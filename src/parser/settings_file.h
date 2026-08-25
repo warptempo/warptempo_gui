@@ -169,7 +169,8 @@ struct SettingsFile {
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
-    float  playback_speed          = 0.7f;  // preset vocabulary only
+    // (architect approval 2026-08-24: default 1.0, was 0.7)
+    float  playback_speed          = 1.0f;  // preset vocabulary only
     // (font_size left this struct and the schema with row 7's monospace
     // deletion — architect approval 2026-08-01. Nothing in either product sizes
     // text from a setting any more; gui_scale is the one scale axis.)

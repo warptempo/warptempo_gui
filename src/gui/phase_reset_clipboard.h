@@ -84,8 +84,8 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 // re-scans the store for a disabled def on every label-ref query, so a whole
 // walk through here is worst-case O(n^2) — the deliberate choice over a cached
 // keep-mask, propagate being a discrete command over tens-to-hundreds of
-// markers (the reasoning is stated in full at section_end_frame,
-// phase_reset_propagate.cpp).
+// markers (the reasoning is stated in full at section_end_index,
+// warpmarkers.h).
 inline bool warp_marker_propagates(const std::vector<GuiWarpMarker>& mv,
                                    int                              i) {
     if (i < 0 || i >= static_cast<int>(mv.size())) return false;

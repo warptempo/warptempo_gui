@@ -81,7 +81,7 @@ struct PhaseResetPropagate {
     // section it renders, which is the next EFFECTIVELY-ENABLED marker's time
     // or the song end when none follows (a disabled marker is dropped before
     // the warp map is built, so it bounds nothing; the extent rule is stated in
-    // full at section_end_frame, phase_reset_propagate.cpp). Non-mutating
+    // full at section_end_index, warpmarkers.h). Non-mutating
     // beyond clipboard state — no undo entry, no marker changes.
     void copy_from_selection();
 

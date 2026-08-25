@@ -205,7 +205,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     // Reset playback bookkeeping; the device is brought up after markers
     // are parsed so the initial playhead has the final trim-begin.
-    app.playback_speed = 0.7f;
+    app.playback_speed = 1.0f;
     // Mirror for gui_scale: construction-state default before the .settings
     // parse below. The schema requires the key, so the parse always assigns it;
     // this initializer only covers the no-.settings / first-open path. Pushed to

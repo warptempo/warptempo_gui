@@ -3360,7 +3360,7 @@ struct AppState {
     // timestamp readout). Meaningful only while active, like the integer sample.
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
-    float   playback_speed          = 0.7f;
+    float   playback_speed          = 1.0f;
 
     // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
     // GUI-wide monospace text size in points, and row 7 deleted the monospace

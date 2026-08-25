@@ -768,7 +768,7 @@ void GuiFlagEditor::wipe_iter_state() {
 // bounds, and span endpoint back to their defaults. Runs on every bpm-mode
 // exit (the single chokepoint exit_bpm_mode) and after a sweep dispatches, so
 // a bracket exists only while the mode is live; re-entering bpm mode always
-// seeds a blank "[]".
+// seeds an EMPTY field.
 //
 // History-less on purpose: bpm values are session-only with no undo of their
 // own (see commit_bpm_edit), so no undo entry is pushed. Unlike iter state,
@@ -789,7 +789,9 @@ void GuiFlagEditor::wipe_bpm_state() {
 
 // Open the BPM editor on `idx` — a modal on the bottom row since 2026-08-13.
 // Seed pending is the
-// current bracket text (`"[]"` when blank, else `"<beats>@[<lo>,<hi>]"`).
+// current bracket text (EMPTY when blank, else `"<beats>@[<lo>,<hi>]"`) — a
+// fresh open is a blank field the whole value is typed into
+// (format_bpm_bracket_text, warpmarkers.h, carries that ruling).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the dialog painter supplies the visible
 // "BPM: " LABEL beside the field (kBpmEditorPrefix, paint_handler.h), so the
@@ -858,9 +860,11 @@ bool GuiFlagEditor::commit_bpm_edit() {
     {
         const int endpoint_idx = mv_const[idx].bpm_endpoint;
         const int n = static_cast<int>(mv_const.size());
-        // The span-end frame is the boundary marker's time when one exists,
-        // else the song end (bpm_endpoint == n is the song-end sentinel).
-        // Guarded on endpoint_idx > idx and endpoint_idx <= n.
+        // The span-end frame is the boundary marker's time when one exists
+        // — the NEXT EFFECTIVELY-ENABLED marker after the last selected
+        // one, which is what bpm_endpoint names (warpmarkers.h) — else the
+        // song end (bpm_endpoint == n is the song-end sentinel). Guarded on
+        // endpoint_idx > idx and endpoint_idx <= n.
         if (audio.sample_rate() > 0 &&
             endpoint_idx > idx &&
             endpoint_idx <= n) {
@@ -922,7 +926,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
 // Full mode-on transition for BPM mode. Validates the activation gate, toggles
 // iter mode off if active, maintains the single-owner invariant, and marks the
 // FIRST selected marker as the BPM owner (mode exit wipes the bpm state, so a
-// fresh entry always seeds a blank bracket), then flips the mode flag. The
+// fresh entry always opens on a blank field), then flips the mode flag. The
 // span endpoint is explicit — supplied by the `m` handler and recorded on the
 // owner's bpm_endpoint (section-based, architect 2026-07-23) — so this does not
 // auto-select an endpoint cue. The full section gate (non-empty, contiguous,
@@ -960,10 +964,10 @@ void GuiFlagEditor::enter_bpm_mode() {
         }
     }
     // Tag owner with bpm_owner=true if not already set. Sentinel-zero
-    // values stay zero; format_bpm_bracket_text renders "[]" for that
-    // state, which seeds the BPM dialog editor. Every prior mode exit
+    // values stay zero; format_bpm_bracket_text renders the EMPTY string for
+    // that state, which seeds the BPM dialog editor. Every prior mode exit
     // wiped the bpm state, so a fresh entry always finds an untagged owner
-    // and seeds a blank bracket.
+    // and opens on a blank field.
     if (!mv[owner].bpm_owner) {
         mv[owner].bpm_owner = true;
         mv[owner].bpm_beats          = 0;

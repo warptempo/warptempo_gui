@@ -40,7 +40,8 @@ constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 // owning marker's label name (empty markers don't produce entries);
 // `start` is the owning marker's own absolute source frame and `end` is its
 // section's extent under the EFFECTIVE-PARTICIPATION rule stated at
-// section_end_frame below — the next marker that participates in the render,
+// section_end_index (warpmarkers.h) — the next marker that participates in
+// the render,
 // else the song end. A disabled marker sitting in between is not a boundary
 // and does not close the block.
 struct DestBlock {
@@ -49,39 +50,19 @@ struct DestBlock {
     int64_t     end;
 };
 
-// The section rule's EFFECTIVE-participation form: a marker's section runs
-// to the next marker that PARTICIPATES IN THE RENDER (the next effectively-
-// enabled marker), else the song end. A disabled marker is dropped before the
-// warp map is built (warp_markers_render_keep_mask, the participation
-// verdict's one owner — "as if the marker were not present"), so it is not a
-// section boundary at all: its span belongs to the preceding enabled marker,
-// and the phase resets lying under it are captured, cleared and pasted with
-// the section they musically belong to. An unlabeled ENABLED marker IS a
-// boundary — it warps its own section, and is only excluded from the label
-// sequence.
-//
-// The ONE extent expression for both propagate walks (the copy's selected-run
-// loop and walk_named_blocks below), so the two sides cannot drift: the paste's
-// lockstep match assumes the destination blocks are measured exactly as the
-// clipboard's were.
-//
-// effective_disabled re-scans the store for a disabled def on every label-ref
-// query, so this forward scan is worst-case O(n^2) across a whole walk. That is
-// the deliberate choice over a per-walk keep-mask: propagate is a discrete
-// command over tens-to-hundreds of markers, and one shared expression is worth
-// more here than two callers each carrying their own cached mask.
-int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
-                          int64_t song_end_frame) {
-    const int n = static_cast<int>(mv.size());
-    for (int j = i + 1; j < n; ++j) {
-        if (!effective_disabled(mv, j)) return mv[j].time_frame;
-    }
-    return song_end_frame;
-}
+// (THE SECTION RULE'S EXTENT EXPRESSION LEFT THIS FILE on 2026-08-24, when the
+// BPM sweep became its second reader: `section_end_frame` and the
+// index-returning walk it is built on, `section_end_index`, live in
+// warpmarkers.h beside `effective_disabled`, where the rule and its reasoning
+// are stated in full. Both propagate walks below — the copy's selected-run loop
+// and walk_named_blocks — still call it, and still call the SAME one, which is
+// what the paste's lockstep match depends on: the destination blocks must be
+// measured exactly as the clipboard's were.)
 
 // Walk the warp marker list across [from_idx, to_idx_exclusive),
 // returning the named blocks in order. A block's extent is section_end_frame
-// above: its owning marker's time to the next EFFECTIVELY-ENABLED marker's
+// (warpmarkers.h): its owning marker's time to the next EFFECTIVELY-ENABLED
+// marker's
 // time, or to the SONG END (song_end_frame, source frames) when no enabled
 // marker follows — so the store-final enabled marker owns the section running
 // to the song end, and so does a marker trailed only by disabled ones (section
@@ -104,7 +85,7 @@ std::vector<DestBlock> walk_named_blocks(
         // (warp_marker_propagates, phase_reset_clipboard.h): labeled AND
         // effectively enabled. An effective-disabled labeled marker is not a
         // block owner, and not a boundary either — section_end_frame walks
-        // past it (see head comment).
+        // past it (warpmarkers.h states the rule).
         if (!warp_marker_propagates(mv, i)) continue;
         const std::string& name = warp_marker_label_name(mv[i]);
         const int64_t start = mv[i].time_frame;

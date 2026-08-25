@@ -593,19 +593,21 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (!(owner.bpm_lo > 0.0))  return false;
     if (!(owner.bpm_hi > 0.0))  return false;
 
-    // Span endpoint is explicit (set on the `m` section gate). It is one past
-    // the last selected marker: endpoint_idx == store size is the SONG-END
-    // sentinel (the last selected marker is store-final, its section runs to
-    // total_frames), endpoint_idx < size means the marker there is the closing
-    // boundary. A value <= owner or past the size is missing/malformed.
+    // Span endpoint is explicit (set on the `m` section gate). It is the index
+    // of the first EFFECTIVELY-ENABLED marker after the last selected one
+    // (section_end_index, warpmarkers.h): endpoint_idx == store size is the
+    // SONG-END sentinel (no enabled marker follows, so the last section runs
+    // to total_frames), endpoint_idx < size means the marker there is the
+    // closing boundary. A value <= owner or past the size is
+    // missing/malformed.
     const int store_size = static_cast<int>(base_warp_markers.size());
     const int endpoint_idx = owner.bpm_endpoint;
     if (endpoint_idx <= bpm_owner_idx || endpoint_idx > store_size) {
         return false;   // missing or malformed span: no sweep
     }
-    // Span end frame: the boundary marker's time when one exists, else the
-    // song end. Named once here and reused for the duration and the
-    // descriptor's endpoint seconds.
+    // Span end frame: the boundary marker's time when one exists — the next
+    // effectively-enabled marker's — else the song end. Named once here and
+    // reused for the duration and the descriptor's endpoint seconds.
     const int64_t span_end_frame =
         (endpoint_idx < store_size)
             ? base_warp_markers[endpoint_idx].time_frame
@@ -694,17 +696,25 @@ bool GuiInputHandler::render_bpm_sweep() {
         // Span-internal markers pass: their own tempo is subsumed by the
         // owner's span tempo. Disabled span-internal markers stay disabled
         // but also pass (the disabled flag is independent of tempo_inherits).
+        // The run may end PAST disabled markers, the span closing at the next
+        // EFFECTIVELY-ENABLED one, so this loop also covers the disabled
+        // markers trailing the selection: converting them is render-inert in
+        // the cell, a disabled marker being dropped before the warp map is
+        // built. A ref among them keeps its ref — the writer branches on
+        // label_ref first, so tempo_inherits never reaches the line.
         for (int i = bpm_owner_idx + 1; i < endpoint_idx; ++i) {
             cell_warp_markers[i].tempo_inherits = true;
             cell_warp_markers[i].tempo_cents    = 100;   // inert default
             cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
-            // label_def on a span-internal marker is preserved (refs are
-            // excluded from spans by the `m` section gate's ref scan, but a
-            // def may exist); only the tempo fields are rewritten. Do not
-            // touch label_def, disabled, or any non-tempo field.
+            // label_def on a span-internal marker is preserved (the `m`
+            // section gate's ref scan excludes every EFFECTIVELY-ENABLED ref
+            // from the span, so only a disabled ref can appear here, and a def
+            // may exist); only the tempo fields are rewritten. Do not touch
+            // label_def, label_ref, disabled, or any non-tempo field.
         }
-        // Boundary marker (when one exists): untouched — it owns the
-        // FOLLOWING section, which lies outside the span. At song end
+        // Boundary marker (when one exists): untouched — it is effectively
+        // enabled and owns the FOLLOWING section, which lies outside the
+        // span. At song end
         // (endpoint_idx == store size) there is no boundary marker and the
         // loop above already ran to the store end, so every following marker
         // passes.

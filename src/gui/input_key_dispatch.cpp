@@ -5278,8 +5278,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // each selected marker contributes the block it owns — its time to the next
     // EFFECTIVELY-ENABLED marker's time, or to the song end when none follows
     // (a disabled marker never reaches the warp map, so it bounds no section;
-    // the extent rule is stated in full at section_end_frame,
-    // phase_reset_propagate.cpp). The set
+    // the extent rule is stated in full at section_end_index,
+    // warpmarkers.h). The set
     // must be a CONTIGUOUS run: the paste walks every labeled
     // destination block from the anchor and matches the clipboard in strict
     // lockstep, so a disjoint clipboard (labeled blocks A, C with a labeled B
@@ -5439,16 +5439,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // run of selected markers whose sections define the sweep span. Warp
     // view only; silent no-op in phase reset view. Mutual exclusion with
     // iter mode is handled inside enter_bpm_mode. The section rule (architect
-    // 2026-07-23): a marker owns the section from itself to the next store
-    // marker, and the store-final marker's section runs to the song end — so
-    // the selected run's LAST section is INCLUDED. The gate requires a
-    // NON-EMPTY, CONTIGUOUS run of selected markers with no label_ref in
+    // 2026-07-23, in its EFFECTIVE-PARTICIPATION form here since 2026-08-24):
+    // a marker owns the section from itself to the next marker that
+    // PARTICIPATES IN THE RENDER, and a marker trailed only by disabled ones
+    // owns the section to the song end — so the selected run's LAST section is
+    // INCLUDED, and it may run PAST disabled markers. section_end_index
+    // (warpmarkers.h) is that rule's one owner, shared with the phase-reset
+    // propagate. The gate requires a NON-EMPTY, CONTIGUOUS run of selected
+    // markers with no effectively-enabled label_ref in
     // [owner .. boundary marker] inclusive; any other selection is a silent
-    // no-op. Under the contiguity rule every in-span marker IS selected, so a
-    // selected span-internal marker may be disabled and is still converted to a
-    // plain pass per sweep cell; a disabled OWNER is rejected
-    // (bpm_popup_eligible_marker now excludes disabled — a disabled owner was a
-    // render-inert rewrite).
+    // no-op. Under the contiguity rule every in-span marker up to the last
+    // selected one IS selected, so a selected span-internal marker may be
+    // disabled and is still converted to a plain pass per sweep cell — as are
+    // the disabled markers the extended boundary sweeps in past it; a
+    // disabled OWNER is rejected (bpm_popup_eligible_marker now excludes
+    // disabled — a disabled owner was a render-inert rewrite).
     // There is no toggle-off branch: the bpm editor is a modal dialog
     // surface, so while it is open `m` never reaches this dispatch — it is
     // just a typed character the bracket grammar rejects — and bpm mode never
@@ -5478,19 +5483,32 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // count.
         if (last_sel - owner + 1 != static_cast<int>(app.selected_markers.size()))
             return true;
-        // boundary == last_sel + 1: one past the last selected marker. When
-        // boundary < n the marker there is the closing boundary (owns the
-        // following section, outside the span); boundary == n is the song end
-        // (last_sel is the store-final marker, its section runs to the end).
-        const int boundary = last_sel + 1;
-        // No label_ref anywhere in [owner .. min(boundary, n-1)] inclusive:
-        // every in-span marker rewrites its tempo (a ref cannot take one),
-        // and the boundary marker (when it exists) still cannot bound the
-        // span cleanly. At song end there is no boundary marker, so the scan
-        // clamps to n-1.
+        // The last selected marker's section ends at the next marker that
+        // PARTICIPATES IN THE RENDER, not at the next store marker
+        // (architect 2026-08-24): section_end_index (warpmarkers.h) is that
+        // rule's one owner, shared with the phase-reset propagate. When
+        // boundary < n the marker there is the closing boundary — effectively
+        // enabled, owning the following section, outside the span; boundary
+        // == n is the song end, no enabled marker following the selection, so
+        // the last section runs to total_frames. A DISABLED marker is dropped
+        // before the warp map is built, so bounding the span at one measured
+        // the duration short by the whole remainder and mistuned every derived
+        // cell tempo.
+        const int boundary = section_end_index(mv, last_sel);
+        // No EFFECTIVELY-ENABLED label_ref anywhere in
+        // [owner .. min(boundary, n-1)] inclusive: every in-span marker
+        // rewrites its tempo (a ref cannot take one), and the boundary marker
+        // (when it exists) still cannot bound the span cleanly. At song end
+        // there is no boundary marker, so the scan clamps to n-1. An
+        // effectively-disabled ref does not refuse — it takes no part in the
+        // render, so it neither receives a rewritten tempo nor bounds
+        // anything, which is exactly how the boundary walk above reads it. The
+        // scan now also covers the disabled markers between the last selected
+        // one and the boundary, and passes over each for the same reason.
         const int scan_end = std::min(boundary, n - 1);
         for (int i = owner; i <= scan_end; ++i) {
-            if (!mv[i].label_ref.empty()) return true;   // silent no-op
+            if (!mv[i].label_ref.empty() && !effective_disabled(mv, i))
+                return true;   // silent no-op
         }
         // Owner must satisfy the BPM-eligibility predicate (owning, no ref,
         // and — now — enabled).

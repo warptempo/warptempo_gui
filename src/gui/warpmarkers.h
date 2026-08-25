@@ -37,9 +37,9 @@ struct GuiWarpMarker : WarpMarker {
     // (architect 2026-07-23): a contiguous run of selected markers is chosen;
     // the FIRST owns (bpm_owner=true) and the sweep tempo covers the run's
     // whole extent — the sections every selected marker owns, the LAST
-    // marker's section INCLUDED. bpm_endpoint holds the index one past the
-    // last selected marker (== store size means the span runs to the song
-    // end). At most one marker at a time has bpm_owner=true (invariant
+    // marker's section INCLUDED. bpm_endpoint holds the index that CLOSES
+    // that last section (== store size means the span runs to the song end).
+    // At most one marker at a time has bpm_owner=true (invariant
     // maintained by the `m` toggle handler). "Committed" is
     // implicit: bpm_beats > 0 means the owner has authored a value (parser
     // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
@@ -52,15 +52,22 @@ struct GuiWarpMarker : WarpMarker {
     double bpm_hi    = 0.0;
 
     // Session-only, set with bpm_owner on the `m`-press section gate.
-    // Index ONE PAST the last selected marker: the BPM region runs
+    // THE INDEX OF THE FIRST EFFECTIVELY-ENABLED MARKER STRICTLY AFTER THE
+    // LAST SELECTED ONE (architect 2026-08-24; it was the raw index one past
+    // the last selected marker until then, which measured the span short
+    // whenever a disabled marker sat at its edge): section_end_index below,
+    // called on the last selected marker, is the one owner of that walk and
+    // the phase-reset propagate's too. The BPM region runs
     // [this owner, bpm_endpoint) over the store, and the tempo covers the
-    // sections owned by every marker in that half-open range. bpm_endpoint
-    // == store size is the SONG-END sentinel — the last selected marker is
-    // the store-final marker, so its section runs to total_frames and there
-    // is no closing marker. When bpm_endpoint < size, the marker at that
-    // index is the boundary: it owns the FOLLOWING section (outside the
-    // span) and is left untouched by the sweep. -1 when unset. Not
-    // serialized.
+    // sections owned by every marker in that half-open range — which is every
+    // SELECTED marker plus any disabled markers trailing them, disabled
+    // markers taking no part in the render and so being swept in
+    // render-inertly. bpm_endpoint == store size is the SONG-END sentinel: no
+    // enabled marker follows, so the last section runs to total_frames and
+    // there is no closing marker. When bpm_endpoint < size, the marker at that
+    // index is the boundary: it is effectively enabled, it owns the FOLLOWING
+    // section (outside the span), and it is left untouched by the sweep. -1
+    // when unset. Not serialized.
     int  bpm_endpoint = -1;
 };
 
@@ -112,6 +119,54 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 // (non-locally-disabled) `label_ref`, the cascade rule applies: the ref
 // inherits its target label_def's disabled state.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
+
+// THE SECTION RULE'S ONE OWNER (architect 2026-07-23; in its EFFECTIVE-
+// PARTICIPATION form for the propagate spans since 2026-08-01 and for the BPM
+// sweep since 2026-08-24, so the product now states the rule once). Index of
+// the marker that CLOSES the section owned by `i`: the first marker after it
+// that PARTICIPATES IN THE RENDER (the next effectively-enabled one), or
+// mv.size() when none follows — the SONG-END sentinel, the section running to
+// the end of the piece. A disabled marker is dropped before the warp map is
+// built (warp_markers_render_keep_mask, the participation verdict's one owner
+// — "as if the marker were not present"), so it is not a section boundary at
+// all: its span belongs to the preceding enabled marker, and a duration
+// measured to it would be short by the whole remainder. An unlabeled ENABLED
+// marker IS a boundary — it warps its own section, and is only excluded from
+// the label sequence.
+//
+// TWO READERS, ONE WALK. The phase-reset propagate takes the FRAME through
+// section_end_frame below (its copy loop and its destination walk both, so the
+// clipboard's blocks and the paste's cannot be measured differently, and the
+// resets lying under a disabled marker are captured, cleared and pasted with
+// the section they musically belong to). The `m` BPM sweep takes the INDEX: it
+// records the boundary marker's store slot on the owner's bpm_endpoint, bounds
+// the per-cell pass rewrite with it, and reads the span-end frame off it — a
+// raw next-in-store boundary made the span duration, and so every derived cell
+// tempo, wrong whenever a disabled marker sat at the edge. The index form is
+// the owner and the frame form calls it, so the two cannot drift.
+//
+// effective_disabled re-scans the store for a disabled def on every label-ref
+// query, so this forward scan is worst-case O(n^2) across a whole walk. That is
+// the deliberate choice over a per-walk keep-mask: both readers are discrete
+// commands over tens-to-hundreds of markers, and one shared expression is worth
+// more here than callers each carrying their own cached mask.
+inline int section_end_index(const std::vector<GuiWarpMarker>& mv, int i) {
+    const int n = static_cast<int>(mv.size());
+    for (int j = i + 1; j < n; ++j) {
+        if (!effective_disabled(mv, j)) return j;
+    }
+    return n;
+}
+
+// The FRAME form of section_end_index above, for callers that want the extent
+// rather than the boundary's store slot: the closing marker's authored frame,
+// or `song_end_frame` when the section runs to the song end.
+inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
+                                 int64_t song_end_frame) {
+    const int j = section_end_index(mv, i);
+    return (j < static_cast<int>(mv.size())) ? mv[j].time_frame
+                                             : song_end_frame;
+}
 
 // (THERE IS NO LABEL-CASCADE RESOLVER FOR THE MEASURE FIELD, and the absence
 // is a RULING rather than a gap — architect 2026-08-20, reversing his own
@@ -245,15 +300,19 @@ inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
 }
 
 // BPM mode: format the bracket-editor text for marker `m`.
-// "[]" when this marker is not the BPM owner (matches iter's empty form
-// exactly), or when it is the owner with bpm_beats == 0 (owner-but-blank,
-// set by the `m`-toggle-on transition before any commit; bpm_beats > 0 is
-// the implicit "committed" sentinel — the parser sets all three of
-// bpm_beats/bpm_lo/bpm_hi together, mirroring iter's NaN convention).
-// The non-empty form is the strict syntax `<beats>@[<lo>,<hi>]`.
+// EMPTY when this marker is not the BPM owner, or when it is the owner with
+// bpm_beats == 0 (owner-but-blank, set by the `m`-toggle-on transition before
+// any commit; bpm_beats > 0 is the implicit "committed" sentinel — the parser
+// sets all three of bpm_beats/bpm_lo/bpm_hi together, mirroring iter's NaN
+// convention). THE BLANK FORM IS THE EMPTY STRING RATHER THAN "[]" (architect
+// 2026-08-24): there is no bracket to fill here — the whole value
+// `<beats>@[<lo>,<hi>]` is typed from nothing, so a seeded "[]" is a fragment
+// the user has to edit around. Iter's "[]" is a different thing entirely: a
+// real token of its own grammar, and the two forms deliberately no longer
+// match. The non-empty form is the strict syntax `<beats>@[<lo>,<hi>]`.
 inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
     if (!m.bpm_owner || m.bpm_beats == 0) {
-        return "[]";
+        return "";
     }
     // lo/hi print as bpm values: plain shortest round-trip form
     // (min_decimals 0 — "72" stays "72", "72.5" stays "72.5").
