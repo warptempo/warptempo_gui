@@ -303,7 +303,6 @@ void deactivate(State& s) {
     s.kind              = Kind::FlagPayload;
     s.iter_grammar      = false;
     s.pending.clear();
-    s.locked_prefix.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
     s.red               = false;
@@ -319,7 +318,6 @@ uint64_t next_session_id() {
 }
 
 void enter(State& s, int target,
-           std::string locked_prefix,
            std::string initial_pending,
            Kind kind,
            bool iter_grammar) {
@@ -331,7 +329,6 @@ void enter(State& s, int target,
     s.target            = target;
     s.kind              = kind;
     s.iter_grammar      = iter_grammar;
-    s.locked_prefix     = std::move(locked_prefix);
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;

@@ -2175,7 +2175,6 @@ void GuiInputHandler::open_history_commit_editor() {
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.commit_title_editor,
                        /*target=*/0,
-                       /*locked_prefix=*/"",
                        history_checkpoint_title(dir),
                        text_editor::Kind::CommitTitle);
     // OPEN-SELECTED ON THE SEED, the prefilling openers' convention (the flag
@@ -2313,7 +2312,6 @@ void GuiInputHandler::open_measure_paste_editor() {
     // clipboard to leave stale after a cancel.
     text_editor::enter(app.measure_offset_editor,
                        /*target=*/anchor,
-                       /*locked_prefix=*/"",
                        "0",
                        text_editor::Kind::MeasureOffset);
     // OPEN-SELECTED ON THE SEED, the prefilling openers' convention: typing a
@@ -4626,7 +4624,6 @@ void GuiInputHandler::open_load_editor() {
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.load_editor,
                        /*target=*/0,
-                       /*locked_prefix=*/"",
                        std::move(prefill),
                        text_editor::Kind::LoadInPlace);
     // OPEN-SELECTED ON A SEEDED BUFFER, the flag editor's convention (the

@@ -109,7 +109,6 @@ void GuiSettingsEditor::open() {
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
-                       /*locked_prefix=*/"",
                        /*initial_pending=*/"",
                        text_editor::Kind::SettingsAssignment);
     // A MODAL OPEN damages the whole window: the modal's rect does not exist

@@ -8,7 +8,6 @@
 #include "input_handler.h"
 #include "render.h"
 #include "text_editor.h"
-#include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers_ops.h"
 
@@ -106,25 +105,6 @@ bool extract_iter_bracket(std::string& payload,
 // warpmarkers.h alongside effective_disabled, so this TU sees them via
 // #include "warpmarkers.h".
 
-// Build the locked-prefix string for `m`. This is the DISPLAY rendering,
-// not the serializer's bytes: the serializer writes the whole-frame
-// position as integer text (frame_format.h), while the prefix keeps the
-// human-readable MM:SS.mmm form derived as
-// format_timestamp(frame / sample_rate). The editor
-// renders this prefix outside the editable rect (left-anchored at the
-// marker column); the pipe is part of the prefix but visually anchors to
-// the marker line. Because the prefix is display-only, the commit path
-// assembles its parse candidate from the marker's own fields in
-// serializer form rather than from these bytes.
-std::string GuiFlagEditor::build_locked_prefix(const GuiWarpMarker& m) {
-    std::string out;
-    if (m.disabled) out += '#';
-    const double sr_d = static_cast<double>(audio.sample_rate());
-    out += format_timestamp(sr_d > 0.0 ? m.time_frame / sr_d : 0.0);
-    out += '|';
-    return out;
-}
-
 void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     // A close while the editor is RED un-flashes the marker's STEM, and a stem
@@ -160,7 +140,6 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // blank-seeded bottom editors.
 void GuiFlagEditor::enter_text_edit(int idx,
                                     text_editor::Kind kind,
-                                    std::string locked_prefix,
                                     std::string initial_pending,
                                     bool iter_grammar) {
     if (idx < 0) return;
@@ -216,7 +195,6 @@ void GuiFlagEditor::enter_text_edit(int idx,
     }
     text_editor::enter(
         app.top_flag_editor, idx,
-        std::move(locked_prefix),
         std::move(initial_pending),
         kind,
         iter_grammar);
@@ -259,7 +237,6 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
     this->enter_text_edit(
         idx,
         text_editor::Kind::FlagPayload,
-        this->build_locked_prefix(mv[idx]),
         flag_text_iter(mv, idx, iter_on),
         /*iter_grammar=*/iter_on);
 }
@@ -322,8 +299,7 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
     const std::string seed = phase
         ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].measure
         : app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
-    text_editor::enter(app.top_flag_editor, idx,
-                       /*locked_prefix=*/std::string(), seed,
+    text_editor::enter(app.top_flag_editor, idx, seed,
                        text_editor::Kind::MeasureText);
 
     // Open-selected, the family's rule: the seeded text is fully selected so
@@ -469,11 +445,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    // Assemble the parse candidate in SERIALIZER form — the locked prefix
-    // is a display rendering (MM:SS.mmm) and no longer the serializer's
-    // bytes, so the position field is rebuilt as the integer frame text the
-    // canonical line grammar expects. Position and disabled both come from
-    // the marker itself (both live in the locked, uneditable prefix).
+    // Assemble the parse candidate in SERIALIZER form. The editor holds the
+    // PAYLOAD alone, so the two fields ahead of the pipe come from the marker's
+    // own state rather than from any typed bytes: `disabled` from the marker's
+    // flag, and the position as the integer frame text the canonical line
+    // grammar expects (format_authored_frame, frame_format.h — never the
+    // MM:SS.mmm form the GUI shows elsewhere).
     std::string candidate;
     if (mv_const[idx].disabled) candidate += '#';
     candidate += format_authored_frame(mv_const[idx].time_frame);
@@ -576,8 +553,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // triggers unconditionally like any store mutation.
     const GuiWarpMarker before = m;
 
-    // Time stays locked; preserve it (parse already produced the
-    // same value via the locked prefix, but be explicit).
+    // Time stays locked; preserve it (the candidate assembled above carried
+    // the marker's own frame, so the parse produced the same value, but be
+    // explicit).
     const int64_t preserved_time = m.time_frame;
 
     // Cache-free: typing `pass` writes inert defaults into
@@ -599,8 +577,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.label_ref      = parsed.label_ref;
     }
     m.time_frame = preserved_time;
-    // disabled lives in the locked prefix — parse_single_canonical_line
-    // populated it; reapply.
+    // disabled is not the editor's field — the candidate carried the marker's
+    // own bit, parse_single_canonical_line populated it; reapply.
     m.disabled      = parsed.disabled;
     // THE MEASURE IS NOT THIS EDITOR'S and is preserved by construction: `m`
     // is the live marker copied whole, and no line above writes the field. The
@@ -828,7 +806,7 @@ void GuiFlagEditor::wipe_bpm_state() {
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the dialog painter supplies the visible
 // "BPM: " LABEL beside the field (kBpmEditorPrefix, paint_handler.h), so the
-// editor's locked_prefix stays "".
+// buffer holds the bracket text alone.
 void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
     if (!app.bpm_mode_enabled) return;
@@ -838,7 +816,6 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
     this->enter_text_edit(
         idx,
         text_editor::Kind::BpmBracket,
-        /*locked_prefix=*/"",
         format_bpm_bracket_text(mv[idx]));
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
     // draws in the bottom row's modal, whose rect does not exist before its

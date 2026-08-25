@@ -36,7 +36,6 @@ struct GuiFlagEditor {
           undo(undo_),
           target_render(target_render_) {}
 
-    std::string build_locked_prefix(const GuiWarpMarker& m);
     void exit_top_flag_edit_no_commit();
     void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
@@ -86,7 +85,6 @@ struct GuiFlagEditor {
     // seeding, top-strip invalidate.
     void enter_text_edit(int idx,
                          text_editor::Kind kind,
-                         std::string locked_prefix,
                          std::string initial_pending,
                          bool iter_grammar = false);
 };

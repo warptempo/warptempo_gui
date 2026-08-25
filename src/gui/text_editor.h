@@ -190,12 +190,12 @@ struct State {
     // from iteration_mode_enabled; does nothing for other kinds.
     bool iter_grammar = false;
 
-    // Editable text — currently the canonical post-pipe payload.
+    // Editable text — the whole of what the editor holds and the whole of what
+    // its painter draws. A surface whose value has uneditable neighbours (the
+    // marker's position and disabled bit for the flag payload, the "BPM: "
+    // label for the bracket editor) leaves them to the marker's own fields and
+    // to the painter; this buffer never carries them.
     std::string pending;
-
-    // Frozen prefix (rendered to the left of `pending`) carrying time
-    // and metadata flags. Display-only; not editable.
-    std::string locked_prefix;
 
     // Byte index into `pending`, always on a UTF-8 CODEPOINT BOUNDARY (the
     // invariant and the routes that maintain it are at the head of this file).
@@ -287,11 +287,10 @@ inline int selection_end(const State& s) {
 // Reset `s` so `is_active` returns false.
 void deactivate(State& s);
 
-// Begin editing `target` with the given locked prefix and seed pending.
+// Begin editing `target` with the given seed pending.
 // Cursor lands at end of pending. `kind` selects the vocabulary the
 // keystroke handler will accept while this editor is active.
 void enter(State& s, int target,
-           std::string locked_prefix,
            std::string initial_pending,
            Kind kind = Kind::FlagPayload,
            bool iter_grammar = false);
