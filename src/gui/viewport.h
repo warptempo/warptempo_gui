@@ -308,7 +308,8 @@ struct Viewport {
     //   switches, input_trim's FIVE commit / drag sites (re-greped 2026-08-18:
     //   the SWEEP's own per-motion write joined them when the region became the
     //   trim), and
-    //   input_key_dispatch's three load-in-place tails.
+    //   input_key_dispatch's load-in-place tails (apply_recipe_in_place, the
+    //   two sidecar loads' shared body, and the history LOCAL member's own).
     //   ONE READ-ONLY ROUTE — bare `o` (input_handler.cpp), which is on this
     //   lane because it moves the TAB's own face; its padlock BUTTON is the
     //   icon row's since 2026-08-14, and the top-strip damage beside this one
@@ -410,12 +411,14 @@ struct Viewport {
     //   BOTH CELLS — the routes that land a playhead AND rewrite the readout,
     //   each calling the two owners in turn: the A/B tab switch (active_views,
     //   which restores the entering tab's own playhead), the undo/redo restore
-    //   (undo), the position nudges' shared tail (position_nudge), two of the
-    //   three load-in-place tails (render entry and history commit — each
-    //   applies the loaded sidecar's own band, playhead included; the HISTORY
-    //   LOCAL member's tail calls the same two owners but its clock half is
-    //   HARMLESS OVER-DAMAGE like the zoom appliers': a timeline state
-    //   carries no band, so that tail never writes the live playhead — its
+    //   (undo), the position nudges' shared tail (position_nudge), the
+    //   load-in-place tail (apply_recipe_in_place, the two sidecar loads' shared
+    //   body — since 2026-08-24 it applies no band at all, but it re-clamps the
+    //   LIVE cursor against the domain its own store replace may have moved, so
+    //   the clock half has a real producer), the HISTORY LOCAL member's tail
+    //   (whose clock half is HARMLESS OVER-DAMAGE like the zoom appliers': a
+    //   timeline state carries no band and that tail takes no clamp, so it never
+    //   writes the live playhead — its
     //   coincidence auto-select fires only where the land is a provable no-op
     //   (auto_select_marker_at_playhead's equality predicate is the land's
     //   own) — and the small always-clean rect is kept as truth-over-churn

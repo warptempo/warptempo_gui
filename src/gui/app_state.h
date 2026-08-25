@@ -1464,7 +1464,7 @@ struct OverviewDragState {
 //     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
 //     with every command that reaches one (the `t`/`p`/Ctrl+Tab keys, the 1/2/3
 //     selectors, the view bar, the S/T + W/P radios, the settings keys, the
-//     propagate paste, undo/redo and both load-in-places) inheriting it by
+//     propagate paste and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
 //     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
 //     modal load from moving that domain with two fingers still down: the S/T
@@ -3244,11 +3244,15 @@ struct ViewState {
     // struct — so a member with no key row is simply never written and never
     // read, which is exactly the ruling's "per tab, per session, not stored on
     // disk". Do not "fix" the omission by adding a row.
-    // A LOAD IN PLACE DROPS IT with the rest of the band, no separate reset
-    // needed: both `'` paths replace the whole ViewState through
-    // view_state_from_settings_tab, which builds a fresh one, and a source load
-    // seeds both tabs from a fresh ViewState too. A load in place is a
-    // discontinuity (architect) — the stamped level described another piece.
+    // A SOURCE LOAD DROPS IT with the rest of the band, no separate reset
+    // needed: it seeds both tabs from a fresh ViewState. A LOAD IN PLACE KEEPS
+    // IT since 2026-08-24, when the act narrowed to what its undo entry restores
+    // (the rule at GuiInputHandler::apply_recipe_in_place, input_handler.h): the
+    // camera does not move any more, and this stamp is the camera's — bare `0`
+    // returns to the level the user himself left, over whatever markers he has
+    // loaded under it. That supersedes the 2026-08-18 reading, which dropped the
+    // stamp because a load in place was then a whole-band replace and so a
+    // discontinuity in the view; it is not one now.
     std::optional<double> zoom_recall_level;
 
     // Per-tab read-only lock. Toggled by bare `o`. IT PROTECTS THE AUTHORED
@@ -3392,8 +3396,9 @@ struct AppState {
     // applied at file load, and set through the settings editor
     // (`:gui_scale=`, no hotkey). LIVE since
     // 2026-07-31: pushed to the renderer's file-scope state via
-    // set_gui_scale_percent at all three application points (file load, the
-    // settings-editor commit, the `'` load-in-place), and the editor commit
+    // set_gui_scale_percent at both application points (file load and the
+    // settings-editor commit — the `'` load-in-place left the list 2026-08-24,
+    // the act no longer applying a file's session prefs), and the editor commit
     // APPLIES it
     // live through GuiInputHandler::apply_gui_scale (the resize-path geometry
     // rebuild). SINCE ROW 7 IT IS THE ONE SCALE AXIS — every painted dimension
@@ -3633,9 +3638,9 @@ struct AppState {
     // hit map advances exactly when the on-screen items commit — not at the
     // offscreen rebuild. Lifecycle: WRITTEN by the paint-pass promotion (target
     // view) / cleared-value promotion (source view, mapless items); CLEARED
-    // (with the staged value) at source load and `'` load-in-place (through
-    // apply_settings_engine_and_prefs) and at a view toggle
-    // (handle_active_audio_view_toggle). Shutdown is terminal — no teardown
+    // (with the staged value) at source load, at both sidecar load-in-places
+    // (those two through the shared reset_displayed_target_basis, below this
+    // struct) and at a view toggle (handle_active_audio_view_toggle). Shutdown is terminal — no teardown
     // clear. The item hit tests read it through displayed_or_live_target_map so
     // what you grab is what you see (event-synchronized hit geometry — the
     // ruling at that selector). Empty = cold (no target frame has committed its
@@ -4990,8 +4995,9 @@ struct AppState {
     // (2026-08-08, when the architect gave the Local walk the act his 2026-08-07
     // ruling had it consume). ON THE REMOTE TAB it opens prefilled with the
     // viewed commit's full SHA, takes any spelling git can resolve in its place,
-    // and on Enter loads THAT COMMIT's three sidecars into the live session in
-    // place, 1:1
+    // and on Enter loads THAT COMMIT's RECIPE — its marker pair and engine
+    // block, the rest of its sidecar state read past (the rule at
+    // apply_recipe_in_place, input_handler.h) — into the live session in place
     // (GuiInputHandler::load_history_commit_in_place — parse-gated by the strict
     // whole-file loaders, so an unresolvable commit, a missing sidecar or a
     // legacy format is a red flash and one stderr line with nothing touched).
@@ -6531,6 +6537,34 @@ double  scanner_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // viewport math can reach it.
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 
+// THE DISPLAYED TARGET BASIS GOES COLD — one owner for the pair of resets a
+// wholesale store/engine replacement owes, so the two routes that perform such
+// a replacement from a file spell it once. It drops the promoted hit map AND
+// its staged value (a stale staged map would else promote wrong geometry at the
+// next paint) and resets the displayed-viewport mirror to area_w = 0, which is
+// the cold state both accessors fall back from — displayed_or_live_target_map
+// to the live map, item_viewport_basis to the live viewport — until the new
+// state's item caches rebuild, stage, and a frame promotes. The fields'
+// contracts and the recorded cold-state seam are at their declarations above.
+//
+// ITS TWO CALLERS are apply_settings_engine_and_prefs (the source load, where
+// the outgoing map is ANOTHER FILE's) and apply_recipe_in_place (both sidecar
+// load-in-places, where the marker pair and the engine block that built the map
+// are both replaced). The undo restore, which also replaces those three pieces,
+// deliberately does not call it: a restore is a step inside one session's own
+// timeline and its ordinary staging is what advances the basis.
+inline void reset_displayed_target_basis(AppState& a) {
+    a.displayed_target_warp_frame_map.clear();
+    a.staged_displayed_target_warp_frame_map.clear();
+    a.displayed_vp_start = 0;
+    a.displayed_vp_end   = 0;
+    a.displayed_area_w   = 0;
+    a.staged_displayed_vp_start = 0;
+    a.staged_displayed_vp_end   = 0;
+    a.staged_displayed_area_w   = 0;
+    a.staged_displayed_valid = false;
+}
+
 // Live-domain playhead clamp — the single spelling of the playhead domain
 // ruling: the playhead rests in [0, total - 1] of its LIVE view's domain,
 // everywhere, after any gesture. All authored positions — both marker columns
@@ -6539,8 +6573,11 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 // scratch values, not a source-view authored-position concern. Every playhead write
 // funnels through here: Viewport::move_playhead_to (the gesture route),
 // and the non-gesture live-ization routes a persisted or stashed value
-// takes into the live fields — the source load's tab snapshots, the
-// Ctrl+Tab restore, and the render-entry load-in-place's tab bands — so an
+// takes into the live fields — the source load's tab snapshots and the
+// Ctrl+Tab restore (each clamping a PARKED band on its way live), plus the
+// sidecar load-in-places' re-clamp of the LIVE cursor against a domain their
+// own store replace may have moved (apply_recipe_in_place; they clamp no
+// parked band, having no business with one) — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
 // arithmetic (the S/T toggle's double->int64 conversion, Space's lead-in

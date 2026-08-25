@@ -130,12 +130,13 @@ struct Undo {
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
                              std::vector<int> touched_live = {});
-    // tab_override attributes entries pushed on behalf of a tab the caller is
-    // about to switch to. The entry belongs to the edit's semantic tab, not
-    // the incidental tab the cursor is in when history is pushed.
+    // Files under the LIVE tab like the three helpers around it. (A
+    // `tab_override` parameter stood here for the load-in-place, which used to
+    // switch to the tab its file named; it lost its last producer on 2026-08-24
+    // when the act stopped writing view state, and went with it.)
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                        char op_mode, char tab_override = 0);
+                        char op_mode);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
     // dispatch. Markers are captured wholesale at push time (carry-

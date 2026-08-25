@@ -24,9 +24,10 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // Authoring-state snapshot captured at dispatch time. Sole consumer: the
 // per-entry `.settings` writer inside do_render, which composes the
 // standard whole-file schema from these fields (the dispatch tab's trim and
-// identity plus the session prefs) so the `'` load-in-place
-// (load_render_entry_in_place) can apply the entry with plain load
-// semantics. The
+// identity plus the session prefs) so the entry is a COMPLETE state on disk —
+// the strict schema requires every key, and the CLI and a plain source load
+// read such a file whole. (The `'` load-in-place reads past all of it but the
+// engine block since 2026-08-24; it is not what these fields are for.) The
 // trim fields duplicate the request's own trim
 // on purpose: the request trim feeds the engine, this block feeds the
 // sidecar, and keeping the block self-contained keeps the writer trivial.

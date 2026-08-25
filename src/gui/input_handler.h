@@ -349,7 +349,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // COMMANDS (`t`, Ctrl+Tab, `p`) and three routes still reached a switch without
 // it: the propagate paste, which calls switch_active_markers_view_to directly;
 // Undo's own inline W/P swap; and apply_settings_engine_and_prefs, which
-// replaces S/T, W/P and A/B wholesale for BOTH load-in-places. So the rule now
+// replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
 //   * GuiInputHandler::handle_active_audio_view_toggle — the S/T writer (bare
@@ -365,7 +365,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //     carries this rule by hand exactly as it already carries the column
 //     switch's selection clear.
 //   * apply_settings_engine_and_prefs (file_loader.cpp) — all three fields at
-//     once, shared by the source load and by both load-in-places. It takes a
+//     once, the source load's alone since 2026-08-24 (a load in place writes no
+//     view state at all now). It takes a
 //     Viewport for this and for nothing else; its VALUES-ONLY contract is
 //     otherwise intact, the clear being a lifecycle end rather than a side
 //     effect the caller could time differently.
@@ -393,9 +394,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // REACHABILITY, so none of this reads as theoretical: a two-finger frame under a
 // MODAL returns at apply_touch_nav_update's wheel_context refusal WITHOUT
 // clearing anything (the only per-frame clear is the one-finger arm), so a
-// seated pinch survives a whole load-editor session and resumes when the modal
-// closes — which is exactly how a load-in-place selecting TARGET reaches a seat
-// taken in SOURCE.
+// seated pinch survives a whole modal editor session and resumes when the modal
+// closes — which is exactly how a settings editor's `active_audio_view=T` commit
+// reaches a seat taken in SOURCE.
 //
 // AND THE TEMPTING FIX IS THE WRONG ONE, recorded here so it is not tried: DO
 // NOT add touch navigation to any_pointer_gesture_active to make the above
@@ -456,8 +457,8 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // render-entry load (load_render_entry_in_place, joined 2026-07-30), the `h`
 // view's commit load (load_history_commit_in_place) and that view's LOCAL-tab
 // load (load_history_local_entry_in_place, 2026-08-08), each because a
-// load-in-place is specified 1:1 with a source load, and the
-// load has always run this. No match leaves the selection exactly as the caller
+// load-in-place replaces the store under a resting playhead, which is an ENTRY
+// into a new set of markers exactly as a load is. No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport);
@@ -620,7 +621,9 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // that touches a trim bound is not a command in this sense: auto_clear_crossed_trim
 // is a shared commit tail every setter already runs inside its own body, and the
 // ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
-// tab-band pull, `'` load-in-place) install a trim wholesale.
+// tab-band pull) install a trim wholesale. The `'` load-in-place left that list
+// 2026-08-24: it installs no trim at all, trim having no undo and the act
+// writing only what its undo entry restores.
 // A PLAIN TRIM-BAR CLICK IS NO LONGER A TRIM ROUTE AT ALL (architect 2026-07-30):
 // its three arms existed only to publish the highlight, so with the publisher gone
 // they retire outright — a click that never becomes a drag is a consumed nothing,
@@ -2391,6 +2394,48 @@ private:
     bool handle_measure_offset_editor_key(GuiKey key, GuiInputState mods);
     bool apply_measure_paste(int64_t offset_measures);
 
+    // -- THE RECIPE APPLY, and the rule it exists to state once ----------
+    //
+    // A LOAD IN PLACE WRITES EXACTLY WHAT ITS ONE UNDO ENTRY RESTORES
+    // (architect 2026-08-24: "load in place should overwrite elements which
+    // have undo — so trim is excluded also"). That is the warp store, the phase
+    // reset store and the engine settings — what push_undo_both captures — and
+    // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
+    // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
+    // tab, the camera, follow, playback_speed, gui_scale, audio_player and
+    // projects_repo. A recipe is a set of markers and an engine block; where
+    // the user is standing when he loads one is his own. Undo/redo and the `h`
+    // view are how he then inspects what the load changed. (It SUPERSEDES the
+    // whole-file apply that stood until this date, which was 1:1 with a source
+    // load of the same sidecars — that one yanked a source-view session into
+    // target view on the entry's dispatch tab and restored the
+    // dispatch-moment camera, three things the user never asked for.)
+    //
+    // THE TWO SIDECAR-SOURCED LOAD-IN-PLACES SHARE THIS ONE BODY —
+    // load_render_entry_in_place (a renders/ entry) and
+    // load_history_commit_in_place (a commit's sidecars) — so the rule lives
+    // here rather than in each of them. The THIRD, load_history_local_entry_in_place,
+    // reads a typed timeline state instead of a file and performs the same
+    // sequence in its own body; it conforms by construction, an undo entry
+    // carrying nothing but the three pieces this rule names.
+    //
+    // ITS PRECONDITIONS, both the caller's: every input is read, validated and
+    // past its last refusal (nothing here can fail, and nothing may mutate
+    // before it), and the `h` mode is already closed where each caller's own
+    // reasoning puts that close. What it does, in order: snapshot the outgoing
+    // stores, replace both, clear the selection, push ONE cross-file undo entry
+    // (the live W/P as its op_mode and NO tab override — the entry belongs to
+    // the tab the user is standing in, no tab switch happening any more), wipe
+    // the session-only marker scratch (iteration brackets, bpm state, both mode
+    // bits), assign the engine block, take the store-change basis reset, clamp
+    // the live playhead and viewport into the possibly-changed domain, and run
+    // the coincidence auto-select and the sync/invalidate/trigger tail. Each
+    // caller keeps its own tail after it (the renders/ trash-then-wipe, the
+    // stderr line, the full-window invalidate).
+    void apply_recipe_in_place(std::vector<GuiWarpMarker> warp,
+                               std::vector<GuiPhaseResetMarker> phase_resets,
+                               const EngineSettings& engine);
+
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
     // agnostic (source OR target authoring view). Reads and validates the wav's
@@ -2398,8 +2443,9 @@ private:
     // false leaving authoring untouched on any missing/malformed input — each
     // such genuine-failure arm naming its cause and path on stderr since
     // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
-    // behind its red flash; otherwise applies the recipe wholesale, wipes
-    // renders/, and returns true.
+    // behind its red flash; otherwise applies the recipe through
+    // apply_recipe_in_place above — the marker pair and the engine block, the
+    // file's view keys and tab bands ignored — wipes renders/, and returns true.
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
@@ -2422,9 +2468,11 @@ private:
     // new authoring baseline. Validate-before-mutate like both siblings: a
     // non-numeric, zero, out-of-range or unreadable member is one stderr line
     // and a false return with nothing touched. It restores exactly what an undo
-    // entry carries — the two marker columns and the engine block — and nothing
-    // a sidecar set would add (no tab bands, no prefs, no trim), applies it ON
-    // TOP as ONE new undo entry rather than as a rollback, writes no disk and
+    // entry carries — the two marker columns and the engine block — which since
+    // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well
+    // (apply_recipe_in_place above), so the three now differ only in where the
+    // three pieces come from. It applies them ON TOP as ONE new undo entry
+    // rather than as a rollback, writes no disk and
     // closes the mode as part of the act. Full behaviour paragraph at the
     // definition.
     bool load_history_local_entry_in_place(const std::string& text);

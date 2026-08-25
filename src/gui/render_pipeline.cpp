@@ -345,24 +345,29 @@ RenderOutcome do_render(const RenderRequest& req,
             note_created(tm_path, existed);
 
             // `.settings` sidecar: the SAME standard whole-file schema a
-            // source carries, so the `'` load-in-place (load_render_entry_in_place)
-            // applies it with plain load semantics.
+            // source carries, so the entry is a complete state on disk — a file
+            // the strict reader, the CLI and a plain source load all take whole.
             {
                 // The dispatch tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
-                // This file is written ONCE here and never touched again: the
-                // `'` load-in-place (load_render_entry_in_place) reads the whole
-                // frozen
-                // file back as the session, so these keys land in the committed
-                // target view THROUGH the file — the load-in-place applies the file,
-                // never a separate live latch. Those keys are captured on
-                // the LIVE map's axis; a sweep cell rewrites its markers per
-                // cell, giving the cell a different (possibly shorter) target
-                // axis, so the values are CLAMPED into this entry's own map
-                // domain before writing — the loaded-in-place view then
-                // lands sensibly on the entry's own axis rather than off its
-                // end. Viewport start sits in [0, total-1] (a start on the
+                // This file is written ONCE here and never touched again.
+                //
+                // THE VIEW KEYS ARE WRITTEN FOR THE FILE, NOT FOR THE `'` LOAD.
+                // Since 2026-08-24 the load-in-place applies only the recipe —
+                // the marker pair and the engine block — and IGNORES
+                // active_audio_view, both tab bands and every session pref this
+                // writer emits (the rule at
+                // GuiInputHandler::apply_recipe_in_place, input_handler.h). They
+                // are still written, and written truthfully, because the schema
+                // is strict and requires EVERY key, and because the file is a
+                // whole state that the CLI and a plain source load do read whole.
+                // So the values below stay the dispatch-moment ones and stay
+                // CLAMPED into this entry's own map domain before writing — a
+                // sweep cell rewrites its markers per cell, giving the cell a
+                // different (possibly shorter) target axis, and a file that
+                // names a position past its own end is wrong on its own terms
+                // whoever reads it. Viewport start sits in [0, total-1] (a start on the
                 // total's frame shows nothing) and the playhead in [0, total]
                 // (it may rest on the end exactly). target_total is this
                 // entry's map domain total.

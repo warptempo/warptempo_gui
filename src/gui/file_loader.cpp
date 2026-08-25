@@ -25,71 +25,47 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.engine_settings = sf.engine;
     app.follow_mode         = sf.follow;
     // Event-synchronized hit geometry: this routine (re)establishes the live
-    // view from settings — the source-load and `'` load-in-place paths both
-    // call it —
-    // so drop any displayed hit map from the previous file/session, AND the
-    // staged value (else a stale staged map would promote wrong geometry at the
-    // next paint). It reflects the OTHER file's last target item pixels;
-    // clearing yields the cold live-map fallback until the new view's item
-    // caches rebuild, stage, and a frame promotes (the recorded cold-state
-    // seam). Ruling at the selector.
-    app.displayed_target_warp_frame_map.clear();
-    app.staged_displayed_target_warp_frame_map.clear();
-    // The displayed-viewport mirror (sibling of the map) resets to cold too:
-    // area_w = 0 yields the live-viewport fallback until the new view's item
-    // caches rebuild, stage, and a frame promotes.
-    app.displayed_vp_start = 0;
-    app.displayed_vp_end   = 0;
-    app.displayed_area_w   = 0;
-    app.staged_displayed_vp_start = 0;
-    app.staged_displayed_vp_end   = 0;
-    app.staged_displayed_area_w   = 0;
-    app.staged_displayed_valid = false;
-    // THE LOAD PATH HIDES THE TRIM REGION OVERLAY. This routine re-establishes
-    // the live view for BOTH the source load and the `'` load-in-place, so the
-    // reset lives here structurally rather than per caller. It discards
-    // nothing — the overlay is DERIVED from the trim (RegionState, app_state.h)
-    // and the load brings its own — but a piece arriving with a stranger's
-    // window already lit on the waveform is the wrong greeting, and hiding is
-    // what every other turn-to-other-work route does. (The defect this
-    // placement was written for is retired with the span it protected: a
-    // source-view region used to survive into the forced target view, where a
-    // later trim-region toggle overwrote the freshly loaded-in-place recipe
-    // trim with the stale span.)
+    // view from settings, so the displayed hit map and its viewport mirror go
+    // COLD through their one owner — the map on screen reflects the OTHER
+    // file's last target item pixels. Membership and the recorded cold-state
+    // seam are at reset_displayed_target_basis (app_state.h); the ruling is at
+    // the selector.
+    reset_displayed_target_basis(app);
+    // THE LOAD PATH HIDES THE TRIM REGION OVERLAY. It discards nothing — the
+    // overlay is DERIVED from the trim (RegionState, app_state.h) and the load
+    // brings its own — but a piece arriving with a stranger's window already lit
+    // on the waveform is the wrong greeting, and hiding is what every other
+    // turn-to-other-work route does. THE SOURCE LOAD IS ITS WHOLE POPULATION
+    // since 2026-08-24: the `'` load-in-place stopped sharing this routine when
+    // it stopped writing anything a source load writes beyond the engine block,
+    // and it hides nothing — it brings no trim of its own to greet the user
+    // with, the resting window being the one that was already on screen.
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
     // same line of argument the region hide above makes (codex round 21): the
     // three assignments below REPLACE the active view state wholesale, and this
-    // routine is where that write lives — so the clear lives here too and both
-    // load-in-places inherit it instead of remembering it. THE SHARP CASE IS THE
-    // LOAD-IN-PLACE: it runs from a modal load editor, and a two-finger frame
-    // under a modal returns at the wheel refusal WITHOUT clearing, so a pinch
-    // seated in SOURCE view survives the whole editor session and would resume
-    // reading its source frame as a target one after a file selecting TARGET
-    // loaded. That makes the S/T assignment the CORRECTNESS member; the W/P and
-    // A/B assignments beside it are the fresh-grip half. THE VALUES-ONLY
-    // CONTRACT STILL HOLDS otherwise: this is a lifecycle END, not a side effect
-    // a caller could time differently, which is why the Viewport parameter buys
-    // nothing else here. Membership and derivation at clear_touch_zoom_seat's
-    // declaration (input_handler.h). A no-op at the source load, which runs once
-    // from the startup tick before any input exists — and which is also what
-    // covers load_file's own two direct writes to these fields (the pre-parse
-    // 'W' reset and the forced 'S' of a failed target-view restore).
+    // routine is where that write lives — so the clear lives here rather than at
+    // the caller. THE VALUES-ONLY CONTRACT STILL HOLDS otherwise: this is a
+    // lifecycle END, not a side effect a caller could time differently, which is
+    // why the Viewport parameter buys nothing else here. Membership and
+    // derivation at clear_touch_zoom_seat's declaration (input_handler.h). A
+    // no-op in practice at the one caller left: the source load runs once from
+    // the startup tick before any input exists — and it is also what covers
+    // load_file's own two direct writes to these fields (the pre-parse 'W' reset
+    // and the forced 'S' of a failed target-view restore).
     clear_touch_zoom_seat(app, viewport);
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
     app.playback_speed      = sf.playback_speed;
     // GUI rendering scale percent, applied verbatim; this routine assigns
-    // VALUES ONLY and the side-effect push lives at each caller's tail. Since
+    // VALUES ONLY and the side-effect push lives at the caller's tail. Since
     // row 7 it is the product's one scale axis — every painted dimension rides
     // gui_scale_factor() (architect approval 2026-08-01 for the font_size
     // removal this paragraph used to name).
     app.gui_scale           = sf.gui_scale;
     // GUI launch preference for the `l` render-listen command, applied
-    // verbatim: a blank value is the deliberate no-player opt-out. The
-    // load-in-place shares this routine, so a loaded-in-place render entry's
-    // player is 1:1 with its file.
+    // verbatim: a blank value is the deliberate no-player opt-out.
     app.audio_player        = sf.audio_player;
     // The projects home for the GitHub recheck, applied verbatim like the
     // launcher above: the key is required, so a successful load always carries
@@ -303,11 +279,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // at AppState::add_to_selection).
     app.add_to_selection = false;
     // (The displayed hit map AND the trim region overlay's visibility are reset in
-    // apply_settings_engine_and_prefs, the shared load / load-in-place
-    // view-establishment routine, not here. The live-pointer-drag scratch
-    // above stays load-only: the load-in-place runs from the modal load
-    // editor, where no pointer gesture can be
-    // live, so it needs no drag clears — only the view-domain region hide.)
+    // apply_settings_engine_and_prefs, this load's own view-establishment
+    // routine, not here.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). SEED IT TO THE FULL WINDOW explicitly before
     // the initial-playhead read: the window is always set (2026-07-30), so
@@ -458,9 +431,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // playback_speed, gui_scale, audio_player, projects_repo),
         // VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_scale_percent,
-        // on_resize) stay below where they always ran. The render-entry
-        // load-in-place
-        // shares this exact routine so its in-memory result is 1:1 with a load.
+        // on_resize) stay below where they always ran.
         apply_settings_engine_and_prefs(app, viewport, sf);
         // Per-tab trim: both bounds are always meaningful in the schema (the
         // `-1` unset spelling died 2026-07-30 and is now a load-fatal malformed

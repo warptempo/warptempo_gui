@@ -5,7 +5,6 @@
 
 #include "input_handler.h"
 
-#include "file_loader.h"     // apply_settings_engine_and_prefs (shared with load)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
 #include "history_diff.h"
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
@@ -4007,6 +4006,101 @@ static std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }
 
+// -- THE RECIPE APPLY, the two sidecar load-in-places' one body -------
+//
+// The RULE this body exists to state once — a load in place writes exactly what
+// its one undo entry restores, and everything else stays live — is at the
+// declaration (input_handler.h), with the whole-file apply it superseded on
+// 2026-08-24. This comment carries only the sequence's own reasons.
+void GuiInputHandler::apply_recipe_in_place(
+        std::vector<GuiWarpMarker> warp,
+        std::vector<GuiPhaseResetMarker> phase_resets,
+        const EngineSettings& engine) {
+    std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
+    std::vector<GuiPhaseResetMarker> phase_reset_pre =
+        app.phaseresetmarkers.markers();
+
+    app.warpmarkers.markers_mut()       = std::move(warp);
+    app.phaseresetmarkers.markers_mut() = std::move(phase_resets);
+    // Wholesale authoring reset: the ONE selection goes, and there is nothing
+    // else to reset — no per-tab per-mode slot holds a copy (the parked
+    // selections died 2026-07-29, so a wholesale store replace no longer has to
+    // hunt down stale index sets in either ViewState).
+    selection.clear_selection();
+
+    // ONE cross-file undo entry: the marker pair plus the OUTGOING engine
+    // settings, which push_undo_both captures from `app` — so it must run
+    // BEFORE the incoming block is applied below. It files under the LIVE tab
+    // and the LIVE W/P column, which are the only ones this act touches now
+    // that it performs no tab or column switch at all.
+    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
+                        app.active_markers_view);
+    undo.recompute_dirty();
+
+    // Wholesale authoring reset: clear every marker's session-only iteration
+    // state and the bpm state, and turn off both sweep modes' visibility. This
+    // is scratch ABOUT the markers that were just replaced, so it goes with
+    // them; it is not view state and not a preference.
+    {
+        auto& mv = app.warpmarkers.markers_mut();
+        for (auto& m : mv) {
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
+        }
+    }
+    flag_editor.wipe_bpm_state();
+    app.iteration_mode_enabled = false;
+    app.bpm_mode_enabled       = false;
+
+    // The engine block, VALUES ONLY — the third and last piece the undo entry
+    // carries. The map rebuild and the target preview are the tail's, below,
+    // exactly as they are an undo restore's.
+    app.engine_settings = engine;
+
+    // The store and the engine block that built the displayed target basis are
+    // both gone, so the basis goes cold through its one owner
+    // (reset_displayed_target_basis, app_state.h, which carries the membership
+    // and names its two callers).
+    reset_displayed_target_basis(app);
+
+    // The LIVE camera stays exactly where the user left it, but the DOMAIN it
+    // sits in may have moved: a target-view session's total is derived from the
+    // map the markers and the engine block just replaced. So the playhead takes
+    // the shared clamp (clamp_playhead_to_live_domain) and the viewport takes
+    // its own chokepoint. BEFORE the auto-select below, so the coincidence scan
+    // reads an in-domain cursor; kick_waveform_sync's own
+    // clamp_display_state_to_live_domain then re-asks and finds nothing to do.
+    // THE PARKED BAND IS NOT CLAMPED HERE and must not be: it is not a live
+    // field, and the Ctrl+Tab restore clamps it on the way in (active_views.cpp)
+    // — the inventory at clamp_playhead_to_live_domain's declaration is what
+    // this follows.
+    app.playhead_cursor_sample =
+        clamp_playhead_to_live_domain(app.playhead_cursor_sample, app, audio);
+    clamp_viewport_start(app, audio);
+
+    // COINCIDENCE AUTO-SELECT, the load-in-place chokepoint (the rule, the
+    // formula and the authoritative call-site inventory live at
+    // auto_select_marker_at_playhead, input_pointer.cpp / input_handler.h). The
+    // act replaced the store under a resting playhead, so the entry re-acquires
+    // the selection the wholesale clear above dropped — the never-park rule's
+    // entry half. PLACED HERE, at the tail: the stores, the engine block and the
+    // domain clamps have all run, so the scan reads the final playhead against
+    // the column the session is actually standing in. Nothing downstream writes
+    // the selection, so the single-select it may make is what rests. Its narrow
+    // damage is superseded by the kick below and by the caller's full-window
+    // invalidate.
+    auto_select_marker_at_playhead(app, audio, selection, viewport);
+    viewport.kick_waveform_sync();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_status_chain_area();
+    viewport.invalidate_clock_area();
+
+    // The trigger owns the rebind for a session standing in TARGET view: it
+    // marks the buffer stale and dispatches the loaded-in-place state's target
+    // preview, which rebinds playback on completion.
+    target_render.trigger();
+}
+
 // -- Standalone render-entry load-in-place (the `'` load editor) ------
 //
 // Load render entry `e`'s frozen sidecar recipe in place as the new authoring
@@ -4096,17 +4190,24 @@ bool GuiInputHandler::load_render_entry_in_place(
         src_phase_resets = t.markers();
     }
 
-    // Every input is in hand and valid. Apply the recipe wholesale. The commit
-    // tab is the tab the entry was dispatched from; its view-state band carries
-    // the recipe trim that shaped this render.
+    // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
+    // IS THE RECIPE AND NOTHING ELSE — the marker pair and the engine block —
+    // through the shared owner apply_recipe_in_place, whose declaration
+    // (input_handler.h) states the rule. The file's view keys, its two tab bands
+    // and its session prefs are READ PAST: the entry sidecar carries them
+    // because it is a whole standard-schema `.settings` a CLI or a plain source
+    // load could read, not because this act wants them.
 
     // THE `h` HISTORY MODE ENDS HERE, on the first line past the last refusal
     // and before the first store write. It is the one route in the product that
     // replaces the authored state the mode's frozen now side was measured
     // against, so leaving the mode standing would leave every flag in the lane
-    // describing a session that no longer exists. Placed at the MUTATOR rather
-    // than at the `'` key because this function is what performs the replacement,
-    // and the close belongs with the act rather than with one of its callers.
+    // describing a session that no longer exists. Placed in this act's own body
+    // rather than at the `'` key because this function is what performs the
+    // replacement, and the close belongs with the act rather than with one of its
+    // callers. It stays here rather than moving into the shared recipe apply
+    // below: the mode's other load closes it too, but only after reading the
+    // session the close clears (see there), so the close is each act's own line.
     // IN PRACTICE IT IS AN IDEMPOTENT NO-OP: the mode ADMITS bare `'`, but in the
     // view that editor's Enter routes to one of the mode's own two loads, so no
     // renders-side load ever runs with a visit standing (the closer inventory at
@@ -4114,131 +4215,13 @@ bool GuiInputHandler::load_render_entry_in_place(
     // close is at the mutator at all.
     close_history_mode();
 
-    const char load_tab = settings->active_tab_view;
-
-    std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
-    std::vector<GuiPhaseResetMarker> phase_reset_pre =
-        app.phaseresetmarkers.markers();
-
-    app.warpmarkers.markers_mut()       = std::move(src_warp);
-    app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-    // Wholesale authoring reset: the ONE selection goes, and there is nothing
-    // else to reset — no per-tab per-mode slot holds a copy (the parked
-    // selections died 2026-07-29, so a wholesale store replace no longer has to
-    // hunt down stale index sets in either ViewState).
-    selection.clear_selection();
-
-    // One cross-file undo entry: the marker pair plus the outgoing engine
-    // settings (captured inside push_undo_both). The inherited prefs and view
-    // state ride OUTSIDE undo — the same convention that keeps view state and
-    // trim out of history.
-    const char load_marker_mode = app.active_markers_view;
-    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        load_marker_mode, load_tab);
-    undo.recompute_dirty();
+    apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
+                          settings->engine);
 
     const std::filesystem::path src(app.source_audio_path);
     std::filesystem::path src_parent = src.parent_path();
     if (src_parent.empty()) src_parent = std::filesystem::path(".");
     const std::filesystem::path renders_root = src_parent / "renders";
-
-    // Wholesale authoring reset: clear every marker's session-only iteration
-    // state and the bpm state, and turn off both sweep modes' visibility.
-    {
-        auto& mv = app.warpmarkers.markers_mut();
-        for (auto& m : mv) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
-        }
-    }
-    flag_editor.wipe_bpm_state();
-    app.iteration_mode_enabled = false;
-    app.bpm_mode_enabled       = false;
-
-    // Both tab bands from the file (view_state_from_settings_tab: viewport /
-    // zoom / playhead, read_only, and the trim pair — the whole of a band, since
-    // a ViewState parks nothing index-shaped). This clean
-    // whole-band replace is equivalent to a source load's per-key apply plus
-    // trim plus read_only for an all-keys render-entry sidecar.
-    app.tab_a = view_state_from_settings_tab(settings->tab_a);
-    app.tab_b = view_state_from_settings_tab(settings->tab_b);
-    // Engine block plus the scalar session prefs, VALUES ONLY, through the one
-    // routine a source load also calls — so the load-in-place applies
-    // engine_settings,
-    // follow, active_audio_view, active_markers_view, active_tab_view,
-    // playback_speed, gui_scale, audio_player and projects_repo 1:1 with
-    // load.
-    // There is NO
-    // W/P carve-out: active_markers_view is now applied from the file like
-    // every other key. The one selection was cleared above, so landing on the
-    // file's marker mode carries an empty selection, exactly as a fresh load's
-    // empty-selection state.
-    apply_settings_engine_and_prefs(app, viewport, *settings);
-
-    // Clamp both loaded-in-place tab bands' playheads into the live domain (the
-    // shared chokepoint, clamp_playhead_to_live_domain), mirroring the source
-    // load's tab-snapshot clamp at the same point in the sequence: the
-    // loaded-in-place S/T domain is computable here (active_audio_view and the
-    // markers/engine settings the target total derives from are all applied
-    // above; one global domain, one total clamps both). Entry sidecars are
-    // trusted (written once at dispatch from an in-domain live state), so
-    // this is a no-op there — it keeps the load-in-place 1:1 with a source load of
-    // the same sidecars, which clamps at this point too.
-    app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        app.tab_a.playhead_cursor_sample, app, audio);
-    app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        app.tab_b.playhead_cursor_sample, app, audio);
-
-    // Activate the file's tab band. active_tab_view was just set by the shared
-    // routine (== load_tab) and both bands are already the file's, so pull
-    // the live fields straight from the active band with no double-apply (NOT
-    // switch_active_tab_view_to).
-    {
-        const ViewState& band = (app.active_tab_view == 'B')
-                                ? app.tab_b : app.tab_a;
-        app.viewport_start_sample  = band.viewport_start_sample;
-        app.zoom_level             = band.zoom_level;
-        // Already clamped into the live domain by the band clamp above, so
-        // the live copy is in [0, total - 1] by construction.
-        app.playhead_cursor_sample = band.playhead_cursor_sample;
-        app.trim                = band.trim;
-    }
-
-    // Caller-side side effects the shared routine deliberately omits, run after
-    // the live band is in place — the same order and the same point a source
-    // load runs them: push the speed to the engine and the gui scale to the
-    // renderer (the one scale axis the lane table reads), then the
-    // geometry-and-cache rebuild on_resize performs.
-    playback.set_speed(app.playback_speed);
-    set_gui_scale_percent(app.gui_scale);
-    paint_handler.on_resize(app.width, app.height);
-
-    clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT, the load-in-place chokepoint (the rule, the
-    // formula and the
-    // authoritative call-site inventory live at auto_select_marker_at_playhead,
-    // input_pointer.cpp / input_handler.h). The load-in-place
-    // is specified 1:1 with a source load and a load runs this, so it runs here too
-    // (architect 2026-07-30, closing the one entry route that honored a stored
-    // playhead and withheld the recovery). PLACED HERE, at the tail: the wholesale
-    // store replacement, the engine/prefs apply that sets active_audio_view and
-    // active_markers_view, both band clamps and the live-band pull have all run, so
-    // the scan reads the column the session actually lands in and the playhead's
-    // final value — the load chokepoint's placement mirrored. Nothing downstream
-    // writes the selection (the wholesale clear is far above), so the single-select
-    // it may make is what rests. Its narrow damage is superseded by the kick below
-    // and by the tail's full-window invalidate.
-    auto_select_marker_at_playhead(app, audio, selection, viewport);
-    viewport.kick_waveform_sync();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
-    viewport.invalidate_clock_area();
-
-    // The tail's trigger owns the rebind for a 'T' landing: it marks the
-    // buffer stale and dispatches the loaded-in-place state's target preview,
-    // which rebinds
-    // playback on completion.
-    target_render.trigger();
 
     // Wipe renders/ AFTER the successful load-in-place. The loaded render survives
     // through the render cache, not as a folder artifact.
@@ -4352,16 +4335,16 @@ bool GuiInputHandler::load_render_entry_in_place(
 // any other authoring
 // edit.
 //
-// WHAT IS APPLIED is load_render_entry_in_place's own sequence, whole: the wholesale
-// store replace with its selection clear, ONE cross-file undo entry with dirty
-// set (auditioning the loaded-in-place state and Ctrl+Z-ing back out is the
-// point of the
-// feature), the iteration/bpm session reset, both tab bands, the values-only
-// engine-and-prefs apply a source load shares, the two band clamps, the live
-// band pull, the three caller-side side effects, the coincidence auto-select and
-// the target preview trigger. Note that the prefs apply includes
-// `projects_repo`, 1:1 with a load: a commit whose settings named a different
-// projects home installs that answer too, and the next `h` reads it.
+// WHAT IS APPLIED is THE RECIPE — the commit's marker pair and its engine block,
+// through the shared owner apply_recipe_in_place, which is also
+// load_render_entry_in_place's body and whose declaration (input_handler.h)
+// states the rule: a load in place writes exactly what its one undo entry
+// restores. Everything else the commit's `.settings` carries is READ PAST, the
+// three-sidecar set being a whole standard-schema state rather than a request:
+// its tab bands (the checkpoint's trim included), its S/T, W/P and A/B keys, its
+// camera, and its session prefs — `projects_repo` among them, so a commit whose
+// settings named a different projects home no longer installs that answer, and
+// the next `h` reads the live one.
 //
 // AND THE MODE CLOSES, at the first line past the last refusal — the placement
 // load_render_entry_in_place states and for its reason: this is the other route that
@@ -4418,91 +4401,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // function read its base name from, which is why that read is at the top.
     close_history_mode();
 
-    const char load_tab = settings.active_tab_view;
-
-    std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
-    std::vector<GuiPhaseResetMarker> phase_reset_pre =
-        app.phaseresetmarkers.markers();
-
-    app.warpmarkers.markers_mut()       = std::move(src_warp);
-    app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-    // Wholesale authoring reset: the ONE selection goes, and there is nothing
-    // else to reset — no per-tab per-mode slot holds a copy.
-    selection.clear_selection();
-
-    // One cross-file undo entry: the marker pair plus the outgoing engine
-    // settings (captured inside push_undo_both). The inherited prefs and view
-    // state ride OUTSIDE undo — the same convention that keeps view state and
-    // trim out of history.
-    const char load_marker_mode = app.active_markers_view;
-    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        load_marker_mode, load_tab);
-    undo.recompute_dirty();
-
-    // Wholesale authoring reset: clear every marker's session-only iteration
-    // state and the bpm state, and turn off both sweep modes' visibility.
-    {
-        auto& mv = app.warpmarkers.markers_mut();
-        for (auto& m : mv) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
-        }
-    }
-    flag_editor.wipe_bpm_state();
-    app.iteration_mode_enabled = false;
-    app.bpm_mode_enabled       = false;
-
-    // Both tab bands from the file, then the engine block and the scalar session
-    // prefs VALUES ONLY through the one routine a source load also calls — the
-    // render-entry load-in-place's two steps, unchanged, so a commit loads in
-    // place 1:1 with a load of the same three files.
-    app.tab_a = view_state_from_settings_tab(settings.tab_a);
-    app.tab_b = view_state_from_settings_tab(settings.tab_b);
-    apply_settings_engine_and_prefs(app, viewport, settings);
-
-    // Clamp both loaded-in-place bands' playheads into the live domain (the shared
-    // chokepoint), mirroring the source load's tab-snapshot clamp at the same
-    // point in the sequence. Unlike an entry sidecar — written once at dispatch
-    // from an in-domain live state — a COMMITTED band is only as in-domain as
-    // the checkpoint that wrote it, so this clamp has a live producer here: a
-    // commit made against a different cut of the source lands its stored
-    // playhead inside this source's domain instead of past its end.
-    app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        app.tab_a.playhead_cursor_sample, app, audio);
-    app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        app.tab_b.playhead_cursor_sample, app, audio);
-
-    // Activate the file's tab band with no double-apply (NOT
-    // switch_active_tab_view_to): active_tab_view was just set by the shared
-    // routine and both bands are already the file's.
-    {
-        const ViewState& band = (app.active_tab_view == 'B')
-                                ? app.tab_b : app.tab_a;
-        app.viewport_start_sample  = band.viewport_start_sample;
-        app.zoom_level             = band.zoom_level;
-        app.playhead_cursor_sample = band.playhead_cursor_sample;
-        app.trim                   = band.trim;
-    }
-
-    // Caller-side side effects the shared routine deliberately omits, in the
-    // source load's own order and at its own point: the speed to the engine, the
-    // gui scale to the renderer, then the geometry-and-cache rebuild.
-    playback.set_speed(app.playback_speed);
-    set_gui_scale_percent(app.gui_scale);
-    paint_handler.on_resize(app.width, app.height);
-
-    clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT at the load-in-place chokepoint (rule and inventory at
-    // auto_select_marker_at_playhead), at the tail for the reason the render-entry
-    // load-in-place states: everything the scan reads has landed.
-    auto_select_marker_at_playhead(app, audio, selection, viewport);
-    viewport.kick_waveform_sync();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
-    viewport.invalidate_clock_area();
-
-    // The tail's trigger owns the rebind for a 'T' landing.
-    target_render.trigger();
+    apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
+                          settings.engine);
 
     // NO renders/ WIPE. That step is the render-entry load-in-place's cleanup
     // of the folder it
@@ -4541,16 +4441,19 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // and nothing to resolve: N is the walk's own member count, and the number is an
 // index into it.
 //
-// WHAT IS APPLIED, AND WHAT DELIBERATELY IS NOT: an undo entry carries the two
-// MARKER COLUMNS and the ENGINE BLOCK and nothing else (the carry-everywhere
-// shape at UndoEntry), so that is exactly what this restores — the same three
-// pieces the walk's delta vocabulary is built from. NO tab bands, NO
-// playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs: the
-// sibling loads those because a SIDECAR SET carries them, and a timeline state
-// simply does not. The engine block is applied the way a restore applies one
-// (restore_history_entry) — the values into app.engine_settings, with the
-// synchronous plate rebuild and the target-preview trigger in the tail covering
-// the map it changes.
+// WHAT IS APPLIED: an undo entry carries the two MARKER COLUMNS and the ENGINE
+// BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
+// exactly what this restores — the same three pieces the walk's delta vocabulary
+// is built from, and, since 2026-08-24, exactly what BOTH SIBLINGS write too: a
+// load in place writes what its undo entry restores, so the family's three acts
+// differ only in where the three pieces come from (the rule at
+// GuiInputHandler::apply_recipe_in_place, input_handler.h). NO tab bands, NO
+// playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs — here
+// because a timeline state does not carry them at all, there because the act
+// reads past the ones a sidecar set does. The engine block is applied the way a
+// restore applies one (restore_history_entry) — the values into
+// app.engine_settings, with the synchronous plate rebuild and the target-preview
+// trigger in the tail covering the map it changes.
 //
 // THE STATE IS TAKEN AS TYPED SNAPSHOTS, never through the member's three TEXTS:
 // those are the DIFF's medium, and re-parsing them would put the strict loaders
@@ -4639,10 +4542,10 @@ bool GuiInputHandler::load_history_local_entry_in_place(
 
     // ONE cross-file undo entry: the marker pair plus the OUTGOING engine
     // settings, which push_undo_both captures from `app` — so this must run
-    // BEFORE the incoming block is applied below. NO TAB OVERRIDE: the load
-    // lands on the ACTIVE tab, a timeline state carrying no tab band of its own.
+    // BEFORE the incoming block is applied below. It files under the ACTIVE
+    // tab, a timeline state carrying no tab band of its own.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        app.active_markers_view, 0);
+                        app.active_markers_view);
     undo.recompute_dirty();
 
     // Wholesale authoring reset: clear every marker's session-only iteration

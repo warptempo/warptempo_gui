@@ -113,13 +113,13 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode, char tab_override) {
+                          char op_mode) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
-    e.tab                = tab_override ? tab_override : app.active_tab_view;
+    e.tab                = app.active_tab_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }

@@ -437,8 +437,8 @@ struct FlagCache {
 // becoming a constant this cache could drop — and the WIDTH was always the one
 // that moves on a resize. The AUDIO IS DELIBERATELY NOT A KEY FIELD: the source is loaded
 // ONCE at launch and is process-immortal (file_loader — there is no
-// in-session source load; `'` load-in-place replaces sidecars and marker
-// stores, never the sample buffer), so the bars' input cannot change under a
+// in-session source load; `'` load-in-place replaces the marker stores and
+// the engine block, never the sample buffer), so the bars' input cannot change under a
 // live process and a per-frame tick repaint never re-reads the pyramid.
 // Rebuilds are synchronous at the paint site (O(lane width) with the
 // pyramid's unconditional <=5-pairs-per-column bound — the whole-song span is

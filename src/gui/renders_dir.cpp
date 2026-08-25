@@ -88,8 +88,11 @@ GuiRendersDir::enumerate_render_entries() {
 // The entry's <basename>.settings path, beside its wav. The .settings snapshot
 // is frozen at dispatch (the dispatch writer writes it once, seeding the
 // queue/dispatch-moment tab/zoom/viewport/playhead/W-P) and never rewritten;
-// the `'` load-in-place reads it to inherit that queue-moment recipe
-// wholesale.
+// the `'` load-in-place reads it for the ENGINE BLOCK, which with the marker
+// pair is the whole of what that act applies (the rule at
+// GuiInputHandler::apply_recipe_in_place, input_handler.h) — the view keys
+// beside it are there because the schema is whole, not because the load wants
+// them.
 std::filesystem::path GuiRendersDir::settings_path(
         const AppState::RenderEntry& e) {
     return e.batch_folder / (e.basename + ".settings");

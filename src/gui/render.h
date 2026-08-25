@@ -1101,8 +1101,9 @@ inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
 // [50, 200] (100 = the 1920x1080 design baseline, 200 = the 4K case, 50 = the
 // half-size floor since 2026-08-10); the current value lives as file-scope
-// state in render.cpp, pushed by three application points (file load, the
-// settings editor's `gui_scale=` commit, the `'` load-in-place).
+// state in render.cpp, pushed by TWO application points (file load and the
+// settings editor's `gui_scale=` commit; the `'` load-in-place left the list
+// 2026-08-24, the act no longer applying a file's session prefs at all).
 //
 // EVERY PAINTED DIMENSION IN THE TREE RIDES IT: crop-measured 100% values are
 // the authored constants, and every conversion rounds with std::nearbyint.

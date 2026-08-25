@@ -55,9 +55,13 @@ struct GuiFileLoader {
 // playback_speed, gui_scale, audio_player, projects_repo) into `app`. VALUES
 // ONLY — no side
 // effects: the caller runs set_speed / set_gui_scale_percent / on_resize itself,
-// so both callers (load_file and the render-entry load-in-place) apply these
-// fields
-// identically while owning their own side-effect timing. SettingsFile is
+// owning its own side-effect timing. THE SOURCE LOAD IS THE ONLY CALLER since
+// 2026-08-24, when a load in place narrowed to what its undo entry restores —
+// the marker pair and the engine block — and so stopped applying a file's view
+// keys, tab bands and session prefs at all (the rule is stated at
+// GuiInputHandler::apply_recipe_in_place, input_handler.h). The routine stays a
+// named routine rather than folding into load_file: it is the whole-file
+// values-only apply, and that is one act worth reading as one. SettingsFile is
 // visible here via app_state.h -> settings_file.h.
 // THE VIEWPORT IS FOR ONE THING AND NOTHING ELSE (codex round 21): this routine
 // is the product's ONLY wholesale write of the three active-view fields, so it

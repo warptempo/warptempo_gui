@@ -29,14 +29,6 @@ bool atomic_write_string_to_path(const std::string& path,
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 
-// Convert one parsed `.settings` tab band into a live ViewState: the
-// viewport / zoom / playhead scratch, the read-only flag, and the trim pair.
-// The marker selection fields take their ViewState defaults (a parsed band
-// carries no selection; trim is outside the selection system). One home for
-// the band-to-ViewState field mapping; the sole caller is the `'`
-// load-in-place's (load_render_entry_in_place) full-inheritance application.
-ViewState view_state_from_settings_tab(const SettingsFileTab& t);
-
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is
 // byte-identical to a save with a default-constructed EngineSettings

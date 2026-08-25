@@ -260,27 +260,6 @@ bool create_if_missing(const std::filesystem::path& p,
     return true;
 }
 
-ViewState view_state_from_settings_tab(const SettingsFileTab& t) {
-    ViewState v;
-    v.viewport_start_sample  = t.viewport_start;
-    v.zoom_level             = t.zoom;
-    v.playhead_cursor_sample = t.playhead;
-    v.read_only              = t.read_only;
-    // Both bounds are always meaningful in the schema and in the store, so the
-    // pair copies straight across (the unset mapping died 2026-07-30).
-    v.trim.begin_frame = t.trim.begin_frame;
-    v.trim.end_frame   = t.trim.end_frame;
-    // THE ONE FIELD WITH NO ASSIGNMENT ABOVE IS DELIBERATE: zoom_recall_level,
-    // bare `0`'s per-session return level, has no `.settings` key to read and
-    // rests at the fresh struct's EMPTY here — so a load in place, whose whole
-    // job is this builder's return value, drops the stamp and leaves the next
-    // `0` at the ceiling meaning plain `c`. That is the ruling (architect
-    // 2026-08-18: a load in place is a discontinuity, and the stamped level
-    // described the piece being replaced), and it needs no reset of its own.
-    // The field's own note (app_state.h) is authoritative.
-    return v;
-}
-
 std::string format_default_settings_template(const std::string& stem,
                                              int64_t total_frames) {
     EngineSettings defaults{};
