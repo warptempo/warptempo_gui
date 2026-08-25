@@ -4446,14 +4446,14 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // exactly what this restores — the same three pieces the walk's delta vocabulary
 // is built from, and, since 2026-08-24, exactly what BOTH SIBLINGS write too: a
 // load in place writes what its undo entry restores, so the family's three acts
-// differ only in where the three pieces come from (the rule at
-// GuiInputHandler::apply_recipe_in_place, input_handler.h). NO tab bands, NO
-// playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs — here
-// because a timeline state does not carry them at all, there because the act
-// reads past the ones a sidecar set does. The engine block is applied the way a
-// restore applies one (restore_history_entry) — the values into
-// app.engine_settings, with the synchronous plate rebuild and the target-preview
-// trigger in the tail covering the map it changes.
+// differ only in where the three pieces come from. They differ in NOTHING ELSE
+// since 2026-08-24, this body having joined the two on the one apply owner
+// (GuiInputHandler::apply_recipe_in_place, input_handler.h, which carries the
+// rule and the sequence): what is spelled here is the validation, the mode
+// close and the stderr line, and the apply itself is read there. NO tab bands,
+// NO playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs —
+// here because a timeline state does not carry them at all, there because the
+// act reads past the ones a sidecar set does.
 //
 // THE STATE IS TAKEN AS TYPED SNAPSHOTS, never through the member's three TEXTS:
 // those are the DIFF's medium, and re-parsing them would put the strict loaders
@@ -4530,60 +4530,20 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     // walk had captured.
     close_history_mode();
 
-    std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
-    std::vector<GuiPhaseResetMarker> phase_reset_pre =
-        app.phaseresetmarkers.markers();
-
-    app.warpmarkers.markers_mut()       = std::move(src_warp);
-    app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-    // Wholesale authoring reset: the ONE selection goes, and there is nothing
-    // else to reset — no per-tab per-mode slot holds a copy.
-    selection.clear_selection();
-
-    // ONE cross-file undo entry: the marker pair plus the OUTGOING engine
-    // settings, which push_undo_both captures from `app` — so this must run
-    // BEFORE the incoming block is applied below. It files under the ACTIVE
-    // tab, a timeline state carrying no tab band of its own.
-    undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        app.active_markers_view);
-    undo.recompute_dirty();
-
-    // Wholesale authoring reset: clear every marker's session-only iteration
-    // state and the bpm state, and turn off both sweep modes' visibility —
-    // exactly as loading a commit would, the two acts replacing the authored
-    // state the same way.
-    {
-        auto& mv = app.warpmarkers.markers_mut();
-        for (auto& m : mv) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
-        }
-    }
-    flag_editor.wipe_bpm_state();
-    app.iteration_mode_enabled = false;
-    app.bpm_mode_enabled       = false;
-
-    // The engine block, applied as a restore applies one (restore_history_entry)
-    // — the values, and nothing beside them: the map rebuild and the target
-    // preview are the tail's, below, exactly as they are a restore's.
-    app.engine_settings = std::move(src_engine);
-
-    clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT at the load-in-place chokepoint (rule and inventory
-    // at auto_select_marker_at_playhead), at the tail for the siblings' reason:
-    // everything the scan reads has landed.
-    auto_select_marker_at_playhead(app, audio, selection, viewport);
-    viewport.kick_waveform_sync();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
-    // HARMLESS OVER-DAMAGE, not a cursor land: a timeline state carries no
-    // band, so this tail never writes the live playhead (the auto-select above
-    // fires only where the land is a provable no-op) — the clock inventory
-    // (viewport.h) records the class beside the zoom appliers'.
-    viewport.invalidate_clock_area();
-
-    // The tail's trigger owns the rebind for a 'T' landing.
-    target_render.trigger();
+    // THE APPLY IS THE ONE OWNER'S (apply_recipe_in_place), the same body both
+    // siblings hand their three pieces to: the outgoing snapshot, both store
+    // replacements, the selection clear, the ONE cross-file undo entry, the
+    // session-only marker scratch wipe, the engine block, the displayed target
+    // basis reset, the live playhead and viewport clamps, and the auto-select /
+    // sync / invalidate / trigger tail. What is left below is this act's own.
+    //
+    // THE TWO STEPS THIS BODY GAINED BY JOINING ARE CORRECT FOR IT, not a cost
+    // of sharing: a wholesale store replace can move the ACTIVE domain's total
+    // under a resting cursor whatever the three pieces came from, so the live
+    // playhead's clamp and the cold displayed target basis belong to every
+    // recipe apply — a timeline state's included.
+    apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
+                          src_engine);
 
     // NO renders/ WIPE and NO DISK WRITE of any kind: this act moved state that
     // was already in memory from one place in memory to another.

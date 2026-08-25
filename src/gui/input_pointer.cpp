@@ -73,10 +73,11 @@ struct ToolbarChord {
     bool           ctrl;
     bool           shift;
     bool           alt;
-    // (WHICH BUTTONS ADMIT SHIFT is NOT a column here: it is
-    // redesign_button_shift_admits in app_state.h, because the TOOLTIP's SHIFT
-    // LINE must appear exactly where a shift press does something — a
-    // static_assert beside that table enforces it. One fact, two readers.)
+    // (WHICH BUTTONS ADMIT A MODIFIER is NOT a column here: it is
+    // redesign_button_shift_admits and, since 2026-08-24,
+    // redesign_button_ctrl_admits, both in app_state.h, because the TOOLTIP's
+    // MODIFIER LINE must appear exactly where a modified press does something —
+    // a static_assert beside that table enforces it. One fact, two readers.)
     //
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
@@ -394,13 +395,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
     // rather than mirroring it.
-    // THE TWO SKIPS ADMIT SHIFT (architect 2026-08-24) and their twin is a CTRL
-    // chord, not a shifted one: a shift-click dispatches Ctrl+Home / Ctrl+End,
-    // the WHOLE-PIECE jump, through redesign_button_ctrl_twin (app_state.h) —
-    // which also keeps the LONG PRESS out of it, the hold being glass's shift
-    // and not a road to a ctrl chord. The rows below carry the PLAIN chord, as
-    // every row does; the admission and the twin's modifier are both the
-    // roster's, never a column here.
+    // THE TWO SKIPS ADMIT CTRL (architect 2026-08-24), the roster's first
+    // ctrl-click: a CTRL-CLICK dispatches Ctrl+Home / Ctrl+End, the WHOLE-PIECE
+    // jump, through redesign_button_ctrl_admits (app_state.h). They admit no
+    // shift, which is what keeps the LONG PRESS — glass's held shift — off the
+    // act by construction. The rows below carry the PLAIN chord, as every row
+    // does; the admission and its modifier are the roster's, never a column
+    // here.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlayStop,
@@ -558,6 +559,42 @@ static_assert(std::size(kToolbarChords) + 3 ==
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
     return rect_contains(
         app.redesign_buttons[redesign_button_index(id)].rect, x, y);
+}
+
+// THE FOUR BAND CLAIMS' ONE MODIFIER GATE — "does this modified press spell a
+// roster chord at all", asked before the arm so a press that spells nothing
+// stays the strict consumed no-op it has always been. One body for all four
+// rows, the band-claim shape's own rule rather than a row's.
+//
+// ALT IS REFUSED EVERYWHERE: the roster has no alt chord and alt's whole
+// pointer vocabulary is empty (conventions.md).
+//
+// CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
+// two SKIPS since 2026-08-24, whose ctrl-click is Ctrl+Home / Ctrl+End — which
+// is why the gate asks the BUTTON under the pointer rather than the band: the
+// admission is the roster's, so a ctrl press anywhere else, on the bare ground
+// of any row, or on one of the three dropdown anchors (which carry no chord row
+// at all) is refused exactly as it always was. The walk is kToolbarChords in the
+// arm's own order, so the button this answers about is the button that would
+// arm.
+//
+// CTRL+SHIFT TOGETHER SPELL NO ROSTER CHORD on any button — strict modifier
+// validation, and Ctrl+Shift+Home is unbound on the keyboard too — so the pair
+// dies here and the lift's chord build never sees it.
+//
+// A SHIFT press is deliberately NOT judged here: its admission is a press-time
+// refusal of the arm body's (arm_redesign_press), where a non-admitting button
+// consumes the press rather than letting the band answer for it.
+bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
+                                   GuiInputState mods) {
+    if (mods.alt) return true;
+    if (!mods.ctrl) return false;
+    if (mods.shift) return true;
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (redesign_button_hit(app, tc.id, x, y))
+            return !redesign_button_ctrl_admits(tc.id);
+    }
+    return true;
 }
 
 // Does the roster button at this index paint a pressed interior? The chord
@@ -3728,10 +3765,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // deleted that button the same day and the claim came home to this block
     // with its justification.)
     //
-    // ONE BAND-CLAIM SHAPE FOR ALL FOUR ROWS: the exact half-open row band, a
-    // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
-    // only where the chord table admits one, and any press in the band that is
-    // not on a button is a consumed nothing. Each band differs ONLY in its rect
+    // ONE BAND-CLAIM SHAPE FOR ALL FOUR ROWS: the exact half-open row band, the
+    // modifier gate above (ALT refused outright, CTRL only on the buttons the
+    // roster admits it on, CTRL+SHIFT never), a SHIFT press binding only where
+    // the roster admits one, and any press in the band that is not on a button
+    // a consumed nothing. Each band differs ONLY in its rect
     // and (row 1) in the dropdown toggle of its TWO non-chord buttons, File
     // and Settings, so the press is ONE arm body, arm_redesign_press, driven
     // by the table's per-button flags — and the act one release body,
@@ -3758,7 +3796,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     {
         const GuiRect menu_row = top_menu_row_area(app);
         if (rect_contains(menu_row, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             if (button == GuiMouseButton::Left) {
                 // FILE, EDIT AND SETTINGS ARE THE ROSTER'S THREE
                 // NON-CHORD BUTTONS, so they are spelled here rather than in the
@@ -3862,7 +3900,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     {
         const GuiRect tab_row = top_tab_row_area(app);
         if (rect_contains(tab_row, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             // THE STATUS CHAIN ON THIS ROW IS POINTER-INERT (it moved here
             // 2026-08-13): it publishes no rect, so a press over its text is
             // the band's own consumed nothing, exactly as the empty tail past
@@ -3896,7 +3934,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     {
         const GuiRect icon_row = top_icon_row_area(app);
         if (rect_contains(icon_row, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             if (button == GuiMouseButton::Left) arm_redesign_press(x, y, mods);
             return;
         }
@@ -3924,7 +3962,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     {
         const GuiRect bottom_row = bottom_row_area(app);
         if (rect_contains(bottom_row, x, y)) {
-            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             if (button == GuiMouseButton::Left) arm_redesign_press(x, y, mods);
             return;
         }
@@ -5998,7 +6036,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // row's click_face column deciding whether a pressed interior exists
         // to paint at all); the damage below is skipped for the two-face rows
         // that paint none. A SHIFT press arms too — it is the same physical
-        // hold, and the carried bit is what the lift dispatches with. THE
+        // hold, and the carried bit is what the lift dispatches with. SO DOES A
+        // CTRL press, which the band's modifier gate has already narrowed to
+        // the buttons redesign_button_ctrl_admits names, so no second admission
+        // is asked here — an unadmitted ctrl press never reaches this body. THE
         // PRESS'S CLOCK IS STAMPED HERE, unconditionally: the lift measures the
         // hold against kChromeShiftHoldMs to decide the SHIFT LONG PRESS, and
         // the stamp is taken for every button rather than for the
@@ -6007,7 +6048,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         const int64_t now = monotonic_ms();
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,
-            redesign_button_index(tc.id), mods.shift, true, now};
+            redesign_button_index(tc.id), mods.shift, mods.ctrl, true, now};
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the four rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -6021,8 +6062,11 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         //
         // The chord is the LIFT's minus its long-press term, which no repeating
         // row can reach (none of the four admits shift, and a shift press
-        // returned above the arm) — so the predicate is asked about exactly the
-        // chord the burst will fire.
+        // returned above the arm) and minus its carried ctrl, which no
+        // repeating row can carry either (none of the four admits ctrl, and the
+        // band's modifier gate refuses an unadmitted ctrl press before the arm)
+        // — so the predicate is asked about exactly the chord the burst will
+        // fire.
         if (tc.repeats) {
             GuiInputState chord{};
             chord.ctrl  = tc.ctrl;
@@ -6201,31 +6245,29 @@ void GuiInputHandler::finish_chrome_press_release(
         // ride is one the gesture's only user never sees. The beat passes
         // silently, the act shows at the lift, and none is to be built.
         //
-        // THE CTRL-TWIN PAIR IS THE ONE EXCLUSION (architect 2026-08-24, and
-        // the roster's one asymmetry between a shift-click and a long press):
-        // the two SKIPS admit shift for the WHOLE-PIECE jump, whose keyboard
-        // spelling is Ctrl+Home / Ctrl+End rather than a shifted Home / End.
-        // The hold is GLASS'S SHIFT — it exists because a keyboardless panel
-        // cannot hold a modifier — so it spells shift and nothing else, and a
-        // ctrl chord's twin is not its to reach; the architect wants that jump
-        // off glass here. A held skip therefore gives the ordinary trim-bound
-        // jump exactly as a tap does. The membership is
-        // redesign_button_ctrl_twin (app_state.h), which owns the rule.
-        const bool ctrl_twin = redesign_button_ctrl_twin(tc.id);
+        // AND IT REACHES NO CTRL-ADMITTING BUTTON, by construction rather than
+        // by an exclusion (architect 2026-08-24): the two SKIPS admit CTRL for
+        // the whole-piece jump and admit no shift at all, so this term's own
+        // predicate answers false for them. The architect wants that jump off
+        // glass, and a held skip gives the ordinary trim-bound jump exactly as
+        // a tap does.
         const bool held_to_shift =
-            redesign_button_shift_admits(tc.id) && !ctrl_twin &&
+            redesign_button_shift_admits(tc.id) &&
             monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // CARRIED press-time bit and the hold — well-defined because no row
         // sets both the table bit and the admission (see shift_admits), so this
         // one expression spells both members of each shifted pair however the
-        // user asked for the shifted one. ON A CTRL-TWIN BUTTON the asked-for
-        // twin moves to the CTRL field instead, which is the whole of what that
-        // predicate changes here: the plain press is untouched on every row.
+        // user asked for the shifted one. THE CTRL TERM IS THE SAME SHAPE ONE
+        // AXIS OVER: the table's own ctrl bit ORed with the carried press-time
+        // one, admitted where redesign_button_ctrl_admits says so — the band
+        // gate's answer re-asked at the lift, the release's own second-wall
+        // rule. The two carried bits never both stand: ctrl+shift is refused at
+        // that gate.
         GuiInputState chord{};
-        chord.ctrl  = tc.ctrl || (ctrl_twin && arm.shift);
-        chord.shift = tc.shift ||
-                      ((arm.shift || held_to_shift) && !ctrl_twin);
+        chord.ctrl  = tc.ctrl ||
+                      (arm.ctrl && redesign_button_ctrl_admits(tc.id));
+        chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
         on_key(tc.key, chord);
         return;

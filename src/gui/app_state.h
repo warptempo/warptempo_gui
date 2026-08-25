@@ -2059,18 +2059,21 @@ enum class RedesignButton {
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
     //
-    // THE TWO SKIPS ADMIT SHIFT (architect 2026-08-24): a SHIFT-CLICK on either
-    // runs the WHOLE-PIECE jump — frame 0 or the active domain's last frame,
-    // whatever the trim window is — where the plain click keeps landing on the
-    // trim bounds. THEY ARE THE ROSTER'S ONE PAIR WHOSE SHIFT-CLICK AND LONG
-    // PRESS DIFFER, and the asymmetry is the point rather than an oversight:
-    // the act's keyboard spelling is CTRL+Home / CTRL+End, not a shifted
-    // Home / End, so the button's modified press synthesizes the CTRL chord
-    // (redesign_button_ctrl_twin, below, owns that rule) — and the LONG PRESS,
-    // which exists to give a keyboardless panel a held SHIFT, spells shift and
-    // nothing else, so it does not reach a ctrl chord's twin. A held skip gives
-    // the ordinary trim-bound jump exactly as a tap does; the architect wants
-    // the whole-piece jump off glass here.
+    // THE TWO SKIPS ADMIT CTRL (architect 2026-08-24), THE ROSTER'S FIRST
+    // CTRL-CLICK: a CTRL-CLICK on either runs the WHOLE-PIECE jump — frame 0 or
+    // the active domain's last frame, whatever the trim window is — where the
+    // plain click keeps landing on the trim bounds. The button spells the
+    // KEYBOARD'S OWN MODIFIER: the act is Ctrl+Home / Ctrl+End, so a ctrl press
+    // here dispatches that chord exactly as a shift press elsewhere dispatches
+    // a shifted one, with nothing translated between the two axes
+    // (redesign_button_ctrl_admits, below, owns the membership).
+    //
+    // THEY ADMIT NO SHIFT, which is what keeps the LONG PRESS off this act BY
+    // CONSTRUCTION rather than by an exclusion: the hold exists to give a
+    // keyboardless panel a held SHIFT, so it reaches a twin exactly where
+    // redesign_button_shift_admits does, and these two are not in it. A held
+    // skip gives the ordinary trim-bound jump exactly as a tap does; the
+    // architect wants the whole-piece jump off glass here.
     TransportSkipBack, TransportPlayStop, TransportSkipForward,
     // THE SINGLE-MARKER VERBS, THE RIGHT BLOCK'S FIRST GROUP since 2026-08-18
     // (architect: "move drop/delete/disable/toggle inherit to bottom right
@@ -4413,11 +4416,15 @@ struct AppState {
     // The claim walks kDropdownMenus, so neither of those two changes touched
     // it or this note's membership.)
     //
-    // `shift` is THE PRESS-TIME MODIFIER, carried with the arm because the
-    // release deliberately does not re-read modifiers (the modal release's own
-    // rule): the shift-admitting buttons must see the shift that was held when
-    // the user PRESSED, and a shift tapped or dropped mid-hold changes
-    // nothing.
+    // `shift` and `ctrl` are THE PRESS-TIME MODIFIERS, carried with the arm
+    // because the release deliberately does not re-read modifiers (the modal
+    // release's own rule): a button that admits a modifier must see the one
+    // held when the user PRESSED, and a modifier tapped or dropped mid-hold
+    // changes nothing. EACH ADMISSION IS THE ROSTER'S — the shift-admitting
+    // set and, since 2026-08-24, the ctrl-admitting one (the two SKIPS, whose
+    // ctrl-click is Ctrl+Home / Ctrl+End) — asked at the press by the band
+    // claims' modifier gate and again at the lift's chord build, so a carried
+    // bit can only ever reach a button that spells something with it.
     //
     // THE RULE'S SCOPE (architect-accepted 2026-08-14, stated here at the
     // rule's own site because the navigation drag now reads ctrl LIVE):
@@ -4542,6 +4549,7 @@ struct AppState {
         Kind    kind          = Kind::None;
         int     index         = -1;
         bool    shift         = false;
+        bool    ctrl          = false;
         bool    inside        = true;
         int64_t press_ms      = 0;
         int64_t repeat_due_ms = 0;
@@ -6548,9 +6556,11 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 // contracts and the recorded cold-state seam are at their declarations above.
 //
 // ITS TWO CALLERS are apply_settings_engine_and_prefs (the source load, where
-// the outgoing map is ANOTHER FILE's) and apply_recipe_in_place (both sidecar
-// load-in-places, where the marker pair and the engine block that built the map
-// are both replaced). The undo restore, which also replaces those three pieces,
+// the outgoing map is ANOTHER FILE's) and apply_recipe_in_place (the WHOLE
+// load-in-place family's one body since 2026-08-24, where the marker pair and
+// the engine block that built the map are both replaced — a timeline state's
+// load reaches it there like both sidecar loads).
+// The undo restore, which also replaces those three pieces,
 // deliberately does not call it: a restore is a step inside one session's own
 // timeline and its ordinary staging is what advances the basis.
 inline void reset_displayed_target_basis(AppState& a) {
@@ -6575,9 +6585,9 @@ inline void reset_displayed_target_basis(AppState& a) {
 // and the non-gesture live-ization routes a persisted or stashed value
 // takes into the live fields — the source load's tab snapshots and the
 // Ctrl+Tab restore (each clamping a PARKED band on its way live), plus the
-// sidecar load-in-places' re-clamp of the LIVE cursor against a domain their
-// own store replace may have moved (apply_recipe_in_place; they clamp no
-// parked band, having no business with one) — so an
+// load-in-place family's re-clamp of the LIVE cursor against a domain its own
+// store replace may have moved (apply_recipe_in_place, all three acts' one
+// body; they clamp no parked band, having no business with one) — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
 // arithmetic (the S/T toggle's double->int64 conversion, Space's lead-in
@@ -7480,7 +7490,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // above discuss their RESTING face alone.)
         //
         // THE TWO SKIPS (bare Home / End, and Ctrl+Home / Ctrl+End on a
-        // shift-click) ARE UNTRUTHFUL TOO AND DELIBERATELY
+        // ctrl-click) ARE UNTRUTHFUL TOO AND DELIBERATELY
         // SO (architect 2026-08-15), and they fall through to the same plain
         // `return true`. They had an honest arm for one revision — greying
         // where the playhead already rested on the frame the jump would land
@@ -7989,15 +7999,15 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 //
 // It lives here rather than as a column in the press claim's chord table
 // because it has THREE readers that must not drift: that table's shift rule,
-// the TOOLTIP — the shift hint exists exactly where a shift press does
-// something, so "which buttons admit shift" and "which buttons advertise it"
-// are one fact by construction rather than two lists to keep in step — and,
+// the TOOLTIP — a second line exists exactly where a modified press does
+// something, so "which buttons admit a modifier" and "which buttons advertise
+// one" are one fact by construction rather than two lists to keep in step
+// (the ctrl set below shares that line and that assert) — and,
 // since 2026-08-13, THE SHIFT LONG PRESS, whose membership is this same
-// predicate MINUS THE CTRL-TWIN PAIR below rather than a fourth list: a press
-// held past kChromeShiftHoldMs reaches the twin exactly where a shift press
-// does, which is what gives a keyboardless glass rig the shifted half of each
-// pair (the beat's contract is at that constant, the arm's stamp at
-// AppState::ChromePress::press_ms).
+// predicate rather than a fourth list: a press held past kChromeShiftHoldMs
+// reaches the twin exactly where a shift press does, which is what gives a
+// keyboardless glass rig the shifted half of each pair (the beat's contract is
+// at that constant, the arm's stamp at AppState::ChromePress::press_ms).
 // (ICONPASTE LEFT THIS SET ON 2026-08-20 WITH ITS BUTTON. It admitted shift
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
 // as a row of its own — a menu item names its command outright, so the shifted
@@ -8010,41 +8020,43 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer ||
-           b == RedesignButton::TransportSkipBack ||
-           b == RedesignButton::TransportSkipForward;
+           b == RedesignButton::HistoryNewer;
 }
 
-// THE CTRL TWIN — the one place a shift-admitting button's twin is NOT the
-// shifted spelling of its own chord (architect 2026-08-24). The two SKIPS
-// dispatch bare Home / End, and the act their modified press owes is the
-// WHOLE-PIECE jump, whose keyboard spelling is CTRL+Home / CTRL+End: the jump
-// ignores the trim window, which is a different axis from anything shift means
-// elsewhere on the roster. So a SHIFT-CLICK on a skip synthesizes the CTRL
-// chord instead of a shifted one.
+// THE CTRL-AUGMENTED BUTTONS — the set above one axis over, and the ROSTER'S
+// FIRST CTRL-CLICK (architect 2026-08-24). The two SKIPS dispatch bare Home /
+// End, and the act their modified press owes is the WHOLE-PIECE jump, whose
+// keyboard spelling is CTRL+Home / CTRL+End: the jump ignores the trim window,
+// which is a different axis from anything shift means elsewhere on the roster.
+// So the modified press is a CTRL-CLICK dispatching the CTRL chord, the same
+// shape a shift-click dispatches a shifted one — the button spells the
+// keyboard's own modifier and translates nothing.
 //
-// AND THE LONG PRESS IS EXCLUDED, which is this pair's recorded asymmetry — the
-// one chrome pair whose shift-click and long press differ. The hold is GLASS'S
-// SHIFT (it exists because a keyboardless panel cannot hold a modifier), so it
-// spells shift and nothing else; a CTRL chord's twin is not its to reach, and
-// the architect wants the whole-piece jump off glass here. A held skip button
-// therefore gives the ordinary trim-bound jump, exactly as a tap does.
+// THE TWO ADMISSIONS ARE EXCLUSIVE, one modifier per button, and the
+// static_assert below holds it: a button carries ONE second tooltip line, so it
+// can honestly advertise one modified act and no more. Exclusivity is also what
+// keeps the SHIFT LONG PRESS — glass's held shift — off this pair BY
+// CONSTRUCTION: the hold reaches a twin exactly where
+// redesign_button_shift_admits does, and the skips are not in it, so a held skip
+// gives the ordinary trim-bound jump just as a tap does. The architect wants the
+// whole-piece jump off glass here.
 //
-// MEMBERSHIP IS A SUBSET OF redesign_button_shift_admits by construction — a
-// twin that no press can reach would be a lie in the tooltip's shift line — and
-// the static_assert below holds the two together. The one reader is the chord
-// build in finish_chrome_press_release (input_pointer.cpp), which uses it twice:
-// once to move the modifier and once to drop the hold.
-inline constexpr bool redesign_button_ctrl_twin(RedesignButton b) {
+// TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
+// admits a ctrl press only where this says so and leaves it the strict consumed
+// no-op it is everywhere else, and the lift's CHORD BUILD, which moves the
+// carried bit into the dispatched chord. CTRL+SHIFT together spell no roster
+// chord on any button and are refused at that gate, so the build never sees the
+// pair.
+inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportSkipForward;
 }
 static_assert(
-    (!redesign_button_ctrl_twin(RedesignButton::TransportSkipBack) ||
-     redesign_button_shift_admits(RedesignButton::TransportSkipBack)) &&
-    (!redesign_button_ctrl_twin(RedesignButton::TransportSkipForward) ||
-     redesign_button_shift_admits(RedesignButton::TransportSkipForward)),
-    "a ctrl-twin button must admit shift, or its twin is unreachable");
+    !(redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
+      redesign_button_shift_admits(RedesignButton::TransportSkipBack)) &&
+    !(redesign_button_ctrl_admits(RedesignButton::TransportSkipForward) &&
+      redesign_button_shift_admits(RedesignButton::TransportSkipForward)),
+    "a button admits one modifier: its one second tooltip line names one act");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -8070,9 +8082,10 @@ static_assert(
 //
 // The names follow HELP's vocabulary so the hint and the manual agree.
 //
-// `line2` is the SHIFT LINE and is non-null on exactly the shift-admitting
-// buttons, which is not a coincidence to be maintained: it is asserted against
-// redesign_button_shift_admits below, so the hint cannot advertise a shift press
+// `line2` is THE MODIFIER LINE and is non-null on exactly the buttons that
+// admit a modified press — the shift-admitting set, and since 2026-08-24 the
+// ctrl-admitting one. That is not a coincidence to be maintained: it is asserted
+// against both predicates below, so the hint cannot advertise a modified press
 // that does nothing (or stay silent about one that does).
 //
 // THE ACCELERATOR'S SPELLING, one rule for this whole table (architect
@@ -8113,14 +8126,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
-        // THE SHIFT LINE NAMES THE OTHER FUNCTION (architect 2026-07-31), not
-        // "for more": a hint that does not say what it gets you is not a hint.
-        // It is also the standing no-gesture-hints preference's ONE ruled
-        // exception, scoped to exactly the shift-admitting buttons —
-        // redesign_button_shift_admits owns that membership and this comment
-        // does not restate it (Paste was named here until its button left with
-        // the 2026-08-20 propagate relocation, which is what a restated list
-        // costs).
+        // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
+        // not "for more": a hint that does not say what it gets you is not a
+        // hint. It is also the standing no-gesture-hints preference's ONE ruled
+        // exception, scoped to exactly the buttons that admit a modifier —
+        // redesign_button_shift_admits and redesign_button_ctrl_admits own that
+        // membership and this comment does not restate it (Paste was named here
+        // until its button left with the 2026-08-20 propagate relocation, which
+        // is what a restated list costs).
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
         // THE TABS CARRY NO LOCK ANY MORE (2026-08-14): the padlock is the
@@ -8241,19 +8254,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when
-        // their shift-click gained the whole-piece jump); every other button
-        // here admits no shift press. (The MEASURE carried a two-line form and
-        // a shift admission from 2026-08-20 to the 2026-08-21 sunset, for the
+        // their CTRL-CLICK gained the whole-piece jump); every other button here
+        // admits no modifier at all. (The MEASURE carried a two-line form and a
+        // shift admission from 2026-08-20 to the 2026-08-21 sunset, for the
         // score-video jump that left the product whole.) The names are the
         // ratified sentence-case
         // labels, the
         // accelerators the table's own convention (non-letter keys are
         // themselves, and a CHORD keeps its capital and its spelled-out
-        // modifiers). THE SHIFT LINE NAMES THE ACT AND NOT A KEY, this table's
-        // rule for second lines.
+        // modifiers). THE MODIFIER LINE NAMES THE ACT AND THE MODIFIER AND NOT
+        // A KEY, this table's rule for second lines.
         case RedesignButton::TransportSkipBack:
             return {"Go to start (Home)",
-                    "Press Shift to ignore the trim window."};
+                    "Press Ctrl to ignore the trim window."};
         // THE PLAY/STOP BUTTON'S TEXT IS STATEFUL and this row is its STOPPED
         // form — the stateful overload below returns "Stop (Space)" while an
         // audition runs, Render's own pattern (a constant row for the ordinary
@@ -8264,7 +8277,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Play (Space)", nullptr};
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)",
-                    "Press Shift to ignore the trim window."};
+                    "Press Ctrl to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
         // plainly in HELP's vocabulary. None admits shift. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
@@ -8431,9 +8444,10 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // there and the tabs carry it in every state.)
     // THE SAVE BUTTON'S TWO OVERRIDES, in the label's own rank order. A
     // publishing checkpoint outranks the view because it outlives it; inside the
-    // view the button IS the act. Both are one-line forms: Save admits no shift
-    // press in any state (redesign_button_shift_admits), so neither can grow a
-    // second line. THE IN-FLIGHT HINT SHOWS ON A DEAD BUTTON, per the
+    // view the button IS the act. Both are one-line forms: Save admits no
+    // modified press in any state (it is in neither
+    // redesign_button_shift_admits nor redesign_button_ctrl_admits), so neither
+    // can grow a second line. THE IN-FLIGHT HINT SHOWS ON A DEAD BUTTON, per the
     // 2026-08-07 tooltips-on-disabled ruling, and names what the button is doing
     // rather than what a press would do — there is no press here, and the face
     // already says as much.
@@ -8491,27 +8505,36 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // WORDS live on the tooltip overload above and their stateful faces are the
 // GLYPH swaps, redesign_button_icon.)
 
-// THE SHIFT LINE EXISTS EXACTLY WHERE A SHIFT PRESS DOES SOMETHING. Checked at
-// compile time so the two tables cannot drift: a button that gains a shifted
-// chord without gaining the line (or the reverse) fails to build here.
+// THE MODIFIER LINE EXISTS EXACTLY WHERE A MODIFIED PRESS DOES SOMETHING.
+// Checked at compile time so the tables cannot drift: a button that gains a
+// shifted or a ctrl chord without gaining the line (or the reverse) fails to
+// build here. The two admissions are ORed because a button carries ONE second
+// line, and they are exclusive by the assert at redesign_button_ctrl_admits, so
+// the line that exists names the one modifier that acts.
 static_assert(
     (redesign_button_tooltip(RedesignButton::Render).line2 != nullptr) ==
-        redesign_button_shift_admits(RedesignButton::Render) &&
+        (redesign_button_shift_admits(RedesignButton::Render) ||
+         redesign_button_ctrl_admits(RedesignButton::Render)) &&
     (redesign_button_tooltip(RedesignButton::IconShowRegion).line2 !=
      nullptr) ==
-        redesign_button_shift_admits(RedesignButton::IconShowRegion) &&
+        (redesign_button_shift_admits(RedesignButton::IconShowRegion) ||
+         redesign_button_ctrl_admits(RedesignButton::IconShowRegion)) &&
     (redesign_button_tooltip(RedesignButton::HistoryOlder).line2 !=
      nullptr) ==
-        redesign_button_shift_admits(RedesignButton::HistoryOlder) &&
+        (redesign_button_shift_admits(RedesignButton::HistoryOlder) ||
+         redesign_button_ctrl_admits(RedesignButton::HistoryOlder)) &&
     (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
      nullptr) ==
-        redesign_button_shift_admits(RedesignButton::HistoryNewer) &&
+        (redesign_button_shift_admits(RedesignButton::HistoryNewer) ||
+         redesign_button_ctrl_admits(RedesignButton::HistoryNewer)) &&
     (redesign_button_tooltip(RedesignButton::TransportSkipBack).line2 !=
      nullptr) ==
-        redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
+        (redesign_button_shift_admits(RedesignButton::TransportSkipBack) ||
+         redesign_button_ctrl_admits(RedesignButton::TransportSkipBack)) &&
     (redesign_button_tooltip(RedesignButton::TransportSkipForward).line2 !=
      nullptr) ==
-        redesign_button_shift_admits(RedesignButton::TransportSkipForward) &&
+        (redesign_button_shift_admits(RedesignButton::TransportSkipForward) ||
+         redesign_button_ctrl_admits(RedesignButton::TransportSkipForward)) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
     // each side of the equivalence and cannot pass vacuously if the members
@@ -8521,7 +8544,7 @@ static_assert(
     // MARKER MEASURE was a member row from 2026-08-20 until the 2026-08-21
     // sunset unbound its shift half with the score-video jump.)
     (redesign_button_tooltip(RedesignButton::IconBpm).line2 == nullptr),
-    "the shift hint and the shift binding must name the same buttons");
+    "the modifier hint and the modifier binding must name the same buttons");
 
 // THE HOVER ZONE — "the pointer is over this button in a way the surface
 // answers at all", which is hoverability WITHOUT the enabled term. It exists

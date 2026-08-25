@@ -110,12 +110,13 @@ struct Viewport {
     //    off this list — the bare Left/Right tempo-image step and the pointer tempo
     //    DRAG. What remains: the bare Up/Down tempo step
     //    (adjust_tempo_cents, singleton AND group — the whole tempo surface now),
-    //    the settings engine-scale commit, undo/redo, and ALL THREE LOAD-IN-PLACE
-    //    BODIES (re-derived 2026-08-08: load_render_entry_in_place for `'` over a
-    //    render entry, load_history_commit_in_place for the `h` view's commit
-    //    load, and load_history_local_entry_in_place for that view's LOCAL walk,
-    //    which puts a state of the session's own undo/redo timeline back — all
-    //    three in input_key_dispatch.cpp).
+    //    the settings engine-scale commit, undo/redo, and THE LOAD-IN-PLACE
+    //    FAMILY, which reaches this through its ONE shared body since 2026-08-24
+    //    (apply_recipe_in_place, input_key_dispatch.cpp — called by
+    //    load_render_entry_in_place for `'` over a render entry,
+    //    load_history_commit_in_place for the `h` view's commit load, and
+    //    load_history_local_entry_in_place for that view's LOCAL walk, which
+    //    puts a state of the session's own undo/redo timeline back).
     //    Each kicks so
     //    displayed == live at the command boundary, leaving no
     //    divergence window for the displayed-basis gestures (phase / trim drags)
@@ -308,8 +309,8 @@ struct Viewport {
     //   switches, input_trim's FIVE commit / drag sites (re-greped 2026-08-18:
     //   the SWEEP's own per-motion write joined them when the region became the
     //   trim), and
-    //   input_key_dispatch's load-in-place tails (apply_recipe_in_place, the
-    //   two sidecar loads' shared body, and the history LOCAL member's own).
+    //   input_key_dispatch's ONE load-in-place tail (apply_recipe_in_place, the
+    //   whole family's shared body since 2026-08-24).
     //   ONE READ-ONLY ROUTE — bare `o` (input_handler.cpp), which is on this
     //   lane because it moves the TAB's own face; its padlock BUTTON is the
     //   icon row's since 2026-08-14, and the top-strip damage beside this one
@@ -412,17 +413,13 @@ struct Viewport {
     //   each calling the two owners in turn: the A/B tab switch (active_views,
     //   which restores the entering tab's own playhead), the undo/redo restore
     //   (undo), the position nudges' shared tail (position_nudge), the
-    //   load-in-place tail (apply_recipe_in_place, the two sidecar loads' shared
+    //   load-in-place tail (apply_recipe_in_place, the whole family's shared
     //   body — since 2026-08-24 it applies no band at all, but it re-clamps the
     //   LIVE cursor against the domain its own store replace may have moved, so
-    //   the clock half has a real producer), the HISTORY LOCAL member's tail
-    //   (whose clock half is HARMLESS OVER-DAMAGE like the zoom appliers': a
-    //   timeline state carries no band and that tail takes no clamp, so it never
-    //   writes the live playhead — its
-    //   coincidence auto-select fires only where the land is a provable no-op
-    //   (auto_select_marker_at_playhead's equality predicate is the land's
-    //   own) — and the small always-clean rect is kept as truth-over-churn
-    //   beside the tail's real status-chain rewrite), and the TRIM COMMIT
+    //   the clock half has a real producer; the HISTORY LOCAL member's load
+    //   joined that body the same day and stopped being a second entry here,
+    //   its clock half having been HARMLESS OVER-DAMAGE while it took no clamp
+    //   of its own), and the TRIM COMMIT
     //   WRITERS (input_trim:
     //   commit_trim_mutation and handle_trim_clear_both damage the waveform +
     //   status chain at their own sites and reach the clock inside

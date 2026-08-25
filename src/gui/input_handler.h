@@ -449,16 +449,18 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // order and SINGLE-SELECTS the first marker whose land value is EXACTLY the
 // resting playhead. Definition in input_pointer.cpp, beside the land whose
 // formula it reuses; that comment states the rule, the exactness, and the
-// first-in-store tie-break. SIX CALL SITES (re-derived 2026-08-08 by grep), each
-// stating only its own class and pointing there: the source load's tail
+// first-in-store tie-break. FOUR CALL SITES (re-greped 2026-08-24, the count
+// having fallen from six as the load-in-place family collapsed onto one body),
+// each stating only its own class and pointing there: the source load's tail
 // (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
-// ALL THREE LOAD-IN-PLACE BODIES' tails (input_key_dispatch.cpp) — the `'`
-// render-entry load (load_render_entry_in_place, joined 2026-07-30), the `h`
-// view's commit load (load_history_commit_in_place) and that view's LOCAL-tab
-// load (load_history_local_entry_in_place, 2026-08-08), each because a
-// load-in-place replaces the store under a resting playhead, which is an ENTRY
-// into a new set of markers exactly as a load is. No match leaves the selection exactly as the caller
+// THE LOAD-IN-PLACE FAMILY'S ONE SHARED TAIL (apply_recipe_in_place,
+// input_key_dispatch.cpp), which all three acts reach — the `'` render-entry
+// load (load_render_entry_in_place, joined 2026-07-30), the `h` view's commit
+// load (load_history_commit_in_place) and that view's LOCAL-tab load
+// (load_history_local_entry_in_place, 2026-08-08) — because a load-in-place
+// replaces the store under a resting playhead, which is an ENTRY into a new set
+// of markers exactly as a load is. No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport);
@@ -2411,13 +2413,14 @@ private:
     // target view on the entry's dispatch tab and restored the
     // dispatch-moment camera, three things the user never asked for.)
     //
-    // THE TWO SIDECAR-SOURCED LOAD-IN-PLACES SHARE THIS ONE BODY —
-    // load_render_entry_in_place (a renders/ entry) and
-    // load_history_commit_in_place (a commit's sidecars) — so the rule lives
-    // here rather than in each of them. The THIRD, load_history_local_entry_in_place,
-    // reads a typed timeline state instead of a file and performs the same
-    // sequence in its own body; it conforms by construction, an undo entry
-    // carrying nothing but the three pieces this rule names.
+    // THE WHOLE LOAD-IN-PLACE FAMILY SHARES THIS ONE BODY — THREE CALLERS,
+    // re-greped: load_render_entry_in_place (a renders/ entry),
+    // load_history_commit_in_place (a commit's sidecars) and
+    // load_history_local_entry_in_place (a state of this session's own
+    // undo/redo timeline, which joined on 2026-08-24, having hand-rolled the
+    // same sequence minus the live-playhead clamp and the basis reset). So the
+    // rule lives here rather than in three places, and the three acts differ
+    // only in where their three pieces come from and in the tail each keeps.
     //
     // ITS PRECONDITIONS, both the caller's: every input is read, validated and
     // past its last refusal (nothing here can fail, and nothing may mutate
@@ -2469,9 +2472,10 @@ private:
     // non-numeric, zero, out-of-range or unreadable member is one stderr line
     // and a false return with nothing touched. It restores exactly what an undo
     // entry carries — the two marker columns and the engine block — which since
-    // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well
-    // (apply_recipe_in_place above), so the three now differ only in where the
-    // three pieces come from. It applies them ON TOP as ONE new undo entry
+    // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well,
+    // and since 2026-08-24 it writes them THROUGH the same body
+    // (apply_recipe_in_place above), so the three differ only in where the three
+    // pieces come from. It applies them ON TOP as ONE new undo entry
     // rather than as a rollback, writes no disk and
     // closes the mode as part of the act. Full behaviour paragraph at the
     // definition.
