@@ -720,8 +720,10 @@ struct PendingMarkerPress {
 // (No pending TEMPO drag, and no TempoDragState: the whole target-view tempo drag
 // is DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
 // step alone. The delete list and the do-not-re-propose note live at the head of
-// marker_drag.h. So the reposition drag above is the ONLY pointer marker gesture,
-// and W+target has no pointer authoring gesture at all.)
+// marker_drag.h. So the reposition drag above is the ONLY pointer marker
+// gesture that MOVES anything, and W+target has no pointer authoring gesture
+// that MOVES anything — its pointer vocabulary is the measure double-click and
+// the payload double-click, both editor opens.)
 
 // Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span)
@@ -6360,7 +6362,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // tempo family's other two flavors — the pointer tempo DRAG and the bare
 // Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
 // head of marker_drag.h), so bare Left/Right in W+target with a selection is now
-// a consumed refusal and W+target has no pointer authoring gesture at all.
+// a consumed refusal and W+target has no pointer authoring gesture that MOVES
+// anything — its pointer vocabulary is the measure double-click and the
+// payload double-click, both editor opens.
 // (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
 // position authoring in target view at all, and exception (5) does not
@@ -8015,16 +8019,16 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
 // FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
-// source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Paste
-// (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state) and THE
+// source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Show trim
+// region (Shift+[ the MAXIMIZER — reset the trim to the whole song) and THE
 // WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
 // bare `.` steps one newer and Shift+`.` goes to the newest
 // (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
 // dispatch them through the one press body like every other button).
 //
-// THE FIFTH IS THE TRIM REGION TOGGLE, and it is the SAME ADMISSION ON A
-// DIFFERENT BUTTON. The trim scissors carried it from 2026-08-15 until their
+// SHOW TRIM REGION CARRIES THE FOURTH, THE SAME ADMISSION ON A DIFFERENT
+// BUTTON. The trim scissors carried it from 2026-08-15 until their
 // button was retired on 2026-08-18, and the reason is a hole rather than a
 // preference: the twin is Shift+[ the MAXIMIZER (reset the trim to the whole
 // song), and the admission superseded the 2026-08-11 "the maximizer stays
