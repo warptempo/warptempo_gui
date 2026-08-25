@@ -1,6 +1,6 @@
 # Warptempo GUI
 
-Custom C++23 in-process PGHI phase-vocoder GUI (Arch / labwc / Wayland / JACK) for time-warping audio toward historically-informed tempos. Single developer/user (the architect); one authoring laptop plus the Raspberry Pi rig. PROJECT STATUS: FEATURE COMPLETE (architect, 2026-07-25). The authoritative architecture rulings live in `docs/engineering/architecture/` — see the docs map below. This file carries the build/process rules, short per-topic digests, and pointers; the topic files are the authoritative detail. When a ruling lands, update the topic file (committed) and this file's digest ONLY if the headline changes — history, quotes and successions belong in the topic files and in git, never here. (This file was deliberately cut down from a ~190KB digest-of-everything on 2026-08-16; the full old text is in git history.)
+Custom C++23 in-process PGHI phase-vocoder GUI (Arch / labwc / Wayland / JACK) for time-warping audio toward historically-informed tempos. Single developer/user (the architect); one authoring laptop. PROJECT STATUS: FEATURE COMPLETE (architect, 2026-07-25). The authoritative architecture rulings live in `docs/engineering/architecture/` — see the docs map below. This file carries the build/process rules, short per-topic digests, and pointers; the topic files are the authoritative detail. When a ruling lands, update the topic file (committed) and this file's digest ONLY if the headline changes — history, quotes and successions belong in the topic files and in git, never here. (This file was deliberately cut down from a ~190KB digest-of-everything on 2026-08-16; the full old text is in git history.)
 
 ## Build Commands
 
@@ -18,7 +18,7 @@ cmake --build build-debug -j$(nproc)
 
 `build/warptempo_gui` is the GUI binary and the default build's only product. No library archives: four per-directory source-list variables (`WARPTEMPO_AUDIO_IO_SOURCES`, `WARPTEMPO_PARSER_SOURCES`, `WARPTEMPO_ENGINE_SOURCES`, `WARPTEMPO_PREPOST_SOURCES`) each binary compiles directly — object-code duplication accepted deliberately. One opt-in binary, default OFF: `warptempo_cli` (`-DWARPTEMPO_BUILD_CLI=ON`, the headless insurance render — exactly the terminal Ctrl+Alt+R, byte-identical to the GUI by shared stages; a headless host builds it with `-DWARPTEMPO_BUILD_GUI=OFF`). `tools/` holds standalone one-shot utilities (own CMakeLists, no link path from product targets). `-ffp-contract=off` is load-bearing: renders are byte-reproducible across rebuilds and `-march` choices under the same toolchain (scope in `docs/engineering/perf_campaign_2026_07.md` §15).
 
-THE TWO HOSTS BUILD IN LOCKSTEP (architect 2026-08-14): the authoring LAPTOP and the Raspberry Pi RIG (aarch64, the ROADOM touchscreen — the only host with glass, so every touch ruling is verifiable there and nowhere else) are both built and kept at the SAME COMMIT as part of landing work. IF THE RIG IS UNREACHABLE, SAY SO AND STOP — the architect fixes it before development continues. A laptop build proves compilation, never behaviour on glass. Rig connection details are local-only (tmp/rig.md, gitignored). Binaries are not portable (`-march=native`); rebuild on the target host.
+THERE IS ONE BUILD HOST: the authoring laptop, and no host here has glass. A build therefore proves COMPILATION AND NEVER BEHAVIOUR ON A TOUCH PANEL — the architect verifies touch and paint rulings himself on whatever device is current, and "from the rig" in a source comment is the PROVENANCE of a ruling taken on the returned car panel, not a live process (the Android tablet arc, PAUSED, owns whatever device-sync convention replaces it — tmp/welcome_back_planner-android.md). Binaries are not portable (`-march=native`); rebuild on the target host.
 
 ## Dependencies
 
@@ -32,7 +32,7 @@ Text: proportional text measures AND paints through the ONE shaping chokepoint `
 ./build/warptempo_gui <source.wav>
 ```
 
-labwc on Arch; 1920x1080@60 laptop, 1024x600 rig. No portability shims, no X11 fallback.
+labwc on Arch; 1920x1080@60 laptop. No portability shims, no X11 fallback.
 
 ## Testing / Verification / Roles
 
