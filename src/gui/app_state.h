@@ -3396,27 +3396,31 @@ constexpr int kAuditionMs = 500;
 // THE A/B AUDITION'S RESTS (architect 2026-08-26) — the act is PACED, not run
 // back to back. The rest is what lets the ear capture one play, isolate it and
 // hear it again; it is what he leaves between the plays when he does this by
-// hand, and about twice that when he switches tabs, so the two constants are
-// his own hand pacing and a retune is a recompile.
+// hand, and a longer one when he switches tabs, so the two constants are his
+// own hand pacing and a retune is a recompile.
 //   * kAuditionPairGapMs rests between the FIRST and SECOND play of a pair
 //     (OtherFirst -> OtherSecond, HomeFirst -> HomeSecond).
 //   * kAuditionSwitchGapMs rests across the TAB SWITCH (OtherSecond ->
-//     HomeFirst) and is the pair gap DOUBLED by ruling. The switch itself
-//     happens at the play's natural end, ahead of the rest, so the tab flips
-//     at once and the rest is silence on the tab about to play.
+//     HomeFirst) and is its own measured number, not a multiple of the pair
+//     gap: the tab change is where the ear resets, so the switch rest is the
+//     longer of the two. The switch itself happens at the play's natural end,
+//     ahead of the rest, so the tab flips at once and the rest is silence on
+//     the tab about to play.
 // NO REST PRECEDES THE FIRST PLAY: the architect's rest is between SOUNDS and
 // nothing sounded before it, so GuiAbAudition::start launches straight after
-// its switch. The values were tuned by ear on the laptop: his first estimate
-// ("fifteen or twenty-five") landed as 20/40 and was still a little fast, so
-// 50/100 is the second setting, each remaining one number to change here and
+// its switch. The values were tuned by ear on the laptop, twice: his first
+// estimate ("fifteen or twenty-five") landed as 20/40 and was still a little
+// fast; 50/100 was the second setting and still too fast by ear; he then
+// recorded himself doing the audition by hand and measured the rests off the
+// recording, giving 150/500, each remaining one number to change here and
 // nowhere else.
 // GRANULARITY: the rests are SAMPLED on the run loop's own deadline tick
 // (GuiAbAudition::fire_if_due, beside the key-repeat and touch-window
 // deadlines), whose interval is the bound output's refresh half-period — so a
 // rest is AT LEAST its milliseconds and at most one timer period more (~8 ms
 // at 60 Hz), which is inside the hand pacing these numbers transcribe.
-inline constexpr int kAuditionPairGapMs   = 50;
-inline constexpr int kAuditionSwitchGapMs = 100;
+inline constexpr int kAuditionPairGapMs   = 150;
+inline constexpr int kAuditionSwitchGapMs = 500;
 
 // THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
 // transport act that spans several plays. Shift+Space (and the play button's
