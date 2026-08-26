@@ -934,9 +934,7 @@ struct TrimDragState {
 // NAVIGATION SURFACE is the WHOLE waveform — BOTH HALVES since 2026-08-13, in
 // every view — plus the RULER lane plus the MARKER lane's empty stretches (the
 // lanes are "essentially an extension of the upper half" — his words — since
-// the waveform-height clamp put them in easy reach; that clamp retired
-// 2026-08-26 and the longer reach is the trade recorded at main.cpp's vertical
-// rule, the lanes keeping this vocabulary). THE LOWER HALF JOINED
+// the waveform-height clamp put them in easy reach). THE LOWER HALF JOINED
 // when the press-time audition scrub moved to the lift (architect 2026-08-13:
 // "the playhead scrub is an outlier. We do everything on lift the finger or on
 // mouse up, but the playhead scrub, we do right on mouse down. We should remove
@@ -9135,10 +9133,8 @@ MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
 // DELETED with both of its callers, and kMarkerStemGrabPx / marker_stem_grab_px
 // with it. The question stayed open through the touch arc and was answered
 // "stems stay" while the scrollbar plan lived; the waveform-height clamp
-// (main.cpp's layout owner) kept the flag lane in easy reach on every display,
-// which is what the removal was waiting for — and the clamp's 2026-08-26
-// retirement made that reach the trade recorded at that owner, the stems
-// staying inert. The stems still PAINT exactly as
+// (main.cpp's layout owner) keeps the flag lane in easy reach on every display,
+// which is what the removal was waiting for. The stems still PAINT exactly as
 // before — the marker_stems stash below is the stem PAINTER's input alone now.)
 
 // Which trim boundary, if any, a waveform-area click lands on.

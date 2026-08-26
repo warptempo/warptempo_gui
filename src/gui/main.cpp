@@ -169,43 +169,39 @@ namespace {
 // gui_scale axis like every other redesigned row, so no lane anywhere is
 // font-scaled any more.
 //
-// THE VERTICAL RULE — THE WAVEFORM TAKES THE WHOLE LEFTOVER (architect
-// 2026-08-26, retiring the seventh glass ruling's MAXIMUM HEIGHT and the
-// constant that carried it: on a tall monitor the waveform now grows with the
-// window instead of stopping at a clamp and leaving blank bands. THE TRADE HE
-// NAMED, accepted: marker stems are pointer-inert, so the taller the waveform
-// the longer the reach from a spot on it up to that marker's FLAG in the
-// marker lane — the cumbersomeness the clamp used to buy off). The window
-// stacks, top to bottom:
+// THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
+// HEIGHT (architect 2026-08-12: the seventh glass ruling gave the clamp,
+// kWaveformMaxHeightPx at render.h carrying the value and its bracket; the
+// relayout's COMMIT B, dictated at session close, gave the centering and took
+// the clamp 550 -> 500). The window stacks, top to bottom:
 //   THE MENU ROW, pinned at the window top;
-//   GAP 1 — flexible blank window ground, which now rests at 0;
-//   THE BLOCK — tab row, icon row, OVERVIEW STRIP, trim bar, ruler,
+//   GAP 1 — flexible blank window ground;
+//   THE CENTERED BLOCK — tab row, icon row, OVERVIEW STRIP, trim bar, ruler,
 //     marker lane, then THE WAVEFORM, whose own thick bottom border (render_-
 //     canvas's, taken FROM the waveform area) is the block's bottom edge;
-//   GAP 2 — flexible blank window ground, which now rests at 0;
+//   GAP 2 — flexible blank window ground;
 //   THE UNIFIED BOTTOM ROW at the window's foot, its 1px border-top the thin
-//     border facing the waveform.
+//     border facing the gap.
 //
-// THE POSITIONING RULE SURVIVES AS ITS OWN FLOOR (commit B's rule, 2026-08-12):
-// it wants THE WAVEFORM'S VERTICAL MIDPOINT ON THE WINDOW'S — centered within
-// the APP SURFACE, with no titlebar arithmetic anywhere, because "the labwc
-// titlebar above and the panel below offset each other" (the architect's own
-// reasoning) — and WHEN CENTERING IS INFEASIBLE the gaps floor at 0 and the
-// WAVEFORM absorbs the shortfall, one clean formula with no second constant.
-// With no maximum the waveform always takes the whole leftover, so the
-// centering is infeasible in EVERY window the lane table can produce: it would
-// want gap 1 = (bottom row - top lane stack)/2, negative wherever the top
-// stack is the taller, which it is at every gui_scale (both stacks scale
-// together). BOTH GAPS THEREFORE REST AT 0, and what was the Pi's case alone
-// is now every case. The derivation, all of it in the four functions below:
+// THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
+// THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, with no
+// titlebar arithmetic anywhere, because "the labwc titlebar above and the panel
+// below offset each other" (the architect's own reasoning). The derivation, all
+// of it in the four functions below:
 //   leftover = win_h - (menu + block-above-the-waveform) - bottom row
 //              = centered_leftover_h; the waveform's own borders are INSIDE its
 //                area, so the block's thick bottom border is not a term here
 //                (counting it would double it),
-//   W        = max(0, leftover)                            = waveform_h,
+//   W        = min(waveform_max_h_px(), max(0, leftover))  = waveform_clamped_h,
 //   gap 1    = max(0, win_h/2 - (menu + block above the waveform) - W/2)
 //              = top_flex_gap,
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
+// WHEN CENTERING IS INFEASIBLE the gaps floor at 0 and the WAVEFORM absorbs the
+// shortfall — one clean formula, no second constant: on a short window the
+// leftover is under the clamp, so W takes all of it and both gaps are 0 (the Pi
+// exactly). A window tall enough for the clamp but too shallow to center it
+// (the top block being taller than the bottom row) rests gap 1 at 0 and puts
+// the remainder in gap 2, top-heavy and harmless.
 //
 // THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 193 =
 // menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
@@ -214,17 +210,19 @@ namespace {
 // below row 1 rose 4px in the lane table; the BOTTOM ROW 47 since
 // 2026-08-14, when it took the icon row's 46px content in place of its own 50
 // — every number below is re-derived from that table rather than adjusted):
-//   1920x1080: leftover 840 -> waveform 840, both gaps 0
-//     — 31 menu / 0 / 162 block / 840 waveform / 0 / 47 row, the waveform
-//     spanning y 193..1033 about its own midline 613, which sits below the
-//     window's 540 by half the difference between the two lane stacks.
-//   1024x600 (the Pi): leftover 360 -> waveform 360, both gaps 0
-//     — 31 / 0 / 162 / 360 / 0 / 47. The Pi's stack is UNCHANGED by the
-//     retirement: its leftover was always under the old maximum.
+//   1920x1080: leftover 840 -> waveform CLAMPED at 500, gap 1 = 97, gap 2 = 243
+//     — 31 menu / 97 blank / 162 block / 500 waveform / 243 blank / 47 row,
+//     the waveform still spanning y 290..790 about the window's midline 540
+//     (the clamp fixes its height and the midpoint rule its centre, so the
+//     four pixels the menu row gave back go into gap 1 and the centered
+//     block does not move).
+//   1024x600 (the Pi): leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
+//     — 31 / 0 / 162 / 360 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -73), so the waveform keeps everything
+//     and takes the four pixels itself, which is the rule's own floor rather
+//     than a special case.
 //
-// THE TWO BLANK BANDS ARE EMPTY WHILE THE GAPS REST AT 0, and the arithmetic
-// that would place them stays as the positioning rule's own floor. Whatever
-// they measure they are WINDOW GROUND AND HIT NOTHING: render_background's
+// THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
 // chrome erase paints both and no lane painter covers them; a press in either
 // falls to a consumed nothing (gap 1 through the top strip's empty-spot return,
 // gap 2 through the press path's tail), the cursor map answers Arrow over both,
@@ -365,40 +363,39 @@ int centered_leftover_h(int win_h) {
     return win_h - strip_total_h(/*top_strip=*/true)
                  - strip_total_h(/*top_strip=*/false);
 }
-// THE WAVEFORM'S HEIGHT: THE WHOLE LEFTOVER, bounded by nothing (the maximum
-// height retired 2026-08-26 — the vertical rule above). The floor at 0 is what
-// keeps a degenerate window's negative leftover out of the gap arithmetic
+// THE WAVEFORM'S HEIGHT: the leftover, CLAMPED at the maximum (the seventh
+// glass ruling's clamp, kWaveformMaxHeightPx at render.h). The floor at 0 is
+// what keeps a degenerate window's negative leftover out of the gap arithmetic
 // below; waveform_area's own guard answers the rect.
-int waveform_h(int win_h) {
+int waveform_clamped_h(int win_h) {
     const int leftover = centered_leftover_h(win_h);
-    return leftover > 0 ? leftover : 0;
+    if (leftover <= 0) return 0;
+    const int cap = waveform_max_h_px();
+    return leftover < cap ? leftover : cap;
 }
-// GAP 1 — the flexible blank band between the MENU ROW and the block (commit
-// B's centering rule, spelled at the vertical rule above): whatever it takes to
-// put the waveform's midpoint on the window's, floored at 0 where that is
-// infeasible, WHICH IS EVERY WINDOW now that the waveform takes the whole
-// leftover — this rests at 0 and the band is empty. strip_total_h(top) is
-// exactly the rule's "menu + the block above the waveform", the two being the
-// whole top lane stack.
+// GAP 1 — the flexible blank band between the MENU ROW and the centered block
+// (commit B's centering rule, spelled at the vertical rule above): whatever it
+// takes to put the waveform's midpoint on the window's, floored at 0 where that
+// is infeasible. strip_total_h(top) is exactly the rule's "menu + the block
+// above the waveform", the two being the whole top lane stack.
 int top_flex_gap(int win_h) {
     const int gap = win_h / 2 - strip_total_h(/*top_strip=*/true)
-                              - waveform_h(win_h) / 2;
+                              - waveform_clamped_h(win_h) / 2;
     return gap > 0 ? gap : 0;
 }
 // GAP 2 — the flexible blank band between the waveform's bottom border and the
 // UNIFIED BOTTOM ROW at the window's foot: the REMAINDER of the leftover, which
 // is what makes the stack add up to the window exactly. Zero whenever the
-// waveform took the whole leftover, which since the maximum height retired is
-// EVERY window: the remainder is leftover - leftover - 0. The floor is
-// defensive only: gap 1 can never exceed the remainder, since that would need
-// the bottom row to be taller than the menu row plus the whole block above the
-// waveform.
+// waveform took the whole leftover (every window short of the clamp — the Pi).
+// The floor is defensive only: gap 1 can never exceed the remainder, since that
+// would need the bottom row to be taller than the menu row plus the whole block
+// above the waveform.
 // (bottom_strip_flex_gap's successor, and top_strip_flex_gap's before it: the
 // seventh ruling opened ONE flexible gap between the icon row and the trim
 // lane, the row unification moved it whole to the window's foot below the
 // bottom row, and commit B split it in two around the block.)
 int bottom_flex_gap(int win_h) {
-    const int gap = centered_leftover_h(win_h) - waveform_h(win_h)
+    const int gap = centered_leftover_h(win_h) - waveform_clamped_h(win_h)
                                                - top_flex_gap(win_h);
     return gap > 0 ? gap : 0;
 }
@@ -420,8 +417,8 @@ int top_strip_h(const AppState& a) {
 // which is what every consumer actually asks of it —
 // bottom_strip_area then spans the blank band (its damage covering it is
 // correct: the band is repainted window ground), and waveform_area's
-// h - top - bottom arithmetic yields the waveform height — the whole leftover
-// since the maximum retired — with no second expression.
+// h - top - bottom arithmetic yields the CLAMPED, CENTERED waveform height with
+// no second expression.
 int bottom_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -445,11 +442,10 @@ GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
-    // centering), so the h - top - bot arithmetic below yields the waveform
-    // height — the WHOLE leftover wherever that is non-negative, both gaps
-    // resting at 0 since the maximum height retired — and the y lands the
-    // waveform flush under the marker lane with no second expression of the
-    // vertical rule here.
+    // centering), so the h - top - bot arithmetic below yields the CLAMPED
+    // waveform height — min(leftover, kWaveformMaxHeightPx-scaled) wherever the
+    // leftover is non-negative — and the y lands the waveform flush under the
+    // marker lane with no second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not

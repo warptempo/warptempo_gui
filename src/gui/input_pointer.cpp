@@ -660,8 +660,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // THE TOP STRIP'S TWO NAVIGATION LANES — the RULER and the MARKER lane, the
 // "extension of the upper half" (architect 2026-08-12, the eighth glass
 // ruling: the waveform-height clamp put both lanes in easy reach, so they take
-// the upper half's whole vocabulary — the clamp retired 2026-08-26 and the
-// vocabulary stands, the reach being main.cpp's recorded trade — the plain pending click / grab-pan, the
+// the upper half's whole vocabulary — the plain pending click / grab-pan, the
 // shift region former, the ctrl zoom drag). One band owner because the press
 // router and the cursor map both ask it: a point is in the lanes iff it is in
 // the top strip AND in either lane's y-band. The FLAG BOXES carve themselves
@@ -4270,10 +4269,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // upper-half press over a stem column is the ordinary placement press,
         // stem or no stem. The stems question stayed OPEN through the touch
         // arc and was answered "stems stay" while the scrollbar plan lived;
-        // the waveform-height clamp (main.cpp's layout owner) kept the flag
+        // the waveform-height clamp (main.cpp's layout owner) keeps the flag
         // lane in easy reach on every display, which is what the removal was
-        // waiting for, and its 2026-08-26 retirement made that reach the trade
-        // recorded at that owner — marker work happens in the flag lane, and the
+        // waiting for — marker work happens in the flag lane, and the
         // waveform is purely trim / playhead / pan / zoom. (Modified
         // presses never resolved a stem anyway — the 2026-08-01 plain-exact
         // gate, made universal by the 2026-08-06 symmetry ruling — so this

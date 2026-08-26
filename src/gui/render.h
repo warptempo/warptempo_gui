@@ -1367,11 +1367,45 @@ inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneHeightPx, 5);
 }
 
-// THE WAVEFORM'S HEIGHT IS NOT A LENGTH HERE AND HAS NO MAXIMUM (architect
-// 2026-08-26): the waveform takes the WHOLE leftover between the top lane
-// stack and the unified bottom row, so no constant in this table bounds it.
-// The vertical stack's ONE owner is main.cpp's geometry block, which carries
-// the rule and the derived stacks; the lane heights above are its input.
+// THE WAVEFORM'S MAXIMUM HEIGHT — a RULED RETUNABLE (architect 2026-08-12, the
+// seventh glass ruling): on tall monitors the natural (leftover) waveform is so
+// tall that reaching the ruler and the flag lane "feels cumbersome", so the
+// waveform CLAMPS at this height and the leftover becomes BLANK WINDOW GROUND.
+// WHERE THAT GROUND SITS IS THE RELAYOUT'S COMMIT B (architect-dictated
+// 2026-08-12 at session close): TWO flexible gaps, one under the MENU ROW and
+// one above the UNIFIED BOTTOM ROW, sized so THE WAVEFORM'S VERTICAL MIDPOINT
+// IS THE WINDOW'S ("the labwc titlebar above and the panel below offset each
+// other" — his own reasoning, so the centering is within the app surface with
+// no titlebar arithmetic). The stack is MENU ROW / gap 1 / THE CENTERED BLOCK
+// (tab, icon, OVERVIEW STRIP, trim, ruler, markers, then the WAVEFORM with its
+// own thick bottom border as the block's bottom edge) / gap 2 / THE UNIFIED
+// BOTTOM ROW at the window foot. (The ruling's first hours put the whole
+// flexible space between the icon row and the trim lane; the row unification
+// later that day moved it to the window's foot, under the bottom row and then
+// under the overview strip, and commit B split it in two around the block.)
+//
+// THE VALUE IS 550 -> 500 AT COMMIT B (the same dictation). The architect's
+// standing bracket: "bigger than the height on the Pi, smaller than the
+// waveform height on my external monitor"; his own scaling example at the
+// revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
+// produces by construction. At 100% scale, with the top lanes summing 197
+// (menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
+// the overview lane and the tab row each grew a border row 2026-08-13)
+// and the bottom row 47 (the icon row's height since 2026-08-14): the
+// 1920x1080 monitor's leftover is 836, so the
+// waveform CLAMPS at 500 and the two gaps take 93 (top) + 243 (bottom); the
+// Pi's 1024x600 leftover is 356, UNCLAMPED, and the centering is infeasible
+// there so both gaps floor at 0 and the waveform keeps the whole 356. The full
+// stacks are recorded at main.cpp's vertical block.
+// A SCALED length riding
+// gui_scale like every authored height, so the clamp keeps pace with the
+// lanes it is measured against. The ONE application point is the
+// strip/waveform geometry owner (the two flex gaps / strip_row_rect /
+// waveform_area, main.cpp); no consumer reads this accessor directly.
+inline constexpr int kWaveformMaxHeightPx = 500;
+inline int waveform_max_h_px() {
+    return scaled_px(kWaveformMaxHeightPx, 1);
+}
 
 // THE OVERVIEW STRIP'S HEIGHT — ONE FIXED TINY LANE (architect-ratified
 // 2026-08-12, his pick from the offered fillers: "the whole song overview
@@ -1398,7 +1432,7 @@ inline int marker_lane_h_px() {
 // very tiny one now that the bottom two rows are combined") — the clamp, the
 // reserve arithmetic and the blank-foot remainder are all DELETED
 // producer-less, and the waveform's natural height is the plain leftover the
-// two flex gaps share (the note above). The surviving 24 is that
+// two flex gaps share (the waveform-max block above). The surviving 24 is that
 // pair's own minimum, the sliver the Pi already read well.
 //
 // THE CSS BOX MODEL, as every bordered lane takes it (rows 3, 4 and the bottom
