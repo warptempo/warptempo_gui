@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- warptempo_gui, the product APK. A NativeActivity over libwarptempo_gui.so,
+     whose android_main (src/gui/platform_android.cpp) calls the same gui_main
+     the desktop main() calls.
+
+     hasCode="false" is deliberate and it HOLDS for everything the app does
+     today: there is no Java at all, no classes.dex, and therefore no javac and
+     no d8 in the packaging pipeline. The Java sliver the port plans for is owed
+     to SAF's onActivityResult (M6), to immersive mode and to the system
+     clipboard — none of which exists yet.
+
+     Not the spike's package: com.warptempo.gui is the product's own name, so
+     installing or removing either one leaves the other alone. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.warptempo.gui">
+
+  <!-- DECLARED FOR M6, granted by hand in Settings, and unused until then. The
+       source and its three sidecars live in the app's own external files dir
+       (/sdcard/Android/data/com.warptempo.gui/files), which needs no permission
+       at all; All-files access is what the OTG / arbitrary-folder arc will
+       need, and declaring it now keeps the manifest stable across that landing. -->
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+  <!-- The OTG stick is M6's, and a device without one must still install. -->
+  <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+  <application
+      android:label="Warptempo"
+      android:hasCode="false"
+      android:extractNativeLibs="false"
+      android:allowBackup="false"
+      android:debuggable="true">
+
+    <activity
+        android:name="android.app.NativeActivity"
+        android:exported="true"
+        android:label="Warptempo"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:screenOrientation="landscape"
+        android:resizeableActivity="false"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"
+        android:windowSoftInputMode="adjustNothing">
+
+      <!-- soname without the lib prefix and the .so suffix. -->
+      <meta-data android:name="android.app.lib_name" android:value="warptempo_gui" />
+
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

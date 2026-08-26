@@ -86,11 +86,190 @@ set(WARPTEMPO_PREPOST_SOURCES
 )
 
 # ============================================================
+#  THE GUI'S SOURCE LIST, less the four per-directory lists and less the
+#  three files that have one arm per backend. Both GUI targets below draw it,
+#  which is what keeps the two builds from drifting into two rosters: a new
+#  GUI source is added HERE and both platforms get it.
+#
+#  THE THREE PER-BACKEND ARMS, each with exactly one arm linked into a given
+#  binary and each named at its own site: the platform backend
+#  (platform_wayland.cpp / platform_android.cpp, chosen for the consumer by
+#  platform.h), the face owner (gui_font_fontconfig.cpp /
+#  gui_font_bundled.cpp, gui_font.h) and the playback device (playback.cpp,
+#  the JACK client / playback_stub.cpp, silent until M4's AAudio backend).
+#  main.cpp is in the list on BOTH: its Linux main() is #ifndef __ANDROID__
+#  and the body it wraps, gui_main, is the one entry both platforms call.
+# ============================================================
+set(WARPTEMPO_GUI_SOURCES
+    src/gui/main.cpp
+    src/gui/app_state.cpp
+    src/gui/async_renderer.cpp
+    src/gui/waveform_worker.cpp
+    src/gui/input_core.cpp
+    src/gui/audio.cpp
+    # GUI-ONLY: HarfBuzz text shaping is a painting concern and exists only
+    # here, so it is deliberately in none of the four shared per-directory
+    # source lists — warptempo_cli must never carry it, nor the
+    # harfbuzz/cairo-ft link it implies.
+    src/gui/text_shape.cpp
+    # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
+    # subset over cairo paths) is a painting concern and exists only here,
+    # so like text_shape.cpp it is deliberately in none of the four shared
+    # per-directory source lists — warptempo_cli must never carry it. It
+    # needs no dependency cairo does not already bring.
+    src/gui/icons.cpp
+    src/gui/render.cpp
+    src/gui/warpmarkers.cpp
+    src/gui/text_editor.cpp
+    src/gui/phaseresetmarkers.cpp
+    src/gui/playback_lifecycle.cpp
+    src/gui/render_pipeline.cpp
+    src/gui/warp_frame_map_view.cpp
+    src/gui/viewport.cpp
+    src/gui/selection.cpp
+    src/gui/settings_io.cpp
+    src/gui/undo.cpp
+    src/gui/phaseresetmarkers_ops.cpp
+    src/gui/phase_reset_propagate.cpp
+    src/gui/prompt.cpp
+    src/gui/warpmarkers_ops.cpp
+    src/gui/position_nudge.cpp
+    src/gui/marker_drag.cpp
+    src/gui/file_loader.cpp
+    src/gui/flag_editor.cpp
+    src/gui/renders_dir.cpp
+    src/gui/save_ops.cpp
+    # GUI-ONLY: the GitHub recheck's history model reads the repo's own
+    # projects/ corpus through git subprocesses AND owns the product's one
+    # mutating git route (the commit act's add/commit/push, behind a separate
+    # entry point in the same file). Like text_shape.cpp and icons.cpp it is
+    # deliberately in none of the four shared per-directory source lists —
+    # warptempo_cli must never carry it. It needs no dependency beyond the C++
+    # standard library and POSIX.
+    src/gui/history_diff.cpp
+    # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
+    # runs that file's one mutating git route off the GUI thread.
+    src/gui/history_commit_worker.cpp
+    src/gui/history_prefetch.cpp
+    src/gui/settings_editor.cpp
+    src/gui/active_views.cpp
+    src/gui/ab_audition.cpp
+    src/gui/target_render.cpp
+    src/gui/render_cache.cpp
+    src/gui/paint_handler.cpp
+    src/gui/waveform_cache.cpp
+    src/gui/input_handler.cpp
+    src/gui/input_trim.cpp
+    src/gui/input_render_dispatch.cpp
+    src/gui/input_pointer.cpp
+    src/gui/input_key_dispatch.cpp
+)
+
+# ============================================================
+#  warptempo_gui — the ANDROID library (arm64 NativeActivity, cross-built from
+#  the laptop through android/app/configure.sh). It is a SHARED LIBRARY rather
+#  than an executable because a NativeActivity's process is started by the
+#  system and dlopen's this .so; android_main (platform_android.cpp) is its
+#  entry point and calls the same gui_main the Linux main() does.
+#
+#  NO WAYLAND, NO XKB, NO JACK, NO wayland-scanner is discovered here — none
+#  of them exists on the platform. The four dependencies that DO cross are
+#  found through the M1 sysroot's own .pc files: android/app/configure.sh
+#  passes PKG_CONFIG_EXECUTABLE (the toolchain's wrapper, which hard-forces
+#  PKG_CONFIG_LIBDIR at android/prebuilt/<abi>) and FFTW3_THREADS_LIB (whose
+#  find_library above cannot search a sysroot the NDK toolchain file has
+#  re-rooted), so this branch itself names no path.
+#
+#  THE LINUX TARGET IS UNTOUCHED BY EVERYTHING IN HERE. The two branches are
+#  mutually exclusive on ANDROID, they share the source list and the flag
+#  block at the bottom of this file, and neither adds a compile option the
+#  other does not.
+# ============================================================
+if(WARPTEMPO_BUILD_GUI AND ANDROID)
+    # Cairo needs its FT backend (there is no fontconfig on the platform, so
+    # gui_font_bundled.cpp builds faces from the APK's own font assets) and
+    # HarfBuzz shapes on those faces, exactly as on Linux. freetype2 gets its
+    # own check here — unlike the Linux branch, which lets cairo-ft and
+    # harfbuzz carry it transitively — because the static link needs its
+    # archive named explicitly inside the group below.
+    pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
+
+    # The NDK's stock android_native_app_glue. It is COMPILED IN PLACE from
+    # the NDK rather than vendored: r29's process_input already drains its
+    # queue with a while loop, so there is no fork to maintain.
+    set(WARPTEMPO_GLUE_DIR ${CMAKE_ANDROID_NDK}/sources/android/native_app_glue)
+    if(NOT EXISTS ${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c)
+        message(FATAL_ERROR
+            "native_app_glue not found under ${WARPTEMPO_GLUE_DIR}")
+    endif()
+    # The glue is THIRD-PARTY SOURCE this project does not own and must not
+    # edit, and it does not compile clean under this project's -Wall -Wextra
+    # (two unused `source` parameters in its own poll handlers). The warning is
+    # silenced FOR THAT FILE ALONE so the product's own warnings stay the only
+    # ones in the log — the same reason -Wfloat-conversion is scoped away from
+    # the generated Wayland protocol C on the other target.
+    set_source_files_properties(${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
+        PROPERTIES COMPILE_OPTIONS "-Wno-unused-parameter")
+
+    add_library(warptempo_gui SHARED
+        ${WARPTEMPO_GUI_SOURCES}
+        src/gui/platform_android.cpp
+        src/gui/gui_font_bundled.cpp
+        src/gui/playback_stub.cpp
+        ${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
+        ${WARPTEMPO_AUDIO_IO_SOURCES}
+        ${WARPTEMPO_PARSER_SOURCES}
+        ${WARPTEMPO_ENGINE_SOURCES}
+        ${WARPTEMPO_PREPOST_SOURCES}
+    )
+    target_include_directories(warptempo_gui PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/engine
+        ${CMAKE_SOURCE_DIR}/src/audio_io
+        ${CMAKE_SOURCE_DIR}/src/prepost
+        ${CMAKE_SOURCE_DIR}/src/gui
+        ${WARPTEMPO_GLUE_DIR}
+        ${FFTW3_INCLUDE_DIRS}
+        ${WT_ANDROID_GFX_INCLUDE_DIRS}
+    )
+    # -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ IS LOAD-BEARING and is
+    # mentioned in no NDK document: without it bionic marks every symbol newer
+    # than minSdk `strict`, and a strict-unavailable symbol is a hard BUILD
+    # ERROR that no __builtin_available(android N, *) guard can open. With it
+    # such a call becomes a weak reference the guard makes safe. Nothing in
+    # this target reaches past minSdk 30 today; the define stays because the
+    # first thing that does would otherwise fail with an error that reads like
+    # a missing library.
+    target_compile_definitions(warptempo_gui PRIVATE
+        __ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
+    # --start-group covers the freetype <-> harfbuzz static cycle (cairo pulls
+    # freetype, freetype's autohinter reaches back into harfbuzz), which a
+    # single-pass static link cannot resolve on its own. --no-undefined makes a
+    # missing symbol a BUILD failure rather than something the device's loader
+    # discovers at launch.
+    target_link_libraries(warptempo_gui PRIVATE
+        -Wl,--no-undefined
+        -Wl,--start-group
+        ${WT_ANDROID_GFX_STATIC_LDFLAGS}
+        ${FFTW3_THREADS_LIB}
+        ${FFTW3_LIBRARIES}
+        -Wl,--end-group
+        aaudio
+        android
+        log
+        m
+        dl
+    )
+    target_link_directories(warptempo_gui PRIVATE ${FFTW3_LIBRARY_DIRS})
+endif()
+
+# ============================================================
 #  warptempo_gui — Cairo/Wayland front end (canonical product, default ON).
 #  All GUI platform dependency discovery lives inside this guard so a
 #  headless build needs none of these packages present.
 # ============================================================
-if(WARPTEMPO_BUILD_GUI)
+if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     pkg_check_modules(WAYLAND_CLIENT    REQUIRED wayland-client)
     pkg_check_modules(WAYLAND_CURSOR    REQUIRED wayland-cursor)
     pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
@@ -140,76 +319,15 @@ if(WARPTEMPO_BUILD_GUI)
     pkg_check_modules(JACK REQUIRED jack)
 
     add_executable(warptempo_gui
-        src/gui/main.cpp
-        src/gui/app_state.cpp
-        src/gui/async_renderer.cpp
-        src/gui/waveform_worker.cpp
+        ${WARPTEMPO_GUI_SOURCES}
+        # The three per-backend arms, Linux's: the Wayland platform backend,
+        # the fontconfig face owner (gui_font.h) and the JACK playback device.
+        # The Android library above compiles platform_android.cpp,
+        # gui_font_bundled.cpp and playback_stub.cpp in their places; exactly
+        # one arm of each is ever linked.
         src/gui/platform_wayland.cpp
-        src/gui/input_core.cpp
-        src/gui/audio.cpp
-        # GUI-ONLY: HarfBuzz text shaping is a painting concern and exists only
-        # here, so it is deliberately in none of the four shared per-directory
-        # source lists — warptempo_cli must never carry it, nor the
-        # harfbuzz/cairo-ft link it implies.
-        src/gui/text_shape.cpp
-        # GUI-ONLY, and the LINUX arm of the one face owner (src/gui/gui_font.h):
-        # face selection is a painting concern and exists only here, so like
-        # text_shape.cpp it is deliberately in none of the four shared
-        # per-directory source lists. The Android target compiles
-        # gui_font_bundled.cpp in its place; exactly one arm is ever linked.
         src/gui/gui_font_fontconfig.cpp
-        # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
-        # subset over cairo paths) is a painting concern and exists only here,
-        # so like text_shape.cpp it is deliberately in none of the four shared
-        # per-directory source lists — warptempo_cli must never carry it. It
-        # needs no dependency cairo does not already bring.
-        src/gui/icons.cpp
-        src/gui/render.cpp
-        src/gui/warpmarkers.cpp
-        src/gui/text_editor.cpp
-        src/gui/phaseresetmarkers.cpp
         src/gui/playback.cpp
-        src/gui/playback_lifecycle.cpp
-        src/gui/render_pipeline.cpp
-        src/gui/warp_frame_map_view.cpp
-        src/gui/viewport.cpp
-        src/gui/selection.cpp
-        src/gui/settings_io.cpp
-        src/gui/undo.cpp
-        src/gui/phaseresetmarkers_ops.cpp
-        src/gui/phase_reset_propagate.cpp
-        src/gui/prompt.cpp
-        src/gui/warpmarkers_ops.cpp
-        src/gui/position_nudge.cpp
-        src/gui/marker_drag.cpp
-        src/gui/file_loader.cpp
-        src/gui/flag_editor.cpp
-        src/gui/renders_dir.cpp
-        src/gui/save_ops.cpp
-        # GUI-ONLY: the GitHub recheck's history model reads the repo's own
-        # projects/ corpus through git subprocesses AND owns the product's one
-        # mutating git route (the commit act's add/commit/push, behind a separate
-        # entry point in the same file). Like text_shape.cpp and icons.cpp it is
-        # deliberately in none of the four shared per-directory source lists —
-        # warptempo_cli must never carry it. It needs no dependency beyond the C++
-        # standard library and POSIX.
-        src/gui/history_diff.cpp
-        # GUI-ONLY, and for history_diff.cpp's reason: it is the thread that
-        # runs that file's one mutating git route off the GUI thread.
-        src/gui/history_commit_worker.cpp
-        src/gui/history_prefetch.cpp
-        src/gui/settings_editor.cpp
-        src/gui/active_views.cpp
-        src/gui/ab_audition.cpp
-        src/gui/target_render.cpp
-        src/gui/render_cache.cpp
-        src/gui/paint_handler.cpp
-        src/gui/waveform_cache.cpp
-        src/gui/input_handler.cpp
-        src/gui/input_trim.cpp
-        src/gui/input_render_dispatch.cpp
-        src/gui/input_pointer.cpp
-        src/gui/input_key_dispatch.cpp
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}

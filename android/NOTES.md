@@ -476,3 +476,257 @@ Settings; the spike only reports the live state.
   there is nothing to defer to a lift.
 - The APK is not byte-reproducible run to run (zip and signature timestamps); the
   *inputs* are — the WAV generator is deterministic and the fonts are copies.
+
+---
+
+## 10. The product APK — the real GUI on the tablet (M3b-2, 2026-08-26)
+
+The M3 seam's Android half: `src/gui/platform_android.{h,cpp}` (the backend),
+`src/gui/playback_stub.cpp` (silent until M4), the root `CMakeLists.txt`'s
+`if(ANDROID)` branch, and `android/app/` (configure + package + manifest).
+Unlike §9 this **is** product code — the same `src/gui`, `src/parser`,
+`src/engine`, `src/audio_io` and `src/prepost` the desktop binary compiles,
+minus three files and plus three.
+
+### 10.1 The commands
+
+```bash
+bash android/app/build_apk.sh                 # clean-to-signed-APK, one command
+adb install -r android/app/build-android/warptempo.apk
+adb shell am start -n com.warptempo.gui/android.app.NativeActivity
+adb logcat -s warptempo:*                     # the GUI's own stderr
+```
+
+`build_apk.sh` calls `configure.sh` itself, so the two-step form is only for
+incremental work:
+
+```bash
+bash android/app/configure.sh
+cmake --build android/app/build-android -j$(nproc)
+```
+
+`rm -rf android/app/build-android` is the clean-build gesture; the packaging
+tree under it is wiped on every run, the CMake tree is not.
+
+Installing a project is a push into the app's own external files dir, which
+needs **no permission at all** — the source plus its three sidecars, renamed to
+one stem:
+
+```bash
+adb push <src>.wav              /sdcard/Android/data/com.warptempo.gui/files/source.wav
+adb push <src>.warpmarkers      .../files/source.warpmarkers
+adb push <src>.phaseresetmarkers .../files/source.phaseresetmarkers
+adb push <src>.settings          .../files/source.settings   # with gui_scale=175
+```
+
+`android_main` reads `<externalDataPath>/source.wav` and the GUI derives the
+sidecars from the stem. That fixed name is **M3's placeholder for the M7 sync
+convention**, documented at `resolve_source_path`.
+
+### 10.2 What the backend is, and what it stubs
+
+The seam's class A only. `GuiPlatform`'s public API is identical to
+`platform_wayland.h`'s member for member (proved by diffing the two headers'
+declaration lines with comments stripped), plus ONE addition — `synthesize_key`,
+which no consumer calls and which exists so M5's painted keyboard has a road
+into the core's key path.
+
+- **Run loop**: a periodic `timerfd` at 8 ms is the ONE wakeup, added to the
+  glue's own `ALooper` alongside the four worker eventfds (idents
+  `LOOPER_ID_USER`..`+4`) and the glue's cmd/input sources.
+  `ALooper_pollOnce(-1)` blocks, then the pass drains everything pending. The
+  dispatch order is the Wayland loop's: window-system sources → `on_tick_` then
+  `GuiInputCore::tick()` → the four worker completions in registration order →
+  the loop-settled hook → paint-if-dirty. The timer and worker fds are FLAGGED
+  during the drain and acted on after it, because the looper hands events back
+  in readiness order and the order above is policy, not protocol.
+  `drain_events()` — whose live caller is a blocking LOAD's progress callback —
+  runs the drain alone at timeout 0 plus the paint, and deliberately NOT the
+  tick, the workers or the settled hook: on Wayland those are out of
+  `wl_display_dispatch_pending`'s reach and simply wait for the next `run()`
+  pass, and running the GUI's per-tick work against a half-loaded `AppState`
+  would be this backend inventing a behaviour the other one does not have. It
+  DOES paint, because on Wayland that same call dispatches the pending
+  frame-done callback, which paints — the load's progress repaint is that
+  paint.
+- **Present**: one persistent cairo ARGB32 backbuffer, damage coalesced exactly
+  as on Wayland, the damaged rects painted through `on_redraw_` and their
+  BOUNDING BOX posted through `ANativeWindow_lock` + the spike's NEON R↔B
+  swizzle, honoring the buffer's pixel stride and the (possibly widened) dirty
+  rect `lock` hands back. The backbuffer is persistent rather than pooled
+  precisely so a widened rect is always answerable.
+- **Touch**: `AMotionEvent` by pointer id straight into the core —
+  DOWN/POINTER_DOWN → `touch_down`, MOVE → `touch_motion` for every pointer in
+  the event, UP/POINTER_UP → `touch_up`, CANCEL → `touch_cancel` — with
+  `touch_frame()` closing every translated event, one AMotionEvent being one
+  logical touch batch. Coordinates are window-pixel doubles, unscaled (the
+  surface is the panel at 1:1). **History samples are not replayed**: the core
+  coalesces motion to the frame boundary anyway.
+- **Keys**: none translated. `AINPUT_EVENT_TYPE_KEY` returns 0 so BACK still
+  leaves the app. Hardware keyboards are out of scope (touch.md).
+- **Mouse**: consumed, not routed and not returned — a click that fell through
+  would act on whatever is behind the activity.
+- **Key repeat**: `set_repeat_info(30, kHoldBeatMs)`, hard-coded (architect
+  ruling 2026-08-23) — Android advertises no cadence to a native activity, so
+  the numbers are labwc's by convention.
+
+Stubs, each with its Wayland twin named at the site: the **clipboard** is one
+stored string (ClipboardManager is a Java surface with no NDK door); **pointer
+capture** is a pair of no-ops (no cursor to hide, no pointer to lock, no
+relative stream — the same degraded path a compositor without the two optional
+protocols takes); **`set_cursor_kind`** still runs the core's policy and applies
+nothing; **the title setters** store nothing (fullscreen, no titlebar);
+**playback** is `playback_stub.cpp`, which answers `init() = true`, parks the
+cursor where `play()` was asked to start, reports `is_playing() = false` and
+gives the bound buffer's real domain extent (those are RANGE POLICY, not audio
+facts, so zeros would silently collapse every range that consults them).
+
+Two things the backend does that are not on the Wayland side at all:
+
+- **stderr and stdout are redirected onto a pipe** whose reader thread turns
+  each line into `__android_log_write` under the tag `warptempo`. The fix is at
+  the file descriptor because the ~200 diagnostic sites across the GUI, the
+  parser and the engine do not know what platform they are on and should not.
+- **`android_main` normalizes the environment before `gui_main`**:
+  `XDG_CACHE_HOME`, `HOME` and `TMPDIR` to the app's private directory (the
+  render cache is `XDG_CACHE_HOME`'s tenant), and `setlocale(LC_ALL, "C")` —
+  see 10.4.
+
+Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
+opens both Liberation assets, installs them, and then ASKS whether selecting a
+family actually put an FT-backed face on a probe context. A missing asset is a
+build defect with no runtime producer, and painting silently in cairo's default
+face is worse than not starting. `gui_font_bundled.cpp`'s own error arms are
+untouched — the abort is the caller's.
+
+### 10.3 The build branch
+
+`if(WARPTEMPO_BUILD_GUI AND ANDROID)` in the root `CMakeLists.txt`. It
+discovers no Wayland, xkb, JACK or wayland-scanner, and finds cairo / cairo-ft
+/ harfbuzz / freetype2 through the M1 sysroot's own `.pc` files. **The branch
+names no path**: `android/app/configure.sh` passes `PKG_CONFIG_EXECUTABLE` (the
+toolchain wrapper, which hard-forces `PKG_CONFIG_LIBDIR`) and
+`FFTW3_THREADS_LIB` (the one dependency with no upstream `.pc`, whose
+top-level `find_library` cannot search a sysroot the NDK toolchain file has
+re-rooted). Target: `add_library(warptempo_gui SHARED …)`, static deps inside
+`--start-group` (the freetype↔harfbuzz cycle) plus `aaudio android log m dl`,
+`-Wl,--no-undefined`, and `-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__`.
+
+**THE LINUX TARGET IS BYTE-UNAFFECTED, and it was proved rather than asserted.**
+The GUI's source list moved into one shared `WARPTEMPO_GUI_SOURCES` variable
+both targets draw (the three per-backend arms — platform, face owner, playback
+device — are named at each target), so the two builds cannot drift into two
+rosters. Re-configuring the desktop build across that change:
+`CMakeFiles/warptempo_gui.dir/flags.make` is **byte-identical**, the object set
+is the **same 70 objects**, and the link line's library list is identical in
+content AND order. Only the ORDER of the object files on the link line changed
+(the three arm objects moved to the tail), which cannot affect an executable
+link of a complete object set. `cmake --build build -j$(nproc)` is green.
+
+### 10.4 Device facts measured, and what they cost
+
+| Fact | Value |
+|---|---|
+| Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel |
+| Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
+| Backend tick | **8 ms** (60 Hz assumed — see below) |
+| Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
+| WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
+| Full PGHI target render, 7:36 output | **~8.7 s** |
+| Stripped `.so` | 6.7 MB; APK 7.4 MB |
+| DT_NEEDED | `libdl libm libaaudio libandroid liblog libc` — nothing to ship beside the app, no `libc++_shared` |
+
+**The tick is 8 ms and the panel is 90 Hz, which is a real (small) mismatch.**
+The Wayland rule is "half the refresh period", which for 90 Hz would be 5 ms.
+The NDK exposes no refresh-rate query to a native activity below
+`AChoreographer`'s own vsync callbacks, and standing a Choreographer up would
+put a second cadence into a loop whose whole design is ONE wakeup — so the
+backend takes the documented 60 Hz fallback. The cost is that some panel frames
+get one tick and some get two, i.e. up to one tick of jitter on the playhead
+scanner; nothing is missed, since 8 ms is still faster than the 11.1 ms frame.
+The measured cadence above says the paint keeps up regardless: the app presents
+at every vsync during a pan, paced by `ANativeWindow_unlockAndPost` blocking on
+buffer availability rather than by our timer. **A fixed 5 ms tick, or a real
+AChoreographer query, is the open refinement.**
+
+**`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
+`verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a
+process starts in `C` — refused to run at all. This was the first thing the port
+hit on the device. The two locales are the same locale numerically (bionic
+supports only C, POSIX and C.UTF-8), so `android_main` calls
+`setlocale(LC_ALL, "C")` before `gui_main`: the platform's way of SPELLING the
+invariant the desktop gets for free, not a relaxation of it. The tripwire's real
+job is intact — a library that moves the locale after that line is still caught.
+**locale_check.h's comment still says "Nothing in this program calls
+setlocale", which is now stale by one caller.** It was left alone deliberately
+(out of this brief's edit ceiling) and is owed a one-line amendment.
+
+### 10.5 What was driven on the device, and what worked
+
+All through `adb shell input touchscreen …`, screencapped before and after and
+compared pixel-for-pixel.
+
+- **The seven-lane top strip, the waveform and the bottom row all paint**, at
+  `gui_scale=175`, correctly coloured — the R↔B swizzle is right (the waveform
+  is kdenlive's teal, not orange), the marker flags are the right purple, the
+  lane text is black on the flags and #fcfcfc elsewhere, the Breeze icon row
+  renders whole, and the monospace clock is monospace. The overview strip, its
+  viewport box and its playhead tick are all live.
+- **A chrome button acts at the LIFT** — the row-1 view selector switched
+  T+P → S+W.
+- **A plain tap on the waveform's UPPER half places the playhead** (clock and
+  playhead line both moved, the selection dropped).
+- **A plain tap on a marker flag selects it and lands the playhead** at the
+  press — the flag brightened, the clock moved to the marker, and the tab row's
+  resolved readout appeared.
+- **A one-finger drag on the waveform pans** (the phone model): 800 px of drag
+  moved the viewport ~8 s and the overview box with it; the playhead and the
+  selection stayed put, the camera not being a movement.
+- **A 700 ms motionless hold converts to the region gesture** and its begin
+  seats the playhead — which also proves the disambiguation deadline
+  (`kTouchRegionHoldMs`) is being polled off the timerfd through
+  `GuiInputCore::tick()`.
+- **The overview strip's outside-the-box press teleports at the press.**
+- **BACK leaves the activity cleanly** (no crash, no ANR) and a relaunch runs
+  `android_main` a SECOND time in the same process and comes up identical —
+  the destroyed-and-remade path exercised for real.
+- **The target-view preview render ran the full PGHI engine on the tablet**
+  unprompted at startup (the pushed `.settings` carries `active_audio_view=T`),
+  all three passes, `[success]`.
+
+Not verified, and why: **the two-finger pinch zoom could not be injected.**
+`adb shell input` has no multi-touch form, and raw `sendevent` on
+`/dev/input/event10` is `Permission denied` on this unrooted device. The Nav
+phase itself IS proved by the single-finger pan, which runs the same
+`deliver_touch_nav_frame` with the pinch arm structurally false; only the ratio
+arm is unexercised. It belongs to the architect's own glass pass (M3c) anyway.
+Also unexercised for lack of a producer: audio (M4), keys (M5), git (there is no
+`git` on the device, so the history prefetch reports unavailable on its worker
+and nothing else notices).
+
+### 10.6 Deliberate limits, not defects
+
+- **The system taskbar overlaps the bottom row's right half.** The activity is
+  fullscreen under `Theme.NoTitleBar.Fullscreen`, which hides the status bar
+  only; hiding the navigation/taskbar is Java-only (immersive mode), which is
+  out of M3's scope and on the same list as SAF and the clipboard.
+- **The `.settings` of a pre-2026-08-26 project is load-fatal** — it carries no
+  `waveform_magnification_level=` line and every key is required. The pushed
+  copy for this pass had the line hand-added at its `kSettingsOrder` position
+  alongside `gui_scale=175`; `projects/` was not touched. This is the standing
+  no-migration convention, not an Android problem.
+- **`libaaudio.so` is in `DT_NEEDED` and nothing calls it yet.** It is linked
+  ahead of M4 deliberately; `--as-needed` is not passed, so the reference
+  stands rather than silently disappearing and reappearing between milestones.
+- **A backgrounded activity keeps ticking.** The timerfd is the loop's one
+  wakeup and it does not stop at `APP_CMD_TERM_WINDOW`, so a task-switched-away
+  app wakes 125 times a second to paint nothing (`paint_one_frame` no-ops with
+  no window) until Android's own cached-app freezer stops the process. Left as
+  it is for M3 — suspending and re-arming the timer on the window edges is a
+  behaviour change to the ONE wakeup and wants the architect's word.
+- **The NDK's stock `android_native_app_glue.c` is compiled in place** (r29's
+  `process_input` already drains with a while loop, so there is no fork to
+  maintain) with `-Wno-unused-parameter` scoped to that one file — it is
+  third-party source this project does not own and must not edit, and the
+  product's own warnings should be the only ones in the log.

@@ -242,6 +242,13 @@ public:
     void pointer_leave();
     void pointer_motion(double x, double y);
     void pointer_button(GuiMouseButton button, bool pressed);
+    // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS
+    // SCROLL DOWN (content moves up under the cursor, delivered as WheelDown)
+    // and negative means up — a backend whose platform reports the other
+    // polarity negates on its own side. It happens to be Wayland's own
+    // convention, which is why the drain body states it as such
+    // (input_core.cpp), but it is this class's requirement of every backend.
+    //
     // One vertical-axis scroll delta in the backend's own continuous unit
     // (touchpads and other non-wheel sources), staged for the frame boundary.
     void pointer_axis(double value);
