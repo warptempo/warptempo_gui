@@ -47,7 +47,8 @@
 // hand pacing they transcribe). The rest's deadline is sampled by fire_if_due
 // on the run loop's existing deadline tick — the one the key-repeat and touch
 // disambiguation deadlines already ride — so no timer is added and the
-// granularity is that tick's (~8 ms at 60 Hz). The scanner paints during each
+// granularity is that tick's (up to one timer period beyond each rest's own
+// milliseconds). The scanner paints during each
 // play exactly as it does under Space, and during a rest nothing plays at all —
 // but THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
 // (architect 2026-08-26), so a rest is transport-LIVE where the user can see or
