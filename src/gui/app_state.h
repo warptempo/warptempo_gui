@@ -3406,15 +3406,17 @@ constexpr int kAuditionMs = 500;
 //     at once and the rest is silence on the tab about to play.
 // NO REST PRECEDES THE FIRST PLAY: the architect's rest is between SOUNDS and
 // nothing sounded before it, so GuiAbAudition::start launches straight after
-// its switch. The values are his estimate ("fifteen or twenty-five"), which is
-// why each is one number to change here and nowhere else.
+// its switch. The values were tuned by ear on the laptop: his first estimate
+// ("fifteen or twenty-five") landed as 20/40 and was still a little fast, so
+// 50/100 is the second setting, each remaining one number to change here and
+// nowhere else.
 // GRANULARITY: the rests are SAMPLED on the run loop's own deadline tick
 // (GuiAbAudition::fire_if_due, beside the key-repeat and touch-window
 // deadlines), whose interval is the bound output's refresh half-period — so a
 // rest is AT LEAST its milliseconds and at most one timer period more (~8 ms
 // at 60 Hz), which is inside the hand pacing these numbers transcribe.
-inline constexpr int kAuditionPairGapMs   = 20;
-inline constexpr int kAuditionSwitchGapMs = 40;
+inline constexpr int kAuditionPairGapMs   = 50;
+inline constexpr int kAuditionSwitchGapMs = 100;
 
 // THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
 // transport act that spans several plays. Shift+Space (and the play button's
