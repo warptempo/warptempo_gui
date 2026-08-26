@@ -2098,7 +2098,7 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     // Incremental off the live level, pre-clamped into the chokepoint's own
     // window exactly as every apply_strip_drag_zoom caller pre-clamps.
     double new_level = app.zoom_level - dx / kNavZoomPxPerLevel;
-    const double max_l = effective_max_zoom_level(wf_area.w, total,
+    const double max_l = effective_max_zoom_level(W, total,
                                                   audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
@@ -2646,7 +2646,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // callers).
     double new_level = app.zoom_level - std::log2(eff_ratio);
     const double max_l =
-        effective_max_zoom_level(wf_area.w, total, audio.sample_rate());
+        effective_max_zoom_level(W, total, audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
@@ -2812,7 +2812,7 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
         }
         const int64_t sample = place_playhead_at_click_column(
             x - area.x, playback.is_playing(), app.playhead_cursor_sample);
-        if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
+        if (sample >= 0) arm_region_drag_at(sample, x, y);
         return;
     }
     // THE LIVE FORMER — the shift press's own body whole (deselect-all,
@@ -4880,15 +4880,10 @@ void GuiInputHandler::finalize_editor_text_drag() {
     app.editor_text_drag.active = false;
 }
 
-void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
+void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
-    // THE ANCHOR IS AUTHORED HERE, at the one arm, from the press COLUMN: the
-    // whole source frame through the sweep's one column->trim route, beside
-    // the active-domain frame the caller's placement just seated the playhead
-    // at (which nothing on the trim side reads — the two-values-per-column
-    // rule at the field's declaration).
-    app.region_drag.anchor_source_frame = sweep_trim_frame_at_column(anchor_col);
+    app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
     // THIS ARM RAISES NOTHING (architect 2026-08-21, on his first drive of the
@@ -5103,15 +5098,13 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return -1;
     // Clamp the click column's frame into the live domain ONCE and hand that
-    // same clamped value back to the caller (the region formers read it as the
-    // gutter sentinel alone — the arm authors its own trim anchor from the
-    // COLUMN, arm_region_drag_at — and the sweep's motion path clamps its
-    // cursor carry by this same rule): move_playhead_to clamps internally, but
-    // at a fractional flush-right zoom the painter-quantized wall
+    // same clamped value back to the caller, which passes it to the region arm:
+    // move_playhead_to clamps internally, but the region former stored the raw
+    // value. At a fractional flush-right zoom the painter-quantized wall
     // (q = nearbyint(spp*W)/W) differs from the click conversion's
     // current_samples_per_pixel, so the last visible column's frame can compute
     // to domain_total — one past [0, domain_total-1], which the display-state
-    // validator would clear wholesale. The clamp also
+    // validator would clear wholesale — so both formers clamp. The clamp also
     // makes -1 a sentinel no seated frame can collide with.
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
@@ -5151,7 +5144,7 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     const int64_t sample = place_playhead_at_click_column(
         click_rel_x, was_playing, playhead_at_entry);
     if (sample < 0) return;
-    arm_region_drag_at(click_rel_x, x, y);
+    arm_region_drag_at(sample, x, y);
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
@@ -6756,7 +6749,7 @@ bool GuiInputHandler::handle_history_mode_press(
         }
         const int64_t sample = place_playhead_at_click_column(
             x - area.x, playback.is_playing(), app.playhead_cursor_sample);
-        if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
+        if (sample >= 0) arm_region_drag_at(sample, x, y);
         return true;
     }
     // Every other modified combination — alt anything, ctrl+shift, shift off
@@ -7471,20 +7464,15 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // PREVIOUS clean click left resting — the standing moved-drag clear
     // route.
     app.double_click = DoubleClickCandidate{};
-    // The MOVING endpoint at the pointer column, clamped to the visible strip
-    // like the other drags' live tracking. THE COLUMN YIELDS TWO VALUES, THE
-    // DOMAINS KEPT APART (the rule at RegionDragState::anchor_source_frame):
-    // far_frame is the ACTIVE-domain frame for the PLAYHEAD — the cursor carry
-    // below, the same click->frame basis the press seated it on — and the
-    // TRIM's moving end is the same column's whole SOURCE frame, taken
-    // separately at the write below through the sweep's one column->trim
-    // route (sweep_trim_frame_at_column), which needs no domain hop in the
-    // writer. Also clamped into the
+    // The MOVING endpoint at the pointer column, through the same click->frame
+    // basis as the anchor, clamped to the visible strip like the other
+    // drags' live tracking. Both ends are active-domain frames, which the trim
+    // write below crosses into the source domain. Also clamped into the
     // live domain: at a fractional flush-right zoom the painter-quantized
     // wall differs from the click conversion, so the last visible column's
     // frame can land at domain_total — one past [0, domain_total-1] — which
     // the display-state validator would clear wholesale (same rule as the
-    // press seat, place_playhead_at_click_column).
+    // press-site anchor).
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
@@ -7506,8 +7494,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // a VIEW-LOCAL reading span until 2026-08-18; there is no span state left
     // to draw one in, the overlay being the trim everywhere.)
     if (!app.history_mode.active &&
-        write_trim_from_sweep(app.region_drag.anchor_source_frame,
-                              sweep_trim_frame_at_column(rel))) {
+        write_trim_from_sweep(app.region_drag.anchor_frame, far_frame)) {
         app.region_drag.wrote_trim = true;
         // AND THE FIRST ACCEPTED WRITE RAISES THE OVERLAY (architect
         // 2026-08-21, moving the raise off the press): INSIDE this branch on

@@ -125,15 +125,10 @@ void GuiWaveformWorker::worker_loop() {
         // is also re-checked after the render so a cancel issued during
         // the render still gets reported (last_ok_=false) to the
         // completion handler.
-        // THE ONE ASYNC GATE ON THE PLATE PAIR: both plates and the audio must
-        // be non-null, else the job renders NOTHING and reports ok=false — a
-        // half-pair is never rendered, and the completion handler's redispatch
-        // is the recovery. The helper below takes the complete pair as its
-        // precondition; this check is what establishes it on the async road.
         bool ok = false;
-        if (!cancel_flag_.load() && job.plates.complete() && job.audio) {
+        if (!cancel_flag_.load() && job.surface && job.audio) {
             render_waveform_to_cache_surface(
-                job.plates,
+                job.surface,
                 job.area_w,
                 job.area_h,
                 job.inset_px,

@@ -471,13 +471,7 @@ void GuiPlayback::stop() {
 void GuiPlayback::set_speed(float speed) {
     if (speed < 0.10f) speed = 0.10f;
     if (speed > 1.00f) speed = 1.00f;
-    // x1000 in DOUBLE, rounded with std::nearbyint — the project's rounding
-    // rule. NOT an audio change: the speed vocabulary is the tenths presets
-    // (kPlaybackSpeedPresets, 0.1 .. 1.0), whose x1000 products all lie within
-    // a float ulp of an integer and nowhere near a tie, so the stored word is
-    // identical to what the old float `std::lround(speed * 1000.0f)` produced.
-    const int32_t v = static_cast<int32_t>(
-        std::nearbyint(static_cast<double>(speed) * 1000.0));
+    const int32_t v = static_cast<int32_t>(std::lround(speed * 1000.0f));
     impl_->speed_x1000.store(v, std::memory_order_relaxed);
 }
 

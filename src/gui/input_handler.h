@@ -1636,14 +1636,9 @@ struct GuiInputHandler {
     // on the desk, the region hold on glass — the deliberate act's two device
     // forms since 2026-08-12, the eighth glass ruling; the plain placement
     // presses that used to arm it are the pending pan now, and the one-day
-    // RULER arm with its deferred dissolve is deleted). `anchor_col` is the
-    // press column (waveform-relative, in range — every caller has just seated
-    // the playhead at it and refused the gutter), from which THE ARM ITSELF
-    // authors the fixed end of every trim pair the sweep writes:
-    // RegionDragState::anchor_source_frame through sweep_trim_frame_at_column,
-    // the sweep's one column->trim route, beside the active-domain frame the
-    // caller's placement seated the playhead at (the two-values-per-column rule
-    // at the field). (x, y) is the press position for
+    // RULER arm with its deferred dissolve is deleted). `anchor_frame` is the
+    // active-domain frame the press just placed the playhead at and the fixed
+    // end of every trim pair the sweep writes; (x, y) is the press position for
     // the press-becomes-drag threshold. IT RAISES NO OVERLAY (2026-08-21): the
     // raise stood here from 2026-08-19, but the overlay derives from the
     // RESTING trim, so at the press it could only show the window the stroke is
@@ -1661,7 +1656,7 @@ struct GuiInputHandler {
     // lower half, for consistency"); its PLAIN press is the pending click,
     // whose motionless release runs the one-shot scrub and leaves the overlay
     // alone.
-    void arm_region_drag_at(int anchor_col, int x, int y);
+    void arm_region_drag_at(int64_t anchor_frame, int x, int y);
 
     // THE SWEEP'S ONE MOTION PATH, hoisted for its two drivers (2026-08-12, the
     // touch half): on_motion's region branch (mouse motion under the held
@@ -2493,10 +2488,8 @@ private:
     bool load_history_local_entry_in_place(const std::string& text);
 
     // THE SWEEP'S TRIM WRITE (architect 2026-08-18 — the region IS the trim):
-    // one ANCHOR and one MOVING end, both whole SOURCE frames already inside
-    // the song walls (sweep_trim_frame_at_column below is their one producer),
-    // written straight into the trim store as an ordered pair — no domain hop
-    // in here. Its two entries are the
+    // one ANCHOR and one MOVING column, both ACTIVE-domain frames, written
+    // straight into the trim store as an ordered pair. Its two entries are the
     // shift+drag former and the touch region hold, and both call it PER MOTION
     // EVENT, so a stroke sets the trim in one gesture with no need to show the
     // overlay first. It takes the setter's regime at the first accepted change
@@ -2516,18 +2509,7 @@ private:
     // handle_toggle_trim_region, which writes no bound and is not a member of
     // anything on this page. The MAXIMIZER survives unchanged as the recovery
     // route.)
-    bool write_trim_from_sweep(int64_t anchor_source, int64_t moving_source);
-
-    // THE SWEEP'S ONE COLUMN->TRIM ROUTE: the whole SOURCE frame a
-    // waveform-relative column authors, through authored_frame_at_column over
-    // the displayed-or-live target map with the song walls applied after —
-    // the lattice every other trim former commits on. Both of the sweep's
-    // trim ends (the arm's anchor, the motion path's moving end) come from
-    // here and nowhere else; the PLAYHEAD those same columns seat and carry
-    // takes the active-domain frame from playhead_frame_at_click_column
-    // instead, the two domains kept apart (the rule and its reasons are at
-    // RegionDragState::anchor_source_frame and at the definition).
-    int64_t sweep_trim_frame_at_column(int col) const;
+    bool write_trim_from_sweep(int64_t anchor_active, int64_t moving_active);
 
     // (THE MINIMUM TRIM WIDTH FLOOR — kMinTrimSpanFrames, a flat count of
     // source frames derived from the engine window and the authored value

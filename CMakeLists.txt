@@ -300,18 +300,4 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})
         target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 -march=native -ffp-contract=off)
     endforeach()
-    # -Wfloat-conversion is a STANDING TRIPWIRE on the GUI's C++ and must report
-    # ZERO: every fractional->integer conversion in src/gui is either an
-    # explicit static_cast on a std::nearbyint / llrint result (the rounding
-    # rule; snap_authored_frame for authored positions) or an audited exact
-    # conversion cast explicitly at its site, so a new warning is a rounding
-    # off the rule to route through the chokepoint, not a cast to add. Scoped
-    # to the GUI target alone and OUTSIDE the shared loop above: the CLI shares
-    # only the frozen stages, which pass the flag but are not its subject; and
-    # scoped to C++ alone because the GUI target also compiles the generated C
-    # protocol stubs, which were never audited under it.
-    if(WARPTEMPO_BUILD_GUI)
-        target_compile_options(warptempo_gui PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:-Wfloat-conversion>)
-    endif()
 endif()

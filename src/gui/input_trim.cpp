@@ -331,18 +331,13 @@ void GuiInputHandler::handle_trim_clear_both() {
 // input_pointer.cpp), a per-frame cursor chase being a cursor fighting the
 // gesture that is moving the bounds.
 //
-// NO DOMAIN HOP IN HERE: both endpoints arrive as whole SOURCE frames already
-// inside the song walls, from the sweep's one column->trim route
-// (sweep_trim_frame_at_column, below this function — the two-values-per-column
-// rule is stated there and at RegionDragState::anchor_source_frame), so this
-// function orders and writes and maps nothing. (The old set-from-region's hop
-// — ACTIVE-domain ends crossed through active_domain_to_source_frame in here —
-// stood until 2026-08-25; it took the CURSOR's value as the trim's, an authored
-// write off the authored_frame_at_column -> snap_authored_frame chokepoint
-// every other trim former commits through: numerically the same frame in
-// source view, but a second route.) Equality is the only collapse a stroke's
-// two ends can produce, and an equal pair is a legal thing to write here: the
-// release's commit tail turns it into the whole song (below).
+// THE DOMAIN HOP IS THE OLD SET-FROM-REGION'S, kept verbatim: both endpoints are ACTIVE-domain
+// frames and the trim store is SOURCE, so each crosses through
+// active_domain_to_source_frame (the identity in source view, the target-view
+// inverse the trim gestures already use, funnelling through snap_authored_frame
+// once). The map is MONOTONE, so lo/hi order survives it — equality is the only
+// collapse it can produce, and an equal pair is a legal thing to write here:
+// the release's commit tail turns it into the whole song (below).
 //
 // Returns whether a bound was actually written, which is the caller's commit
 // gate: a refused write leaves the release owing no tail at all.
@@ -380,18 +375,27 @@ void GuiInputHandler::handle_trim_clear_both() {
 // keeping only as a note to whoever proposes the next span rule here: any such
 // rule must be one number in both views or it is two rules wearing one name.)
 
-bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
-                                            int64_t moving_source) {
+bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_active,
+                                            int64_t moving_active) {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return false;
+    const int64_t wall = audio.total_frames() - 1;
+    int64_t anchor = active_domain_to_source_frame(app, audio, anchor_active);
+    int64_t moving = active_domain_to_source_frame(app, audio, moving_active);
+    const auto clamp_wall = [wall](int64_t v) {
+        if (v < 0)    return int64_t{0};
+        if (v > wall) return wall;
+        return v;
+    };
+    anchor = clamp_wall(anchor);
+    moving = clamp_wall(moving);
 
-    // ORDER IS THE WHOLE OF THIS FUNCTION'S GEOMETRY since 2026-08-19 (the
-    // walls are the producer's, applied before the ends arrive): the pair is
-    // ordered and written as the two ends describe it, with no width rule of
-    // any kind between them (the retired floor's record is at the head of this
-    // function). A coincident pair is written like any other and the RELEASE
-    // turns it into the whole song through the shared escape.
-    const int64_t begin = std::min(anchor_source, moving_source);
-    const int64_t end   = std::max(anchor_source, moving_source);
+    // THE WALLS ARE THE WHOLE OF THIS FUNCTION'S GEOMETRY since 2026-08-19: the
+    // pair is ordered and written as the two ends describe it, with no width
+    // rule of any kind between them (the retired floor's record is at the head
+    // of this function). A coincident pair is written like any other and the
+    // RELEASE turns it into the whole song through the shared escape.
+    const int64_t begin = std::min(anchor, moving);
+    const int64_t end   = std::max(anchor, moving);
     if (app.trim.begin_frame == begin && app.trim.end_frame == end)
         return false;   // same pair: nothing to write, nothing to repaint
 
@@ -413,41 +417,6 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
     return true;
-}
-
-// THE SWEEP'S ONE COLUMN->TRIM ROUTE — the authored value a sweep column
-// yields, and the only producer of write_trim_from_sweep's two arguments (the
-// arm's anchor, arm_region_drag_at; the motion path's moving end,
-// apply_region_drag_motion). EVERY SWEEP COLUMN YIELDS TWO VALUES, THE DOMAINS
-// KEPT APART: the ACTIVE-domain frame from playhead_frame_at_click_column seats
-// and carries the PLAYHEAD (the press placement, the live cursor carry, the
-// playback reseat, the `h` view's playhead-only former — that road is
-// untouched by this one), and THIS whole SOURCE frame goes into the TRIM. Same
-// display grid, two routes: this one is authored_frame_at_column over the
-// displayed-or-live target map — the single-rounding grid in both views, the
-// target arm quantizing to a target frame and inverse-mapping at full
-// precision, snap_authored_frame the one double->authored conversion — with
-// the song walls applied AFTER in source space (walls win over the grid),
-// exactly the route the endcap drag's release snap (commit_trim_drag's
-// snap_moved_bound) and the trim bar's ctrl click (trim_bound_click_frame)
-// commit through, so every trim former authors on one lattice. Feeding the
-// cursor's active-domain value into the trim instead would put an authored
-// write off that chokepoint (the shape this replaced), and feeding this source
-// value into the cursor would jump a target-view playhead into source
-// coordinates — hence two values per column. In source view the two agree
-// frame for frame (the same rounding under the same grid); in target view this
-// is the inverse image the cursor's value only names. Returns 0 on degenerate
-// geometry (unloaded audio, no strip width), which no caller reaches: every
-// arm refuses unloaded audio and the gutter, and the motion path returns on an
-// empty strip.
-int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
-    if (audio.total_frames() <= 0) return 0;
-    const int64_t wall = audio.total_frames() - 1;
-    int64_t frame = authored_frame_at_column(
-        app, audio, col, displayed_or_live_target_map(app, audio));
-    if (frame < 0)    frame = 0;
-    if (frame > wall) frame = wall;
-    return frame;
 }
 
 // Shift+[ MAXIMIZES the trim to the full window (architect 2026-07-25 for the

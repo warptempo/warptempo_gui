@@ -12,8 +12,6 @@
 #include <vector>
 
 class GuiAudio;
-// The waveform's display lane (defined in audio.h); render_waveform takes one.
-enum class GuiWaveformLane;
 struct AppState;
 struct DragOverlay;
 
@@ -122,13 +120,12 @@ struct TrimRange {
 //
 // EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all, and
 // the redesign kept the doctrine: a highlight REPLACES the colors it lifts
-// rather than washing over them. The region highlight is opaque colors in two
-// passes — kWaveformRegionCanvas for the ground under the ink, then the ink
-// itself as the SECOND PLATE (the same bars in the three selected inks, the
-// plate's own BINARY alpha) blitted through the live region clip, so every
-// pixel ends up fully one color or fully the other and nothing blends; a
-// disabled face resolves to a solid color through mix_color before it reaches
-// cairo, never a fade.
+// rather than washing over them. The region highlight is two opaque colors in
+// two passes — kWaveformRegionCanvas for the ground under the ink, then
+// kWaveformRegionInk for the ink itself, masked through the plate's own BINARY
+// alpha so every pixel ends up fully one color or fully the other and nothing
+// blends; a disabled face resolves to a solid color through mix_color before it
+// reaches cairo, never a fade.
 
 // THE BASE CHROME ERASE (render_background) — and the surviving half of the
 // GROUND SPLIT: this goes under everything, and the redesigned rows then paint
@@ -761,105 +758,60 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // onto its own sampled surfaces. THE WHOLE TUNABLE SYSTEM RETIRED THE NEXT DAY
 // (2026-08-02) — every key above is deleted along with the loader and the config
 // file itself; the record is at the palette header.
-//
-// THE THREE-BAND WAVEFORM'S COLOURS (2026-08-25; THE THIRD HUE SET, 2026-08-26).
-// The plate paints the mono sum's three frequency bands (GuiWaveformLane
-// Low / Mid / High, audio.h) as three opaque bar stacks in the fixed z-order
-// low -> mid -> high, each band in its own ink, and the region highlight paints
-// the same three bands in three SELECTED inks over its own canvas.
-//
-// THE THREE BANDS ARE THREE HUES, NOT THREE GREENS (architect 2026-08-26, after
-// his first glass pass): kdenlive's two waveform greens sat inside one another
-// — the low band's teal #1c816b nested invisibly in the mid green, and the
-// third green was a lift off the second — so the halo the stack exists to show
-// could not be read as a separate band. Low and high move to two of kdenlive's
-// own MARKER CATEGORY colours instead, sampled off the Edit Marker dialog's
-// category swatches: category 7 ORANGE #f39c1f for the low band (the DJ
-// convention for bass, and warm against the green body) and category 5 YELLOW
-// #c9ce3b for the high. Categories 1, 2 and 9 are excluded on purpose — 1 and 2
-// are already this product's marker and measure inks and 9 is the red class.
-// The MID band keeps kdenlive's own waveform green, measured off kden1.png (a
-// plain clip) and kden2.png (the same clip selected), dominant ink per channel,
-// histogram-verified; so does the canvas pair, and so does kWaveformInk, which
-// is now the OVERVIEW STRIP'S ink alone (that lane paints the plain mono sum,
-// no band split, so it keeps kdenlive's waveform teal while the plate's low
-// band does not).
-//   plain:    canvas #12312b (kden1), low #f39c1f (kdenlive category 7),
-//             mid #1f8b4c (kden1 bottom channel), high #c9ce3b (category 5);
-//   selected: canvas #1b4941 (kden2), low #f7ba62, mid #2ed172 (kden2 bottom
-//             channel), high #d9dd76.
-// EVERY ONE OF THE FOUR NEW VALUES IS A PLACEHOLDER to be retuned on glass, as
-// the two greens they replace were.
-inline constexpr GuiColor kWaveformCanvas  = hex(0x12312B);  // (18, 49, 43)  kden1 canvas
-inline constexpr GuiColor kWaveformInk     = hex(0x1C816B);  // (28, 129, 107) kden1 top channel — THE OVERVIEW STRIP'S one ink
-inline constexpr GuiColor kWaveformInkLow  = hex(0xF39C1F);  // (243, 156, 31) kdenlive marker category 7 — the LOW band (PLACEHOLDER)
-inline constexpr GuiColor kWaveformInkMid  = hex(0x1F8B4C);  // (31, 139, 76)  kden1 bottom channel — the MID band
-inline constexpr GuiColor kWaveformInkHigh = hex(0xC9CE3B);  // (201, 206, 59) kdenlive marker category 5 — the HIGH band (PLACEHOLDER)
+inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
+inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
-// THE PER-BAND DISPLAY GAINS (architect 2026-08-26). Each band call multiplies
-// its column's min/max by its own gain and clamps to [-1, 1] before the tips
-// become rows (render_waveform, render.cpp — the one application point). The
-// bands' true amplitudes differ by more than an octave of headroom, so at unity
-// the fixed z-order would show mid alone: THE Z-ORDER IS NOT TOUCHED, the gains
-// are what make the bands beneath and in front of it visible at all.
+// THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
+// old value read GREY on the green canvas — "start over, don't just tune it;
+// leave it more greenish").
 //
-// THE RULE THE GAINS BUY, stated once here and again at render_waveform: with
-// low -> mid -> high fixed, THE LOW BAND IS VISIBLE EXACTLY WHERE
-// gain_low * low > mid, so the orange halo reads as "the bass is relatively
-// prominent here" — it pokes out past the mid body at each downbeat of a quiet
-// passage and is swallowed at a forte, the bass relegated to the background
-// there BY DESIGN. The HIGH band is always the front core, nothing painting
-// over it, so its gain sets only how big that core is. Measured on the piece at
-// the 200/2000 crossovers, low x4 puts the halo in about 55 % of frames and
-// clips low's own true peak (about 0.3) only at the loudest ones.
+// DERIVED, NOT SAMPLED — and deliberately so: there is no kdenlive reference for
+// it, because kdenlive has no comparable highlight. What is transplanted is the
+// RELATIONSHIP, not the colour. The old region highlight #42474d was the old
+// grey canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
+// channel; applying that same lift to the crop's canvas keeps the
+// theme's-native-lift logic and lands same-hue and subtly lifted on the green,
+// which is what the grey pair was on the grey.
 //
-// THEY ARE COMPILE-TIME PAINT CONSTANTS: nothing persisted reads them, so a
-// retune is a recompile and NOT a cache rebuild (the .peaks payload is the
-// bands' true peaks; the gain is applied on the way to pixels). PLACEHOLDERS,
-// to be retuned on glass.
-inline constexpr double kBandDisplayGainLow  = 4.0;
-inline constexpr double kBandDisplayGainMid  = 1.0;
-inline constexpr double kBandDisplayGainHigh = 3.0;
+// THE LIFT IS DOUBLED (architect 2026-08-01: "the waveform highlight should be
+// brighter"). One native step was too quiet to find on the green ground, so the
+// step is applied TWICE — still the theme's own relationship, taken twice, not
+// a tint invented for it:
+//     kWaveformCanvas (18, 49, 43) + 2*(9, 9, 10) = (36, 67, 63) = #24433f
+// (one step gave (27, 58, 53) = #1b3a35, the value this constant held between
+// the row-6 re-derivation and the tweak).
+//
+// IT IS AN OPAQUE GROUND RECOLOR, NOT A BLEND (paint_region_ground, painted
+// BEFORE the plate blit): the span's canvas is REPLACED by this colour, and the
+// ink then composites over it exactly as it composites over the plain canvas.
+// Since the aliasing deletion the plate's alpha is BINARY, so an ink pixel is
+// fully opaque and a gap is fully transparent: this colour shows through the
+// gaps and blends with nothing.
+inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
 
-// THE REGION HIGHLIGHT: THE SELECTED CANVAS AND THE THREE SELECTED INKS. A
-// SELECTED CLIP IN KDENLIVE IS EXACTLY A LIT REGION, so kden2 answers the
-// highlight directly for everything kdenlive itself supplies: the selected
-// canvas and the selected MID ink are read off kden2 the way their plain twins
-// are read off kden1, dominant ink per surface, and the theme-lift derivation
-// this constant once held (with a second, now deleted, for the ink) is
-// superseded whole. kden2's TOP-CHANNEL sample #2ac1a0 was measured with them
-// and is recorded here for provenance alone: it was the low band's selected
-// ink until the third hue set moved that band off kdenlive's greens, and with
-// kWaveformInk left serving only the overview — a lane with no region plate —
-// nothing reads a selected teal, so no constant holds one.
+// THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
+// 2026-08-18: "apply overlay alpha to wave along with canvas on region
+// highlight"). The ground recolor alone lit the background behind unlit
+// content; lifting the ink too makes the span read as ONE lit region.
 //
-// THE TWO NEW HUES TAKE A HUE-PRESERVING TINT INSTEAD (2026-08-26): the
-// measured kden1 -> kden2 step is roughly a x1.5 per-channel lift, which on the
-// orange would clamp red and green at 255 and turn it into a yellow — the one
-// thing a selected low band must not become, the high band being yellow. So
-// each new selected ink is its plain ink mixed 30 % TOWARD WHITE, channel by
-// channel (c + 0.3*(255 - c), rounded): #f39c1f -> #f7ba62 and #c9ce3b ->
-// #d9dd76. That lifts the same way the kden2 pair does without moving the hue.
+// DERIVED EXACTLY AS ITS SIBLING WAS, so the pair is one construction rather
+// than a colour and a guess: Breeze's own View -> ViewAlternate lift of
+// +9/+9/+10 per channel, taken TWICE — the theme's own relationship applied
+// twice, not a tint invented for it —
+//     kWaveformInk (28, 129, 107) + 2*(9, 9, 10) = (46, 147, 127) = #2e937f
 //
-// THE MECHANISM IS AN OPAQUE RECOLOR IN TWO PASSES AROUND THE PLATE BLIT, and
-// that is what the highlight has always been. The ground half is
-// paint_region_ground's opaque canvas recolor BEFORE the blit; the ink half is
-// the REGION PLATE — the same bars in the three selected inks, rendered by the
-// one job beside the plain plate — blitted AFTER it through the live region
-// clip (paint_region_ink). Both plates carry the same BINARY alpha and the
-// same geometry by construction (same reads, same bars), so every ink pixel
-// inside the span becomes exactly its band's selected ink and every gap keeps
-// showing the selected canvas: nothing blends, and a translucent wash over the
-// plate is the retired form the opaque recolor model rejects. Because both
-// plates are rendered under one fingerprint and the span is only a clip,
-// region motion rebuilds nothing.
+// STILL FULLY OPAQUE, NOT A WASH: paint_region_ink masks this colour through
+// the plate's own BINARY alpha in a second pass AFTER the blit, so every ink
+// pixel inside the span becomes exactly this colour and every gap is left
+// untouched — still showing the kWaveformRegionCanvas ground the first pass
+// laid down. A translucent wash painted over the plate is the retired form the
+// opaque recolor model rejects, and this is not it.
 //
-// THE ARCHITECT'S TUNING KNOB: these constants are the whole of what the region
-// path has to tune, and the low and high bands' are placeholders he will move.
-inline constexpr GuiColor kWaveformRegionCanvas  = hex(0x1B4941);  // (27, 73, 65)   kden2 canvas
-inline constexpr GuiColor kWaveformRegionInkLow  = hex(0xF7BA62);  // (247, 186, 98) #f39c1f tinted 30 % to white — the LOW band (PLACEHOLDER)
-inline constexpr GuiColor kWaveformRegionInkMid  = hex(0x2ED172);  // (46, 209, 114) kden2 bottom channel — the MID band
-inline constexpr GuiColor kWaveformRegionInkHigh = hex(0xD9DD76);  // (217, 221, 118) #c9ce3b tinted 30 % to white — the HIGH band (PLACEHOLDER)
+// THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
+// derivation and not a measurement, so this constant and kWaveformRegionCanvas
+// above are the two to move if the highlight wants to be stronger or weaker,
+// and they are the whole of what the region path has to tune.
+inline constexpr GuiColor kWaveformRegionInk = hex(0x2E937F);  // (46, 147, 127)
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -1872,17 +1824,6 @@ inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
 // aliased integer rects). A FLOOR, NOT A PIN: at 100% and above every scaled
 // half is already >= 1, so nothing above the baseline moves and the tips keep
 // scaling.
-//
-// THE ROW INVERSE TRUNCATES, deliberately — the one conversion here off the
-// project's nearbyint rule. `device_row / s` is a POSITION INSIDE the authored
-// table, and source row k covers the device rows [k*s, (k+1)*s), so the row
-// that CONTAINS the position is the floor of it: the same containment reading
-// a screen pixel takes. Rounding would pull the upper half of every device
-// band into the next source row and shift the transcribed shape by half a row
-// at fractional scales. Every caller passes a row index inside the head band
-// and s > 0 by gui_scale's own bracket, so the quotient is non-negative and
-// the cast's toward-zero truncation IS that floor; the two clamps below are
-// the backstop that holds the index inside the table at either end.
 inline int playhead_head_half_px(int device_row, double s) {
     int src = static_cast<int>(static_cast<double>(device_row) / s);
     if (src > kPlayheadHeadHeightPx - 1) src = kPlayheadHeadHeightPx - 1;
@@ -1951,6 +1892,23 @@ inline int popup_item_margin_y_px() {
 // [50, 200] (8 px reaches 2 only below 19%).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
+}
+
+// THE CHANNEL SPLIT ROW — where the two channel bands meet, area-local (add the
+// area's y for a window row). The plate renderer
+// (render_waveform_to_cache_surface) is its ONE caller: it lays the top band
+// down to this row and the bottom band from it. Nothing paints on the row —
+// the two channels meet flush.
+//
+// The band is the area minus the symmetric inset at each end; each channel
+// takes the halved-and-floored height, so at an odd band height the spare row
+// falls at the BOTTOM of the drawing band, inside the inset, where nothing
+// draws (the reasoning is at the renderer). Returns -1 when the inset leaves no
+// band at all — the caller's own refusal case.
+inline int waveform_channel_split_row(int area_h, int inset_px) {
+    const int inset_h = area_h - 2 * inset_px;
+    if (inset_h <= 0) return -1;
+    return inset_px + inset_h / 2;
 }
 
 // Half-width (px) of the playhead COLUMN's reach: a playhead at column c owns
@@ -2104,20 +2062,18 @@ struct WaveformBasis {
 };
 
 
-// Draws one display LANE's waveform (GuiWaveformLane: the mono sum or one of
-// its three bands) into `area`, which holds the `area.w` columns starting at
-// GLOBAL column `col0` — i.e. the column sub-range [col0, col0+area.w) of
-// `basis`. Both callers are full-plate renders and pass col0 = 0 with
-// area.w == basis.full_width. When `warp_frame_map` is null (source view) the basis
+// Draws one channel's waveform into `area`, which holds the `area.w` columns
+// starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
+// col0+area.w) of `basis`. Both callers are full-plate renders and pass
+// col0 = 0 with area.w == basis.full_width. When `warp_frame_map` is null (source view) the basis
 // viewport is source-frame and each column reads `audio.get_peak_range`
 // directly. When non-null (target view) it is target-frame: each column's
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
 // pyramid read, producing the deformed-waveform display.
 //
 // THE SILHOUETTE IS A COLUMN OF HARD BARS. Each column reduces to two TIPS in
-// float rows — its maximum as the top tip, its minimum as the bottom, each
-// scaled by this call's `gain` — and paints as ONE opaque bar spanning
-// floor(top) .. floor(bot) inclusive.
+// float rows — its raw maximum as the top tip, its raw minimum as the bottom —
+// and paints as ONE opaque bar spanning floor(top) .. floor(bot) inclusive.
 // There is no interior/edge split, no fractional coverage, no regime threshold,
 // and NO INTER-COLUMN CONNECTIVITY AT ALL: a spike stands alone beside a short
 // neighbour, which is the classic min/max look the architect chose.
@@ -2151,58 +2107,32 @@ struct WaveformBasis {
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
 // context. ONE COMPOSITING RULE, where there were two: every write REPLACES.
-// The caller cleared every column this call regenerates, and within ONE call
-// each column is written exactly once by exactly one bar, so replacing is
-// correct and idempotent — the max-compositing that the segments needed (they
-// wrote into an already-rendered neighbour) went with them. THE Z-ORDER IS
-// THE SAME RULE ACROSS CALLS: the plate is painted by three calls over the
-// SAME band — the Low, Mid and High lanes in that fixed order — and a later
-// band's bar deliberately REPLACES whatever an earlier band wrote in the rows
-// they share, so the low band reads as the wide halo behind and a transient's
-// high content paints in front wherever it exceeds the bands beneath it. The
-// overview strip is a single Sum-lane call and has no z-order to speak of.
-//
-// `gain` IS THE BAND'S DISPLAY GAIN, APPLIED AT THE TIP MAPPING AND NOWHERE
-// ELSE: the column's dequantized min and max are each multiplied by it and
-// clamped into [-1, 1] before they become rows, so nothing about the column's
-// FRAME SPAN, its pyramid rung, the carried-endpoint chain or the >=1px
-// never-fade floor is touched — a gain moves only how tall a bar is drawn.
-// The plate's three band calls pass their band's constant
-// (kBandDisplayGainLow / Mid / High above) and the overview strip's Sum call
-// passes 1.0, that lane staying TRUE AMPLITUDE. Nothing persisted sees a gain:
-// the .peaks payload is the bands' own peaks, so a retune is a recompile and
-// not a cache rebuild.
-//
-// WHAT THE GAINS BUY, with the z-order fixed at low -> mid -> high: THE LOW
-// BAND IS VISIBLE EXACTLY WHERE gain_low * low > mid, so its halo reads as
-// "the bass is relatively prominent here" and is swallowed by a forte's mid
-// body by design; the HIGH band is always the front core, so its gain sets only
-// that core's size. The full statement is at the constants.
+// The caller cleared every column this call regenerates and each column is
+// written exactly once by exactly one bar, so replacing is correct and
+// idempotent — the max-compositing that the segments needed (they wrote into an
+// already-rendered neighbour) went with them.
 //
 // The word is PREMULTIPLIED ARGB32, built once per call for the one ink colour;
 // at full coverage that is the ink itself, so there is a single word rather than
 // a table. The surface is flushed before the first CPU write and marked dirty
 // after the last, so later cairo use sees the pixels.
 //
-// Each call paints uniformly in `color` — the plate is trim-agnostic, and the
+// The plate paints uniformly in `color` — it is trim-agnostic, and the
 // out-of-trim dim that once masked a second color through this alpha is
 // retired, the trim bar spanning the window being the whole inside-the-window
 // signal now. Its alpha is BINARY now: opaque bars and
 // transparent gaps, with no fractional edges left. The gaps are what let a
 // recolored GROUND (kWaveformRegionCanvas, painted before the blit) show
-// through. The region's INK is not a recolor of these pixels: the one job
-// renders a SECOND plate with the same calls in the selected inks, and
-// paint_region_ink blits that plate through the region's clip — identical
-// alpha and geometry by construction, since the same reads produce the same
-// bars — leaving both plates untouched at paint time.
+// through, and the SET pixels are what the one remaining after-the-fact
+// recolor reads: paint_region_ink masks kWaveformRegionInk through this same
+// alpha inside the region's column span, leaving the plate itself untouched.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,
-                     GuiWaveformLane lane,
+                     int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
-                     double gain,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`

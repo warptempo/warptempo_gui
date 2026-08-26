@@ -1946,13 +1946,6 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         const int asc  = static_cast<int>(std::ceil(fe.ascent));
         const int desc = static_cast<int>(std::ceil(fe.descent));
         const int edge_h = marker_flag_edge_h_px();
-        // THE TWO CASTS BELOW ARE INTEGRAL BY CONSTRUCTION, which is why they
-        // truncate where the baseline one rounds: `pen` starts at chain_x,
-        // already through std::nearbyint above, and `chip_box_w` is scaled
-        // integer pads and a border around a std::nearbyint'ed run width — both
-        // doubles hold whole numbers here, so no rounding rule is in play.
-        // `baseline` is the only genuinely fractional input on this line and it
-        // takes std::nearbyint, the project's rule.
         const int fx = static_cast<int>(pen) + border_w;
         const int fw = static_cast<int>(chip_box_w) - border_w;
         const int fy = static_cast<int>(std::nearbyint(baseline)) - asc;
@@ -2885,11 +2878,6 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // box is the row's whole content band, which the nudged baseline's ink
         // stays inside, and the band's bottom IS the window's, so widening it
         // downward would damage past the surface.
-        // CEIL, NOT nearbyint: cell_w is a fractional advance sum and this is
-        // a DAMAGE box, which may be a hair too wide but never a hair too
-        // narrow — rounding down could leave the cell's last column unerased.
-        // Same round-up rule the critical chip's box takes on its ascent and
-        // descent (the status chain's paint tail), for the same reason.
         app.clock_cell_rect = GuiRect{
             cell_x - 1, content_y,
             static_cast<int>(std::ceil(cell_w)) + 2, content_h};
@@ -3528,8 +3516,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     constexpr int kHeadTickWindowCap = 48;
     std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
     const int head_half_max = playhead_head_half_px(0, gui_scale_factor());
-    const double head_px_pre = playhead_pixel_x(
-        app, static_cast<int64_t>(basis.vp_start), basis.spp);
+    const double head_px_pre = playhead_pixel_x(app, basis.vp_start, basis.spp);
     const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
     int head_window = 2 * head_half_max + 1;
     if (head_window > kHeadTickWindowCap) head_window = kHeadTickWindowCap;
@@ -3611,13 +3598,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // PLACEMENT is distributed, and a major is at its own exact time
             // anyway. Its x rides `col`, which for a major IS the rounded major,
             // so number and line cannot drift apart.
-            // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
-            // product exact in double at any ruler magnitude), so this is a
-            // representation change, not a rounding: llrint reads the integer
-            // back and can never meet a tie. (nearbyint is the rule where a
-            // fraction is actually rounded; the trim bar's displayed_trim_ms
-            // cast makes the same integral-valued claim.)
-            const int64_t label_ms = static_cast<int64_t>(std::llrint(step_ms));
+            const int64_t label_ms = static_cast<int64_t>(std::llround(step_ms));
             if (label_ms < 0) continue;
             const std::string txt =
                 ruler_label_text(label_ms, step);
@@ -3678,8 +3659,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // time this pass runs, in a band this one never touches (the sequence is
     // the paint-order block in on_redraw).
     {
-        const double cursor_px = playhead_pixel_x(
-            app, static_cast<int64_t>(basis.vp_start), basis.spp);
+        const double cursor_px = playhead_pixel_x(app, basis.vp_start, basis.spp);
         const int col = static_cast<int>(std::nearbyint(cursor_px));
         if (col >= 0 && col < wave_w) {
             const double s   = gui_scale_factor();
@@ -3791,11 +3771,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
 void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
-    // wf_cache.plates (the live plain + region pair) is produced by one of two
-    // paths, both of which leave this paint path blit-only:
+    // wf_cache.surface is produced by one of two paths, both of which
+    // leave this paint path blit-only:
     //   1. Worker full render — maybe_enqueue_waveform_render
     //      dispatches a full-window render on GuiWaveformWorker,
-    //      which swaps the pair into wf_cache.plates on completion. Fires
+    //      which swaps into wf_cache.surface on completion. Fires
     //      for UNDRIVEN changes — resize, the launch load, follow-scroll
     //      during playback — and as the on_tick backstop for any residual
     //      fingerprint drift (a warp_frame_map hash included). Map EDITS
@@ -3814,25 +3794,25 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // any mismatch by layering flags onto a surface keyed
     // off the same displayed-viewport.
     //
-    // If the live pair is incomplete (initial load, before the first worker
-    // completion), the blit is skipped — NEITHER plate paints, the invariant's
-    // PAINT clause (WaveformCache) — and the canvas ground fill shows through.
-    // The user-visible difference is one extra paint frame of empty canvas
-    // between load and first waveform display, masked by the existing
-    // load-time progress bar.
+    // If wf_cache.surface is null (initial load, before the first
+    // worker completion), the blit is skipped and the canvas
+    // ground fill shows through. The user-visible difference is one
+    // extra paint frame of empty canvas between load and first
+    // waveform display, masked by the existing load-time progress
+    // bar.
     //
-    // BLIT-ONLY HERE, WITH EXACTLY ONE PASS OVER IT AFTER: this call writes
-    // the PLAIN plate's pixels as the renderer wrote them, composited once
+    // BLIT-ONLY HERE, WITH EXACTLY ONE PASS RECOLORING IT AFTER: this call
+    // writes the plate's pixels as the renderer wrote them, composited once
     // over whichever ground — kWaveformCanvas, or a kWaveformRegionCanvas
-    // recolor — the pass before this one left. The one later pass that covers
+    // recolor — the pass before this one left. The one later pass that touches
     // those pixels is paint_region_ink, the very next call in on_redraw, which
-    // blits the REGION plate — the same bars in the selected inks — through
-    // the REGION's column span alone; outside that span, and on every frame
-    // where no region stands, the blitted pixels are final. Neither plate
-    // SURFACE is ever rewritten at paint time.
+    // masks kWaveformRegionInk through the plate's own alpha inside the REGION's
+    // column span alone; outside that span, and on every frame where no region
+    // stands, the blitted pixels are final. The plate SURFACE is never rewritten
+    // either way — both passes recolor at paint time.
     //
-    // The out-of-trim dim — a second masked-colour pass over the whole
-    // out-of-trim stretch — stays retired (architect 2026-07-26): the trim
+    // The out-of-trim dim — the same second-masked-pass mechanism applied to the
+    // whole out-of-trim stretch — stays retired (architect 2026-07-26): the trim
     // bridge bar is the whole inside-the-window signal now.
     //
     // The clip is the CONTENT band, not the full area: the area's top and
@@ -3840,12 +3820,12 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // band-filling pass may cover them. (The plate's own inset band leaves those rows transparent
     // anyway, so this is the structural statement of the rule rather than a
     // pixel change.)
-    if (wf_cache.plates.complete()) {
+    if (wf_cache.surface) {
         const GuiRect content = waveform_content_rect(area);
         cairo_save(cr);
         cairo_rectangle(cr, content.x, content.y, content.w, content.h);
         cairo_clip(cr);
-        cairo_set_source_surface(cr, wf_cache.plates.plain,
+        cairo_set_source_surface(cr, wf_cache.surface,
                                  area.x, area.y);
         cairo_paint(cr);
         cairo_restore(cr);
@@ -3905,10 +3885,9 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // It is HALF the highlight, not all of it: paint_region_ink below lifts the INK
 // over the same span after the blit (architect 2026-08-18), so the highlight
 // reads as one lit region rather than as a lit background behind unlit content.
-// That is still no wash — it blits the REGION plate, the same bars in the
-// selected inks, through the span's clip: opaque pixels replacing opaque
-// pixels, the mechanism the recolor model admits, where a translucent wash
-// painted over the plate is the form it rejects.
+// That is still no wash — it masks a second OPAQUE colour through the plate's
+// own binary alpha, the mechanism the recolor model admits, where a translucent
+// wash painted over the plate is the form it rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
 // clipped to the CONTENT band so it cannot cover the area's border rows.
@@ -3949,33 +3928,24 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_region_ink -----------------------------------
 
 // THE HIGHLIGHT'S SECOND HALF (architect 2026-08-18): the span's INK takes the
-// selected inks its canvas already takes (the kden2 measurements, render.h),
-// so the highlight lifts the whole picture instead of only the ground behind
-// it. Called from on_redraw immediately AFTER paint_waveform_plate — the pair
-// with paint_region_ground above, one highlight in two passes with the blit
-// between them.
+// same doubled Breeze lift its canvas already takes, so the highlight lifts the
+// whole picture instead of only the ground behind it. Called from on_redraw
+// immediately AFTER paint_waveform_plate — the pair with paint_region_ground
+// above, one highlight in two passes with the blit between them.
 //
-// THE REGION PLATE, BLITTED THROUGH THE LIVE CLIP: the one waveform job renders
-// a second plate beside the plain one — the same three bands, the same reads,
-// the same bars, in the three SELECTED inks (the plate contract at
-// render_waveform_to_cache_surface) — and this pass clips to (the region's
-// column span) INTERSECT (the content band) and paints that plate over the
-// plain blit. Never a translucent wash over the plate — the wash is the
-// retired form the opaque recolor model rejects. Because the aliased
-// renderer's alpha is BINARY (the antialiased plate is deleted;
-// docs/engineering/waveform_antialiasing_retired.md) and both plates share it
-// by construction, there is no fractional coverage anywhere: every ink pixel
-// in the span becomes exactly its band's selected ink and every gap is left
-// alone, so the kWaveformRegionCanvas ground the previous pass laid down still
-// shows through the gaps unchanged. (Until the bands, this pass masked ONE
-// lifted colour through the single plate's alpha; three inks need three
-// colours, and the second plate carries them without a per-band mask.)
+// A SECOND OPAQUE COLOR MASKED THROUGH THE PLATE'S OWN ALPHA, never a
+// translucent wash over the plate — the wash is the retired form the opaque
+// recolor model rejects. Because the aliased renderer's alpha is BINARY (the
+// antialiased plate is deleted; docs/engineering/waveform_antialiasing_retired.md)
+// the mask has no fractional coverage anywhere: every ink pixel in the span
+// becomes exactly kWaveformRegionInk and every gap is left alone, so the
+// kWaveformRegionCanvas ground the previous pass laid down still shows through
+// the gaps unchanged.
 //
-// Neither plate is rewritten: the span is a CLIP applied at PAINT time and
-// nothing is written into the cache, so region motion rebuilds no plate and
-// the trim stays out of the fingerprint. Damage is the ground pass's — a
-// subspan of pixels that pass already owns in the same redraw. Session-only,
-// nothing persisted, no cache involved.
+// The plate is not rewritten: this recolors at PAINT time and writes nothing
+// into the cache, so a pan or a zoom that reuses the surface reuses the plain
+// ink. Damage is the ground pass's — a subspan of pixels that pass already owns
+// in the same redraw. Session-only, nothing persisted, no cache involved.
 //
 // The span comes from plate_viewport_basis() and region_columns(), the very
 // calls paint_region_ground makes, so the ground and the ink cannot disagree
@@ -3984,10 +3954,9 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     if (!app.region.shown) return;
     if (area.w <= 0 || area.h <= 0) return;
-    // The blit's own guard, the invariant's PAINT clause (WaveformCache): with
-    // an incomplete live pair NEITHER plate paints, and the ground pass's fill
-    // is the whole highlight for that frame.
-    if (!wf_cache.plates.complete()) return;
+    // The blit's own guard: with no published plate there is no alpha to mask
+    // through, and the ground pass's fill is the whole highlight for that frame.
+    if (!wf_cache.surface) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
@@ -4008,10 +3977,10 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     cairo_rectangle(cr, x0, static_cast<double>(content.y),
                     x1 - x0, static_cast<double>(content.h));
     cairo_clip(cr);
-    // The plain blit's own origin, so the region plate lands column for column
-    // on the plain plate's pixels — the two share every bar.
-    cairo_set_source_surface(cr, wf_cache.plates.region, area.x, area.y);
-    cairo_paint(cr);
+    cairo_set_source_rgb(cr, kWaveformRegionInk.r, kWaveformRegionInk.g,
+                         kWaveformRegionInk.b);
+    // The blit's own origin, so the mask lands on the pixels it came from.
+    cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
     cairo_restore(cr);
 }
 
@@ -4749,11 +4718,8 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      model and the succession are recorded at the constant). Painted on
 //      every frame class, audio or none.
 //   2. THE BARS (the cached blit; maybe_rebuild_overview_bar_cache below):
-//      the WHOLE PIECE as per-column min/max bars in kWaveformInk — the
-//      PLAIN MONO SUM (GuiWaveformLane::Sum), one lane, one ink, NO BAND
-//      SPLIT and NO DISPLAY GAIN (1.0, true amplitude): the plate's
-//      three-band stack and its per-band gains are the plate's alone, and
-//      this lane stays a plain mono-sum miniature. THE DATA IS THE
+//      the WHOLE PIECE as per-column min/max bars in kWaveformInk, two
+//      channel bands exactly as the plate stacks them. THE DATA IS THE
 //      SOURCE DOMAIN, ALWAYS — a deliberate ruled choice: the whole-song
 //      TARGET domain does not exist as audio (the preview buffer is
 //      trim-scoped), so the overview shows the piece itself in every view
@@ -4837,21 +4803,26 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         cairo_paint(ccr);
         cairo_destroy(ccr);
     }
-    // ONE MONO-SUM BAND (GuiWaveformLane::Sum, in kWaveformInk — kdenlive's
-    // waveform teal, this lane's own ink since the plate's bands moved to
-    // three hues; the plate paints the three frequency bands instead, this
-    // lane deliberately does not, and it reads the Sum lane the plate never
-    // paints) filling
+    // TWO CHANNEL BANDS, the plate's own stack (stereo is structural), filling
     // the CONTENT band whole — the plate's symmetric waveform_inset_px serves
     // the playhead head's clearance there and would eat a third of this lane's
     // 24px content band, so the bars run the whole band. The band is the lane
-    // less its TWO border rows. The cache surface is LANE-sized and blitted at
-    // the lane's own origin, so the band's y offset is carried into the rect
-    // here and the bars land inside the borders rather than under the top one.
+    // less its TWO border rows (the split is computed with a ZERO inset over
+    // that band's OWN height, the channel splitter's own arithmetic — the
+    // borders are already off, so asking it for a symmetric inset would take
+    // them twice),
+    // and the odd spare row falls at the band's bottom where nothing draws,
+    // exactly as in the plate. The cache surface is LANE-sized and blitted at
+    // the lane's own origin, so the band's y offset is carried into both
+    // channel rects here and the bars land inside the borders rather than
+    // under the top one.
     const GuiRect band = overview_content_rect(GuiRect{0, 0, lane.w, lane.h});
+    const int split = waveform_channel_split_row(band.h, /*inset_px=*/0);
     const double spp = overview_samples_per_pixel(app, audio);
-    if (band.h > 0 && spp > 0.0) {
-        const GuiRect bars{0, band.y, lane.w, band.h};
+    if (split >= 0 && spp > 0.0) {
+        const int ch_h = split;
+        const GuiRect ch0{0, band.y, lane.w, ch_h};
+        const GuiRect ch1{0, band.y + split, lane.w, ch_h};
         // THE BASIS: viewport start 0, the whole piece over the lane's width.
         // THE PYRAMID RUNG IS THE ONE OWNER'S PICK, per column from this spp
         // (GuiAudio::level_for_span inside render_waveform — the coarse rungs
@@ -4860,13 +4831,10 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         // rungs at the unconditional <=5-pairs-per-column bound, so the
         // rebuild is O(lane width) like any plate render).
         const WaveformBasis basis{0, spp, lane.w};
-        // GAIN 1.0: the overview is TRUE AMPLITUDE. The plate's per-band
-        // display gains exist to pull one band out from behind another in a
-        // three-band stack; this lane is one lane, so there is nothing to
-        // separate and nothing to exaggerate.
-        render_waveform(overview_bar_cache.surface, bars, /*col0=*/0, audio,
-                        GuiWaveformLane::Sum, basis, kWaveformInk, /*gain=*/1.0,
-                        nullptr);
+        render_waveform(overview_bar_cache.surface, ch0, /*col0=*/0, audio, 0,
+                        basis, kWaveformInk, nullptr);
+        render_waveform(overview_bar_cache.surface, ch1, /*col0=*/0, audio, 1,
+                        basis, kWaveformInk, nullptr);
     }
     overview_bar_cache.rendered = true;
 }
@@ -5489,11 +5457,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (size_t i = 0; i < plan.size(); ++i) {
         const double lw =
             text_shape::shape_text_run(font, plan[i].label).width_px;
-        // CEIL, NOT nearbyint: a measured run width is fractional and the box
-        // it sizes must CONTAIN the ink, so it rounds UP — rounding to nearest
-        // could clip the label's last column inside its own pads. The same
-        // round-up rule the critical chip's box takes on its ascent and descent
-        // (the status chain's paint tail), applied to a width.
         plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
@@ -5579,10 +5542,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // twice.
         const text_shape::ShapedRun msg =
             text_shape::shape_text_run(font, app.prompt.text);
-        // CEIL: the shaped width is fractional and it sets where the buttons
-        // may start, so it rounds UP — a nearest-rounded width could place the
-        // cluster inside the message's last column. The round-up rule again
-        // (the critical chip's box, the status chain's paint tail).
         const int msg_w = static_cast<int>(std::ceil(msg.width_px));
         buttons_x0 = std::min(cx0 + msg_w + pad + ring, buttons_x_max);
         const int msg_clip = std::max(0, (buttons_x0 - ring - pad) - cx0);
@@ -5603,9 +5562,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    own narrow-window rule, now measured against the row instead of
         //    a window margin), and its width is what places the cluster. --
         dlg.owner = AppState::ModalDialogOwner::Editor;
-        // CEIL, for the reason the message width above takes it: the label's
-        // measured width places the field after it, so it rounds UP and the
-        // field can never start inside the label's last column.
         const int label_w = static_cast<int>(
             std::ceil(text_shape::shape_text_run(font, prefix).width_px));
         const int fbord = scaled_px(kModalFieldBorderPx, 1);
@@ -6249,10 +6205,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     2026-08-18) — a highlight REPLACES colors, it never washes over
         //     them, and the region's is the ONE highlight that recolors: its
         //     GROUND half paints BEFORE the plate and the ink composites over
-        //     it, then its INK half blits the REGION plate — the same bars in
-        //     the selected inks, binary alpha shared by construction — through
-        //     the same span's clip, so the whole span lifts without a single
-        //     compositing alpha. The phase-reset
+        //     it, then its INK half masks a second opaque color through the
+        //     blitted plate's binary alpha over the same span, so the whole
+        //     span lifts without a single compositing alpha. The phase-reset
         //     overlay contributes no ground at all (architect 2026-07-27): its
         //     1px RING is its whole visual, and a boundary line paints AFTER
         //     the plate, crossing the ink like the stems do.
@@ -6275,10 +6230,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // INK, over the plate and over the identical span: the region
-            // plate's selected-ink bars replace the plain plate's through the
-            // span's clip, so the highlight lifts the whole picture rather
-            // than only the ground behind it.
+            // INK, over the plate and over the identical span: the blitted ink
+            // is remasked in the lifted colour, so the highlight lifts the whole
+            // picture rather than only the ground behind it.
             paint_region_ink(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim

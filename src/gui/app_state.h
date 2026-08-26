@@ -241,7 +241,7 @@ struct UndoEntry {
 // is the one place to read it. Git holds the deleted model.)
 //
 // THE LIVE SWEEP IS THE ONE THING NOT AT REST, and it stores no span either:
-// the former holds its ANCHOR alone (RegionDragState::anchor_source_frame) and writes
+// the former holds its ANCHOR alone (RegionDragState::anchor_frame) and writes
 // the moving pair straight into the trim per motion event, ordered lo/hi, so
 // even mid-gesture the overlay derives from the trim like everything else. The
 // ruling is about the RESTING state; this gesture simply turned out to need
@@ -571,9 +571,8 @@ struct UndoHistory {
 // window on the bar alone.
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
-// there is no span field to extend: this holds the press column's authored
-// source frame (the field's own comment carries the two-domain rule), the trim
-// holds the pair, and the overlay derives from the trim on every frame including the
+// there is no span field to extend: this holds the press frame, the trim holds
+// the pair, and the overlay derives from the trim on every frame including the
 // ones this gesture writes.
 //
 // Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the drag does NOT
@@ -621,20 +620,7 @@ struct RegionDragState {
     bool    wrote_trim   = false;
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
-    // THE TRIM'S FIXED END — a whole SOURCE frame in the authored int64 domain,
-    // taken at the press column through the sweep's one column route
-    // (sweep_trim_frame_at_column, input_trim.cpp: authored_frame_at_column
-    // over the displayed-or-live target map, walls after, snap_authored_frame
-    // the one double->authored conversion — the lattice every other trim
-    // former commits on). EVERY SWEEP COLUMN YIELDS TWO VALUES, THE DOMAINS
-    // KEPT APART: the ACTIVE-domain frame from playhead_frame_at_click_column
-    // seats and carries the PLAYHEAD (the press placement, the live cursor
-    // carry, the playback reseat, the `h` view's playhead-only former), and
-    // THIS is the authored one for the TRIM alone — nothing here holds the
-    // active-domain value, because nothing on the trim side reads it. In
-    // source view the two are the same frame; in target view this is the
-    // inverse image the active-domain value only names.
-    int64_t anchor_source_frame = 0;
+    int64_t anchor_frame = 0;      // active-domain frame the press placed
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
