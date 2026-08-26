@@ -188,7 +188,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
         // runs the resize-path rebuild), and a `:gui_scale=200` is visible
         // without a restart. The value still persists on the next ordinary
-        // Ctrl+S and marks nothing dirty. The [50, 200] integer grammar was
+        // Ctrl+S and marks nothing dirty. The [50, 400] integer grammar was
         // already enforced by validate_gui_setting above; applied() prints the
         // one stderr line and deactivates.
         const int v = static_cast<int>(gv.i64);

@@ -202,8 +202,10 @@ struct SettingsFile {
     // (font_size left this struct and the schema with row 7's monospace
     // deletion — architect approval 2026-08-01. Nothing in either product sizes
     // text from a setting any more; gui_scale is the one scale axis.)
-    // GUI rendering scale as an integer PERCENT in [50, 200]; 100 is the
-    // design baseline (1920x1080), 200 the 4K case, 50 the half-size floor.
+    // GUI rendering scale as an integer PERCENT in [50, 400]; 100 is the
+    // design baseline (1920x1080), 200 the 4K case, 400 the fine-panel ceiling
+    // (a 280 dpi tablet panel, where matching a coarser display's apparent size
+    // lands above 200), 50 the half-size floor.
     // LIVE in the GUI since 2026-07-31: the redesigned rows size on it (the
     // menu row is the first consumer), and the row-by-row GUI redesign adds
     // the rest one row at a time. Inert in the CLI, like every other GUI-kind
@@ -211,8 +213,10 @@ struct SettingsFile {
     // key landed under; comment-only retell of the retired DORMANT wording,
     // architect approval 2026-07-31; the floor 100->50 comment corrections are
     // text-only under the same architect approval 2026-08-10 that moved the
-    // range arm in settings_file.cpp, where the ruling's own record lives).
-    int    gui_scale               = 100;   // percent, [50, 200]
+    // range arm in settings_file.cpp, where the ruling's own record lives; the
+    // CEILING's return 200->400 is that same arm's change, architect approval
+    // 2026-08-26, and its record lives there too).
+    int    gui_scale               = 100;   // percent, [50, 400]
     // THE WAVEFORM'S VISUAL MAGNIFICATION — the half-doubling COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping
     // of every waveform picture (the plate and the overview strip alike),

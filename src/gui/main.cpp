@@ -467,11 +467,14 @@ GuiRect waveform_area(const AppState& a) {
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
-    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: gui_scale at its 200
-    // ceiling doubles all eight lanes (roughly 430 px of top strip plus 102 of
-    // bottom), which the supported 1080-tall window still holds — but the guard
+    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: gui_scale at its 400
+    // ceiling (2026-08-26) quadruples all eight lanes — the top strip's 193
+    // authored px become 772 and the bottom row's 47 become 188 — which the
+    // supported 1080-tall window still holds, but by 120 px rather than by
+    // room to spare. The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
-    // architect moves and the lane set is one the redesign keeps adding to. If
+    // architect moves — it has now moved twice — and the lane set is one the
+    // redesign keeps adding to. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
     // A negative-height rect is a silent-wrong input to every consumer
     // that takes a width/height pair, which is exactly the class this project
@@ -486,9 +489,12 @@ GuiRect waveform_area(const AppState& a) {
     // the clock cell instead), and cairo treats an empty rectangle as a no-op.
     // A positive floor would instead invent a strip of waveform that has nowhere
     // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
-    // ceiling came down to 200 (architect 2026-07-31), and font_size, the other
+    // ceiling came down to 200 (architect 2026-07-31) and went back up to 400
+    // (architect approval 2026-08-26, for a 280 dpi tablet panel), and
+    // font_size, the other
     // half of the cross-product this guard was written against, left the schema
-    // entirely in row 7 — and the guard STAYS regardless: it costs one compare
+    // entirely in row 7 — and the guard STAYS regardless, the ceiling's return
+    // being exactly why: it costs one compare
     // and it is the class of fault (silent-wrong geometry) the project keeps
     // guards for. (NEITHER FLEXIBLE GAP CAN DEEPEN AN OVERFLOW: both floor at
     // 0 and both derive from the same leftover this subtraction reads, which is

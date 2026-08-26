@@ -77,8 +77,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
     // percent. 100 is the design baseline (1920x1080, the supported
-    // resolution); 200 is the 4K case; 50 is the half-size floor. Valid range
-    // [50, 200]. Applied at load and live at the editor commit. It is THE
+    // resolution); 200 is the 4K case; 400 is the fine-panel ceiling; 50 is the
+    // half-size floor. Valid range
+    // [50, 400]. Applied at load and live at the editor commit. It is THE
     // scale axis since row 7 — every
     // painted dimension in the product rides it, and the font_size key that
     // used to own the text half of that job left the schema with the monospace

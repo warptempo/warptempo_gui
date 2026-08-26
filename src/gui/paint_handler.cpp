@@ -2138,8 +2138,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // line from a rounded TOP MARGIN, so a third rounding put the whole error
     // under the line and it sat off-centre; this row places EVERYTHING by the
     // centering rule below, which splits the remainder itself. The residual is
-    // the integer-centering remainder alone — at most 1px, at 72 scales — and
-    // the row's own 32px BUTTONS carry exactly the same residual at 74 scales
+    // the integer-centering remainder alone — at most 1px, at 168 of the 351
+    // legal scales — and
+    // the row's own 32px BUTTONS carry exactly the same residual at 172 scales
     // by the same expression. Deriving this one height would make the
     // separator the only element in the row not placed by the shared rule, so
     // the crop's 34 stays authored.
@@ -2817,7 +2818,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
-    // toward the 200 ceiling.
+    // toward the 400 ceiling (2026-08-26). THE RIGHT BLOCK IS 458 AUTHORED PX
+    // WIDE and anchored one pad in from the right edge, so it reaches the
+    // clock's own ~203px right edge once the LOGICAL width (device width over
+    // the factor) falls below about 669 — at 400% on a 2304px panel that is
+    // 576, where the verb group lands on the cell outright. Still no collision
+    // rule, for the reason above: the row crops at its floor.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
@@ -3534,11 +3540,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // wrong).
     //
     // FIXED CAPACITY, no allocation: kPlayheadHeadHalf[0] is 9 authored px and
-    // the gui_scale schema caps at 200%, so the window is at most 2*18+1 = 37
-    // columns. 48 is headroom; the recording clamps to it, so a raised ceiling
+    // the gui_scale schema caps at 400%, so the window is at most 2*36+1 = 73
+    // columns. 80 is headroom; the recording clamps to it, so a raised ceiling
     // would lose the pre-blend at the outermost head columns rather than write
-    // out of bounds.
-    constexpr int kHeadTickWindowCap = 48;
+    // out of bounds — which is what 48 (the 200%-ceiling number) would have
+    // done from 2026-08-26, when the schema's ceiling went 200 -> 400.
+    constexpr int kHeadTickWindowCap = 80;
     std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
     const int head_half_max = playhead_head_half_px(0, gui_scale_factor());
     const double head_px_pre = playhead_pixel_x(
@@ -4509,8 +4516,8 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // the playhead still paints everywhere else, unconditionally, and the HEAD
 // paints even here (the architect expects it partly visible behind a coincident
 // flag; a ±1 column is invisible against the HEAD, whose widest row is
-// 2 * playhead_head_half_px(0, s) + 1 — 9px at the 50% floor, 19 at 100%, 37 at
-// the 200% ceiling, so it is at least nine columns wide anywhere in the schema
+// 2 * playhead_head_half_px(0, s) + 1 — 9px at the 50% floor, 19 at 100%, 73 at
+// the 400% ceiling, so it is at least nine columns wide anywhere in the schema
 // and the ±1 never approaches half of it. That is exactly what a 1px stem
 // beside another 1px stem is not, at any scale: the stem is one column by
 // ruling and does not scale at all, so there the same ±1 is the whole object).

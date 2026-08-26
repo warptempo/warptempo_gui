@@ -1099,8 +1099,9 @@ inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 //
 // THE PRODUCT'S ONE SCALE AXIS since row 7 (it was the redesign's own, beside a
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
-// [50, 200] (100 = the 1920x1080 design baseline, 200 = the 4K case, 50 = the
-// half-size floor since 2026-08-10); the current value lives as file-scope
+// [50, 400] (100 = the 1920x1080 design baseline, 200 = the 4K case, 400 = the
+// fine-panel ceiling since 2026-08-26, 50 = the half-size floor since
+// 2026-08-10); the current value lives as file-scope
 // state in render.cpp, pushed by TWO application points (file load and the
 // settings editor's `gui_scale=` commit; the `'` load-in-place left the list
 // 2026-08-24, the act no longer applying a file's session prefs at all).
@@ -1900,7 +1901,7 @@ inline int popup_item_margin_y_px() {
 // so every pixel is identical at every gui_scale. 8 at 100%. The floor of 2 was
 // the triangle's own ("always a tip row below a top row") and survives only to
 // hold the value byte-for-byte; it cannot fire while gui_scale rests in
-// [50, 200] (8 px reaches 2 only below 19%).
+// [50, 400] (8 px reaches 2 only below 19%).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
 }
@@ -1939,8 +1940,9 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD in the
 // marker lane is WIDER than this reach at every scale. The head's widest row is
 // 2 * playhead_head_half_px(0, s) + 1 off kPlayheadHeadHalf[0] = 9 — 19px at
-// 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at the 200% ceiling,
-// which is the capacity the ruler's tick window already derives — against this
+// 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at 200% and 73 at the
+// 400% ceiling, which is the capacity the ruler's tick window already derives
+// — against this
 // +/- 7-at-100% reach, which rides a different authored unit. Both scale, and
 // neither is a function of the other, so the gap is a fact at every scale
 // rather than a 100%-only observation. It is harmless as

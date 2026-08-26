@@ -273,16 +273,28 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // unknown-key rule. NO legacy path, by the architect's explicit instruction;
     // he updates his own files.)
     if (key == "gui_scale") {
-        // GUI rendering scale, an integer PERCENT in [50, 200]. One canonical
+        // GUI rendering scale, an integer PERCENT in [50, 400]. One canonical
         // spelling: plain digits through parse_authored_frame (no sign, point,
         // or leading zeros — exactly the writer's %d output), then the range
-        // check. 100 is the design baseline; 200 is the 4K case; 50 is the
-        // half-size floor.
+        // check. 100 is the design baseline; 200 is the 4K case; 400 is the
+        // fine-panel ceiling; 50 is the half-size floor.
         //
-        // THE CEILING CAME DOWN FROM 400 (architect approval 2026-07-31): 200 is
-        // the largest scale the supported 1920x1080 window has room for, and the
-        // vocabulary now says so rather than accepting values whose layout does
-        // not fit.
+        // THE CEILING WENT BACK UP TO 400 (architect approval 2026-08-26),
+        // where it stood until 2026-07-31. That day's 400->200 cut read 200 as
+        // the largest scale the supported 1920x1080 window has room for, and a
+        // 280 dpi panel is what re-opened it: on a 2304x1440 tablet, matching
+        // the apparent size of a coarser display lies ABOVE 200 (225% gives the
+        // 1024 logical width of the old rig, ~305% matches an 82 PPI external),
+        // so the useful range now sits inside the vocabulary rather than past
+        // its end.
+        //
+        // THE LAYOUT IS NOT WIDENED WITH IT, deliberately. Below roughly 1040 px
+        // of LOGICAL width (device width divided by the factor) the icon row's
+        // left-to-right walk runs past the window's right edge, and the redesign
+        // carries no collision rule anywhere — the crop-at-the-floor allowance
+        // recorded at kMinWindowWidthPx (render.h) is the standing answer. A
+        // scale is a VOCABULARY; which of its values lays out well is the
+        // architect's call on his own panel, not the parser's.
         //
         // THE FLOOR CAME DOWN FROM 100 TO 50 (architect approval 2026-08-10 —
         // the gui_scale floor 100->50). Below 100% the per-metric FLOORS in the
@@ -299,10 +311,10 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // budget for anyway (font_size left the schema in row 7, architect
         // approval 2026-08-01).
         // (architect approval 2026-07-30 — the settings/parser grant this key
-        // landed under.)
+        // landed under, extended 2026-08-26 for the ceiling's return to 400.)
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) || v < 50 || v > 200)
-            return err("must be an integer in [50, 200] in canonical spelling");
+        if (!parse_authored_frame(value, v) || v < 50 || v > 400)
+            return err("must be an integer in [50, 400] in canonical spelling");
         out.i64 = v;
         return R(out);
     }
@@ -431,7 +443,7 @@ std::expected<SettingsFile, std::string> read_settings_file(
         } else if (key == "playback_speed") {
             out.playback_speed = gv.f;
         } else if (key == "gui_scale") {
-            // Range-checked into [50, 200] by validate_gui_setting above, so
+            // Range-checked into [50, 400] by validate_gui_setting above, so
             // the narrowing to int is exact (architect approval 2026-07-30).
             out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "waveform_magnification_level") {

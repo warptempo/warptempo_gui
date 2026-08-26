@@ -44,7 +44,7 @@ struct AuthoringSnapshot {
     char        active_markers_view = 'W';   // 'W' or 'P'
     float       playback_speed      = 1.0f;
     bool        follow              = true;
-    int         gui_scale           = 100;   // percent, [50, 200]
+    int         gui_scale           = 100;   // percent, [50, 400]
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.

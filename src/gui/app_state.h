@@ -3686,9 +3686,11 @@ struct AppState {
     // the value any more — a sidecar still holding it is load-fatal as an
     // unknown key, by the architect's explicit no-legacy instruction.)
 
-    // GUI rendering scale in PERCENT (the gui_scale setting; [50, 200], default
+    // GUI rendering scale in PERCENT (the gui_scale setting; [50, 400], default
     // 100). 100 is the design baseline — 1920x1080, the one supported
-    // resolution — 200 is the 4K case and 50 the half-size floor. A display
+    // resolution — 200 is the 4K case, 400 the fine-panel ceiling (a 280 dpi
+    // tablet) and 50 the half-size floor; the parser's range arm
+    // (settings_file.cpp) is the domain's ONE owner and this is a retell. A display
     // preference: not engine input, not authoring state, persisted on Ctrl+S,
     // applied at file load, and set through the settings editor
     // (`:gui_scale=`, no hotkey). LIVE since
