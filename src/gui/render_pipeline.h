@@ -45,10 +45,10 @@ struct AuthoringSnapshot {
     float       playback_speed      = 1.0f;
     bool        follow              = true;
     int         gui_scale           = 100;   // percent, [50, 200]
-    // The waveform PICTURE's magnification, carried into the entry's .settings
-    // like every other always-emitted key. It reaches no render input: the
-    // factor scales pixels, never samples.
-    int         waveform_magnification = 1;  // one of kWaveformMagnificationValues
+    // The waveform PICTURE's magnification LEVEL, carried into the entry's
+    // .settings like every other always-emitted key. It reaches no render
+    // input: the gain it stands for scales pixels, never samples.
+    int         waveform_magnification_level = 0;  // the schema's [0, 8]
     std::string audio_player;                // empty = unset
     // The projects-home repository name, carried into the entry's .settings
     // like every other always-emitted key. (architect approval 2026-08-03.)

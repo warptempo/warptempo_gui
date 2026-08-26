@@ -105,10 +105,10 @@ struct Viewport {
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
     //  - THE PLATE'S OWN GAIN, one site (2026-08-26): the waveform
-    //    MAGNIFICATION, whose chokepoint apply_waveform_magnification
+    //    MAGNIFICATION, whose chokepoint apply_waveform_magnification_level
     //    (input_handler.cpp) kicks here. It is the class's only member and it
     //    is neither of the two above — the viewport, the domain and the map all
-    //    stand still, and what moves is an INPUT TO THE PIXELS: the factor the
+    //    stand still, and what moves is an INPUT TO THE PIXELS: the gain the
     //    painter multiplies into every column's tips. That makes it a plate
     //    CONTENT change with no geometry behind it, so the reclamp below is a
     //    pure no-op and what is wanted is the synchronous rebuild alone, in one

@@ -44,7 +44,7 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
-    int     magnification,
+    int     magnification_level,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
@@ -107,15 +107,16 @@ void render_waveform_to_cache_surface(
     // declared and stays in the grammar (the ruling is at the row-6 palette
     // block, render.h). Both channels take the one constant, as they took the
     // one global.
-    // THE VISUAL MAGNIFICATION rides in from the job snapshot beside the
+    // THE VISUAL MAGNIFICATION LEVEL rides in from the job snapshot beside the
     // geometry, for the same reason the inset does: the worker must read no
-    // live GUI state. Both channels take the one factor, as they take the one
-    // ink. It scales the PICTURE only — this whole function writes pixels.
+    // live GUI state. Both channels take the one level, as they take the one
+    // ink, and the painter resolves it to a gain through the one owner. It
+    // scales the PICTURE only — this whole function writes pixels.
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, kWaveformInk, magnification,
+                    basis, kWaveformInk, magnification_level,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, kWaveformInk, magnification,
+                    basis, kWaveformInk, magnification_level,
                     warp_frame_map_or_null);
 }
 
@@ -167,10 +168,12 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
-    // The waveform PICTURE's gain, captured here with the geometry so the
-    // worker reads no live setting. It is a fingerprint field too, which is
-    // what keeps a plate from being shown at a gain that is no longer live.
-    in.magnification = app.waveform_magnification;
+    // The waveform PICTURE's magnification LEVEL, captured here with the
+    // geometry so the worker reads no live setting. It is a fingerprint field
+    // too, which is what keeps a plate from being shown at a gain that is no
+    // longer live — and it is the LEVEL that is compared, never the gain, so
+    // the comparison stays integer.
+    in.magnification_level = app.waveform_magnification_level;
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.warp_frame_map       = std::move(target_warp_frame_map);
@@ -256,7 +259,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
         if (fp_inset != in.inset_px)       return true;
-        if (fp_mag  != in.magnification)   return true;
+        if (fp_mag  != in.magnification_level)   return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
         return false;
@@ -268,7 +271,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_inset_px,
-        wf_cache.pending_fp_magnification,
+        wf_cache.pending_fp_magnification_level,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
 
@@ -286,7 +289,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
-        wf_cache.supersede_magnification = in.magnification;
+        wf_cache.supersede_magnification_level = in.magnification_level;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
@@ -315,7 +318,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
     job.inset_px       = in.inset_px;
-    job.magnification  = in.magnification;
+    job.magnification_level = in.magnification_level;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
     // Stash a copy of the warp_frame_map on the pending slot so the flag cache —
@@ -332,7 +335,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
-    wf_cache.pending_fp_magnification = in.magnification;
+    wf_cache.pending_fp_magnification_level = in.magnification_level;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
 
@@ -392,7 +395,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
         wf_cache.pending_fp_inset_px            = wf_cache.fp_inset_px;
-        wf_cache.pending_fp_magnification       = wf_cache.fp_magnification;
+        wf_cache.pending_fp_magnification_level = wf_cache.fp_magnification_level;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
         wf_cache.pending_fp_warp_frame_map      = wf_cache.fp_warp_frame_map;
@@ -462,7 +465,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_inset_px = wf_cache.supersede_inset_px;
-        wf_cache.pending_fp_magnification = wf_cache.supersede_magnification;
+        wf_cache.pending_fp_magnification_level = wf_cache.supersede_magnification_level;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
 
@@ -488,7 +491,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_inset_px = wf_cache.pending_fp_inset_px;
-    wf_cache.fp_magnification = wf_cache.pending_fp_magnification;
+    wf_cache.fp_magnification_level = wf_cache.pending_fp_magnification_level;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
@@ -645,7 +648,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.surface,
         in.area_w, in.area_h, in.inset_px,
         *in.audio,
-        in.vp_start, in.painter_spp, in.magnification,
+        in.vp_start, in.painter_spp, in.magnification_level,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
     // Publish the displayed fingerprint NOW so the flag rebuild at
@@ -657,7 +660,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_inset_px = in.inset_px;
-    wf_cache.fp_magnification = in.magnification;
+    wf_cache.fp_magnification_level = in.magnification_level;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -667,7 +670,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_inset_px = in.inset_px;
-    wf_cache.pending_fp_magnification = in.magnification;
+    wf_cache.pending_fp_magnification_level = in.magnification_level;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;

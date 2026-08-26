@@ -52,13 +52,15 @@ struct WaveformJob {
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
 
-    // THE WAVEFORM'S VISUAL MAGNIFICATION (app.waveform_magnification),
-    // captured on the GUI thread with the rest of the geometry so the worker
-    // reads no live setting — the same reason inset_px is here. It is also a
-    // FINGERPRINT field (WaveformCache::fp_magnification), so a plate can never
-    // be shown at a gain that is not the live one. PIXELS ONLY: this job
-    // produces a picture, and the factor reaches no sample anywhere.
-    int       magnification    = 1;
+    // THE WAVEFORM'S VISUAL MAGNIFICATION LEVEL
+    // (app.waveform_magnification_level), captured on the GUI thread with the
+    // rest of the geometry so the worker reads no live setting — the same
+    // reason inset_px is here. THE LEVEL AND NOT ITS GAIN, so the comparison
+    // is integer: it is also a FINGERPRINT field
+    // (WaveformCache::fp_magnification_level), which is what keeps a plate from
+    // being shown at a gain that is not the live one. PIXELS ONLY: this job
+    // produces a picture, and the level reaches no sample anywhere.
+    int       magnification_level = 0;
 
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the memoized target display map (an owned copy taken
@@ -189,5 +191,5 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
-    int     magnification,
+    int     magnification_level,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

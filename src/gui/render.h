@@ -2137,24 +2137,29 @@ struct WaveformBasis {
 // through, and the SET pixels are what the one remaining after-the-fact
 // recolor reads: paint_region_ink masks kWaveformRegionInk through this same
 // alpha inside the region's column span, leaving the plate itself untouched.
-// THE VISUAL MAGNIFICATION is `magnification`: the column's raw min/max are
-// multiplied by it and CLAMPED to [-1, 1] before they become rows, which is the
-// whole of it — one multiply at the tip mapping, and nothing else in this
-// painter moves (the column grid, the >=1px floor, the carried-endpoint chain
-// and the aliased-only writer are all untouched). A loud passage therefore
-// clips FLAT at the lane's edges while its troughs still dip, which is the
-// intended look: the picture exists to make a quiet passage readable, and a
-// marker goes on a transient rather than in a sustain.
+// THE VISUAL MAGNIFICATION is `magnification_level`: the level's gain (below)
+// multiplies the column's raw min/max, and the product is CLAMPED to [-1, 1]
+// before they become rows, which is the whole of it — one multiply at the tip
+// mapping, and nothing else in this painter moves (the column grid, the >=1px
+// floor, the carried-endpoint chain and the aliased-only writer are all
+// untouched). A loud passage therefore clips FLAT at the lane's edges while its
+// troughs still dip, which is the intended look: the picture exists to make a
+// quiet passage readable, and a marker goes on a transient rather than in a
+// sustain.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate and the overview strip are pixels, playback
 // reads the sample buffer at its own level, and no render input is derived from
 // this parameter anywhere.
 //
-// It is a PARAMETER rather than a read of app state so this primitive stays
-// free of both (the worker thread renders from a job snapshot). The callers
-// pass a ladder value (kWaveformMagnificationValues, settings_file.h), which
-// the schema and the one applier both guarantee; 1 is the untouched picture.
+// THE LEVEL IS WHAT TRAVELS, never the gain: every caller passes the persisted
+// integer, so the two picture caches (the plate fingerprint and the overview
+// bar cache's reuse key) compare levels by construction and the gain is spelled
+// exactly once, just below. It is a PARAMETER rather than a read of app state
+// so this primitive stays free of both (the worker thread renders from a job
+// snapshot). The range is the schema's (is_waveform_magnification_level,
+// settings_file.h), which the schema and the one applier both guarantee; level
+// 0 is the untouched picture.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -2162,8 +2167,22 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
-                     int magnification,
+                     int magnification_level,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
+
+// THE ONE OWNER OF THE GAIN — the only place the waveform magnification LEVEL
+// becomes a multiplier, and a GUI fact rather than a schema one: the picture is
+// the only thing that ever wants it, so the shared schema owns the level's
+// range and this owns what the level means.
+//
+// The ladder is √2 PER STEP: gain = 2^(level/2), so two presses double. Over
+// the schema's bracket that is 1, 1.414, 2, 2.828, 4, 5.657, 8, 11.31, 16 —
+// fine enough to settle on a picture, and capped where the architect stops
+// wanting more (×8 already clips the quietest classical passages, and one step
+// past it covers the quietest masters).
+inline double waveform_magnification_gain(int level) {
+    return std::exp2(static_cast<double>(level) * 0.5);
+}
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering), in one solid `color` end

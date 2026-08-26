@@ -419,7 +419,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     req.authoring.active_tab,
                     req.authoring.playback_speed,
                     req.authoring.gui_scale,
-                    req.authoring.waveform_magnification,
+                    req.authoring.waveform_magnification_level,
                     req.authoring.audio_player,
                     req.authoring.projects_repo};
                 if (!write_settings_file(st_path.string(), gui,

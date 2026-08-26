@@ -284,15 +284,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
          !ctrl && !shift && !alt);
-    // THE WAVEFORM MAGNIFICATION STEP (2026-08-26), Ctrl+= / Ctrl+- exactly as
-    // their dispatch arms spell them. It is a DISPLAY PREFERENCE — the picture's
-    // own gain, keyed and persisted like gui_scale — so it authors nothing the
-    // lock protects: no marker, no engine setting, no sample. It is admitted on
-    // the header's own persistent-mutation standard, exactly as the bare zoom
-    // pair above it is, and the two icon-row buttons stay lit on a locked tab
-    // by the same answer.
+    // THE WAVEFORM MAGNIFICATION CHORDS (2026-08-26), Ctrl+= / Ctrl+- / Ctrl+0
+    // exactly as their dispatch arms spell them. It is a DISPLAY PREFERENCE —
+    // the picture's own gain, keyed and persisted like gui_scale — so it
+    // authors nothing the lock protects: no marker, no engine setting, no
+    // sample. It is admitted on the header's own persistent-mutation standard,
+    // exactly as the bare zoom trio above it is, and the three icon-row buttons
+    // stay lit on a locked tab by the same answer.
     const bool is_waveform_magnify =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus ||
+          key == GuiKeys::Digit0) &&
          ctrl && !shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
@@ -2021,13 +2022,14 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool bare  = !ctrl && !shift && !alt;
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
-    // THE WAVEFORM MAGNIFICATION STEP (2026-08-26), Ctrl+= / Ctrl+-. The view
-    // paints the SAME PLATE, so the gain is as live in here as the zoom is —
-    // it changes the picture and nothing the mode is reading. Its two buttons
-    // stay lit in the view for that reason, the derived partition walking the
-    // chord table through this gate.
+    // THE WAVEFORM MAGNIFICATION CHORDS (2026-08-26), Ctrl+= / Ctrl+- / Ctrl+0.
+    // The view paints the SAME PLATE, so the gain is as live in here as the
+    // zoom is — it changes the picture and nothing the mode is reading. Its
+    // three buttons stay lit in the view for that reason, the derived partition
+    // walking the chord table through this gate.
     const bool is_waveform_magnify =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus ||
+          key == GuiKeys::Digit0) &&
          ctrl && !shift && !alt);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
@@ -3375,8 +3377,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // one-shot: a held jump could only flap against the wall it just reached),
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
     // repeating Ctrl chords — the Ctrl+Shift+Tab march, Ctrl+Z / Ctrl+Shift+Z
-    // (undo / redo), and Ctrl+= / Ctrl+- (the waveform magnification step,
-    // 2026-08-26), each a continuous step gesture like the cycle, not a
+    // (undo / redo), and Ctrl+= / Ctrl+- (the waveform magnification STEP,
+    // 2026-08-26 — its Ctrl+0 reset is idempotent and is not one of them),
+    // each a continuous step gesture like the cycle, not a
     // one-shot command. THE MARCH REPEATS IN EVERY STATE since 2026-08-18, its
     // mode scope having gone with the reason for it: the chord is the march
     // inside the `h` history view too, over the diff-flag cycle instead of the
@@ -3439,6 +3442,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // icon-row buttons' hold-repeat asks THIS predicate about exactly this
     // chord (arm_redesign_press / tick_chrome_press_repeat), so the key and
     // the button walk at one speed by construction.
+    //
+    // CTRL+0, THE MAGNIFICATION RESET BESIDE THEM, IS DELIBERATELY ABSENT: it
+    // is idempotent, so every fire after the first would be a fire into a
+    // consumed no-op, and a hold on its button is refused by the same answer
+    // (that row carries no `repeats`).
     if (mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Equal || key == GuiKeys::Minus))
         return true;

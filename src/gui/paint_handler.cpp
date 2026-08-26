@@ -699,7 +699,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     // MARKER VERBS gone to the bottom row with their group, the four HISTORY
     // COMPANIONS returned behind the opener in a group of its own — and the
     // WALK RADIOS made it TWENTY-EIGHT in EIGHT later that day, landing inside
-    // the history group between the opener and the cumulative toggle.)
+    // the history group between the opener and the cumulative toggle; the
+    // WAVEFORM MAGNIFICATION three closed the zoom group on 2026-08-26 — the
+    // stepping pair, then the reset later the same day — which is TWENTY-NINE
+    // in EIGHT.)
     // THE TRIM GROUP (2026-08-11 for the scissors that opened it, 2026-08-16
     // for the Show trim region button that filled and then led it, 2026-08-18 for
     // the scissors' deletion that left it one member), a SEPARATOR-LED GROUP
@@ -740,15 +743,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the same group: the
-    // picture's VERTICAL gain, magnify (Ctrl+=) then reduce (Ctrl+-), wearing
-    // Breeze's zoom-in-y / zoom-out-y — the magnifier construction beside them
-    // with an AXIS RULER down the left of the lens, which is what tells the
-    // pair apart from the four horizontal magnifiers at row size. They join
-    // the zoom group rather than opening one, so the row gains two boxes and
-    // two 2px gaps and no separator moves.
+    // THE WAVEFORM MAGNIFICATION THREE (2026-08-26), closing the same group:
+    // the picture's VERTICAL gain, magnify (Ctrl+=) then reduce (Ctrl+-) then
+    // reset to the untouched picture (Ctrl+0), wearing Breeze's zoom-in-y /
+    // zoom-out-y / zoom-fit-height — the magnifier construction beside them
+    // with an AXIS RULER down the left of the lens (the reset's is the
+    // horizontal tick pair that reads as fitting the height), which is what
+    // tells the three apart from the four horizontal magnifiers at row size.
+    // They join the zoom group rather than opening one, so the row gains three
+    // boxes and three 2px gaps and no separator moves. The reset landed later
+    // the same day, with the ladder's retune to √2 steps.
     {RedesignButton::IconWaveformMagnify, icons::Icon::ZoomInY},
     {RedesignButton::IconWaveformReduce,  icons::Icon::ZoomOutY},
+    {RedesignButton::IconWaveformMagnificationReset, icons::Icon::ZoomFitHeight},
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
@@ -4807,16 +4814,17 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         overview_bar_cache.destroy_surface();
         return;
     }
-    // THE KEY IS (width, height, magnification) — the contract is at
-    // OverviewBarCache. The gain is an input to these bars' own tip mapping, so
-    // a change to it dirties them BY FIELD.
+    // THE KEY IS (width, height, magnification level) — the contract is at
+    // OverviewBarCache. The level is an input to these bars' own tip mapping,
+    // so a change to it dirties them BY FIELD.
     if (overview_bar_cache.rendered &&
         overview_bar_cache.width  == lane.w &&
         overview_bar_cache.height == lane.h &&
-        overview_bar_cache.magnification == app.waveform_magnification) {
+        overview_bar_cache.magnification_level ==
+            app.waveform_magnification_level) {
         return;
     }
-    overview_bar_cache.magnification = app.waveform_magnification;
+    overview_bar_cache.magnification_level = app.waveform_magnification_level;
     if (!overview_bar_cache.surface ||
         overview_bar_cache.width  != lane.w ||
         overview_bar_cache.height != lane.h) {
@@ -4869,11 +4877,11 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         // magnifies exactly as the plate does, this band being where a quiet
         // passage disappears first. The PICTURE only — no sample is scaled.
         render_waveform(overview_bar_cache.surface, ch0, /*col0=*/0, audio, 0,
-                        basis, kWaveformInk, app.waveform_magnification,
-                        nullptr);
+                        basis, kWaveformInk,
+                        app.waveform_magnification_level, nullptr);
         render_waveform(overview_bar_cache.surface, ch1, /*col0=*/0, audio, 1,
-                        basis, kWaveformInk, app.waveform_magnification,
-                        nullptr);
+                        basis, kWaveformInk,
+                        app.waveform_magnification_level, nullptr);
     }
     overview_bar_cache.rendered = true;
 }

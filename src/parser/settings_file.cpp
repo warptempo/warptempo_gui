@@ -61,19 +61,22 @@ using warptempo_parse::prefix_line_error;
 // ordinary UNKNOWN-key refusal below, hand-edit is the whole recovery, and
 // there is no migration tool and no reader leniency.
 //
-// `waveform_magnification` JOINED 2026-08-26 (architect approval 2026-08-26),
-// REQUIRED from its first day like every key since `projects_repo`'s one-day
-// exception was retired — and it carries the standing consequence in the other
-// direction: a `.settings` written BEFORE that date, carrying no
-// `waveform_magnification=` line, is load-fatal in both products by the
+// `waveform_magnification_level` JOINED 2026-08-26 (architect approval
+// 2026-08-26), REQUIRED from its first day like every key since
+// `projects_repo`'s one-day exception was retired — and it carries the standing
+// consequence in the other direction: a `.settings` carrying no
+// `waveform_magnification_level=` line is load-fatal in both products by the
 // missing-required-key refusal below. Legacy on-disk formats are never
 // supported here; the architect re-saves his projects (and the checkpoints
 // committed before the key drop out of the `h` walk by the same gate, the
-// font_size and attestation precedents verbatim).
+// font_size and attestation precedents verbatim). THE KEY WAS RENAMED LATER
+// THE SAME DAY, when the ladder became a count of half-doublings rather than a
+// factor: the first spelling `waveform_magnification` is now an UNKNOWN key and
+// takes the unknown-key refusal above, which is the same re-save either way.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "playback_speed", "follow", "gui_scale", "waveform_magnification",
+    "playback_speed", "follow", "gui_scale", "waveform_magnification_level",
     "audio_player", "projects_repo",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
@@ -303,24 +306,25 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.i64 = v;
         return R(out);
     }
-    if (key == "waveform_magnification") {
-        // THE WAVEFORM'S VISUAL MAGNIFICATION — a plain linear factor off the
-        // seven-position ladder in settings_file.h, and the PICTURE'S alone: it
-        // scales the peaks the GUI draws (plate and overview strip both) and
-        // reaches no sample, no playback path and no render. The CLI parses it
-        // here and never reads it, exactly as it never reads gui_scale.
+    if (key == "waveform_magnification_level") {
+        // THE WAVEFORM'S VISUAL MAGNIFICATION — the count of half-doublings on
+        // the ladder in settings_file.h, and the PICTURE'S alone: the gain it
+        // stands for scales the peaks the GUI draws (plate and overview strip
+        // both) and reaches no sample, no playback path and no render. The CLI
+        // parses it here and never reads it, exactly as it never reads
+        // gui_scale.
         //
         // One canonical spelling per value: plain digits through
         // parse_authored_frame (no sign, point, or leading zeros — exactly the
-        // writer's %d output), then LADDER MEMBERSHIP through the shared
-        // predicate. Membership rather than a range, because the setting moves
-        // geometrically and every value between the rungs is a state the GUI
-        // can never produce — adversarial under the two-category rule.
+        // writer's %d output), then the RANGE through the shared predicate. A
+        // range rather than a membership list, because the value is now a
+        // count: every whole number the bracket admits is a state the GUI can
+        // produce, and nothing outside it is.
         // (architect approval 2026-08-26 — the settings/parser grant this key
-        // landed under.)
+        // landed under, extended the same day to this retune of it.)
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_waveform_magnification(v))
-            return err("must be 1, 2, 4, 8, 16, 32 or 64 in canonical spelling");
+        if (!parse_authored_frame(value, v) || !is_waveform_magnification_level(v))
+            return err("must be an integer in [0, 8] in canonical spelling");
         out.i64 = v;
         return R(out);
     }
@@ -430,10 +434,11 @@ std::expected<SettingsFile, std::string> read_settings_file(
             // Range-checked into [50, 200] by validate_gui_setting above, so
             // the narrowing to int is exact (architect approval 2026-07-30).
             out.gui_scale = static_cast<int>(gv.i64);
-        } else if (key == "waveform_magnification") {
-            // Ladder-checked by validate_gui_setting above (max 64), so the
-            // narrowing to int is exact (architect approval 2026-08-26).
-            out.waveform_magnification = static_cast<int>(gv.i64);
+        } else if (key == "waveform_magnification_level") {
+            // Range-checked into [0, kWaveformMagnificationLevelMax] by
+            // validate_gui_setting above, so the narrowing to int is exact
+            // (architect approval 2026-08-26).
+            out.waveform_magnification_level = static_cast<int>(gv.i64);
         } else if (key == "audio_player") {
             out.audio_player = gv.text;
         } else if (key == "projects_repo") {

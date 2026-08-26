@@ -116,10 +116,12 @@ struct ToolbarChord {
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
     // need no eighth column. SIX ROWS CARRY IT since 2026-08-26, when the
-    // WAVEFORM MAGNIFICATION PAIR joined the four arrows — a ladder step is a
-    // continuous step gesture like an arrow, and the pair is the touch panel's
-    // only road to the setting. Those two push no undo entry at all (the key is
-    // history-less), so the opener flip below is vacuous for them.
+    // WAVEFORM MAGNIFICATION STEPPING PAIR joined the four arrows — a ladder
+    // step is a continuous step gesture like an arrow, and the pair is the
+    // touch panel's only road to the setting. Those two push no undo entry at
+    // all (the key is history-less), so the opener flip below is vacuous for
+    // them. THE MAGNIFICATION RESET BESIDE THEM DOES NOT CARRY IT: an
+    // idempotent act has nothing for a second fire to do.
     bool           repeats = false;
 };
 
@@ -240,20 +242,25 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconZoomOut,      GuiKeys::Minus,  false, false, false, false, true}, // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), the zoom group's last two:
-    // the picture's VERTICAL gain on the same two keys one modifier over. The
-    // chord CARRIES ctrl in this table's own column — a different thing from
-    // ADMITTING a ctrl press, which neither does (redesign_button_ctrl_admits
+    // THE WAVEFORM MAGNIFICATION THREE (2026-08-26), the zoom group's last:
+    // the picture's VERTICAL gain, on the same two keys one modifier over plus
+    // the reset on the zero the horizontal full-zoom-out already owns bare. The
+    // chords CARRY ctrl in this table's own column — a different thing from
+    // ADMITTING a ctrl press, which none does (redesign_button_ctrl_admits
     // names only the two skips), so a ctrl or shift click is refused at the
     // band gate and the shift long press cannot reach them. No radio, click
-    // face like the rest of the row, and BOTH REPEAT: a held button walks the
-    // ladder at the compositor's own rate, exactly as a held key does.
-    // Live in the `h` view — the chord is on that mode's allowlist, the plate
-    // in there being the same plate.
+    // face like the rest of the row, and THE STEPPING PAIR REPEATS: a held
+    // button walks the ladder at the compositor's own rate, exactly as a held
+    // key does. THE RESET DOES NOT — it is idempotent, so a second fire has
+    // nothing to do; the `repeats` column is where that membership lives and
+    // there is no second list. All three are live in the `h` view — the chords
+    // are on that mode's allowlist, the plate in there being the same plate.
     {RedesignButton::IconWaveformMagnify,
      GuiKeys::Equal,  true,  false, false, false, true,  true},                     // Ctrl+=
     {RedesignButton::IconWaveformReduce,
      GuiKeys::Minus,  true,  false, false, false, true,  true},                     // Ctrl+-
+    {RedesignButton::IconWaveformMagnificationReset,
+     GuiKeys::Digit0, true,  false, false, false, true,  false},                    // Ctrl+0
     // THE MASS-MARKER CATEGORY — three chords the `h` view consumes outright,
     // all three greyed in there.
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
@@ -515,8 +522,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the three menu anchors carries a chord here — 47
-// rows against the roster's 50 since 2026-08-20, when the EDIT anchor joined
+// every RedesignButton but the three menu anchors carries a chord here — 50
+// rows against the roster's 53 since 2026-08-26, when the WAVEFORM
+// MAGNIFICATION arrived in the zoom group: the stepping pair on Ctrl+= /
+// Ctrl+- first, then the RESET on Ctrl+0 later the same day with the ladder's
+// retune (three chords, so the pairs moved together). It was 47 against 50
+// from 2026-08-20, when the EDIT anchor joined
 // row 1 and IconCopy and IconPaste were deleted from row 4 in one act (one
 // non-chord entry gained, two chord rows lost). It was 49 against 51 from
 // 2026-08-19, when the MARKER MEASURE
@@ -6095,8 +6106,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // repeating row can carry either (none of the six admits ctrl, and the
         // band's modifier gate refuses an unadmitted ctrl press before the arm)
         // — so the predicate is asked about exactly the chord the burst will
-        // fire. The magnification pair's own ctrl comes from tc.ctrl, this
-        // table's column, and is copied below like any other row's.
+        // fire. The magnification stepping pair's own ctrl comes from tc.ctrl,
+        // this table's column, and is copied below like any other row's.
         if (tc.repeats) {
             GuiInputState chord{};
             chord.ctrl  = tc.ctrl;
@@ -6307,7 +6318,8 @@ void GuiInputHandler::finish_chrome_press_release(
 // THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect
 // 2026-08-16): while a press stands on a button whose chord row sets `repeats`
 // — the bottom row's four cardinal arrows and the icon row's waveform
-// magnification pair — synthesize that button's chord on the keyboard's own
+// magnification STEPPING pair (its reset is idempotent and carries no
+// `repeats`) — synthesize that button's chord on the keyboard's own
 // cadence, so a held BUTTON walks at the speed the held KEY does. It exists for the glass rig, which has no keyboard, and it
 // works there with NO TOUCH-SPECIFIC CODE: the one-finger translation delivers
 // an ordinary left press and an ordinary left release, so it arms and ends this
@@ -6328,8 +6340,9 @@ void GuiInputHandler::finish_chrome_press_release(
 // KEY's burst opens with its physical press — the press acts, then the
 // repeats merge behind it — but a held BUTTON's press dispatches nothing (its
 // act is at the lift), so the first fire stands in for that press act. (The
-// flip is VACUOUS for the magnification pair, whose setting is history-less:
-// its bursts push no undo entry at all, so there is nothing to open or merge.
+// flip is VACUOUS for the magnification stepping pair, whose setting is
+// history-less: its bursts push no undo entry at all, so there is nothing to
+// open or merge.
 // The flag is set uniformly rather than forked on the row.) Fire
 // one goes out with synthesized_repeat FALSE and pushes its own entry under
 // the arrival-invalidate and the tap-window rules, and every fire behind it

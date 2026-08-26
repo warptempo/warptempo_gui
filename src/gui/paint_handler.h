@@ -195,14 +195,15 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
-    // THE VISUAL MAGNIFICATION the live pixels were rendered at
-    // (app.waveform_magnification — the ladder in settings_file.h). A
-    // FINGERPRINT FIELD in its own right, keyed directly like the inset: it is
-    // an input to the tip mapping alone, so nothing else about the plate would
-    // move if it changed by itself, and without it a plate rendered at one gain
-    // could go on being blitted after the setting moved. PIXELS ONLY — this
-    // cache holds a picture, and the factor reaches no sample anywhere.
-    int       fp_magnification = 1;
+    // THE VISUAL MAGNIFICATION LEVEL the live pixels were rendered at
+    // (app.waveform_magnification_level — the ladder settings_file.h brackets).
+    // A FINGERPRINT FIELD in its own right, keyed directly like the inset: it
+    // is an input to the tip mapping alone, so nothing else about the plate
+    // would move if it changed by itself, and without it a plate rendered at
+    // one gain could go on being blitted after the setting moved. THE LEVEL AND
+    // NOT ITS GAIN, so the compare is integer. PIXELS ONLY — this cache holds a
+    // picture, and the level reaches no sample anywhere.
+    int       fp_magnification_level = 0;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -234,7 +235,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
-    int       pending_fp_magnification = 1;
+    int       pending_fp_magnification_level = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -256,7 +257,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
-    int       supersede_magnification = 1; // GUI-captured picture gain
+    int       supersede_magnification_level = 0; // GUI-captured picture level
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -282,7 +283,7 @@ struct WaveformCache {
         // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
         // any valid render (compute_waveform_render_inputs rejects area.w <= 0).
         pending_fp_area_w = -1;
-        // (The magnification needs no poison of its own: area_w = -1 already
+        // (The magnification level needs no poison of its own: area_w = -1 already
         // guarantees the mismatch, and this cache carries the one poison
         // rather than one per field.)
         supersede = false;
@@ -482,8 +483,9 @@ struct OverviewBarCache {
     cairo_surface_t* surface  = nullptr;
     int              width    = 0;
     int              height   = 0;
-    // The picture gain the cached bars were drawn at (the key's third field).
-    int              magnification = 1;
+    // The magnification LEVEL the cached bars were drawn at (the key's third
+    // field) — the level and not its gain, so the compare is integer.
+    int              magnification_level = 0;
     bool             rendered = false;
 
     void destroy_surface() {
@@ -493,7 +495,7 @@ struct OverviewBarCache {
         }
         width    = 0;
         height   = 0;
-        magnification = 1;
+        magnification_level = 0;
         rendered = false;
     }
 
@@ -707,11 +709,12 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
-        // The waveform PICTURE's linear magnification
-        // (app.waveform_magnification). BOTH a render input and a fingerprint
-        // field, exactly like inset_px above: it feeds the tip mapping and
-        // nothing else, so nothing else would move if it changed alone.
-        int      magnification = 1;
+        // The waveform PICTURE's magnification LEVEL
+        // (app.waveform_magnification_level). BOTH a render input and a
+        // fingerprint field, exactly like inset_px above: it feeds the tip
+        // mapping and nothing else, so nothing else would move if it changed
+        // alone.
+        int      magnification_level = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in

@@ -1173,28 +1173,44 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
         viewport.zoom_out(); return;
     }
-    // THE WAVEFORM'S VISUAL MAGNIFICATION, on the same two keys one modifier
-    // over: Ctrl+= doubles the picture's gain and Ctrl+- halves it, along the
-    // ladder in settings_file.h, a consumed no-op at either end. The pairing is
-    // the mnemonic — `=`/`-` are the horizontal magnification and these are the
-    // vertical one — and both spellings are CTRL-EXACT, no shift and no alt:
-    // Ctrl+Shift+= and the keypad KP_Add / KP_Subtract bind nothing here or
-    // anywhere, one spelling per act under the strict-modifier rule. They rest
-    // beside the zoom arms deliberately, so the four cannot drift apart.
+    // THE WAVEFORM'S VISUAL MAGNIFICATION, on the same three keys the
+    // horizontal zoom uses, one modifier over: Ctrl+= steps the level up,
+    // Ctrl+- steps it down along the √2 ladder settings_file.h brackets, and
+    // Ctrl+0 RESETS TO LEVEL 0, the untouched picture, exactly as bare `0`
+    // returns the horizontal zoom to the whole song. All three are consumed
+    // no-ops where they have nothing to do — the applier's own bracket answers
+    // for the ladder's ends and for a reset already at 0. The pairing is the
+    // mnemonic — `=`/`-`/`0` are the horizontal magnification and these are the
+    // vertical one — and all three spellings are CTRL-EXACT, no shift and no
+    // alt: Ctrl+Shift+= and the keypad KP_Add / KP_Subtract bind nothing here
+    // or anywhere, one spelling per act under the strict-modifier rule. Ctrl+0
+    // was UNBOUND before this arm (bare `0` is the full zoom out above, and no
+    // other route claimed the digit with a modifier), so the reset took a free
+    // chord rather than displacing one. They rest beside the zoom arms
+    // deliberately, so the six cannot drift apart.
     //
-    // IT MOVES THE PICTURE AND NOT THE SOUND: the factor is multiplied into the
-    // peaks at the painter's tip mapping and reaches no sample, no playback
-    // path and no render — an audition sounds identical at every rung.
+    // IT MOVES THE PICTURE AND NOT THE SOUND: the level's gain is multiplied
+    // into the peaks at the painter's tip mapping and reaches no sample, no
+    // playback path and no render — an audition sounds identical at every rung.
     //
-    // A HELD KEY WALKS THE LADDER at the platform's repeat rate (both chords
-    // are repeat_eligible, the zoom pair's own eligibility), and there is
-    // nothing to coalesce: the setting is history-less, so a burst pushes no
-    // undo entries to merge.
+    // A HELD STEPPING KEY WALKS THE LADDER at the platform's repeat rate (both
+    // step chords are repeat_eligible, the zoom pair's own eligibility) and
+    // there is nothing to coalesce: the setting is history-less, so a burst
+    // pushes no undo entries to merge. THE RESET DOES NOT REPEAT — it is
+    // idempotent, so a burst of it would be a burst of nothing.
     if (key == GuiKeys::Equal && ctrl && !shift && !alt) {
-        step_waveform_magnification(/*up=*/true); return;
+        apply_waveform_magnification_level(
+            app.waveform_magnification_level + 1);
+        return;
     }
     if (key == GuiKeys::Minus && ctrl && !shift && !alt) {
-        step_waveform_magnification(/*up=*/false); return;
+        apply_waveform_magnification_level(
+            app.waveform_magnification_level - 1);
+        return;
+    }
+    if (key == GuiKeys::Digit0 && ctrl && !shift && !alt) {
+        apply_waveform_magnification_level(0);
+        return;
     }
 
     // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+[ MAXIMIZES
@@ -2569,33 +2585,20 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     paint_handler.on_resize(app.width, app.height);
 }
 
-void GuiInputHandler::apply_waveform_magnification(int factor) {
-    // The contract — sole writer, ladder-only, history-less, picture-only — is
-    // at the declaration (input_handler.h). Two lines of body: the refusal, and
-    // the rebuild every user-driven plate change takes.
-    if (!is_waveform_magnification(factor)) return;
-    if (factor == app.waveform_magnification) return;
-    app.waveform_magnification = factor;
-    // The plate's fingerprint carries the gain, so this rebuild renders and
+void GuiInputHandler::apply_waveform_magnification_level(int level) {
+    // The contract — sole writer, in-range-only, history-less, picture-only —
+    // is at the declaration (input_handler.h). Two lines of body: the refusal,
+    // and the rebuild every user-driven plate change takes. THE REFUSAL IS THE
+    // WHOLE END-OF-LADDER STORY: a step asks for cur ± 1 and this bracket check
+    // turns the step off the end into a consumed no-op, with no wrap and no
+    // clamp-to-self write.
+    if (!is_waveform_magnification_level(level)) return;
+    if (level == app.waveform_magnification_level) return;
+    app.waveform_magnification_level = level;
+    // The plate's fingerprint carries the level, so this rebuild renders and
     // publishes at the new one; its damage rect (window top through the
     // waveform's bottom) covers the OVERVIEW LANE, whose bar cache keys on the
-    // gain and rebuilds inside the same frame. Nothing about the audio is
+    // level and rebuilds inside the same frame. Nothing about the audio is
     // touched — no playback session is disturbed and no render is dispatched.
     viewport.kick_waveform_sync();
-}
-
-void GuiInputHandler::step_waveform_magnification(bool up) {
-    // The ladder is geometric, so a step is a double or a halve — computed
-    // against the ladder itself rather than by arithmetic, so the ladder stays
-    // the one owner of which factors exist. At either end the neighbour does
-    // not exist and this is a consumed no-op.
-    const int cur = app.waveform_magnification;
-    const int n   = static_cast<int>(std::size(kWaveformMagnificationValues));
-    for (int i = 0; i < n; ++i) {
-        if (kWaveformMagnificationValues[i] != cur) continue;
-        const int j = up ? i + 1 : i - 1;
-        if (j < 0 || j >= n) return;
-        apply_waveform_magnification(kWaveformMagnificationValues[j]);
-        return;
-    }
 }

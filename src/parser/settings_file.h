@@ -135,30 +135,32 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
            end_frame == total_frames - 1;
 }
 
-// THE WAVEFORM MAGNIFICATION LADDER — the persisted vocabulary of the
-// `waveform_magnification` key, and the ONE owner of "which factors exist".
-// It lives here for the reason kMinZoom/kMaxZoom do: the schema is run
-// verbatim by both products, so an off-ladder value must refuse identically in
-// warptempo_gui and warptempo_cli even though only the GUI has pixels to apply
-// it to. (architect approval 2026-08-26 — the settings/parser grant this key
-// landed under.)
+// THE WAVEFORM MAGNIFICATION LEVEL — the persisted vocabulary of the
+// `waveform_magnification_level` key, and the ONE owner of its range. It lives
+// here for the reason kMinZoom/kMaxZoom do: the schema is run verbatim by both
+// products, so an out-of-range value must refuse identically in warptempo_gui
+// and warptempo_cli even though only the GUI has pixels to apply it to.
+// (architect approval 2026-08-26 — the settings/parser grant this key landed
+// under, extended the same day to this retune of it.)
 //
-// THE FACTOR IS THE PLAIN LINEAR MULTIPLIER APPLIED TO THE WAVEFORM PICTURE,
-// and to nothing else: `waveform_magnification = 8` draws the peaks eight
-// times as tall, clipped at the lane's edges. IT IS NOT A GAIN ON THE AUDIO —
-// no sample, no playback path and no render reads it; the CLI parses it and
-// ignores it like every other GUI-kind key.
+// THE VALUE IS A COUNT OF HALF-DOUBLINGS, not a factor: the ladder is √2 per
+// step, so the GAIN is 2^(level/2) — 1, 1.414, 2, 2.828, 4, 5.657, 8, 11.31,
+// 16 — and level 0 is the untouched picture. THE GAIN IS THE GUI'S OWN DERIVED
+// FACT and is spelled once there (waveform_magnification_gain, render.h); the
+// schema owns the RANGE alone, which is all a value arm can check.
 //
-// GEOMETRIC, SEVEN POSITIONS, so one press doubles or halves: a linear
-// picture at every setting, with the step rather than the mapping carrying the
-// non-linearity. Membership is asked through the predicate below and never
-// re-spelled — the schema's value arm, the GUI's own applier and the ladder
-// step all call it.
-inline constexpr int kWaveformMagnificationValues[] = {1, 2, 4, 8, 16, 32, 64};
-inline constexpr bool is_waveform_magnification(int64_t v) {
-    for (int m : kWaveformMagnificationValues)
-        if (v == m) return true;
-    return false;
+// CAPPED AT ×16 because nothing above it is ever wanted: ×8 already clips the
+// quietest classical passages and one more step covers the quietest masters.
+// The √2 step is what makes that short ladder fine enough to work in.
+//
+// THE LEVEL SCALES THE WAVEFORM PICTURE AND NOTHING ELSE: it is not a gain on
+// the audio — no sample, no playback path and no render reads it; the CLI
+// parses it and ignores it like every other GUI-kind key. Range membership is
+// asked through the predicate below and never re-spelled — the schema's value
+// arm and the GUI's own applier both call it.
+inline constexpr int kWaveformMagnificationLevelMax = 8;
+inline constexpr bool is_waveform_magnification_level(int64_t v) {
+    return v >= 0 && v <= kWaveformMagnificationLevelMax;
 }
 
 // The repository a project is STAMPED WITH when it has never named one — the
@@ -211,17 +213,18 @@ struct SettingsFile {
     // text-only under the same architect approval 2026-08-10 that moved the
     // range arm in settings_file.cpp, where the ruling's own record lives).
     int    gui_scale               = 100;   // percent, [50, 200]
-    // THE WAVEFORM'S VISUAL MAGNIFICATION — a plain linear factor off the
-    // ladder above, applied at the tip mapping of every waveform picture (the
-    // plate and the overview strip alike) and CLAMPED to the lane, so a loud
-    // passage clips flat at the edges while its troughs still dip. THE PICTURE
-    // ONLY: it touches no sample, no playback path and no render, and the CLI
-    // reads it and ignores it exactly as it ignores gui_scale.
+    // THE WAVEFORM'S VISUAL MAGNIFICATION — the half-doubling COUNT of the
+    // ladder above, whose gain the GUI derives and applies at the tip mapping
+    // of every waveform picture (the plate and the overview strip alike),
+    // CLAMPED to the lane so a loud passage clips flat at the edges while its
+    // troughs still dip. THE PICTURE ONLY: it touches no sample, no playback
+    // path and no render, and the CLI reads it and ignores it exactly as it
+    // ignores gui_scale.
     // The key is required, so the reader always assigns this field; the
     // initializer is construction state.
     // (architect approval 2026-08-26 — the settings/parser grant this key
-    // landed under.)
-    int    waveform_magnification  = 1;     // one of kWaveformMagnificationValues
+    // landed under, extended the same day to this retune of it.)
+    int    waveform_magnification_level = 0; // [0, kWaveformMagnificationLevelMax]
     // GUI-kind launcher for the `l` render-listen command: an external player
     // name or path. A BLANK value (`audio_player=`) is the deliberate
     // no-player opt-out — the only spelling of it. The key is required, so the
@@ -299,7 +302,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
-    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, gui_scale, waveform_magnification
+    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, gui_scale, waveform_magnification_level
     float       f    = 0.0f;    // playback_speed
     double      d    = 0.0;     // tab_X_zoom
     std::string text;           // audio_player, projects_repo

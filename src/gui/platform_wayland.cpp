@@ -2521,9 +2521,9 @@ void GuiPlatform::maybe_fire_repeat() {
     // separates the two.)
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
-    // held BUTTON — the four cardinal arrow buttons and the waveform magnification
-// pair, whose hold-repeat returned
-    // 2026-08-16. The button producer never passes through this class (it calls
+    // held BUTTON — the four cardinal arrow buttons and the waveform
+    // magnification STEPPING pair (its reset button is idempotent and does not
+    // repeat), whose hold-repeat returned 2026-08-16. The button producer never passes through this class (it calls
     // on_key application-side) and buys the adjacency property below from
     // its own edge, so nothing here has to account for it; this site is the KEY
     // surface's whole producer.
