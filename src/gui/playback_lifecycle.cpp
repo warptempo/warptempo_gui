@@ -85,6 +85,19 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // this term a press in one of the few rest frames would start a PLAIN
     // audition instead, and the glyph would flip to Play and back three times
     // per act to stay honest about it.
+    //
+    // THE ORDINARY TERM IS NOT SHARED, though, and that predates this act: the
+    // face's is playhead_scanner_active (the GUI-side mirror, cleared by the
+    // run-loop tick on natural end — main.cpp) and this arm's is
+    // playback.is_playing() (the audio callback's own published flag, set
+    // false at the same natural end but read here directly, no tick between).
+    // Between the callback's publish and the tick's clear there is a sub-tick
+    // window where is_playing() already reads false but the scanner is still
+    // active: the face still says Stop while a bare press here — phase also
+    // Idle — takes the play arm below instead of the stop arm the face
+    // implies. Accepted cost, not a defect of this fork: the two terms track
+    // the same event off two different clocks, and the drift is bounded to
+    // that one window.
     // stop_playback_if_playing IS EXACTLY RIGHT for the rest case: its clear
     // sits ahead of its own nothing-to-do guard, so it ends the act and then
     // early-returns having moved no cursor and damaged nothing.

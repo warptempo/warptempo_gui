@@ -2083,8 +2083,13 @@ enum class RedesignButton {
     // playhead_scanner_active (the GUI-side playback mirror) OR a standing A/B
     // audition sequence, whose rests are silent frames INSIDE one transport
     // session (architect 2026-08-26): the whole condition is spelled once at
-    // redesign_button_glyph_swapped, and the fork bare Space takes reads the
-    // same two facts, so the face and the act stay one. It is RENDER-IS-CANCEL's own shape (one button, one chord, a
+    // redesign_button_glyph_swapped. THE A/B TERM IS SHARED WITH THE FORK bare
+    // Space takes (GuiPlaybackLifecycle::toggle_playback reads the same
+    // `phase != Idle`), which is what keeps the face honest through the act's
+    // rests; the ORDINARY term is each site's own — the face follows the
+    // painted scanner, the fork follows the device — and the two can drift for
+    // a sub-tick natural-end window, an accepted cost recorded at the fork. It
+    // is RENDER-IS-CANCEL's own shape (one button, one chord, a
     // stateful face driven by one bit), and the resolvers are
     // redesign_button_glyph_swapped + redesign_button_icon for the glyph and
     // redesign_button_tooltip's stateful overload for the words.
@@ -3443,10 +3448,13 @@ inline constexpr int kAuditionSwitchGapMs = 40;
 //     user can see or press: the play/stop button wears its STOP face for the
 //     act's whole duration (redesign_button_glyph_swapped reads this phase
 //     beside playhead_scanner_active) and bare Space is the act's STOP
-//     throughout, the fork in GuiPlaybackLifecycle::toggle_playback reading the
-//     same two facts so the face and the act cannot disagree. Were the rests
-//     transport-dead instead, the glyph would flip to Play and back three times
-//     per act, and the transport row must never lie about live state.
+//     throughout, the fork in GuiPlaybackLifecycle::toggle_playback reading
+//     this SAME `phase != Idle` term — the shared half that keeps the two
+//     from disagreeing across a rest. (Their ORDINARY terms are each site's
+//     own and can drift for a sub-tick natural-end window; accepted cost,
+//     recorded at the fork.) Were the rests transport-dead instead, the glyph
+//     would flip to Play and back three times per act, and the transport row
+//     must never lie about live state.
 // `home_tab` is the tab the act started on and returns to.
 // NO LAUNCH FRAME IS CARRIED: each play reads the tab's resting cursor at its
 // own launch and never writes it, and what proves the pair identical is that
@@ -8365,10 +8373,12 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         // 2026-08-26), rests included, so its standing phase is the second
         // term: without it the face would flip to Play and back for the few
         // frames of each of the act's three rests, and the transport row must
-        // never lie about live state. The fork bare Space takes reads the same
-        // two facts (GuiPlaybackLifecycle::toggle_playback), so the glyph and
-        // the act the press runs cannot disagree — the button says Stop
-        // throughout and Stop is what a press does throughout.
+        // never lie about live state. The fork bare Space takes
+        // (GuiPlaybackLifecycle::toggle_playback) reads this SAME phase term,
+        // which is what keeps the glyph honest through every rest; its OTHER
+        // term is its own — playhead_scanner_active here, playback.is_playing()
+        // there — and the two can disagree for a sub-tick natural-end window
+        // that predates this act (accepted cost, recorded at the fork).
         case RedesignButton::TransportPlayStop:
             return a.playhead_scanner_active ||
                    a.audition_sequence.phase !=
