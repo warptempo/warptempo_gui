@@ -176,7 +176,7 @@ void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,
-                     int channel,
+                     GuiWaveformLane lane,
                      const WaveformBasis& basis,
                      GuiColor color,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
@@ -191,10 +191,11 @@ void render_waveform(cairo_surface_t* dest,
     if (num_levels <= 0) return;
 
     // ARGB32 ONLY: the writer stores 32-bit premultiplied words, so any other
-    // format would be silently misinterpreted. Both plate surfaces are created
-    // CAIRO_FORMAT_ARGB32 (waveform_cache.cpp); this is the guard that keeps
-    // that true. Geometry comes from the surface itself — the stride accessor,
-    // never width*4, since cairo is free to pad rows.
+    // format would be silently misinterpreted. Every destination — both plates
+    // of the pair (waveform_cache.cpp) and the overview strip's bar cache
+    // (paint_handler.cpp) — is created CAIRO_FORMAT_ARGB32; this is the guard
+    // that keeps that true. Geometry comes from the surface itself — the stride
+    // accessor, never width*4, since cairo is free to pad rows.
     if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32) return;
     // Flush BEFORE the first CPU access so any pending cairo drawing (the
     // caller's CLEAR of the columns this call regenerates) has landed in the
@@ -284,14 +285,17 @@ void render_waveform(cairo_surface_t* dest,
     // word to write. cairo ARGB32 is a native-endian 32-bit quantity —
     // (A<<24)|(R<<16)|(G<<8)|B written as a uint32_t is correct on any byte
     // order, which indexing bytes would not be. Channels are PREMULTIPLIED, as
-    // ARGB32 requires; at full coverage that is the ink itself.
+    // ARGB32 requires; at full coverage that is the ink itself. The channel
+    // bytes round with std::nearbyint, the project's rule — vacuous for the
+    // exact n/255 hex inks every caller passes today, decisive only if a
+    // mixed ink ever ties.
     const uint32_t opaque_word =
         (UINT32_C(255) << 24) |
-        (static_cast<uint32_t>(std::lround(color.r * 255.0)) << 16) |
-        (static_cast<uint32_t>(std::lround(color.g * 255.0)) <<  8) |
-        (static_cast<uint32_t>(std::lround(color.b * 255.0)));
+        (static_cast<uint32_t>(std::nearbyint(color.r * 255.0)) << 16) |
+        (static_cast<uint32_t>(std::nearbyint(color.g * 255.0)) <<  8) |
+        (static_cast<uint32_t>(std::nearbyint(color.b * 255.0)));
 
-    // Row bounds: this channel's band, intersected with the surface.
+    // Row bounds: this call's band, intersected with the surface.
     int y_lo = area.y;
     int y_hi = area.y + area.h;          // exclusive
     if (y_lo < 0)      y_lo = 0;
@@ -310,9 +314,12 @@ void render_waveform(cairo_surface_t* dest,
 
     // Write one pixel word, REPLACING what is there. Row/column bounds are
     // established by the bar writer below; this is its single store site.
-    // Replace is unambiguously correct now: the caller cleared every column this
-    // call regenerates, and each column is written exactly once by exactly one
-    // bar (the max-compositing the tip segments needed went with them).
+    // Replace is unambiguously correct: the caller cleared every column this
+    // call regenerates, and within this call each column is written exactly
+    // once by exactly one bar (the max-compositing the tip segments needed went
+    // with them). Across the plate's three band calls over one band, replace IS
+    // the z-order — a later band's bar overwrites an earlier band's rows where
+    // they overlap (the declaration's z-order paragraph).
     const auto put = [&](int x, int y, uint32_t word) {
         auto* px = reinterpret_cast<uint32_t*>(
             surf_data + static_cast<size_t>(y) * surf_stride);
@@ -369,7 +376,7 @@ void render_waveform(cairo_surface_t* dest,
         if (s1 <= s0) s1 = s0 + 1;
 
         const int level = level_for_column(g1 - g0);
-        const auto mm = audio.get_peak_range(channel, level, s0, s1);
+        const auto mm = audio.get_peak_range(lane, level, s0, s1);
         const double raw_min = mm.first;
         const double raw_max = mm.second;
 
@@ -382,7 +389,7 @@ void render_waveform(cairo_surface_t* dest,
         const double cur_top_y = y_center - raw_max * half_h;
         const double cur_bot_y = y_center - raw_min * half_h;
 
-        // THE BAR. Clamp to this channel's rows BEFORE any row index is derived,
+        // THE BAR. Clamp to this call's rows BEFORE any row index is derived,
         // so a clipped interval cannot address outside the band; then floor both
         // ends and fill inclusively. r0 == r1 for any sub-pixel interval, which
         // is the >=1px floor stated at the top of this function.

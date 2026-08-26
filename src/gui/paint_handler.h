@@ -6,12 +6,11 @@
 #include "render.h"
 #include "platform_wayland.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment
+#include "waveform_worker.h"  // WaveformPlatePair, GuiWaveformWorker
 
 #include <cairo/cairo.h>
 #include <string>
 #include <vector>
-
-class GuiWaveformWorker;
 
 // Paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, reaching shared state through the reference members below.
@@ -154,16 +153,44 @@ std::string history_diff_label(const char* sign, bool disabled,
 //
 // Lives for the life of main(); recreated when the waveform area is
 // resized; re-rendered when any input to render_waveform has changed.
-// The redraw path blits this surface onto the pixmap and paints markers
-// / flags / playhead / timestamp on top. No implicit Cairo state from
-// the main pixmap context leaks in — render_waveform does its own
-// save/restore and does not depend on the caller's transform.
+// The redraw path blits the live PLAIN plate onto the pixmap, blits the live
+// REGION plate through the region's clip over it, and paints markers / flags /
+// playhead / timestamp on top. No implicit Cairo state from the main pixmap
+// context leaks in — render_waveform does its own save/restore and does not
+// depend on the caller's transform.
+//
+// THE ATOMIC PLATE-PAIR INVARIANT, stated here once (every other site states
+// only its own class plus a pointer here). The cache holds TWO pairs
+// (WaveformPlatePair, waveform_worker.h) — the LIVE pair the paint pass reads
+// and the PENDING pair the worker writes — and each pair is ALL-OR-NOTHING on
+// every path:
+//   ALLOCATION: both members of a pair are created together and destroyed
+//     together (the idle dispatch, the supersede redispatch and the
+//     synchronous rebuild each recreate a pair whole on a dimension mismatch;
+//     no path ever creates or replaces one member alone).
+//   THE ASYNC GATE: the dispatch paths run NO pre-dispatch completeness check
+//     — the ONE gate is the worker's own (waveform_worker.cpp), widened to
+//     "both plates and the audio non-null"; its false result withholds
+//     publication and the completion handler's dirty-detect redispatches.
+//   RENDERING: the worker renders both plates before reporting ok; the
+//     synchronous path renders NEITHER plate unless both exist (its own
+//     render-neither / publish-nothing policy is stated at the function).
+//   PUBLICATION: the completion swaps the pending pair into the live slot as
+//     ONE value (std::swap of the pair struct), only after whole-job success;
+//     a cancelled or superseded job never publishes a partial pair.
+//   PAINT: the cold-frame guards in paint_waveform_plate and paint_region_ink
+//     test `plates.complete()` and paint NEITHER plate otherwise.
+//   DESTRUCTION: destroy_surface loops over every member of both pairs.
+// No cairo_surface_status check exists anywhere on this road: a nil error
+// surface is the exposure the singular plate always had, and stays so.
 struct WaveformCache {
-    cairo_surface_t* surface = nullptr;
-    int              width   = 0;     // surface width  (== area.w when valid)
-    int              height  = 0;     // surface height (== area.h when valid)
+    // The LIVE pair (what the next blit will draw). `width`/`height` are the
+    // dimensions BOTH members share (== area.w / area.h when valid).
+    WaveformPlatePair plates;
+    int               width   = 0;
+    int               height  = 0;
 
-    // Fingerprint of the LIVE surface (what the next blit will draw). Set
+    // Fingerprint of the LIVE pair (what the next blit will draw). Set
     // at completion-swap time, not at dispatch. fp_target discriminates
     // the source-view and target-view caches: a `t` toggle flips it
     // without disturbing the source-domain inputs, forcing a cache rebuild.
@@ -203,15 +230,16 @@ struct WaveformCache {
     // empty before the first completion has fired.
     std::vector<WarpFrameMapSegment> fp_warp_frame_map;
 
-    // Pending-slot surface and fingerprint. The worker renders
-    // into pending_surface; the completion handler swaps it into surface
-    // and copies pending_fp_* into fp_*. While a render is in flight,
-    // pending_fp_* describes what the worker is producing — dirty-detect
-    // compares against pending_fp_* (not fp_*) so we don't enqueue a
-    // second render for the same target the worker is already working on.
-    cairo_surface_t* pending_surface = nullptr;
-    int              pending_width   = 0;
-    int              pending_height  = 0;
+    // Pending-slot pair and fingerprint. The worker renders both members of
+    // pending_plates; the completion handler swaps the pair into `plates` as
+    // one value and copies pending_fp_* into fp_*. While a render is in
+    // flight, pending_fp_* describes what the worker is producing —
+    // dirty-detect compares against pending_fp_* (not fp_*) so we don't
+    // enqueue a second render for the same target the worker is already
+    // working on.
+    WaveformPlatePair pending_plates;
+    int               pending_width   = 0;
+    int               pending_height  = 0;
 
     int64_t   pending_fp_vp_start    = 0;
     int64_t   pending_fp_vp_end      = 0;
@@ -246,15 +274,10 @@ struct WaveformCache {
     // (WaveformJob.audio), so the slot carries no audio pointer or keepalive —
     // the deferred redispatch just names &audio.
 
+    // Every member of both pairs (the invariant's DESTRUCTION clause above).
     void destroy_surface() {
-        if (surface) {
-            cairo_surface_destroy(surface);
-            surface = nullptr;
-        }
-        if (pending_surface) {
-            cairo_surface_destroy(pending_surface);
-            pending_surface = nullptr;
-        }
+        plates.destroy();
+        pending_plates.destroy();
         width  = 0;
         height = 0;
         pending_width  = 0;
@@ -508,7 +531,8 @@ struct GuiPaintHandler {
     //   (or has just produced them).
     // - Different and worker idle: dispatch a fresh render job, updating
     //   pending_fp_* to the desired fingerprint and allocating/reusing
-    //   the pending surface.
+    //   the pending plate pair (both members together; no completeness check
+    //   here — the worker's gate is the one, see WaveformCache).
     // - Different and worker busy: set the supersede slot so the
     //   completion handler dispatches a fresh job for the latest
     //   fingerprint at completion time.
@@ -518,8 +542,8 @@ struct GuiPaintHandler {
     // Invoked from the worker's DoneCallback (which fires on the
     // main thread, via the eventfd handler the platform layer routes
     // through GuiWaveformWorker::on_completion_event). Either dispatches
-    // a supersede job, or swaps the pending surface into the live slot
-    // and invalidates the waveform area.
+    // a supersede job, or swaps the pending plate pair into the live slot as
+    // one value and invalidates the waveform area.
     void on_waveform_render_done(bool ok);
 
     // Dirty-detect for the flag-rect cache. Called from on_tick
@@ -577,7 +601,7 @@ struct GuiPaintHandler {
     void rebuild_history_diff_flags();
 
     // Force a synchronous waveform rebuild + fp_vp_* update for a user-driven
-    // viewport jump. Renders into the live surface on the calling (main)
+    // viewport jump. Renders into the live plate pair on the calling (main)
     // thread and publishes the displayed fingerprint immediately, so a
     // same-tick flag rebuild reads the current viewport instead of the lagging
     // async one. This is the route for EVERY user-driven viewport change,
@@ -699,9 +723,10 @@ private:
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
     // recolor model, architect 2026-07-26: TRIM recolors no blitted pixel, the
     // trim bar spanning the window being the whole inside-the-window signal.
-    // Neither helper had any other consumer, so both went with the pass. The
-    // dim's second-masked-pass MECHANISM came back for the region's ink half in
-    // 2026-08-18 — paint_region_ink — over the region's span alone.)
+    // Neither helper had any other consumer, so both went with the pass. A
+    // second pass over the region's span alone came back for the region's ink
+    // half in 2026-08-18 — paint_region_ink — first as the dim's masked-colour
+    // mechanism, now as the clipped blit of the second plate.)
 
     // (The region-select span's column pair, RegionColumns / region_columns,
     // moved up into the PUBLIC block beside plate_viewport_basis on 2026-08-15,
@@ -824,15 +849,18 @@ private:
     // painter's class ladder, pads, baseline and shaping. on_redraw calls the
     // free function directly, in the floating-surfaces slot and for their
     // reason: it publishes geometry the pointer path reads.)
+    // The live PLAIN plate's blit, content-band clipped. Paints nothing unless
+    // the live pair is complete (the invariant's PAINT clause, WaveformCache).
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE REGION HIGHLIGHT, ONE HIGHLIGHT IN TWO OPAQUE HALVES STRADDLING THE
     // PLATE BLIT (the Ableton model, extended to the ink 2026-08-18). The GROUND
-    // half paints after render_canvas and BEFORE the blit; the INK half masks
-    // its own colour through the blitted plate's binary alpha immediately AFTER
-    // it, over the identical span. Neither half is a wash, and the two share the
-    // basis and column owners so they cannot disagree. The region is the only
-    // recolor there is: the phase-reset overlay recolors nothing (architect
-    // 2026-07-27).
+    // half paints after render_canvas and BEFORE the blit; the INK half blits
+    // the live REGION plate — the same bars in the selected inks — through the
+    // region's clip immediately AFTER it, over the identical span. Neither half
+    // is a wash, and the two share the basis and column owners so they cannot
+    // disagree. The region is the only recolor there is: the phase-reset
+    // overlay recolors nothing (architect 2026-07-27). The ink half paints
+    // nothing unless the live pair is complete, like the plain blit.
     void paint_region_ground(cairo_t* cr, const GuiRect& area);
     void paint_region_ink(cairo_t* cr, const GuiRect& area);
     // The overlay band's 1px ring — the phase-reset overlay's whole visual —

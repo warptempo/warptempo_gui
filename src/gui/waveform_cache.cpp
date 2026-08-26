@@ -7,6 +7,7 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -29,15 +30,49 @@
 
 // -- render_waveform_to_cache_surface ------------------------------------
 //
-// Extracted from on_redraw's inline cairo_create/cairo_destroy
-// block (the body that lived between fingerprint-check and blit). Runs on
-// the waveform worker thread when the main path goes through GuiWaveformWorker;
-// the function itself is thread-agnostic — it touches only the dest surface
-// the caller passed in, the audio handle's peak pyramid (read-only after
-// load), and the warp_frame_map snapshot the caller built.
+// THE PLATE CONTRACT. One job renders TWO ARGB32 plates under ONE fingerprint
+// (WaveformPlatePair, waveform_worker.h): the PLAIN plate — cleared once, then
+// the mono sum's three frequency bands low -> mid -> high in the three PLAIN
+// inks — and the REGION plate — cleared once, then the same three bands in the
+// same order in the three SELECTED inks. Same reads, same bars: the two plates
+// have identical binary alpha and geometry by construction, so the paint pass
+// can blit the plain plate whole and the region plate through the live region
+// clip, and the trim span stays OUT of the fingerprint — region motion
+// rebuilds nothing.
+//
+// THREE BAND CALLS PER PLATE, SIX PER JOB, rather than one column loop writing
+// both plates: render_waveform stays the one single-destination primitive the
+// overview strip also calls, its per-call `!dest` backstop untouched; the
+// peak reads it repeats are at most five cached pairs or at most sixteen raw
+// values per lane per column (GuiAudio::level_for_span), so the second plate
+// costs a second set of reads and nothing else.
+//
+// THE REJECTED ALTERNATIVES, so their absence reads as a decision:
+//   * three per-band plates plus three masked-colour passes per frame — more
+//     lifecycle (a triple where a pair already needs an atomic invariant) and
+//     three per-frame compositing passes, for the same pixels;
+//   * baking the region into the plate — every sweep motion event becomes a
+//     plate rebuild and the trim enters the fingerprint, exactly the property
+//     the two-pass highlight exists to avoid;
+//   * a per-pixel band tag in the plate with a paint-time lookup — cairo
+//     cannot recolor through a lookup table; a mask carries one colour, so a
+//     tag would need the three masks anyway.
+//
+// PRECONDITION: the pair is COMPLETE. The two owners upstream establish it —
+// the worker's dispatch gate (waveform_worker.cpp) refuses an incomplete pair
+// whole, and force_synchronous_waveform_rebuild renders neither member unless
+// both exist — so there is no destination-null arm here; a second silent
+// completeness predicate under two declared owners would be a duplicate. The
+// assert states the precondition (it compiles out of the Release build, like
+// main.cpp's zoom-range assert); only the GEOMETRY returns remain.
+//
+// Runs on the waveform worker thread when the main path goes through
+// GuiWaveformWorker; the function itself is thread-agnostic — it touches only
+// the pair the caller passed in, the audio handle's peak pyramids (read-only
+// after load), and the warp_frame_map snapshot the caller built.
 
 void render_waveform_to_cache_surface(
-    cairo_surface_t* dest,
+    WaveformPlatePair plates,
     int area_w,
     int area_h,
     int inset_px,
@@ -45,73 +80,71 @@ void render_waveform_to_cache_surface(
     int64_t vp_start,
     double  painter_spp,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
-    if (!dest || area_w <= 0 || area_h <= 0) return;
+    assert(plates.complete());
+    if (area_w <= 0 || area_h <= 0) return;
 
-    // Clear to transparent — whatever ground the paint pass laid under the plate
-    // (kWaveformCanvas, or a kWaveformRegionCanvas recolor) shows through
-    // wherever the waveform samples don't paint. No ground color is ever baked
-    // into the plate: its alpha is exactly what composites the ink over that
-    // ground through its gaps (binary alpha since the aliasing deletion), which
-    // is why a highlighted
-    // span needs no plate of its own.
-    // This is the LAST cairo drawing on the surface: render_waveform writes the
-    // pixel words directly, so the context is destroyed before those CPU writes
-    // begin (render_waveform still flushes defensively, per its contract).
-    {
+    // Clear BOTH plates to transparent — whatever ground the paint pass laid
+    // under the plate (kWaveformCanvas, or the kWaveformRegionCanvas recolor)
+    // shows through wherever the bands don't paint. No ground color is ever
+    // baked into either plate: the alpha is exactly what composites the ink
+    // over that ground through its gaps (binary alpha since the aliasing
+    // deletion).
+    // This is the LAST cairo drawing on each surface: render_waveform writes
+    // the pixel words directly, so the context is destroyed before those CPU
+    // writes begin (render_waveform still flushes defensively, per its
+    // contract).
+    for (cairo_surface_t* dest : {plates.plain, plates.region}) {
         cairo_t* ccr = cairo_create(dest);
         cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
         cairo_paint(ccr);
         cairo_destroy(ccr);
     }
-    // Samples draw into an inset sub-rect of the full-height cache surface:
+    // Bands draw into an inset sub-rect of the full-height cache surface:
     // inset_px clear at top and bottom (the top band holds the cursor
     // triangle; the bottom mirrors it so the waveform is centered in its area).
     // inset_px is the GUI-thread-captured waveform_inset_px() snapshot (see the
     // WaveformJob geometry-capture note) — this function reads no font-scale
     // state itself, so a mid-render font commit cannot tear the geometry.
-    // The surface itself is still area_w x area_h and is blitted at area.y, so
-    // the cache fingerprint and blit are unaffected — the inset is
-    // a property of sample drawing only.
+    // The surfaces themselves are still area_w x area_h and are blitted at
+    // area.y, so the cache fingerprint and blit are unaffected — the inset is
+    // a property of band drawing only.
     const int inset_h = area_h - 2 * inset_px;
     if (inset_h <= 0) return;
     const GuiRect cache_area{0, inset_px, area_w, inset_h};
-    // Stereo is structural — channels != 2 refuses at load (see file_loader) —
-    // so both channels always render. No channel gap: the 1972 Krips material
-    // is effectively never unity, so the two channels' inner excursions do
-    // not visually collide at the shared midline; a plain halve of the
-    // inset region is clean. The two channels share the single inset band
-    // (inset first, then split), so the inset_px band stays clear above
-    // the top channel and below the bottom channel, with the channels
-    // meeting at the inset region's vertical center.
-    //
-    // THE TWO BANDS ARE EXACTLY EQUAL AND THEY MEET FLUSH (architect
-    // 2026-08-03, when the 1px channel-split line was retired): each channel
-    // takes the halved-and-floored band height and the bottom one begins
-    // immediately below the top one, so there is no row between them. At an odd
-    // band height the spare row falls at the BOTTOM of the drawing band, inside
-    // the symmetric inset where nothing draws — with no line on it, a spare row
-    // between the channels would read as a one-pixel gap in the ink. The split
-    // row comes from waveform_channel_split_row, which names where the bands
-    // meet. Purely a vertical band offset: no column's frame span moves, so
-    // plate column purity and both views' identity are untouched.
-    const int split_row = waveform_channel_split_row(area_h, inset_px);
-    if (split_row < 0) return;
-    const int ch_h = split_row - cache_area.y;
-    const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
-    const GuiRect ch1{0, split_row, cache_area.w, ch_h};
+    // ONE CENTRED MONO LANE over the whole inset band, painted as THREE BANDS:
+    // each band call covers the SAME full inset band, centred on its midline,
+    // and each column's bar runs from y_center - max * half_h to
+    // y_center - min * half_h over that band's own min/max. The z-order is the
+    // call order — Low, then Mid, then High, fixed — a later band replacing an
+    // earlier one's rows where they overlap (render_waveform's replacing
+    // stores), so the low band reads as the wide halo behind and a transient's
+    // high content paints in front wherever it exceeds the bands beneath it.
+    // The two stereo channel bands that once split this band at its centre are
+    // gone — the display's axis is the lane (GuiWaveformLane), and a source
+    // channel is never painted again. Purely a vertical extent: no column's
+    // frame span moves, so plate column purity and both views' identity are
+    // untouched.
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk). These two
-    // calls were the `waveform_ink` key's only paint sites; the key stays
-    // declared and stays in the grammar (the ruling is at the row-6 palette
-    // block, render.h). Both channels take the one constant, as they took the
-    // one global.
-    render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, kWaveformInk,
-                    warp_frame_map_or_null);
-    render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, kWaveformInk,
-                    warp_frame_map_or_null);
+    // THE INKS are the row-6 / region palette constants (render.h): the plain
+    // plate takes the three plain inks, the region plate the three selected
+    // inks, band for band.
+    struct Band {
+        GuiWaveformLane lane;
+        GuiColor        plain;
+        GuiColor        region;
+    };
+    const Band bands[] = {
+        {GuiWaveformLane::Low,  kWaveformInk,     kWaveformRegionInk},
+        {GuiWaveformLane::Mid,  kWaveformInkMid,  kWaveformRegionInkMid},
+        {GuiWaveformLane::High, kWaveformInkHigh, kWaveformRegionInkHigh},
+    };
+    for (const Band& b : bands) {
+        render_waveform(plates.plain, cache_area, /*col0=*/0, audio, b.lane,
+                        basis, b.plain, warp_frame_map_or_null);
+        render_waveform(plates.region, cache_area, /*col0=*/0, audio, b.lane,
+                        basis, b.region, warp_frame_map_or_null);
+    }
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -280,16 +313,19 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         return;
     }
 
-    // Idle: dispatch immediately. Reuse pending_surface if dimensions
-    // match; recreate on mismatch (window resize, first allocation).
-    if (!wf_cache.pending_surface ||
+    // Idle: dispatch immediately. Reuse the pending plate pair if it is
+    // complete and its dimensions match; recreate BOTH members together on
+    // mismatch (window resize, first allocation) — the pair is one value
+    // (the invariant at WaveformCache). No completeness check follows the
+    // allocation: the worker's own gate is the one async gate, and its refusal
+    // withholds publication and redispatches through dirty-detect.
+    if (!wf_cache.pending_plates.complete() ||
         wf_cache.pending_width  != in.area_w ||
         wf_cache.pending_height != in.area_h) {
-        if (wf_cache.pending_surface) {
-            cairo_surface_destroy(wf_cache.pending_surface);
-            wf_cache.pending_surface = nullptr;
-        }
-        wf_cache.pending_surface = cairo_image_surface_create(
+        wf_cache.pending_plates.destroy();
+        wf_cache.pending_plates.plain = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+        wf_cache.pending_plates.region = cairo_image_surface_create(
             CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
         wf_cache.pending_width  = in.area_w;
         wf_cache.pending_height = in.area_h;
@@ -309,7 +345,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
-    job.surface        = wf_cache.pending_surface;
+    job.plates         = wf_cache.pending_plates;
     // The audio the worker reads: always the one process-immortal source audio.
     job.audio          = in.audio;
 
@@ -398,24 +434,26 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     }
 
     // Supersede path: a viewport change happened mid-render. Discard the
-    // just-completed pending pixels (they'll be overwritten by the next
-    // render — no swap, no invalidate) and dispatch a fresh job built
-    // from the supersede slot. The pending_surface dimensions may differ
-    // from supersede_area_*, so reuse-or-recreate the same way the
-    // idle-path does.
+    // just-completed pending pixels (both plates — they'll be overwritten by
+    // the next render; no swap, no invalidate, so a superseded job never
+    // publishes anything, partial or whole) and dispatch a fresh job built
+    // from the supersede slot. The pending pair's dimensions may differ
+    // from supersede_area_*, so reuse-or-recreate BOTH members together the
+    // same way the idle path does. A degenerate supersede geometry leaves the
+    // pair destroyed and dispatches anyway — the worker's gate refuses the
+    // incomplete pair and the !ok arm above re-poisons dirty-detect.
     if (wf_cache.supersede) {
         const int sw = wf_cache.supersede_area_w;
         const int sh = wf_cache.supersede_area_h;
 
-        if (!wf_cache.pending_surface ||
+        if (!wf_cache.pending_plates.complete() ||
             wf_cache.pending_width  != sw ||
             wf_cache.pending_height != sh) {
-            if (wf_cache.pending_surface) {
-                cairo_surface_destroy(wf_cache.pending_surface);
-                wf_cache.pending_surface = nullptr;
-            }
+            wf_cache.pending_plates.destroy();
             if (sw > 0 && sh > 0) {
-                wf_cache.pending_surface = cairo_image_surface_create(
+                wf_cache.pending_plates.plain = cairo_image_surface_create(
+                    CAIRO_FORMAT_ARGB32, sw, sh);
+                wf_cache.pending_plates.region = cairo_image_surface_create(
                     CAIRO_FORMAT_ARGB32, sw, sh);
                 wf_cache.pending_width  = sw;
                 wf_cache.pending_height = sh;
@@ -437,7 +475,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         // displayable copy for the post-completion flag rebuild.
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
-        job.surface        = wf_cache.pending_surface;
+        job.plates         = wf_cache.pending_plates;
         // The superseding job reads the one process-immortal source audio.
         job.audio          = &audio;
 
@@ -457,12 +495,16 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         return;
     }
 
-    // Swap the pending surface into the live slot. Cairo surface ownership
+    // Swap the pending plate pair into the live slot AS ONE VALUE — the pair
+    // struct swaps whole, so the live slot never holds one plate from this job
+    // beside one from an earlier one — and only here, after whole-job success
+    // (ok=true means both plates rendered; the cancelled and superseded arms
+    // above returned without reaching this line). Cairo surface ownership
     // transfers cleanly via pointer swap; no flush needed because the worker's
-    // render already committed the surface fully — its CLEAR context was
+    // render already committed both surfaces fully — each CLEAR context was
     // destroyed and render_waveform's direct pixel writes end in a
-    // cairo_surface_mark_dirty, so the buffer and cairo agree before the swap.
-    std::swap(wf_cache.surface,        wf_cache.pending_surface);
+    // cairo_surface_mark_dirty, so the buffers and cairo agree before the swap.
+    std::swap(wf_cache.plates,         wf_cache.pending_plates);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);
 
@@ -524,9 +566,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // window. Rendering + publishing the fp here makes the flag cache converge
 // against the final viewport this tick.
 //
-// Writing into wf_cache.surface directly (not pending_surface + swap) is
+// Writing into wf_cache.plates directly (not pending_plates + swap) is
 // safe only because wait_until_idle() ran first — the worker is Idle and
-// holds no reference to the live surface. Do not reorder the drain after
+// holds no reference to the live pair. Do not reorder the drain after
 // the render.
 
 // Synchronous-repaint rule (the waveform-layer coherence invariant):
@@ -607,24 +649,40 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.supersede = false;
     wf_cache.supersede_warp_frame_map.clear();
 
-    // Render into the LIVE surface directly. Reuse-or-recreate on
-    // dimension mismatch, mirroring the dispatch path.
-    if (!wf_cache.surface ||
+    // Render into the LIVE plate pair directly. Reuse-or-recreate BOTH members
+    // together on dimension mismatch, mirroring the dispatch path.
+    if (!wf_cache.plates.complete() ||
         wf_cache.width  != in.area_w ||
         wf_cache.height != in.area_h) {
-        if (wf_cache.surface) {
-            cairo_surface_destroy(wf_cache.surface);
-            wf_cache.surface = nullptr;
-        }
-        wf_cache.surface = cairo_image_surface_create(
+        wf_cache.plates.destroy();
+        wf_cache.plates.plain = cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+        wf_cache.plates.region = cairo_image_surface_create(
             CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
         wf_cache.width  = in.area_w;
         wf_cache.height = in.area_h;
     }
 
+    // THE SYNCHRONOUS ROAD'S ONE POLICY ON THE PAIR (its class at WaveformCache):
+    // if EITHER member is null, render NEITHER, publish NO fingerprint and NO
+    // fp_rendered, destroy BOTH — a half-pair never rests in the cache — and
+    // return. The live slot goes cold (the flag cache's gate reads that) and
+    // the pending fingerprint is poisoned exactly as the worker's failure arm
+    // poisons it, so dirty-detect redispatches on its next tick. This is the
+    // one place the helper's complete-pair precondition is established on
+    // this road; the worker's gate is its twin on the async one.
+    if (!wf_cache.plates.complete()) {
+        wf_cache.plates.destroy();
+        wf_cache.width  = 0;
+        wf_cache.height = 0;
+        wf_cache.fp_rendered = false;
+        wf_cache.pending_fp_area_w = -1;
+        return;
+    }
+
     // in.audio is the source audio.
     render_waveform_to_cache_surface(
-        wf_cache.surface,
+        wf_cache.plates,
         in.area_w, in.area_h, in.inset_px,
         *in.audio,
         in.vp_start, in.painter_spp,

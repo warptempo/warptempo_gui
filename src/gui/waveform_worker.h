@@ -31,6 +31,37 @@ class GuiAudio;
 // synchronous drain (GuiWaveformWorker::wait_until_idle) is the paint path's
 // force_synchronous_waveform_rebuild, which takes over the cache surfaces
 // before a one-shot rebuild.
+
+// THE PLATE PAIR: the two ARGB32 surfaces ONE waveform job renders under ONE
+// fingerprint — the PLAIN plate (the three bands in their plain inks) and the
+// REGION plate (the same bands, same reads, same bars, in the three selected
+// inks; identical binary alpha and geometry by construction). The paint pass
+// blits the plain plate whole and the region plate through the live region
+// clip, which is what keeps the trim span out of the fingerprint. The pair is
+// ONE VALUE everywhere it rests or moves: WaveformCache (paint_handler.h)
+// states the atomic all-or-nothing invariant once and owns every allocation
+// and destruction; the job only writes pixels into a pair it was handed. Both
+// members are always allocated together, swapped together and destroyed
+// together; `complete()` is the one predicate a consumer asks before reading
+// either.
+struct WaveformPlatePair {
+    cairo_surface_t* plain  = nullptr;
+    cairo_surface_t* region = nullptr;
+
+    bool complete() const { return plain != nullptr && region != nullptr; }
+
+    void destroy() {
+        if (plain) {
+            cairo_surface_destroy(plain);
+            plain = nullptr;
+        }
+        if (region) {
+            cairo_surface_destroy(region);
+            region = nullptr;
+        }
+    }
+};
+
 struct WaveformJob {
     // Fingerprint inputs the worker's render uses. The cache's fp_* fields
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
@@ -58,10 +89,11 @@ struct WaveformJob {
     // source view. The worker reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
 
-    // Surface to render into. Owned by the cache (the cache's pending-slot
-    // surface). The worker only writes pixels; the cache lifecycle owns
-    // destroy/recreate.
-    cairo_surface_t* surface = nullptr;
+    // The plate pair to render into. Owned by the cache (the cache's
+    // pending-slot pair). The worker only writes pixels; the cache lifecycle
+    // owns destroy/recreate. The worker's dispatch gate refuses an incomplete
+    // pair whole (see DoneCallback) — it never renders one member alone.
+    WaveformPlatePair plates;
 
     // Audio handle the render reads (see lifetime invariant above). Always
     // main.cpp's single long-lived source audio — the one GuiAudio for the
@@ -73,9 +105,13 @@ struct WaveformJob {
 
 class GuiWaveformWorker {
 public:
-    // ok=true on a clean render; ok=false on dispatch with a null surface
-    // or null audio. The completion handler is responsible for the
-    // swap-or-redispatch state machine.
+    // ok=true on a clean render of BOTH plates; ok=false on cancellation or on
+    // dispatch with an incomplete plate pair (either member null) or null
+    // audio — THE ONE ASYNC GATE on the pair (the dispatch paths run no
+    // completeness check of their own; a second predicate upstream of this one
+    // would be a duplicate). A false result withholds publication and lets the
+    // completion handler's dirty-detect redispatch. The completion handler is
+    // responsible for the swap-or-redispatch state machine.
     using DoneCallback = std::function<void(bool ok)>;
 
     GuiWaveformWorker();
@@ -103,9 +139,10 @@ public:
 
     // Request cancellation of the in-flight job. Sets cancel_flag; the
     // worker observes it once before the render starts and once after, and
-    // skips the render entirely on either hit. A 23-37ms worst-case render
-    // is short enough that mid-render cancellation isn't necessary — the
-    // file-load wait will be at most one render's worth of latency.
+    // skips the render entirely on either hit. A full render (six band calls,
+    // two plates) is short enough that mid-render cancellation isn't
+    // necessary — the file-load wait will be at most one render's worth of
+    // latency.
     void request_cancel();
 
     // Called by the platform layer when the completion eventfd fires.
@@ -153,13 +190,19 @@ private:
     int completion_fd_ = -1;
 };
 
-// Render the waveform into `dest` from scratch (clears to transparent first,
-// then writes the peak columns for both stereo channels DIRECTLY into the plate
-// buffer — no cairo strokes; see render_waveform's writer contract — stereo is
-// structural, channels != 2 refuses at load; see file_loader). Thread-agnostic: it runs
+// Render the waveform into BOTH plates of `plates` from scratch (clears each
+// to transparent first, then writes the peak columns of the three band lanes
+// — Low, Mid, High, in that fixed z-order — DIRECTLY into each plate buffer,
+// the plain inks into the plain plate and the selected inks into the region
+// plate; no cairo strokes; see render_waveform's writer contract).
+// PRECONDITION: the pair is complete — both members non-null. The two owners
+// upstream establish it (the worker's dispatch gate refuses an incomplete pair
+// whole; force_synchronous_waveform_rebuild renders neither member unless both
+// exist), so this function carries no destination-null arm of its own; only
+// its GEOMETRY returns (area, inset) remain. Thread-agnostic: it runs
 // either on the waveform worker thread (the async dispatch) or synchronously on
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
-// supplied dest surface, the audio handle's peak pyramid (read-only after
+// supplied plate pair, the audio handle's peak pyramids (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
 // scalars (area_w/area_h/inset_px) — no other shared or main-thread state. The
 // inset is passed in rather than read via waveform_inset_px() so the render
@@ -173,7 +216,7 @@ private:
 // the old pixels and redispatches). When integer waveform geometry changed,
 // dirty-detect drives a replacement either way; otherwise none is needed.
 void render_waveform_to_cache_surface(
-    cairo_surface_t* dest,
+    WaveformPlatePair plates,
     int area_w,
     int area_h,
     int inset_px,
