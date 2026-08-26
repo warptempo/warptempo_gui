@@ -421,7 +421,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // render — no swap, no invalidate) and dispatch a fresh job built
     // from the supersede slot. The pending_surface dimensions may differ
     // from supersede_area_*, so reuse-or-recreate the same way the
-    // idle-path does.
+    // idle-path does. EVERY FIELD THE PENDING FINGERPRINT RECORDS IS ALSO IN
+    // THE JOB PAYLOAD: the fingerprint names the pixels the job renders and
+    // never more, so a pending_fp_* left describing state the worker was not
+    // handed would publish a plate under a claim dirty-detect then believes.
     if (wf_cache.supersede) {
         const int sw = wf_cache.supersede_area_w;
         const int sh = wf_cache.supersede_area_h;
@@ -448,6 +451,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_w         = sw;
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
+        job.magnification_level = wf_cache.supersede_magnification_level;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
         // Thread the supersede warp_frame_map into both the job and
