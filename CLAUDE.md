@@ -16,9 +16,14 @@ cmake -B build-debug -S . -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-debug -j$(nproc)
 ```
 
+```bash
+# Android (the tablet): cross-build + APK, statically against android/prebuilt
+bash android/app/build_apk.sh        # then: adb install -r android/app/build-android/warptempo.apk
+```
+
 `build/warptempo_gui` is the GUI binary and the default build's only product. No library archives: four per-directory source-list variables (`WARPTEMPO_AUDIO_IO_SOURCES`, `WARPTEMPO_PARSER_SOURCES`, `WARPTEMPO_ENGINE_SOURCES`, `WARPTEMPO_PREPOST_SOURCES`) each binary compiles directly — object-code duplication accepted deliberately. One opt-in binary, default OFF: `warptempo_cli` (`-DWARPTEMPO_BUILD_CLI=ON`, the headless insurance render — exactly the terminal Ctrl+Alt+R, byte-identical to the GUI by shared stages; a headless host builds it with `-DWARPTEMPO_BUILD_GUI=OFF`). `tools/` holds standalone one-shot utilities (own CMakeLists, no link path from product targets). `-ffp-contract=off` is load-bearing: renders are byte-reproducible across rebuilds and `-march` choices under the same toolchain (scope in `docs/engineering/perf_campaign_2026_07.md` §15).
 
-THERE IS ONE BUILD HOST: the authoring laptop, and no host here has glass. A build therefore proves COMPILATION AND NEVER BEHAVIOUR ON A TOUCH PANEL — the architect verifies touch and paint rulings himself on whatever device is current, and "from the rig" in a source comment is the PROVENANCE of a ruling taken on the returned car panel, not a live process (the Android tablet arc, PAUSED, owns whatever device-sync convention replaces it — tmp/welcome_back_planner-android.md). Binaries are not portable (`-march=native`); rebuild on the target host.
+THERE IS ONE BUILD HOST, the authoring laptop, and ONE GLASS HOST, the Android tablet (Galaxy Tab S10 FE; the Pi rig is returned — "from the rig" in a source comment is the PROVENANCE of a ruling taken on that panel). The laptop builds BOTH: the Wayland product and, since 2026-08-26, the Android APK over the same portable GUI (`docs/engineering/architecture/platform-seam.md`). A laptop build proves compilation and the pointer/keyboard path only; the tablet is adb-drivable (install, launch, screencap, single-touch injection, logcat), so a coder CAN verify paint and one-finger touch on the device — multi-touch and feel stay the architect's glass pass. Linux binaries are not portable (`-march=native`); the APK is.
 
 ## Dependencies
 
@@ -59,6 +64,7 @@ All in `docs/engineering/architecture/` unless noted. Each file holds the full h
 | The trim region overlay (the region IS the trim), the sweep and its retired minimum-width floor, scrub area, the Esc bindings, `[`/`Shift+[` | `region-scrub-esc.md` |
 | The GitHub recheck (`h` history mode, the diff lane, `,`/`.` walk, `projects_repo`, load-in-place-from-a-commit) | `github-recheck.md` |
 | Touch (wl_touch binding, the one-finger pointer translation, the disambiguation window, the phone-model pan, the region hold, the two-finger pan/zoom, the hard-end contract, the out-of-scope list) | `touch.md` |
+| The platform seam (`GuiPlatform` per backend over the ONE portable `GuiInputCore`; the loop contract; pixel containment's owner; the playback split; the font owner; `gui_main`; the Android stubs, the Java sliver, the APK build, the freeze posture, the tablet's facts) | `platform-seam.md` |
 | Home-view binding, the bare Up/Down tempo cent step (singleton + group), propagate paste | `tempo-and-home-view.md` |
 | Parser phase-reset compilation, engine geometry, trim prepost stage, render dispatch/cancel/reuse | `render-pipeline.md` |
 | Modality (all seven editors), the keyup retirement record + the third clause (content acts at the press when its identity is certain; the certainty audit), strict modifier validation, the alt vocabulary, bare-`e` mouse key, type names, warp/phase-reset naming symmetry | `conventions.md` |
