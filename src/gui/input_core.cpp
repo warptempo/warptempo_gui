@@ -101,7 +101,8 @@ void GuiInputCore::tick() {
 // ---------------------------------------------------------------------------
 
 // THE ONE TEARDOWN FOR "the keyboard's modeled state is gone", called from both
-// edges that mean it: wl_keyboard.leave and keyboard-capability loss. Each site
+// edges that mean it: the keyboard focus leaving (wl_keyboard.leave on
+// Wayland) and keyboard-capability loss. Each site
 // keeps only the justification that is ITS OWN; everything the two share is
 // here.
 //
@@ -118,7 +119,7 @@ void GuiInputCore::tick() {
 // per-iteration owner rather than an omission here: dropping the modifier bits
 // (and, below, a held synthesized button that can end a gesture) changes what
 // the cursor's zone map answers, and the run loop's tail re-derives it in this
-// same iteration — a wl_keyboard.leave and a capability loss both arrive as
+// same iteration — a keyboard leave and a capability loss both arrive as
 // dispatched events, so neither can outrun the boundary. A fire of its own
 // would only be an earlier answer to the same question, from a spot that would
 // then owe an ordering rule about the teardown below it.
@@ -220,9 +221,9 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
     // and is swallowed entirely as a key event — no delivery, no repeat
     // arming (a held button must not machine-gun re-press). pointer_focused_
     // gating means a press with the pointer off the window silently no-ops, as
-    // a real BTN_LEFT would not be delivered to this surface either. Any
-    // modifier state rides along to the synthesized button, exactly as it
-    // would for a physical BTN_LEFT device (see kLeftClickKey's comment).
+    // a real left-button press would not be delivered to this surface either.
+    // Any modifier state rides along to the synthesized button, exactly as it
+    // would for a physical left-button device (see kLeftClickKey's comment).
     if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
         if (!synth_left_held_ && pointer_focused_) {
@@ -231,7 +232,7 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
             repeat_key_ = 0;
             // Logical state before this source's edge: synth is false here, so
             // the OR is the other two sources (a touch hold counts — three
-            // devices sharing BTN_LEFT never double-deliver).
+            // devices sharing the left button never double-deliver).
             const bool was_held = pointer_left_held_ || touch_left_held_;
             synth_left_held_    = true;
             synth_left_keycode_ = stable_code;
@@ -301,7 +302,7 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
     if (modeled_edge) {
         // STAGED CAPTURED MOTION IS DELIVERED UNDER THE MODIFIER STATE IT
         // ARRIVED IN. A captured drag defers its relative motion to the
-        // wl_pointer.frame boundary (relative_motion) and the
+        // pointer_frame boundary (relative_motion) and the
         // delivery reads current_mods(), so motion that arrived under one
         // modifier state but was still staged when this event landed would be
         // delivered under the NEW one: a pan delta staged with ctrl UP and
@@ -389,7 +390,7 @@ GuiInputState GuiInputCore::current_mods() const {
     s.ctrl  = mod_ctrl_;
     s.shift = mod_shift_;
     s.alt   = mod_alt_;
-    // Logical left button: the physical BTN_LEFT, the kLeftClickKey
+    // Logical left button: the physical left button, the kLeftClickKey
     // synthesized hold, or the touch translation's hold. Drags consult this
     // bit on motion; without the OR a synthesized-key or touch drag tears on
     // the first motion event.
@@ -570,7 +571,7 @@ void GuiInputCore::pointer_leave() {
     // the same reason the capability branch's hold ends do: WHAT IS STILL OWED
     // GOES BEFORE THE INVARIANT RESTORE (codex 2026-08-08). A captured drag's
     // relative motion is staged, not delivered — it is coalesced to the
-    // wl_pointer.frame boundary (relative_motion) — and the frame that
+    // pointer_frame boundary (relative_motion) — and the frame that
     // TERMINATES this leave runs pointer_frame's pending block AFTER the hook
     // below has already fired. That block calls on_motion_, whose prologue
     // unconditionally sets `pointer_in_window` TRUE, and an ordinary leave has no
@@ -700,7 +701,7 @@ void GuiInputCore::forget_pointer_state() {
 void GuiInputCore::pointer_motion(double x, double y) {
     pointer_x_ = containing_pixel(x);
     pointer_y_ = containing_pixel(y);
-    // The pointer's real position, from the compositor: the post-capture unknown
+    // The pointer's real position, from the backend: the post-capture unknown
     // span ends here (same rule and same guard as the enter above), and this
     // iteration's tail re-derives the cursor for it once the delivery below has
     // recorded it — which is why the clear owes no cursor call of its own.
@@ -718,7 +719,7 @@ void GuiInputCore::note_notional_pointer_x(double x) {
     // the waveform's opposite bound before the value ever gets here, so this
     // clamp bites only on a pathological delta larger than the whole span.
     // This body is deliberately NOT the wrap's owner: it serves every writer,
-    // and an absolute delivery from the compositor is a real position that
+    // and an absolute delivery from the backend is a real position that
     // must be stored as given rather than folded.
     notional_pointer_x_ = std::clamp(x, 0.0, max_x);
 }
@@ -735,7 +736,7 @@ void GuiInputCore::deliver_motion(int x, int y) {
 
 void GuiInputCore::flush_deferred_motion() {
     // A captured strip drag defers its coalesced relative motion to the pointer-
-    // frame boundary (pointer_frame). But a wl_pointer.frame can carry both
+    // frame boundary (pointer_frame). But a pointer frame can carry both
     // that motion and a button event, and button events are NOT deferred — they
     // dispatch at arrival. Delivering the pending motion here, immediately before
     // any button, guarantees the button handler runs against the latest
@@ -847,9 +848,10 @@ void GuiInputCore::pointer_button(GuiMouseButton button, bool pressed) {
 void GuiInputCore::pointer_axis(double value) {
     // Live path for touchpad two-finger scroll and any other continuous
     // (non-wheel) source. value120 carries WHEEL scroll only; the
-    // compositor sends a touchpad's continuous delta through this legacy
-    // wl_pointer.axis event (in its continuous scroll unit, a wl_fixed_t)
-    // and sends no value120 for that frame. So this is the touchpad's only
+    // backend delivers a touchpad's continuous delta through this legacy
+    // axis path (wl_pointer.axis on Wayland, in its own continuous scroll
+    // unit) and delivers no value120 for that frame. So this is the touchpad's
+    // only
     // path. We stage the delta into the per-frame scratch and do not emit
     // here — pointer_frame() arbitrates so exactly one source counts
     // per frame (value120 wins when both arrive) and drains to detents.
@@ -882,7 +884,7 @@ void GuiInputCore::pointer_axis_value120(int32_t value120) {
 }
 
 void GuiInputCore::pointer_frame() {
-    // Per-frame arbitration: a wl_pointer.frame may carry value120 (wheel)
+    // Per-frame arbitration: a pointer frame may carry value120 (wheel)
     // and/or legacy axis (touchpad) events for the vertical axis. Resolve
     // them to a single delta in value120 units:
     //   - value120 present  -> use it; discard the paired legacy axis delta
@@ -1002,7 +1004,7 @@ void GuiInputCore::pointer_frame() {
     // one delivery per frame.
     // TWO EDGES ALSO EMPTY THE STAGE BEFORE THIS BLOCK CAN RUN, both because
     // this delivery would otherwise land AFTER the leave hook that was supposed
-    // to be the last word (2026-08-08): wl_pointer.leave FLUSHES above its hook
+    // to be the last word (2026-08-08): pointer_leave FLUSHES above its hook
     // — the frame terminating that leave reaches this block, and a delivery here
     // would set `pointer_in_window` back to true with no second hook to undo it
     // — and the pointer-capability teardown DROPS the flag in its frame-scratch
@@ -1024,7 +1026,7 @@ void GuiInputCore::pointer_frame() {
     frame_have_relmotion_ = false;
 }
 // ---------------------------------------------------------------------------
-// Touch event handlers (wl_touch as the pointer; touch phase 1, 2026-08-11;
+// Touch event handlers (the finger as the pointer; touch phase 1, 2026-08-11;
 // the WINDOWED MODEL, restored at the sixth glass ruling 2026-08-12 and
 // TWO-DEADLINE since the eighth, the same day)
 //
@@ -1093,7 +1095,7 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     const int down_y = containing_pixel(touch_down_y_);
     deliver_motion(down_x, down_y);
     // A pointer-button press is a context event that kills an armed key repeat
-    // (layer 1 of the repeat contract), exactly as the physical BTN_LEFT and
+    // (layer 1 of the repeat contract), exactly as the physical left button and
     // the synthesized-`e` presses do at their own delivery sites.
     repeat_key_ = 0;
     // The logical left's OR-edge model, third source: the press is delivered
@@ -1171,15 +1173,16 @@ void GuiInputCore::resolve_touch_window_to_region() {
 
 void GuiInputCore::flush_touch_frame_motion() {
     // The touch twin of flush_deferred_motion: Pointer-phase motion is
-    // coalesced to the wl_touch.frame boundary, and a button delivery in the
+    // coalesced to the touch_frame boundary, and a button delivery in the
     // same frame must see the latest position first (delivered while the hold
     // still reads held, so the motion takes the live-drag path).
     // THE INVARIANT, stated once here (the flush owner): the staged motion is
     // the FINGER's own and is independent of the logical-left OR's edge, so
     // every end of the touch translation FLUSHES it rather than clearing it —
     // end_touch_left_hold flushes UNCONDITIONALLY, ahead of its release
-    // decision, because a sibling source (physical BTN_LEFT / bare-`e`) still
-    // holding suppresses only the RELEASE, never the motion. The only bare
+    // decision, because a sibling source (the physical left button / bare-`e`)
+    // still holding suppresses only the RELEASE, never the motion. The only
+    // bare
     // clears of touch_frame_motion_pending_ are resets of state already
     // flushed or never deliverable: the resolution's replay tail (Pending
     // never stages this flag) and forget_touch_state (which runs after the
@@ -1196,8 +1199,8 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     // The staged TOUCH motion flushes UNCONDITIONALLY, before the release
     // decision and while this bit still reads held: the finger's final
     // position is owed to on_motion whatever the logical-left OR says,
-    // because a sibling source (physical BTN_LEFT / bare-`e`) staying held
-    // suppresses only the RELEASE edge, never the motion (the invariant at
+    // because a sibling source (the physical left button / bare-`e`) staying
+    // held suppresses only the RELEASE edge, never the motion (the invariant at
     // flush_touch_frame_motion, the flush owner). Gating this on the edge
     // made a shared drag silently stop short of the finger whenever the
     // mouse kept the OR true through the finger's last frame.
@@ -1283,14 +1286,15 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // THE END FORKS ON PHYSICAL POINTER FOCUS (codex round 3, the
     // cursor-residue fix): a resolved touch drives the GUI's remembered
     // position to the finger, and the loop-settled cursor owner applies the
-    // finger zone's kind to the REAL wl_pointer — so before this fork a mouse
+    // finger zone's kind to the REAL pointer — so before this fork a mouse
     // resting in the window kept the finger's cue (Arrow/resize over a
     // Pan zone, say) until its own next motion. The finger ceasing to BE the
     // pointer — its lift, or the upgrade's handover to the nav gesture — means
     // the unified pointer is now wherever the MOUSE is:
-    //   * physical pointer FOCUSED (wl_pointer enter/leave, which touch never
-    //     writes) — synthesize an ordinary MOTION at its last
-    //     platform-tracked position (pointer_x_/pointer_y_, wl_pointer's own
+    //   * physical pointer FOCUSED (pointer_enter / pointer_leave, which touch
+    //     never writes) — synthesize an ordinary MOTION at its last
+    //     platform-tracked position (pointer_x_/pointer_y_, the physical
+    //     pointer's own
     //     fields under the recorded split; after a touch-armed capture the
     //     release already rewrote them to the warp-restore position, so the
     //     value is the cursor's honest whereabouts) INSTEAD of the leave: the
@@ -1630,7 +1634,7 @@ void GuiInputCore::touch_up(int32_t id) {
                 // the PAIR'S OWN COMPLETED MOTION, measured between two
                 // fingers that were both still down, and nothing supersedes
                 // it: Wayland orders motion and EVERY up before the
-                // wl_touch.frame that closes the batch, so when both fingers
+                // touch_frame that closes the batch, so when both fingers
                 // lift together this site takes the first up with the pinch's
                 // last — often only — motion still staged, and dropping it
                 // left the second up calling end_touch_nav_gesture with
@@ -1732,7 +1736,7 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
                 std::max(std::abs(x - touch_down_x_),
                          std::abs(y - touch_down_y_)) >= kTouchSlopPx)
                 touch_translation_moved_ = true;
-            // Coalesced to the wl_touch.frame boundary — the pointer-frame
+            // Coalesced to the touch_frame boundary — the pointer-frame
             // precedent: a panel can report at sensor rate, and the strip
             // drag's synchronous per-event repaint wants one delivery per
             // frame. Button deliveries flush this first.
@@ -1757,8 +1761,7 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             if (id != touch_owner_id_) break;   // ignored fingers stay ignored
             touch_last_x_ = x;
             touch_last_y_ = y;
-            // The Nav dirty-frame cadence: one region_update per
-            // wl_touch.frame.
+            // The Nav dirty-frame cadence: one region_update per touch_frame.
             touch_region_frame_dirty_ = true;
             break;
         case TouchPhase::Idle:
@@ -1768,7 +1771,7 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
 }
 
 void GuiInputCore::touch_frame() {
-    // The per-frame drain, the wl_pointer.frame precedent: one motion delivery
+    // The per-frame drain, the pointer_frame precedent: one motion delivery
     // (Pointer), one nav update (Nav) or one region update (Region) per
     // logical touch frame, whatever the sensor rate.
     maybe_resolve_touch_window();
@@ -1857,7 +1860,7 @@ void GuiInputCore::deliver_touch_nav_frame() {
 void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     // THE END SPLIT (recorded here, at the one owner; each caller passes its
     // own clause and the edge inventory at the touch state block names both):
-    // Wayland orders the terminating up/cancel BEFORE the wl_touch.frame that
+    // Wayland orders the terminating up/cancel BEFORE the touch_frame that
     // closes its batch, so motion batched with the end is still staged in
     // touch_nav_frame_dirty_ when this runs.
     //   * FINGER-UP (true): the staged frame is the user's own FINAL MOTION
@@ -1866,9 +1869,9 @@ void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     //     act at all: with no prior update delivered, dropping that frame
     //     would erase the crossing, owe no end hook, and make the whole
     //     gesture silently do nothing.
-    //   * HARD ENDS (wl_touch.cancel / touch-capability loss, false): the
-    //     staged frame is DROPPED deliberately — the compositor's claim means
-    //     that motion retroactively was not ours — and the end hook still
+    //   * HARD ENDS (touch_cancel / touch-capability loss, false): the
+    //     staged frame is DROPPED deliberately — the window system's claim
+    //     means that motion retroactively was not ours — and the end hook still
     //     fires iff an update was delivered. The asymmetry with the POINTER
     //     translation's hard end is deliberate: that release MUST deliver (a
     //     vanished hold would latch the drag-modal gate with no event left to
@@ -1895,7 +1898,7 @@ void GuiInputCore::end_touch_region_gesture(bool deliver_final_frame) {
     // The Nav end split restated for the region trio (the contract at the
     // declaration): the finger's own lift delivers the staged frame first —
     // the user's final leg, the span's resting extent — while the hard ends
-    // drop it (the compositor's claim means that motion retroactively was
+    // drop it (the window system's claim means that motion retroactively was
     // not ours). region_end then fires UNCONDITIONALLY, unlike the nav end's
     // delivered-gate: the GUI-side region drag has held the drag-modal gate
     // open since the begin, so its release path is owed even when no update
@@ -1913,7 +1916,8 @@ void GuiInputCore::end_touch_region_gesture(bool deliver_final_frame) {
 }
 
 void GuiInputCore::touch_cancel() {
-    // The compositor claims the touches (its own gesture recognition, a grab).
+    // The window system claims the touches (its own gesture recognition, a
+    // grab; wl_touch.cancel on Wayland).
     // One contract with touch-capability loss, in full.
     hard_end_touch_stream();
 }
@@ -2064,7 +2068,7 @@ void GuiInputCore::note_capture_locked(GuiCursorKind restore_kind) {
 
     // From here the GUI's pointer position is the virtual travel, so the kinds it
     // names are about a place the pointer is not: they stop being recorded until
-    // the compositor next tells us where the pointer really is (the contract is at
+    // the backend next tells us where the pointer really is (the contract is at
     // the field). Set beside pointer_captured_ and only on the path that CREATED
     // THE LOCK PROXY — the degraded and creation-failed returns above leave it
     // false, which is what keeps those gestures on the ordinary cursor path. That

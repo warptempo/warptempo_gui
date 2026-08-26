@@ -88,9 +88,10 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // the desktop is the beat this program's own holds use.
 //
 // THE KEYBOARD'S OWN DELAY IS NOT THIS CONSTANT AND NEVER SHOULD BE. Key
-// repeat arrives from the compositor through wl_keyboard.repeat_info, so it
-// tracks the user's desktop setting and moves with every other application if
-// that setting is ever edited. This constant is the number OUR gesture holds
+// repeat arrives from the compositor through wl_keyboard.repeat_info and
+// reaches the input core through set_repeat_info, so it tracks the user's
+// desktop setting and moves with every other application if that setting is
+// ever edited. This constant is the number OUR gesture holds
 // use to agree with it — hard-coding the key delay to match would be the one
 // place the product fights the desktop, and it would buy nothing, because the
 // two numbers already agree.
@@ -106,7 +107,7 @@ struct GuiInputState {
     bool     primary_button_held = false;
     // The Unicode codepoint this key event resolves to under the live
     // keyboard state (shift / layout / compose applied), as computed by
-    // xkb_state_key_get_utf32 at the platform boundary; 0 when the key
+    // the backend — xkb_state_key_get_utf32 on Wayland; 0 when the key
     // produces no character (function keys, bare modifiers). It is a FULL
     // CODEPOINT, not a byte — a compose or dead-key sequence arrives here
     // whole (U+2026, U+2014, an accented letter) and the text editors UTF-8
@@ -121,8 +122,8 @@ struct GuiInputState {
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED REPEAT — one the process
     // generated itself from a HELD input rather than a fresh physical press.
-    // TWO PRODUCERS, one per surface: GuiPlatform::maybe_fire_repeat for a held
-    // KEY (the platform boundary's own), and
+    // TWO PRODUCERS, one per surface: GuiInputCore::maybe_fire_repeat for a
+    // held KEY (the portable input core's own, input_core.cpp), and
     // GuiInputHandler::tick_chrome_press_repeat for a held BUTTON (the chord
     // table's `repeats` rows, 2026-08-16 — the pointer twin, which exists so
     // the keyboard-less touch panel has a step run of its own). The two carry the same
