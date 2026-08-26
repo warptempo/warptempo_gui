@@ -145,6 +145,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/async_renderer.cpp
         src/gui/waveform_worker.cpp
         src/gui/platform_wayland.cpp
+        src/gui/input_core.cpp
         src/gui/audio.cpp
         # GUI-ONLY: HarfBuzz text shaping is a painting concern and exists only
         # here, so it is deliberately in none of the four shared per-directory

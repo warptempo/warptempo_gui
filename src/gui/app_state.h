@@ -3009,7 +3009,7 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // crosses it commits the sliver it drew, nothing dissolving it and — since the
 // minimum width floor's retirement, 2026-08-19 — nothing widening it either.)
 // The TOUCH slop is a separate constant deliberately equal to it
-// (kTouchSlopPx, platform_wayland.cpp — the platform sits below this header),
+// (kTouchSlopPx, input_core.cpp — the input layer sits below this header),
 // which is what makes a quick finger drag cross both gates at once.
 // UNIFIED to 8px (architect
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
@@ -4868,7 +4868,7 @@ struct AppState {
     //   NO KEYBOARD-INTENT-CANCEL MEMBERSHIP, deliberately, where the
     //   pre-2026-08-13 form had one: this burst is POINTER intent and the
     //   hook's edges run no command (the reasoning is at
-    //   set_keyboard_intent_cancel_hook, platform_wayland.h).
+    //   set_keyboard_intent_cancel_hook, input_core.h).
     //   NOTHING IS MIRRORED FOR THE POINTER-BUTTON AND WHEEL EDGES the old form
     //   also carried: the left button cannot press again while it is held, the
     //   other two buttons bind nothing anywhere in this product, and a wheel
@@ -5092,7 +5092,7 @@ struct AppState {
     //       DOES EVERY POINTER-CAPABILITY LOSS whatever the position said: that
     //       edge is the hard end of the stream, with no return motion to make
     //       sense of a kept mode, so the hook reads the platform's leave REASON
-    //       ahead of the band (GuiPointerLeaveReason, platform_wayland.h).
+    //       ahead of the band (GuiPointerLeaveReason, input_core.h).
     // Entries (2)-(4) share one gated writer, disarm_menu_row, which is inert
     // while a menu is open — there the popup's own routes decide, and (1) is
     // what they call. The ONE close that KEEPS the mode is the row-1 hover

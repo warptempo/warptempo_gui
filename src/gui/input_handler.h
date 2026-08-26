@@ -858,7 +858,7 @@ struct GuiInputHandler {
     // live at their own homes: the seven editors' modality
     // (route_modal_editor_key), strict modifier validation (an unbound
     // modifier combination is a consumed no-op; conventions.md), the Super
-    // press drop (deliver_key, platform_wayland.cpp), the modal Enter/Space
+    // press drop (deliver_key, input_core.cpp), the modal Enter/Space
     // act at the RELEASE — the product's one act-on-lift keyboard edge
     // (on_key_release, below) — bare `e` as the left mouse button, swallowed
     // at the platform boundary (kLeftClickKey, gui_input.h), and the held

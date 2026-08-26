@@ -1510,8 +1510,8 @@ int main(int argc, char** argv) {
     // gated a second time, on no menu being open). The platform-side sites name
     // their OWN concern and point
     // here rather than each keeping a list that can drift (the setter contract
-    // and the member comment in platform_wayland.h, and the capability-loss fire
-    // site in platform_wayland.cpp).
+    // and the member comment in input_core.h, and the capability-loss fire
+    // site in input_core.cpp).
     // THE TWO EDGES ARE NOT THE SAME EDGE (codex 2026-08-03) — and SINCE
     // 2026-08-08 THE BODY IS TOLD WHICH ONE IT IS, the platform handing in a
     // GuiPointerLeaveReason, because one effect below now differs between them.
@@ -1521,12 +1521,12 @@ int main(int argc, char** argv) {
     // delivers a restore MOTION at the mouse's own position instead and this
     // body never runs — the ordinary motion path re-derives hover and the
     // settled cursor from truth (the fork's one statement is at
-    // deliver_touch_translation_end, platform_wayland.cpp). On the arm that
+    // deliver_touch_translation_end, input_core.cpp). On the arm that
     // DOES fire, the body needed no change:
     // clearing hover faces where a finger last was is precisely what the
     // no-hover-under-touch consequence asks for, and the row-1 keep below
     // reads the remembered position exactly as it does for a mouse. The fire
-    // sites are the touch edge inventory's, platform_wayland.h.
+    // sites are the touch edge inventory's, input_core.h.
     // ONE OF THOSE FIRINGS IS THE SECOND-FINGER UPGRADE, whose end is the
     // ABNORMAL one (codex round 19) — no release is delivered, so the three
     // press ARMS this body drops are what stops a pinch dispatching whatever
@@ -1680,7 +1680,7 @@ int main(int argc, char** argv) {
     // platform consumes them without calling on_key — so the platform reports
     // them through this one hook instead of the application growing a second,
     // partial list. The fire classes and the per-swallowed-delivery decision
-    // are at the setter's contract (platform_wayland.h). THIS BODY IS THE
+    // are at the setter's contract (input_core.h). THIS BODY IS THE
     // AUTHORITATIVE EFFECT LIST for the hook, the pointer-leave hook's own
     // model, and it holds ONE application-side key intent: THE MODAL DIALOG'S
     // KEYBOARD PRESS ARM, which is sharper than a face — that button is
@@ -2183,7 +2183,7 @@ int main(int argc, char** argv) {
         // by definition, so a call under that guard would never run during one.
         // This is the run loop's own deadline tick, the same timerfd expiry the
         // platform's key-repeat and touch-disambiguation deadlines ride
-        // (maybe_fire_repeat / maybe_resolve_touch_window, platform_wayland.cpp)
+        // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
         // and the same one the chrome button hold-repeat rides above; the act
         // adds no timer of its own. One enum compare when no rest stands. It
         // sits ahead of ma_playing so a play launched here takes this tick's
@@ -2449,7 +2449,7 @@ int main(int argc, char** argv) {
         // intended reading: the user is aiming.
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during the disambiguation
-        // window; the contract is at the touch state block, platform_wayland.h.
+        // window; the contract is at the touch state block, input_core.h.
         if (app.follow_mode && !app.follow_overridden_for_session &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();

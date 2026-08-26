@@ -78,7 +78,7 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // rest before it crosses into its held meaning. Every gesture hold in the
 // product reads THIS: the chrome roster's shift long press
 // (kChromeShiftHoldMs, app_state.h) and the touch pan zone's region hold
-// (kTouchRegionHoldMs, platform_wayland.cpp), so a keyboard hold, a chrome
+// (kTouchRegionHoldMs, input_core.cpp), so a keyboard hold, a chrome
 // shift hold and a touch region hold all cross their threshold on the same
 // beat rather than on three numbers that happen to be near each other.
 //

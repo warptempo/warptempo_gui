@@ -112,7 +112,7 @@ Every guard classifies under docs/engineering/validation_topology.md — five cl
 Marker and related GUI types carry the `Gui` prefix; new marker-side types follow. Warp and phase reset are co-equal axes: new pipeline surfaces ship both columns or record the asymmetry in a comment at the site. "Phase reset" is one concept token, never shortened to "reset" in names; warp is never the unmarked default (recorded-asymmetry inventory in conventions.md).
 
 ### Rounding
-`std::nearbyint` for banker's rounding wherever fractional values convert to integer-domain values. No epsilon nudge. For authored positions, `snap_authored_frame` (app_state.h) is the single conversion chokepoint; no other site may round or cast an authored position.
+`std::nearbyint` for banker's rounding wherever fractional values convert to POINTS ON A GRID (authored frames, lattice columns, sample indices). No epsilon nudge. For authored positions, `snap_authored_frame` (app_state.h) is the single conversion chokepoint; no other site may round or cast an authored position. SCREEN PIXELS ARE CELLS, NOT POINTS (architect 2026-08-25, landed 2026-08-26): a pixel x covers [x, x+1), so a surface coordinate names the pixel that CONTAINS it — floor, through the ONE owner `containing_pixel` (input_core.h), which every pointer, touch and capture coordinate passes through on its way to an int; before that owner the mouse truncated and the finger rounded, one pixel apart on the 10px endcap bands and the 8px crossing. The cell/point distinction is the whole rule; no site restates it.
 
 ### Comments
 Comments describe current behavior and rationale only. No dead-process citations (Brief/chunk/Stage/spec tags or "per the brief" prose).

@@ -3016,7 +3016,7 @@ void GuiInputHandler::clear_modal_dialog_press() {
 // THE KEYBOARD ARM'S HARD END, the twin of the one above and on the twin edge:
 // the platform's keyboard-intent cancellation (keyboard leave, keyboard-
 // capability loss, a Super-swallowed press — the fire classes are at
-// set_keyboard_intent_cancel_hook, platform_wayland.h). On the two focus edges
+// set_keyboard_intent_cancel_hook, input_core.h). On the two focus edges
 // the release this arm waits for can never be delivered, and an act that has
 // not happened yet must not be left waiting for it; on the Super-swallowed
 // press the drop is the conservative one — that press is an intervening key
@@ -6489,12 +6489,12 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
 // rather than the compare's return: whenever the arm IS current, the recompute
 // set it from dropdown_item_at at app.last_mouse_x/y against the same published
 // rects, and the platform delivers a release AT THOSE COORDINATES — absolute
-// motion is delivered synchronously (on_pointer_motion) and the release carries
-// the platform's own pointer_x_/pointer_y_, while the one deferred kind, a
-// captured drag's coalesced relative motion, is flushed immediately BEFORE any
-// button event with the held bit crossing on the pre-release side so that flushed
-// motion still reads the button as down (flush_deferred_motion,
-// platform_wayland.cpp). Same expression, same coordinates, same rects: the two
+// motion is delivered synchronously (GuiInputCore::pointer_motion) and the
+// release carries the input core's own pointer_x_/pointer_y_, while the one
+// deferred kind, a captured drag's coalesced relative motion, is flushed
+// immediately BEFORE any button event with the held bit crossing on the
+// pre-release side so that flushed motion still reads the button as down
+// (flush_deferred_motion, input_core.cpp). Same expression, same coordinates, same rects: the two
 // answers are equal by construction wherever the arm is resolvable at all, and
 // where they differ the ARM is the stale one. So nothing that fires today stops
 // firing, and the stale-rect window stops swallowing an activation.

@@ -1984,7 +1984,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
         // Positive steps zoom in. The platform's sub-detent accumulator keys
         // its remainder on the modifier chord as well as the hit region, and
         // clears it outright on any modifier change, so remainder grown while
-        // panning can never complete a detent as a zoom (platform_wayland.cpp's
+        // panning can never complete a detent as a zoom (input_core.cpp's
         // context key).
         viewport.zoom_steps(button == GuiMouseButton::WheelUp ? +count : -count);
     }
