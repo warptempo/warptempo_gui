@@ -3384,16 +3384,40 @@ struct ViewState {
 // GuiAbAudition::audition_span_frames, the one conversion site.
 constexpr int kAuditionMs = 500;
 
+// THE A/B AUDITION'S RESTS (architect 2026-08-26) — the act is PACED, not run
+// back to back. The rest is what lets the ear capture one play, isolate it and
+// hear it again; it is what he leaves between the plays when he does this by
+// hand, and about twice that when he switches tabs, so the two constants are
+// his own hand pacing and a retune is a recompile.
+//   * kAuditionPairGapMs rests between the FIRST and SECOND play of a pair
+//     (OtherFirst -> OtherSecond, HomeFirst -> HomeSecond).
+//   * kAuditionSwitchGapMs rests across the TAB SWITCH (OtherSecond ->
+//     HomeFirst) and is the pair gap DOUBLED by ruling. The switch itself
+//     happens at the play's natural end, ahead of the rest, so the tab flips
+//     at once and the rest is silence on the tab about to play.
+// NO REST PRECEDES THE FIRST PLAY: the architect's rest is between SOUNDS and
+// nothing sounded before it, so GuiAbAudition::start launches straight after
+// its switch. The values are his estimate ("fifteen or twenty-five"), which is
+// why each is one number to change here and nowhere else.
+// GRANULARITY: the rests are SAMPLED on the run loop's own deadline tick
+// (GuiAbAudition::fire_if_due, beside the key-repeat and touch-window
+// deadlines), whose interval is the bound output's refresh half-period — so a
+// rest is AT LEAST its milliseconds and at most one timer period more (~8 ms
+// at 60 Hz), which is inside the hand pacing these numbers transcribe.
+inline constexpr int kAuditionPairGapMs   = 20;
+inline constexpr int kAuditionSwitchGapMs = 40;
+
 // THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
 // transport act that spans several plays. Shift+Space (and the play button's
 // shift-click or long press, which dispatch the same chord) switches to the
-// OTHER tab, plays kAuditionMs from that tab's resting playhead TWICE in
-// immediate succession, switches back to the tab it started on, and plays the
-// same span from THAT tab's resting playhead twice; the user then adjusts on
-// the tab he started from. It automates what he did by hand — four quick
-// Space presses, Ctrl+Tab, four more, Ctrl+Tab — and changes nothing about
-// what plays or how: each play is an ordinary GuiPlayback session over the
-// same buffer at the same level, launched through the one launch body
+// OTHER tab, plays kAuditionMs from that tab's resting playhead TWICE with a
+// kAuditionPairGapMs rest between them, switches back to the tab it started
+// on, rests kAuditionSwitchGapMs, and plays the same span from THAT tab's
+// resting playhead twice, that pair resting between them too; the user then
+// adjusts on the tab he started from. It automates what he did by hand — four
+// Space presses at his own pacing, Ctrl+Tab, four more, Ctrl+Tab — and changes
+// nothing about what plays or how: each play is an ordinary GuiPlayback
+// session over the same buffer at the same level, launched through one body
 // (GuiPlaybackLifecycle::launch_bounded_audition), and NO RESTING PLAYHEAD
 // EVER MOVES — playback drives the scanner, a stop moves no cursor, and the
 // two tab switches restore each tab's own band, so after the whole act both
@@ -3401,27 +3425,56 @@ constexpr int kAuditionMs = 500;
 // and no damage of its own (the tab switch and the scanner already own theirs).
 //
 // THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
-// while one of the act's plays is live — from its successful launch to the
-// stop that ends it. `home_tab` is the tab the act started on and returns to.
+// WHILE THE ACT STANDS — from the first successful launch to whatever ends it.
+// `waiting` says which half of the act that phase is in, and it is the ONE
+// running/not-running question there is, so `phase != Idle` is the whole test
+// everywhere:
+//   * waiting == false — the named play is LIVE, from its successful launch to
+//     the stop that ends it.
+//   * waiting == true — the named play has NOT launched yet: the act is
+//     RESTING, and `launch_due_ms` is the monotonic_ms() instant it becomes
+//     due. Nothing is playing and the scanner is inactive during a rest, so
+//     the play/stop button honestly wears its play face and Space starts a
+//     plain audition (which ends the act at the one launch body, edge (2)).
+// `home_tab` is the tab the act started on and returns to.
 // NO LAUNCH FRAME IS CARRIED: each play reads the tab's resting cursor at its
 // own launch and never writes it, and what proves the pair identical is that
 // the cursor cannot MOVE under a standing act — every route that moves it is a
-// clearing owner below, the placement's live reseek included.
+// clearing owner below, the placement's live reseek included. A REST IS
+// INTERRUPTED EXACTLY AS A PLAY IS: no owner below tests for live playback
+// before clearing, so each ends a resting act as it ends a playing one.
 //
 // THE EDGES, complete:
-//   * WRITTEN NON-IDLE at ONE site: GuiAbAudition::launch_phase, after its
-//     bounded launch has returned true. A refused launch writes nothing, so a
+//   * WRITTEN NON-IDLE at TWO sites, one per half:
+//     THE PLAY, GuiAbAudition::launch_phase, after its bounded launch has
+//     returned true (waiting = false). A refused launch writes nothing, so a
 //     phase whose play could not start (a playhead at or past the domain end,
 //     a preview that went stale) simply ends the act — silently, the tab
 //     staying where it is.
+//     THE REST, GuiAbAudition::advance_after_natural_end, which arms the NEXT
+//     phase with waiting = true and its deadline (edge below).
 //   * ADVANCED at ONE site: the tick's natural-end branch (main.cpp), which
 //     reads the phase, takes the one stop body, and hands what it read to
-//     GuiAbAudition::advance_after_natural_end — the next play launches from
-//     there, the tab switch between plays happening synchronously on the GUI
-//     thread inside that call, with no timer and no gap.
-//   * CLEARED TO IDLE at FOUR OWNERS, so no interrupt path can forget it:
+//     GuiAbAudition::advance_after_natural_end. That call no longer launches:
+//     it switches the tab where the phase asks — synchronously, inside this
+//     same tick, so the flip is seen at once — and then arms the REST that
+//     precedes the next play (kAuditionPairGapMs inside a pair,
+//     kAuditionSwitchGapMs across the switch), AFTER the switch, because the
+//     switch's own stop body clears the sequence.
+//   * FIRED at ONE site: GuiAbAudition::fire_if_due, called from the run
+//     loop's deadline tick (main.cpp's on_tick, above its playing-only guard,
+//     beside the key-repeat and touch-window deadline samplers). It ends the
+//     rest and launches the phase it named; a launch refusal ends the act, the
+//     interrupt rule's own answer.
+//   * CLEARED TO IDLE at FOUR OWNERS, so no interrupt path can forget it. A
+//     REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners every interrupt
+//     route ends up in — the stop body and the launch body — neither test for
+//     live playback (the stop body's clear sits AHEAD of its own
+//     nothing-to-do guard), so a stop or a launch that finds silence still
+//     ends the act.
 //     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
-//         which clears it BEFORE its own nothing-to-do guard — every caller of
+//         which clears it BEFORE its own nothing-to-do guard — so a stop that
+//         finds nothing playing still ends a RESTING act. Every caller of
 //         that body ends the act: Space's stop edge, every keyboard stop under
 //         the keyboard stop rule, the modal-open stop (every dialog editor and
 //         prompt), the A/B tab switch by any route (Ctrl+Tab, the tab click,
@@ -3430,10 +3483,11 @@ constexpr int kAuditionMs = 500;
 //         and the tick's natural end itself (which then advances).
 //     (2) THE ONE LAUNCH BODY, GuiPlaybackLifecycle::launch_playback_window,
 //         at its head, refused or not: every launch begins a fresh session, so
-//         a plain Space or a scrub launched inside the sub-tick window between
-//         a bounded play's natural end and the tick that observes it can never
-//         be mistaken for the act's own play at ITS natural end. The act's own
-//         launch runs through the same head and re-arms after it returns.
+//         a plain Space or a scrub launched DURING ONE OF THE RESTS — or
+//         inside the sub-tick window between a play's natural end and the tick
+//         that observes it — can never be mistaken for the act's own play at
+//         ITS natural end. The act's own launch runs through the same head
+//         (fire_if_due's, at the rest's end) and re-arms after it returns.
 //     (3) THE TARGET_RENDER CLEARS, three of them, because those bodies
 //         deactivate the scanner without the stop body and the tick's
 //         natural-end branch therefore never sees their session end: trigger()'s
@@ -3451,14 +3505,26 @@ constexpr int kAuditionMs = 500;
 //         playback.play() DIRECTLY, so a plain click that repositions a live
 //         session reaches neither the stop body nor the launch body, and an act
 //         left standing there would advance from a moved cursor at that play's
-//         natural end.
+//         natural end. This owner answers a click that lands DURING A PLAY: its
+//         one caller (place_playhead_at_click_column, input_pointer.cpp) fires
+//         it on `was_playing`, the plain click being the product's one cursor
+//         write that takes no stop.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
 // The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.
 struct GuiAuditionSequence {
     enum class Phase { Idle, OtherFirst, OtherSecond, HomeFirst, HomeSecond };
-    Phase phase    = Phase::Idle;
-    char  home_tab = 'A';
+    // The act's ONE running bit: Idle means no act stands, in either half.
+    Phase   phase    = Phase::Idle;
+    char    home_tab = 'A';
+    // The half `phase` is in: false = that play is LIVE, true = the act is
+    // RESTING and that play is the one `launch_due_ms` will start. Idle
+    // carries neither — the default-constructed value IS the cleared state
+    // every owner writes through clear_audition_sequence.
+    bool    waiting  = false;
+    // monotonic_ms() instant the rested play becomes due. Meaningful only
+    // while `waiting`; sampled by GuiAbAudition::fire_if_due.
+    int64_t launch_due_ms = 0;
 };
 
 struct AppState {
@@ -6723,9 +6789,13 @@ void remap_marker_indices_after_reorder(AppState& app,
                                         const std::vector<int>& old_to_new);
 
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
-// platform). The ONE shared wall-clock reader for the press-driven double-click
-// time base (strip-row / marker double-click detection, input_pointer.cpp). Body
-// in app_state.cpp so no TU copies its own clock reader.
+// platform). The ONE shared wall-clock reader for the application layer's
+// millisecond time bases — the press-driven double-click detection (strip-row /
+// marker, input_pointer.cpp), the tooltip's hover dwell (main.cpp) and the A/B
+// audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
+// platform's own deadlines (key repeat, the touch disambiguation window) are
+// stamped on, so the run loop samples them all against one clock. Body in
+// app_state.cpp so no TU copies its own clock reader.
 int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);

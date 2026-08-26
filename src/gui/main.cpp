@@ -2182,6 +2182,18 @@ int main(int argc, char** argv) {
 
         if (app.loading || audio.total_frames() <= 0) return;
 
+        // THE A/B AUDITION'S REST DEADLINE, sampled here and ABOVE the
+        // playing-only guard below — a rest has nothing playing and no scanner
+        // by definition, so a call under that guard would never run during one.
+        // This is the run loop's own deadline tick, the same timerfd expiry the
+        // platform's key-repeat and touch-disambiguation deadlines ride
+        // (maybe_fire_repeat / maybe_resolve_touch_window, platform_wayland.cpp)
+        // and the same one the chrome button hold-repeat rides above; the act
+        // adds no timer of its own. One enum compare when no rest stands. It
+        // sits ahead of ma_playing so a play launched here takes this tick's
+        // scanner heartbeat rather than waiting for the next.
+        ab_audition.fire_if_due();
+
         const bool ma_playing = playback.is_playing();
         if (!app.playhead_scanner_active && !ma_playing) return;
 
@@ -2287,14 +2299,19 @@ int main(int argc, char** argv) {
         // THE A/B AUDITION ADVANCES HERE AND NOWHERE ELSE (architect 2026-08-26):
         // the phase is READ before the stop body (which clears it, being the
         // one stop body every interrupt path also takes) and handed to the
-        // advance after, which launches the act's next play — switching tabs
-        // first where the phase asks — synchronously, inside this same tick,
-        // with no timer and no gap. A play that was not the act's hands over
-        // Idle and the advance does nothing; the natural end of the act's LAST
-        // play hands over HomeSecond and the advance launches nothing. The
-        // stop body's own call is unchanged: the fence-before-flag-clear
-        // ordering above is exactly what the next launch relies on too, a
-        // rebind-safe, quiesced device under the fresh play().
+        // advance after. The advance does NOT launch: it switches tabs where
+        // the phase asks — synchronously, inside this same tick, so the flip
+        // is seen at once — and then ARMS THE REST that precedes the next play
+        // (kAuditionPairGapMs inside a pair, kAuditionSwitchGapMs across the
+        // switch; the pacing is the architect's own hand, app_state.h). The
+        // rest's deadline is sampled by ab_audition.fire_if_due earlier in
+        // this same tick body, which is where the launch now happens. A play that
+        // was not the act's hands over Idle and the advance does nothing; the
+        // natural end of the act's LAST play hands over HomeSecond and the
+        // advance arms nothing. The stop body's own call is unchanged: the
+        // fence-before-flag-clear ordering above is exactly what the next
+        // launch relies on too, a rebind-safe, quiesced device under the fresh
+        // play().
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
