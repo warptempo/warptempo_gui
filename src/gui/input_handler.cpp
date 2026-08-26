@@ -826,9 +826,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Space is the sole playback toggle, and it is modifier-strict — every
-    // modified Space is unbound (is_play_pause_key owns that test). Return /
-    // keypad Enter are NOT playback keys; they open the flag editor, handled
-    // just below.
+    // modified Space but ONE is unbound (is_play_pause_key owns that test; the
+    // one is Shift+Space, the A/B audition, the arm just below this one).
+    // Return / keypad Enter are NOT playback keys; they open the flag editor,
+    // handled further below.
     if (is_play_pause_key(key, mods)) {
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
@@ -843,10 +844,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // between a natural end and the tick that deactivates the scanner
         // leaves that scanner exactly as it found it — the tick's end-of-audio
         // branch has no is_updating gate and deactivates it on its own.
+        // THE PREDICATE IS GuiTargetRender::preview_ready (2026-08-26), the
+        // one owner both this edge and the A/B audition's gate read.
         if (app.active_audio_view == 'T' &&
-            !playback.is_playing()) {
-            if (target_render.is_updating()) return;
-            if (app.target_buffer_frames <= 0) return;
+            !playback.is_playing() &&
+            !target_render.preview_ready()) {
+            return;
         }
         // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the
         // phase-reset lead-in overlay has a SUBJECT, Space launches the scanner
@@ -878,6 +881,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Space now touches no region at all, in either
         // direction: it neither reads the overlay nor hides it.
         playback_lifecycle.toggle_playback(launch_offset);
+        return;
+    }
+
+    // SHIFT+SPACE IS THE A/B AUDITION (architect 2026-08-26): switch to the
+    // other tab, play kAuditionMs from its playhead twice, switch back, play
+    // the same span from this tab's playhead twice. A hotkey, so it acts at
+    // the PRESS; shift-exact (is_ab_audition_key — no ctrl, no alt, the strict
+    // rule's other decorations of Space staying consumed no-ops). Every
+    // refusal is the act's own and silent (GuiAbAudition::start): a sequence
+    // already running (which is also what a held key meets — Space is
+    // one-shot in repeat_eligible, so no repeat ever arrives, and one that
+    // did would land on that refusal), a preview not ready on either tab in
+    // target view. The `h` view consumes the chord at history_mode_key_blocked
+    // (playback is removed from the view whole and Space in neither form is
+    // on its allowlist); loading-or-absent audio consumed it at the head of
+    // this function; a read-only tab ADMITS it (the allowlist's
+    // is_ab_audition term — it authors nothing). The play button's shift-click
+    // and long press arrive here through the same chord
+    // (redesign_button_shift_admits).
+    if (is_ab_audition_key(key, mods)) {
+        ab_audition.start();
         return;
     }
 

@@ -2135,6 +2135,13 @@ enum class RedesignButton {
     // redesign_button_shift_admits does, and these two are not in it. A held
     // skip gives the ordinary trim-bound jump exactly as a tap does; the
     // architect wants the whole-piece jump off glass here.
+    //
+    // THE PLAY BUTTON ADMITS SHIFT (architect 2026-08-26): its twin is
+    // Shift+Space, THE A/B AUDITION, so a shift-click or a long press runs the
+    // four-play sequence the key runs (redesign_button_shift_admits owns the
+    // membership; the act is GuiAbAudition, ab_audition.h). Here the long
+    // press IS wanted on glass — the sequence exists for the touch panel's
+    // workflow as much as the desk's.
     TransportSkipBack, TransportPlayStop, TransportSkipForward,
     // THE SINGLE-MARKER VERBS, THE RIGHT BLOCK'S FIRST GROUP since 2026-08-18
     // (architect: "move drop/delete/disable/toggle inherit to bottom right
@@ -3367,6 +3374,78 @@ struct ViewState {
     TrimState     trim;
 };
 
+// THE A/B AUDITION'S SPAN (architect 2026-08-26): each bounded play runs this
+// many milliseconds from the tab's resting playhead — the "~500 ms" he used to
+// get by tapping Space twice quickly. Converted to frames at the active
+// domain's sample rate (the target buffer is bound at the source's rate, so
+// one rate serves both views) with std::nearbyint, at
+// GuiAbAudition::audition_span_frames, the one conversion site.
+constexpr int kAuditionMs = 500;
+
+// THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
+// transport act that spans several plays. Shift+Space (and the play button's
+// shift-click or long press, which dispatch the same chord) switches to the
+// OTHER tab, plays kAuditionMs from that tab's resting playhead TWICE in
+// immediate succession, switches back to the tab it started on, and plays the
+// same span from THAT tab's resting playhead twice; the user then adjusts on
+// the tab he started from. It automates what he did by hand — four quick
+// Space presses, Ctrl+Tab, four more, Ctrl+Tab — and changes nothing about
+// what plays or how: each play is an ordinary GuiPlayback session over the
+// same buffer at the same level, launched through the one launch body
+// (GuiPlaybackLifecycle::launch_bounded_audition), and NO RESTING PLAYHEAD
+// EVER MOVES — playback drives the scanner, a stop moves no cursor, and the
+// two tab switches restore each tab's own band, so after the whole act both
+// playheads are exactly where they were. There is no undo (nothing authored)
+// and no damage of its own (the tab switch and the scanner already own theirs).
+//
+// THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
+// while one of the act's plays is live — from its successful launch to the
+// stop that ends it. `home_tab` is the tab the act started on and returns to;
+// `launch_frame` is the paint-domain frame the live play launched from (the
+// tab's resting playhead at that moment, recorded for the reader — the play
+// itself reads the cursor at launch and never writes it).
+//
+// THE EDGES, complete:
+//   * WRITTEN NON-IDLE at ONE site: GuiAbAudition::launch_phase, after its
+//     bounded launch has returned true. A refused launch writes nothing, so a
+//     phase whose play could not start (a playhead at or past the domain end,
+//     a preview that went stale) simply ends the act — silently, the tab
+//     staying where it is.
+//   * ADVANCED at ONE site: the tick's natural-end branch (main.cpp), which
+//     reads the phase, takes the one stop body, and hands what it read to
+//     GuiAbAudition::advance_after_natural_end — the next play launches from
+//     there, the tab switch between plays happening synchronously on the GUI
+//     thread inside that call, with no timer and no gap.
+//   * CLEARED TO IDLE at THREE OWNERS, so no interrupt path can forget it:
+//     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
+//         which clears it BEFORE its own nothing-to-do guard — every caller of
+//         that body ends the act: Space's stop edge, every keyboard stop under
+//         the keyboard stop rule, the modal-open stop (every dialog editor and
+//         prompt), the A/B tab switch by any route (Ctrl+Tab, the tab click,
+//         undo/redo's tab restore, the settings editor's tab key), the `h`
+//         view's entry, the S/T flip, every trim write, the scrub's stop half,
+//         and the tick's natural end itself (which then advances).
+//     (2) THE ONE LAUNCH BODY, GuiPlaybackLifecycle::launch_playback_window,
+//         at its head, refused or not: every launch begins a fresh session, so
+//         a plain Space or a scrub launched inside the sub-tick window between
+//         a bounded play's natural end and the tick that observes it can never
+//         be mistaken for the act's own play at ITS natural end. The act's own
+//         launch runs through the same head and re-arms after it returns.
+//     (3) THE THREE HAND-SPELLED STOPS in target_render.cpp — trigger()'s
+//         freeze (the preview invalidation in target view), ensure_ready's and
+//         rebind_to_source's conditional stops — through clear_audition_sequence,
+//         because they deactivate the scanner without the stop body and the
+//         tick's natural-end branch therefore never sees their session end.
+//     The source file loads once, at startup, so a file load finds this Idle by
+//     construction and needs no site.
+// The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.
+struct GuiAuditionSequence {
+    enum class Phase { Idle, OtherFirst, OtherSecond, HomeFirst, HomeSecond };
+    Phase   phase        = Phase::Idle;
+    char    home_tab     = 'A';
+    int64_t launch_frame = 0;
+};
+
 struct AppState {
     int     width                 = 1400;
     int     height                = 800;
@@ -3475,6 +3554,11 @@ struct AppState {
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
     float   playback_speed          = 1.0f;
+
+    // THE A/B AUDITION SEQUENCE — session-only, never persisted; the model
+    // and the complete edge inventory are at GuiAuditionSequence (above this
+    // struct). Non-Idle exactly while one of the act's four plays is live.
+    GuiAuditionSequence audition_sequence;
 
     // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
     // GUI-wide monospace text size in points, and row 7 deleted the monospace
@@ -6981,6 +7065,15 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
     return stood;
 }
 
+// END THE A/B AUDITION SEQUENCE — the one spelling of "the act is over", so
+// the three clearing owners (the stop body, the launch body, the three
+// hand-spelled target_render stops; the inventory is at GuiAuditionSequence)
+// write the same reset. Idempotent and a no-op at Idle, which is why the stop
+// body can call it ahead of its own nothing-to-do guard.
+inline void clear_audition_sequence(AppState& a) {
+    a.audition_sequence = GuiAuditionSequence{};
+}
+
 // IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
 // word (architect 2026-08-05): the selected diff flags, else the focused one
 // alone. Empty means Ctrl+H is a consumed no-op — history_mode_key_blocked's
@@ -7077,11 +7170,15 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // site of that shape.)
 
 // WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
-// refusal set, hoisted whole (2026-08-15). IT HAS ONE READER AND MUST NOT GAIN
-// A SECOND OF THE FACE KIND: GuiPlaybackLifecycle::launch_playback_from, whose
-// every silent refusal this IS and which CALLS IT — so this is a real
+// refusal set, hoisted whole (2026-08-15). IT HAS TWO READERS AND MUST NOT
+// GAIN ONE OF THE FACE KIND: GuiPlaybackLifecycle::launch_playback_window,
+// whose every silent refusal this IS and which CALLS IT — so this is a real
 // producer's own predicate, not a producer-less leftover, and it stays exactly
-// as it is. It was hoisted for a SECOND reader, the bottom row's PLAY button
+// as it is — and, since 2026-08-26, the A/B audition's PRESS-TIME GATE
+// (GuiAbAudition::tab_launch_ready), which asks it about the OTHER tab's
+// playhead before the act's first switch — a frame no launch body can be
+// asked about yet, and a refusal-shaped read, not a face. It was originally
+// hoisted for a second reader of the other kind, the bottom row's PLAY button
 // (redesign_button_enabled), which asked it about the resting cursor for the
 // day the whole-row honesty ruling stood; the architect reversed that ruling
 // the same day ("there's not a whole lot of value derived from the icon faces
@@ -8155,14 +8252,20 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// FOUR carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
+// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
 // source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Show trim
-// region (Shift+[ the MAXIMIZER — reset the trim to the whole song) and THE
+// region (Shift+[ the MAXIMIZER — reset the trim to the whole song), THE
 // WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
 // bare `.` steps one newer and Shift+`.` goes to the newest
 // (handle_history_mode_key, input_key_dispatch.cpp, owns both shapes; the arrows
-// dispatch them through the one press body like every other button).
+// dispatch them through the one press body like every other button), and
+// since 2026-08-26 THE PLAY BUTTON, whose twin is Shift+Space, THE A/B
+// AUDITION (GuiAbAudition, ab_audition.h): a shift-click or a long press on
+// the transport's play/stop button runs the four-play sequence the key runs,
+// the button still acting at the lift and dispatching the chord through
+// on_key like every other roster member. The admission is what gives glass
+// the act at all — the panel has no Shift and no Space.
 //
 // SHOW TRIM REGION CARRIES THE FOURTH, THE SAME ADMISSION ON A DIFFERENT
 // BUTTON. The trim scissors carried it from 2026-08-15 until their
@@ -8208,7 +8311,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
-           b == RedesignButton::HistoryNewer;
+           b == RedesignButton::HistoryNewer ||
+           b == RedesignButton::TransportPlayStop;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over, and the ROSTER'S
@@ -8473,9 +8577,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // audition runs, Render's own pattern (a constant row for the ordinary
         // meaning, an override for the live one). It says the half the press
         // will DO rather than "Toggle playback", which is what the glyph is
-        // saying in the same breath.
+        // saying in the same breath. THE SHIFT LINE (2026-08-26) names the
+        // A/B audition, the button's twin since it joined
+        // redesign_button_shift_admits; the static_assert below keeps the line
+        // and the admission one fact. The live form carries the same line —
+        // see the overload — because a shift press starts the sequence in
+        // both states, so it does something different from the plain press in
+        // both.
         case RedesignButton::TransportPlayStop:
-            return {"Play (Space)", nullptr};
+            return {"Play (Space)", "Press Shift for the A/B audition."};
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)",
                     "Press Ctrl to ignore the trim window."};
@@ -8688,11 +8798,15 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // will run — "Stop" while an audition is live, the constant table's "Play"
     // otherwise. The condition is redesign_button_glyph_swapped's, not a
     // second read of the audition bit, so the WORDS and the GLYPH can never
-    // disagree about which half the button currently is. One line: bare Space
-    // has no shifted twin.
+    // disagree about which half the button currently is. THE SHIFT LINE
+    // STAYS ON THE LIVE FORM (2026-08-26): the shift press's act is the A/B
+    // audition in both states — over a running plain audition its first tab
+    // switch stops that audition and the sequence begins — so, unlike Render's
+    // Cancel face (where a shift press cancels exactly as the plain one does),
+    // the modified press does something DIFFERENT here and the line is owed.
     if (b == RedesignButton::TransportPlayStop &&
         redesign_button_glyph_swapped(a, b)) {
-        return {"Stop (Space)", nullptr};
+        return {"Stop (Space)", "Press Shift for the A/B audition."};
     }
     return redesign_button_tooltip(b);
 }
@@ -8736,6 +8850,10 @@ static_assert(
      nullptr) ==
         (redesign_button_shift_admits(RedesignButton::TransportSkipForward) ||
          redesign_button_ctrl_admits(RedesignButton::TransportSkipForward)) &&
+    (redesign_button_tooltip(RedesignButton::TransportPlayStop).line2 !=
+     nullptr) ==
+        (redesign_button_shift_admits(RedesignButton::TransportPlayStop) ||
+         redesign_button_ctrl_admits(RedesignButton::TransportPlayStop)) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
     // each side of the equivalence and cannot pass vacuously if the members

@@ -14,6 +14,7 @@
 #include "save_ops.h"
 #include "selection.h"
 #include "active_views.h"
+#include "ab_audition.h"
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
@@ -656,6 +657,9 @@ struct GuiInputHandler {
     GuiFlagEditor&           flag_editor;
     GuiRendersDir&           renders_dir;
     GuiActiveViews&          active_views;
+    // THE A/B AUDITION (2026-08-26). ONE reader here: on_key's Shift+Space
+    // arm, which calls its start; the advance is the tick's (main.cpp).
+    GuiAbAudition&           ab_audition;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
@@ -784,6 +788,7 @@ struct GuiInputHandler {
                     GuiFlagEditor&           flag_editor_,
                     GuiRendersDir&           renders_dir_,
                     GuiActiveViews&          active_views_,
+                    GuiAbAudition&           ab_audition_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
@@ -807,6 +812,7 @@ struct GuiInputHandler {
           flag_editor(flag_editor_),
           renders_dir(renders_dir_),
           active_views(active_views_),
+          ab_audition(ab_audition_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),

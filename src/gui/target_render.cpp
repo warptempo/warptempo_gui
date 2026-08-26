@@ -180,6 +180,13 @@ void GuiTargetRender::trigger() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
+        // A HAND-SPELLED STOP ENDS THE A/B AUDITION SEQUENCE TOO (the third
+        // clearing owner at GuiAuditionSequence, app_state.h): this freeze
+        // deactivates the scanner without the one stop body, so the tick's
+        // natural-end branch never sees this session end and could not clear
+        // it there. A preview invalidation in target view is an interrupt of
+        // the act by ruling.
+        clear_audition_sequence(app);
         // The clock flips from the scanner's time to the resting cursor's on
         // this edge, and nothing else damages row 8's cell on the reachable
         // route (a W+target cent step during a live audition — the one
@@ -723,6 +730,10 @@ void GuiTargetRender::ensure_ready() {
         if (playback.is_playing()) {
             playback.stop();
             app.playhead_scanner_active = false;
+            // The hand-spelled stops' clear (GuiAuditionSequence's third
+            // clearing owner); unreachable in practice for the same reason the
+            // stop itself is, and carried so the two facts stay one.
+            clear_audition_sequence(app);
         }
         // Restore the domain offset the cached buffer was rendered with.
         // rebind_to_source() (the T→S leg) rebinds the source at offset 0,
@@ -778,6 +789,9 @@ void GuiTargetRender::rebind_to_source() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
+        // The hand-spelled stops' clear (GuiAuditionSequence's third clearing
+        // owner), for the same dead-in-practice reason as ensure_ready's twin.
+        clear_audition_sequence(app);
     }
     if (audio.total_frames() > 0) {
         // Domain offset 0: the source is its own domain origin. The target

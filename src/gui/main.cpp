@@ -33,6 +33,7 @@
 #include "render_pipeline.h"
 #include "renders_dir.h"
 #include "active_views.h"
+#include "ab_audition.h"
 #include "save_ops.h"
 #include "selection.h"
 #include "settings_editor.h"
@@ -1123,6 +1124,11 @@ int main(int argc, char** argv) {
                               target_render, paint_handler, selection);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle);
+    // THE A/B AUDITION (2026-08-26): after active_views and target_render,
+    // both of which it holds; before the input handler, which holds it. Its
+    // advance is called from the tick's natural-end branch below.
+    GuiAbAudition ab_audition(app, audio, playback, playback_lifecycle,
+                              active_views, target_render);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
@@ -1154,7 +1160,7 @@ int main(int argc, char** argv) {
                                   viewport, selection, undo,
                                   warpops, phase_resets, marker_drag,
                                   flag_editor,
-                                  renders_dir, active_views,
+                                  renders_dir, active_views, ab_audition,
                                   phase_reset_propagate,
                                   async_renderer,
                                   history_commit_worker,
@@ -2273,7 +2279,21 @@ int main(int argc, char** argv) {
         // means the early return above did not fire and `ma_playing` is false, so the
         // scanner flag is true — and that is bit-for-bit the helper's own entry guard
         // (`!is_playing() && !scanner_active`), which now carries it.
+        //
+        // THE A/B AUDITION ADVANCES HERE AND NOWHERE ELSE (architect 2026-08-26):
+        // the phase is READ before the stop body (which clears it, being the
+        // one stop body every interrupt path also takes) and handed to the
+        // advance after, which launches the act's next play — switching tabs
+        // first where the phase asks — synchronously, inside this same tick,
+        // with no timer and no gap. A play that was not the act's hands over
+        // Idle and the advance does nothing; the natural end of the act's LAST
+        // play hands over HomeSecond and the advance launches nothing. The
+        // stop body's own call is unchanged: the fence-before-flag-clear
+        // ordering above is exactly what the next launch relies on too, a
+        // rebind-safe, quiesced device under the fresh play().
+        const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
+        ab_audition.advance_after_natural_end(ended_audition);
     });
 
     gui.set_on_pre_paint([&]() {

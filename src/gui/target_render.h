@@ -144,6 +144,21 @@ struct GuiTargetRender {
         return pending_ || in_flight_;
     }
 
+    // THE PREVIEW'S READINESS FOR A LAUNCH — the one owner of "target view has
+    // audio to play right now": no update in flight or pending (the bound
+    // buffer is stale by definition while one is) AND a populated target
+    // buffer (no successful preview render yet in this session means the bind
+    // would play stale source-domain samples). The two readers are Space's
+    // play edge (input_handler.cpp, where Space-to-stop is honored first) and
+    // the A/B audition's press-time gate (GuiAbAudition, which asks it for
+    // BOTH tabs before its first switch and again at every launch). The
+    // per-position gate — the launch frame against the bound domain — is the
+    // launch body's own (playback_launch_playable) and is deliberately not
+    // folded in: this answers about the buffer, that about a frame in it.
+    bool preview_ready() const {
+        return !is_updating() && app.target_buffer_frames > 0;
+    }
+
     // True iff app.target_buffer is potentially stale relative to the current
     // engine input (set by trigger() on any output-affecting mutation, cleared
     // after the completion rebind). Consulted by the archival on_done tail to

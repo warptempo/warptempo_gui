@@ -1,5 +1,6 @@
 #include "playback_lifecycle.h"
 
+#include <algorithm>
 #include <cstdint>
 
 // Gesture-stop: called by any handler that will move the
@@ -16,6 +17,17 @@
 // the cursor, but the scanner has its own visible identity that this
 // function is responsible for tearing down.
 void GuiPlaybackLifecycle::stop_playback_if_playing() {
+    // THE A/B AUDITION SEQUENCE ENDS HERE, AHEAD OF THE GUARD (architect
+    // 2026-08-26): every caller of this body — a keyboard stop, a modal open,
+    // a tab switch, the `h` entry, the S/T flip, a trim write, the scrub's stop
+    // half, Space's stop edge, the tick's natural end — is an interrupt of the
+    // four-play act by construction, so the clear lives INSIDE the one stop
+    // body and no caller can forget it. Ahead of the guard because a stop that
+    // finds nothing playing must still end an act that was between plays in
+    // the sub-tick window (the natural end observed by the tick's own branch,
+    // which reads the phase before calling here and advances after). The
+    // complete edge inventory is at GuiAuditionSequence (app_state.h).
+    clear_audition_sequence(app);
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
     playback.stop();
     app.playhead_scanner_active = false;
@@ -146,16 +158,65 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
     launch_playback_from(frame);
 }
 
-// The shared launch body: validate `launch_pos` — an ABSOLUTE position in the
-// active PAINT domain — against the active view's window, seed the scanner, and
-// start the audio. Returns whether it
-// launched; every refusal is a silent no-op (the "nothing to audition"
-// family). Two callers: toggle_playback's play edge (cursor + launch_offset)
-// and scrub_launch_at (the scrub's clicked frame). This body never writes the
+// The active view's play end (contract at the declaration).
+// WHAT THE END IS SPLITS BY AUDIO VIEW (architect 2026-08-05): TARGET plays to
+// the bound preview buffer's end, which IS the trim window — the preview
+// render covers that window and nothing else exists to play. SOURCE PLAYS TO
+// THE SONG'S END, the trim window not bounding it at all: source playback is
+// the source file read directly, so the gating bought nothing there and only
+// cost the user the audition past a trim bound he was aiming. The NAVIGATION
+// range is untouched by this — Home/End still jump to the trim bounds
+// (Viewport::trim_range, the shared owner both used to read here). In source
+// view the paint domain is source frames and the bound buffer is the source
+// file itself, so this is both the domain's end and the buffer's; play()
+// clamps its end bound to the bound total besides.
+int64_t GuiPlaybackLifecycle::active_view_play_end() const {
+    return (app.active_audio_view == 'T') ? playback.domain_end()
+                                          : audio.total_frames();
+}
+
+// The view-end launch: validate `launch_pos` — an ABSOLUTE position in the
+// active PAINT domain — and play from it to the active view's end. Two
+// callers: toggle_playback's play edge (cursor + launch_offset) and
+// scrub_launch_at (the scrub's clicked frame). Both run the defensive
+// follow-override clear before delegating, so it precedes validation exactly
+// once either way. Everything else is the one launch body's, below.
+bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
+    return launch_playback_window(launch_pos, active_view_play_end());
+}
+
+// THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
+// `start`, the end clamped to the view's own. The pre-sum gate takes the
+// shape of toggle_playback's: `start` is tested against the view end BEFORE
+// `start + span` is formed, so the sum is only ever formed from a start
+// below a modest buffer extent and cannot overflow; the launch body's own
+// remainder gate then re-checks the same verdict on the formed start. A
+// window that the clamp shortens to fewer than two frames refuses there too
+// (the two-frame remainder gate is on `start` against the view end, and a
+// start that passes it leaves at least two frames for the clamp to keep).
+bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
+                                                   int64_t span) {
+    // Defensive, scrub_launch_at's own guard: a live session never launches.
+    if (playback.is_playing()) return false;
+    if (span <= 0) return false;
+    // The same defensive clear the other two launch entries run before their
+    // own validation (the launch body assumes its caller ran it).
+    app.follow_overridden_for_session = false;
+    const int64_t view_end = active_view_play_end();
+    if (start >= view_end - 1) return false;
+    const int64_t end = std::min(start + span, view_end);
+    return launch_playback_window(start, end);
+}
+
+// THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
+// PAINT domain — against the active view's window, seed the scanner, and play
+// [start, end). Returns whether it launched; every refusal is a silent no-op
+// (the "nothing to audition" family). Two callers: the view-end launch above
+// (Space's play edge and the scrub, `end` = the view's end) and the bounded
+// audition (`end` = start + span, clamped). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
-// Callers run the defensive follow-override clear before delegating
-// (both do, so it precedes validation exactly once either way).
+// Callers run the defensive follow-override clear before delegating.
 //
 // Target-view branch: the audio device is bound to app.target_buffer
 // (rebound by GuiTargetRender's completion path on Success, with the
@@ -171,36 +232,40 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 // is left untouched; toggling back to source view restores it naturally
 // because every launch re-applies from app.playback_speed (a speed set
 // while in target view only stores, taking effect at this launch site).
-bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
+bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
+    // THE LAUNCH-BODY CLEAR (architect 2026-08-26): every launch begins a
+    // fresh session, so the A/B audition sequence ends here whoever asked and
+    // whether or not the launch below refuses — a plain Space or a scrub
+    // launched in the sub-tick window after a bounded play's natural end can
+    // then never be taken for the act's own play when IT ends. The act's own
+    // launch passes through this same line and re-arms once this returns true
+    // (GuiAbAudition::launch_phase). The edge inventory is at
+    // GuiAuditionSequence.
+    clear_audition_sequence(app);
     // Both `start` (playback.play()'s launch bound) and the scanner's
     // launch position below are in the active PAINT domain
     // (full-target-frame in target view; source-frame otherwise)
     // — playback's API takes domain coordinates, so the same value
     // serves both, and follow_scroll_if_needed compares the scanner
     // against the full-domain viewport with no wrong-domain leak.
-    int64_t start;
-    int64_t end;
+    //
     // NO LOOPING (architect 2026-07-30, "looping behavior is not that useful.
     // ok to remove all looping" — re-ruling the 2026-07-19 loop ruling dead).
     // EVERY audition plays once from `start` to `end` and stops there. The launch
     // verdict, the per-view loop starts, the audio-callback wrap, the wrap
     // counter and its predictor resync are all gone with it; the natural-end
-    // teardown is what remains and is what every session now takes.
+    // teardown is what remains and is what every session now takes. `end` is
+    // the view's end for Space and the scrub and `start + kAuditionMs` for the
+    // bounded audition — a different end, the same once-to-its-end play.
     //
-    // WHAT `end` IS SPLITS BY AUDIO VIEW (architect 2026-08-05): TARGET plays to
-    // the bound preview buffer's end, which IS the trim window — the preview
-    // render covers that window and nothing else exists to play. SOURCE PLAYS TO
-    // THE SONG'S END, the trim window not bounding it at all: source playback is
-    // the source file read directly, so the gating bought nothing there and only
-    // cost the user the audition past a trim bound he was aiming. The NAVIGATION
-    // range is untouched by this — Home/End still jump to the trim bounds
-    // (Viewport::trim_range, the shared owner both used to read here).
     // EVERY REFUSAL IS THE ONE PREDICATE (playback_launch_playable,
     // app_state.h — hoisted out of this body 2026-08-15 so the bottom row's
     // PLAY button could read the launch's own refusal; the architect reversed
-    // that face arm the same day and the predicate stayed, THIS being its one
-    // remaining reader, so it is a hoist that outlived its second consumer
-    // rather than a producer-less leftover). The per-arm reasoning moved to
+    // that face arm the same day and the predicate stayed with THIS as its one
+    // reader until the A/B audition's press-time gate became the second on
+    // 2026-08-26 — a gate reader, not a face — so it is a hoist that outlived
+    // its first second consumer rather than a producer-less leftover). The
+    // per-arm reasoning moved to
     // the predicate whole: the target arm's
     // buffer-populated check (which must live on this shared path — the scrub
     // launch arrives with no outer gate), the two-frame remainder gate against
@@ -213,18 +278,11 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // launch-inert by this gate (its render still works: the trimmer's
     // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
     if (!playback_launch_playable(app, playback, audio.total_frames(),
-                                  launch_pos)) {
+                                  start)) {
         return false;
     }
-    start = launch_pos;
-    // WHAT `end` IS SPLITS BY AUDIO VIEW (the ruling above): the bound target
-    // buffer's domain end in target view, and in SOURCE VIEW the song's end,
-    // whatever the trim window says — the paint domain there is source frames
-    // and the bound buffer is the source file itself, so this is both the
-    // domain's end and the buffer's; play() clamps its end bound to the bound
-    // total besides.
-    end = (app.active_audio_view == 'T') ? playback.domain_end()
-                                         : audio.total_frames();
+    // (`end` is the caller's: the view's end from active_view_play_end for
+    // the view-end launch, the clamped bounded window for the audition.)
     // Scanner launch = the validated launch position, in the paint domain
     // in every view (see the comment above `start`). Seed the continuous
     // position too so the first paint (where the predictor's cur still equals

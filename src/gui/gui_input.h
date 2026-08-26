@@ -149,7 +149,8 @@ struct GuiInputState {
 };
 
 // True for the chord that toggles playback: BARE Space only. Modifier-strict —
-// a Space carrying ctrl, shift, or alt has no binding, so it must not reach a
+// a Space carrying ctrl or alt has no binding, and the ONE shifted form is a
+// different act (is_ab_audition_key, below), so none of them may reach a
 // toggle (the uniform rule: an unbound modifier combination is a no-op). Return
 // / keypad Enter are NOT playback keys — Enter opens the flag editor on the
 // focused marker (see the bare-Enter binding in input_handler.cpp). Shared by
@@ -158,6 +159,18 @@ struct GuiInputState {
 // see it, and one owner so the two readers cannot drift.
 inline bool is_play_pause_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Space && !mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that runs THE A/B AUDITION (architect 2026-08-26):
+// SHIFT+Space exactly — no ctrl, no alt. The shifted Space was the strict
+// rule's consumed no-op until that date; this is its one binding, and every
+// other decoration on Space stays unbound. The same two readers as the bare
+// form's predicate — on_key's dispatch arm and the read-only allowlist — and
+// the same one-owner reason. The act itself is GuiAbAudition::start
+// (ab_audition.h); the play button's shift-click and long press dispatch this
+// chord through on_key (redesign_button_shift_admits).
+inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Space && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {

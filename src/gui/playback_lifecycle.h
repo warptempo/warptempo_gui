@@ -8,7 +8,9 @@
 // Playback-orchestration operations, extracted from main.cpp's inline lambdas.
 // Owns the GUI-level wrappers around GuiPlayback's mechanism: the one stop body
 // (both stop edges and every gesture stop), the modal-open stop that names it,
-// toggle play/stop, the audition launch, the keep-alive reseek, follow mode, and
+// toggle play/stop, the audition launch, the bounded audition the A/B sequence
+// plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
+// the one play), the keep-alive reseek, follow mode, and
 // the speed set. AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
@@ -161,6 +163,22 @@ struct GuiPlaybackLifecycle {
     // launches (defensive; the caller reaches here only with
     // playback stopped — a scrub act over a live session STOPS it and returns).
     void scrub_launch_at(int64_t frame);
+    // THE BOUNDED AUDITION (architect 2026-08-26), the A/B audition's play:
+    // launch the scanner from `start` — an ABSOLUTE position in the active
+    // paint domain — and play `span` frames, the session's end being
+    // `start + span` clamped to the active view's own end (the song's in
+    // source view, the bound preview buffer's in target) rather than that end
+    // itself. NOTHING LOOPS still: this is a discrete play to ITS end, the
+    // natural-end teardown is its one terminal, and the resting cursor is
+    // untouched exactly as under Space — the same launch body, the same
+    // gates (playback_launch_playable, so a start at or past the domain end
+    // or leaving fewer than two frames refuses), the same follow behaviour,
+    // the same scanner. Returns whether it launched; every refusal is silent.
+    // ONE CALLER: GuiAbAudition::launch_phase (ab_audition.cpp), which owns the
+    // sequence this play is one step of and re-arms the sequence only on
+    // true. A live session never launches (the caller always arrives stopped —
+    // the tick's natural end or the act's own tab switch precede every call).
+    bool launch_bounded_audition(int64_t start, int64_t span);
     void set_playback_speed(float s);
 
     // Reseek the active playback session to a new starting sample, keeping
@@ -187,10 +205,25 @@ struct GuiPlaybackLifecycle {
     void set_follow_mode(bool desired);
 
 private:
-    // The shared launch body (contract at the definition): validate an
-    // absolute paint-domain launch position, seed
-    // the scanner, and start the audio. Returns whether it launched. Callers
-    // (toggle_playback's play edge, scrub_launch_at) run the defensive
-    // follow-override clear before delegating.
+    // The active view's PLAY END — the song's end in source view, the bound
+    // preview buffer's domain end in target (the split and its ruling are at
+    // the launch body's definition). The one owner of that split for the
+    // launch family: the view-end launch reads it as its end, the bounded
+    // launch as its clamp.
+    int64_t active_view_play_end() const;
+    // The view-end launch (contract at the definition): validate an absolute
+    // paint-domain launch position and play from it to active_view_play_end.
+    // Returns whether it launched. Callers (toggle_playback's play edge,
+    // scrub_launch_at) run the defensive follow-override clear before
+    // delegating. Since 2026-08-26 this is a thin caller of
+    // launch_playback_window below, the end being the only thing it adds.
     bool launch_playback_from(int64_t launch_pos);
+    // THE ONE LAUNCH BODY (contract at the definition): validate `start`,
+    // seed the scanner, and play [start, end). Every launch in the product
+    // ends here — the view-end launch above and the bounded audition — so the
+    // gates, the scanner seed, the follow check, the launch damage and the
+    // speed rule are written once. It also ends the A/B audition sequence at
+    // its head (the launch-body clear, the edge inventory at
+    // GuiAuditionSequence): a launch is a fresh session, whoever asked.
+    bool launch_playback_window(int64_t start, int64_t end);
 };

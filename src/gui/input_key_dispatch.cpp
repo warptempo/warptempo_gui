@@ -247,6 +247,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_o =
         (key == GuiKeys::O && !ctrl && !shift && !alt);
     const bool is_play_pause = is_play_pause_key(key, mods);
+    // THE A/B AUDITION (2026-08-26) is admitted on the header's own standard:
+    // it plays and switches tabs — playback and navigation, both already on
+    // this list — and writes no store, no setting and no trim. Shift-exact,
+    // the dispatch arm's own spelling through the shared predicate.
+    const bool is_ab_audition = is_ab_audition_key(key, mods);
     // The bare horizontal arrows step the PLAYHEAD by one painted column, and
     // they are admitted ONLY in the waveform lane, where that step is pure
     // navigation. In the MARKER lane (a non-empty selection) the very same press
@@ -436,7 +441,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
     // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
     // see is_trim_region_toggle above.
-    return !(is_o || is_play_pause || is_playhead_step ||
+    return !(is_o || is_play_pause || is_ab_audition || is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
@@ -3389,10 +3394,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // flap, and this line excluded the view for that.) Ctrl+Tab stays one-shot
     // everywhere, in the view as out of it, a held A/B switch being able only
     // to flap. Every
-    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End in
-    // BOTH of its forms (bare and the 2026-08-24 ctrl whole-piece jump), and
-    // Delete is one-shot. No MODIFIED arrow repeats at all: the arrows carry
-    // no modified binding to repeat.
+    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space in BOTH of
+    // its forms (bare, and Shift+Space the A/B audition — a held one would
+    // only meet the running-sequence refusal, so no repeat is owed), Home/End
+    // in BOTH of its forms (bare and the 2026-08-24 ctrl whole-piece jump),
+    // and Delete is one-shot. No MODIFIED arrow repeats at all: the arrows
+    // carry no modified binding to repeat.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
          key == GuiKeys::Up || key == GuiKeys::Down ||

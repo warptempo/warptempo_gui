@@ -193,6 +193,7 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/history_prefetch.cpp
         src/gui/settings_editor.cpp
         src/gui/active_views.cpp
+        src/gui/ab_audition.cpp
         src/gui/target_render.cpp
         src/gui/render_cache.cpp
         src/gui/paint_handler.cpp
