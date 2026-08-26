@@ -86,11 +86,16 @@ void GuiAbAudition::advance_after_natural_end(
 
 bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
                                  char home_tab) {
-    // RE-ASK THE PREVIEW GATE at every launch, not only at the press: a
-    // mutation landing in the sub-tick window after a play's natural end
-    // triggers a re-render with nothing playing to freeze, so the phase
-    // survives to this tick and the buffer is stale by definition — the same
-    // refusal Space would give. The frame gate is the launch body's.
+    // RE-ASK THE PREVIEW GATE at every launch, not only at the press: this
+    // launch has its own precondition and does not inherit the press-time
+    // verdict, and a refusal here simply ends the act, the interrupt rule's own
+    // answer. The window it was first written for — a target-view mutation
+    // landing after a play's natural end and before the tick observes it — is
+    // now closed at the source instead: GuiTargetRender::trigger() clears the
+    // sequence UNCONDITIONALLY on its target-view path, so such a mutation ends
+    // the act outright and the tick hands the advance an Idle phase rather than
+    // reaching this line against a stale or re-bound preview. The frame gate is
+    // the launch body's.
     if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
         return false;
     }
@@ -102,8 +107,7 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     }
     // THE ONE NON-IDLE WRITE, strictly after the launch body returned true
     // (its head cleared the sequence; this re-arms it for the play now live).
-    app.audition_sequence.phase        = phase;
-    app.audition_sequence.home_tab     = home_tab;
-    app.audition_sequence.launch_frame = start;
+    app.audition_sequence.phase    = phase;
+    app.audition_sequence.home_tab = home_tab;
     return true;
 }

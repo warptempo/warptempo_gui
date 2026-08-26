@@ -3402,10 +3402,11 @@ constexpr int kAuditionMs = 500;
 //
 // THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
 // while one of the act's plays is live — from its successful launch to the
-// stop that ends it. `home_tab` is the tab the act started on and returns to;
-// `launch_frame` is the paint-domain frame the live play launched from (the
-// tab's resting playhead at that moment, recorded for the reader — the play
-// itself reads the cursor at launch and never writes it).
+// stop that ends it. `home_tab` is the tab the act started on and returns to.
+// NO LAUNCH FRAME IS CARRIED: each play reads the tab's resting cursor at its
+// own launch and never writes it, and what proves the pair identical is that
+// the cursor cannot MOVE under a standing act — every route that moves it is a
+// clearing owner below, the placement's live reseek included.
 //
 // THE EDGES, complete:
 //   * WRITTEN NON-IDLE at ONE site: GuiAbAudition::launch_phase, after its
@@ -3418,7 +3419,7 @@ constexpr int kAuditionMs = 500;
 //     GuiAbAudition::advance_after_natural_end — the next play launches from
 //     there, the tab switch between plays happening synchronously on the GUI
 //     thread inside that call, with no timer and no gap.
-//   * CLEARED TO IDLE at THREE OWNERS, so no interrupt path can forget it:
+//   * CLEARED TO IDLE at FOUR OWNERS, so no interrupt path can forget it:
 //     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
 //         which clears it BEFORE its own nothing-to-do guard — every caller of
 //         that body ends the act: Space's stop edge, every keyboard stop under
@@ -3433,19 +3434,31 @@ constexpr int kAuditionMs = 500;
 //         a bounded play's natural end and the tick that observes it can never
 //         be mistaken for the act's own play at ITS natural end. The act's own
 //         launch runs through the same head and re-arms after it returns.
-//     (3) THE THREE HAND-SPELLED STOPS in target_render.cpp — trigger()'s
-//         freeze (the preview invalidation in target view), ensure_ready's and
-//         rebind_to_source's conditional stops — through clear_audition_sequence,
-//         because they deactivate the scanner without the stop body and the
-//         tick's natural-end branch therefore never sees their session end.
+//     (3) THE TARGET_RENDER CLEARS, three of them, because those bodies
+//         deactivate the scanner without the stop body and the tick's
+//         natural-end branch therefore never sees their session end: trigger()'s
+//         (the preview invalidation in target view), which is UNCONDITIONAL on
+//         the target-view path and sits AHEAD of its freeze's is_playing()
+//         guard — the sub-tick window between a play's natural end and the tick
+//         that observes it is precisely where a clear behind that guard would
+//         miss, and a synchronous reuse rung can rebind a fresh preview inside
+//         it; and ensure_ready's and rebind_to_source's, which stay behind their
+//         own conditional stops because the S/T flip has already taken the stop
+//         body ahead of them and no other caller reaches them with an act
+//         standing (the reachability argument is written out at both sites).
+//     (4) THE LIVE PLACEMENT'S RESEEK, GuiPlaybackLifecycle::reseek_keeping_alive,
+//         at its entry and unconditionally: its in-range arms call
+//         playback.play() DIRECTLY, so a plain click that repositions a live
+//         session reaches neither the stop body nor the launch body, and an act
+//         left standing there would advance from a moved cursor at that play's
+//         natural end.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
 // The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.
 struct GuiAuditionSequence {
     enum class Phase { Idle, OtherFirst, OtherSecond, HomeFirst, HomeSecond };
-    Phase   phase        = Phase::Idle;
-    char    home_tab     = 'A';
-    int64_t launch_frame = 0;
+    Phase phase    = Phase::Idle;
+    char  home_tab = 'A';
 };
 
 struct AppState {
@@ -3532,9 +3545,11 @@ struct AppState {
     // the line simply vanishes from wherever the predictor last drew it (a few
     // pixels short of the exclusive end bound — the accepted delta of not holding
     // the endpoint).
-    // The launch seed (launch_playback_from, the shared body under Space's
-    // toggle and the scrub launch) and the per-paint predictor advance are the
-    // only writers of the value fields. There is no resting coincidence with the
+    // The launch seed (launch_playback_window, the ONE launch body under every
+    // launch in the product — Space's toggle and the scrub launch through the
+    // view-end entry launch_playback_from, and the A/B audition's four plays
+    // through launch_bounded_audition) and the per-paint predictor advance are
+    // the only writers of the value fields. There is no resting coincidence with the
     // cursor — a coincide-at-rest relationship would be wrong, not just unused
     // (a plain Space launches the scanner from the cursor, while the lower-half
     // scrub act launches it independently of the cursor, from a clicked
@@ -6757,7 +6772,9 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 //    explicit-basis overloads.
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
 //    the stop teardown (stop_playback_if_playing) and the launch
-//    (launch_playback_from), the MARKER LAND (land_playhead_on_marker — through
+//    (launch_playback_window, the one launch body every launch ends in — the
+//    view-end entry and the bounded audition alike), the MARKER LAND
+//    (land_playhead_on_marker — through
 //    which the Tab/`c` jump now inherits this shape too, having stopped
 //    hand-copying the recipe 2026-07-30), move_playhead_to's no-scroll branch,
 //    and the live-domain cursor repair (clamp_display_state_to_live_domain). A
@@ -7068,10 +7085,10 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 }
 
 // END THE A/B AUDITION SEQUENCE — the one spelling of "the act is over", so
-// the three clearing owners (the stop body, the launch body, the three
-// hand-spelled target_render stops; the inventory is at GuiAuditionSequence)
-// write the same reset. Idempotent and a no-op at Idle, which is why the stop
-// body can call it ahead of its own nothing-to-do guard.
+// every clearing owner (the inventory is at GuiAuditionSequence) writes the
+// same reset. Idempotent and a no-op at Idle, which is why the owners that
+// carry a guard of their own — the stop body, trigger()'s freeze — can call it
+// ahead of that guard.
 inline void clear_audition_sequence(AppState& a) {
     a.audition_sequence = GuiAuditionSequence{};
 }
@@ -7714,8 +7731,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // own shape.
         //
         // playback_launch_playable SURVIVES AND MUST NOT GAIN A FACE READER —
-        // it is launch_playback_from's own refusal set and that body calls it
-        // (playback_lifecycle.cpp), so it is not producer-less; only the FACE
+        // it is the one launch body's own refusal set (launch_playback_window,
+        // under the view-end entry and the bounded audition alike) and that body
+        // calls it (playback_lifecycle.cpp), so it is not producer-less; the A/B
+        // audition's press-time gate is a second reader of the same kind, a gate
+        // and not a face. Only the FACE
         // read went, the same shape tempo_cent_step_actionable kept hours
         // earlier when the arrows were reversed.
         //

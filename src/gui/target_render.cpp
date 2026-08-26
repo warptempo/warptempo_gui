@@ -173,20 +173,38 @@ void GuiTargetRender::trigger() {
         return;
     }
 
+    // THE A/B AUDITION SEQUENCE ENDS HERE, AHEAD OF THE FREEZE'S GUARD (the
+    // target_render clears, the third clearing owner at GuiAuditionSequence,
+    // app_state.h): a preview invalidation in target view is an interrupt of the
+    // act by ruling, and this freeze deactivates the scanner without the one
+    // stop body, so the tick's natural-end branch never sees the session end and
+    // could not clear it there.
+    //
+    // UNCONDITIONAL, ahead of the is_playing() guard below, for the same reason
+    // the stop body's own clear sits ahead of ITS guard: the SUB-TICK WINDOW
+    // between a bounded play's natural end and the tick that observes it is
+    // exactly where a clear behind is_playing() misses — the audio thread has
+    // already published false while the phase still stands. A target-view
+    // mutation landing in that window (the W+target cent step, the one mutator
+    // the keyboard stop rule lets through un-stopped) reaches
+    // dispatch_render_now, whose synchronous reuse rungs can rebind a cached
+    // preview before the tick runs; preview_ready() would then be true again and
+    // the tick would launch the act's NEXT play against the new preview, when
+    // the edit was required to end the act. Placing it here also makes the
+    // synchronous and asynchronous reuse paths take the same interruption
+    // verdict, which is what the ruling means by "every interrupt ends the whole
+    // sequence where it stands".
+    clear_audition_sequence(app);
+
     // Freeze playback. Target view's playback model is "every edit halts
     // playback; the user re-presses Space after the update completes".
     // Stop synchronously so the audio callback releases the buffer before
-    // we (potentially) swap it underneath.
+    // we (potentially) swap it underneath. The stop and its teardown stay
+    // CONDITIONAL — they are the freeze's own quiescence work, which only a
+    // live session owes — while the clear above is not.
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
-        // A HAND-SPELLED STOP ENDS THE A/B AUDITION SEQUENCE TOO (the third
-        // clearing owner at GuiAuditionSequence, app_state.h): this freeze
-        // deactivates the scanner without the one stop body, so the tick's
-        // natural-end branch never sees this session end and could not clear
-        // it there. A preview invalidation in target view is an interrupt of
-        // the act by ruling.
-        clear_audition_sequence(app);
         // The clock flips from the scanner's time to the resting cursor's on
         // this edge, and nothing else damages row 8's cell on the reachable
         // route (a W+target cent step during a live audition — the one
@@ -730,9 +748,18 @@ void GuiTargetRender::ensure_ready() {
         if (playback.is_playing()) {
             playback.stop();
             app.playhead_scanner_active = false;
-            // The hand-spelled stops' clear (GuiAuditionSequence's third
-            // clearing owner); unreachable in practice for the same reason the
-            // stop itself is, and carried so the two facts stay one.
+            // The target_render clears (GuiAuditionSequence's third clearing
+            // owner); unreachable in practice for the same reason the stop
+            // itself is, and carried so the two facts stay one. It stays BEHIND
+            // the guard rather than being hoisted the way trigger()'s was,
+            // because no route reaches this branch inside the sub-tick window
+            // with an act still standing: the S→T flip takes the one stop body
+            // far ahead of it (handle_active_audio_view_toggle), and neither
+            // other caller can reach this branch at all with a standing act —
+            // maybe_reestablish_target_buffer calls in only when the buffer is
+            // dirty or empty, which falls through to trigger() and its
+            // unconditional clear, and the end-of-load call runs once at startup
+            // with the sequence Idle by construction.
             clear_audition_sequence(app);
         }
         // Restore the domain offset the cached buffer was rendered with.
@@ -789,8 +816,11 @@ void GuiTargetRender::rebind_to_source() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
-        // The hand-spelled stops' clear (GuiAuditionSequence's third clearing
-        // owner), for the same dead-in-practice reason as ensure_ready's twin.
+        // The target_render clears (GuiAuditionSequence's third clearing
+        // owner), for the same dead-in-practice reason as ensure_ready's twin,
+        // and behind the guard for the same reachability reason stated there:
+        // the T→S flip is this method's ONE caller and takes the one stop body
+        // ahead of it, so no sub-tick window can carry a standing act to here.
         clear_audition_sequence(app);
     }
     if (audio.total_frames() > 0) {

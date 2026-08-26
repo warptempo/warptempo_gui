@@ -54,8 +54,11 @@
 // INTERRUPTION ends the whole act and leaves the tab where it is — the user is
 // already acting, so no return to the starting tab: every path is a clearing
 // owner listed at GuiAuditionSequence (the one stop body ahead of its guard,
-// the one launch body's head, the three hand-spelled target_render stops).
-// Bare Esc is NOT one of them — its five bindings are closed.
+// the one launch body's head, target_render's three clears — trigger()'s ahead
+// of its freeze's guard — and the live placement's reseek at its entry, which
+// is its own owner because reseek_keeping_alive RE-LAUNCHES DIRECTLY through
+// playback.play() and so passes through neither of those two bodies). Bare Esc
+// is NOT one of them — its five bindings are closed.
 //
 // REFUSALS, all silent, all at the press, all at start: a sequence already
 // running (a second Shift+Space is a consumed no-op; a held key meets the same

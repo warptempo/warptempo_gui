@@ -68,8 +68,9 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 //
 // The play edge computes the launch position — cursor + launch_offset, the
 // offset non-zero only for the target-view lead-in Space auditions — and delegates
-// to launch_playback_from, the shared launch body the scrub launch also
-// rides; the validation, scanner seed, follow behavior,
+// to launch_playback_from, the VIEW-END ENTRY the scrub launch also rides,
+// which adds the end and hands both bounds to the one launch body
+// (launch_playback_window); the validation, scanner seed, follow behavior,
 // and play() all live there. What stays HERE is the cursor-relative
 // arithmetic and its overflow-ordered pre-sum gate (a cursor-vs-shifted-bound
 // check that must run before the sum exists — see below).
@@ -331,8 +332,8 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
 }
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
-// stop-and-restart visual glitch. Both arms mirror the launch body's
-// (launch_playback_from's)
+// stop-and-restart visual glitch. Both arms mirror the one launch body's
+// (launch_playback_window's)
 // range policy: source view against [0, total_frames) — the SONG, the trim
 // window having stopped bounding source playback 2026-08-05 — and target view
 // against the bound buffer's [domain_begin(), domain_end()). `sample` is a
@@ -364,6 +365,20 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
 // (having already run move_playhead_to before), so the reset is a harmless
 // transient there — that caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
+    // THE A/B AUDITION SEQUENCE ENDS HERE TOO, AT THE ENTRY AND UNCONDITIONALLY
+    // (architect 2026-08-26) — the FOURTH clearing owner, the complete edge
+    // inventory at GuiAuditionSequence (app_state.h). A live placement
+    // RE-LAUNCHES DIRECTLY: the two in-range arms below call playback.play()
+    // themselves, reaching neither the one stop body nor the one launch body, so
+    // neither of their clears can see this route. Left unclear, a motionless
+    // plain click during one of the act's four plays would restart that play
+    // from the moved cursor to the VIEW's end, leave the phase standing, and let
+    // the tick advance the act at THAT play's natural end — the resting playhead
+    // moved and the pair's two plays no longer identical, which is exactly the
+    // act's premise. The clear sits at the ENTRY so this one function is the
+    // owner: the out-of-range arms clear a second time through the stop body,
+    // idempotently and harmlessly.
+    clear_audition_sequence(app);
     if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }
         if (sample < playback.domain_begin() ||
