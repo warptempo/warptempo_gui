@@ -1779,7 +1779,7 @@ struct GuiInputHandler {
     // PROJECTION of the platform's notional pointer position, held nowhere and
     // computed at each seat; the contract, and why exactly one position exists
     // and it is not this layer's, are at the definition (input_pointer.cpp)
-    // and at GuiPlatform::notional_pointer_x_.
+    // and at GuiInputCore::notional_pointer_x_.
     double nav_notional_col() const;
 
     // TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's inclusive

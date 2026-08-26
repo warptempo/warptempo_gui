@@ -1045,7 +1045,7 @@ struct TrimDragState {
 // THE Y HAS NO
 // TWIN, deliberately — there is no notional y to freeze, and the restore's
 // press-row y is an unchanged ruling (the reasoning is recorded at
-// GuiPlatform::notional_pointer_x_).
+// GuiInputCore::notional_pointer_x_).
 // THE MODE FOLLOWS THE MODIFIER AT ITS OWN EDGE
 // (architect 2026-08-14, from the rig: "if I let go of control, the zoom stem
 // should disappear. It doesn't disappear until I start moving the mouse") —
@@ -1066,7 +1066,7 @@ struct TrimDragState {
 //     ctrl-down pop of hours earlier: the hidden cursor WRAPS to the
 //     waveform's opposite bound rather than pinning at the one it reached, so
 //     it is never stranded out there for a pop to bring home —
-//     GuiPlatform::notional_pointer_x_ carries that record). What is stored is
+//     GuiInputCore::notional_pointer_x_ carries that record). What is stored is
 //     the SONG FRAME under that column (the seat and the withdrawn
 //     persist-across-toggles experiment are recorded at anchor_sample below),
 //     and the anchor stem paints there, at the edge itself (the ctrl-armed
@@ -1181,7 +1181,7 @@ struct ScrollDragState {
     // input_pointer.cpp) and never accumulated here: the position is owned
     // where the raw events are, because a second clamped accumulation
     // advanced on the DELIVERY cadence cannot agree with it at a wall
-    // (GuiPlatform::notional_pointer_x_ carries that record, codex round 17).
+    // (GuiInputCore::notional_pointer_x_ carries that record, codex round 17).
     //
     // WHAT THE PHASE HOLDS IS THE FRAME, AND THAT IS THE PART THAT CHANGED
     // (architect 2026-08-14, from the rig, reversing the pivot half of the
@@ -1250,7 +1250,7 @@ struct ScrollDragState {
     // read. The hidden pointer WRAPS to the waveform's opposite bound instead
     // of pinning at the one it reached, so it is never stranded and the cursor
     // simply comes back where the virtual pointer is
-    // (GuiPlatform::notional_pointer_x_).
+    // (GuiInputCore::notional_pointer_x_).
     // Both the ctrl-down pop that briefly answered the same worry and the
     // teleport it was derived from are deleted, and the seat is the whole of
     // what ctrl does.

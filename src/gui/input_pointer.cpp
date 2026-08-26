@@ -1913,7 +1913,7 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // travel of a whole coalesced pointer frame, while the platform's advanced per
 // RAW event — and the two answers differ at a wall (raw +20 then -8 at the
 // right edge), permanently and silently, since interior motion preserves the
-// offset. The full record is at GuiPlatform::notional_pointer_x_.
+// offset. The full record is at GuiInputCore::notional_pointer_x_.
 // Read on demand at each seat (the ctrl-armed press and every ctrl-down edge),
 // so it is current by construction: under a capture the raw events of the
 // frame being delivered have already been accumulated, and the settled-state
@@ -2021,7 +2021,7 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // only half of what a zoom is for; the hidden cursor now WRAPS to the
         // waveform's opposite bound instead of pinning, so it is never out
         // there to be brought back and the edge has nothing left to do but seat
-        // (GuiPlatform::notional_pointer_x_ carries the wrap's record).
+        // (GuiInputCore::notional_pointer_x_ carries the wrap's record).
         //
         // THE PIVOT SEATS AT THE POINTER, every ctrl-down (the withdrawn
         // persist-across-toggles experiment and its reason are recorded at

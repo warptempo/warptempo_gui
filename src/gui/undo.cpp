@@ -164,7 +164,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // because the burst's structure already supplies the adjacency
             // properties a clock would enforce numerically, in two halves.
             // (a) Layer (1) of the platform's key-repeat contract (stated at
-            // GuiPlatform::maybe_fire_repeat) disarms the
+            // GuiInputCore::maybe_fire_repeat) disarms the
             // hold at every intervening pointer-button press, key press, and
             // completed wheel emission, so a synthesized repeat STRUCTURALLY
             // CANNOT arrive after another command ran — and the held-BUTTON

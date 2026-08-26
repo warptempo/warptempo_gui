@@ -140,9 +140,18 @@ enum class GuiPointerLeaveReason {
 // physical spot landed one pixel apart on the 10 px endcap bands and the 8 px
 // drag crossing depending on which device was under it.
 //
-// ON A SURFACE COORDINATE truncation toward zero IS floor — surface positions
-// are non-negative — so the mouse path is unchanged by construction; the
-// finger's rule is what moves, and it moves onto the mouse's.
+// TWO CASES ARE WHERE THIS MOVES SOMETHING (architect 2026-08-25, landed
+// 2026-08-26; CLAUDE.md "Rounding" carries the corrected digest): (a) a held
+// pointer drag past the left/top edge reports a NEGATIVE surface coordinate
+// under labwc's implicit grab, where truncation gave -5 for -5.5 and
+// containment gives -6 — the correct cell; (b) the captured-pointer ledger
+// previously ROUNDED (nearbyint), so 5.5 delivered 6 and now delivers 5 —
+// and this one is LAPTOP-VISIBLE: the ledger is the nav drag's (grab-pan /
+// ctrl-zoom) virtual position, so every delivered captured-motion
+// coordinate and the release write-back (a motionless click right after the
+// release) can differ by 1 px from before. Say exactly that: the ABSOLUTE
+// mouse path truncated; the finger and the captured-pointer ledger rounded
+// — never "the mouse truncated" unqualified.
 inline int containing_pixel(double v) {
     return static_cast<int>(std::floor(v));
 }
