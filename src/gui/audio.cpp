@@ -18,7 +18,7 @@
 
 namespace {
 
-// `.peaks` format (v7) -----------------------------------------------------
+// `.peaks` format (v9) -----------------------------------------------------
 //
 // The layout below is version-independent — what the bumps have moved is the
 // RUNG COUNT the body header carries in num_levels, never the framing — so this
@@ -27,7 +27,7 @@ namespace {
 //
 // 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently kCacheVersion = 7)
+//   off 8  | 2  | version (uint16, currently kCacheVersion = 9)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)
@@ -55,12 +55,21 @@ namespace {
 //       (pair_count * 4 bytes), then channel 1 if render_channels == 2.
 //       Each pair is (min_int16, max_int16).
 //
-// Quantization: float v in [-1, 1] -> int16 round(clamp(v) * 32767).
-// Out-of-range source peaks clip at the boundary.
+// Quantization: v in [-1, 1] -> int16 nearbyint(clamp(v) * 32767), computed
+// in DOUBLE — quantize_unit below, where the rule is stated in full.
+// Out-of-range source peaks clip at the boundary. A file older than v9 was
+// written by the retired float `std::lround(v * 32767.0f)` path, whose values
+// differ on more than ties, which is why that change moved the version: one
+// version number may never name two different bodies.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-// Bumped whenever the ladder changes shape: v5 densified it to powers of four,
-// v6 extended it to nine rungs, v7 to thirteen. An older file therefore fails
+// Bumped whenever the BYTES CHANGE MEANING — the ladder's shape or the values
+// on it. v5 densified the ladder to powers of four, v6 extended it to nine
+// rungs, v7 to thirteen; v9 leaves the ladder alone and moves the quantizer
+// (float lround -> double nearbyint, quantize_unit below), so the same rungs
+// carry different int16 words. VERSION 8 IS SKIPPED: it named a different body
+// in a build that was withdrawn, files of it may rest on disk, and it is never
+// reused. An older file therefore fails
 // the version compare and takes the ordinary STALE path — logged, rebuilt,
 // never partially accepted and never surfaced to the user as an error.
 //
@@ -68,7 +77,9 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // the level-count compare in try_load_cache, so an old file exits through
 // stale() and never reaches the hdr_nl != kNumLevels branch, which would report
 // CORRUPT for what is merely an older schema. Any future change to kStrides or
-// kNumLevels must bump this in the same commit for that reason.
+// kNumLevels must bump this in the same commit for that reason — and so must
+// any change to the quantizer, which leaves the framing intact and would
+// otherwise leave two sets of values under one version number.
 //
 // The rebuild writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of
 // the raw frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to
@@ -76,7 +87,7 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // the first costs a quarter of the one before it, so the deep tail is free in
 // practice — on 13.2M-frame material the four rungs v7 added hold about 4, 1, 1
 // and 1 pairs.
-constexpr uint16_t kCacheVersion          = 7;
+constexpr uint16_t kCacheVersion          = 9;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
 // miss rather than a memory-pressure event.
@@ -117,7 +128,7 @@ constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384,
                                               65536, 262144, 1048576, 4194304,
                                               16777216, 67108864, 268435456 };
 constexpr int      kReductionFactor       = 4;
-constexpr float    kQuantScale            = 32767.0f;
+constexpr double   kQuantScale            = 32767.0;
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;
 // the deeper levels fold from in-memory int16 buffers and finish in
 // microseconds.
@@ -138,13 +149,27 @@ static_assert([] {
 }(), "each kStrides rung must be its predecessor times kReductionFactor — the "
      "fold builds every level from the previous one");
 
-inline int16_t quantize_f32(float v) {
-    if (v < -1.0f) v = -1.0f;
-    if (v >  1.0f) v =  1.0f;
-    return static_cast<int16_t>(std::lround(v * kQuantScale));
+// THE ONE QUANTIZER onto the int16 display lattice, shared by both channels and
+// therefore by every rung (the deeper levels fold the quantized words and never
+// requantize): clamp to [-1, 1], scale by 32767, round with std::nearbyint —
+// the project's rounding rule, banker's under the default mode — in DOUBLE, a
+// float caller promoting at the call. It replaced a float
+// `std::lround(v * kQuantScale)` (half-away-from-zero, a residue from before
+// the rounding rule). The change reaches MORE THAN TIES: the old path
+// multiplied in FLOAT, whose product can land ON a half that the exact double
+// product is just under — a representable float near 1.5259e-5 gives 0.5f in
+// float but 0.49999999953 in double, so old 1, new 0. Accepted deliberately:
+// the lattice is DISPLAY-ONLY, no audio path reads a pyramid, and every reader
+// either dequantizes stored extrema (get_peak_range) or folds them by min/max
+// (the deeper levels above), so no consumer assumes either rounding rule. The
+// old values rest in older sidecars, which is what kCacheVersion 9 is for.
+inline int16_t quantize_unit(double v) {
+    if (v < -1.0) v = -1.0;
+    if (v >  1.0) v =  1.0;
+    return static_cast<int16_t>(std::nearbyint(v * kQuantScale));
 }
 inline float dequantize_i16(int16_t q) {
-    return static_cast<float>(q) / kQuantScale;
+    return static_cast<float>(q) / static_cast<float>(kQuantScale);
 }
 
 std::shared_ptr<const std::vector<float>>
@@ -231,8 +256,8 @@ void build_pyramid_streaming(const float* samples,
     auto flush_window = [&]() {
         if (in_window > 0) {
             for (int ch = 0; ch < render_channels; ch++) {
-                out[0].pairs[ch].push_back(quantize_f32(cur_min[ch]));
-                out[0].pairs[ch].push_back(quantize_f32(cur_max[ch]));
+                out[0].pairs[ch].push_back(quantize_unit(cur_min[ch]));
+                out[0].pairs[ch].push_back(quantize_unit(cur_max[ch]));
             }
             in_window = 0;
         }

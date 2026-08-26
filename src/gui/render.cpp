@@ -284,12 +284,15 @@ void render_waveform(cairo_surface_t* dest,
     // word to write. cairo ARGB32 is a native-endian 32-bit quantity —
     // (A<<24)|(R<<16)|(G<<8)|B written as a uint32_t is correct on any byte
     // order, which indexing bytes would not be. Channels are PREMULTIPLIED, as
-    // ARGB32 requires; at full coverage that is the ink itself.
+    // ARGB32 requires; at full coverage that is the ink itself. The channel
+    // bytes round with std::nearbyint, the project's rule — vacuous for the
+    // exact n/255 hex inks every caller passes today, decisive only if a
+    // mixed ink ever ties.
     const uint32_t opaque_word =
         (UINT32_C(255) << 24) |
-        (static_cast<uint32_t>(std::lround(color.r * 255.0)) << 16) |
-        (static_cast<uint32_t>(std::lround(color.g * 255.0)) <<  8) |
-        (static_cast<uint32_t>(std::lround(color.b * 255.0)));
+        (static_cast<uint32_t>(std::nearbyint(color.r * 255.0)) << 16) |
+        (static_cast<uint32_t>(std::nearbyint(color.g * 255.0)) <<  8) |
+        (static_cast<uint32_t>(std::nearbyint(color.b * 255.0)));
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;

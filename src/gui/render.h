@@ -1824,6 +1824,17 @@ inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
 // aliased integer rects). A FLOOR, NOT A PIN: at 100% and above every scaled
 // half is already >= 1, so nothing above the baseline moves and the tips keep
 // scaling.
+//
+// THE ROW INVERSE TRUNCATES, deliberately — the one conversion here off the
+// project's nearbyint rule. `device_row / s` is a POSITION INSIDE the authored
+// table, and source row k covers the device rows [k*s, (k+1)*s), so the row
+// that CONTAINS the position is the floor of it: the same containment reading
+// a screen pixel takes. Rounding would pull the upper half of every device
+// band into the next source row and shift the transcribed shape by half a row
+// at fractional scales. Every caller passes a row index inside the head band
+// and s > 0 by gui_scale's own bracket, so the quotient is non-negative and
+// the cast's toward-zero truncation IS that floor; the two clamps below are
+// the backstop that holds the index inside the table at either end.
 inline int playhead_head_half_px(int device_row, double s) {
     int src = static_cast<int>(static_cast<double>(device_row) / s);
     if (src > kPlayheadHeadHeightPx - 1) src = kPlayheadHeadHeightPx - 1;

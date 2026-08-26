@@ -1946,6 +1946,13 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         const int asc  = static_cast<int>(std::ceil(fe.ascent));
         const int desc = static_cast<int>(std::ceil(fe.descent));
         const int edge_h = marker_flag_edge_h_px();
+        // THE TWO CASTS BELOW ARE INTEGRAL BY CONSTRUCTION, which is why they
+        // truncate where the baseline one rounds: `pen` starts at chain_x,
+        // already through std::nearbyint above, and `chip_box_w` is scaled
+        // integer pads and a border around a std::nearbyint'ed run width — both
+        // doubles hold whole numbers here, so no rounding rule is in play.
+        // `baseline` is the only genuinely fractional input on this line and it
+        // takes std::nearbyint, the project's rule.
         const int fx = static_cast<int>(pen) + border_w;
         const int fw = static_cast<int>(chip_box_w) - border_w;
         const int fy = static_cast<int>(std::nearbyint(baseline)) - asc;
@@ -2878,6 +2885,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // box is the row's whole content band, which the nudged baseline's ink
         // stays inside, and the band's bottom IS the window's, so widening it
         // downward would damage past the surface.
+        // CEIL, NOT nearbyint: cell_w is a fractional advance sum and this is
+        // a DAMAGE box, which may be a hair too wide but never a hair too
+        // narrow — rounding down could leave the cell's last column unerased.
+        // Same round-up rule the critical chip's box takes on its ascent and
+        // descent (the status chain's paint tail), for the same reason.
         app.clock_cell_rect = GuiRect{
             cell_x - 1, content_y,
             static_cast<int>(std::ceil(cell_w)) + 2, content_h};
@@ -3516,7 +3528,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     constexpr int kHeadTickWindowCap = 48;
     std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
     const int head_half_max = playhead_head_half_px(0, gui_scale_factor());
-    const double head_px_pre = playhead_pixel_x(app, basis.vp_start, basis.spp);
+    const double head_px_pre = playhead_pixel_x(
+        app, static_cast<int64_t>(basis.vp_start), basis.spp);
     const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
     int head_window = 2 * head_half_max + 1;
     if (head_window > kHeadTickWindowCap) head_window = kHeadTickWindowCap;
@@ -3598,7 +3611,13 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // PLACEMENT is distributed, and a major is at its own exact time
             // anyway. Its x rides `col`, which for a major IS the rounded major,
             // so number and line cannot drift apart.
-            const int64_t label_ms = static_cast<int64_t>(std::llround(step_ms));
+            // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
+            // product exact in double at any ruler magnitude), so this is a
+            // representation change, not a rounding: llrint reads the integer
+            // back and can never meet a tie. (nearbyint is the rule where a
+            // fraction is actually rounded; the trim bar's displayed_trim_ms
+            // cast makes the same integral-valued claim.)
+            const int64_t label_ms = static_cast<int64_t>(std::llrint(step_ms));
             if (label_ms < 0) continue;
             const std::string txt =
                 ruler_label_text(label_ms, step);
@@ -3659,7 +3678,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // time this pass runs, in a band this one never touches (the sequence is
     // the paint-order block in on_redraw).
     {
-        const double cursor_px = playhead_pixel_x(app, basis.vp_start, basis.spp);
+        const double cursor_px = playhead_pixel_x(
+            app, static_cast<int64_t>(basis.vp_start), basis.spp);
         const int col = static_cast<int>(std::nearbyint(cursor_px));
         if (col >= 0 && col < wave_w) {
             const double s   = gui_scale_factor();
@@ -5457,6 +5477,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (size_t i = 0; i < plan.size(); ++i) {
         const double lw =
             text_shape::shape_text_run(font, plan[i].label).width_px;
+        // CEIL, NOT nearbyint: a measured run width is fractional and the box
+        // it sizes must CONTAIN the ink, so it rounds UP — rounding to nearest
+        // could clip the label's last column inside its own pads. The same
+        // round-up rule the critical chip's box takes on its ascent and descent
+        // (the status chain's paint tail), applied to a width.
         plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
@@ -5542,6 +5567,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // twice.
         const text_shape::ShapedRun msg =
             text_shape::shape_text_run(font, app.prompt.text);
+        // CEIL: the shaped width is fractional and it sets where the buttons
+        // may start, so it rounds UP — a nearest-rounded width could place the
+        // cluster inside the message's last column. The round-up rule again
+        // (the critical chip's box, the status chain's paint tail).
         const int msg_w = static_cast<int>(std::ceil(msg.width_px));
         buttons_x0 = std::min(cx0 + msg_w + pad + ring, buttons_x_max);
         const int msg_clip = std::max(0, (buttons_x0 - ring - pad) - cx0);
@@ -5562,6 +5591,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    own narrow-window rule, now measured against the row instead of
         //    a window margin), and its width is what places the cluster. --
         dlg.owner = AppState::ModalDialogOwner::Editor;
+        // CEIL, for the reason the message width above takes it: the label's
+        // measured width places the field after it, so it rounds UP and the
+        // field can never start inside the label's last column.
         const int label_w = static_cast<int>(
             std::ceil(text_shape::shape_text_run(font, prefix).width_px));
         const int fbord = scaled_px(kModalFieldBorderPx, 1);
