@@ -9,8 +9,8 @@
 #include <vector>
 
 // GuiPlatform: the platform abstraction for the GUI's window, event loop and
-// presentation — the ANDROID backend, the seam's second implementation. It
-// runs inside a NativeActivity over the NDK's stock android_native_app_glue:
+// presentation — THE ANDROID BACKEND, the glass half of the seam whose other
+// implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
 // and the four worker eventfds to it, paints cairo into a persistent ARGB32
 // backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer.
@@ -89,7 +89,7 @@ public:
     // one payload, get answers with it, and the empty string is the legal cold
     // answer every caller already handles ("nothing to paste"). Android's
     // system clipboard is a Java surface (ClipboardManager) reachable only
-    // through JNI, which is a later nicety and not M3's; the Wayland twin's
+    // through JNI and is not reached; the Wayland twin's
     // wl_data_device machinery — the selection claim, the offer bookkeeping,
     // the bounded pipe read — has no counterpart here because there is no
     // second client to hand bytes to. The bytes are not filtered here for the
@@ -246,10 +246,9 @@ public:
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
     // keyboards are out of scope on this platform (touch.md) and this backend
     // translates none: AInputEvent key events are handed back to the system so
-    // BACK still leaves the app. What this exists for is M5's PAINTED
-    // keyboard, which will emit keysyms directly — it is the road from that
-    // surface into the core's key path, and it exists NOW so the path is built
-    // and readable rather than discovered later.
+    // BACK still leaves the app. THIS IS THE ROAD AN OWNED ON-SCREEN KEYBOARD
+    // TAKES INTO THE CORE'S KEY PATH — a painted surface emitting keysyms
+    // directly, which is the only key producer this platform can have.
     //
     // `key` is a GuiKey (an X11 keysym, ASCII case-folded, standalone
     // modifiers and F1..F35 already dropped — the backend's contract, at
@@ -262,8 +261,8 @@ public:
     // the whole reason this is a method rather than a bare forward.
     //
     // NO CONSUMER CALLS IT TODAY and none may: main.cpp compiles against both
-    // backends, so a call here would break the Wayland build. It is reached
-    // from inside this backend alone until M5 gives it a caller.
+    // backends, so a call from there would break the Wayland build. It is
+    // reachable from inside this backend alone.
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
                         uint32_t codepoint);
 
@@ -314,18 +313,19 @@ private:
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE
     // main.cpp has wired a single hook — so the geometry is taken at once and
-    // the CALLBACK is deferred to the head of the first loop pass, by which
-    // time every hook is installed. Every later adoption (an APP_CMD_INIT_WINDOW
-    // after a TERM) fires it on the spot and never sets this.
+    // the CALLBACK is deferred to whichever comes first of the first loop pass
+    // and the first paint, by which time every hook is installed
+    // (deliver_owed_resize is the one owner). Every later adoption (an
+    // APP_CMD_INIT_WINDOW after a TERM) fires it on the spot and never sets
+    // this.
     bool initial_resize_owed_ = false;
 
     // THE TWO DEFERRABLE SOURCES, recorded by the drain and consumed by the
-    // loop pass's tail. They are MEMBERS rather than locals because
-    // drain_events() runs the drain WITHOUT the tail (see its definition): a
-    // tick or a worker completion that lands inside a blocking load is
-    // recorded here and dispatched at the first real loop pass, which is the
-    // same deferral the Wayland backend gets for free from a timerfd nobody
-    // reads while it is only dispatching the display.
+    // loop pass's tail. They are MEMBERS rather than locals because the drain
+    // hands the looper's events back in readiness order while the ORDER THEY
+    // ARE ACTED ON IN IS POLICY (stated at pump): a tick and a worker
+    // completion that arrive mid-drain are recorded here and dispatched at the
+    // pass's tail, after the window-system sources are empty.
     bool timer_fired_ = false;
     bool worker_fired_[4] = {false, false, false, false};
 
@@ -394,8 +394,14 @@ private:
     void paint_one_frame();
     // Blit the damaged rectangle out of the backbuffer into the window,
     // honoring the stride and the (possibly widened) dirty rect lock hands
-    // back. Silent no-op with no window or no backbuffer.
-    void present(int x, int y, int w, int h);
+    // back. Silent false with no window or no backbuffer. TRUE MEANS THE
+    // PIXELS REACHED THE WINDOW — the caller clears its damage on that answer
+    // and on no other (the rule is at the call site).
+    bool present(int x, int y, int w, int h);
+    // Deliver the owed first on_resize_ if one is owed. THE ONE OWNER, called
+    // from pump()'s head and from paint_one_frame's (contract at its
+    // definition).
+    void deliver_owed_resize();
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
     // Add one fd to the glue's looper under `ident`; a negative fd is the

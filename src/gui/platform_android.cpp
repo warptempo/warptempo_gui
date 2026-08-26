@@ -80,25 +80,55 @@ void* log_pump(void* arg) {
     if (!line.empty()) {
         __android_log_write(ANDROID_LOG_INFO, kLogTag, line.c_str());
     }
+    // EOF means every writer is gone and this pump is finished; the read end
+    // is this thread's to close.
+    close(read_fd);
     return nullptr;
 }
 
+// THE SINK IS THE PROCESS'S, NOT THE ACTIVITY'S. android_main runs again if
+// the activity is destroyed and remade, and a second pipe would strand the
+// first: replacing stdout and stderr closes the old pipe's last writers, the
+// old pump reaches EOF and exits, and one more read fd is gone for each
+// recreation. One sink installed once outlives every entry — the second
+// android_main finds stdout and stderr already pointing at a pipe whose thread
+// is still blocked in read(), and there is nothing left to do.
 void route_stdio_to_logcat() {
+    static bool installed = false;
+    if (installed) return;
+
     int fds[2];
     if (pipe(fds) != 0) return;
     // Line-buffer both streams so a message reaches the pump at its newline
     // rather than when a 4 KB block fills.
     setvbuf(stdout, nullptr, _IOLBF, 0);
     setvbuf(stderr, nullptr, _IOLBF, 0);
+    // The originals are kept only so the failure arm below can put them back.
+    const int saved_out = dup(STDOUT_FILENO);
+    const int saved_err = dup(STDERR_FILENO);
     dup2(fds[1], STDOUT_FILENO);
     dup2(fds[1], STDERR_FILENO);
     close(fds[1]);
     pthread_t t;
     if (pthread_create(&t, nullptr, log_pump,
                        reinterpret_cast<void*>(
-                           static_cast<intptr_t>(fds[0]))) == 0) {
-        pthread_detach(t);
+                           static_cast<intptr_t>(fds[0]))) != 0) {
+        // NO READER MEANS THE REDIRECTION MUST COME BACK OUT. Left as it is,
+        // every diagnostic in the program would write into a pipe nobody
+        // drains, and the GUI thread would block for good on the fprintf that
+        // fills the last of the pipe's buffer. Restoring the descriptors costs
+        // the logcat sink and keeps the program running.
+        if (saved_out >= 0) dup2(saved_out, STDOUT_FILENO);
+        if (saved_err >= 0) dup2(saved_err, STDERR_FILENO);
+        close(fds[0]);
+        if (saved_out >= 0) close(saved_out);
+        if (saved_err >= 0) close(saved_err);
+        return;
     }
+    pthread_detach(t);
+    if (saved_out >= 0) close(saved_out);
+    if (saved_err >= 0) close(saved_err);
+    installed = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,9 +176,10 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
 
 // cairo's ARGB32 is a NATIVE-ENDIAN 0xAARRGGBB word, so on this little-endian
 // target its bytes run B,G,R,A, while WINDOW_FORMAT_RGBA_8888 / RGBX_8888 run
-// R,G,B,A. R and B are transposed and the copy fixes it. The choice is made
-// per frame off the format the window ACTUALLY handed back, never off the
-// format that was requested.
+// R,G,B,A. R and B are transposed and the copy fixes it. Every buffer this
+// backend accepts is one of those two — the format the window ACTUALLY hands
+// back is checked at each lock (present), never assumed from what was
+// requested — so the swap is on every row of every frame.
 void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
     int x = 0;
     for (; x + 16 <= n; x += 16) {
@@ -230,8 +261,8 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // can read — so the numbers are labwc's own, taken BY CONVENTION: the
     // delay is kHoldBeatMs (575, gui_input.h, the same constant every product
     // hold threshold reads) and the rate is 30 Hz, a 33 ms period. They pace
-    // the painted keyboard M5 will bring and, through
-    // key_repeat_period_ms(), the chrome buttons' hold-repeat today.
+    // the chrome buttons' hold-repeat through key_repeat_period_ms(), and
+    // whatever on-screen keyboard this backend comes to own.
     input_.set_repeat_info(30, kHoldBeatMs);
 
     // THE CORE'S CODEPOINT REFILL, the one probe pointing DOWNWARD across the
@@ -277,8 +308,17 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     if (!window_) return;
 
     // 0,0 for the geometry means "the window's own size"; the FORMAT is the
-    // one thing asked for, and it is re-read at every lock anyway (present).
-    ANativeWindow_setBuffersGeometry(window_, 0, 0, WINDOW_FORMAT_RGBA_8888);
+    // one thing asked for. A REFUSAL IS REPORTED AND NOT FATAL HERE, because
+    // it is not yet the question that matters: the window may still hand back
+    // a 32-bit buffer of its own choosing. The gate sits where the truth is,
+    // at the lock that reads the format back (present).
+    const int32_t geom_rc =
+        ANativeWindow_setBuffersGeometry(window_, 0, 0, WINDOW_FORMAT_RGBA_8888);
+    if (geom_rc != 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: ANativeWindow_setBuffersGeometry"
+                     "(RGBA_8888) refused (%d)\n", static_cast<int>(geom_rc));
+    }
 
     const int w = ANativeWindow_getWidth(window_);
     const int h = ANativeWindow_getHeight(window_);
@@ -317,6 +357,21 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // buffers whose content is a lost frame's, so the first post after any
     // adoption has to carry the whole picture.
     invalidate_region(0, 0, width_, height_);
+}
+
+/*
+ * THE OWED FIRST on_resize_, delivered by whoever gets there first. init()
+ * adopts a window before main.cpp has wired a single hook, so the geometry is
+ * taken then and the CALLBACK is owed (initial_resize_owed_). Every path that
+ * can paint calls this before it paints — pump()'s head, and paint_one_frame,
+ * which is the funnel paint_now() and drain_events() both go through — so the
+ * first buffer this process posts can never carry the layout computed from
+ * AppState's cold default size.
+ */
+void GuiPlatform::deliver_owed_resize() {
+    if (!initial_resize_owed_) return;
+    initial_resize_owed_ = false;
+    if (on_resize_) on_resize_(width_, height_);
 }
 
 void GuiPlatform::ensure_backbuffer(int w, int h) {
@@ -431,6 +486,11 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
  * hands back.
  */
 void GuiPlatform::paint_one_frame() {
+    // BEFORE ANY PIXEL: the owed first resize, so the layout the frame is
+    // painted from is the panel's and not the cold default. It runs ahead of
+    // the guards below because the hook it fires declares its own damage.
+    deliver_owed_resize();
+
     if (!has_initial_configure_ || !window_ || !back_) return;
     if (damage_.empty()) return;
 
@@ -468,25 +528,49 @@ void GuiPlatform::paint_one_frame() {
     cairo_destroy(cr);
     cairo_surface_flush(back_);
 
-    damage_.clear();
-    present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y);
+    // THE DAMAGE LIVES UNTIL THE POST SUCCEEDS. The pixels are in the
+    // backbuffer either way, but the damage list is the only record of what
+    // the WINDOW has not yet been shown: clearing it on a failed lock or a
+    // failed post would leave the displayed buffer stale with nothing left to
+    // re-post it, and a later, disjoint invalidation would never copy the lost
+    // rectangle. Kept, it simply goes out again with the next frame.
+    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) damage_.clear();
 }
 
-void GuiPlatform::present(int x, int y, int w, int h) {
-    if (!window_ || !back_ || w <= 0 || h <= 0) return;
+bool GuiPlatform::present(int x, int y, int w, int h) {
+    if (!window_ || !back_ || w <= 0 || h <= 0) return false;
 
     ARect dirty{x, y, x + w, y + h};
     ANativeWindow_Buffer buf;
     const int rc = ANativeWindow_lock(window_, &buf, &dirty);
     if (rc != 0) {
-        // A failed lock loses this frame's post and nothing else — the
-        // backbuffer still holds the pixels, and the next paint re-posts
-        // whatever is damaged then. Re-damaging the rect here would be the
-        // right move if the failure were transient AND rare; it is neither
-        // observed nor recoverable, so the honest answer is one loud line.
+        // A failed lock loses this frame's post and nothing else: the
+        // backbuffer still holds the pixels and the caller keeps the damage,
+        // so the next paint re-posts the same rectangle. One loud line, no
+        // retry machinery.
         std::fprintf(stderr, "warptempo_gui: ANativeWindow_lock failed (%d)\n",
                      rc);
-        return;
+        return false;
+    }
+
+    // THE FORMAT IS 32-BIT OR THE PROGRAM STOPS. The copy below casts
+    // buf.bits to uint32_t* and applies buf.stride in 32-BIT UNITS, so a
+    // 16-bit buffer — WINDOW_FORMAT_RGB_565 is a legal NDK window format, and
+    // a refused geometry request above can leave one in place — would take
+    // four bytes per pixel into two and run off the end of every row. That is
+    // memory corruption, not a wrong picture. THE ACCEPTED SET IS EXACTLY
+    // RGBA_8888 AND RGBX_8888, the two the swizzle below is written for, and
+    // there is no conversion arm because there is no producer for one to
+    // serve: inventing a 565 path would be untestable machinery for a fault
+    // nothing on this product's panels produces.
+    if (buf.format != WINDOW_FORMAT_RGBA_8888 &&
+        buf.format != WINDOW_FORMAT_RGBX_8888) {
+        __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                            "ANativeWindow buffer format %d is neither "
+                            "RGBA_8888 nor RGBX_8888; refusing to blit 32-bit "
+                            "pixels into it",
+                            static_cast<int>(buf.format));
+        abort();
     }
 
     // lock() may WIDEN the rect it was asked for (a buffer whose content is
@@ -497,11 +581,6 @@ void GuiPlatform::present(int x, int y, int w, int h) {
     const int cy0 = std::max(0, std::min(dirty.top,    buf.height));
     const int cx1 = std::max(cx0, std::min(dirty.right,  std::min(buf.width,  back_w_)));
     const int cy1 = std::max(cy0, std::min(dirty.bottom, std::min(buf.height, back_h_)));
-
-    // RGBA/RGBX both need the R<->B swap; a BGRA window (HAL-only, absent from
-    // the NDK enum) would already match cairo and take the plain copy.
-    const bool swap = (buf.format == WINDOW_FORMAT_RGBA_8888 ||
-                       buf.format == WINDOW_FORMAT_RGBX_8888);
 
     // Both strides are in PIXELS: cairo's is bytes and is divided here,
     // ANativeWindow_Buffer::stride is documented as pixels already.
@@ -516,12 +595,20 @@ void GuiPlatform::present(int x, int y, int w, int h) {
                 src + static_cast<size_t>(row) * src_stride_px + cx0;
             uint32_t* drow =
                 dst + static_cast<size_t>(row) * buf.stride + cx0;
-            if (swap) copy_swap_rb(drow, srow, run);
-            else      std::memcpy(drow, srow, static_cast<size_t>(run) * 4);
+            // Both accepted formats need the R<->B swap (the gate above is
+            // what makes that unconditional).
+            copy_swap_rb(drow, srow, run);
         }
     }
 
-    ANativeWindow_unlockAndPost(window_);
+    const int post_rc = ANativeWindow_unlockAndPost(window_);
+    if (post_rc != 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: ANativeWindow_unlockAndPost failed (%d)\n",
+                     post_rc);
+        return false;
+    }
+    return true;
 }
 
 void GuiPlatform::paint_now() {
@@ -660,11 +747,10 @@ void GuiPlatform::pump() {
     if (!app_) return;
 
     // The first on_resize_ of the process is owed here rather than at the
-    // adoption that took the geometry (see initial_resize_owed_).
-    if (initial_resize_owed_) {
-        initial_resize_owed_ = false;
-        if (on_resize_) on_resize_(width_, height_);
-    }
+    // adoption that took the geometry, and it lands BEFORE the drain so the
+    // first event of the process acts on the panel's own layout (one owner,
+    // deliver_owed_resize).
+    deliver_owed_resize();
 
     drain_looper(/*timeout_ms=*/-1);
 
@@ -701,25 +787,32 @@ void GuiPlatform::run() {
 }
 
 void GuiPlatform::drain_events() {
-    // WHAT IS ALREADY QUEUED, AND NOTHING MORE — the contract the Wayland
-    // backend keeps with wl_display_dispatch_pending, and the exact set of
-    // work that mirrors it here.
+    // IT PAINTS, AND IT DOES NOTHING ELSE.
     //
     // ITS LIVE CALLER IS A BLOCKING LOAD'S PROGRESS CALLBACK (file_loader.cpp),
-    // which calls it many times per load so the window system stays
-    // responsive while the model is half-built. That is why the TICK, the
-    // worker completions and the settled hook are NOT run here: on Wayland
-    // they cannot be — the timerfd and the worker eventfds are not in
-    // dispatch_pending's reach, and their expirations simply wait for the next
-    // run() pass — and running the GUI's per-tick work against a half-loaded
-    // AppState would be this backend inventing a behaviour the other one does
-    // not have. The drain records them in the two flag members instead, and
-    // the next pump() dispatches them.
+    // which calls it many times per load so the window keeps showing progress
+    // while the model is half-built. What the caller was written against is
+    // the Wayland backend's wl_display_dispatch_pending: that call dispatches
+    // events ALREADY READ and reads no socket, so a load observes no new
+    // input, no focus change and no close — only the pending frame-done
+    // callback, which paints. This backend has no equivalent split: the
+    // looper's window-system sources hold the glue's own process() bodies,
+    // and stepping one would deliver a touch or a lifecycle command straight
+    // into a GUI whose AppState is explicitly half-built. So no source is
+    // processed at all — neither LOOPER_ID_MAIN nor LOOPER_ID_INPUT — and the
+    // periodic tick and the worker completions likewise wait for the next
+    // pump(), exactly as their Wayland counterparts wait outside
+    // dispatch_pending's reach.
     //
-    // IT DOES PAINT, and that is not an exception: on Wayland this same call
-    // dispatches the pending frame-done callback, which paints. The load's
-    // progress repaint is that paint.
-    drain_looper(/*timeout_ms=*/0);
+    // THE ACCEPTED COST is Android's ANR watchdog, which fires after ~5 s of
+    // an input event nobody services. The product's loads measure ~0.5 s for a
+    // 101 MB source, so a touch has to land inside a load an order of
+    // magnitude longer than that to be at risk — and a touch during a load
+    // that long is the user interrupting his own load, which is his to answer.
+    //
+    // paint_now()'s contract is unchanged and is the other half of this pair:
+    // that one is the synchronous paint asked for outright, this one is the
+    // progress paint a load takes on its way through.
     paint_one_frame();
 }
 
@@ -797,8 +890,8 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // this backend translates no KeyEvent: returning 0 hands the event
         // back to the system, which is what keeps BACK leaving the app instead
         // of being swallowed by a GUI that has no use for it. The road INTO
-        // the core's key path exists and is public — synthesize_key — and M5's
-        // painted keyboard is its caller.
+        // the core's key path exists and is public — synthesize_key — for an
+        // on-screen keyboard this backend owns.
         return 0;
     }
 
@@ -839,16 +932,32 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
         case AMOTION_EVENT_ACTION_DOWN:
         case AMOTION_EVENT_ACTION_POINTER_DOWN:
             if (index < count) {
+                // EVERY AMotionEvent CARRIES EVERY LIVE POINTER'S CURRENT
+                // POSITION, not only the one its action names, and the fingers
+                // already down have moved since the last MOVE was delivered.
+                // Their fresh positions go FIRST, before the new finger's
+                // down: the core's two-finger upgrade seats the pinch's pan
+                // and distance bases on the positions it holds AT THE JOIN,
+                // so a stale first finger would start the pinch from a place
+                // the hand had already left and jump on its first frame. The
+                // new pointer takes touch_down alone — a down IS its position.
+                for (size_t i = 0; i < count; ++i) {
+                    if (i == index) continue;
+                    input_.touch_motion(AMotionEvent_getPointerId(event, i),
+                                        px(i), py(i));
+                }
                 input_.touch_down(AMotionEvent_getPointerId(event, index),
                                   px(index), py(index));
             }
             break;
 
         case AMOTION_EVENT_ACTION_MOVE:
-            // ONE MOVE EVENT CARRIES EVERY POINTER'S CURRENT POSITION, so all
-            // of them are delivered before the frame that closes the batch —
-            // the same shape wl_touch's motion-then-frame grouping has, and
-            // what lets the core's two-finger machine read a consistent pair.
+            // EVERY POINTER'S CURRENT POSITION IS DELIVERED before the frame
+            // that closes the batch — the same shape wl_touch's
+            // motion-then-frame grouping has, and what lets the core's
+            // two-finger machine read a consistent pair. (The down and up arms
+            // deliver the same snapshot for the same reason; this is the arm
+            // that carries nothing else.)
             //
             // HISTORY SAMPLES ARE NOT REPLAYED. AMotionEvent carries the
             // positions the sensor produced between deliveries
@@ -866,6 +975,20 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
         case AMOTION_EVENT_ACTION_UP:
         case AMOTION_EVENT_ACTION_POINTER_UP:
             if (index < count) {
+                // WHY THE UP NEEDS THE MOTION: the core's touch_up takes no
+                // coordinates. It delivers whatever motion is STAGED for this
+                // frame — the nav pair's completed leg, the region former's
+                // final leg — and then ends the gesture, so a finger's LAST
+                // MOTION IS ITS LIFT POSITION. That is Wayland's shape
+                // (wl_touch.up carries no coordinates either), while an
+                // AMotionEvent up carries the whole current snapshot, and a
+                // short gesture can have its only travel present in the up
+                // event alone. The snapshot is therefore delivered for every
+                // pointer INCLUDING the lifting one, and only then the up.
+                for (size_t i = 0; i < count; ++i) {
+                    input_.touch_motion(AMotionEvent_getPointerId(event, i),
+                                        px(i), py(i));
+                }
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
             }
             break;
@@ -1013,15 +1136,14 @@ double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_
 
 namespace {
 
-// THE SOURCE PATH, M3's PLACEHOLDER FOR THE M7 SYNC CONVENTION. The GUI takes
-// exactly one audio file and derives its three sidecars from the stem, so a
-// path is all this owes. It answers with <externalDataPath>/source.wav — the
-// app's own directory under /sdcard/Android/data/<pkg>/files, which adb can
-// push into with no permission granted and which the app can read and write
-// without MANAGE_EXTERNAL_STORAGE. M7 replaces this with the real convention
-// (the project folder, its sidecars and the gui_scale rewrite); until then a
-// push of source.wav + source.warpmarkers + source.phaseresetmarkers +
-// source.settings into that directory is the whole install.
+// THE SOURCE PATH. The GUI takes exactly one audio file and derives its three
+// sidecars from the stem, so a path is all this owes. It answers with
+// <externalDataPath>/source.wav — THE APP'S EXTERNAL FILES DIR, which is
+// /sdcard/Android/data/<pkg>/files: adb can push into it with no permission
+// granted and the app reads and writes it without MANAGE_EXTERNAL_STORAGE.
+// WHAT PUTS THE FILES THERE IS THE LAPTOP-TABLET SYNC CONVENTION, which owns
+// that directory whole — source.wav with source.warpmarkers,
+// source.phaseresetmarkers and source.settings beside it.
 std::string resolve_source_path(ANativeActivity* activity) {
     const char* dir = activity->externalDataPath;
     if (!dir || !*dir) {

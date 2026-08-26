@@ -520,16 +520,17 @@ adb push <src>.settings          .../files/source.settings   # with gui_scale=17
 ```
 
 `android_main` reads `<externalDataPath>/source.wav` and the GUI derives the
-sidecars from the stem. That fixed name is **M3's placeholder for the M7 sync
-convention**, documented at `resolve_source_path`.
+sidecars from the stem. That directory — the app's external files dir — is the
+**laptop-tablet sync convention's**, which owns what lands in it;
+`resolve_source_path` documents the path it answers with.
 
 ### 10.2 What the backend is, and what it stubs
 
 The seam's class A only. `GuiPlatform`'s public API is identical to
 `platform_wayland.h`'s member for member (proved by diffing the two headers'
 declaration lines with comments stripped), plus ONE addition — `synthesize_key`,
-which no consumer calls and which exists so M5's painted keyboard has a road
-into the core's key path.
+which no consumer calls and which is the road an owned on-screen keyboard would
+take into the core's key path.
 
 - **Run loop**: a periodic `timerfd` at 8 ms is the ONE wakeup, added to the
   glue's own `ALooper` alongside the four worker eventfds (idents
@@ -541,23 +542,37 @@ into the core's key path.
   during the drain and acted on after it, because the looper hands events back
   in readiness order and the order above is policy, not protocol.
   `drain_events()` — whose live caller is a blocking LOAD's progress callback —
-  runs the drain alone at timeout 0 plus the paint, and deliberately NOT the
-  tick, the workers or the settled hook: on Wayland those are out of
-  `wl_display_dispatch_pending`'s reach and simply wait for the next `run()`
-  pass, and running the GUI's per-tick work against a half-loaded `AppState`
-  would be this backend inventing a behaviour the other one does not have. It
-  DOES paint, because on Wayland that same call dispatches the pending
-  frame-done callback, which paints — the load's progress repaint is that
-  paint.
+  **is the paint and nothing else**. Its Wayland counterpart is
+  `wl_display_dispatch_pending`, which dispatches already-read events and reads
+  no socket, so a load observes no new input, no focus change and no close —
+  only the pending frame-done callback, which paints. Here there is no such
+  split: the looper's window-system sources hold the glue's own `process()`
+  bodies, and stepping one would deliver a touch or a lifecycle command into a
+  half-built `AppState`. So NO source is processed (neither `LOOPER_ID_MAIN`
+  nor `LOOPER_ID_INPUT`), and the tick and the worker completions likewise wait
+  for the next `pump()`. **The accepted cost** is the ANR watchdog, which fires
+  after ~5 s of an unserviced input event; the product's loads measure ~0.5 s
+  for a 101 MB source, and a touch inside a load an order of magnitude longer
+  than that is the user interrupting his own load.
 - **Present**: one persistent cairo ARGB32 backbuffer, damage coalesced exactly
   as on Wayland, the damaged rects painted through `on_redraw_` and their
   BOUNDING BOX posted through `ANativeWindow_lock` + the spike's NEON R↔B
   swizzle, honoring the buffer's pixel stride and the (possibly widened) dirty
   rect `lock` hands back. The backbuffer is persistent rather than pooled
-  precisely so a widened rect is always answerable.
+  precisely so a widened rect is always answerable. **The locked format is a
+  hard gate**: exactly `WINDOW_FORMAT_RGBA_8888` and `RGBX_8888` are accepted —
+  the two the swizzle is written for — and anything else logs the format and
+  `abort()`s, a 16-bit buffer under a 32-bit row copy being memory corruption
+  rather than a wrong picture (there is no producer for a conversion arm). The
+  `setBuffersGeometry` request's refusal is reported but not fatal there; the
+  lock is where the truth is. **The damage lives until the post succeeds**: a
+  failed lock or a failed `unlockAndPost` keeps the rectangle, which is the
+  only record of what the window has not been shown.
 - **Touch**: `AMotionEvent` by pointer id straight into the core —
-  DOWN/POINTER_DOWN → `touch_down`, MOVE → `touch_motion` for every pointer in
-  the event, UP/POINTER_UP → `touch_up`, CANCEL → `touch_cancel` — with
+  DOWN/POINTER_DOWN → `touch_motion` for every ALREADY-LIVE pointer then
+  `touch_down`, MOVE → `touch_motion` for every pointer in the event,
+  UP/POINTER_UP → `touch_motion` for every pointer INCLUDING the lifting one
+  then `touch_up`, CANCEL → `touch_cancel` — with
   `touch_frame()` closing every translated event, one AMotionEvent being one
   logical touch batch. Coordinates are window-pixel doubles, unscaled (the
   surface is the panel at 1:1). **History samples are not replayed**: the core
@@ -589,6 +604,12 @@ Two things the backend does that are not on the Wayland side at all:
   each line into `__android_log_write` under the tag `warptempo`. The fix is at
   the file descriptor because the ~200 diagnostic sites across the GUI, the
   parser and the engine do not know what platform they are on and should not.
+  The sink is **process-lifetime**, installed once behind a static guard: a
+  second `android_main` (activity destroyed and remade) reuses the pipe and the
+  thread already blocked in `read()` rather than stranding the first one's read
+  fd. If the thread cannot be created the redirection is **unwound** — the
+  original descriptors go back — so no diagnostic ever writes into a pipe with
+  no reader.
 - **`android_main` normalizes the environment before `gui_main`**:
   `XDG_CACHE_HOME`, `HOME` and `TMPDIR` to the app's private directory (the
   render cache is `XDG_CACHE_HOME`'s tenant), and `setlocale(LC_ALL, "C")` —
