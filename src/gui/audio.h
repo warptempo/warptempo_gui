@@ -52,11 +52,14 @@ public:
 
     // Opens `path` via the in-tree codec library, reads all frames, forms the
     // four lane signals (the mono sum and the two zero-phase lowpass passes
-    // that yield the three bands) and builds the four pyramids, all in one
-    // blocking phase. Returns true on success. On failure, writes a diagnostic
-    // to stderr and returns false, before anything is installed. `on_progress`
-    // is invoked with a value in [0.0, 1.0] periodically during the filter
-    // walk and then the pyramid construction; it may be empty.
+    // that yield the three bands) and obtains the four pyramids — from the
+    // `.peaks` sidecar when one matches, otherwise built and then written —
+    // all in one blocking phase. The sidecar holds pyramids only, so the
+    // filter walk runs either way. Returns true on success. On failure, writes
+    // a diagnostic to stderr and returns false, before anything is installed;
+    // a cache problem is never a failure, only a rebuild. `on_progress` is
+    // invoked with a value in [0.0, 1.0] periodically during the filter walk
+    // and then, on a cache miss, the pyramid construction; it may be empty.
     bool load(const std::string& path, const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
@@ -122,8 +125,8 @@ public:
     // signal; levels 1..kCacheLevels select cached min/max pairs on the
     // powers-of-4 stride ladder (see kStrides in audio.cpp). Levels above the
     // deepest cached level clamp to it. Inputs are clamped; an empty range
-    // returns (0, 0), and so does a lane value outside the enum (the same
-    // display-only safe return an invalid channel took). The semantics are
+    // returns (0, 0), and so does a lane value outside the enum (the
+    // display-only safe return). The semantics are
     // identical across the four lanes: every lane, at every level, reads the
     // same int16 lattice through the one dequantizer.
     std::pair<float,float> get_peak_range(GuiWaveformLane lane,
@@ -162,8 +165,10 @@ private:
     std::array<std::vector<int16_t>, kLaneCount> lane_signals_;
 
     // The fixed-stride cache levels (powers-of-4 ladder, see kStrides in
-    // audio.cpp), built by folding each lane's int16 signal at load. Every
-    // level's stride and pair_count are shared by the four lanes.
+    // audio.cpp): read from a matching `.peaks` v8 sidecar when one is found
+    // at load, or built by folding each lane's int16 signal on a miss (and
+    // then written back to disk). Every level's stride and pair_count are
+    // shared by the four lanes regardless of which path filled them.
     std::array<PyramidLevel, kCacheLevels> levels_;
 };
 

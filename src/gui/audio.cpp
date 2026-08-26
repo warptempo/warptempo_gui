@@ -21,61 +21,98 @@
 
 namespace {
 
-// `.peaks` format (v7) -----------------------------------------------------
+// `.peaks` format (v8) -----------------------------------------------------
 //
-// TEMPORARY: cache I/O is BYPASSED — neither try_load_cache nor
-// write_cache_to_disk is called (the statement of why is at the load site,
-// GuiAudio::load). The reader and writer below still describe and implement
-// the v7 file exactly; a v7 file on disk is simply not read.
+// WHAT THE SIDECAR HOLDS: the FOUR PYRAMIDS and nothing else — int16 min/max
+// pairs on the stride ladder, one pyramid per display lane. No signal is ever
+// persisted: not the source samples, not the four level-0 lane signals. So a
+// cache HIT still runs the band filter pass at load and skips only the pyramid
+// build; the sequencing is at GuiAudio::load.
 //
-// The layout below is version-independent — what the bumps have moved is the
-// RUNG COUNT the body header carries in num_levels, never the framing — so this
-// description holds for every version the reader has ever accepted; only the
-// version field's current value tracks kCacheVersion (below).
+// What follows is the EXACT v8 FRAMING; only the fixed preamble and the
+// version gate are inherited across versions — the version is checked before
+// any version-specific body interpretation runs, since a bump is free to
+// change the body's layout under that gate. v8 itself did: the body header
+// grew from 16 to 32 bytes and the payload cardinality moved from the v7
+// stereo pair to the four ordered lanes below. Every multi-byte field is a
+// native little-endian scalar written and read as itself.
 //
 // 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently kCacheVersion = 7)
-//   off 10 | 2  | flags   (uint16, written 0)
+//   off 8  | 2  | version (uint16, currently kCacheVersion = 8)
+//   off 10 | 2  | flags   (uint16, written 0; read and IGNORED)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)
 //   off 28 | 4  | sample_rate  (int32)
 //
 // Owner discriminator (length-prefixed string, immediately after the
 // preamble):
-//   4          | owner_len (uint32, bytes; bounded, an over-long value is a
-//                miss, not a hard error)
+//   4          | owner_len (uint32, bytes; bounded by kMaxOwnerBytes, an
+//                over-long value is a miss, not a hard error)
 //   owner_len  | source basename WITH extension, exact bytes, case-sensitive
 //                (the final path component, e.g. "take.wav"). Distinguishes
 //                same-stem sources like take.wav / take.WAV that share
-//                size/mtime/rate/frames/channels.
+//                size/mtime/rate/frames.
 //
-// Body header (16 bytes):
-//   8 | total_frames    (int64)
-//   1 | render_channels (uint8, 1 or 2)
-//   1 | num_levels      (uint8, = kNumLevels)
-//   6 | reserved (zero)
+// Body header (32 bytes):
+//   off 0  | 8 | total_frames      (int64)
+//   off 8  | 1 | lane_count        (uint8, = kLaneCount = 4: Sum, Low, Mid,
+//              |                    High, in that order)
+//   off 9  | 1 | num_levels        (uint8, = kNumLevels)
+//   off 10 | 1 | filter_design_id  (uint8, = kBandFilterDesignId)
+//   off 11 | 1 | reserved (zero)
+//   off 12 | 4 | low_crossover_hz  (int32, = kBandLowCrossoverHz)
+//   off 16 | 4 | high_crossover_hz (int32, = kBandHighCrossoverHz)
+//   off 20 | 4 | kernel_half_ms    (int32, = kBandKernelHalfMs)
+//   off 24 | 8 | reserved (zero)
 //
 // Then for each level in ascending stride order:
 //   4 | stride     (int32)
 //   8 | pair_count (int64)
-//   ? | int16 data, channel-major: all of channel 0's pairs first
-//       (pair_count * 4 bytes), then channel 1 if render_channels == 2.
-//       Each pair is (min_int16, max_int16).
+//   ? | int16 data, LANE-MAJOR: all of Sum's pairs first (pair_count * 4
+//       bytes), then Low's, then Mid's, then High's. Each pair is
+//       (min_int16, max_int16). ONE pair_count covers all four, every lane
+//       signal being exactly total_frames long.
 //
-// Quantization: an existing v7 file on disk was written by the retired
-// float `std::lround(v * 32767.0f)` path — clamp to [-1, 1], scale by 32767,
-// round half-away-from-zero, in FLOAT. Out-of-range peaks clip at the
-// boundary. That is the quantizer this format description covers; the
-// current double/nearbyint quantizer (quantize_unit below) never wrote a v7
-// file, cache I/O being bypassed (above), and is described only at its own
-// definition.
+// RESERVED VALUES are written zero and never compared; trailing bytes past the
+// last payload are never checked.
+//
+// THE CACHE IDENTITY is everything a stored pair's VALUE depends on: the
+// source (size, mtime, sample_rate, owner basename, total_frames), the display
+// axis (lane_count) and the band algorithm (filter_design_id plus the three
+// band constants). A difference in any of them means the file describes other
+// material. The DERIVED filter sizes are pure functions of the sample rate and
+// the identified algorithm, so they are not fields — see kBandFilterDesignId.
+//
+// THE TWO DECISIONS. Both write one stderr line and fall through to the
+// ordinary rebuild; a cache problem is NEVER surfaced to the user as an error
+// and never a source-load failure.
+//   STALE   — the file is not about the material being loaded, or the reader
+//             could not get far enough to tell. Every READ FAILURE in the
+//             preamble, the owner string or the 32-byte body header (reserved
+//             fields included); a magic mismatch; a version mismatch; an
+//             owner_len over kMaxOwnerBytes; and a VALUE mismatch in any
+//             identity field above.
+//   CORRUPT — a successfully read SAME-VERSION file whose own framing does not
+//             hold together: a num_levels that is not kNumLevels, a per-level
+//             descriptor read failure or stride/pair_count mismatch, and a
+//             payload short read. The levels are cleared so the rebuild starts
+//             from nothing.
+// THE VERSION COMPARE RUNS BEFORE THE LEVEL-COUNT COMPARE, which is what keeps
+// an older ladder STALE instead of reporting CORRUPT for what is merely an
+// older schema.
+//
+// Quantization: the one quantizer at quantize_unit below — every byte of every
+// payload came through it, and the cached levels fold its output without
+// requantizing.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-// Bumped whenever the ladder changes shape: v5 densified it to powers of four,
-// v6 extended it to nine rungs, v7 to thirteen. An older file therefore fails
-// the version compare and takes the ordinary STALE path — logged, rebuilt,
-// never partially accepted and never surfaced to the user as an error.
+// Bumped whenever the file's MEANING changes: v5 densified the ladder to powers
+// of four, v6 extended it to nine rungs, v7 to thirteen, v8 moved the payload
+// off the source's two channels onto the four display lanes and grew the body
+// header to 32 bytes so it carries the band identity. An older file therefore
+// fails the version compare and takes the ordinary STALE path — logged,
+// rebuilt, never partially accepted and never surfaced to the user as an error.
 //
 // THE BUMP IS LOAD-BEARING, not bookkeeping: the version compare runs BEFORE
 // the level-count compare in try_load_cache, so an old file exits through
@@ -83,13 +120,13 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // CORRUPT for what is merely an older schema. Any future change to kStrides or
 // kNumLevels must bump this in the same commit for that reason.
 //
-// The rebuild writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of
-// the raw frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to
-// bump cache file size", the cost of the smoother zoom ladder. Every rung past
-// the first costs a quarter of the one before it, so the deep tail is free in
-// practice — on 13.2M-frame material the four rungs v7 added hold about 4, 1, 1
-// and 1 pairs.
-constexpr uint16_t kCacheVersion          = 7;
+// Each bump has written a larger sidecar — the denser ladder made the pair
+// count ~1/16 + 1/64 + ... of the raw frames instead of ~1/32 + ..., and v8's
+// four lanes double what v7's stereo pair held. Architect-granted 2026-07-26,
+// "ok to bump cache file size". Every rung past the first costs a quarter of
+// the one before it, so the deep tail is free in practice — on 13.2M-frame
+// material the four rungs v7 added hold about 4, 1, 1 and 1 pairs.
+constexpr uint16_t kCacheVersion          = 8;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
 // miss rather than a memory-pressure event.
@@ -140,7 +177,9 @@ constexpr float    kLevel1Share           = 0.95f;
 // The load's progress budget splits between its two long phases: the band
 // filter walk (FFT convolution over the whole signal) takes the first share,
 // the four pyramid builds the rest. Both are O(total_frames) and of the same
-// order in wall time, so an even split keeps the bar moving throughout.
+// order in wall time, so an even split keeps the bar moving throughout. On a
+// CACHE HIT the second phase does not run and the filter walk takes the whole
+// budget instead — the load site chooses.
 constexpr float    kFilterProgressShare   = 0.5f;
 
 static_assert(kStrides[0] > 0, "finest stride must be positive");
@@ -202,7 +241,7 @@ std::string cache_path_for(const std::string& source) {
 std::string owner_name_for(const std::string& source) {
     // The source file's final path component WITH extension, exact bytes and
     // case-sensitive, so same-stem siblings (take.wav / take.WAV) that share
-    // size/mtime/rate/frames/channels never accept each other's peaks.
+    // size/mtime/rate/frames never accept each other's peaks.
     return std::filesystem::path(source).filename().string();
 }
 
@@ -288,6 +327,41 @@ GuiAudio::ProgressCallback sub_progress(const GuiAudio::ProgressCallback& outer,
 constexpr int kBandLowCrossoverHz  = 120;
 constexpr int kBandHighCrossoverHz = 3500;
 constexpr int kBandKernelHalfMs    = 20;
+
+// THE IDENTITY OF THE COMPLETE ALGORITHM behind every persisted int16 peak,
+// carried in the cache body header so a sidecar written by a different
+// implementation reads back STALE instead of being painted as if it agreed.
+// It identifies EVERY step that can move a peak, not the kernel design alone:
+//   - the magnitude target |H(f)| = 1 / (1 + (f/fc)^4), sampled real, zero
+//     imaginary, over bins [0, M_des/2];
+//   - the DESIGN-GRID rule M_des = next_pow2(max(65536, 8L)), and with it the
+//     bin spacing fs / M_des;
+//   - the HANN definition w[j] = 0.5 * (1 + cos(pi * j / (K + 1))) and the
+//     span it is applied over;
+//   - the UNWRAP of the periodic kernel and the CROP to [-K, K] (h[0] = g[0];
+//     h[j] = g[j], h[-j] = g[M_des - j] for 1 <= j <= K);
+//   - the DC RENORMALIZATION — divide by the tap sum accumulated in ASCENDING
+//     index order;
+//   - the CONVOLUTION PARTITION (Nfft, the per-block input length B, the
+//     causal tap placement) and the ACCUMULATION ORDER — blocks ascending,
+//     low kernel then high within each block;
+//   - the INVERSE SCALING (divide by Nfft) and the ZERO BOUNDARY RULE (the
+//     signal is zero outside [0, N));
+//   - the MONO-SUM formula m[n] = (L[n] + R[n]) / 2 and the three band
+//     formulas built from the two lowpass outputs;
+//   - the QUANTIZER, quantize_unit.
+// Any implementation change that can move an int16 peak bumps this id (or
+// kCacheVersion). The DERIVED SIZES — K, L, M_des, Nfft, B — are pure
+// functions of the sample rate and the algorithm this id names, so they are
+// NOT persisted; the sample rate already is.
+//
+// The three band constants above are persisted as their own header fields
+// rather than folded in here, so retuning a crossover invalidates every
+// existing sidecar without needing an id bump.
+//
+// Four pyramids on disk where the retired stereo pair held two is about twice
+// the v7 file; "ok to bump cache file size" (architect 2026-07-26) stands.
+constexpr uint8_t kBandFilterDesignId = 1;
 
 // EVERY SIZE IS A PURE FUNCTION OF THE SAMPLE RATE AND THE CONSTANTS. The
 // product enforces a rate floor and no ceiling, so nothing here may assume a
@@ -638,13 +712,14 @@ void build_lane_pyramids(const std::array<std::vector<int16_t>, kLaneCount>& sig
     if (on_progress) on_progress(1.0f);
 }
 
-// Try to populate `levels` from the disk cache. Returns true on a clean hit.
-// On version/header mismatch ("stale") logs and returns false leaving
-// `levels` untouched. On corruption (short read, internal mismatch) clears
-// `levels` so the caller's rebuild path starts fresh, logs, returns false.
-[[maybe_unused]] bool try_load_cache(const std::string& source_path,
+// Try to populate the four lanes of `levels` from the disk cache. Returns true
+// on a clean hit. On a STALE file (an identity mismatch, or a read that could
+// not get far enough to judge one) logs and returns false leaving `levels`
+// untouched. On a CORRUPT one (same-version framing damage: a short read or an
+// internal mismatch) clears `levels` so the caller's rebuild path starts fresh,
+// logs, returns false. The full branch map is at the format block above.
+bool try_load_cache(const std::string& source_path,
                     int64_t total_frames,
-                    int     render_channels,
                     int     sample_rate,
                     std::array<GuiAudio::PyramidLevel, kNumLevels>& levels) {
 
@@ -712,19 +787,43 @@ void build_lane_pyramids(const std::array<std::vector<int16_t>, kLaneCount>& sig
     }
     if (hdr_owner != owner_name_for(source_path)) { stale(); return false; }
 
+    // The 32-byte body header, field by field in layout order. Every read
+    // failure here is STALE, as is every identity-value mismatch.
     int64_t hdr_total_frames = 0;
-    uint8_t hdr_rc = 0, hdr_nl = 0;
-    char    reserved[6];
+    uint8_t hdr_lanes = 0, hdr_nl = 0, hdr_design = 0;
+    int32_t hdr_low = 0, hdr_high = 0, hdr_kernel_half_ms = 0;
+    char    reserved_1[1];
+    char    reserved_8[8];
     if (std::fread(&hdr_total_frames, sizeof(hdr_total_frames), 1, f) != 1 ||
         hdr_total_frames != total_frames) {
         stale(); return false;
     }
-    if (std::fread(&hdr_rc, sizeof(hdr_rc), 1, f) != 1 ||
-        hdr_rc != static_cast<uint8_t>(render_channels)) {
+    if (std::fread(&hdr_lanes, sizeof(hdr_lanes), 1, f) != 1 ||
+        hdr_lanes != static_cast<uint8_t>(kLaneCount)) {
         stale(); return false;
     }
+    // num_levels is READ here and JUDGED after the header, because a
+    // same-version rung-count disagreement is CORRUPT rather than stale and the
+    // rest of the header must still be consumed before that decision.
     if (std::fread(&hdr_nl, sizeof(hdr_nl), 1, f) != 1) { stale(); return false; }
-    if (std::fread(reserved, 1, 6, f) != 6) { stale(); return false; }
+    if (std::fread(&hdr_design, sizeof(hdr_design), 1, f) != 1 ||
+        hdr_design != kBandFilterDesignId) {
+        stale(); return false;
+    }
+    if (std::fread(reserved_1, 1, 1, f) != 1) { stale(); return false; }
+    if (std::fread(&hdr_low, sizeof(hdr_low), 1, f) != 1 ||
+        hdr_low != static_cast<int32_t>(kBandLowCrossoverHz)) {
+        stale(); return false;
+    }
+    if (std::fread(&hdr_high, sizeof(hdr_high), 1, f) != 1 ||
+        hdr_high != static_cast<int32_t>(kBandHighCrossoverHz)) {
+        stale(); return false;
+    }
+    if (std::fread(&hdr_kernel_half_ms, sizeof(hdr_kernel_half_ms), 1, f) != 1 ||
+        hdr_kernel_half_ms != static_cast<int32_t>(kBandKernelHalfMs)) {
+        stale(); return false;
+    }
+    if (std::fread(reserved_8, 1, 8, f) != 8) { stale(); return false; }
     if (hdr_nl != static_cast<uint8_t>(kNumLevels)) { corrupt(); return false; }
 
     int64_t expected_pc[kNumLevels];
@@ -747,12 +846,14 @@ void build_lane_pyramids(const std::array<std::vector<int16_t>, kLaneCount>& sig
 
         levels[L].stride     = kStrides[L];
         levels[L].pair_count = hdr_pc;
-        levels[L].pairs.assign(static_cast<size_t>(render_channels),
+        levels[L].pairs.assign(static_cast<size_t>(kLaneCount),
                                std::vector<int16_t>(static_cast<size_t>(2 * hdr_pc)));
-        for (int ch = 0; ch < render_channels; ch++) {
+        // Lane-major, in the enum's order: Sum, Low, Mid, High.
+        for (int lane = 0; lane < kLaneCount; lane++) {
             const size_t bytes = sizeof(int16_t) * 2 * static_cast<size_t>(hdr_pc);
             if (hdr_pc > 0 &&
-                std::fread(levels[L].pairs[ch].data(), 1, bytes, f) != bytes) {
+                std::fread(levels[L].pairs[static_cast<size_t>(lane)].data(),
+                           1, bytes, f) != bytes) {
                 corrupt(); return false;
             }
         }
@@ -764,13 +865,12 @@ void build_lane_pyramids(const std::array<std::vector<int16_t>, kLaneCount>& sig
     return true;
 }
 
-// Write `levels` to <basename>.peaks (the audio file's extension is
-// swapped, see `cache_path_for`) using the .tmp + fsync + rename atomic
-// pattern. Logs a single stderr line on any failure and returns false.
+// Write the four lanes of `levels` to <basename>.peaks (the audio file's
+// extension is swapped, see `cache_path_for`) using the .tmp + fsync + rename
+// atomic pattern. Logs a single stderr line on any failure and returns false.
 // Cache write failure is never fatal.
-[[maybe_unused]] bool write_cache_to_disk(const std::string& source_path,
+bool write_cache_to_disk(const std::string& source_path,
                          int64_t total_frames,
-                         int     render_channels,
                          int     sample_rate,
                          const std::array<GuiAudio::PyramidLevel, kNumLevels>& levels) {
 
@@ -820,24 +920,37 @@ void build_lane_pyramids(const std::array<std::vector<int16_t>, kLaneCount>& sig
     if (owner_len > 0 &&
         std::fwrite(owner.data(), 1, owner_len, f) != owner_len) return fail();
 
+    // The 32-byte body header, in layout order; both reserved runs go out zero
+    // and are never compared on the way back in.
     const int64_t tf = total_frames;
     if (std::fwrite(&tf, sizeof(tf), 1, f) != 1) return fail();
-    const uint8_t rc = static_cast<uint8_t>(render_channels);
-    if (std::fwrite(&rc, sizeof(rc), 1, f) != 1) return fail();
+    const uint8_t lanes = static_cast<uint8_t>(kLaneCount);
+    if (std::fwrite(&lanes, sizeof(lanes), 1, f) != 1) return fail();
     const uint8_t nl = static_cast<uint8_t>(kNumLevels);
     if (std::fwrite(&nl, sizeof(nl), 1, f) != 1) return fail();
-    const char zeros[6] = {0,0,0,0,0,0};
-    if (std::fwrite(zeros, 1, 6, f) != 6) return fail();
+    const uint8_t design = kBandFilterDesignId;
+    if (std::fwrite(&design, sizeof(design), 1, f) != 1) return fail();
+    const char zeros[8] = {0,0,0,0,0,0,0,0};
+    if (std::fwrite(zeros, 1, 1, f) != 1) return fail();
+    const int32_t low_hz  = static_cast<int32_t>(kBandLowCrossoverHz);
+    const int32_t high_hz = static_cast<int32_t>(kBandHighCrossoverHz);
+    const int32_t half_ms = static_cast<int32_t>(kBandKernelHalfMs);
+    if (std::fwrite(&low_hz,  sizeof(low_hz),  1, f) != 1) return fail();
+    if (std::fwrite(&high_hz, sizeof(high_hz), 1, f) != 1) return fail();
+    if (std::fwrite(&half_ms, sizeof(half_ms), 1, f) != 1) return fail();
+    if (std::fwrite(zeros, 1, 8, f) != 8) return fail();
 
     for (int L = 0; L < kNumLevels; L++) {
         const int32_t stride = levels[L].stride;
         const int64_t pc     = levels[L].pair_count;
         if (std::fwrite(&stride, sizeof(stride), 1, f) != 1) return fail();
         if (std::fwrite(&pc,     sizeof(pc),     1, f) != 1) return fail();
-        for (int ch = 0; ch < render_channels; ch++) {
+        // Lane-major, in the enum's order: Sum, Low, Mid, High.
+        for (int lane = 0; lane < kLaneCount; lane++) {
             const size_t bytes = sizeof(int16_t) * 2 * static_cast<size_t>(pc);
             if (pc > 0 &&
-                std::fwrite(levels[L].pairs[ch].data(), 1, bytes, f) != bytes) {
+                std::fwrite(levels[L].pairs[static_cast<size_t>(lane)].data(),
+                            1, bytes, f) != bytes) {
                 return fail();
             }
         }
@@ -907,21 +1020,31 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     std::array<PyramidLevel, kCacheLevels>       next_levels;
     reset_levels(next_levels);
 
-    // TEMPORARY: the on-disk peaks cache is BYPASSED in both directions —
-    // try_load_cache is not consulted and write_cache_to_disk is not run — so
-    // every load builds the lanes and pyramids fresh. The v7 body stores the
-    // retired stereo-display pair (one pyramid per channel), which the
-    // four-lane implementation must neither consume nor rewrite; the cache is
-    // re-enabled only with the four-lane schema.
     if (on_progress) on_progress(0.0f);
+
+    // THE SIDECAR HOLDS PYRAMIDS ONLY — no signal is persisted, so the FILTER
+    // PASS RUNS ON EVERY LOAD, hit or miss, and a hit skips only the four
+    // pyramid builds. That cost is on the order of a second for a ten-minute
+    // song, single-threaded; the pyramid builds it saves are of the same order.
+    // The try runs FIRST (it needs nothing the probe has not already given)
+    // purely so the filter walk can own the whole progress budget when it is
+    // the only phase left. A miss — stale or corrupt — leaves next_levels in
+    // the reset state build_lane_pyramids expects.
+    const bool cache_hit = try_load_cache(path, next_total_frames,
+                                          next_sample_rate, next_levels);
 
     build_lane_signals(next_samples.data(), next_channels, next_total_frames,
                        next_sample_rate,
-                       sub_progress(on_progress, 0.0f, kFilterProgressShare),
+                       sub_progress(on_progress, 0.0f,
+                                    cache_hit ? 1.0f : kFilterProgressShare),
                        next_lanes);
-    build_lane_pyramids(next_lanes, next_total_frames,
-                        sub_progress(on_progress, kFilterProgressShare, 1.0f),
-                        next_levels);
+    if (!cache_hit) {
+        build_lane_pyramids(next_lanes, next_total_frames,
+                            sub_progress(on_progress, kFilterProgressShare, 1.0f),
+                            next_levels);
+        write_cache_to_disk(path, next_total_frames, next_sample_rate,
+                            next_levels);
+    }
 
     // Nothing above can fail once the samples are decoded, so this is the one
     // install point: every refusal returned before it and left this object
@@ -971,8 +1094,8 @@ std::pair<float,float> GuiAudio::get_peak_range(GuiWaveformLane lane,
                                                 int64_t end_sample) const {
     const std::pair<float,float> empty{0.0f, 0.0f};
 
-    // A lane value outside the enum is the display-only safe return an
-    // invalid channel used to take: the empty pair, never a read.
+    // A lane value outside the enum takes the display-only safe return: the
+    // empty pair, never a read.
     const int lane_idx = static_cast<int>(lane);
     if (lane_idx < 0 || lane_idx >= kLaneCount) return empty;
     if (start_sample < 0) start_sample = 0;
