@@ -95,8 +95,10 @@ set(WARPTEMPO_PREPOST_SOURCES
 #  binary and each named at its own site: the platform backend
 #  (platform_wayland.cpp / platform_android.cpp, chosen for the consumer by
 #  platform.h), the face owner (gui_font_fontconfig.cpp /
-#  gui_font_bundled.cpp, gui_font.h) and the playback device (playback.cpp,
-#  the JACK client / playback_stub.cpp, silent until M4's AAudio backend).
+#  gui_font_bundled.cpp, gui_font.h) and the playback DEVICE (playback.cpp,
+#  the JACK client / playback_aaudio.cpp, the AAudio stream) — the device
+#  half alone, the engine both drive being playback_common.cpp in the
+#  shared list.
 #  main.cpp is in the list on BOTH: its Linux main() is #ifndef __ANDROID__
 #  and the body it wraps, gui_main, is the one entry both platforms call.
 # ============================================================
@@ -123,6 +125,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp
     src/gui/playback_lifecycle.cpp
+    # THE PORTABLE HALF of the playback engine (the render body, the
+    # predictor, the domain/bind/speed logic). Shared: each backend arm
+    # below carries only its device mechanics over this one engine.
+    src/gui/playback_common.cpp
     src/gui/render_pipeline.cpp
     src/gui/warp_frame_map_view.cpp
     src/gui/viewport.cpp
@@ -215,7 +221,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         ${WARPTEMPO_GUI_SOURCES}
         src/gui/platform_android.cpp
         src/gui/gui_font_bundled.cpp
-        src/gui/playback_stub.cpp
+        src/gui/playback_aaudio.cpp
         ${WARPTEMPO_GLUE_DIR}/android_native_app_glue.c
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
@@ -323,7 +329,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         # The three per-backend arms, Linux's: the Wayland platform backend,
         # the fontconfig face owner (gui_font.h) and the JACK playback device.
         # The Android library above compiles platform_android.cpp,
-        # gui_font_bundled.cpp and playback_stub.cpp in their places; exactly
+        # gui_font_bundled.cpp and playback_aaudio.cpp in their places; exactly
         # one arm of each is ever linked.
         src/gui/platform_wayland.cpp
         src/gui/gui_font_fontconfig.cpp

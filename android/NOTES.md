@@ -482,7 +482,7 @@ Settings; the spike only reports the live state.
 ## 10. The product APK — the real GUI on the tablet (M3b-2, 2026-08-26)
 
 The M3 seam's Android half: `src/gui/platform_android.{h,cpp}` (the backend),
-`src/gui/playback_stub.cpp` (silent until M4), the root `CMakeLists.txt`'s
+`src/gui/playback_stub.cpp` (silent; §11 replaced it), the root `CMakeLists.txt`'s
 `if(ANDROID)` branch, and `android/app/` (configure + package + manifest).
 Unlike §9 this **is** product code — the same `src/gui`, `src/parser`,
 `src/engine`, `src/audio_io` and `src/prepost` the desktop binary compiles,
@@ -576,10 +576,12 @@ capture** is a pair of no-ops (no cursor to hide, no pointer to lock, no
 relative stream — the same degraded path a compositor without the two optional
 protocols takes); **`set_cursor_kind`** still runs the core's policy and applies
 nothing; **the title setters** store nothing (fullscreen, no titlebar);
-**playback** is `playback_stub.cpp`, which answers `init() = true`, parks the
-cursor where `play()` was asked to start, reports `is_playing() = false` and
-gives the bound buffer's real domain extent (those are RANGE POLICY, not audio
-facts, so zeros would silently collapse every range that consults them).
+**playback** was `playback_stub.cpp`, which answered `init() = true`, parked
+the cursor where `play()` was asked to start, reported `is_playing() = false`
+and gave the bound buffer's real domain extent (those are RANGE POLICY, not
+audio facts, so zeros would silently collapse every range that consults them).
+That file is DELETED — §11 replaced it with the real AAudio backend, and the
+Android arm of the playback device is now `playback_aaudio.cpp`.
 
 Two things the backend does that are not on the Wayland side at all:
 
@@ -730,3 +732,171 @@ and nothing else notices).
   maintain) with `-Wno-unused-parameter` scoped to that one file — it is
   third-party source this project does not own and must not edit, and the
   product's own warnings should be the only ones in the log.
+
+
+## 11. Sound — the AAudio playback backend (M4, 2026-08-26)
+
+The stub is gone. `GuiPlayback` now has two real implementations over one
+engine, and the tablet plays.
+
+### 11.1 The shape: one engine, two devices
+
+`playback.cpp` was one class holding two layers, exactly as `GuiPlatform` was
+before §10 split it. M4 split it the same way:
+
+- **`src/gui/playback_common.{h,cpp}` (NEW, portable)** — `GuiPlaybackState`
+  (the borrowed buffer, the domain offset, the range, the cursor, the predictor
+  anchor, the speed word, the `playing` flag, the audio-thread fractional
+  cursor, the pending-start handoff) plus the AUDIO-THREAD RENDER BODY and
+  every main-thread helper the public methods were: bind-and-validate, publish-
+  play, resync, set-speed, cursor, cursor-precise, the domain accessors,
+  rebind. This is the engine, and it is the same object code on both platforms.
+- **`src/gui/playback.cpp`** keeps the JACK client alone: open/close, the
+  process and sample-rate callbacks, `stop()`'s cycle-counting fence.
+- **`src/gui/playback_aaudio.cpp` (NEW)** is the second device half: one AAudio
+  output stream, its data and error callbacks, `stop()`'s state-machine fence,
+  and the disconnect rule.
+
+`playback.h` — THE CONTRACT — is byte-unchanged, and so is every consumer.
+`playback_lifecycle.*`, `ab_audition.*` and the ~30 `playback.` call sites
+needed no edit at all: the split is entirely below the public API.
+
+### 11.2 The rate: one multiply, and it was already there
+
+The render body already advanced its fractional source position by
+`speed * source_rate / device_rate` per output frame — the JACK graph rate had
+been in that increment since the graph was allowed to differ from the source.
+Extraction therefore renamed `jack_rate` to `output_rate` and changed no
+arithmetic: on JACK it is the graph's rate, on AAudio the rate the stream was
+GRANTED. The fractional read the body already performs IS the resampler; no
+second one was added, and none is wanted (the architect's standing ruling: the
+audition resample is preview-inaudible, nothing vendor-dependent).
+
+`output_rate == 0` is the SUSPENDED device on both backends — silence and a
+held position in the render body, a held cursor in `cursor()` — which is
+exactly what `playback.h`'s graph-suspension clause already promised, and what
+the AAudio error callback now sets.
+
+### 11.3 The numbers the device grants
+
+Logged once per open, and better than §10's spike measured with
+`PERFORMANCE_MODE_NONE`:
+
+```
+Audio backend: AAudio, output_sample_rate=48000, source_sample_rate=44100, channels=2
+AAudio granted: burst=96, buffer=192, perf=LOW_LATENCY, sharing=SHARED, deviceId=2, hwRate=48000
+```
+
+**LOW_LATENCY IS GRANTED on the speaker**: burst 96 (2 ms) and a two-burst
+buffer of 192 (4 ms), against the spike's 960/1920 (20/40 ms) under
+`PERFORMANCE_MODE_NONE`. `hwRate == getSampleRate() == 48000` says the
+framework is doing NO resampling under us: the 44100→48000 ratio in the render
+body's own increment is the only one in the chain. `dumpsys media.audio_flinger`
+shows the stream as `MMAP_PLAYBACK` / `AUDIO_OUTPUT_FLAG_MMAP_NOIRQ`, which is
+the low-latency path being real rather than nominal.
+
+Every setter is a REQUEST and the granted value is read back. Only the FORMAT
+and the CHANNEL COUNT are refused over (`PCM_FLOAT`, 2) — the render body
+writes interleaved stereo floats and has no other shape. The rate is asked for
+as `AAUDIO_UNSPECIFIED` deliberately: asking for 44100 on 48 k hardware only
+moves the resample into the framework.
+
+### 11.4 The stop fence, per backend
+
+`playback.h` says `stop()` "returns only once the callback has quiesced", with
+no deadline. The two devices prove that differently, and each states its choice
+at its own site:
+
+- **JACK** counts `process_cycles`. That works because an active JACK client's
+  process callback keeps running (silent) forever.
+- **AAudio** cannot count: its data callback stops being called the moment the
+  stream stops, so a counter would never advance. The fence is the STREAM STATE
+  MACHINE — `requestStop`, then `waitForStateChange` until STOPPED, re-waiting
+  on every TIMEOUT with no iteration cap. It is bounded only on a DEAD stream,
+  and that is not a loophole: a disconnected stream has had its callback thread
+  retired by the framework before the error callback ran, so there is nothing
+  left to wait for and waiting would hang forever on a quiesced device.
+
+### 11.5 The disconnect (UNTESTED ON HARDWARE)
+
+The KA17-unplugged case. The error callback writes three atomics and logs —
+NO AAudio call, which is Google's own rule for that thread. It marks the stream
+dead, clears `output_rate` (so the cursor holds, the graph-suspension clause)
+and clears `playing` (so the run loop's next tick reads a natural end and tears
+the scanner down through the product's one stop body). The NEXT `play()` closes
+the dead stream on the main thread and opens a new one — at the NEW device's
+granted rate, so the rate ratio is recomputed per open and a 44.1 k DAC would
+simply make the ratio 1.0 with no other edit.
+
+NOTHING RECOVERS BY ITSELF: no auto-resume, no reconnect timer, no retry
+machinery. The user presses play again. That is the wind-down policy's answer
+for a rare, loud fault, and it is also why this backend needs no detached
+thread where the spike had one — it never closes from a callback thread
+because it never closes there at all.
+
+**This path could not be exercised**: one USB-C port, and the cable is the adb
+link. It is reasoned, not observed.
+
+### 11.6 What was driven on the device
+
+APK installed over the §10 project (`/sdcard/Android/data/com.warptempo.gui/
+files/`, `active_audio_view=T`, `playback_speed=0.7`), the target preview
+rendered by the on-device engine at startup as before.
+
+- **The transport row's PLAY button, tapped by coordinate**, starts playback:
+  the glyph swaps to STOP and the clock advances (03:48.278 → 03:50.681 across
+  a screenshot burst, ~0.7× wall clock as the speed setting asks).
+- **`dumpsys media.audio_flinger` shows the live stream**: `MMAP_PLAYBACK`
+  thread, `Sample rate: 48000 Hz`, `Standby: no`, `Attributes: content type 2
+  usage 1` (MUSIC/MEDIA, the two we asked for), `Track: com.warptempo.gui`.
+- **A second tap stops it**: the glyph returns to Play and the clock returns to
+  the RESTING cursor, which the audition never moved.
+- **THE NATURAL END STOPS PLAYBACK.** Started 2.3 s before the target buffer's
+  end, the scanner ran 07:33.823 → 07:35.765 (exactly `domain_end`), then the
+  transport fell back to Play and the clock to the resting 07:33.445 with no
+  further input. NOTHING LOOPS, on the second platform.
+- **A cold start after a 20 s idle works**: the service puts an idle MMAP
+  stream into standby and unmaps its memory; the next tap starts it clean.
+- **No error line from the product** across any of it.
+
+**NOBODY HEARD IT.** These are screenshots, logs and audio-server state — the
+architect listens, on the panel, and that check is his.
+
+### 11.7 Two findings from the drive
+
+- **THE SYSTEM TASKBAR EATS THE WHOLE BOTTOM ROW, not its right half.**
+  §10.6 recorded the taskbar as OVERLAPPING the bottom row's right half. It is
+  worse: the taskbar's window takes input across the FULL width, so an injected
+  tap on the transport buttons at the row's far LEFT — where the taskbar paints
+  nothing and the app's own glyphs are plainly visible — never reaches the app.
+  Hiding the taskbar is not enough on its own; the navigation bar that replaces
+  it captures the same band. Only forcing immersive mode from outside
+  (`settings put global policy_control immersive.full=com.warptempo.gui`, set
+  and then DELETED again for this pass, with `task_bar` restored to 1) freed
+  the row. **The bottom row is the modal surface and the transport**, so this
+  is not cosmetic — it makes the immersive-mode Java sliver load-bearing rather
+  than nice-to-have, and it is the strongest argument yet on M6's list.
+- **`AAudioServiceStreamBase: start_l() the stream is standby, return
+  ERROR_STANDBY`** appears once in the SERVICE's log when a long-idle stream is
+  restarted. The client library handles it itself (`exitStandby` and retry) and
+  playback ran correctly through it, so no code answers it here: adding an
+  `AAudioStream_exitStandby` call would be backstop machinery for a fault the
+  platform already absorbs, and a start that genuinely failed already closes
+  the stream so the next press reopens it — one silent lost press, then sound.
+
+### 11.8 The Linux path is untouched
+
+The extraction was proved rather than asserted: every moved body was extracted
+from the pre-M4 `playback.cpp` and diffed statement-for-statement against
+`playback_common.cpp` under a declared rename list. The engine bodies — the
+render body, the predictor, `cursor`/`cursor_precise`, rebind, speed, resync —
+come out EMPTY. The deviations are four, all declared: the two output-layout
+reconciliations (the silence memsets become one helper and the sample write
+gains a stride, so one body serves JACK's de-interleaved ports and AAudio's
+interleaved buffer), the JACK-only fence/port fields staying in the JACK
+backend, `play()` becoming a bool so a backend knows whether to start its
+device, and the `unique_ptr` null guards staying in the public methods.
+
+The Linux target's `flags.make` is byte-identical and its object set gains
+exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
+`DT_NEEDED` — it was linked ahead of M4 in §10 and now something calls it.
