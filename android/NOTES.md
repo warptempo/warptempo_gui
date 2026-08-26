@@ -493,7 +493,7 @@ minus three files and plus three.
 ```bash
 bash android/app/build_apk.sh                 # clean-to-signed-APK, one command
 adb install -r android/app/build-android/warptempo.apk
-adb shell am start -n com.warptempo.gui/android.app.NativeActivity
+adb shell am start -n com.warptempo.gui/.MainActivity
 adb logcat -s warptempo:*                     # the GUI's own stderr
 ```
 
@@ -778,7 +778,9 @@ before §10 split it. M4 split it the same way:
   output stream, its data and error callbacks, `stop()`'s state-machine fence,
   and the disconnect rule.
 
-`playback.h` — THE CONTRACT — is byte-unchanged, and so is every consumer.
+`playback.h` — THE CONTRACT — declares exactly what it declared before, and so
+does every consumer (its head and `stop()` comments were reworded afterwards to
+name BOTH devices where they had named JACK alone; no clause changed meaning).
 `playback_lifecycle.*`, `ab_audition.*` and the ~30 `playback.` call sites
 needed no edit at all: the split is entirely below the public API.
 
@@ -832,11 +834,24 @@ at its own site:
   process callback keeps running (silent) forever.
 - **AAudio** cannot count: its data callback stops being called the moment the
   stream stops, so a counter would never advance. The fence is the STREAM STATE
-  MACHINE — `requestStop`, then `waitForStateChange` until STOPPED, re-waiting
-  on every TIMEOUT with no iteration cap. It is bounded only on a DEAD stream,
-  and that is not a loophole: a disconnected stream has had its callback thread
-  retired by the framework before the error callback ran, so there is nothing
-  left to wait for and waiting would hang forever on a quiesced device.
+  MACHINE — `requestStop`, then `waitForStateChange` until the stream proves
+  quiescence POSITIVELY: STOPPED, or a positively terminal stream
+  (DISCONNECTED / CLOSING / CLOSED, or the error callback's `stream_dead`
+  latch — a disconnected stream has had its callback thread retired by the
+  framework before that callback ran, so there is nothing left to wait for and
+  waiting would hang forever on a quiesced device).
+
+  **NO RESULT CODE IS EVER READ AS QUIESCENCE.** A failed `requestStop` is
+  logged and then ignored, and `waitForStateChange` has two arms only:
+  `AAUDIO_OK` takes the state it reported, and every other result — TIMEOUT and
+  unclassified errors alike, AAudio's result domain being neither closed nor
+  documented as one — re-queries the state and waits again. No iteration cap,
+  no deadline, no early exit on "some error". **So a stalled device hangs the
+  main thread here, and that is the contract's safe failure mode**: the
+  alternative is a rebind, a buffer replacement or a shutdown freeing samples
+  out from under a live audio thread, silently. The state is read once before
+  the first wait, so an already-stopped stream (the natural end, a synchronous
+  `requestStop`) exits without waiting at all.
 
 ### 11.5 The disconnect (UNTESTED ON HARDWARE)
 
@@ -911,12 +926,16 @@ The extraction was proved rather than asserted: every moved body was extracted
 from the pre-M4 `playback.cpp` and diffed statement-for-statement against
 `playback_common.cpp` under a declared rename list. The engine bodies — the
 render body, the predictor, `cursor`/`cursor_precise`, rebind, speed, resync —
-come out EMPTY. The deviations are four, all declared: the two output-layout
+come out EMPTY. The deviations are five, all declared: the two output-layout
 reconciliations (the silence memsets become one helper and the sample write
 gains a stride, so one body serves JACK's de-interleaved ports and AAudio's
 interleaved buffer), the JACK-only fence/port fields staying in the JACK
 backend, `play()` becoming a bool so a backend knows whether to start its
-device, and the `unique_ptr` null guards staying in the public methods.
+device, the `unique_ptr` null guards staying in the public methods, and one
+OBSERVABLE diagnostic change: the rejected-channel message dropped the word
+"JACK" ("Unsupported channel count for playback"), the refusal being the shared
+engine's on both devices rather than any one device's — recorded at the site in
+`playback_common.cpp`.
 
 The Linux target's `flags.make` is byte-identical and its object set gains
 exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
@@ -1011,7 +1030,7 @@ adb shell am start -n com.warptempo.gui/.MainActivity
 
 and `am start -n com.warptempo.gui/android.app.NativeActivity` no longer
 resolves. `build_apk.sh` prints the new line at the end. §10.1's command block
-and the scoping doc's are stale by that one word.
+carries the new component; the scoping doc's is still stale by that one word.
 
 ### 12.5 What was driven on the device (policy_control **null** throughout)
 

@@ -148,6 +148,10 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     state.output_rate.store(0, std::memory_order_relaxed);
 
     if (channels != 2) {
+        // The extraction's FIFTH deviation from the old JACK body (android/
+        // NOTES.md §11.8 lists the other four): this message dropped the word
+        // "JACK", the refusal being the shared engine's on both devices rather
+        // than any one device's.
         std::fprintf(stderr,
             "warptempo_gui: Unsupported channel count for playback "
             "(channels=%d, stereo sources only); playback disabled.\n",

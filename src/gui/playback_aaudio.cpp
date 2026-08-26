@@ -152,44 +152,68 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
         static_cast<int>(error), AAudio_convertResultToText(error));
 }
 
+// THE FENCE'S EXIT TEST. QUIESCENCE IS PROVED POSITIVELY OR NOT AT ALL: the
+// only ways out are the stream reporting STOPPED — which AAudio reaches only
+// after its callback thread has left the callback — and the stream being
+// positively terminal, meaning DISCONNECTED / CLOSING / CLOSED or the error
+// callback's `stream_dead` latch (the disconnect rule at the error callback:
+// the framework retires the callback thread BEFORE that callback runs, so a
+// dead stream has nothing left to wait for and waiting would hang forever on a
+// quiesced device). Anything else — STARTED, STOPPING, PAUSING, a state this
+// build has never heard of — is NOT a proof and does not end the wait.
+bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
+                             aaudio_stream_state_t state) {
+    return state == AAUDIO_STREAM_STATE_STOPPED ||
+           state == AAUDIO_STREAM_STATE_DISCONNECTED ||
+           state == AAUDIO_STREAM_STATE_CLOSING ||
+           state == AAUDIO_STREAM_STATE_CLOSED ||
+           impl.stream_dead.load(std::memory_order_acquire);
+}
+
 // THE QUIESCENCE FENCE (playback.h's stop() contract: "returns only once the
 // callback has quiesced"). The JACK backend counts process cycles, which works
 // because a JACK client's callback keeps running silently while the client is
 // active. AAudio's does not: the data callback stops being called when the
 // stream stops, so counting would never advance. The fence here is the STREAM
-// STATE MACHINE — requestStop, then wait until the stream reports STOPPED,
-// which AAudio reaches only after its callback thread has left the callback.
+// STATE MACHINE — requestStop, then wait until `fence_state_is_quiesced`
+// above says so.
 //
-// The wait is UNBOUNDED in the same sense JACK's is: a TIMEOUT return re-waits
-// forever rather than giving up, because returning into a buffer the callback
-// may still be reading is the one thing the fence exists to prevent. It is not
-// unbounded on a DEAD stream, and that is not a loophole: a disconnected
-// stream has already had its callback thread retired by the framework before
-// the error callback ran, so there is nothing left to wait for and waiting
-// would hang forever on a quiesced device.
+// NO RESULT CODE IS EVER READ AS QUIESCENCE, which is what makes the fence a
+// fence. `requestStop` failing is logged and then ignored: a refused stop
+// request is a reason to keep waiting, not a licence to return into a buffer
+// the callback may still be reading. `waitForStateChange` has exactly two arms
+// — AAUDIO_OK takes the state it reported, and EVERY other result (TIMEOUT and
+// unclassified errors alike, AAudio's result domain being neither closed nor
+// documented as one) re-queries the state and waits again. There is no
+// iteration cap and no deadline.
+//
+// SO THIS CAN HANG, AND HANGING IS THE CONTRACT'S SAFE FAILURE MODE. A stalled
+// device freezes the main thread here, visibly and loudly; the alternative — a
+// weakened fence — lets a rebind, a buffer replacement or a shutdown free
+// samples out from under a live audio thread, silently and unreproducibly.
+// The state is queried once BEFORE the first wait, so the ordinary paths cost
+// nothing: a natural end or a stream requestStop finished synchronously reads
+// STOPPED and exits without a single wait.
 void fence_stopped(GuiPlayback::Impl& impl) {
     if (!impl.stream) {
         impl.started = false;
         return;
     }
-    AAudioStream_requestStop(impl.stream);
+
+    const aaudio_result_t stop_r = AAudioStream_requestStop(impl.stream);
+    if (stop_r != AAUDIO_OK) {
+        std::fprintf(stderr,
+            "warptempo_gui: AAudio requestStop failed (%s); waiting for the "
+            "stream to quiesce anyway.\n",
+            AAudio_convertResultToText(stop_r));
+    }
 
     aaudio_stream_state_t now = AAudioStream_getState(impl.stream);
-    while (now != AAUDIO_STREAM_STATE_STOPPED &&
-           now != AAUDIO_STREAM_STATE_DISCONNECTED &&
-           now != AAUDIO_STREAM_STATE_CLOSING &&
-           now != AAUDIO_STREAM_STATE_CLOSED &&
-           now != AAUDIO_STREAM_STATE_UNINITIALIZED) {
-        aaudio_stream_state_t next = AAUDIO_STREAM_STATE_UNINITIALIZED;
+    while (!fence_state_is_quiesced(impl, now)) {
+        aaudio_stream_state_t next = now;
         const aaudio_result_t r = AAudioStream_waitForStateChange(
             impl.stream, now, &next, 100 * 1000 * 1000L);  // 100 ms per wait
-        if (r == AAUDIO_OK) {
-            now = next;
-        } else if (r == AAUDIO_ERROR_TIMEOUT) {
-            now = AAudioStream_getState(impl.stream);  // re-wait, no deadline
-        } else {
-            break;  // dead or disconnected: already quiesced
-        }
+        now = (r == AAUDIO_OK) ? next : AAudioStream_getState(impl.stream);
     }
     impl.started = false;
 }

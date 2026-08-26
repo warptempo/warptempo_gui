@@ -2,8 +2,15 @@
 #include <cstdint>
 #include <memory>
 
-// Audio playback engine. Owns a JACK client and drives it from JACK's process
-// thread. The sample buffer is borrowed, not owned: the caller must keep the
+// Audio playback engine. Owns ONE audio device and drives itself from that
+// device's callback thread. The device half is per backend — a JACK client on
+// Linux (playback.cpp), an AAudio output stream on Android
+// (playback_aaudio.cpp), exactly one of the two compiled into a given binary —
+// while the render body, the cursor predictor and every main-thread helper
+// below are shared verbatim (playback_common.{h,cpp}). EVERY CLAUSE IN THIS
+// HEADER IS THE CONTRACT ON BOTH BACKENDS; where a clause is proved
+// differently by each device, it names both proofs.
+// The sample buffer is borrowed, not owned: the caller must keep the
 // pointer passed to init() valid until shutdown() returns, and must call
 // stop()+shutdown() before tearing down the source.
 //
@@ -22,7 +29,8 @@
 // translation happens only at this public API boundary.
 //
 // Thread model:
-//   - Audio thread (JACK process thread): reads cursor_/speed_, writes
+//   - Audio thread (the device's callback thread: JACK's process thread,
+//     AAudio's data callback): reads cursor_/speed_, writes
 //     cursor_ and is_playing_ via relaxed atomics. No allocation, no I/O,
 //     no locks.
 //   - Main thread: calls init/play/stop/set_speed/shutdown; snapshots
@@ -94,12 +102,13 @@ public:
     void play(int64_t start_sample, int64_t end_sample);
 
     // Stop playback and block until any in-flight audio callback has exited,
-    // normally within about two JACK periods. The wait has no deadline: it
-    // returns only once the callback has quiesced, so a stalled or dead
-    // server hangs here rather than letting the caller mutate a buffer the
-    // audio thread may still read. Safe to call when not playing; it still
-    // fences. Main thread only. The cursor retains its last value so the
-    // main thread can snapshot where it stopped.
+    // normally within about two of the device's callback periods (JACK counts
+    // process cycles; AAudio waits for the stream's STOPPED state). The wait
+    // has no deadline on either backend: it returns only once the callback has
+    // quiesced, so a stalled or dead device hangs here rather than letting the
+    // caller mutate a buffer the audio thread may still read. Safe to call
+    // when not playing; it still fences. Main thread only. The cursor retains
+    // its last value so the main thread can snapshot where it stopped.
     void stop();
 
     // Clamp to [0.10, 1.00] and publish to the audio thread. The change
