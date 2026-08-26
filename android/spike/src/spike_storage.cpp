@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdarg>
 #include <cstdio>
@@ -101,6 +102,50 @@ int is_external_storage_manager(ANativeActivity* activity) {
     return result;
 }
 
+
+// Volume discovery that survives a traversal-only /storage.
+//
+// /storage is mode 0711 (owner shell), so an app may traverse into
+// /storage/<FS-UUID>/ but may never list /storage itself. That is a filesystem
+// mode, not a permission check, so MANAGE_EXTERNAL_STORAGE does not lift it and
+// opendir("/storage") returns EACCES on a device with a stick plugged in exactly
+// as it does on one without. /proc/mounts is world-readable and names every
+// mounted volume, so discovery goes through it whenever the listing is refused.
+std::vector<std::string> volumes_from_proc_mounts(SpikeStorageReport& out) {
+    std::vector<std::string> found;
+
+    FILE* f = ::fopen("/proc/mounts", "re");
+    if (!f) {
+        out.lines.push_back(fmt("fopen /proc/mounts FAILED errno=%d %s", errno,
+                                std::strerror(errno)));
+        return found;
+    }
+
+    char line[1024];
+    int lines_seen = 0;
+    while (std::fgets(line, sizeof line, f)) {
+        ++lines_seen;
+        // "<source> <mountpoint> <fstype> <opts> ..." -- the mountpoint is field 2.
+        const char* p = std::strchr(line, ' ');
+        if (!p) continue;
+        ++p;
+        const char* q = std::strchr(p, ' ');
+        if (!q) continue;
+        const std::string mp(p, static_cast<size_t>(q - p));
+
+        static const char kPrefix[] = "/storage/";
+        if (mp.compare(0, std::strlen(kPrefix), kPrefix) != 0) continue;
+        const std::string name = mp.substr(std::strlen(kPrefix));
+        if (!is_fs_uuid(name.c_str())) continue;
+        if (std::find(found.begin(), found.end(), name) == found.end()) found.push_back(name);
+    }
+    ::fclose(f);
+
+    out.lines.push_back(fmt("/proc/mounts read OK (%d lines), %zu XXXX-XXXX volume(s)",
+                            lines_seen, found.size()));
+    return found;
+}
+
 }  // namespace
 
 void spike_storage_probe(ANativeActivity* activity, SpikeStorageReport& out) {
@@ -117,29 +162,34 @@ void spike_storage_probe(ANativeActivity* activity, SpikeStorageReport& out) {
         out.lines.push_back("   " + write_probe(activity->internalDataPath));
     }
 
-    // Control 2: can /storage even be enumerated?
+    // Control 2: can /storage be enumerated? A refusal here is NOT fatal -- see
+    // volumes_from_proc_mounts() for why listing and traversal come apart.
+    std::vector<std::string> volumes;
+
     DIR* d = ::opendir("/storage");
     if (!d) {
-        out.lines.push_back(fmt("opendir /storage FAILED errno=%d %s", errno, std::strerror(errno)));
-        return;
+        out.lines.push_back(fmt("opendir /storage FAILED errno=%d %s (listing refused; "
+                                "traversal may still work)",
+                                errno, std::strerror(errno)));
+    } else {
+        std::vector<std::string> all;
+        while (dirent* e = ::readdir(d)) {
+            if (std::strcmp(e->d_name, ".") == 0 || std::strcmp(e->d_name, "..") == 0) continue;
+            all.push_back(e->d_name);
+            if (is_fs_uuid(e->d_name)) volumes.push_back(e->d_name);
+        }
+        ::closedir(d);
+
+        std::string listing;
+        for (size_t i = 0; i < all.size(); ++i) {
+            if (i) listing += " ";
+            listing += all[i];
+        }
+        out.lines.push_back(fmt("opendir /storage OK, %zu entries: %s", all.size(),
+                                listing.empty() ? "(none visible)" : listing.c_str()));
     }
 
-    std::vector<std::string> all;
-    std::vector<std::string> volumes;
-    while (dirent* e = ::readdir(d)) {
-        if (std::strcmp(e->d_name, ".") == 0 || std::strcmp(e->d_name, "..") == 0) continue;
-        all.push_back(e->d_name);
-        if (is_fs_uuid(e->d_name)) volumes.push_back(e->d_name);
-    }
-    ::closedir(d);
-
-    std::string listing;
-    for (size_t i = 0; i < all.size(); ++i) {
-        if (i) listing += " ";
-        listing += all[i];
-    }
-    out.lines.push_back(fmt("opendir /storage OK, %zu entries: %s", all.size(),
-                            listing.empty() ? "(none visible)" : listing.c_str()));
+    if (volumes.empty()) volumes = volumes_from_proc_mounts(out);
 
     if (volumes.empty()) {
         out.lines.push_back("no XXXX-XXXX volume mounted -- plug the OTG stick in and tap again");
