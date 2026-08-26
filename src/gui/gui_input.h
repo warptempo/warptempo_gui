@@ -123,9 +123,9 @@ struct GuiInputState {
     // generated itself from a HELD input rather than a fresh physical press.
     // TWO PRODUCERS, one per surface: GuiPlatform::maybe_fire_repeat for a held
     // KEY (the platform boundary's own), and
-    // GuiInputHandler::tick_chrome_press_repeat for a held BUTTON (the four
-    // cardinal arrow buttons, 2026-08-16 — the pointer twin, which exists so
-    // the keyboard-less glass rig has a nudge run). The two carry the same
+    // GuiInputHandler::tick_chrome_press_repeat for a held BUTTON (the chord
+    // table's `repeats` rows, 2026-08-16 — the pointer twin, which exists so
+    // the keyboard-less touch panel has a step run of its own). The two carry the same
     // meaning to the same senior consumer and differ only in what is being
     // held. ONLY THE BUTTON PRODUCER CLEARS THE BIT ON ITS BURST'S OPENER —
     // its first fire goes out with the bit FALSE and takes undo's PHYSICAL

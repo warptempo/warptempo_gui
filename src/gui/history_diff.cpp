@@ -1839,6 +1839,7 @@ struct GuiHistoryGuiSide {
     char        active_tab_view     = 'A';
     float       playback_speed      = 1.0f;
     int         gui_scale           = 100;
+    int         waveform_magnification = 1;
     std::string audio_player;
     std::string projects_repo;
 };
@@ -1868,6 +1869,7 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     gui->active_tab_view     = app.active_tab_view;
     gui->playback_speed      = app.playback_speed;
     gui->gui_scale           = app.gui_scale;
+    gui->waveform_magnification = app.waveform_magnification;
     gui->audio_player        = app.audio_player;
     gui->projects_repo       = app.projects_repo;
     return gui;
@@ -1878,7 +1880,8 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
     const NonEngineSettingsSnapshot snap{
         gui.tab_a, gui.tab_b, gui.follow,
         gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
-        gui.playback_speed, gui.gui_scale, gui.audio_player,
+        gui.playback_speed, gui.gui_scale, gui.waveform_magnification,
+        gui.audio_player,
         gui.projects_repo};
     return format_settings_text(snap, engine);
 }

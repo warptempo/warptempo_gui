@@ -171,6 +171,14 @@ struct WaveformCache {
     // the warp_frame_map the target paint just consumed; any authoring edit in
     // source view that would shift the deformity invalidates the target
     // view's last cached paint on its next entry.
+    //
+    // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
+    // compare in waveform_cache.cpp walks exactly these, and the dispatch,
+    // completion-swap and synchronous-publish sites copy exactly these):
+    // vp_start, vp_end, area_w, area_h, inset_px, MAGNIFICATION, target, and
+    // the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // on, and each is keyed BY FIELD rather than through whatever else happens
+    // to move with it.
     int64_t   fp_vp_start    = 0;
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
@@ -187,6 +195,14 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
+    // THE VISUAL MAGNIFICATION the live pixels were rendered at
+    // (app.waveform_magnification — the ladder in settings_file.h). A
+    // FINGERPRINT FIELD in its own right, keyed directly like the inset: it is
+    // an input to the tip mapping alone, so nothing else about the plate would
+    // move if it changed by itself, and without it a plate rendered at one gain
+    // could go on being blitted after the setting moved. PIXELS ONLY — this
+    // cache holds a picture, and the factor reaches no sample anywhere.
+    int       fp_magnification = 1;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -218,6 +234,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
+    int       pending_fp_magnification = 1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -239,6 +256,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
+    int       supersede_magnification = 1; // GUI-captured picture gain
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -264,6 +282,9 @@ struct WaveformCache {
         // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
         // any valid render (compute_waveform_render_inputs rejects area.w <= 0).
         pending_fp_area_w = -1;
+        // (The magnification needs no poison of its own: area_w = -1 already
+        // guarantees the mismatch, and this cache carries the one poison
+        // rather than one per field.)
         supersede = false;
         supersede_warp_frame_map.clear();
         fp_warp_frame_map.clear();
@@ -426,7 +447,7 @@ struct FlagCache {
 // transparent outside the ink exactly like the plate, so the lane's ground
 // shows through.
 //
-// THE INVALIDATION KEY IS (width, height) AND NOTHING ELSE — the LANE's own
+// THE INVALIDATION KEY IS (width, height, MAGNIFICATION) — the LANE's own
 // dimensions (the cache surface is lane-sized and blits at the lane's origin;
 // the bars are drawn into the content band inside it, borders excluded), which
 // move only on a window resize or a gui_scale
@@ -444,6 +465,14 @@ struct FlagCache {
 // pyramid's unconditional <=5-pairs-per-column bound — the whole-song span is
 // exactly what the coarse rungs exist for).
 //
+// THE MAGNIFICATION JOINED THE KEY 2026-08-26, with the setting itself: ONE
+// GAIN ON EVERY WAVEFORM PICTURE, no exception — this 24px band is where a
+// quiet passage disappears first, and clipping in a whole-song map costs
+// nothing. It is an input to these bars' tip mapping exactly as it is to the
+// plate's, so it is keyed BY FIELD beside the two dimensions rather than left
+// to ride one of them. PIXELS ONLY: the factor scales this picture and reaches
+// no sample anywhere.
+//
 // OWNED BY GuiPaintHandler AS A VALUE, unlike WaveformCache and FlagCache
 // (main.cpp-constructed references): those two are touched from outside the
 // painter — the worker completion path and main.cpp's tick — while this one
@@ -453,6 +482,8 @@ struct OverviewBarCache {
     cairo_surface_t* surface  = nullptr;
     int              width    = 0;
     int              height   = 0;
+    // The picture gain the cached bars were drawn at (the key's third field).
+    int              magnification = 1;
     bool             rendered = false;
 
     void destroy_surface() {
@@ -462,6 +493,7 @@ struct OverviewBarCache {
         }
         width    = 0;
         height   = 0;
+        magnification = 1;
         rendered = false;
     }
 
@@ -675,6 +707,11 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
+        // The waveform PICTURE's linear magnification
+        // (app.waveform_magnification). BOTH a render input and a fingerprint
+        // field, exactly like inset_px above: it feeds the tip mapping and
+        // nothing else, so nothing else would move if it changed alone.
+        int      magnification = 1;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in

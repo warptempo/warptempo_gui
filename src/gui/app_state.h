@@ -1872,6 +1872,44 @@ enum class RedesignButton {
     // of its rows a second path to a command that already had one — so these
     // four are the zoom commands' pointer home outright now.
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
+    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the zoom group: the
+    // picture's VERTICAL gain where the four above it are the horizontal one.
+    // Magnify (Ctrl+=) doubles it and Reduce (Ctrl+-) halves it along the
+    // ladder in settings_file.h — the same two keys the bare zoom pair uses,
+    // one modifier over, which is the mnemonic.
+    //
+    // THEY EXIST FOR GLASS. The setting is hotkey-operated on the laptop, and a
+    // touch panel has no hotkeys — "I wouldn't want to go click on the settings
+    // dropdown and type a number, especially on the touch screen" — so the act
+    // needs a pointer home, which is what these two are. They sit in the ZOOM
+    // GROUP rather than opening one, both because the group is where the
+    // viewport-class acts collect and because the row's separator count is a
+    // thing the architect places by hand.
+    //
+    // THEY HOLD-REPEAT, the roster's second hold gesture after the four
+    // cardinal arrows and taking its shape whole: first fire at kHoldBeatMs,
+    // later fires at the COMPOSITOR'S advertised repeat rate, a fired burst
+    // suppressing the lift's own act, the burst's state and edge inventory at
+    // AppState::ChromePress. There is NO UNDO OPENER to worry about, unlike the
+    // arrows: the setting is history-less, so a burst pushes no entries at all
+    // and the coalescing question does not arise.
+    //
+    // ALWAYS ENABLED AND NEVER GREY AT THE LADDER'S ENDS, the zoom group's own
+    // answer beside them (redesign_button_enabled): a press at either end is a
+    // consumed no-op exactly as a zoom-in at the ceiling is, and a face that
+    // tracked the rung would blink at interaction cadence — the 2026-08-15
+    // no-blink ruling. NO LAMP either: each is an act that completes, momentary
+    // like the four magnifiers.
+    //
+    // NO MODIFIER IS ADMITTED — neither redesign_button_shift_admits nor
+    // redesign_button_ctrl_admits names them, so a shift or ctrl click is
+    // refused at the band gate and the SHIFT LONG PRESS cannot reach them
+    // either. Their chord CARRIES ctrl (it is Ctrl+= / Ctrl+-), which is the
+    // table's own column and a different thing from admitting a ctrl press.
+    //
+    // THE PICTURE ONLY: the factor scales what the painter draws and reaches no
+    // sample, no playback path and no render.
+    IconWaveformMagnify, IconWaveformReduce,
     // THE MASS-MARKER CATEGORY: the BPM opener (bare `m`), iteration mode
     // (bare `i`) and follow (bare `f`). All three are consumed in the `h` view
     // and all three GREY there (they were the one group the view dropped whole,
@@ -2211,11 +2249,15 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-SIX in row 4 and SIXTEEN in the bottom row — 50. Of those,
-// FORTY-SEVEN carry a chord in kToolbarChords and THREE are the dropdown
+// in row 3, TWENTY-EIGHT in row 4 and SIXTEEN in the bottom row — 52. Of those,
+// FORTY-NINE carry a chord in kToolbarChords and THREE are the dropdown
 // anchors (File, Edit and Settings), which is the split the chord table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 52 SINCE 2026-08-26: the WAVEFORM MAGNIFICATION PAIR joined the icon row's
+// zoom group on Ctrl+= / Ctrl+-, two pure chord additions inside an existing
+// group — 50 + 2, split 47 + 3 to 49 + 3, no separator and no group boundary
+// moved.
 // 50 AT 2026-08-20'S PROPAGATE RELOCATION, and the arithmetic is a NET LOSS OF
 // ONE over one addition and two deletions: the EDIT ANCHOR joined row 1 (a
 // non-chord entry, the roster's first anchor GAIN since File's) while ICONCOPY
@@ -2263,7 +2305,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 50;
+inline constexpr int kRedesignButtonCount = 52;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2334,6 +2376,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
+        case RedesignButton::IconWaveformMagnify:
+        case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
         case RedesignButton::IconFollow:
@@ -2595,11 +2639,21 @@ struct SettingsPopupItem {
     const char* key;
     bool        separator_before;
 };
-// (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. The widest label
-// is still "Playback speed", so the popup's authored width is unchanged; only
-// the item count and the height derived from it moved.)
+// (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. "Playback speed"
+// was the widest label from then until 2026-08-26; only the item count and the
+// height derived from it moved at that deletion.)
+//
+// THE WAVEFORM MAGNIFICATION JOINED THE GUI HALF 2026-08-26, a third GUI key
+// beside the two — it is settable here like every key that can appear in a
+// `.settings`, and its click prefills through the ordinary recall serializer
+// with nothing translated. It is now the WIDEST LABEL, which costs nothing: the
+// popup's width is DERIVED from the widest measured label plus the pads (the
+// derivation is at the paint site), so the box simply grows. The KEY's real
+// gestures are its two chords and its two icon-row buttons — a dropdown item is
+// the typed route's convenience, not the act's home.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI scale",      "gui_scale",      false},
+    {"Waveform magnification", "waveform_magnification", false},
     {"Playback speed", "playback_speed", false},
     {"Title",          "title",          true},
     {"Notes",          "notes",          false},
@@ -3433,6 +3487,31 @@ struct AppState {
     // in the product rides it, the former font_size axis having died with the
     // monospace face.
     int     gui_scale               = 100;
+
+    // THE WAVEFORM'S VISUAL MAGNIFICATION (the waveform_magnification setting;
+    // one of kWaveformMagnificationValues — 1, 2, 4, 8, 16, 32, 64 — default 1),
+    // a plain LINEAR factor multiplied into the peaks at the tip mapping of
+    // every waveform picture the product paints, plate and OVERVIEW STRIP
+    // alike, and clamped to the lane so a loud passage clips flat at the edges
+    // while its troughs still dip. It exists because the dynamic range of
+    // classical material is wide enough that a quiet passage draws as a
+    // hairline at the level a forte fills the lane, and the picture is an
+    // AUTHORING AID: clipped fortes cost nothing, since a marker goes on a
+    // transient rather than in a sustain.
+    //
+    // IT IS THE PICTURE AND NOTHING ELSE. No sample, no JACK path, no render
+    // and no RenderRequest reads this field — playback and every render are
+    // byte-identical at every setting, and the key is not an engine key.
+    //
+    // A display preference like gui_scale above: not engine input, not
+    // authoring state, persisted on Ctrl+S, applied at file load, and written
+    // through ONE chokepoint — GuiInputHandler::apply_waveform_magnification —
+    // which the two hotkeys (Ctrl+= / Ctrl+-), the two icon-row buttons and the
+    // settings editor's `:waveform_magnification=` commit all call and nothing
+    // else does. History-less like every GUI-kind key: no undo, no dirty.
+    // The `'` load-in-place leaves it live — a recipe is markers plus the
+    // engine block, and this is neither.
+    int     waveform_magnification  = 1;
 
     // GUI-kind launch preference: the external audio player the `l`
     // ("Listen to renders") command spawns with the rendered wavs. The
@@ -4510,7 +4589,9 @@ struct AppState {
     // 2026-08-13 deletion of the arrows' repeat: the touch panel has no
     // keyboard, so a held arrow BUTTON is the panel's only nudge run). A press
     // on a button whose chord row sets `repeats` — the bottom row's four
-    // cardinal arrows and nothing else, kToolbarChords, input_pointer.cpp —
+    // cardinal arrows and, since 2026-08-26, the icon row's WAVEFORM
+    // MAGNIFICATION PAIR; the membership is the `repeats` column itself,
+    // kToolbarChords, input_pointer.cpp, and is not re-listed anywhere —
     // arms a synthesized-repeat burst alongside the act:
     //   * `repeat_due_ms` is the CLOCK_MONOTONIC stamp of the next fire, and 0
     //     means THIS ARM CARRIES NO BURST (an unarmed button or an ineligible
@@ -7351,6 +7432,18 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
+        // AND NEITHER DOES THE MAGNIFICATION PAIR beside them (2026-08-26),
+        // which is the ZOOM GROUP'S ANSWER TAKEN VERBATIM at the one place it
+        // could have differed: a press at the ladder's end has nothing to step
+        // to, and that is a HARMLESS NOTHING rather than a refusal — exactly
+        // like a zoom-in at the ceiling, which this row has never greyed. A
+        // face that tracked the rung would blink every few presses, which is
+        // the 2026-08-15 no-blink ruling's own case. Both stay LIVE on a
+        // READ-ONLY tab (the picture's gain authors nothing the lock protects)
+        // and LIVE in the `h` VIEW, where the derived partition finds their
+        // chord on the mode's allowlist — nothing hand-listed either way.
+        case RedesignButton::IconWaveformMagnify:
+        case RedesignButton::IconWaveformReduce:
         // FOLLOW MIRRORS NOTHING: bare `f` toggles the chase in either
         // direction on any loaded piece, and the lock admits it (follow is
         // navigation, not authored content). Its lamp reports the state.
@@ -7905,6 +7998,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
+        // The magnification pair is momentary for the same reason (2026-08-26):
+        // each press is a step that completes. WHERE the ladder stands is the
+        // picture itself, which says it in the only terms that matter.
+        case RedesignButton::IconWaveformMagnify:
+        case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
@@ -8245,6 +8343,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Full zoom out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
             return {"Center on focus (c)", nullptr};
+        // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), one line each: neither
+        // admits a modifier, so neither carries the second line, and the
+        // static_assert below is satisfied by their absence from both
+        // admission predicates. The words name the PICTURE — "waveform", not
+        // "volume" or "gain" — because that is the whole of what moves. The
+        // accelerators are CHORDS and so keep their capitals and spelled-out
+        // modifier, this table's rule.
+        case RedesignButton::IconWaveformMagnify:
+            return {"Magnify waveform (Ctrl+=)", nullptr};
+        case RedesignButton::IconWaveformReduce:
+            return {"Reduce waveform (Ctrl+-)", nullptr};
         case RedesignButton::IconBpm:    return {"BPM editor (m)", nullptr};
         case RedesignButton::IconIter:   return {"Iteration mode (i)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};

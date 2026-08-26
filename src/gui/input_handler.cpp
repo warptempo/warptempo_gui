@@ -1173,6 +1173,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
         viewport.zoom_out(); return;
     }
+    // THE WAVEFORM'S VISUAL MAGNIFICATION, on the same two keys one modifier
+    // over: Ctrl+= doubles the picture's gain and Ctrl+- halves it, along the
+    // ladder in settings_file.h, a consumed no-op at either end. The pairing is
+    // the mnemonic — `=`/`-` are the horizontal magnification and these are the
+    // vertical one — and both spellings are CTRL-EXACT, no shift and no alt:
+    // Ctrl+Shift+= and the keypad KP_Add / KP_Subtract bind nothing here or
+    // anywhere, one spelling per act under the strict-modifier rule. They rest
+    // beside the zoom arms deliberately, so the four cannot drift apart.
+    //
+    // IT MOVES THE PICTURE AND NOT THE SOUND: the factor is multiplied into the
+    // peaks at the painter's tip mapping and reaches no sample, no playback
+    // path and no render — an audition sounds identical at every rung.
+    //
+    // A HELD KEY WALKS THE LADDER at the platform's repeat rate (both chords
+    // are repeat_eligible, the zoom pair's own eligibility), and there is
+    // nothing to coalesce: the setting is history-less, so a burst pushes no
+    // undo entries to merge.
+    if (key == GuiKeys::Equal && ctrl && !shift && !alt) {
+        step_waveform_magnification(/*up=*/true); return;
+    }
+    if (key == GuiKeys::Minus && ctrl && !shift && !alt) {
+        step_waveform_magnification(/*up=*/false); return;
+    }
 
     // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+[ MAXIMIZES
     // the trim to the full window — the two halves of one trim surface: show
@@ -2544,4 +2567,35 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     set_gui_scale_percent(percent);
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
+}
+
+void GuiInputHandler::apply_waveform_magnification(int factor) {
+    // The contract — sole writer, ladder-only, history-less, picture-only — is
+    // at the declaration (input_handler.h). Two lines of body: the refusal, and
+    // the rebuild every user-driven plate change takes.
+    if (!is_waveform_magnification(factor)) return;
+    if (factor == app.waveform_magnification) return;
+    app.waveform_magnification = factor;
+    // The plate's fingerprint carries the gain, so this rebuild renders and
+    // publishes at the new one; its damage rect (window top through the
+    // waveform's bottom) covers the OVERVIEW LANE, whose bar cache keys on the
+    // gain and rebuilds inside the same frame. Nothing about the audio is
+    // touched — no playback session is disturbed and no render is dispatched.
+    viewport.kick_waveform_sync();
+}
+
+void GuiInputHandler::step_waveform_magnification(bool up) {
+    // The ladder is geometric, so a step is a double or a halve — computed
+    // against the ladder itself rather than by arithmetic, so the ladder stays
+    // the one owner of which factors exist. At either end the neighbour does
+    // not exist and this is a consumed no-op.
+    const int cur = app.waveform_magnification;
+    const int n   = static_cast<int>(std::size(kWaveformMagnificationValues));
+    for (int i = 0; i < n; ++i) {
+        if (kWaveformMagnificationValues[i] != cur) continue;
+        const int j = up ? i + 1 : i - 1;
+        if (j < 0 || j >= n) return;
+        apply_waveform_magnification(kWaveformMagnificationValues[j]);
+        return;
+    }
 }

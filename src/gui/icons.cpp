@@ -841,6 +841,37 @@ constexpr IconPath kZoomFitBestPaths[] = {
      "7-7zm-4 3v1 6 1h8v-1-6-1h-8zm1 1h6v6h-6v-6z"},
 };
 
+// THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), the same family two files
+// further along: zoom-in-y and zoom-out-y. The identical magnifier except that
+// the HANDLE STUB IS ONE UNIT SHORTER (2.400391 where the four above carry
+// 3.400391) and the lens holds a Y-AXIS RULER — the run of tick pairs inside
+// the ring — beside the plus or the minus. Single `.ColorScheme-Text` paths in
+// the family's own idiom, transcribed byte-verbatim from breeze-dark's
+// actions/22/ like every entry here; zoom-in-y.svg is a symlink to
+// y-zoom-in.svg in the installed theme, so the committed asset holds the
+// resolved bytes.
+constexpr IconPath kZoomInYPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l2.400391 2.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-2.40039-2.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-2-0.302734v-4.697266"
+     "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
+     "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
+     "2-0.3027344zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
+};
+
+constexpr IconPath kZoomOutYPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l2.400391 2.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-2.40039-2.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-2-0.302734v-4.697266"
+     "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
+     "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
+     "2-0.3027344zm-4 6v2h8v-2h-8z"},
+};
+
 constexpr IconPath kZoomOriginalPaths[] = {
     {kIconText,
      "m3 3v6h0.2695312 1.0332032 4.6972656l-2.9394531-2.9394531a7 7 0 0 1 "
@@ -1014,6 +1045,8 @@ constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
 constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
+constexpr IconDef kZoomInY            {22.0, kZoomInYPaths,             1};
+constexpr IconDef kZoomOutY           {22.0, kZoomOutYPaths,            1};
 constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
 constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
@@ -1062,6 +1095,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ZoomOut:             return kZoomOut;
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
+        case Icon::ZoomInY:             return kZoomInY;
+        case Icon::ZoomOutY:            return kZoomOutY;
         case Icon::ListAdd:             return kListAdd;
         case Icon::ListRemove:          return kListRemove;
         case Icon::ViewHidden:          return kViewHidden;

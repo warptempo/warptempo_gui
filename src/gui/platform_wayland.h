@@ -270,9 +270,9 @@ public:
     // reference and reads it directly, no hook.
     //
     // ITS ONE APPLICATION CONSUMER is the CHROME BUTTON HOLD-REPEAT
-    // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held arrow
-    // BUTTON at the rate a held arrow KEY runs at rather than at a constant of
-    // its own — so the two holds cannot drift apart when the desktop's repeat
+    // (tick_chrome_press_repeat, input_pointer.cpp), which paces a held
+    // repeating BUTTON at the rate its held KEY runs at rather than at a
+    // constant of its own — so the two holds cannot drift apart when the desktop's repeat
     // setting is edited. Rate 0 therefore stops the buttons repeating too,
     // which is the honest mirror of a keyboard that does not repeat. It is
     // READ PER FIRE and never cached: repeat_info may be re-sent at any time.

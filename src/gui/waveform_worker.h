@@ -52,6 +52,14 @@ struct WaveformJob {
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
 
+    // THE WAVEFORM'S VISUAL MAGNIFICATION (app.waveform_magnification),
+    // captured on the GUI thread with the rest of the geometry so the worker
+    // reads no live setting — the same reason inset_px is here. It is also a
+    // FINGERPRINT field (WaveformCache::fp_magnification), so a plate can never
+    // be shown at a gain that is not the live one. PIXELS ONLY: this job
+    // produces a picture, and the factor reaches no sample anywhere.
+    int       magnification    = 1;
+
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the memoized target display map (an owned copy taken
     // at job submission, so the worker never races a cache rebuild). Empty in
@@ -162,8 +170,9 @@ private:
 // supplied dest surface, the audio handle's peak pyramid (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
 // scalars (area_w/area_h/inset_px) — no other shared or main-thread state. The
-// inset is passed in rather than read via waveform_inset_px() so the render
-// touches no gui_scale state: ALL scale-dependent geometry
+// inset and the MAGNIFICATION are passed in rather than read off live state so
+// the render touches no gui_scale and no settings state: ALL scale-dependent
+// geometry
 // is snapshotted on the GUI thread at dispatch, closing the race with a
 // mid-render set_gui_scale_percent. Such a job COMPLETES from its coherent
 // old-geometry snapshot on either reachable ordering: it may publish before the
@@ -180,4 +189,5 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
+    int     magnification,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

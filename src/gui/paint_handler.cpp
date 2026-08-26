@@ -740,6 +740,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
+    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the same group: the
+    // picture's VERTICAL gain, magnify (Ctrl+=) then reduce (Ctrl+-), wearing
+    // Breeze's zoom-in-y / zoom-out-y — the magnifier construction beside them
+    // with an AXIS RULER down the left of the lens, which is what tells the
+    // pair apart from the four horizontal magnifiers at row size. They join
+    // the zoom group rather than opening one, so the row gains two boxes and
+    // two 2px gaps and no separator moves.
+    {RedesignButton::IconWaveformMagnify, icons::Icon::ZoomInY},
+    {RedesignButton::IconWaveformReduce,  icons::Icon::ZoomOutY},
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
@@ -4798,11 +4807,16 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         overview_bar_cache.destroy_surface();
         return;
     }
+    // THE KEY IS (width, height, magnification) — the contract is at
+    // OverviewBarCache. The gain is an input to these bars' own tip mapping, so
+    // a change to it dirties them BY FIELD.
     if (overview_bar_cache.rendered &&
         overview_bar_cache.width  == lane.w &&
-        overview_bar_cache.height == lane.h) {
+        overview_bar_cache.height == lane.h &&
+        overview_bar_cache.magnification == app.waveform_magnification) {
         return;
     }
+    overview_bar_cache.magnification = app.waveform_magnification;
     if (!overview_bar_cache.surface ||
         overview_bar_cache.width  != lane.w ||
         overview_bar_cache.height != lane.h) {
@@ -4851,10 +4865,15 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         // rungs at the unconditional <=5-pairs-per-column bound, so the
         // rebuild is O(lane width) like any plate render).
         const WaveformBasis basis{0, spp, lane.w};
+        // ONE GAIN ON EVERY WAVEFORM PICTURE (2026-08-26): the whole-song map
+        // magnifies exactly as the plate does, this band being where a quiet
+        // passage disappears first. The PICTURE only — no sample is scaled.
         render_waveform(overview_bar_cache.surface, ch0, /*col0=*/0, audio, 0,
-                        basis, kWaveformInk, nullptr);
+                        basis, kWaveformInk, app.waveform_magnification,
+                        nullptr);
         render_waveform(overview_bar_cache.surface, ch1, /*col0=*/0, audio, 1,
-                        basis, kWaveformInk, nullptr);
+                        basis, kWaveformInk, app.waveform_magnification,
+                        nullptr);
     }
     overview_bar_cache.rendered = true;
 }

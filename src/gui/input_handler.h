@@ -2998,6 +2998,36 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
+    // THE WAVEFORM MAGNIFICATION'S ONE WRITER — the gesture chokepoint every
+    // route to app.waveform_magnification goes through, and the only site in
+    // the product that assigns that field: the two hotkeys (Ctrl+= / Ctrl+-)
+    // and the two icon-row buttons reach it through
+    // step_waveform_magnification below, and the settings editor's
+    // `:waveform_magnification=` commit calls it directly. `factor` must be a
+    // ladder value (kWaveformMagnificationValues, settings_file.h); an
+    // off-ladder factor is REFUSED WHOLE and never clamped — the editor's own
+    // red flash is what an off-ladder typed value gets, from the shared
+    // grammar owner validate_gui_setting one step earlier.
+    //
+    // WHAT IT DOES: assign, then kick_waveform_sync — the synchronous full
+    // rebuild every user-driven pan/zoom frame takes, whose tail damages the
+    // window top through the waveform's bottom and so carries the OVERVIEW
+    // LANE with it (the lane's bar cache keys on the magnification, so it
+    // rebuilds in that same frame). A magnification change is a DISCRETE
+    // COMMAND, so the damage is the whole waveform area rather than a narrowed
+    // scanner rect.
+    //
+    // HISTORY-LESS, like every GUI-kind key's gesture: no undo entry, no dirty
+    // bit; the value persists on the next ordinary Ctrl+S. And NO AUDIO MOVES —
+    // the factor scales the picture the painter draws and reaches no sample, no
+    // playback path and no render input.
+    void apply_waveform_magnification(int factor);
+
+    // One step along the ladder: `up` doubles, otherwise halves. At either end
+    // it is a consumed no-op — there is no wrap and no clamp-to-self write. The
+    // two chords' whole body.
+    void step_waveform_magnification(bool up);
+
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare
     // horizontal arrows step one painted column per press; the lane decides WHAT

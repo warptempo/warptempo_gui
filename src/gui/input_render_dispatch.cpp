@@ -58,6 +58,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.playback_speed      = app.playback_speed;
     s.follow              = app.follow_mode;
     s.gui_scale           = app.gui_scale;
+    s.waveform_magnification = app.waveform_magnification;
     s.audio_player        = app.audio_player;
     s.projects_repo       = app.projects_repo;
 

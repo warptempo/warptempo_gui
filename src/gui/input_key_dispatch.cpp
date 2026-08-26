@@ -284,6 +284,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
          !ctrl && !shift && !alt);
+    // THE WAVEFORM MAGNIFICATION STEP (2026-08-26), Ctrl+= / Ctrl+- exactly as
+    // their dispatch arms spell them. It is a DISPLAY PREFERENCE — the picture's
+    // own gain, keyed and persisted like gui_scale — so it authors nothing the
+    // lock protects: no marker, no engine setting, no sample. It is admitted on
+    // the header's own persistent-mutation standard, exactly as the bare zoom
+    // pair above it is, and the two icon-row buttons stay lit on a locked tab
+    // by the same answer.
+    const bool is_waveform_magnify =
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+         ctrl && !shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
@@ -427,7 +437,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // see is_trim_region_toggle above.
     return !(is_o || is_play_pause || is_playhead_step ||
              is_home_end || is_page_updown ||
-             is_zoom_symbol || is_zero ||
+             is_zoom_symbol || is_waveform_magnify || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -2011,6 +2021,14 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool bare  = !ctrl && !shift && !alt;
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
+    // THE WAVEFORM MAGNIFICATION STEP (2026-08-26), Ctrl+= / Ctrl+-. The view
+    // paints the SAME PLATE, so the gain is as live in here as the zoom is —
+    // it changes the picture and nothing the mode is reading. Its two buttons
+    // stay lit in the view for that reason, the derived partition walking the
+    // chord table through this gate.
+    const bool is_waveform_magnify =
+        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
+         ctrl && !shift && !alt);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
@@ -2119,7 +2137,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zoom_symbol || is_zero || is_page_updown ||
+    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
@@ -3355,9 +3373,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // nothing to nudge fires into a refusal. Their SHIFT shapes — the walk's
     // absolute wall jumps — are excluded by the no-shift term below and stay
     // one-shot: a held jump could only flap against the wall it just reached),
-    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
-    // repeating Ctrl chords — the Ctrl+Shift+Tab march plus Ctrl+Z / Ctrl+Shift+Z
-    // (undo / redo), each a continuous step gesture like the cycle, not a
+    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
+    // repeating Ctrl chords — the Ctrl+Shift+Tab march, Ctrl+Z / Ctrl+Shift+Z
+    // (undo / redo), and Ctrl+= / Ctrl+- (the waveform magnification step,
+    // 2026-08-26), each a continuous step gesture like the cycle, not a
     // one-shot command. THE MARCH REPEATS IN EVERY STATE since 2026-08-18, its
     // mode scope having gone with the reason for it: the chord is the march
     // inside the `h` history view too, over the diff-flag cycle instead of the
@@ -3409,6 +3428,19 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // modifiers live, so a shift pressed mid-hold flips to redo — consistent
     // with the platform's live-modifier rule.
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
+        return true;
+    // Ctrl+= / Ctrl+- (the waveform magnification step, 2026-08-26) repeat
+    // while held, for the reason the BARE pair on those same two keys does:
+    // stepping a ladder is a continuous step gesture, and a held key walking
+    // it is how a quiet passage is brought up to a readable height in one
+    // press-and-hold. Ctrl-exact, matching the dispatch arms; the shifted
+    // shapes bind nothing and stay one-shot by this term. Nothing coalesces —
+    // the setting is history-less, so a burst pushes no undo entries. The two
+    // icon-row buttons' hold-repeat asks THIS predicate about exactly this
+    // chord (arm_redesign_press / tick_chrome_press_repeat), so the key and
+    // the button walk at one speed by construction.
+    if (mods.ctrl && !mods.shift && !mods.alt &&
+        (key == GuiKeys::Equal || key == GuiKeys::Minus))
         return true;
     return false;
 }

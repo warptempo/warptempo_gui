@@ -64,6 +64,12 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // gui_scale_factor() (architect approval 2026-08-01 for the font_size
     // removal this paragraph used to name).
     app.gui_scale           = sf.gui_scale;
+    // The waveform PICTURE's magnification, applied verbatim beside the scale
+    // above. It is consumed by the painter alone — the plate fingerprint and
+    // the overview bar cache both key on it — so this routine's VALUES-ONLY
+    // contract holds with no side effect at the caller's tail: the load's own
+    // full rebuild repaints both surfaces.
+    app.waveform_magnification = sf.waveform_magnification;
     // GUI launch preference for the `l` render-listen command, applied
     // verbatim: a blank value is the deliberate no-player opt-out.
     app.audio_player        = sf.audio_player;
@@ -187,6 +193,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // this initializer only covers the no-.settings / first-open path. Pushed to
     // the renderer after the parse, beside set_speed.
     app.gui_scale      = 100;
+    // Same mirror for the waveform magnification: construction-state default
+    // before the .settings parse below, which the required key always
+    // overwrites. Unlike gui_scale it needs no push — the painter reads
+    // app.waveform_magnification directly.
+    app.waveform_magnification = 1;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
     // <basename>.phaseresetmarkers, and <basename>.settings if missing.
@@ -428,7 +439,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, gui_scale, audio_player, projects_repo),
+        // playback_speed, gui_scale, waveform_magnification, audio_player,
+        // projects_repo),
         // VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_scale_percent,
         // on_resize) stay below where they always ran.

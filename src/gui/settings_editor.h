@@ -27,7 +27,8 @@ struct GuiInputHandler;
 //    projects-home repository name, likewise gesture-less): set directly.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / playback_speed / per-tab trim /
-//    per-tab read_only / gui_scale): commit_gui_setting
+//    per-tab read_only / gui_scale / waveform_magnification):
+//    commit_gui_setting
 //    parses strictly (red-flash on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
 //    chokepoint. These are launch/view state: no undo entry, no dirty; a
@@ -55,7 +56,8 @@ struct GuiSettingsEditor {
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
     // gesture chokepoints that live on GuiInputHandler:
-    // handle_active_audio_view_toggle, apply_gui_scale, commit_trim_mutation.
+    // handle_active_audio_view_toggle, apply_gui_scale,
+    // apply_waveform_magnification, commit_trim_mutation.
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,

@@ -25,9 +25,9 @@ struct GuiTargetRender;
 //       pushes the pre-burst snapshot, and every SYNTHESIZED REPEAT behind it
 //       (GuiInputState::synthesized_repeat — TWO producers, one per surface:
 //       GuiPlatform::maybe_fire_repeat for held keys, and
-//       GuiInputHandler::tick_chrome_press_repeat for the four cardinal arrow
-//       BUTTONS, whose hold-repeat returned 2026-08-16 after three days
-//       deleted) SKIPS its
+//       GuiInputHandler::tick_chrome_press_repeat for the repeating BUTTONS,
+//       whose hold-repeat returned 2026-08-16 after three days deleted; the
+//       membership is the chord table's `repeats` column) SKIPS its
 //       own push. THE OPENER DIFFERS PER SURFACE: a held KEY's burst opens
 //       with the PHYSICAL press itself — the press acts and pushes, then its
 //       repeats merge behind it — while a held BUTTON's opens with the

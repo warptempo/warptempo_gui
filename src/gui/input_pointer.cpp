@@ -114,8 +114,12 @@ struct ToolbarChord {
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
-    // suppresses the lift's own act. Defaulted, so the forty-five rows that do
-    // not repeat need no eighth column.
+    // suppresses the lift's own act. Defaulted, so the rows that do not repeat
+    // need no eighth column. SIX ROWS CARRY IT since 2026-08-26, when the
+    // WAVEFORM MAGNIFICATION PAIR joined the four arrows — a ladder step is a
+    // continuous step gesture like an arrow, and the pair is the touch panel's
+    // only road to the setting. Those two push no undo entry at all (the key is
+    // history-less), so the opener flip below is vacuous for them.
     bool           repeats = false;
 };
 
@@ -236,6 +240,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconZoomOut,      GuiKeys::Minus,  false, false, false, false, true}, // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
+    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), the zoom group's last two:
+    // the picture's VERTICAL gain on the same two keys one modifier over. The
+    // chord CARRIES ctrl in this table's own column — a different thing from
+    // ADMITTING a ctrl press, which neither does (redesign_button_ctrl_admits
+    // names only the two skips), so a ctrl or shift click is refused at the
+    // band gate and the shift long press cannot reach them. No radio, click
+    // face like the rest of the row, and BOTH REPEAT: a held button walks the
+    // ladder at the compositor's own rate, exactly as a held key does.
+    // Live in the `h` view — the chord is on that mode's allowlist, the plate
+    // in there being the same plate.
+    {RedesignButton::IconWaveformMagnify,
+     GuiKeys::Equal,  true,  false, false, false, true,  true},                     // Ctrl+=
+    {RedesignButton::IconWaveformReduce,
+     GuiKeys::Minus,  true,  false, false, false, true,  true},                     // Ctrl+-
     // THE MASS-MARKER CATEGORY — three chords the `h` view consumes outright,
     // all three greyed in there.
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
@@ -6060,7 +6078,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         app.chrome_press = AppState::ChromePress{
             AppState::ChromePress::Kind::Roster,
             redesign_button_index(tc.id), mods.shift, mods.ctrl, true, now};
-        // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the four rows that
+        // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
         // repeat_eligible is exactly what the platform's arming probe asks for
@@ -6072,12 +6090,13 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // "press-time" is simply the state this press found.
         //
         // The chord is the LIFT's minus its long-press term, which no repeating
-        // row can reach (none of the four admits shift, and a shift press
-        // returned above the arm) and minus its carried ctrl, which no
-        // repeating row can carry either (none of the four admits ctrl, and the
+        // row can reach (none of the six ADMITS shift, and a shift press
+        // returned above the arm) and minus its CARRIED ctrl, which no
+        // repeating row can carry either (none of the six admits ctrl, and the
         // band's modifier gate refuses an unadmitted ctrl press before the arm)
         // — so the predicate is asked about exactly the chord the burst will
-        // fire.
+        // fire. The magnification pair's own ctrl comes from tc.ctrl, this
+        // table's column, and is copied below like any other row's.
         if (tc.repeats) {
             GuiInputState chord{};
             chord.ctrl  = tc.ctrl;
@@ -6287,9 +6306,9 @@ void GuiInputHandler::finish_chrome_press_release(
 
 // THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect
 // 2026-08-16): while a press stands on a button whose chord row sets `repeats`
-// — the bottom row's four cardinal arrows — synthesize that button's chord on
-// the keyboard's own cadence, so a held arrow BUTTON walks at the speed a held
-// arrow KEY does. It exists for the glass rig, which has no keyboard, and it
+// — the bottom row's four cardinal arrows and the icon row's waveform
+// magnification pair — synthesize that button's chord on the keyboard's own
+// cadence, so a held BUTTON walks at the speed the held KEY does. It exists for the glass rig, which has no keyboard, and it
 // works there with NO TOUCH-SPECIFIC CODE: the one-finger translation delivers
 // an ordinary left press and an ordinary left release, so it arms and ends this
 // arm exactly as a mouse does, and its motion deliveries keep the position this
@@ -6308,7 +6327,10 @@ void GuiInputHandler::finish_chrome_press_release(
 // THE BURST'S FIRST FIRE IS ITS UNDO OPENER, this producer's own flip: a held
 // KEY's burst opens with its physical press — the press acts, then the
 // repeats merge behind it — but a held BUTTON's press dispatches nothing (its
-// act is at the lift), so the first fire stands in for that press act. Fire
+// act is at the lift), so the first fire stands in for that press act. (The
+// flip is VACUOUS for the magnification pair, whose setting is history-less:
+// its bursts push no undo entry at all, so there is nothing to open or merge.
+// The flag is set uniformly rather than forked on the row.) Fire
 // one goes out with synthesized_repeat FALSE and pushes its own entry under
 // the arrival-invalidate and the tap-window rules, and every fire behind it
 // carries TRUE and merges by identity (the argument is at

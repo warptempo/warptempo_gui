@@ -179,6 +179,7 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
+                     int magnification,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -252,6 +253,18 @@ void render_waveform(cairo_surface_t* dest,
 
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
+
+    // THE VISUAL MAGNIFICATION, as a double once per call. The contract is at
+    // this function's declaration; the arithmetic is one multiply and a clamp
+    // at the tip mapping below. IT SCALES PIXELS ONLY — nothing this function
+    // touches is audio.
+    const double mag = static_cast<double>(magnification);
+    const auto magnified_tip = [mag](double raw) {
+        const double v = raw * mag;
+        if (v < -1.0) return -1.0;
+        if (v >  1.0) return  1.0;
+        return v;
+    };
 
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
@@ -373,8 +386,15 @@ void render_waveform(cairo_surface_t* dest,
 
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
-        const double raw_min = mm.first;
-        const double raw_max = mm.second;
+        // THE GAIN AT THE TIP MAPPING: the column's raw extremes times the
+        // magnification, clamped to the sample domain [-1, 1] BEFORE they
+        // become rows. The clamp is what makes a magnified forte clip flat
+        // against the lane's edges instead of running off into row arithmetic,
+        // and it is a no-op at magnification 1 (raw peaks already rest in
+        // range). A PICTURE gain: the samples themselves are untouched, here
+        // and everywhere.
+        const double raw_min = magnified_tip(mm.first);
+        const double raw_max = magnified_tip(mm.second);
 
         const int x = area.x + i;
 

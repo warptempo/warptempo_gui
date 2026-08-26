@@ -2137,6 +2137,24 @@ struct WaveformBasis {
 // through, and the SET pixels are what the one remaining after-the-fact
 // recolor reads: paint_region_ink masks kWaveformRegionInk through this same
 // alpha inside the region's column span, leaving the plate itself untouched.
+// THE VISUAL MAGNIFICATION is `magnification`: the column's raw min/max are
+// multiplied by it and CLAMPED to [-1, 1] before they become rows, which is the
+// whole of it — one multiply at the tip mapping, and nothing else in this
+// painter moves (the column grid, the >=1px floor, the carried-endpoint chain
+// and the aliased-only writer are all untouched). A loud passage therefore
+// clips FLAT at the lane's edges while its troughs still dip, which is the
+// intended look: the picture exists to make a quiet passage readable, and a
+// marker goes on a transient rather than in a sustain.
+//
+// IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
+// function is audio: the plate and the overview strip are pixels, playback
+// reads the sample buffer at its own level, and no render input is derived from
+// this parameter anywhere.
+//
+// It is a PARAMETER rather than a read of app state so this primitive stays
+// free of both (the worker thread renders from a job snapshot). The callers
+// pass a ladder value (kWaveformMagnificationValues, settings_file.h), which
+// the schema and the one applier both guarantee; 1 is the untouched picture.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -2144,6 +2162,7 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
+                     int magnification,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`

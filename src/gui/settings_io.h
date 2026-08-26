@@ -58,6 +58,10 @@ struct NonEngineSettingsSnapshot {
     char               active_tab_view;
     float              playback_speed;
     int                gui_scale;
+    // The waveform PICTURE's linear magnification (one of
+    // kWaveformMagnificationValues, settings_file.h). A display preference like
+    // gui_scale beside it — it scales no audio anywhere.
+    int                waveform_magnification;
     const std::string& audio_player;
     // The repository that is the projects home (the GitHub recheck's corpus).
     // A reference member like audio_player: the caller's storage, borrowed for

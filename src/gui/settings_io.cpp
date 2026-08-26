@@ -28,6 +28,7 @@ enum class SettingKind {
     PlaybackSpeedFloat,
     FollowFlag,
     GuiScalePercent,
+    WaveformMagnification,
     AudioPlayerPath,
     ProjectsRepoName,
     TrimBegin_A,
@@ -83,6 +84,17 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // used to own the text half of that job left the schema with the monospace
     // face (architect approval 2026-08-01).
     { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
+    // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's linear
+    // magnification, one of kWaveformMagnificationValues (settings_file.h,
+    // which owns the ladder for both products). 1 is the untouched picture and
+    // the template's stamp. It multiplies the peaks the painter maps to rows
+    // and NOTHING ELSE — no sample, no playback path, no render input — so it
+    // never enters kEngineKeys and never reaches the render fingerprint.
+    // Placed immediately after gui_scale because the two are the same kind of
+    // thing: display preferences with no bearing on the piece.
+    // (architect approval 2026-08-26 for the schema addition; the parser-side
+    // record is at kCanonicalSettingsKeys.)
+    { "waveform_magnification",      SettingKind::WaveformMagnification,EngineField::Title,                   "1"        },
     // GUI-kind launch preference, NOT an engine key: an external audio player
     // for the `l` render-listen command. Default "audacious" so the first-open
     // template writes `audio_player=audacious` (read back at load) and a fresh
@@ -154,6 +166,12 @@ std::optional<std::string> format_nonengine_value(
             // validate_gui_setting accepts (parse_authored_frame): the default
             // round-trips as `100`.
             std::snprintf(buf, sizeof(buf), "%d", gui.gui_scale);
+            return std::string(buf);
+        case SettingKind::WaveformMagnification:
+            // Plain digits, the one canonical spelling validate_gui_setting's
+            // ladder arm accepts (parse_authored_frame): the default
+            // round-trips as `1`.
+            std::snprintf(buf, sizeof(buf), "%d", gui.waveform_magnification);
             return std::string(buf);
         case SettingKind::AudioPlayerPath:
             return gui.audio_player;
@@ -376,7 +394,8 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.playback_speed, app.gui_scale, app.audio_player,
+        app.playback_speed, app.gui_scale, app.waveform_magnification,
+        app.audio_player,
         app.projects_repo};
     return format_nonengine_value(desc->kind, gui);
 }

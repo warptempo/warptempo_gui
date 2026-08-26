@@ -196,6 +196,20 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         input->apply_gui_scale(v);
         applied(); return true;
     }
+    if (key == "waveform_magnification") {
+        // History-less and APPLIED LIVE, through the SAME chokepoint the two
+        // hotkeys and the two icon-row buttons use — a typed
+        // `:waveform_magnification=8` is one more caller of
+        // apply_waveform_magnification, never a parallel writer. The LADDER was
+        // already enforced by validate_gui_setting above, so an off-ladder
+        // value never reaches here: it red-flashes at the grammar owner, which
+        // is why the applier clamps nothing. The value persists on the next
+        // ordinary Ctrl+S and marks nothing dirty.
+        const int v = static_cast<int>(gv.i64);
+        if (v == app.waveform_magnification) { unchanged(); return true; }
+        input->apply_waveform_magnification(v);
+        applied(); return true;
+    }
     if (key == "active_audio_view") {
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // The bare-`t` route (no editor-state guard); it flips S<->T.
@@ -637,8 +651,8 @@ bool GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // playback_speed, follow, gui_scale, audio_player, projects_repo, per-tab
-    // trim / read_only)
+    // playback_speed, follow, gui_scale, waveform_magnification,
+    // audio_player, projects_repo, per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

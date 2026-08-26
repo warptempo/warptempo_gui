@@ -104,6 +104,18 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
+    //  - THE PLATE'S OWN GAIN, one site (2026-08-26): the waveform
+    //    MAGNIFICATION, whose chokepoint apply_waveform_magnification
+    //    (input_handler.cpp) kicks here. It is the class's only member and it
+    //    is neither of the two above — the viewport, the domain and the map all
+    //    stand still, and what moves is an INPUT TO THE PIXELS: the factor the
+    //    painter multiplies into every column's tips. That makes it a plate
+    //    CONTENT change with no geometry behind it, so the reclamp below is a
+    //    pure no-op and what is wanted is the synchronous rebuild alone, in one
+    //    frame with the overlays. The rebuild's tail damage (window top through
+    //    the waveform's bottom) carries the OVERVIEW LANE, whose bar cache keys
+    //    on the same factor and rebuilds inside that frame. It touches no
+    //    audio: the gain is the picture's.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
