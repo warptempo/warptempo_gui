@@ -2077,10 +2077,14 @@ enum class RedesignButton {
     //
     // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
     // live look at the row): bare Space is ONE TOGGLE, so the roster carries
-    // ONE member for it and the GLYPH and the TOOLTIP swap on the live audition
-    // bit (playhead_scanner_active, the GUI-side playback mirror) —
-    // media-playback-start while stopped, media-playback-stop while a session
-    // runs. It is RENDER-IS-CANCEL's own shape (one button, one chord, a
+    // ONE member for it and the GLYPH and the TOOLTIP swap on whether the
+    // transport is LIVE — media-playback-start while stopped,
+    // media-playback-stop while a session runs. That fact is
+    // playhead_scanner_active (the GUI-side playback mirror) OR a standing A/B
+    // audition sequence, whose rests are silent frames INSIDE one transport
+    // session (architect 2026-08-26): the whole condition is spelled once at
+    // redesign_button_glyph_swapped, and the fork bare Space takes reads the
+    // same two facts, so the face and the act stay one. It is RENDER-IS-CANCEL's own shape (one button, one chord, a
     // stateful face driven by one bit), and the resolvers are
     // redesign_button_glyph_swapped + redesign_button_icon for the glyph and
     // redesign_button_tooltip's stateful overload for the words.
@@ -3433,16 +3437,24 @@ inline constexpr int kAuditionSwitchGapMs = 40;
 //     the stop that ends it.
 //   * waiting == true — the named play has NOT launched yet: the act is
 //     RESTING, and `launch_due_ms` is the monotonic_ms() instant it becomes
-//     due. Nothing is playing and the scanner is inactive during a rest, so
-//     the play/stop button honestly wears its play face and Space starts a
-//     plain audition (which ends the act at the one launch body, edge (2)).
+//     due. Nothing is playing and the scanner is inactive during a rest — but
+//     THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
+//     (architect 2026-08-26), so a rest is transport-LIVE to everything the
+//     user can see or press: the play/stop button wears its STOP face for the
+//     act's whole duration (redesign_button_glyph_swapped reads this phase
+//     beside playhead_scanner_active) and bare Space is the act's STOP
+//     throughout, the fork in GuiPlaybackLifecycle::toggle_playback reading the
+//     same two facts so the face and the act cannot disagree. Were the rests
+//     transport-dead instead, the glyph would flip to Play and back three times
+//     per act, and the transport row must never lie about live state.
 // `home_tab` is the tab the act started on and returns to.
 // NO LAUNCH FRAME IS CARRIED: each play reads the tab's resting cursor at its
 // own launch and never writes it, and what proves the pair identical is that
-// the cursor cannot MOVE under a standing act — every route that moves it is a
-// clearing owner below, the placement's live reseek included. A REST IS
-// INTERRUPTED EXACTLY AS A PLAY IS: no owner below tests for live playback
-// before clearing, so each ends a resting act as it ends a playing one.
+// the cursor cannot MOVE under a standing act — a MOVEMENT of the playhead is
+// itself a clearing owner below, which is what makes that guarantee structural
+// rather than an enumeration of routes. A REST IS INTERRUPTED EXACTLY AS A PLAY
+// IS: no owner below tests for live playback before clearing, so each ends a
+// resting act as it ends a playing one.
 //
 // THE EDGES, complete:
 //   * WRITTEN NON-IDLE at TWO sites, one per half:
@@ -3466,12 +3478,15 @@ inline constexpr int kAuditionSwitchGapMs = 40;
 //     beside the key-repeat and touch-window deadline samplers). It ends the
 //     rest and launches the phase it named; a launch refusal ends the act, the
 //     interrupt rule's own answer.
-//   * CLEARED TO IDLE at FOUR OWNERS, so no interrupt path can forget it. A
-//     REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners every interrupt
-//     route ends up in — the stop body and the launch body — neither test for
-//     live playback (the stop body's clear sits AHEAD of its own
-//     nothing-to-do guard), so a stop or a launch that finds silence still
-//     ends the act.
+//   * CLEARED TO IDLE at FOUR OWNERS ACROSS EIGHT CALL SITES (re-derived by
+//     grepping every clear_audition_sequence call), so no interrupt path can
+//     forget it. A REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners
+//     every interrupt route ends up in — the stop body and the launch body —
+//     neither test for live playback (the stop body's clear sits AHEAD of its
+//     own nothing-to-do guard), so a stop or a launch that finds silence still
+//     ends the act. (The grep's NINTH call is not an owner and not an
+//     interrupt: GuiAbAudition::fire_if_due ends the REST it is about to
+//     launch, the FIRED edge above.)
 //     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
 //         which clears it BEFORE its own nothing-to-do guard — so a stop that
 //         finds nothing playing still ends a RESTING act. Every caller of
@@ -3500,15 +3515,31 @@ inline constexpr int kAuditionSwitchGapMs = 40;
 //         own conditional stops because the S/T flip has already taken the stop
 //         body ahead of them and no other caller reaches them with an act
 //         standing (the reachability argument is written out at both sites).
-//     (4) THE LIVE PLACEMENT'S RESEEK, GuiPlaybackLifecycle::reseek_keeping_alive,
-//         at its entry and unconditionally: its in-range arms call
-//         playback.play() DIRECTLY, so a plain click that repositions a live
-//         session reaches neither the stop body nor the launch body, and an act
-//         left standing there would advance from a moved cursor at that play's
-//         natural end. This owner answers a click that lands DURING A PLAY: its
-//         one caller (place_playhead_at_click_column, input_pointer.cpp) fires
-//         it on `was_playing`, the plain click being the product's one cursor
-//         write that takes no stop.
+//     (4) THE TWO MOVEMENT OWNERS (architect 2026-08-26) — three call sites,
+//         each beside that owner's trim-region hide and unconditional there for
+//         the same reason: Viewport::move_playhead_to (viewport.cpp) and the
+//         two land entry points land_playhead_on_marker /
+//         land_playhead_on_source_frame (input_pointer.cpp), which do not wrap
+//         one another but share a seat body the NON-hiding entries also use, so
+//         the clear rides the entry points and not the seat.
+//         THE ACT ENDS WHEN THE PLAYHEAD'S POSITION IN THE MUSIC CHANGES: that
+//         is the trim overlay's hide rule exactly (clear_region_highlight,
+//         input_handler.h), and it is this act's rule for the same reason —
+//         each pair of plays is identical only because the cursor it launches
+//         from cannot move. So a MOVEMENT interrupts, while a TRANSLATION
+//         (Viewport::reseat_playhead_to and reseat_playhead_on_marker, the
+//         named non-hiding entries) and a RESTORE (the tab switch's band swap,
+//         which writes app.playhead_cursor_sample direct) do not — and the act
+//         needs both of those exemptions, its own two tab switches being
+//         restores and its own advance running strictly after them.
+//         THIS SUBSUMES the placement's live reseek, which was owner (4) until
+//         this ruling: reseek_keeping_alive re-launches through playback.play()
+//         directly and so reaches neither the stop body nor the launch body,
+//         but its ONE caller (place_playhead_at_click_column) runs
+//         move_playhead_to unconditionally first, so the movement owner already
+//         answers it — for a click that lands during a REST as well as one that
+//         lands during a play, which the reseek arm never could (it fires on
+//         `was_playing`).
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
 // The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.
@@ -3640,7 +3671,8 @@ struct AppState {
 
     // THE A/B AUDITION SEQUENCE — session-only, never persisted; the model
     // and the complete edge inventory are at GuiAuditionSequence (above this
-    // struct). Non-Idle exactly while one of the act's four plays is live.
+    // struct). Non-Idle exactly while the act STANDS — its four plays and the
+    // three rests between them alike, one transport session throughout.
     GuiAuditionSequence audition_sequence;
 
     // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
@@ -4207,9 +4239,11 @@ struct AppState {
     // over: a button wearing a SECOND GLYPH changes its pixels without moving
     // either of the other two bits, so the comparator was blind to it. Four
     // buttons have one — Save, Render, the read-only toggle and the collapsed
-    // PLAY/STOP button, whose audition bit is written by six routes, several
-    // damaging nothing wider than the clock cell. The predicate and the full
-    // argument are at redesign_button_glyph_swapped.
+    // PLAY/STOP button, whose transport-live fact is written by many routes,
+    // several damaging nothing wider than the clock cell (and, since the A/B
+    // audition joined that fact on 2026-08-26, by the sequence's own arm and
+    // clear too). The predicate and the full argument are at
+    // redesign_button_glyph_swapped.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
         bool    hovered       = false;
@@ -8289,7 +8323,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // being enough the moment PLAY/STOP collapsed onto a glyph swap, because
 // playhead_scanner_active moves through six writers, several of which damage
 // nothing wider than the CLOCK CELL (the natural end-of-song teardown, the
-// click act's stop). Under a narrow lane damage the bottom row's painter runs
+// click act's stop) — and since 2026-08-26 the transport's condition carries a
+// SECOND such fact, the A/B audition's standing phase, whose arm and clear are
+// written by the tick and by every interrupt route with no bottom-row damage of
+// their own at all. Under a narrow lane damage the bottom row's painter runs
 // but the button's pixels are clipped away, so without a stashed glyph term
 // the row would keep showing the wrong transport glyph until something else
 // damaged the whole lane — which is EXACTLY the bug this arc opened with
@@ -8323,9 +8360,19 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         case RedesignButton::IconReadOnly:
             return !active_view_state(a).read_only;
         // THE TRANSPORT BUTTON wears media-playback-STOP while an audition
-        // runs; its table glyph is media-playback-start.
+        // runs; its table glyph is media-playback-start. THE A/B AUDITION IS
+        // ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST (architect
+        // 2026-08-26), rests included, so its standing phase is the second
+        // term: without it the face would flip to Play and back for the few
+        // frames of each of the act's three rests, and the transport row must
+        // never lie about live state. The fork bare Space takes reads the same
+        // two facts (GuiPlaybackLifecycle::toggle_playback), so the glyph and
+        // the act the press runs cannot disagree — the button says Stop
+        // throughout and Stop is what a press does throughout.
         case RedesignButton::TransportPlayStop:
-            return a.playhead_scanner_active;
+            return a.playhead_scanner_active ||
+                   a.audition_sequence.phase !=
+                       GuiAuditionSequence::Phase::Idle;
         default:
             return false;
     }
@@ -8887,7 +8934,8 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     }
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press
-    // will run — "Stop" while an audition is live, the constant table's "Play"
+    // will run — "Stop" while the transport is live (a plain audition, or an
+    // A/B audition sequence including its rests), the constant table's "Play"
     // otherwise. The condition is redesign_button_glyph_swapped's, not a
     // second read of the audition bit, so the WORDS and the GLYPH can never
     // disagree about which half the button currently is. THE SHIFT LINE

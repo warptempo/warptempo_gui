@@ -1243,6 +1243,15 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // seats nothing still hides: an unconditional hide is the marker click's own
     // recorded shape and the Home/End skip buttons' too.
     clear_region_highlight(app, viewport);
+    // THE A/B AUDITION ENDS ON THE SAME MOVEMENT, by the same membership — a
+    // land is the marker-shaped spelling of "the playhead's position in the
+    // music changes", and the act's premise is a resting cursor that cannot
+    // move under it. Beside the hide rather than in the shared seat below,
+    // because reseat_playhead_on_marker shares that seat and its land is a
+    // TRANSLATION or a provable no-op, neither of which is a movement. A class
+    // statement: the complete clearing-owner inventory is at
+    // GuiAuditionSequence (app_state.h).
+    clear_audition_sequence(app);
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
@@ -1278,13 +1287,16 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
     if (valid) seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
-// The frame-shaped half, above — the MOVEMENT owner's frame form: the hide, then
-// the seat. Every caller of this one is a command whose subject is the playhead
-// (the `h` mode's Tab cycle, its `c` and its two diff-flag click bodies), so
-// none of them wants the reseat.
+// The frame-shaped half, above — the MOVEMENT owner's frame form: the hide and
+// the audition's end, then the seat. Every caller of this one is a command whose
+// subject is the playhead (the `h` mode's Tab cycle, its `c` and its two
+// diff-flag click bodies), so none of them wants the reseat.
 void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame) {
     clear_region_highlight(app, viewport);
+    // The A/B audition's end, this entry point's half of it — the argument is
+    // at the marker form above, the inventory at GuiAuditionSequence.
+    clear_audition_sequence(app);
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 

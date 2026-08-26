@@ -876,8 +876,9 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // this row a dimmed glyph means disabled.
         case RedesignButton::IconReadOnly: return icons::Icon::Unlock;
         // THE COLLAPSED PLAY/STOP BUTTON (architect 2026-08-15): one button
-        // over bare Space, wearing media-playback-STOP while an audition runs
-        // and the table's media-playback-start otherwise. It is
+        // over bare Space, wearing media-playback-STOP while the TRANSPORT is
+        // live — a plain audition, or an A/B audition sequence including its
+        // silent rests — and the table's media-playback-start otherwise. It is
         // RENDER-IS-CANCEL's shape applied to a toggle — and unlike Render it
         // needs no chord exception, because Space already toggles.
         case RedesignButton::TransportPlayStop:

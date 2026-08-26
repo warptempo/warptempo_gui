@@ -48,7 +48,15 @@
 // on the run loop's existing deadline tick — the one the key-repeat and touch
 // disambiguation deadlines already ride — so no timer is added and the
 // granularity is that tick's (~8 ms at 60 Hz). The scanner paints during each
-// play exactly as it does under Space, and during a rest nothing plays at all.
+// play exactly as it does under Space, and during a rest nothing plays at all —
+// but THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
+// (architect 2026-08-26), so a rest is transport-LIVE where the user can see or
+// press it: the play/stop button wears its STOP face for the act's whole
+// duration and bare Space is the act's stop throughout (the fork at
+// GuiPlaybackLifecycle::toggle_playback, the face at
+// redesign_button_glyph_swapped, both reading `phase != Idle` beside the
+// scanner bit). The alternative would flip the glyph to Play and back three
+// times per act, and the transport row must never lie about live state.
 //
 // THE SWITCH IS switch_active_tab_view_to ALONE, NOT Ctrl+Tab's trigger()
 // tail. Ctrl+Tab re-dispatches the preview for the entering tab's trim; here
@@ -66,19 +74,23 @@
 // EXACTLY AS A PLAY IS: no clearing owner tests for live playback on the way
 // in (the stop body's clear sits ahead of its own nothing-to-do guard, the
 // launch body's at its head), so a stop, a Space or a scrub that lands in one
-// of the rests ends the act just as it would mid-play. Every path is a clearing
-// owner listed at GuiAuditionSequence (the one stop body ahead of its guard,
-// the one launch body's head, target_render's three clears — trigger()'s ahead
-// of its freeze's guard — and the live placement's reseek at its entry, which
-// is its own owner because reseek_keeping_alive RE-LAUNCHES DIRECTLY through
-// playback.play() and so passes through neither of those two bodies). Bare Esc
-// is NOT one of them — its five bindings are closed.
+// of the rests ends the act just as it would mid-play — a Space landing in a
+// rest reaching the stop body rather than the launch body since the fork became
+// transport-live, which is the same end by the same owner. Every path is a
+// clearing owner listed at GuiAuditionSequence, whose inventory is the one
+// authoritative copy; the class that matters here is that A PLAYHEAD MOVEMENT
+// IS ONE OF THEM (the trim overlay's hide rule's own two movement owners),
+// which is what makes "the resting playhead cannot move under a standing act"
+// structural rather than a list of routes — while a TRANSLATION and a RESTORE
+// are not, which is what lets the act's own two tab switches run inside it.
+// Bare Esc is NOT one of them — its five bindings are closed.
 //
 // REFUSALS, all silent, all at the press, all at start: a sequence already
 // running (a second Shift+Space is a consumed no-op; a held key meets the same
 // answer, though Space is one-shot in repeat_eligible and no repeat arrives) —
 // AND A REST COUNTS AS RUNNING, `phase` being the act's one running bit in
-// both halves, so the test is the same `phase != Idle` it always was;
+// both halves, so the test is the same `phase != Idle` it always was (and the
+// same term the transport fork and the play/stop glyph read);
 // in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or
 // EITHER tab's playhead outside the bound buffer's playable range — the other
 // tab's read through its own ViewState, clamped exactly as the switch would

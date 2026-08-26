@@ -75,7 +75,21 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // arithmetic and its overflow-ordered pre-sum gate (a cursor-vs-shifted-bound
 // check that must run before the sum exists — see below).
 void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
-    if (playback.is_playing()) {
+    // THE PLAY/STOP FORK, and A REST OF THE A/B AUDITION IS ON THE STOP SIDE OF
+    // IT (architect 2026-08-26): the act is ONE TRANSPORT SESSION from its first
+    // play to its last, so bare Space is its stop throughout, rests included. A
+    // rest is transport-live for this fork's purposes because THE FACE SAYS SO
+    // — the play/stop button wears the stop glyph for the act's whole duration
+    // (redesign_button_glyph_swapped reads the same `phase != Idle` this arm
+    // does), and the transport row must never lie about live state. Without
+    // this term a press in one of the few rest frames would start a PLAIN
+    // audition instead, and the glyph would flip to Play and back three times
+    // per act to stay honest about it.
+    // stop_playback_if_playing IS EXACTLY RIGHT for the rest case: its clear
+    // sits ahead of its own nothing-to-do guard, so it ends the act and then
+    // early-returns having moved no cursor and damaged nothing.
+    if (playback.is_playing() ||
+        app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
         // ONE STOP BODY (architect 2026-07-30): this edge used to hand-spell
         // playback.stop() + restore_playhead_to_lsp() while every other stop in
         // the product called the gesture stop. That second body's only surplus work was a
@@ -365,20 +379,12 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
 // (having already run move_playhead_to before), so the reset is a harmless
 // transient there — that caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
-    // THE A/B AUDITION SEQUENCE ENDS HERE TOO, AT THE ENTRY AND UNCONDITIONALLY
-    // (architect 2026-08-26) — the FOURTH clearing owner, the complete edge
-    // inventory at GuiAuditionSequence (app_state.h). A live placement
-    // RE-LAUNCHES DIRECTLY: the two in-range arms below call playback.play()
-    // themselves, reaching neither the one stop body nor the one launch body, so
-    // neither of their clears can see this route. Left unclear, a motionless
-    // plain click during one of the act's four plays would restart that play
-    // from the moved cursor to the VIEW's end, leave the phase standing, and let
-    // the tick advance the act at THAT play's natural end — the resting playhead
-    // moved and the pair's two plays no longer identical, which is exactly the
-    // act's premise. The clear sits at the ENTRY so this one function is the
-    // owner: the out-of-range arms clear a second time through the stop body,
-    // idempotently and harmlessly.
-    clear_audition_sequence(app);
+    // (NO A/B AUDITION CLEAR HERE: the act's clear is the MOVEMENT OWNER's, one
+    // call up. This body's one caller — place_playhead_at_click_column,
+    // input_pointer.cpp — runs Viewport::move_playhead_to unconditionally
+    // before it, and a movement is exactly what ends the act, so a clear here
+    // would be a second spelling of a decision already taken. The complete
+    // owner inventory is at GuiAuditionSequence, app_state.h.)
     if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }
         if (sample < playback.domain_begin() ||

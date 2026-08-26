@@ -175,15 +175,25 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 }
 
 // move_playhead_to: THE MOVEMENT OWNER — the reseat below, with the trim region
-// overlay's HIDE in front of it. Reaching this function means the playhead's
-// POSITION IN THE MUSIC is changing, and that is the whole hide rule; the rule,
-// its second owner and its exemptions are stated once at clear_region_highlight
-// (input_handler.h). UNCONDITIONAL, never gated on whether the write moved
-// anything: a Home pressed on the frame the cursor already holds still hides,
-// which is what the bottom row's ungreyed skip buttons promise (architect
-// 2026-08-15, the record at their case in redesign_button_enabled).
+// overlay's HIDE and the A/B audition's END in front of it. Reaching this
+// function means the playhead's POSITION IN THE MUSIC is changing, and that is
+// the whole hide rule; the rule, its second owner and its exemptions are stated
+// once at clear_region_highlight (input_handler.h). UNCONDITIONAL, never gated
+// on whether the write moved anything: a Home pressed on the frame the cursor
+// already holds still hides, which is what the bottom row's ungreyed skip
+// buttons promise (architect 2026-08-15, the record at their case in
+// redesign_button_enabled).
 void Viewport::move_playhead_to(int64_t new_sample) {
     clear_region_highlight(app, *this);
+    // A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION, and it is the hide rule's own
+    // membership: what the act promises is that the pair of plays it makes on
+    // each tab is identical, which is exactly a resting cursor that cannot move
+    // under it. So the two rules share these movement owners, and a TRANSLATION
+    // (reseat_playhead_to, below) or a RESTORE (the tab switch's band swap,
+    // which writes the cursor direct) ends neither. This is a class statement:
+    // the complete clearing-owner inventory is at GuiAuditionSequence
+    // (app_state.h) and is not to be restated here.
+    clear_audition_sequence(app);
     reseat_playhead_to(new_sample);
 }
 
