@@ -4751,8 +4751,9 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //   2. THE BARS (the cached blit; maybe_rebuild_overview_bar_cache below):
 //      the WHOLE PIECE as per-column min/max bars in kWaveformInk — the
 //      PLAIN MONO SUM (GuiWaveformLane::Sum), one lane, one ink, NO BAND
-//      SPLIT: the plate's three-band stack is the plate's alone, and this
-//      lane stays a plain mono-sum miniature. THE DATA IS THE
+//      SPLIT and NO DISPLAY GAIN (1.0, true amplitude): the plate's
+//      three-band stack and its per-band gains are the plate's alone, and
+//      this lane stays a plain mono-sum miniature. THE DATA IS THE
 //      SOURCE DOMAIN, ALWAYS — a deliberate ruled choice: the whole-song
 //      TARGET domain does not exist as audio (the preview buffer is
 //      trim-scoped), so the overview shows the piece itself in every view
@@ -4836,9 +4837,11 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         cairo_paint(ccr);
         cairo_destroy(ccr);
     }
-    // ONE MONO-SUM BAND (GuiWaveformLane::Sum, in kWaveformInk — the plate
-    // paints the three frequency bands instead; this lane deliberately does
-    // not, and reads the Sum lane the plate never paints) filling
+    // ONE MONO-SUM BAND (GuiWaveformLane::Sum, in kWaveformInk — kdenlive's
+    // waveform teal, this lane's own ink since the plate's bands moved to
+    // three hues; the plate paints the three frequency bands instead, this
+    // lane deliberately does not, and it reads the Sum lane the plate never
+    // paints) filling
     // the CONTENT band whole — the plate's symmetric waveform_inset_px serves
     // the playhead head's clearance there and would eat a third of this lane's
     // 24px content band, so the bars run the whole band. The band is the lane
@@ -4857,8 +4860,13 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         // rungs at the unconditional <=5-pairs-per-column bound, so the
         // rebuild is O(lane width) like any plate render).
         const WaveformBasis basis{0, spp, lane.w};
+        // GAIN 1.0: the overview is TRUE AMPLITUDE. The plate's per-band
+        // display gains exist to pull one band out from behind another in a
+        // three-band stack; this lane is one lane, so there is nothing to
+        // separate and nothing to exaggerate.
         render_waveform(overview_bar_cache.surface, bars, /*col0=*/0, audio,
-                        GuiWaveformLane::Sum, basis, kWaveformInk, nullptr);
+                        GuiWaveformLane::Sum, basis, kWaveformInk, /*gain=*/1.0,
+                        nullptr);
     }
     overview_bar_cache.rendered = true;
 }

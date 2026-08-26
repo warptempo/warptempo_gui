@@ -291,11 +291,23 @@ GuiAudio::ProgressCallback sub_progress(const GuiAudio::ProgressCallback& outer,
 // stereo buffer.
 //
 // The crossovers are hard-coded constants — no settings key, by ruling
-// (architect 2026-08-25). kBandLowCrossoverHz = 120 Hz is derived from the
-// orchestral instrumentation (the same value the retired automated
-// EQ-matching and transient-detection work used; 100 Hz is too low), and
-// kBandHighCrossoverHz = 3500 Hz stands on equal-loudness (Fletcher–Munson)
-// grounds. DJ software hard-codes the same pair.
+// (architect 2026-08-25). kBandLowCrossoverHz = 200 Hz and
+// kBandHighCrossoverHz = 2000 Hz are the architect's ORIGINAL pair, the one
+// the retired automated EQ-matching and transient-detection work used: 200 Hz
+// sits under the orchestral body, and 2000 Hz opens the string-attack
+// presence region where the onsets are.
+//
+// 120/3500 WAS TRIED FIRST FOR THIS DISPLAY AND MEASURED TOO NARROW
+// (architect 2026-08-26, all figures taken on the piece's own data — per-column
+// band peaks off the source WAV). Under that pair the mid band carried about
+// 93 % of the energy and the low band's median column peak was about 0.12 of
+// mid's, so the bass could never show from behind the mid body however it was
+// painted. At 200/2000 the low band's median peak is about 0.27 of mid's and
+// the high band's about 0.21 (against 0.07 before), the high band having taken
+// in the 2-3.5 kHz presence region that the old 3500 Hz crossover left in
+// mid. The
+// wider low band also RINGS LESS: the 200 Hz kernel's pre-ring is shorter than
+// the 120 Hz one's by the ratio of the crossovers (the decay figures below).
 // They are DESIGN TARGETS — the finite, windowed kernels realize the
 // Linkwitz-Riley curve to within their design error, so at the low crossover
 // a pure tone paints at nominally half height in both Low and Mid, and at the
@@ -310,9 +322,9 @@ GuiAudio::ProgressCallback sub_progress(const GuiAudio::ProgressCallback& outer,
 // The filters are real, even (symmetric)
 // kernels of the LR24 (Butterworth-squared) magnitude |H(f)| = 1 / (1 +
 // (f/fc)^4); such a kernel's impulse decays as e^(-0.707 * 2 * pi * fc * |t|)
-// — 1/e at about 1.9 ms and -60 dB by about 13 ms at 120 Hz, with the pre-ring
+// — 1/e at about 1.1 ms and -60 dB by about 8 ms at 200 Hz, with the pre-ring
 // the same tail mirrored into negative time. That smear is the accepted cost
-// of zero phase; at 3500 Hz the tail is gone inside a millisecond.
+// of zero phase; at 2000 Hz the tail is gone inside a millisecond.
 //
 // THREE BANDS FROM TWO FILTERS, exactly complementary: with zero-phase
 // lowpasses the highpasses are subtractions, so
@@ -323,9 +335,15 @@ GuiAudio::ProgressCallback sub_progress(const GuiAudio::ProgressCallback& outer,
 // rounding), whatever the kernels are — high and mid come from the two ACTUAL
 // lowpass outputs, not from separately designed highpasses. (The pedantic
 // difference between this mid and HPlow·LPhigh is the product term
-// LPlow·HPhigh, peaking near sqrt(120 * 3500) = 648 Hz at about 1.4e-6.)
-constexpr int kBandLowCrossoverHz  = 120;
-constexpr int kBandHighCrossoverHz = 3500;
+// LPlow·HPhigh, peaking near sqrt(200 * 2000) = 632 Hz at about 9.8e-5.)
+//
+// RETUNING EITHER CROSSOVER NEEDS NO ID BUMP AND NO CACHE ERASURE: both are
+// their own header identity fields in the .peaks body, so every sidecar
+// written under a different pair reads back STALE and rebuilds itself on the
+// next load (try_load_cache below; kBandFilterDesignId stays 1, the algorithm
+// being untouched).
+constexpr int kBandLowCrossoverHz  = 200;
+constexpr int kBandHighCrossoverHz = 2000;
 constexpr int kBandKernelHalfMs    = 20;
 
 // THE IDENTITY OF THE COMPLETE ALGORITHM behind every persisted int16 peak,

@@ -118,7 +118,9 @@ void render_waveform_to_cache_surface(
     // call order — Low, then Mid, then High, fixed — a later band replacing an
     // earlier one's rows where they overlap (render_waveform's replacing
     // stores), so the low band reads as the wide halo behind and a transient's
-    // high content paints in front wherever it exceeds the bands beneath it.
+    // high content paints in front wherever it exceeds the bands beneath it —
+    // "exceeds" being AFTER each band's own display gain, which is the whole
+    // reason the halo is visible at all (the rule is at kBandDisplayGainLow).
     // The two stereo channel bands that once split this band at its centre are
     // gone — the display's axis is the lane (GuiWaveformLane), and a source
     // channel is never painted again. Purely a vertical extent: no column's
@@ -127,23 +129,34 @@ void render_waveform_to_cache_surface(
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // THE INKS are the row-6 / region palette constants (render.h): the plain
-    // plate takes the three plain inks, the region plate the three selected
-    // inks, band for band.
+    // plate takes the three plain inks — orange low, green mid, yellow high —
+    // and the region plate the three selected inks, band for band. The low
+    // band's ink is kWaveformInkLow, NOT kWaveformInk: that constant is the
+    // overview strip's alone now.
+    // AND ITS OWN DISPLAY GAIN, carried in the same row: the bands' true
+    // amplitudes differ by more than an octave of headroom, so at unity the
+    // fixed z-order would show mid alone. The gain scales the column's tips
+    // inside render_waveform and nothing else; the rule it buys (the low band
+    // shows exactly where gain_low * low exceeds mid) is at the constants.
     struct Band {
         GuiWaveformLane lane;
         GuiColor        plain;
         GuiColor        region;
+        double          gain;
     };
     const Band bands[] = {
-        {GuiWaveformLane::Low,  kWaveformInk,     kWaveformRegionInk},
-        {GuiWaveformLane::Mid,  kWaveformInkMid,  kWaveformRegionInkMid},
-        {GuiWaveformLane::High, kWaveformInkHigh, kWaveformRegionInkHigh},
+        {GuiWaveformLane::Low,  kWaveformInkLow,  kWaveformRegionInkLow,
+         kBandDisplayGainLow},
+        {GuiWaveformLane::Mid,  kWaveformInkMid,  kWaveformRegionInkMid,
+         kBandDisplayGainMid},
+        {GuiWaveformLane::High, kWaveformInkHigh, kWaveformRegionInkHigh,
+         kBandDisplayGainHigh},
     };
     for (const Band& b : bands) {
         render_waveform(plates.plain, cache_area, /*col0=*/0, audio, b.lane,
-                        basis, b.plain, warp_frame_map_or_null);
+                        basis, b.plain, b.gain, warp_frame_map_or_null);
         render_waveform(plates.region, cache_area, /*col0=*/0, audio, b.lane,
-                        basis, b.region, warp_frame_map_or_null);
+                        basis, b.region, b.gain, warp_frame_map_or_null);
     }
 }
 

@@ -179,6 +179,7 @@ void render_waveform(cairo_surface_t* dest,
                      GuiWaveformLane lane,
                      const WaveformBasis& basis,
                      GuiColor color,
+                     double gain,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -254,9 +255,17 @@ void render_waveform(cairo_surface_t* dest,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
+    // The unit interval the tips are expressed in, applied after the gain.
+    const auto clamp_unit = [](double v) {
+        if (v < -1.0) return -1.0;
+        if (v >  1.0) return  1.0;
+        return v;
+    };
+
     // Each column is written straight into the plate's pixel words, and a
-    // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
-    // filled inclusively with the opaque ink word. There is no interior/edge
+    // column is ONE HARD BAR: its own min/max interval under this call's
+    // display gain, floored to rows and filled inclusively with the opaque ink
+    // word. There is no interior/edge
     // split, no fractional coverage, and no inter-column connectivity of any
     // kind — a spike stands alone, exactly as in a classic min/max renderer.
     //
@@ -377,17 +386,28 @@ void render_waveform(cairo_surface_t* dest,
 
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(lane, level, s0, s1);
-        const double raw_min = mm.first;
-        const double raw_max = mm.second;
+        // THE BAND'S DISPLAY GAIN, the one application point: the dequantized
+        // extremes are scaled and clamped back into the unit interval HERE,
+        // before any row is derived, so a gain changes bar HEIGHT and nothing
+        // else — the column's frame span, its pyramid rung, the carried
+        // endpoint chain and the >=1px floor below all stand as they are.
+        // The clamp is what keeps a lifted band inside its own drawing band
+        // instead of relying on the row clamp to catch it, and it is why a
+        // loud passage's low band saturates rather than growing without
+        // bound. The gains themselves are the compile-time constants at
+        // kBandDisplayGainLow (render.h); the overview passes 1.0.
+        const double tip_min = clamp_unit(static_cast<double>(mm.first) * gain);
+        const double tip_max = clamp_unit(static_cast<double>(mm.second) * gain);
 
         const int x = area.x + i;
 
-        // THE COLUMN'S TIPS: raw maximum -> top tip, raw minimum -> bottom
-        // tip, in float rows, never snapped — then floored to rows for the bar.
-        // The regime split (thin vs tall) went with the tip segments: there is
-        // one rendering for every column now, however small its interval.
-        const double cur_top_y = y_center - raw_max * half_h;
-        const double cur_bot_y = y_center - raw_min * half_h;
+        // THE COLUMN'S TIPS: gained maximum -> top tip, gained minimum ->
+        // bottom tip, in float rows, never snapped — then floored to rows for
+        // the bar. The regime split (thin vs tall) went with the tip segments:
+        // there is one rendering for every column now, however small its
+        // interval.
+        const double cur_top_y = y_center - tip_max * half_h;
+        const double cur_bot_y = y_center - tip_min * half_h;
 
         // THE BAR. Clamp to this call's rows BEFORE any row index is derived,
         // so a clipped interval cannot address outside the band; then floor both
