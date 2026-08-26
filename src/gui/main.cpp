@@ -25,6 +25,7 @@
 #include "file_loader.h"
 #include "flag_editor.h"
 #include "gui_display_context.h"
+#include "gui_main.h"
 #include "input_handler.h"
 #include "paint_handler.h"
 #include "playback.h"
@@ -46,7 +47,7 @@
 #include "undo.h"
 #include "viewport.h"
 #include "warpmarkers_ops.h"
-#include "platform_wayland.h"
+#include "platform.h"
 #include "locale_check.h"
 
 #include <cairo/cairo.h>
@@ -962,7 +963,26 @@ GuiRect clock_invalidate_rect(const AppState& a) {
 }
 
 
+// THE LINUX ENTRY POINT and nothing more: the argument check, then the one GUI
+// body (gui_main.h). Android's backend has its own entry (android_main) and
+// calls the same body with the source path its own convention produces, so this
+// wrapper is compiled out of that build.
+#ifndef __ANDROID__
 int main(int argc, char** argv) {
+    // A source is loaded only from the command line: the GUI has no
+    // in-session file open or drag-and-drop (open the next source by
+    // relaunching). The audio path is therefore mandatory — there is no
+    // blank-window state to load into.
+    if (argc != 2) {
+        std::fprintf(stderr, "Usage: warptempo_gui <audio_file>\n");
+        return 1;
+    }
+    return gui_main(argv[1]);
+}
+#endif
+
+
+int gui_main(const char* source_path) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
     // Auto-reap the fire-and-forget children the GUI launches. Ignoring SIGCHLD
@@ -1003,16 +1023,6 @@ int main(int argc, char** argv) {
     // since an ignored disposition survives exec
     // and would change the child's own semantics.
     std::signal(SIGPIPE, SIG_IGN);
-
-    // A source is loaded only from the command line: the GUI has no
-    // in-session file open or drag-and-drop (open the next source by
-    // relaunching). The audio path is therefore mandatory — there is no
-    // blank-window state to load into.
-    if (argc != 2) {
-        std::fprintf(stderr, "Usage: warptempo_gui <audio_file>\n");
-        return 1;
-    }
-    const char* cli_path = argv[1];
 
     // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
     // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly
@@ -1311,7 +1321,7 @@ int main(int argc, char** argv) {
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
-    std::string pending_initial_load = cli_path;
+    std::string pending_initial_load = source_path;
     bool        initial_load_done    = false;
 
     // -- Redraw -------------------------------------------------------------

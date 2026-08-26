@@ -2,6 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "gui_display_context.h"
+#include "gui_font.h"
 #include "text_shape.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -1186,10 +1187,9 @@ void render_flag_boxes_impl(
     // shaped and painted at this one size on this one scaled font, which is the
     // text_shape precondition (shape with the font you paint with). Nothing
     // below changes the size, so the borrowed scaled-font pointer stays valid
-    // for the whole loop.
-    cairo_select_font_face(cr, "sans",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    // for the whole loop. What the family resolves to is the backend's, through
+    // the one face owner (gui_font.h).
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
@@ -1625,10 +1625,8 @@ void render_history_diff_flags(
     cairo_save(cr);
     // The redesign's one sans face, set once for the pass — the text_shape
     // precondition (shape with the font you paint with), exactly as
-    // render_flag_boxes_impl sets it.
-    cairo_select_font_face(cr, "sans",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    // render_flag_boxes_impl sets it, through the one face owner (gui_font.h).
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
@@ -2040,11 +2038,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    // The redesign's sans, set once — shape and paint on ONE scaled font, the
-    // text_shape precondition. Nothing below changes the size.
-    cairo_select_font_face(cr, "sans",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    // The redesign's sans, set once through the one face owner (gui_font.h) —
+    // shape and paint on ONE scaled font, the text_shape precondition. Nothing
+    // below changes the size.
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 

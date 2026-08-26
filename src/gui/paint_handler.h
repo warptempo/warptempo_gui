@@ -4,7 +4,7 @@
 #include "audio.h"
 #include "playback.h"
 #include "render.h"
-#include "platform_wayland.h"
+#include "platform.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>

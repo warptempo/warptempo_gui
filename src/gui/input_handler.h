@@ -27,7 +27,7 @@
 #include "warpmarkers.h"
 #include "warpmarkers_ops.h"
 #include "gui_input.h"
-#include "platform_wayland.h"
+#include "platform.h"
 
 #include <atomic>
 #include <cmath>

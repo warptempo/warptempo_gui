@@ -6,7 +6,7 @@
 #include "render.h"
 #include "text_editor.h"
 #include "warp_frame_map_view.h"
-#include "platform_wayland.h"
+#include "platform.h"
 
 #include <algorithm>
 #include <cmath>

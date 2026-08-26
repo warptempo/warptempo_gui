@@ -4,7 +4,7 @@
 #include "audio.h"
 #include "paint_handler.h"   // for GuiPaintHandler
 #include "playback.h"
-#include "platform_wayland.h"
+#include "platform.h"
 #include "viewport.h"
 
 #include <string>

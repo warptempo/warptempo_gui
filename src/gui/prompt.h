@@ -2,7 +2,7 @@
 
 #include "app_state.h"
 #include "phase_reset_propagate.h"
-#include "platform_wayland.h"
+#include "platform.h"
 #include "playback_lifecycle.h"
 #include "save_ops.h"
 #include "viewport.h"

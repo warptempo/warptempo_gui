@@ -8,7 +8,7 @@
                                   // since 2026-08-16; frame_span_into_view is
                                   // its cannot-fit arm and is no longer called
                                   // from this TU)
-#include "platform_wayland.h"     // viewport.gui.set_title_dirty — the window
+#include "platform.h"           // viewport.gui.set_title_dirty — the window
                                   // title's dirty half, pushed from
                                   // recompute_dirty's tail
 #include "target_render.h"

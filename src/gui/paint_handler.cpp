@@ -1,5 +1,6 @@
 #include "paint_handler.h"
 
+#include "gui_font.h"
 #include "icons.h"
 #include "render.h"
 #include "text_editor.h"
@@ -48,16 +49,15 @@
 // belongs to the clock and lives at its own metrics, re-derived on the
 // monospace face rather than trusted to it.
 
-// The bottom row's ONE sans face, selected on `cr`. Returns the scaled font
-// every shape and paint that takes it must share — the text_shape precondition
-// is that a run is shown with the same font it was shaped with. Its callers
-// are the MODAL DIALOG (whose labels, field text and button words are the
-// row's only sans left) and, through show_row_text below, the modal's own
-// strings; the clock selects monospace for itself.
+// The bottom row's ONE sans face, selected on `cr` through the one face owner
+// (gui_font.h). Returns the scaled font every shape and paint that takes it
+// must share — the text_shape precondition is that a run is shown with the same
+// font it was shaped with. Its callers are the MODAL DIALOG (whose labels,
+// field text and button words are the row's only sans left) and, through
+// show_row_text below, the modal's own strings; the clock selects monospace for
+// itself.
 static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
-    cairo_select_font_face(cr, "sans",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     return cairo_get_scaled_font(cr);
 }
@@ -1159,8 +1159,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // same positions and cannot disagree. Shaping a handful of glyphs per paint
     // is deliberate — the chokepoint's own comment defers caching to a profile,
     // and these are the cheapest runs there are.
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
@@ -1492,8 +1491,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     cairo_rectangle(cr, lane.x, lane.y, lane.w, border_h);
     cairo_fill(cr);
 
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
@@ -2866,11 +2864,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         }
     }
 
-    // THE CLOCK. Its own face on this context, contained by the save/restore
-    // this body already opened; nothing else on the row draws text.
+    // THE CLOCK. Its own face on this context — the product's one monospace
+    // surface, selected through the one face owner (gui_font.h) — contained by
+    // the save/restore this body already opened; nothing else on the row draws
+    // text.
     {
-        cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_NORMAL);
+        gui_select_font_face(cr, GuiFontFamily::Mono);
         const double size_px = clock_font_size_px();
         cairo_set_font_size(cr, size_px);
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
@@ -3019,8 +3018,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
 
     // TWO SIZES ON ONE CONTEXT, IN TWO PHASES — MEASURE, THEN PAINT — and the
     // phase split is not tidiness, it is the chokepoint's stated precondition:
@@ -3175,8 +3173,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
@@ -3509,8 +3506,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int minor_top   = marker.y;                    // no rise
     const int major_top   = marker.y - scaled_px(kRulerMajorRisePx);
 
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
     cairo_font_extents_t fe;

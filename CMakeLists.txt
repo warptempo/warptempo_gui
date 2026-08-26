@@ -152,6 +152,12 @@ if(WARPTEMPO_BUILD_GUI)
         # source lists — warptempo_cli must never carry it, nor the
         # harfbuzz/cairo-ft link it implies.
         src/gui/text_shape.cpp
+        # GUI-ONLY, and the LINUX arm of the one face owner (src/gui/gui_font.h):
+        # face selection is a painting concern and exists only here, so like
+        # text_shape.cpp it is deliberately in none of the four shared
+        # per-directory source lists. The Android target compiles
+        # gui_font_bundled.cpp in its place; exactly one arm is ever linked.
+        src/gui/gui_font_fontconfig.cpp
         # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
         # subset over cairo paths) is a painting concern and exists only here,
         # so like text_shape.cpp it is deliberately in none of the four shared
@@ -291,6 +297,18 @@ endif()
 # toolchain and unchanged math libraries. Any future port compiles with
 # contraction off as well; clang contracts by default too. Measurement record
 # and the claim's exact scope in docs/engineering/perf_campaign_2026_07.md §15.
+#
+# -march=native IS THE ONE HOST-ONLY FLAG here, and the only conditional one: it
+# compiles for whatever CPU is doing the compiling, which a cross build has no
+# answer for. An Android build therefore takes the NDK's own armv8-a default and
+# adds nothing — the ABI the device already assumes. -O3 and -ffp-contract=off
+# stay unconditional on every target and every platform, contraction being off
+# by the reproducibility argument above rather than as a speed knob.
+set(WARPTEMPO_ARCH_FLAGS -march=native)
+if(ANDROID)
+    set(WARPTEMPO_ARCH_FLAGS)
+endif()
+
 set(WARPTEMPO_OPT_TARGETS "")
 if(WARPTEMPO_BUILD_GUI)
     list(APPEND WARPTEMPO_OPT_TARGETS warptempo_gui)
@@ -300,7 +318,7 @@ if(WARPTEMPO_BUILD_CLI)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(tgt ${WARPTEMPO_OPT_TARGETS})
-        target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 -march=native -ffp-contract=off)
+        target_compile_options(${tgt} PRIVATE -Wall -Wextra -O3 ${WARPTEMPO_ARCH_FLAGS} -ffp-contract=off)
     endforeach()
     # -Wfloat-conversion is a STANDING TRIPWIRE on the GUI's C++ and must report
     # ZERO: every fractional->integer conversion in src/gui is either an
