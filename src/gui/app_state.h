@@ -3411,14 +3411,15 @@ constexpr int kAuditionMs = 500;
 // fast; 50/100 was the second setting and still too fast by ear; he then
 // recorded himself doing the audition by hand and measured the rests off the
 // recording, giving 150/500, each remaining one number to change here and
-// nowhere else.
+// nowhere else. The switch rest was then raised again, by ear on top of the
+// measured 500, to 650; the pair rest stayed at its measured 150.
 // GRANULARITY: the rests are SAMPLED on the run loop's own deadline tick
 // (GuiAbAudition::fire_if_due, beside the key-repeat and touch-window
 // deadlines), whose interval is the bound output's refresh half-period — so a
 // rest is AT LEAST its milliseconds and at most one timer period more (~8 ms
 // at 60 Hz), which is inside the hand pacing these numbers transcribe.
 inline constexpr int kAuditionPairGapMs   = 150;
-inline constexpr int kAuditionSwitchGapMs = 500;
+inline constexpr int kAuditionSwitchGapMs = 650;
 
 // THE A/B AUDITION SEQUENCE (architect 2026-08-26) — the state of the ONE
 // transport act that spans several plays. Shift+Space (and the play button's
