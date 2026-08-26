@@ -921,3 +921,128 @@ device, and the `unique_ptr` null guards staying in the public methods.
 The Linux target's `flags.make` is byte-identical and its object set gains
 exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 `DT_NEEDED` — it was linked ahead of M4 in §10 and now something calls it.
+
+
+---
+
+## 12. The Java sliver — immersive mode (2026-08-26)
+
+The APK has Java in it now: **one class**, `com.warptempo.gui.MainActivity`,
+`android/app/java/com/warptempo/gui/MainActivity.java`, ~30 lines of body. It is
+the port's ONE Java home and **every later Java need joins it as a method, never
+as a second class** — the SAF picker's `onActivityResult` (which is the reason a
+subclass is structurally required at all: `NativeActivity` never forwards it,
+§5.2 of the research doc) and the system clipboard are the two already known.
+
+**No product source changed.** Nothing under `src/` knows this class exists: the
+manifest's `android.app.lib_name` still names `warptempo_gui`, `NativeActivity`'s
+own `onCreate` still `dlopen`s the library, and `android_main` runs exactly as it
+did.
+
+### 12.1 Why it is load-bearing
+
+§11.7's escalation: the system taskbar takes the input of the **whole bottom
+row's** band, not merely its right half, and the navigation bar that replaces it
+captures the same band. The bottom row is the product's transport **and** its
+modal surface, so the app is undrivable on glass without immersive mode — and
+hiding the navigation bar is Java-only (`WindowInsetsController`, API 30+; §3.6).
+The interim `settings put global policy_control immersive.full=com.warptempo.gui`
+was a device-wide setting standing in for this class; it is **deleted** now.
+
+### 12.2 What the class does
+
+`onCreate` (after `super`) and every `onWindowFocusChanged(true)`:
+
+- `getWindow().setDecorFitsSystemWindows(false)` — the native window is the whole
+  panel. It compiles with ONE deprecation warning (deprecated in API 35, where
+  edge-to-edge is the default for `targetSdk >= 35` anyway); the call is kept
+  because it states the intent rather than inheriting it.
+- `hide(statusBars() | navigationBars())` +
+  `setSystemBarsBehavior(BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE)`.
+
+The re-apply at focus gain is not belt-and-braces: the system restores the bars
+whenever the activity loses focus, so `onCreate` alone would hold only until the
+first task switch. No deprecated `setSystemUiVisibility` path — minSdk is 30 and
+`WindowInsetsController` is API 30.
+
+`getWindow().getInsetsController()` is null-guarded and returns early; there is
+no producer for that arm on this platform (the decor view exists by the time
+`NativeActivity.onCreate` has returned), and a hidden window that painted no bars
+is not worth an abort.
+
+**The `System.loadLibrary` gotcha is NOT needed yet and WILL be**: the first
+`native` method declared on this class must add
+`static { System.loadLibrary("warptempo_gui"); }`, because `NativeActivity`'s own
+`dlopen` does not register the library for name-based JNI resolution and the
+method would throw `UnsatisfiedLinkError` (§5.4).
+
+### 12.3 The build steps
+
+`build_apk.sh` step 4, between the cmake build and `aapt2 link`:
+
+```bash
+javac -source 11 -target 11 -Xlint:-options -classpath $WT_ANDROID_JAR \
+      -d $PKGDIR/classes  $(find android/app/java -name '*.java')
+d8 --release --lib $WT_ANDROID_JAR --min-api 30 --output $PKGDIR/dex  <classes>
+zip -u -j -X -q $PKGDIR/unaligned.apk $PKGDIR/dex/classes.dex
+```
+
+- **`-classpath`, not `-bootclasspath`** — since JDK 9 the latter is refused
+  unless `-source/-target` is 8 or lower, and the JDK here is 21 (§5.5's
+  correction to §1.9).
+- `d8 --output` takes a **directory**, into which it writes `classes.dex`.
+- `--min-api` is `$WT_API` (30), the manifest's own minSdk.
+- `classes.dex` must sit at the **APK root** — hence `zip -j`. It takes ordinary
+  deflate: nothing mmaps it and nothing aligns it, unlike the `.so`'s `-0`/`-P 16`
+  pair. It is 1436 bytes.
+- The step compiles a **tree**, not a named file, so a second class costs no
+  script edit.
+
+`VERIFY 5/5` was added at the tail: `aapt2 dump badging`'s launchable-activity
+line plus the APK listing of `classes.dex` and the `.so`.
+
+### 12.4 The component name CHANGED
+
+`android.app.NativeActivity` → `.MainActivity`. The launch command is now
+
+```bash
+adb shell am start -n com.warptempo.gui/.MainActivity
+```
+
+and `am start -n com.warptempo.gui/android.app.NativeActivity` no longer
+resolves. `build_apk.sh` prints the new line at the end. §10.1's command block
+and the scoping doc's are stale by that one word.
+
+### 12.5 What was driven on the device (policy_control **null** throughout)
+
+The stopgap was deleted BEFORE the install, so every check below ran with the
+platform's own defaults.
+
+- **`aapt2 dump badging`**:
+  `launchable-activity: name='com.warptempo.gui.MainActivity' label='Warptempo'`.
+- **No status bar, no navigation bar, no taskbar** on the launch screenshot; the
+  native window is `2304x1440` (logcat's own line) and the bottom row sits at the
+  panel's bottom edge with nothing over it.
+- **The bottom row RECEIVES input.** A tap at `(101, 1397)` — the transport's
+  far-left PLAY glyph, in the exact band the taskbar used to eat — swapped the
+  glyph to STOP and the clock ran `00:11.848 → 00:21.338 → 00:23.852`; a second
+  tap at the same point returned the glyph to Play and the clock to the resting
+  `00:00.000`. This is the check §11.7 could only pass under `policy_control`.
+- **The transient bars behave.** A swipe up from the bottom edge showed the
+  taskbar; ~8 s later it was gone on its own, the app still focused and still
+  running, and a tap on PLAY immediately after still reached the app.
+- **BACK and relaunch.** BACK returned to the launcher without killing the
+  process (pid 30177 throughout); `am start` on the new component came back up
+  identical and immersive, and `window 2304x1440, tick 8 ms` appears **twice** in
+  the one process's log — `android_main` runs a second time, as §10.5 recorded.
+
+### 12.6 Deliberate limits
+
+- **A swipe from the bottom edge is the system's, not the app's.** Under
+  `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` that gesture summons the bars instead
+  of reaching the product, so a nav-surface drag that STARTS on the panel's very
+  bottom edge is unavailable. The bottom row is chrome (buttons act at the lift),
+  not a drag surface, so nothing the product does is lost — but the trade is real
+  and it is the price of the row being reachable at all.
+- **No `System.loadLibrary`, no JNI, no callbacks** — see 12.2. The class is
+  deliberately the smallest thing that solves the input problem.

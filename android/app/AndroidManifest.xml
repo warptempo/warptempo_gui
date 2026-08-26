@@ -3,11 +3,13 @@
      whose android_main (src/gui/platform_android.cpp) calls the same gui_main
      the desktop main() calls.
 
-     hasCode="false" is deliberate and it HOLDS for everything the app does
-     today: there is no Java at all, no classes.dex, and therefore no javac and
-     no d8 in the packaging pipeline. The Java sliver the port plans for is owed
-     to SAF's onActivityResult (M6), to immersive mode and to the system
-     clipboard — none of which exists yet.
+     hasCode="true" since the immersive-mode sliver: the APK carries a
+     classes.dex holding exactly ONE class, .MainActivity (a NativeActivity
+     subclass), and build_apk.sh grew a javac -> d8 step for it. The subclass is
+     load-bearing rather than decorative — hiding the navigation bar / taskbar
+     is Java-only, and that bar owns the INPUT of the band the product paints
+     its transport and its modal surface into. The port's other Java needs
+     (SAF's onActivityResult, the system clipboard) join THAT class as methods.
 
      Not the spike's package: com.warptempo.gui is the product's own name, so
      installing or removing either one leaves the other alone. -->
@@ -26,13 +28,18 @@
 
   <application
       android:label="Warptempo"
-      android:hasCode="false"
+      android:hasCode="true"
       android:extractNativeLibs="false"
       android:allowBackup="false"
       android:debuggable="true">
 
+    <!-- The subclass, not android.app.NativeActivity: it is what hides the
+         system bars. android.app.lib_name stays here on the <activity> —
+         NativeActivity's own onCreate reads it and dlopens the library exactly
+         as before, so the native side is unaware this class exists.
+         Component name: com.warptempo.gui/.MainActivity -->
     <activity
-        android:name="android.app.NativeActivity"
+        android:name=".MainActivity"
         android:exported="true"
         android:label="Warptempo"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
