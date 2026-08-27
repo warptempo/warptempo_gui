@@ -131,6 +131,33 @@ beside every other painter and router. The standing predicate is false forever
 on Wayland, which is what makes the laptop build's behaviour identical by
 construction rather than by care.
 
+THE BAND CARRIES NO CHROME OF ITS OWN (architect 2026-08-27, on his first glass
+drive of the surface): no line at its top edge. Its ground IS the bottom row's
+ground, so the keyboard and the row it sits on read as one block, and the only
+line in that neighbourhood is the bottom row's own border-top, which that row
+paints and this surface neither owns nor touches. `kBorderPx` / `border_px()`
+are gone with the seam, so the band's published height, its paint and its hit
+rect are one number by construction.
+
+EVERY CAP IS TEXT, on the one sans face at the product's one text size through
+the one shaping chokepoint — the letter caps, the layer toggle's `abc` / `&123`
+and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
+**Cancel**, **Enter**, on both layers (the symbol layer's second space bar
+included). The function keys wore unmodified Breeze glyphs for their first day
+and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's
+own height beside a 12pt letter — and a full-width row has room for words, so
+they say what they do. `onscreen_keyboard::cap_word` is the words' ONE owner,
+the painter's icon branch is gone, and the five glyphs that surface alone read
+(keyboard-caps-disabled / keyboard-caps-enabled / keyboard-enter /
+keyboard-spacebar / edit-clear-locationbar-rtl) went with it — enumerators,
+defs and committed assets, the roster 51 → 46. SHIFT'S ONE-SHOT ARM IS THE
+FACE: the cap says "Shift" armed or resting, and what says the arm is the key's
+ARMED FACE — `kRedesignSelectedFill` under a `kRedesignLine` frame, the icon
+row's own lit-toggle face, which this key and the layer toggle already wore off
+their lamp bits — together with the letter caps, every one of which turns
+capital while the arm stands. No new colour; the caps pair's stateful glyph is
+what the face replaced.
+
 ## The Java sliver
 
 `android/app/java/com/warptempo/gui/MainActivity.java` is the product's ONE

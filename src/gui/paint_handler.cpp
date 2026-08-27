@@ -6077,12 +6077,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //   the KEY FACE          -> kRedesignRowGround     #292C30 (measured 45,48,52)
 //   the GROUND around and
 //     between the keys    -> kRedesignContentGround #202326 (measured 30,34,37)
-//   the CAPS and the
-//     function GLYPHS     -> kRedesignLabel         #FCFCFC
+//   the CAPS              -> kRedesignLabel         #FCFCFC
 // (The measured pairs carry the source JPEG's own drift; the constants are the
 // values, per the palette block's hard-coded-whole rule.) The ground is also
-// the BOTTOM ROW'S, so the keyboard and the row it sits on read as one block,
-// and the 1px top seam is that row's own kRedesignTabLine.
+// the BOTTOM ROW'S, so the keyboard and the row it sits on read as one block —
+// which is why the band paints NO LINE at its own top edge (architect
+// 2026-08-27, on glass): the only line in this neighbourhood is the bottom
+// row's own border-top, painted by that row.
 //
 // THE OTHER TWO FACES ARE THE ICON ROW'S, BORROWED WHOLE — nothing here is
 // keyboard-specific (the architect's ruling: reuse what the chrome button
@@ -6093,7 +6094,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //   ARMED     — kRedesignSelectedFill under a 1px kRedesignLine frame, the
 //               roster's SELECTED face verbatim. Worn by SHIFT while it is
 //               armed and by the LAYER TOGGLE while the symbol layer stands:
-//               the two lamps, one face, the icon row's own lamp.
+//               the two lamps, one face, the icon row's own lamp. IT IS ALL
+//               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
+//               word "Shift" in both states — that, and the letter caps, every
+//               one of which turns capital while the arm stands.
 //   PRESSED   — the interior at kRedesignClickMix toward kRedesignAccent under
 //               an accent frame, the roster's CLICK face verbatim — the same
 //               expression over the same ground — AND IT WINS OVER ARMED while
@@ -6105,10 +6109,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
 // pointer, so a hover has no producer and a hint has nowhere to hang.
 //
+// EVERY CAP IS TEXT (architect 2026-08-27, on glass — the Breeze glyphs the
+// function keys wore for a day read oversized beside the letter caps): the
+// function keys, Space and the layer toggle say their words, the letter keys
+// their characters, all on the one sans face through the one shaping
+// chokepoint. This surface draws no icon.
+//
 // STATE-AXIS: every one of the three faces is decided ONCE per key, from the
-// two lamp bits and the one held index this body reads at its head, and the
-// glyph and the cap come from the layout table's own derivations (shifted_char,
-// icon_of). There is no second list of what a key looks like anywhere.
+// two lamp bits and the one held index this body reads at its head, and the cap
+// comes from the layout table's own derivations (cap_word, shifted_char). There
+// is no second list of what a key looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
     // THE AS-PAINTED BIT, AND IT DESCRIBES PIXELS — the roster publisher's own
@@ -6156,22 +6166,23 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     cairo_save(cr);
 
-    // The lane's chrome: the 1px seam across the whole width, then the ground.
-    const int border = onscreen_keyboard::border_px();
-    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                         kRedesignTabLine.b);
-    cairo_rectangle(cr, surf.x, surf.y, surf.w, border);
-    cairo_fill(cr);
+    // The lane's ground, one fill across the whole band and NO LINE AT ITS TOP
+    // EDGE: the band's ground is the bottom row's ground, so the two lanes read
+    // as one block and a seam between them would draw a border through the
+    // middle of it. The 1px line below the band belongs to the BOTTOM ROW (its
+    // own border-top, painted by that row's body).
     cairo_set_source_rgb(cr, kRedesignContentGround.r,
                          kRedesignContentGround.g,
                          kRedesignContentGround.b);
-    cairo_rectangle(cr, surf.x, surf.y + border, surf.w, surf.h - border);
+    cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
 
     // THE ONE SANS FACE at the product's ONE text size, selected through the
     // one face owner and shaped through the one chokepoint (text_shape.h) like
-    // every other label in the product. A cap is one or four glyphs, which are
-    // the cheapest runs there are.
+    // every other label in the product. EVERY key on this surface takes it —
+    // the letter caps, the layer toggle's word and the function keys' words
+    // alike — so there is no second way a cap can be drawn. A cap is one to
+    // nine glyphs, which are the cheapest runs there are.
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
@@ -6179,11 +6190,6 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(onscreen_keyboard::kCornerPx *
                                          gui_scale_factor());
-    // The icon box inside a key: the roster's own 22-in-32 proportion carried
-    // onto a box that is not 32 tall, so the glyph grows with the key instead
-    // of sitting lost in the middle of it.
-    const int glyph_px = static_cast<int>(std::nearbyint(
-        onscreen_keyboard::key_height_px() * (kIconGlyphPx / kIconBtnPx)));
 
     onscreen_keyboard::for_each_key(
         app, symbol_layer,
@@ -6192,9 +6198,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             using Role = onscreen_keyboard::Role;
             // PER-KEY EXPOSURE. The band's ground is laid across the whole
             // surface above (one fill, bounded by the outer damage clip), but a
-            // KEY costs a face box and either an icon or a shaped run, so a
-            // narrow damage crossing this band pays for the keys it actually
-            // crosses and for no other. That matters at the panel's tick rate:
+            // KEY costs a face box and a shaped run, so a narrow damage
+            // crossing this band pays for the keys it actually crosses and for
+            // no other. That matters at the panel's tick rate:
             // the scanner's own damage is a column a few pixels wide, and
             // without this test every one of them walked forty-odd keys.
             if (!rects_intersect(exposed, r)) return;
@@ -6218,22 +6224,13 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius, &fill,
                               (pressed || armed) ? &line : nullptr);
 
-            if (onscreen_keyboard::wears_icon(k)) {
-                icons::draw(cr, onscreen_keyboard::icon_of(k, shift_armed),
-                            static_cast<double>(r.x + (r.w - glyph_px) / 2),
-                            static_cast<double>(r.y + (r.h - glyph_px) / 2),
-                            static_cast<double>(glyph_px));
-                return;
-            }
-
-            // THE CAP: the layer toggle's word, or the character key's own
-            // letter through the ONE case derivation (shifted_char) — never a
-            // second uppercase table.
+            // THE CAP: the word the table's one cap owner answers (cap_word —
+            // the function keys, Space and the layer toggle), or, where it
+            // answers none, the character key's own letter through the ONE case
+            // derivation (shifted_char) — never a second uppercase table.
             char one[2] = {'\0', '\0'};
-            const char* cap = nullptr;
-            if (k.role == Role::LayerToggle) {
-                cap = onscreen_keyboard::layer_toggle_cap(symbol_layer);
-            } else {
+            const char* cap = onscreen_keyboard::cap_word(k, symbol_layer);
+            if (cap == nullptr) {
                 one[0] = onscreen_keyboard::shifted_char(k.ch, shift_armed);
                 cap    = one;
             }
@@ -6407,7 +6404,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // under it is a fill nobody ever sees. The rect handed to render_canvas
         // is still the WHOLE area — its own two black border rows are its
         // geometry, and a shortened rect would draw the bottom one as a line
-        // across the keyboard's top seam — so the band is subtracted with a
+        // across the keyboard's top edge — so the band is subtracted with a
         // CLIP rather than with a smaller rectangle. Nothing at all on a
         // platform with no painted keyboard.
         const GuiRect painted =

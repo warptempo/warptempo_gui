@@ -336,34 +336,21 @@ enum class Icon {
     // symlink, so the committed asset is the installed breeze-dark bytes
     // verbatim — the table entry carries that record.
     MinuetScales,        // Measure (bare `/`)
-
-    // -- THE ON-SCREEN KEYBOARD'S FIVE (2026-08-27) -------------------------
-    //
-    // The painted keyboard's function keys wear UNMODIFIED Breeze glyphs like
-    // every other surface in this set, and these five are the whole of what it
-    // needs beyond its own text caps. FOUR OF THE FIVE ARE THE `keyboard-*`
-    // FAMILY breeze-icons ships for exactly this purpose (devices/22), which is
-    // why no glyph here had to be invented or adapted; the fifth is the
-    // location bar's clear arrow, which IS the backspace shape (a left-pointing
-    // tag with an X in it) and is what Plasma's own virtual keyboard puts on
-    // that key.
-    //
-    // THE CAPS PAIR IS ONE KEY'S TWO FACES, not two keys: SHIFT is one-shot, so
-    // its glyph says whether the next letter is capital — the hollow arrow at
-    // rest, the solid one while armed. That is the stateful-glyph shape Save
-    // and Render already wear, read off ONE bit at one site (the keyboard's own
-    // painter), so the two faces cannot disagree about the lamp beside them.
-    KeyboardCapsDisabled,      // Shift, at rest (the hollow arrow)
-    KeyboardCapsEnabled,       // Shift, armed for the next letter (solid)
-    KeyboardEnter,             // Enter (the editor's commit)
-    KeyboardSpacebar,          // The space bar
-    EditClearLocationbarRtl,   // Backspace
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 51 SINCE 2026-08-27, THE SERIES RELOCATION (the day's third move here):
+// 46 SINCE 2026-08-27, THE KEYBOARD'S CAPS BECOMING WORDS: 51 − the on-screen
+// keyboard's five (keyboard-caps-disabled / keyboard-caps-enabled /
+// keyboard-enter / keyboard-spacebar / edit-clear-locationbar-rtl). The
+// architect drove the painted keyboard on glass and the Breeze glyphs read
+// OVERSIZED beside the letter caps, so every function key says its word on the
+// one sans face instead — Shift, Backspace, Space, Cancel, Enter — and all
+// five glyphs lost their only consumer in one act. Their defs and their
+// committed assets went with them; DialogCancel is untouched, Render's
+// mid-render face being its own reader. They lived one day.
+// 51 since 2026-08-27, THE SERIES RELOCATION (the day's third move here):
 // 53 − music-note-16th and mathmode, deleted with the two icon-row buttons the
 // SERIES MENU replaced. Both commands survive whole on their bare keys and as
 // menu rows; the glyphs had no other consumer, exactly as edit-copy and
@@ -413,7 +400,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 51;
+inline constexpr int kIconCount = 46;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

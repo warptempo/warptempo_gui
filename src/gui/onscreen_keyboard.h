@@ -47,7 +47,6 @@
 
 #include "app_state.h"
 #include "gui_input.h"
-#include "icons.h"
 #include "platform.h"
 #include "render.h"
 #include "viewport.h"
@@ -60,9 +59,9 @@ namespace onscreen_keyboard {
 // -- The layout table -------------------------------------------------------
 //
 // ONE OWNER FOR EVERY KEY'S IDENTITY: its role, the character it types, and
-// how wide it is. The painter reads its cap and its icon from here through the
-// two derivations below, and the press router reads its keysym and codepoint
-// from the SAME `ch`, so a key cannot type one thing and say another.
+// how wide it is. The painter reads the cap a key wears from here through the
+// derivations below, and the press router reads its keysym and codepoint from
+// the SAME `ch`, so a key cannot type one thing and say another.
 
 enum class Role : uint8_t {
     Character,     // types `ch` — every letter, digit and symbol, space included
@@ -213,7 +212,7 @@ inline constexpr bool layer_of_key_index(int index) {
            static_cast<uint32_t>(kRowCount * kMaxRowKeys);
 }
 
-// -- The two derivations off `ch` -------------------------------------------
+// -- The derivations off the table ------------------------------------------
 //
 // THE CASE IS A DERIVATION AND NOT A SECOND TABLE (the state-axis rule for a
 // new painted surface): the table holds the base character once, and the shift
@@ -242,45 +241,39 @@ inline constexpr GuiKey keysym_of(char base) {
     return static_cast<GuiKey>(static_cast<unsigned char>(base));
 }
 
-// WHAT A KEY WEARS. A Character key wears its own cap TEXT, with one exception
-// that is a property of the character rather than a list: SPACE has no glyph,
-// so it wears Breeze's own spacebar icon. The four function keys wear
-// unmodified Breeze icons, and SHIFT's is its two faces off the one lamp bit
-// (the caps pair — the reading is at the enumerators, icons.h). The layer
-// toggle and the blank slot wear neither.
-inline bool wears_icon(const KeyDef& k) {
+// WHAT A KEY WEARS, AND IT IS TEXT AND NOTHING ELSE (architect 2026-08-27, on
+// glass): every cap is a WORD or a character on the ONE sans face at the
+// product's one text size, shaped through the one chokepoint like every other
+// label. The function keys wore Breeze glyphs for a day and read OVERSIZED
+// beside the letter caps — a 22-unit icon scaled to the key's own height next
+// to a 12pt letter — and there is plenty of horizontal room on a full-width
+// row, so they say what they do instead.
+//
+// This function is the ONE OWNER of the words. It answers the cap for every key
+// that has one that is not simply its own character: the four function keys,
+// SPACE (which has no glyph of its own to wear), and the LAYER TOGGLE, whose
+// cap names the layer it goes TO — the reference's own convention and the only
+// one that reads right on a key you press to leave where you are. A Character
+// key other than space answers nullptr and the painter spells it out of the
+// table's own `ch` through the one case derivation above; so does a Blank slot,
+// which paints nothing at all.
+//
+// SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
+// what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
+// kRedesignLine frame, the icon row's own lit-toggle face, which this key and
+// the layer toggle already wear off their lamp bits — and the letter caps
+// themselves, every one of which turns capital while the arm stands.
+inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
     switch (k.role) {
-        case Role::Character:   return k.ch == ' ';
-        case Role::Shift:
-        case Role::Backspace:
-        case Role::Enter:
-        case Role::Escape:      return true;
-        case Role::LayerToggle:
-        case Role::Blank:       return false;
-    }
-    return false;
-}
-
-inline icons::Icon icon_of(const KeyDef& k, bool shift_armed) {
-    switch (k.role) {
-        case Role::Shift:
-            return shift_armed ? icons::Icon::KeyboardCapsEnabled
-                               : icons::Icon::KeyboardCapsDisabled;
-        case Role::Backspace:   return icons::Icon::EditClearLocationbarRtl;
-        case Role::Enter:       return icons::Icon::KeyboardEnter;
-        case Role::Escape:      return icons::Icon::DialogCancel;
-        case Role::Character:
-        case Role::LayerToggle:
+        case Role::Shift:       return "Shift";
+        case Role::Backspace:   return "Backspace";
+        case Role::Enter:       return "Enter";
+        case Role::Escape:      return "Cancel";
+        case Role::LayerToggle: return symbol_layer ? "abc" : "&123";
+        case Role::Character:   return k.ch == ' ' ? "Space" : nullptr;
         case Role::Blank:       break;
     }
-    return icons::Icon::KeyboardSpacebar;   // the space bar's own
-}
-
-// THE LAYER TOGGLE'S CAP names the layer it goes TO, which is the reference's
-// own convention and the only one that reads right on a key you press to
-// leave where you are.
-inline const char* layer_toggle_cap(bool symbol_layer) {
-    return symbol_layer ? "abc" : "&123";
+    return nullptr;
 }
 
 // -- The authored geometry --------------------------------------------------
@@ -292,18 +285,21 @@ inline const char* layer_toggle_cap(bool symbol_layer) {
 inline constexpr double kKeyHeightPx = 40.0;   // one row's key box
 inline constexpr double kKeyGapPx    = 4.0;    // between adjacent keys, both axes
 inline constexpr double kPadPx       = 4.0;    // the surface's own outer margin
-inline constexpr double kBorderPx    = 1.0;    // the top seam, the bottom row's own
 inline constexpr double kCornerPx    = 5.0;    // the roster's radius (kIconCornerRadiusPx)
 
 inline int key_height_px()  { return scaled_px(kKeyHeightPx, 1); }
 inline int key_gap_px()     { return scaled_px(kKeyGapPx, 1); }
 inline int pad_px()         { return scaled_px(kPadPx); }
-inline int border_px()      { return scaled_px(kBorderPx, 1); }
 
-// The surface's whole height: four key rows, three gaps between them, the outer
-// margin at both ends, and the 1px top seam.
+// The surface's whole height: four key rows, three gaps between them, and the
+// outer margin at both ends. THE BAND HAS NO CHROME OF ITS OWN — no line at its
+// top edge (architect 2026-08-27, on glass): the keyboard's ground is the
+// bottom row's ground, so the two lanes read as one block and a seam between
+// them would draw a border through the middle of it. The 1px line under the
+// band is the BOTTOM ROW'S own border-top (bottom_row_border_h_px, painted by
+// that row), which this surface neither owns nor touches.
 inline int surface_height_px() {
-    return border_px() + 2 * pad_px() + kRowCount * key_height_px() +
+    return 2 * pad_px() + kRowCount * key_height_px() +
            (kRowCount - 1) * key_gap_px();
 }
 
@@ -462,7 +458,7 @@ inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
     if (inner_w <= 0) return;
     const double unit = static_cast<double>(inner_w) / kUnitsPerRow;
 
-    int y = surf.y + border_px() + pad;
+    int y = surf.y + pad;
     for (int r = 0; r < kRowCount; ++r) {
         const Row& row = row_of(symbol_layer, r);
         int span_total = 0;

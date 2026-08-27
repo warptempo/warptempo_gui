@@ -999,52 +999,6 @@ constexpr IconPath kBoostPaths[] = {
     {kIconText, "m12.632 14.621 4.9583 1.8758-4.9583 1.8758", {}, true, true},
 };
 
-// -- THE ON-SCREEN KEYBOARD'S FIVE (2026-08-27) ------------------------------
-//
-// The painted keyboard's function keys, transcribed under this table's ordinary
-// rules: `d` verbatim from the committed file (assets/icons/breeze/), the fill
-// hard-coded to the value that file's own `.ColorScheme-Text` resolves to,
-// which is kIconText #fcfcfc for all five. No departures ride with them — every
-// one is a single `<path>` element with a real `d`, no transform, no stroke, no
-// dash — and their command coverage is the interpreter's oldest arms alone
-// (relative m/l/h/v/z on the four `keyboard-*` files, absolute M/L/z on the
-// clear arrow), so nothing in the subset had to grow to accept them.
-//
-// THE CAPS PAIR IS ONE KEY'S TWO FACES (the reading is at the enumerators,
-// icons.h): keyboard-caps-disabled is the arrow drawn as an OUTLINE — its `d`
-// closes the outer arrow and then walks an inner one, so the nonzero winding
-// rule hollows it, exactly as document-save's lid slot comes out — and
-// keyboard-caps-enabled is the same arrow with that second subpath absent,
-// hence solid.
-
-constexpr IconPath kKeyboardCapsDisabledPaths[] = {
-    {kIconText, "m11 2-7 7h4v8h6v-8h4zm0 1.5 4.5 4.5h-2.5v8h-4v-8h-2.5z"},
-};
-
-constexpr IconPath kKeyboardCapsEnabledPaths[] = {
-    {kIconText, "m11 2-7 7h4v8h6v-8h4z"},
-};
-
-constexpr IconPath kKeyboardEnterPaths[] = {
-    {kIconText, "m17 6v5h-9v-4l-5 5 5 5v-4h11v-7h-2z"},
-};
-
-constexpr IconPath kKeyboardSpacebarPaths[] = {
-    {kIconText, "m3 8v6h16v-6h-2v4h-12v-4z"},
-};
-
-// BACKSPACE. The file's `d` is one path whose second subpath is the X inside
-// the tag; the nonzero rule punches it out, so no second element and no
-// even-odd rule are needed.
-constexpr IconPath kEditClearLocationbarRtlPaths[] = {
-    {kIconText,
-     "M 8 3 L 0.94335938 10.056641 L 0 11 L 0.94335938 11.943359 L 8 19 L "
-     "20.333984 19 L 22 19 L 22 3 L 20.333984 3 L 8 3 z M 11.320312 7 L 14 "
-     "9.6796875 L 16.679688 7 L 18 8.3203125 L 15.320312 11 L 18 13.679688 L "
-     "16.679688 15 L 14 12.320312 L 11.320312 15 L 10 13.679688 L 12.679688 11 "
-     "L 10 8.3203125 L 11.320312 7 z "},
-};
-
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -1091,12 +1045,6 @@ constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
 constexpr IconDef kBoost              {22.0, kBoostPaths,               4};
-constexpr IconDef kKeyboardCapsDisabled {22.0, kKeyboardCapsDisabledPaths,  1};
-constexpr IconDef kKeyboardCapsEnabled  {22.0, kKeyboardCapsEnabledPaths,   1};
-constexpr IconDef kKeyboardEnter        {22.0, kKeyboardEnterPaths,         1};
-constexpr IconDef kKeyboardSpacebar     {22.0, kKeyboardSpacebarPaths,      1};
-constexpr IconDef kEditClearLocationbarRtl
-                                        {22.0, kEditClearLocationbarRtlPaths, 1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -1145,12 +1093,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::BboxPrev:            return kBboxPrev;
         case Icon::BboxNext:            return kBboxNext;
         case Icon::Boost:               return kBoost;
-        case Icon::KeyboardCapsDisabled: return kKeyboardCapsDisabled;
-        case Icon::KeyboardCapsEnabled:  return kKeyboardCapsEnabled;
-        case Icon::KeyboardEnter:        return kKeyboardEnter;
-        case Icon::KeyboardSpacebar:     return kKeyboardSpacebar;
-        case Icon::EditClearLocationbarRtl:
-                                         return kEditClearLocationbarRtl;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

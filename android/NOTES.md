@@ -1136,6 +1136,17 @@ The glass had no way to type. This is the surface that gives it one, and it is
 PRODUCT code in `src/gui/` rather than anything Android-specific: the only
 platform-shaped parts are the two seam members that gate it.
 
+> **Two parts of this section were superseded LATER THE SAME DAY**, on the
+> architect's first glass drive: the band's 1px TOP SEAM is deleted (its ground
+> is the bottom row's, so the two lanes read as one block), and every FUNCTION
+> KEY now says its word on the sans face instead of wearing a Breeze glyph —
+> Shift, Backspace, Space, Cancel, Enter — which took §13.5's five icons out
+> whole (`kIconCount` 51 → 46, `dialog-cancel` untouched, Render's mid-render
+> face being its own reader) and left shift's one-shot arm on the ARMED FACE
+> alone. `docs/engineering/architecture/platform-seam.md` and
+> `src/gui/onscreen_keyboard.h` are authoritative; what follows is the record of
+> what M5 landed.
+
 ### 13.1 The shape
 
 A four-row Maliit-shaped keyboard (reference: Plasma Mobile's own, Breeze Dark),
