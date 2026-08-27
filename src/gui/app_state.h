@@ -4645,9 +4645,9 @@ struct AppState {
     // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
     // is the text_editor_session() they were set in, and the ONE OWNER
     // onscreen_keyboard::reconcile_session clears the pair the moment the live
-    // session has moved — from the run loop's tick and from the head of the
-    // press router, damaging the whole band as it goes, so the pixels can never
-    // describe one key while a press dispatches another. Every reader (the
+    // session has moved — at its own call sites, which its declaration names,
+    // damaging the whole band as it goes, so the pixels can never describe one
+    // key while a press dispatches another. Every reader (the
     // painter, the press router) then simply READS this struct. The reset owns
     // no editor-side call sites and cannot be forgotten by a route added
     // later.

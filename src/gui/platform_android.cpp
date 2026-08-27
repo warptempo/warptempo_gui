@@ -1235,7 +1235,19 @@ std::string resolve_source_path(ANativeActivity* activity) {
     // `current`. std::getline takes the line without its terminator; the \r trim
     // beside it costs nothing and the name is otherwise taken VERBATIM, since a
     // project folder may legitimately end in any character but a newline.
+    //
+    // ITS PAYLOAD IS ONE RELATIVE PATH COMPONENT AND NOTHING ELSE, and the four
+    // refusals below are the ADVERSARIAL-LOAD CLASS, not a fallback: the sync
+    // script writes this file with one folder NAME on one line, so a `/`, a `.`
+    // or `..`, an absolute path, or a second line of payload are states its ONE
+    // producer cannot make. A name carrying a separator would compose a path
+    // that leaves the folder it claims to name — `../other` resolves outside
+    // `files/projects` entirely — and the app would then open and EDIT a piece
+    // the laptop never put here. So the composition happens only after the name
+    // is known to be a single component, and anything else names itself and
+    // aborts, exactly as every other failure in this function does.
     std::string name;
+    bool        extra_payload = false;
     {
         std::ifstream in(files / "current", std::ios::binary);
         if (!in) {
@@ -1243,6 +1255,18 @@ std::string resolve_source_path(ANativeActivity* activity) {
                          ": run `wts tp` from the laptop");
         }
         std::getline(in, name);
+        // Trailing blank lines are what a text editor's final newline leaves
+        // behind and say nothing; any other second line is payload.
+        std::string rest;
+        while (std::getline(in, rest)) {
+            while (!rest.empty() && (rest.back() == '\r' || rest.back() == '\n')) {
+                rest.pop_back();
+            }
+            if (!rest.empty()) {
+                extra_payload = true;
+                break;
+            }
+        }
     }
     while (!name.empty() && (name.back() == '\r' || name.back() == '\n')) {
         name.pop_back();
@@ -1250,31 +1274,82 @@ std::string resolve_source_path(ANativeActivity* activity) {
     if (name.empty()) {
         source_fatal("`current` names no project folder");
     }
+    if (extra_payload) {
+        source_fatal("`current` holds more than one line: it must name one "
+                     "folder under projects/ and nothing else");
+    }
+    if (name.find('/') != std::string::npos || name == "." || name == "..") {
+        source_fatal("`current` names '" + name + "': it must name one folder "
+                     "under projects/, not a path");
+    }
 
     std::error_code             ec;
     const std::filesystem::path project = files / "projects" / name;
     if (!std::filesystem::is_directory(project, ec)) {
+        // The parenthetical is the SYSTEM'S own words and only appears when the
+        // system had some: a plainly absent folder sets no error code, and
+        // "(Success)" after a refusal message would read as a contradiction.
         source_fatal("`current` names '" + name + "', which is not a folder "
-                     "under " + (files / "projects").string() + " (" +
-                     ec.message() + ")");
+                     "under " + (files / "projects").string() +
+                     (ec ? " (" + ec.message() + ")" : ""));
     }
 
+    // THE WALK REFUSES OUT LOUD AND CANNOT THROW. Every step takes the
+    // non-throwing overload and every error code is read, because a directory
+    // that passes is_directory can still refuse to be enumerated (an ACL or a
+    // mode this uid cannot read) — and that refusal is a DIFFERENT fact from
+    // "no source in there", which is what an empty walk would otherwise report.
+    // The system's own words are the whole diagnosis in those cases, exactly as
+    // the directory refusal above carries them.
     std::filesystem::path source;
-    for (const auto& de : std::filesystem::directory_iterator(project, ec)) {
-        if (!de.is_regular_file()) continue;
-        if (de.path().extension() != ".wav") continue;
-        std::filesystem::path markers = de.path();
-        markers.replace_extension(".warpmarkers");
-        if (!std::filesystem::is_regular_file(markers, ec)) continue;
-        if (!source.empty()) {
-            // TWO SOURCES IN ONE FOLDER is not a state the sync script can
-            // produce, and directory_iterator's order is unspecified, so there
-            // is no honest way to choose between them. It says which two.
-            source_fatal("two sources in '" + name + "': " +
-                         source.filename().string() + " and " +
-                         de.path().filename().string());
+    std::filesystem::directory_iterator it(project, ec);
+    if (ec) {
+        source_fatal("cannot read '" + name + "': " + ec.message());
+    }
+    // The step is the loop's TAIL rather than its increment expression so the
+    // code it sets is read before the end test can hide it: an increment that
+    // fails is free to land on the end iterator, and a for-loop's condition
+    // would then leave the walk quietly short.
+    const std::filesystem::directory_iterator walk_end;
+    while (it != walk_end) {
+        // NESTED RATHER THAN `continue`d: the step below is the loop's one
+        // advance, so every not-the-source answer has to fall through to it.
+        const std::filesystem::path entry = it->path();
+        std::error_code             entry_ec;
+        const bool                  regular = it->is_regular_file(entry_ec);
+        if (entry_ec) {
+            source_fatal("cannot read '" + entry.filename().string() +
+                         "' in '" + name + "': " + entry_ec.message());
         }
-        source = de.path();
+        if (regular && entry.extension() == ".wav") {
+            std::filesystem::path markers = entry;
+            markers.replace_extension(".warpmarkers");
+            // An ABSENT sibling is not an error and clears the code (that is
+            // what makes this the ordinary "not the source" path); a real
+            // refusal sets one and is fatal like every other.
+            const bool has_markers =
+                std::filesystem::is_regular_file(markers, entry_ec);
+            if (entry_ec) {
+                source_fatal("cannot read '" + markers.filename().string() +
+                             "' in '" + name + "': " + entry_ec.message());
+            }
+            if (has_markers) {
+                if (!source.empty()) {
+                    // TWO SOURCES IN ONE FOLDER is not a state the sync script
+                    // can produce, and directory_iterator's order is
+                    // unspecified, so there is no honest way to choose between
+                    // them. It says which two.
+                    source_fatal("two sources in '" + name + "': " +
+                                 source.filename().string() + " and " +
+                                 entry.filename().string());
+                }
+                source = entry;
+            }
+        }
+        it.increment(ec);
+        if (ec) {
+            source_fatal("cannot read '" + name + "': " + ec.message());
+        }
     }
     if (source.empty()) {
         source_fatal("no source in '" + name +

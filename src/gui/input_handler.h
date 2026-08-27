@@ -3310,8 +3310,8 @@ private:
     // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the
     // editor's own vocabulary, the undo coalescing, the core's repeat arming —
     // runs unchanged from there. Ahead of the hit test it runs the SESSION-
-    // CHANGE OWNER (onscreen_keyboard::reconcile_session, which the run loop's
-    // tick also calls), so a press can never be routed against lamps the
+    // CHANGE OWNER (onscreen_keyboard::reconcile_session, whose declaration
+    // names its other caller), so a press can never be routed against lamps the
     // previous edit armed.
     //
     // THE RELEASE OWES THE KEY-UP AND NOTHING ELSE. It is guarded on the held

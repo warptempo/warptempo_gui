@@ -524,10 +524,17 @@ projects/<name>/         the source .wav, its three sidecars sharing that
 `resolve_source_path` reads `current`, then answers with the ONE `.wav` in
 `projects/<name>/` whose stem has a `.warpmarkers` sibling — the sync script's
 own rule for "the source", so a render sitting beside it (published title, no
-sidecars) never matches. `current` absent, naming no folder, that folder holding
-no such `.wav`, or two of them: each is logged at FATAL through `__android_log`
-and aborts, since the sync script writes `current` on every run and a fallback
-would have no producer.
+sidecars) never matches. `current` absent, empty, holding a second line of
+payload, naming anything but ONE relative component (a `/`, `.` or `..`, an
+absolute path), naming no folder, a folder that refuses to be enumerated, that
+folder holding no such `.wav`, or two of them: each is logged at FATAL through
+`__android_log` and aborts, since the sync script writes `current` on every run
+and a fallback would have no producer. The grammar refusals are the
+adversarial-load class read onto this file — a name carrying a separator would
+compose a path leaving the folder it claims to name, and the app would open and
+edit a piece the laptop never put here — and every filesystem refusal carries
+the system's own words, because "Permission denied" is the one that means the
+mode-770 directory this section records below.
 
 The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`
 from a project folder pushes it and makes it current, `wts fp` brings the
@@ -557,9 +564,11 @@ are already world-readable. `wts tp` runs it after every push.
 
 The seam's class A only. `GuiPlatform`'s public API is identical to
 `platform_wayland.h`'s member for member (proved by diffing the two headers'
-declaration lines with comments stripped), plus ONE addition — `synthesize_key`,
-which no consumer calls and which is the road an owned on-screen keyboard would
-take into the core's key path.
+declaration lines with comments stripped). *(This paragraph once recorded ONE
+addition — `synthesize_key`, unused and reserved for an owned on-screen
+keyboard. SUPERSEDED 2026-08-27: both backends now declare `synthesize_key` and
+`wants_onscreen_keyboard`, the on-screen keyboard's press router is their one
+consumer, and the seam has no addition at all — §13.3.)*
 
 - **Run loop**: a periodic `timerfd` at 5 ms (8 ms until 2026-08-27; §10.4
   carries the pin that moved it) is the ONE wakeup, added to the
@@ -1153,9 +1162,13 @@ a 407 px surface of 90 px keys.
 
 `SHIFT` is **one-shot**: tap it, the next letter is a capital, then it clears; a
 second tap while armed clears it; there is no caps lock. `&123` toggles the
-symbol layer and reads `abc` while it stands, and leaving the letter page clears
-a pending capital (the shift lamp does not paint on the symbol page, and a state
-nothing shows is a state that surprises). The two lamps are session-scoped: they
+symbol layer and reads `abc` while it stands, and leaving the letter page LEAVES
+A PENDING CAPITAL STANDING — like every other key that types no letter, since
+only a letter can spend the arm and every letter is on the page the toggle came
+from, so a round trip to the symbols and back finds the arm where it was left.
+*(This paragraph said the opposite — the toggle clearing the arm because the
+lamp does not paint on the symbol page — until 2026-08-27; the input owner is
+authoritative, `input_pointer.cpp`.)* The two lamps are session-scoped: they
 are keyed to the live editor's `text_editor::State::session`, so a close, a
 reopen or a retarget clears them by comparison rather than by a list of close
 sites. No globe, no language label, no hide key, no long-press alternates, no

@@ -362,16 +362,22 @@ inline GuiRect surface_rect(const AppState& a) {
 //
 // So the reset is a WRITE THAT RUNS ON ITS OWN, never a reconciliation a reader
 // happens to discover. Its two callers are:
-//   * the TICK (main.cpp), beside the show/hide comparator — which watches
-//     standing/not-standing alone, and a RETARGET moves neither; this call is
-//     what makes the tick observe the SESSION IDENTITY;
+//   * the PRE-PAINT HOOK (main.cpp), which runs ahead of EVERY frame either
+//     backend paints — before the damage list is read and free to add to it,
+//     which is what a painter may not do. Nothing reaches the glass without
+//     passing here first, so the first frame of a newly opened editor cannot
+//     show the previous one's lamps even when the release that opened it is
+//     followed straight by a paint with no tick between them;
 //   * the HEAD OF THE PRESS ROUTER (input_pointer.cpp), which covers a close
-//     and a reopen completed inside ONE DRAINED INPUT BATCH, with no tick
-//     between them.
+//     and a reopen completed inside ONE DRAINED INPUT BATCH, with no paint
+//     between them — the hit test must not run against the old session's
+//     lamps either.
 // THE PAINTER DOES NOT CALL IT: a painter that reconciled would discover the
 // change only on a frame whose exposure happened to reach this band, and it
 // would be declaring damage from inside a frame (the paint loop may not — the
-// contract is at GuiPlatform::paint_one_frame).
+// contract is at GuiPlatform::paint_one_frame). THE TICK DOES NOT CALL IT
+// EITHER: a tick with no paint behind it has nothing to correct on screen, and
+// a tick that is followed by one is already covered by the pre-paint call.
 //
 // IT DAMAGES THE WHOLE BAND because both lamps are whole-surface facts: the
 // arm moves every letter cap's case and the layer moves every key on three

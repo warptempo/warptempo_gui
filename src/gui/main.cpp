@@ -2092,13 +2092,12 @@ int gui_main(const char* source_path) {
         // THE SHOW AND HIDE ARE NOT THE WHOLE OF IT: this comparator watches
         // STANDING and nothing else, and the live editor SESSION can change
         // without it moving — a flag-editor retarget, or a close and a reopen
-        // inside one drained batch. That change is the other owner's, called
-        // first here so the tick observes the session identity too; it clears
-        // the two lamps and damages the band, and does nothing at all with the
-        // surface down (the contract is at reconcile_session).
+        // inside one drained batch. That change has its own owner and IS NOT
+        // CALLED HERE: a tick with no paint behind it has nothing to correct on
+        // screen, and every frame that does paint runs the owner in the
+        // PRE-PAINT hook below, which is strictly earlier and strictly more
+        // often than this (the caller list is at reconcile_session).
         {
-            onscreen_keyboard::reconcile_session(app, gui, viewport);
-
             const bool kb_live = onscreen_keyboard::stands(app, gui);
             if (kb_live != app.onscreen_keyboard.painted_standing) {
                 viewport.invalidate_waveform_area();
@@ -2369,6 +2368,20 @@ int gui_main(const char* source_path) {
     });
 
     gui.set_on_pre_paint([&]() {
+        // THE ON-SCREEN KEYBOARD'S SESSION OWNER RUNS AHEAD OF EVERY FRAME,
+        // and this hook is the one place a write may still happen with a paint
+        // already committed to: it runs before the damage list is read and is
+        // allowed to add to it (both backends' paint_one_frame say so), while
+        // the painter itself may not — which is why the painter stays a pure
+        // reader of the two lamps. A pointer release can open an editor and be
+        // followed straight by the backend's paint with no tick between them,
+        // so without this call the first frame of a NEW edit could show the
+        // previous one's Shift arm or symbol page. It is a no-op with the
+        // surface down (the laptop forever) and on any frame whose session did
+        // not change, and it sits ABOVE the playback guards below because it
+        // has nothing to do with playback.
+        onscreen_keyboard::reconcile_session(app, gui, viewport);
+
         if (app.loading || audio.total_frames() <= 0) return;
         if (!playback.is_playing()) return;
 

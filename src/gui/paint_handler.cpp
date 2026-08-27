@@ -6145,8 +6145,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // The keyboard's state, READ ONCE here so every key below is painted
     // against one answer. THIS BODY ONLY READS IT: the reset that follows a
     // change of the live editor session has its own owner
-    // (onscreen_keyboard::reconcile_session), called from the tick and from the
-    // head of the press router, and deliberately not from here — the exposure
+    // (onscreen_keyboard::reconcile_session, whose own declaration names its
+    // callers), and it is deliberately not called from here — the exposure
     // gates above would decide when a painter noticed the change, and a painter
     // may declare no damage.
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
