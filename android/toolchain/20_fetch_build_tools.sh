@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Fetch + verify + install the MINIMAL SDK pieces: build-tools (aapt2, zipalign,
-# apksigner, d8) and the android-$WT_TARGET_SDK platform (android.jar, needed by
-# aapt2 link -I). No sdkmanager, no licence dance, no system-wide state.
+# apksigner, d8) and the android-$WT_PLATFORM_SDK platform (android.jar, needed
+# by aapt2 link -I -- the INSTALLED platform, which is not the manifest's
+# targetSdkVersion and does not have to match it; 00_env.sh states both). No
+# sdkmanager, no licence dance, no system-wide state.
 # Idempotent.
 set -euo pipefail
 . "$(dirname -- "${BASH_SOURCE[0]}")/00_env.sh"
@@ -25,7 +27,7 @@ install_zip() {  # <zip> <sha1> <final-dir>
 }
 
 install_zip "$WT_BUILD_TOOLS_ZIP" "$WT_BUILD_TOOLS_SHA1" "$WT_BUILD_TOOLS"
-install_zip "$WT_PLATFORM_ZIP"    "$WT_PLATFORM_SHA1"    "$WT_SDK/platforms/android-$WT_TARGET_SDK"
+install_zip "$WT_PLATFORM_ZIP"    "$WT_PLATFORM_SHA1"    "$WT_SDK/platforms/android-$WT_PLATFORM_SDK"
 
 for t in aapt2 zipalign apksigner d8; do
     [ -e "$WT_BUILD_TOOLS/$t" ] || wt_die "missing $t in $WT_BUILD_TOOLS"
@@ -34,5 +36,5 @@ done
 [ -f "$WT_ANDROID_JAR" ] || wt_die "missing $WT_ANDROID_JAR"
 
 wt_say "build-tools $WT_BUILD_TOOLS_VERSION at $WT_BUILD_TOOLS"
-wt_say "android.jar (API $WT_TARGET_SDK) at $WT_ANDROID_JAR"
+wt_say "android.jar (API $WT_PLATFORM_SDK) at $WT_ANDROID_JAR"
 "$WT_BUILD_TOOLS/aapt2" version || true

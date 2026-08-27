@@ -2,6 +2,7 @@
 
 #include "gui_font.h"
 #include "gui_main.h"
+#include "render.h"   // kRedesignContentGround, the band fill
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -35,7 +36,12 @@
 
 // THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
 // the glue's lifecycle, the ALooper run loop, the cairo -> ANativeWindow blit,
-// the AMotionEvent decode and this platform's stubs. The POLICY (the touch
+// the AMotionEvent decode and this platform's stubs. THE WINDOW IT PRESENTS TO
+// THE GUI IS THE CONTENT RECT, not the surface: the surface is the whole panel
+// on this platform and the band inside the system bars arrives separately, so
+// this file adds the origin at the blit and subtracts it at the touch decode
+// and nothing above the seam knows either exists (the rule is at origin_x_,
+// platform_android.h). The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the notional-x
 // bookkeeping, the containment conversion) is in GuiInputCore and is shared
 // verbatim with the Wayland backend; every input event decoded below is handed
@@ -195,6 +201,31 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
         const uint32_t v = src[x];
         dst[x] = (v & 0xFF00FF00u) | ((v >> 16) & 0xFFu) | ((v & 0xFFu) << 16);
     }
+}
+
+// ---------------------------------------------------------------------------
+// The bands outside the content rect
+// ---------------------------------------------------------------------------
+
+// THE PRODUCT'S CONTENT GROUND, in the WINDOW's own byte order. The two bands
+// (above the content rect, under the status bar; below it, under the taskbar)
+// are covered by the system's own windows, so nothing of ours is meant to be
+// seen there — but a translucent bar over a buffer nobody wrote would show a
+// stale frame, so they are filled. These pixels never pass through the
+// backbuffer, so they never meet copy_swap_rb's swap either: the word is built
+// R,G,B,A directly, from the palette constant rather than from a second
+// spelling of #202326 (render.h is the one color owner; a retune follows).
+constexpr uint32_t window_word(GuiColor c) {
+    const auto ch = [](double v) {
+        return static_cast<uint32_t>(v * 255.0 + 0.5) & 0xFFu;
+    };
+    return 0xFF000000u | (ch(c.b) << 16) | (ch(c.g) << 8) | ch(c.r);
+}
+
+constexpr uint32_t kBandWord = window_word(kRedesignContentGround);
+
+void fill_band(uint32_t* dst, int n) {
+    for (int x = 0; x < n; ++x) dst[x] = kBandWord;
 }
 
 // ---------------------------------------------------------------------------
@@ -369,27 +400,46 @@ void GuiPlatform::adopt_window(bool fire_resize) {
                      "FIXED_SOURCE) -> %d\n", static_cast<int>(rate_rc));
     }
 
-    const int w = ANativeWindow_getWidth(window_);
-    const int h = ANativeWindow_getHeight(window_);
-    if (w <= 0 || h <= 0) {
+    // THE SURFACE, which is not the window the GUI sees. On this platform the
+    // app window's frame is the whole display and the band inside the system
+    // bars arrives separately, as the content rect (the rule is at origin_x_,
+    // platform_android.h).
+    const int surf_w = ANativeWindow_getWidth(window_);
+    const int surf_h = ANativeWindow_getHeight(window_);
+    if (surf_w <= 0 || surf_h <= 0) {
         std::fprintf(stderr,
                      "warptempo_gui: ANativeWindow reported %dx%d; "
-                     "painting suspended\n", w, h);
+                     "painting suspended\n", surf_w, surf_h);
         window_ = nullptr;
         return;
     }
 
+    // EVERY ADOPTION RE-READS THE RECT, which is what makes one function
+    // answer for all four commands that reach it: INIT_WINDOW, WINDOW_RESIZED,
+    // CONFIG_CHANGED and CONTENT_RECT_CHANGED. A bar coming or going moves the
+    // rect without moving the surface, and a rotation would move both.
+    int ox = 0, oy = 0, cw = surf_w, ch = surf_h;
+    resolve_content_rect(surf_w, surf_h, ox, oy, cw, ch);
+
     // THE GEOMETRY EDGE, which is not the same thing as an adoption: the glue
     // posts INIT_WINDOW, WINDOW_RESIZED and CONFIG_CHANGED for a
-    // landscape-locked activity that never changes size, so most adoptions
-    // move nothing. Only a real move owes the resize callback (which force-ends
-    // every pointer gesture, closes the dropdown and rebuilds the layout) and
-    // the one startup line.
-    const bool moved = (w != width_ || h != height_ || !has_initial_configure_);
+    // landscape-locked activity whose surface never changes size, so most
+    // adoptions move nothing. A moved ORIGIN counts as a move even at an
+    // unchanged size: every pixel the GUI paints lands somewhere else.
+    // Only a real move owes the resize callback (which force-ends every
+    // pointer gesture, closes the dropdown and rebuilds the layout) and the
+    // one startup line.
+    const bool moved = (cw != width_ || ch != height_ ||
+                        ox != origin_x_ || oy != origin_y_ ||
+                        !has_initial_configure_);
 
-    width_  = w;
-    height_ = h;
-    ensure_backbuffer(w, h);
+    surface_w_ = surf_w;
+    surface_h_ = surf_h;
+    origin_x_  = ox;
+    origin_y_  = oy;
+    width_     = cw;
+    height_    = ch;
+    ensure_backbuffer(width_, height_);
     input_.set_surface_width(width_);
     has_initial_configure_ = true;
 
@@ -399,13 +449,54 @@ void GuiPlatform::adopt_window(bool fire_resize) {
         } else {
             initial_resize_owed_ = true;
         }
-        std::fprintf(stderr, "warptempo_gui: window %dx%d, tick %d ms\n",
-                     width_, height_, playback_tick_ms_);
+        std::fprintf(stderr,
+                     "warptempo_gui: window %dx%d at (%d,%d) of surface "
+                     "%dx%d, tick %d ms\n",
+                     width_, height_, origin_x_, origin_y_,
+                     surface_w_, surface_h_, playback_tick_ms_);
     }
     // FULL DAMAGE ON EVERY ADOPTION, moved or not: the window hands back
     // buffers whose content is a lost frame's, so the first post after any
-    // adoption has to carry the whole picture.
+    // adoption has to carry the whole picture — and the bands with it, which
+    // is what the owed full-surface post below is for.
+    surface_bands_owed_ = true;
     invalidate_region(0, 0, width_, height_);
+}
+
+/*
+ * THE CONTENT RECT, resolved against the surface. The glue keeps
+ * android_app::contentRect current (it writes it under its own mutex on the UI
+ * thread and posts APP_CMD_CONTENT_RECT_CHANGED; reading the latest value here
+ * is the documented use) and ZERO-INITIALISES it, so before the first callback
+ * there is no rect at all — the fallback is the whole surface, which is
+ * exactly what this backend did before the rect was read.
+ *
+ * EVERY DEGENERATE ANSWER TAKES THE SAME FALLBACK rather than an error arm:
+ * an inverted or empty rect, or one that does not intersect the surface, would
+ * otherwise hand the GUI a window of nothing. There is no producer for those
+ * on this device; the fallback exists because the alternative is a black app,
+ * not because a fault is expected.
+ */
+void GuiPlatform::resolve_content_rect(int surf_w, int surf_h,
+                                       int& ox, int& oy,
+                                       int& cw, int& ch) const {
+    ox = 0;
+    oy = 0;
+    cw = surf_w;
+    ch = surf_h;
+    if (!app_) return;
+
+    const ARect r = app_->contentRect;
+    const int left   = std::max(0, std::min(static_cast<int>(r.left),   surf_w));
+    const int top    = std::max(0, std::min(static_cast<int>(r.top),    surf_h));
+    const int right  = std::max(0, std::min(static_cast<int>(r.right),  surf_w));
+    const int bottom = std::max(0, std::min(static_cast<int>(r.bottom), surf_h));
+    if (right <= left || bottom <= top) return;
+
+    ox = left;
+    oy = top;
+    cw = right - left;
+    ch = bottom - top;
 }
 
 /*
@@ -453,7 +544,7 @@ int GuiPlatform::height() const { return height_; }
 // The title — no surface on this platform
 // ---------------------------------------------------------------------------
 
-// A NativeActivity under Theme.NoTitleBar.Fullscreen has no titlebar and no
+// A NativeActivity under Theme.NoTitleBar has no titlebar and no
 // task-switcher string a native app can rewrite, so the classic application
 // form the Wayland backend composes ("K551 * - warptempo_gui") has nowhere to
 // go. Both setters are therefore silent no-ops. They are not deleted because
@@ -589,7 +680,29 @@ void GuiPlatform::paint_one_frame() {
 bool GuiPlatform::present(int x, int y, int w, int h) {
     if (!window_ || !back_ || w <= 0 || h <= 0) return false;
 
-    ARect dirty{x, y, x + w, y + h};
+    // THE ORIGIN IS ADDED HERE AND NOWHERE ELSE ON THE WAY OUT. Everything
+    // above this line — the damage list, the backbuffer, every rect the GUI
+    // ever named — is in CONTENT coordinates; the window wants SURFACE ones.
+    //
+    // AND THE OWED POST IS THE WHOLE SURFACE, once per adoption, so the two
+    // bands outside the content rect are written at least once with the
+    // product's ground instead of holding whatever the buffer arrived with.
+    // After that they stay right for free: lock() widens the dirty rect it is
+    // given whenever the buffer it hands back is older than the last post, and
+    // the row loop below fills whatever band rows that widening names — the
+    // same mechanism the content's own partial damage already depends on.
+    int sx0 = x + origin_x_;
+    int sy0 = y + origin_y_;
+    int sx1 = sx0 + w;
+    int sy1 = sy0 + h;
+    if (surface_bands_owed_) {
+        sx0 = 0;
+        sy0 = 0;
+        sx1 = surface_w_;
+        sy1 = surface_h_;
+    }
+
+    ARect dirty{sx0, sy0, sx1, sy1};
     ANativeWindow_Buffer buf;
     const int rc = ANativeWindow_lock(window_, &buf, &dirty);
     if (rc != 0) {
@@ -625,11 +738,19 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     // lock() may WIDEN the rect it was asked for (a buffer whose content is
     // older than the last post), and the widened region is what the caller
     // must fill. The backbuffer holds the whole frame, so honoring it is a
-    // straight clamp-and-copy.
+    // straight clamp-and-copy — clamped to the BUFFER alone now, because the
+    // widened rect may reach outside the content rect and those pixels are
+    // this loop's to fill too.
     const int cx0 = std::max(0, std::min(dirty.left,   buf.width));
     const int cy0 = std::max(0, std::min(dirty.top,    buf.height));
-    const int cx1 = std::max(cx0, std::min(dirty.right,  std::min(buf.width,  back_w_)));
-    const int cy1 = std::max(cy0, std::min(dirty.bottom, std::min(buf.height, back_h_)));
+    const int cx1 = std::max(cx0, std::min(dirty.right,  buf.width));
+    const int cy1 = std::max(cy0, std::min(dirty.bottom, buf.height));
+
+    // The content's span inside that rect, in SURFACE coordinates: [ix0, ix1)
+    // horizontally, and vertically whichever rows map into the backbuffer.
+    // Everything else is band.
+    const int ix0 = std::max(cx0, origin_x_);
+    const int ix1 = std::min(cx1, origin_x_ + back_w_);
 
     // Both strides are in PIXELS: cairo's is bytes and is divided here,
     // ANativeWindow_Buffer::stride is documented as pixels already.
@@ -637,16 +758,25 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     const auto* src = reinterpret_cast<const uint32_t*>(
         cairo_image_surface_get_data(back_));
     auto* dst = static_cast<uint32_t*>(buf.bits);
-    const int  run = cx1 - cx0;
-    if (src && dst && run > 0) {
+    if (src && dst && cx1 > cx0) {
         for (int row = cy0; row < cy1; ++row) {
+            uint32_t* drow = dst + static_cast<size_t>(row) * buf.stride;
+            const int brow = row - origin_y_;
+            if (brow < 0 || brow >= back_h_ || ix1 <= ix0) {
+                // A band row (above or below the content rect), or a rect that
+                // misses the content horizontally: all ground.
+                fill_band(drow + cx0, cx1 - cx0);
+                continue;
+            }
+            if (ix0 > cx0) fill_band(drow + cx0, ix0 - cx0);
+            if (cx1 > ix1) fill_band(drow + ix1, cx1 - ix1);
             const uint32_t* srow =
-                src + static_cast<size_t>(row) * src_stride_px + cx0;
-            uint32_t* drow =
-                dst + static_cast<size_t>(row) * buf.stride + cx0;
+                src + static_cast<size_t>(brow) * src_stride_px +
+                (ix0 - origin_x_);
             // Both accepted formats need the R<->B swap (the gate above is
-            // what makes that unconditional).
-            copy_swap_rb(drow, srow, run);
+            // what makes that unconditional). The band fill above does not:
+            // its word was built in the window's order to begin with.
+            copy_swap_rb(drow + ix0, srow, ix1 - ix0);
         }
     }
 
@@ -657,6 +787,9 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
                      post_rc);
         return false;
     }
+    // The owed full-surface post is spent only on a post that reached the
+    // window, for the same reason the caller keeps its damage until then.
+    surface_bands_owed_ = false;
     return true;
 }
 
@@ -896,12 +1029,19 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             window_ = nullptr;
             break;
 
+        case APP_CMD_CONTENT_RECT_CHANGED:
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_CONFIG_CHANGED:
             // The activity is landscape-locked and resizeableActivity="false",
-            // so this is not expected to move the geometry; adopt anyway
-            // rather than assume, since ensure_backbuffer and the resize hook
-            // are both cheap no-ops when the size has not changed.
+            // so the SURFACE cannot move here — but the window the GUI sees is
+            // the content rect inside the system bars, and a bar coming or
+            // going moves that without touching the surface. CONTENT_RECT_-
+            // CHANGED is the command that carries it (the glue has already
+            // stored the new rect by the time this runs); the other two adopt
+            // for the same reason they always did. One handler for all three:
+            // adopt_window re-reads the surface AND the rect, and both
+            // ensure_backbuffer and the resize hook are cheap no-ops when
+            // nothing moved.
             if (app_->window) adopt_window(/*fire_resize=*/true);
             break;
 
@@ -977,13 +1117,37 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                             AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
     const size_t  count  = AMotionEvent_getPointerCount(event);
 
-    // COORDINATES ARE WINDOW PIXELS AS DOUBLES, unscaled: the surface is the
-    // panel at 1:1 (setBuffersGeometry(0,0) takes the window's own size), so
-    // there is no factor to apply. They are handed over FRACTIONAL because
-    // that is what the panel reports and what the core's one containment
-    // conversion expects (GuiInputCore::containing_pixel).
-    auto px = [&](size_t i) { return static_cast<double>(AMotionEvent_getX(event, i)); };
-    auto py = [&](size_t i) { return static_cast<double>(AMotionEvent_getY(event, i)); };
+    // COORDINATES ARE CONTENT PIXELS AS DOUBLES, unscaled. A surface pixel IS
+    // a panel pixel (setBuffersGeometry(0,0) takes the window's own size), so
+    // there is no factor to apply — but an AMotionEvent is measured from the
+    // WINDOW's own corner, and the window is the whole panel while the GUI's
+    // is the content rect inside the system bars. THE ORIGIN IS SUBTRACTED
+    // HERE AND NOWHERE ELSE ON THE WAY IN: these two lambdas are every
+    // coordinate this backend hands the core (the key path carries none, the
+    // hover/scroll actions are dropped below, and the capture doors take GUI
+    // coordinates that never reach the window at all), which is what keeps
+    // GuiInputCore identical to the Wayland build's.
+    //
+    // A TOUCH IN A BAND IS DELIVERED, NOT CLAMPED AND NOT DROPPED: translated,
+    // it is simply outside the window — a negative y over the status bar, y >=
+    // height_ under the taskbar — which is exactly the shape a Wayland pointer
+    // drag past an edge takes under labwc's implicit grab, and the GUI's own
+    // hit tests are what answer it there (the case is written out at
+    // containing_pixel, input_core.h). Clamping would invent a second policy
+    // for a coordinate the shared core already has one for. There is no
+    // producer either way: the bars' own windows take those touches.
+    //
+    // They are handed over FRACTIONAL because that is what the panel reports
+    // and what the core's one containment conversion expects
+    // (GuiInputCore::containing_pixel).
+    auto px = [&](size_t i) {
+        return static_cast<double>(AMotionEvent_getX(event, i)) -
+               static_cast<double>(origin_x_);
+    };
+    auto py = [&](size_t i) {
+        return static_cast<double>(AMotionEvent_getY(event, i)) -
+               static_cast<double>(origin_y_);
+    };
 
     switch (masked) {
         case AMOTION_EVENT_ACTION_DOWN:

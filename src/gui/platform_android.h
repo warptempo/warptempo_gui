@@ -14,7 +14,9 @@
 // implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
 // and the four worker eventfds to it, paints cairo into a persistent ARGB32
-// backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer.
+// backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer
+// AT THE CONTENT RECT'S ORIGIN (the window the GUI sees is the band inside the
+// system bars; the rule and its two translation points are at origin_x_).
 // No Android headers appear here on purpose; member pointer types are spelled
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_android.cpp — the same rule
@@ -341,6 +343,34 @@ private:
     int              back_h_ = 0;
 
     // -- Window state --
+    // THE CONTENT RECT IS THE WINDOW, and width_/height_ are ITS size — what
+    // the GUI is told the window is, and what every rect that crosses the seam
+    // is measured in. The SURFACE ANativeWindow hands back is bigger: an app
+    // window's frame is the whole display by construction on modern Android
+    // (its own layout params carry FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_-
+    // DECOR, and "fitting the system windows" is DecorView PADDING, which a
+    // NativeActivity never sees because it takes the WINDOW's surface), so the
+    // band between the status bar and the taskbar arrives as the CONTENT RECT
+    // instead — measured on the Tab S10 FE 2026-08-27 as frame [0,0][2304,1440]
+    // with a 53 px status bar and an 84 px taskbar, content 2304x1303 at (0,53).
+    //
+    // ORIGIN IS THIS BACKEND'S ALONE. Nothing above the seam knows it exists:
+    // it is ADDED on the way out (present, the one blit) and SUBTRACTED on the
+    // way in (the AMotionEvent decode's two coordinate lambdas), which is the
+    // whole of the translation and the reason GuiInputCore, main.cpp and every
+    // painter stay identical to the Wayland build's. Before the first
+    // APP_CMD_CONTENT_RECT_CHANGED the rect is the whole surface and every
+    // offset below is 0, which is exactly the pre-2026-08-27 behaviour.
+    int  origin_x_  = 0;
+    int  origin_y_  = 0;
+    int  surface_w_ = 0;
+    int  surface_h_ = 0;
+    // ONE FULL-SURFACE POST IS OWED AFTER EVERY ADOPTION, so the two bands
+    // outside the content rect get the product's content ground at least once
+    // per window rather than showing whatever the buffer held. Later frames
+    // keep them right through lock()'s own widening, which is the same
+    // mechanism partial damage already relies on (present).
+    bool surface_bands_owed_ = false;
     int  width_  = 0;
     int  height_ = 0;
     bool should_exit_ = false;
@@ -422,11 +452,17 @@ private:
     PrePaintCallback     on_pre_paint_;
 
     // -- Internal helpers --
-    // Take the glue's current ANativeWindow as ours: the geometry, the
-    // backbuffer, the core's surface width, has_initial_configure_, and full
-    // damage. `fire_resize` is false for init()'s adoption alone (see
+    // Take the glue's current ANativeWindow as ours: the surface geometry AND
+    // the content rect (origin + size, re-read every time), the backbuffer,
+    // the core's surface width, has_initial_configure_, and full damage. `fire_resize` is false for init()'s adoption alone (see
     // initial_resize_owed_) and true everywhere else.
     void adopt_window(bool fire_resize);
+    // Resolve the glue's current content rect against the surface size: the
+    // origin and the size the GUI will be told. Falls back to the whole
+    // surface for the zero rect the glue starts with and for anything empty,
+    // inverted or out of bounds — the window is never nothing.
+    void resolve_content_rect(int surf_w, int surf_h,
+                              int& ox, int& oy, int& cw, int& ch) const;
     void ensure_backbuffer(int w, int h);
     void destroy_backbuffer();
     void paint_one_frame();

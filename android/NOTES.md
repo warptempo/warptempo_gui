@@ -92,6 +92,15 @@ carry absolute paths, the NDK version and the API level. Re-run
 and `resizableActivity` on displays ≥ 600dp, which the Tab S10 FE is. `android.jar`
 is therefore the android-35 one.
 
+> **targetSdk is 34 since 2026-08-27** (§12's note): 35 turned out to carry
+> Android 15's edge-to-edge enforcement, which lays the window over the system
+> bars whatever the app asks for, and the opt-out at 35 is a theme attribute
+> needing a `res/` this APK has never had. 36 is still out for the reason above.
+> The `android.jar` is STILL the android-35 one — the compile platform and the
+> declared target are two numbers now (`WT_PLATFORM_SDK` / `WT_TARGET_SDK`,
+> `android/toolchain/00_env.sh`), because the runtime gates behaviour on the
+> stamped target and never on the jar.
+
 **minSdk 30 (Android 11)** — this is the choice the brief asked me to make and
 justify. The floor and the ceiling both leave it free:
 
@@ -623,8 +632,10 @@ consumer, and the seam has no addition at all — §13.3.)*
   UP/POINTER_UP → `touch_motion` for every pointer INCLUDING the lifting one
   then `touch_up`, CANCEL → `touch_cancel` — with
   `touch_frame()` closing every translated event, one AMotionEvent being one
-  logical touch batch. Coordinates are window-pixel doubles, unscaled (the
-  surface is the panel at 1:1). **History samples are not replayed**: the core
+  logical touch batch. Coordinates are pixel doubles, unscaled — a
+  surface pixel is a panel pixel; since 2026-08-27 they are also translated by
+  the content rect's origin on the way in (§12's note), so what the core sees is
+  CONTENT pixels. **History samples are not replayed**: the core
   coalesces motion to the frame boundary anyway.
 - **Keys**: none translated. `AINPUT_EVENT_TYPE_KEY` returns 0 so BACK still
   leaves the app. Hardware keyboards are out of scope (touch.md).
@@ -700,7 +711,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Fact | Value |
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
-| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect inside the system bars, 2304x1303 at (0,53) — §12's note) |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
@@ -1019,6 +1030,56 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 ---
 
 ## 12. The Java sliver — immersive mode (2026-08-26)
+
+> **IMMERSIVE MODE WAS RETIRED THE NEXT DAY** (architect 2026-08-27) as a
+> reversible experiment — one commit a later `git revert` undoes whole. The
+> status bar and the taskbar now SHOW permanently, like any ordinary app: on
+> the glass a swipe brought the taskbar's icons up OVER the app with no
+> background of their own (§12.5's "the transient bars behave" — Android's
+> behaviour, not ours) and it read as a bug, and the waveform is plenty tall
+> enough to lose the bars' height. Their colors and theme are the system's and
+> are not expected to match the app. What changed: `hideSystemBars()` and both
+> its call sites are gone with the `onWindowFocusChanged` override,
+> `setDecorFitsSystemWindows(false)` became `(true)`, and the activity's theme
+> is `Theme.NoTitleBar` rather than `.Fullscreen`, and **`targetSdk` stepped 35
+> → 34**. That last one is the load-bearing half and it was measured, not
+> reasoned: with `setDecorFitsSystemWindows(true)` installed and NO
+> `policy_control` override on the device (`task_bar` = 1), the startup log
+> still said `window 2304x1440` — Android 15 lays a target-35 window out
+> EDGE-TO-EDGE whatever the app asks for, and `NativeActivity` hands the native
+> side the WINDOW's own surface, so the taskbar sat over the bottom row exactly
+> as §11.7 measured. At 34 fitting the insets is the platform's own default. The
+> 35-era opt-out is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute,
+> which needs a `res/values` style and an `aapt2 compile` step this APK has
+> never had; 36 was never a candidate (Android 16 revokes `screenOrientation` on
+> a screen this size). The COMPILE platform stays `android-35` — the only jar
+> installed — because the runtime gates on the stamped target, not on the jar:
+> `WT_TARGET_SDK` and `WT_PLATFORM_SDK` are two numbers in
+> `android/toolchain/00_env.sh` now.
+>
+> **AND 34 DID NOT SHRINK THE WINDOW EITHER** — the log still said
+> `window 2304x1440` — which is where `dumpsys window` settled the design. The
+> app window's frame is the whole display BY CONSTRUCTION: `mAttrs fl=1810180`
+> = `FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_DECOR | HARDWARE_ACCELERATED |
+> SPLIT_TOUCH | KEEP_SCREEN_ON`, `Frames: frame=[0,0][2304,1440]`. "Fitting the
+> system windows" is DecorView PADDING, and a `NativeActivity` never sees it
+> because it takes the WINDOW's own surface (`Window#takeSurface`). The inset
+> area reaches native code as the CONTENT RECT instead: `mAppBounds=(0,0-2304,
+> 1356)`, `InsetsSource statusBars frame=[0,0][2304,53] visible=true`,
+> `navigationBars` (the taskbar) `frame=[0,1356][2304,1440]` = 84 px. So THE
+> CONTENT RECT IS THE WINDOW, implemented in the backend: `APP_CMD_CONTENT_-
+> RECT_CHANGED` is handled, `adopt_window` re-reads the rect on all four window
+> commands, `width()`/`height()` are the rect's, the origin is ADDED at the one
+> blit (`present`, which also fills the two bands with `kRedesignContentGround`)
+> and SUBTRACTED at the one touch decode, and nothing above the seam learns it
+> exists. The startup line carries both now:
+> `window 2304x1303 at (0,53) of surface 2304x1440, tick 5 ms`.
+>
+> **THE SLIVER STAYS**: `setDecorFitsSystemWindows(true)` plus target 34 is what
+> makes the framework report an inset content rect at all, and the SAF /
+> clipboard / key-repeat needs still join it. Everything below is the record of
+> what 2026-08-26 landed; `docs/engineering/architecture/platform-seam.md` and
+> the class's own head comment are authoritative for what stands.
 
 The APK has Java in it now: **one class**, `com.warptempo.gui.MainActivity`,
 `android/app/java/com/warptempo/gui/MainActivity.java`, ~30 lines of body. It is

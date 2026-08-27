@@ -35,8 +35,28 @@ export WT_BUILD_TOOLS_VERSION="36.0.0"
 export WT_BUILD_TOOLS_ZIP="build-tools_r36_linux.zip"
 export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 
-# targetSdk 35, NOT 36 (Android 16 revokes screenOrientation on >=600dp).
-export WT_TARGET_SDK="35"
+# TWO SEPARATE NUMBERS, stated only here: the manifest's targetSdkVersion, and
+# the INSTALLED platform we compile and link against. They do not have to match
+# -- runtime behaviour gates on the target aapt2 stamps, not on the jar.
+#
+# targetSdk 34 (architect 2026-08-27), NOT 35: from Android 15 on, an app whose
+# target is 35 or higher is laid out EDGE-TO-EDGE by the platform whatever it
+# asks for, and Window#setDecorFitsSystemWindows(true) does not step out of it
+# -- measured on the device that evening with the sliver's explicit call in
+# place, the log still said `window 2304x1440`, so the taskbar sat over the
+# bottom row whose INPUT it owns (android/NOTES.md 11.7). The documented opt-out
+# at 35 is the windowOptOutEdgeToEdgeEnforcement THEME attribute, which needs a
+# res/values style and an aapt2 compile step this APK does not have (it ships no
+# res/ at all); stepping the target back to 34 is the same result with no build
+# machinery at all. NOT 36 either, which was 35's own reason: Android 16 revokes
+# screenOrientation on screens >=600dp and this activity is landscape-locked.
+# The spike's build script reads this same variable.
+export WT_TARGET_SDK="34"
+
+# The installed platform: android.jar for javac/d8 and for aapt2's -I. Keeping
+# it at 35 while the target is 34 is what lets the target move with no second
+# SDK download -- android-35 is the only platform under $WT_SDK/platforms.
+export WT_PLATFORM_SDK="35"
 export WT_PLATFORM_ZIP="platform-35_r02.zip"
 export WT_PLATFORM_SHA1="0bb560a90a7a2cbd0dd8348224d518b638fe7949"
 
@@ -51,7 +71,7 @@ export WT_SDK_REPO_BASE="https://dl.google.com/android/repository"
 export WT_NDK="$WT_ANDROID_ROOT/ndk/android-ndk-$WT_NDK_RELEASE"
 export WT_SDK="$WT_ANDROID_ROOT/sdk"
 export WT_BUILD_TOOLS="$WT_SDK/build-tools/$WT_BUILD_TOOLS_VERSION"
-export WT_ANDROID_JAR="$WT_SDK/platforms/android-$WT_TARGET_SDK/android.jar"
+export WT_ANDROID_JAR="$WT_SDK/platforms/android-$WT_PLATFORM_SDK/android.jar"
 export WT_JDK="$WT_ANDROID_ROOT/jdk"
 
 # --- target ---------------------------------------------------------------

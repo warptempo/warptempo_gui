@@ -94,11 +94,14 @@ cp -f "$SO" "$STAGING/lib/$WT_ABI/$LIBNAME"
 wt_say "linked: $(stat -c%s "$STAGING/lib/$WT_ABI/$LIBNAME") bytes (stripped)"
 
 # --- 4. the Java sliver: javac -> d8 --------------------------------------
-# ONE class, com.warptempo.gui.MainActivity, whose whole job is immersive mode
-# (Java-only: there is no NDK door to the system bars, and the taskbar owns the
-# input of the band the product's transport and modal surface live in). Every
-# later Java need joins that class as a method, so this step is built to compile
-# a TREE, not a file.
+# ONE class, com.warptempo.gui.MainActivity, whose whole body is one call:
+# setDecorFitsSystemWindows(true) -- Java-only, and with the manifest's targetSdk
+# 34 it is what makes the framework report a CONTENT RECT: the band inside the
+# system bars, which the Android backend treats as the window (the native
+# surface is always the whole panel). Without it the product paints under the
+# taskbar, which owns the input of the band the transport and the modal surface
+# live in. Every later Java need joins that class as a method, so this step is
+# built to compile a TREE, not a file.
 #
 # -classpath, NOT -bootclasspath: since JDK 9 the latter is refused unless
 # -source/-target is 8 or lower, and the private JDK here is 21. --min-api
@@ -122,7 +125,15 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 link --------------------------------------------------------
 # No res/ dir at all: the app declares no @drawable/@string (every pixel is
 # painted by cairo and every icon is an in-tree path), and aapt2 still emits a
-# valid binary manifest plus resources.arsc.
+# valid binary manifest plus resources.arsc. (It is also why targetSdk stepped
+# to 34 rather than opting out of Android 15's edge-to-edge enforcement with the
+# windowOptOutEdgeToEdgeEnforcement theme attribute: that attribute needs a
+# res/values style and the aapt2 compile step this script does not have.)
+#
+# -I is the INSTALLED platform jar (android-$WT_PLATFORM_SDK) and
+# --target-sdk-version is the manifest's own number ($WT_TARGET_SDK). They are
+# deliberately different and 00_env.sh states both: the runtime gates behaviour
+# on the stamped target, never on the jar the app was compiled against.
 wt_say "aapt2 link"
 "$WT_BUILD_TOOLS/aapt2" link \
     -o "$PKGDIR/base.apk" \

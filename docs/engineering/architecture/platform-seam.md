@@ -181,15 +181,63 @@ their lamp bits — together with the letter caps, every one of which turns
 capital while the arm stands. No new colour; the caps pair's stateful glyph is
 what the face replaced.
 
+## The content rect is the window
+
+THE SURFACE IS THE WHOLE PANEL AND THE WINDOW IS NOT. An app window's frame on
+modern Android is the full display by construction — the framework gives the
+activity `FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_DECOR` and "fitting the
+system windows" is DecorView PADDING, which a `NativeActivity` never sees
+because it takes the WINDOW's own surface (`Window#takeSurface`). So neither
+the theme, nor the target SDK, nor `setDecorFitsSystemWindows` shrinks what
+`ANativeWindow_getWidth/Height` report: measured on the tablet 2026-08-27,
+`frame=[0,0][2304,1440]` at every setting tried. What the framework DOES
+deliver to native code is the **content rect** — the band inside the system
+bars — through `onContentRectChanged`, which the glue stores in
+`android_app::contentRect` and announces as `APP_CMD_CONTENT_RECT_CHANGED`.
+
+THE ANDROID BACKEND MAKES THAT RECT THE WINDOW. `width()`/`height()` are the
+RECT's size, `adopt_window` re-reads it on all four window commands (INIT,
+RESIZED, CONFIG_CHANGED, CONTENT_RECT_CHANGED) and fires the ordinary resize,
+so the vertical stack (`main.cpp`, which takes any height) lays out inside the
+bars and the waveform pays the difference. THE ORIGIN IS THE BACKEND'S OWN
+CONTAINMENT and crosses the seam nowhere: it is ADDED at the one blit
+(`present`, which also fills the two bands outside the rect with
+`kRedesignContentGround` — one owed full-surface post per adoption, and
+`ANativeWindow_lock`'s own dirty-rect widening after that) and SUBTRACTED at
+the one input decode (`on_motion_event`'s two coordinate lambdas — the key path
+carries no coordinates and the capture doors take GUI coordinates that never
+reach the window). `GuiInputCore`, `main.cpp` and every painter are identical
+to the Wayland build's and none of them can name the origin. A touch inside a
+band translates to a coordinate outside the window and is delivered as such,
+neither clamped nor dropped — the shape a Wayland drag past an edge already
+takes (`containing_pixel`, input_core.h); the bars' own windows take those
+touches in practice. The startup line reports both:
+`window 2304x1303 at (0,53) of surface 2304x1440, tick 5 ms`.
+
+A surface pixel is still a panel pixel — there is no scaling anywhere on this
+platform — and the window is now the content rect rather than the surface.
+
 ## The Java sliver
 
 `android/app/java/com/warptempo/gui/MainActivity.java` is the product's ONE
-Java class: a `NativeActivity` subclass hiding both system bars
-sticky-immersive at create and every focus gain. It is load-bearing — the
-taskbar owns the INPUT of the band the bottom row (the transport and the
-modal surface) paints into. Every later Java need (the SAF picker's
-`onActivityResult`, the clipboard) joins this class as a method. Launch
-component: `com.warptempo.gui/.MainActivity`.
+Java class: a `NativeActivity` subclass whose whole body is one call in
+`onCreate`, `setDecorFitsSystemWindows(true)`. It ASKS for the inset layout;
+what actually delivers the inset area is the content rect above, and the pair
+(target 34 + this call) is what makes the framework report one. THE SYSTEM BARS
+SHOW PERMANENTLY (architect 2026-08-27): immersive mode — both bars hidden
+sticky-immersive at create and every focus gain — is RETIRED as a reversible
+experiment, because a swipe brought the taskbar's icons up OVER the app with no
+background of their own (Android's transient bars, its behaviour rather than
+ours) and read as a bug, and the waveform is tall enough to lose the bars'
+height; the bars' colors and theme are the system's and are not expected to
+match the app. The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
+and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
+target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
+is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
+`res/values` style and an `aapt2 compile` step this APK has never had. Every
+later Java need (the SAF picker's `onActivityResult`, the clipboard, the
+key-repeat cadence) joins this class as a method. Launch component:
+`com.warptempo.gui/.MainActivity`.
 
 ## Build and freeze posture
 
@@ -205,8 +253,13 @@ image+ft); DT_NEEDED is exactly the NDK stable-ABI set — `libdl libm
 libaaudio libandroid libnativewindow liblog libc`, `libnativewindow` since the
 frame-rate pin (`ANativeWindow_setFrameRate` lives there rather than in
 libandroid), and nothing to ship beside the app. targetSdk is PINNED
-at 35 (Android gates behavior on it; sideload has no ceiling), the whole
-freeze story: a decade-later replacement tablet runs the same APK. The
+at 34 (Android gates behavior on it; sideload has no ceiling), the whole
+freeze story: a decade-later replacement tablet runs the same APK. It was 35
+until 2026-08-27, when the system bars came back and 35's edge-to-edge
+enforcement proved unopt-out-able without a `res/` — 36 was never a candidate,
+Android 16 revoking `screenOrientation` on a screen this size. The COMPILE
+platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
+runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
 ## Device facts (Galaxy Tab S10 FE, SM-X520)
