@@ -2177,13 +2177,13 @@ void render_waveform(cairo_surface_t* dest,
 // the only thing that ever wants it, so the shared schema owns the level's
 // range and this owns what the level means.
 //
-// The ladder is √2 PER STEP: gain = 2^(level/2), so two presses double. Over
-// the schema's bracket that is 1, 1.414, 2, 2.828, 4, 5.657, 8, 11.31, 16 —
-// fine enough to settle on a picture, and capped where the architect stops
-// wanting more (×8 already clips the quietest classical passages, and one step
-// past it covers the quietest masters).
+// The ladder is ×2 PER STEP: gain = 2^level, so every press doubles. Over the
+// schema's bracket that is 1, 2, 4, 8, 16 — four presses from the untouched
+// picture to the cap, and capped where the architect stops wanting more (×8
+// already clips the quietest classical passages, and one step past it covers
+// the quietest masters).
 inline double waveform_magnification_gain(int level) {
-    return std::exp2(static_cast<double>(level) * 0.5);
+    return std::exp2(static_cast<double>(level));
 }
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`

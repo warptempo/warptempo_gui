@@ -48,7 +48,7 @@ struct AuthoringSnapshot {
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.
-    int         waveform_magnification_level = 0;  // the schema's [0, 8]
+    int         waveform_magnification_level = 0;  // the schema's [0, 4]
     std::string audio_player;                // empty = unset
     // The projects-home repository name, carried into the entry's .settings
     // like every other always-emitted key. (architect approval 2026-08-03.)

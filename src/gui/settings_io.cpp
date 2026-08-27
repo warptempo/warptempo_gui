@@ -86,8 +86,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // face (architect approval 2026-08-01).
     { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
-    // LEVEL, a count of half-doublings in the range settings_file.h owns for
-    // both products. 0 is the untouched picture and the template's stamp. The
+    // LEVEL, a count of doublings in the range settings_file.h owns for both
+    // products. 0 is the untouched picture and the template's stamp. The
     // gain it stands for multiplies the peaks the painter maps to rows and
     // NOTHING ELSE — no sample, no playback path, no render input — so it never
     // enters kEngineKeys and never reaches the render fingerprint. Placed

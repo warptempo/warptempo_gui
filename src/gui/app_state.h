@@ -1875,11 +1875,11 @@ enum class RedesignButton {
     // THE WAVEFORM MAGNIFICATION THREE (2026-08-26), closing the zoom group:
     // the picture's VERTICAL gain where the four above it are the horizontal
     // one. Magnify (Ctrl+=) steps the level up and Reduce (Ctrl+-) steps it
-    // down along the √2 ladder whose range settings_file.h owns and whose gain
-    // render.h derives — the same two keys the bare zoom pair uses, one
-    // modifier over, which is the mnemonic. Reset (Ctrl+0) returns to level 0,
-    // the untouched picture, beside the bare `0` that returns the horizontal
-    // zoom to the whole song — the same mnemonic one modifier over.
+    // down along the doubling ladder whose range settings_file.h owns and
+    // whose gain render.h derives — the same two keys the bare zoom pair uses,
+    // one modifier over, which is the mnemonic. Reset (Ctrl+0) returns to
+    // level 0, the untouched picture, beside the bare `0` that returns the
+    // horizontal zoom to the whole song — the same mnemonic one modifier over.
     //
     // THEY EXIST FOR GLASS. The setting is hotkey-operated on the laptop, and a
     // touch panel has no hotkeys — "I wouldn't want to go click on the settings
@@ -2278,7 +2278,7 @@ enum class RedesignButton {
 // chord table and File joined the anchors in its slot (the count did not move).
 // 53 SINCE 2026-08-26 (later the same day): the MAGNIFICATION RESET joined the
 // pair it was added beside, closing the zoom group at three, when the ladder
-// was retuned to √2 steps and gained a chord that returns to level 0 — one pure
+// was retuned that day and gained a chord that returns to level 0 — one pure
 // chord addition inside an existing group on Ctrl+0, 52 + 1, split 49 + 3 to
 // 50 + 3, no separator and no group boundary moved.
 // 52 SINCE 2026-08-26: the WAVEFORM MAGNIFICATION PAIR joined the icon row's
@@ -3706,8 +3706,8 @@ struct AppState {
     int     gui_scale               = 100;
 
     // THE WAVEFORM'S VISUAL MAGNIFICATION (the waveform_magnification_level
-    // setting; a COUNT OF HALF-DOUBLINGS in the range settings_file.h owns,
-    // default 0), whose gain — 2^(level/2), spelled once at
+    // setting; a COUNT OF DOUBLINGS in the range settings_file.h owns,
+    // default 0), whose gain — 2^level, spelled once at
     // waveform_magnification_gain in render.h — is multiplied into the peaks at
     // the tip mapping of every waveform picture the product paints, plate and
     // OVERVIEW STRIP alike, and clamped to the lane so a loud passage clips

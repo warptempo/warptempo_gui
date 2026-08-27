@@ -752,7 +752,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // tells the three apart from the four horizontal magnifiers at row size.
     // They join the zoom group rather than opening one, so the row gains three
     // boxes and three 2px gaps and no separator moves. The reset landed later
-    // the same day, with the ladder's retune to √2 steps.
+    // the same day, with the ladder's own retune that day.
     {RedesignButton::IconWaveformMagnify, icons::Icon::ZoomInY},
     {RedesignButton::IconWaveformReduce,  icons::Icon::ZoomOutY},
     {RedesignButton::IconWaveformMagnificationReset, icons::Icon::ZoomFitHeight},

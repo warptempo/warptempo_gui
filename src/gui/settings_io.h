@@ -58,8 +58,8 @@ struct NonEngineSettingsSnapshot {
     char               active_tab_view;
     float              playback_speed;
     int                gui_scale;
-    // The waveform PICTURE's magnification LEVEL — a count of half-doublings
-    // in the range settings_file.h owns, whose gain render.h derives. A display
+    // The waveform PICTURE's magnification LEVEL — a count of doublings in
+    // the range settings_file.h owns, whose gain render.h derives. A display
     // preference like gui_scale beside it — it scales no audio anywhere.
     int                waveform_magnification_level;
     const std::string& audio_player;

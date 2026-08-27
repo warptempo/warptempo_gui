@@ -332,8 +332,9 @@ enum class Icon {
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
 // 49 since 2026-08-26 (later the same day): zoom-fit-height joined for the
-// MAGNIFICATION RESET, the third zoom-group member the ladder's √2 retune
-// brought with it — 48 + 1, one more fresh transcription in the same family.
+// MAGNIFICATION RESET, the third zoom-group member the ladder's 2026-08-26
+// retune brought with it — 48 + 1, one more fresh transcription in the same
+// family.
 // 48 since 2026-08-26: zoom-in-y and zoom-out-y joined for the waveform
 // magnification stepping pair, the icon row's two new zoom-group members —
 // 46 + 2, two fresh transcriptions with no departures beside them.

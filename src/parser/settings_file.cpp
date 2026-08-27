@@ -73,6 +73,10 @@ using warptempo_parse::prefix_line_error;
 // THE SAME DAY, when the ladder became a count of half-doublings rather than a
 // factor: the first spelling `waveform_magnification` is now an UNKNOWN key and
 // takes the unknown-key refusal above, which is the same re-save either way.
+// THE LADDER WAS RETUNED AGAIN 2026-08-27 (architect approval 2026-08-27),
+// from half-doublings to WHOLE DOUBLINGS over the shorter bracket [0, 4]: the
+// name is unchanged, so a file carrying a level above 4 keeps a canonical key
+// and takes the value refusal below instead — the same re-save once more.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
@@ -319,7 +323,7 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "waveform_magnification_level") {
-        // THE WAVEFORM'S VISUAL MAGNIFICATION — the count of half-doublings on
+        // THE WAVEFORM'S VISUAL MAGNIFICATION — the count of doublings on
         // the ladder in settings_file.h, and the PICTURE'S alone: the gain it
         // stands for scales the peaks the GUI draws (plate and overview strip
         // both) and reaches no sample, no playback path and no render. The CLI
@@ -333,10 +337,11 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // count: every whole number the bracket admits is a state the GUI can
         // produce, and nothing outside it is.
         // (architect approval 2026-08-26 — the settings/parser grant this key
-        // landed under, extended the same day to this retune of it.)
+        // landed under, extended the same day to the first retune of it, and
+        // again 2026-08-27 to the second.)
         int64_t v = 0;
         if (!parse_authored_frame(value, v) || !is_waveform_magnification_level(v))
-            return err("must be an integer in [0, 8] in canonical spelling");
+            return err("must be an integer in [0, 4] in canonical spelling");
         out.i64 = v;
         return R(out);
     }

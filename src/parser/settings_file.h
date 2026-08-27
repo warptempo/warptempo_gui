@@ -141,24 +141,28 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
 // products, so an out-of-range value must refuse identically in warptempo_gui
 // and warptempo_cli even though only the GUI has pixels to apply it to.
 // (architect approval 2026-08-26 — the settings/parser grant this key landed
-// under, extended the same day to this retune of it.)
+// under, extended the same day to the first retune of it, and again
+// 2026-08-27 to the second.)
 //
-// THE VALUE IS A COUNT OF HALF-DOUBLINGS, not a factor: the ladder is √2 per
-// step, so the GAIN is 2^(level/2) — 1, 1.414, 2, 2.828, 4, 5.657, 8, 11.31,
-// 16 — and level 0 is the untouched picture. THE GAIN IS THE GUI'S OWN DERIVED
-// FACT and is spelled once there (waveform_magnification_gain, render.h); the
-// schema owns the RANGE alone, which is all a value arm can check.
+// THE VALUE IS A COUNT OF DOUBLINGS, not a factor: the ladder is ×2 per step,
+// so the GAIN is 2^level — 1, 2, 4, 8, 16 — and level 0 is the untouched
+// picture. THE GAIN IS THE GUI'S OWN DERIVED FACT and is spelled once there
+// (waveform_magnification_gain, render.h); the schema owns the RANGE alone,
+// which is all a value arm can check.
 //
 // CAPPED AT ×16 because nothing above it is ever wanted: ×8 already clips the
 // quietest classical passages and one more step covers the quietest masters.
-// The √2 step is what makes that short ladder fine enough to work in.
+// A WHOLE DOUBLING PER STEP is the coarser ladder the architect settled on
+// 2026-08-27: the √2 ladder of the day before had twice the rungs and they
+// were not worth walking, so a press is a doubling again and four of them
+// reach the cap.
 //
 // THE LEVEL SCALES THE WAVEFORM PICTURE AND NOTHING ELSE: it is not a gain on
 // the audio — no sample, no playback path and no render reads it; the CLI
 // parses it and ignores it like every other GUI-kind key. Range membership is
 // asked through the predicate below and never re-spelled — the schema's value
 // arm and the GUI's own applier both call it.
-inline constexpr int kWaveformMagnificationLevelMax = 8;
+inline constexpr int kWaveformMagnificationLevelMax = 4;
 inline constexpr bool is_waveform_magnification_level(int64_t v) {
     return v >= 0 && v <= kWaveformMagnificationLevelMax;
 }
@@ -217,7 +221,7 @@ struct SettingsFile {
     // CEILING's return 200->400 is that same arm's change, architect approval
     // 2026-08-26, and its record lives there too).
     int    gui_scale               = 100;   // percent, [50, 400]
-    // THE WAVEFORM'S VISUAL MAGNIFICATION — the half-doubling COUNT of the
+    // THE WAVEFORM'S VISUAL MAGNIFICATION — the DOUBLING COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping
     // of every waveform picture (the plate and the overview strip alike),
     // CLAMPED to the lane so a loud passage clips flat at the edges while its
@@ -227,7 +231,8 @@ struct SettingsFile {
     // The key is required, so the reader always assigns this field; the
     // initializer is construction state.
     // (architect approval 2026-08-26 — the settings/parser grant this key
-    // landed under, extended the same day to this retune of it.)
+    // landed under, extended the same day to the first retune of it, and again
+    // 2026-08-27 to the second.)
     int    waveform_magnification_level = 0; // [0, kWaveformMagnificationLevelMax]
     // GUI-kind launcher for the `l` render-listen command: an external player
     // name or path. A BLANK value (`audio_player=`) is the deliberate

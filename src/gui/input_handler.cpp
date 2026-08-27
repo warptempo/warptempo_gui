@@ -1199,7 +1199,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
     // THE WAVEFORM'S VISUAL MAGNIFICATION, on the same three keys the
     // horizontal zoom uses, one modifier over: Ctrl+= steps the level up,
-    // Ctrl+- steps it down along the √2 ladder settings_file.h brackets, and
+    // Ctrl+- steps it down the doubling ladder settings_file.h brackets, and
     // Ctrl+0 RESETS TO LEVEL 0, the untouched picture, exactly as bare `0`
     // returns the horizontal zoom to the whole song. All three are consumed
     // no-ops where they have nothing to do — the applier's own bracket answers
