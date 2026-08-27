@@ -5381,8 +5381,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (warpmarkers.h) is that rule's one owner, shared with the phase-reset
     // propagate. The gate requires a NON-EMPTY, CONTIGUOUS run of selected
     // markers with no effectively-enabled label_ref in
-    // [owner .. boundary marker] inclusive; any other selection is a silent
-    // no-op. Under the contiguity rule every in-span marker up to the last
+    // [owner .. boundary marker] inclusive and, since 2026-08-26, ONE TEMPO
+    // across the run (each selected marker a pass or the owner's own value);
+    // any other selection is a silent no-op. Under the contiguity rule every in-span marker up to the last
     // selected one IS selected, so a selected span-internal marker may be
     // disabled and is still converted to a plain pass per sweep cell — as are
     // the disabled markers the extended boundary sweeps in past it; a
@@ -5452,6 +5453,27 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // Owner must satisfy the BPM-eligibility predicate (owning, no ref,
         // and — now — enabled).
         if (!bpm_popup_eligible_marker(mv[owner])) return true;
+        // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected marker
+        // is a pass or carries the owner's own tempo — cents AND typed scale,
+        // the effective value — else `m` is a silent no-op like the other
+        // arrangement refusals above. The sweep rewrites the span to ONE
+        // tempo and rescales everything outside it by THE OWNER'S change
+        // (bpm_cell_warp_markers, input_handler.h), so a run whose members
+        // disagreed would have its internal differences erased while the
+        // rest of the map kept its shape — the very deformation the rescale
+        // exists to prevent — and the rule is what makes the owner's change
+        // the whole span's. Effectively-disabled members pass over for the
+        // reason the ref scan passes over them: they contribute no tempo to
+        // the render. The scan covers the SELECTED run [owner .. last_sel];
+        // the disabled markers the boundary walk sweeps in past it are
+        // render-inert by construction and were never selected.
+        for (int i = owner + 1; i <= last_sel; ++i) {
+            if (mv[i].tempo_inherits)      continue;
+            if (effective_disabled(mv, i)) continue;
+            if (mv[i].tempo_cents != mv[owner].tempo_cents ||
+                mv[i].tempo_scale != mv[owner].tempo_scale)
+                return true;   // silent no-op
+        }
         // enter_bpm_mode tags the owner and flips the mode flag; the span
         // endpoint is explicit, so record it on the owner and keep the whole
         // selected run highlighted as the span cue.

@@ -91,9 +91,9 @@ namespace {
 // position) now lives in render.h as a single shared inline accessor,
 // reached here via the render.h include.
 
-// The BPM-sweep math primitive (BaseTempoScale + compute_base_tempo_scale)
-// lives in input_handler.h so input_handler.cpp can reach it.
-// GuiInputHandler::render_bpm_sweep is the sole caller.
+// The BPM-sweep math primitives (BaseTempoScale + compute_base_tempo_scale,
+// and the cell rewrite bpm_cell_warp_markers) live in input_handler.h so
+// input_handler.cpp and flag_editor.cpp can reach them.
 
 // compute_hover_popup_text lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation

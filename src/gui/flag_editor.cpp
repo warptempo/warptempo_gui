@@ -855,13 +855,14 @@ bool GuiFlagEditor::commit_bpm_edit() {
         return false;
     }
     // Derived-value bracket gate. Every sweep cell carries a derived base
-    // tempo into its cell markers and a derived scale into its cell
-    // .settings, and the derivation (compute_base_tempo_scale) is monotone
-    // in bpm, so the bracket ends bound every cell: if either endpoint bpm
-    // refuses — the derived base tempo lands outside [kTempoMinCents,
-    // kTempoMaxCents]
-    // or the derived scale outside [kScaleMin, kScaleMax] — the commit
-    // red-flashes like any invalid editor value. Never clamp: a clamped
+    // tempo into its cell markers, a derived scale into its cell .settings,
+    // and — since 2026-08-26 — a rescaled tempo into every owning marker
+    // outside the span; the derivation (compute_base_tempo_scale) is
+    // monotone in bpm and the rescale rides it, so the bracket ends bound
+    // every cell: if either endpoint bpm refuses — the derived base tempo
+    // lands outside [kTempoMinCents, kTempoMaxCents], the derived scale
+    // outside [kScaleMin, kScaleMax], or any rescaled marker outside the
+    // tempo bracket — the commit red-flashes like any invalid editor value. Never clamp: a clamped
     // derivation would silently mistune the span. Gated on a well-formed
     // span (owner before endpoint, positive duration); without one,
     // render_bpm_sweep early-bails and derives nothing. The bpm editor is
@@ -884,21 +885,49 @@ bool GuiFlagEditor::commit_bpm_edit() {
             const double duration_seconds =
                 (span_end_frame - mv_const[idx].time_frame) /
                 static_cast<double>(audio.sample_rate());
-            if (duration_seconds > 0.0 &&
-                (!compute_base_tempo_scale(duration_seconds, beats, lo) ||
-                 !compute_base_tempo_scale(duration_seconds, beats, hi))) {
-                app.top_flag_editor.red = true;
-                viewport.invalidate_modal_dialog_area();
-                std::fprintf(stderr,
-                    "warptempo_gui: BPM edit rejected: derived tempo or "
-                    "scale outside its bracket (tempo [%s, %s], scale "
-                    "[%s, %s]): %s\n",
-                    format_tempo_cents(kTempoMinCents).c_str(),
-                    format_tempo_cents(kTempoMaxCents).c_str(),
-                    format_value_double(kScaleMin, 4).c_str(),
-                    format_value_double(kScaleMax, 4).c_str(),
-                    s.c_str());
-                return false;
+            if (duration_seconds > 0.0) {
+                const auto at_lo =
+                    compute_base_tempo_scale(duration_seconds, beats, lo);
+                const auto at_hi =
+                    compute_base_tempo_scale(duration_seconds, beats, hi);
+                if (!at_lo || !at_hi) {
+                    app.top_flag_editor.red = true;
+                    viewport.invalidate_modal_dialog_area();
+                    std::fprintf(stderr,
+                        "warptempo_gui: BPM edit rejected: derived tempo or "
+                        "scale outside its bracket (tempo [%s, %s], scale "
+                        "[%s, %s]): %s\n",
+                        format_tempo_cents(kTempoMinCents).c_str(),
+                        format_tempo_cents(kTempoMaxCents).c_str(),
+                        format_value_double(kScaleMin, 4).c_str(),
+                        format_value_double(kScaleMax, 4).c_str(),
+                        s.c_str());
+                    return false;
+                }
+                // The RESCALED MAP's arm of the same gate (2026-08-26): the
+                // sweep rescales every owning marker outside the span by
+                // the owner's change (bpm_cell_warp_markers, input_handler.h
+                // — the sweep's own per-cell rewrite, run here at the two
+                // ends the derivation's monotonicity makes sufficient), and
+                // a marker whose rescaled tempo would leave the bracket
+                // refuses the commit exactly like an out-of-bracket
+                // derivation — never clamped, which would deform the shape
+                // the rescale preserves.
+                if (!bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
+                                           at_lo->base_tempo_cents) ||
+                    !bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
+                                           at_hi->base_tempo_cents)) {
+                    app.top_flag_editor.red = true;
+                    viewport.invalidate_modal_dialog_area();
+                    std::fprintf(stderr,
+                        "warptempo_gui: BPM edit rejected: a marker outside "
+                        "the span would leave the tempo bracket [%s, %s] "
+                        "once rescaled: %s\n",
+                        format_tempo_cents(kTempoMinCents).c_str(),
+                        format_tempo_cents(kTempoMaxCents).c_str(),
+                        s.c_str());
+                    return false;
+                }
             }
         }
     }

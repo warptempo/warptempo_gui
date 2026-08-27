@@ -49,8 +49,9 @@ struct GuiPaintHandler;
 // -- BPM-sweep math primitive -------------------------------------------
 //
 // Promoted out of main.cpp's anonymous namespace so input_handler.cpp can
-// reach it. render_bpm_sweep() is the sole caller; if a future TU needs it the
-// home is open for relocation.
+// reach it. Two callers: render_bpm_sweep() per cell, and commit_bpm_edit()
+// at the bracket's two ends (the derivation is monotone in bpm). The cell's
+// marker rewrite below shares the same two callers.
 //
 // Given a span's measured duration (seconds), the user-asserted beat count
 // for that span, and a target BPM, return the (base_tempo_cents, scale)
@@ -117,6 +118,94 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     if (scale < kScaleMin || scale > kScaleMax) return std::nullopt;
 
     return BaseTempoScale{base_tempo_cents, scale};
+}
+
+// -- The BPM cell's marker rewrite ---------------------------------------
+//
+// THE ONE OWNER of a sweep cell's marker vector (architect 2026-08-26: "the
+// selected markers determine the BPM, but the shape of the tempo map should
+// remain"). render_bpm_sweep calls it once per cell; commit_bpm_edit calls it
+// at the bracket's two ends — the derivation is monotone in bpm, so the ends
+// bound every cell's rescaled values exactly as they bound the derived base
+// tempo, and the editor red-flashes what the sweep would otherwise have to
+// reject cell by cell.
+//
+// THE SPAN [owner_idx, endpoint_idx) WORKS AS IT ALWAYS HAS: the owner takes
+// the derived base tempo (typed scale reset — the residual rides the cell's
+// .settings scale), and every span-internal marker becomes a pass, the
+// disabled ones trailing the selection included (render-inert: a disabled
+// marker is dropped before the warp map is built; a ref among them keeps its
+// ref, the writer branching on label_ref first; label_def, disabled and every
+// non-tempo field are untouched). The boundary marker, when one exists, is
+// simply the first marker OUTSIDE the span.
+//
+// EVERYTHING OUTSIDE THE SPAN KEEPS ITS SHAPE: every marker that OWNS its
+// tempo (tempo_inherits false, no label_ref — disabled or not, so a marker
+// re-enabled later still sits in proportion) has its tempo cents rescaled by
+// THE OWNER'S OWN CHANGE, the ratio of the derived base tempo to the owner's
+// old effective tempo (its base times its typed scale, which the cell resets):
+//
+//     cents_i' = nearbyint(cents_i * new_cents / (old_cents * owner_scale))
+//
+// The global settings scale cancels out of that ratio — it multiplies every
+// section alike, so the cell's residual scale reaches the rescaled markers and
+// the owner in one proportion. Passes stay passes and refs stay refs: each
+// follows its ancestor or its definition, which is either rescaled here or is
+// the owner itself, so the map's STRUCTURE is untouched and only its owned
+// VALUES move. The `m` gate's one-tempo rule (input_key_dispatch.cpp) is what
+// makes the owner's change THE span's change: the run's owning members carry
+// the owner's tempo, so a boundary-side pass that walks back into the span
+// inherits exactly the rescaled value too.
+//
+// BANKER'S ROUNDING ONTO THE CENTS GRID — the project's one rule for points on
+// a grid. The product of two integer cents counts is exact in double and the
+// single division is correctly rounded, so a true tie reaches std::nearbyint
+// as an exact .5; the cents-domain form is used rather than two
+// tempo_from_cents conversions for that reason (the /100s cancel and would
+// only add rounding). A rescaled value outside [kTempoMinCents, kTempoMaxCents]
+// REFUSES the cell (nullopt), never clamps — a clamped section would deform
+// the very shape this exists to preserve.
+inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
+    const std::vector<GuiWarpMarker>& base,
+    int owner_idx, int endpoint_idx,
+    int64_t derived_base_tempo_cents) {
+    const int n = static_cast<int>(base.size());
+    if (owner_idx < 0 || owner_idx >= n)           return std::nullopt;
+    if (endpoint_idx <= owner_idx || endpoint_idx > n) return std::nullopt;
+    const GuiWarpMarker& owner = base[owner_idx];
+    // In-bracket at every input surface: cents >= kTempoMinCents, a typed
+    // scale in [kScaleMin, kScaleMax] — the divisor is positive by
+    // construction; the guard is the breach backstop.
+    const double old_effective_cents =
+        static_cast<double>(owner.tempo_cents) *
+        owner.tempo_scale.value_or(1.0);
+    if (!(old_effective_cents > 0.0)) return std::nullopt;
+    const double new_cents = static_cast<double>(derived_base_tempo_cents);
+
+    std::vector<GuiWarpMarker> cell = base;
+    cell[owner_idx].tempo_inherits = false;
+    cell[owner_idx].tempo_cents    = derived_base_tempo_cents;
+    cell[owner_idx].tempo_scale.reset();
+    for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
+        cell[i].tempo_inherits = true;
+        cell[i].tempo_cents    = 100;   // inert default
+        cell[i].tempo_scale.reset();    // inert: no typed scale
+    }
+    for (int i = 0; i < n; ++i) {
+        if (i >= owner_idx && i < endpoint_idx) continue;   // the span
+        GuiWarpMarker& m = cell[i];
+        if (m.tempo_inherits || !m.label_ref.empty()) continue;
+        const double rescaled = std::nearbyint(
+            static_cast<double>(m.tempo_cents) * new_cents /
+            old_effective_cents);
+        if (!std::isfinite(rescaled) ||
+            rescaled < static_cast<double>(kTempoMinCents) ||
+            rescaled > static_cast<double>(kTempoMaxCents)) {
+            return std::nullopt;
+        }
+        m.tempo_cents = static_cast<int64_t>(rescaled);
+    }
+    return cell;
 }
 
 // -- Target-view entry validity predicate --------------------------------

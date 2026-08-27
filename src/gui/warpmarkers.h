@@ -39,6 +39,10 @@ struct GuiWarpMarker : WarpMarker {
     // whole extent — the sections every selected marker owns, the LAST
     // marker's section INCLUDED. bpm_endpoint holds the index that CLOSES
     // that last section (== store size means the span runs to the song end).
+    // The map OUTSIDE the span keeps its shape: every owning marker there is
+    // rescaled by the owner's own change in each cell (bpm_cell_warp_markers,
+    // input_handler.h, the cell rewrite's one owner; the `m` gate's one-tempo
+    // rule over the selected run is what makes the owner's change the span's).
     // At most one marker at a time has bpm_owner=true (invariant
     // maintained by the `m` toggle handler). "Committed" is
     // implicit: bpm_beats > 0 means the owner has authored a value (parser

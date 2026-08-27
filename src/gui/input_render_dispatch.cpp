@@ -559,7 +559,10 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // by do_render); the `'` load-in-place (load_render_entry_in_place) applies
 // them when loading a BPM cell in place. The
 // substantive difference from the iter render handler is per-cell
-// mutation of cell_settings.scale, in addition to per-cell marker mutation.
+// mutation of cell_settings.scale, in addition to per-cell marker mutation —
+// which since 2026-08-26 reaches the WHOLE map, not the span alone: every
+// owning marker outside the span is rescaled by the owner's own change
+// (bpm_cell_warp_markers, input_handler.h).
 // Returns true iff a batch was dispatched; every guard bail returns false.
 // Body is the former Ctrl+Alt+M block verbatim, minus the keystroke gate.
 bool GuiInputHandler::render_bpm_sweep() {
@@ -684,41 +687,27 @@ bool GuiInputHandler::render_bpm_sweep() {
             continue;
         }
 
-        std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
-        // Owner: concrete computed base tempo, scale carried in settings.
-        // compute_base_tempo_scale's positivity and bracket guards are the
-        // cell filter; the BPM editor commit already checked the bracket
-        // at both bracket ends (the derivation is monotone in bpm), so in
-        // practice every cell derives in-bracket and serializes exactly
-        // (padded shortest round-trip form).
-        cell_warp_markers[bpm_owner_idx].tempo_inherits = false;
-        cell_warp_markers[bpm_owner_idx].tempo_cents    = computed->base_tempo_cents;
-        cell_warp_markers[bpm_owner_idx].tempo_scale.reset();
-        // Span-internal markers pass: their own tempo is subsumed by the
-        // owner's span tempo. Disabled span-internal markers stay disabled
-        // but also pass (the disabled flag is independent of tempo_inherits).
-        // The run may end PAST disabled markers, the span closing at the next
-        // EFFECTIVELY-ENABLED one, so this loop also covers the disabled
-        // markers trailing the selection: converting them is render-inert in
-        // the cell, a disabled marker being dropped before the warp map is
-        // built. A ref among them keeps its ref — the writer branches on
-        // label_ref first, so tempo_inherits never reaches the line.
-        for (int i = bpm_owner_idx + 1; i < endpoint_idx; ++i) {
-            cell_warp_markers[i].tempo_inherits = true;
-            cell_warp_markers[i].tempo_cents    = 100;   // inert default
-            cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
-            // label_def on a span-internal marker is preserved (the `m`
-            // section gate's ref scan excludes every EFFECTIVELY-ENABLED ref
-            // from the span, so only a disabled ref can appear here, and a def
-            // may exist); only the tempo fields are rewritten. Do not touch
-            // label_def, label_ref, disabled, or any non-tempo field.
+        // The cell's marker vector, whole, from its one owner
+        // (bpm_cell_warp_markers, input_handler.h): the owner stamped with
+        // the derived base tempo, the span passed, and EVERY OWNING MARKER
+        // OUTSIDE THE SPAN rescaled by the owner's own change so the map
+        // keeps its shape. The editor commit already ran the same rewrite at
+        // both bracket ends (monotone in bpm), so in practice every cell
+        // rescales in-bracket; the refusal here is the per-cell backstop,
+        // reported like a refused derivation.
+        auto cell_warp_markers = bpm_cell_warp_markers(
+            base_warp_markers, bpm_owner_idx, endpoint_idx,
+            computed->base_tempo_cents);
+        if (!cell_warp_markers) {
+            std::fprintf(stderr,
+                "warptempo_gui: render-bpm: Rejected cell "
+                "bpm=%s: a rescaled marker tempo leaves the tempo "
+                "bracket [%s, %s]\n",
+                format_value_double(bpm, 0).c_str(),
+                format_tempo_cents(kTempoMinCents).c_str(),
+                format_tempo_cents(kTempoMaxCents).c_str());
+            continue;
         }
-        // Boundary marker (when one exists): untouched — it is effectively
-        // enabled and owns the FOLLOWING section, which lies outside the
-        // span. At song end
-        // (endpoint_idx == store size) there is no boundary marker and the
-        // loop above already ran to the store end, so every following marker
-        // passes.
 
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
@@ -748,7 +737,7 @@ bool GuiInputHandler::render_bpm_sweep() {
         basename += format_value_double(computed->scale, 4);
 
         RenderRequest req = build_render_request(
-            app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
+            app.source_audio_path, std::move(*cell_warp_markers), base_phase_resets,
             std::move(cell_settings),
             app.trim.begin_frame, app.trim.end_frame,
         batch_folder.string(), std::move(basename));

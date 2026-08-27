@@ -22,8 +22,8 @@
 // on_wheel), dispatching into the operation structs through the reference
 // members (warpops, phase_resets, flag_editor, renders_dir, active_views,
 // playback_lifecycle, save_ops, prompt, selection, undo, viewport).
-// compute_base_tempo_scale + BaseTempoScale live in input_handler.h so
-// this TU can reach them; render_bpm_sweep() is the sole caller.
+// compute_base_tempo_scale + BaseTempoScale (and bpm_cell_warp_markers)
+// live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
