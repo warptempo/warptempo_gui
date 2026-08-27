@@ -79,16 +79,16 @@ public:
     bool init(int width, int height, const char* title);
 
     // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
-    // platform_wayland.h, which owns it): this backend answers 250 % and NO
-    // PLAYER. 250 is the architect's own answer on the glass — the scale at
-    // which a marker flag is tappable without the second tap of a double-tap
-    // landing on the waveform — and the blank player is not a placeholder but
-    // the real answer: nothing on the tablet can be spawned to play a render,
-    // so `l` reports "No audio_player set" through the existing opt-out road.
-    // The
-    // XDG_CONFIG_HOME the config resolves under is pointed at the app's private
-    // internal directory by android_main before gui_main runs, beside the cache
-    // home it has always set.
+    // platform_wayland.h, which owns it): this backend answers 225 % and NO
+    // PLAYER. 225 is the architect's own answer on the glass — the scale that
+    // reproduces the retired rig's 1024 logical pixels on this panel, with the
+    // whole icon row fitting (rationale at the definition, platform_android.cpp)
+    // — and the blank player is not a placeholder but the real answer: nothing
+    // on the tablet can be spawned to play a render, so `l` reports "No
+    // audio_player set" through the existing opt-out road. The XDG_CONFIG_HOME
+    // the config resolves under is pointed at the app's private internal
+    // directory by android_main before gui_main runs, beside the cache home it
+    // has always set.
     static DeviceConfig device_config_defaults();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen

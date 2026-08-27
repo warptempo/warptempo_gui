@@ -142,7 +142,7 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 250 % a level costs 500 device px — ~51 mm on that panel, back on the
+// own 225 % a level costs 450 device px — ~46 mm on that panel, back on the
 // rig's ~43 mm order of hand travel instead of half it. Durations never scale;
 // lengths do — the same split the
 // press road's three pixel thresholds take (drag_moved_threshold_px,
@@ -3132,9 +3132,25 @@ inline int dropdown_h_px(DropdownMenu m) {
 // 8 px, against 1.7 mm on the retired road rig's 1024x600 panel, which is why a relaxed
 // double tap arrived as two single clicks there. The AUTHORED value stays the
 // 100 % one; the RESOLVED value is double_click_slack_px() below, and every
-// compare site reads that accessor and never the constant. The 500 ms window,
-// like every other duration in the product, is untouched by the scale.
-constexpr int64_t kDoubleClickMs      = 500;
+// compare site reads that accessor and never the constant. The window, like
+// every other duration in the product, is untouched by the scale.
+//
+// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE BEAT — 575 ms,
+// the architect's own labwc <repeatDelay> matched by convention (architect
+// 2026-08-27, on the glass: "I'm definitely sure about the interval"). It was
+// its own 500 until that evening. A RELAXED DOUBLE TAP IS SLOWER THAN A
+// MOUSE'S DOUBLE CLICK: the finger leaves the panel between the two taps and
+// has to come back, and 500 was cutting the second one off — the same gesture
+// the scaled slack fixed on the distance axis the same day, missing on the
+// time axis instead. Tying it to the beat rather than picking a second number
+// keeps the product on ONE cadence: the interval a deliberate hold has to
+// cross is the interval a deliberate second tap has to arrive inside. It is
+// NOT a hold, which is why the beat's own declaration lists it apart.
+//
+// kTapCoalesceMs (500, the undo-coalescing window, undo.h) is a DIFFERENT
+// window measuring a different thing — how long a standing undo subject keeps
+// accepting rapid taps — and it stays where it is.
+constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
 constexpr int     kDoubleClickSlackPx = 8;
 
 // The slack in DEVICE pixels at the live gui_scale — the five compare sites'
@@ -3160,12 +3176,12 @@ inline int double_click_slack_px() {
 // (finish_chrome_press_release, input_pointer.cpp), against the press stamp the
 // arm carries (AppState::ChromePress::press_ms).
 //
-// IT READS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE HOLD BEAT — the same
-// number the touch pan zone's region hold (kTouchRegionHoldMs) reads, matched
-// by convention with the compositor's key-repeat delay, so every deliberate
-// hold in the product crosses its threshold on one beat. The constant's own
-// declaration carries that ruling, including why the keyboard's delay stays
-// the compositor's rather than joining as a third copy.
+// IT READS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE HOLD BEAT, matched by
+// convention with the compositor's key-repeat delay, so every deliberate hold
+// in the product crosses its threshold on one beat. The constant's own
+// declaration carries that ruling and the readers' one inventory, including
+// why the keyboard's delay stays the compositor's where a compositor offers
+// one.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
 // nothing to say about it (the same rule the drag-slop and disambiguation
@@ -3938,7 +3954,7 @@ struct AppState {
     //
     // IT IS A PER-DEVICE PREFERENCE, NOT A PROPERTY OF THE PIECE (architect
     // 2026-08-27): it left the `.settings` sidecar that day for the device
-    // config, because the same project wants 100 on the laptop and 250 on the
+    // config, because the same project wants 100 on the laptop and 225 on the
     // tablet and the sidecar travels between them. Ctrl+S does not carry it and
     // no load writes it — gui_main reads the config ONCE at startup, before the
     // window exists, and the editor commit rewrites the file at the moment it

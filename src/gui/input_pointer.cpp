@@ -6593,10 +6593,10 @@ void GuiInputHandler::finish_chrome_press_release(
 // body re-hits honest.
 //
 // THE SCHEDULE'S TWO NUMBERS COME FROM DIFFERENT OWNERS ON PURPOSE. The FIRST
-// fire is one kHoldBeatMs after the press — the product's own hold beat, the
-// constant the chrome shift hold and the touch region hold also read, matched
-// to the architect's compositor delay so all three coincide. Every LATER fire
-// is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
+// fire is one kHoldBeatMs after the press — the product's own hold beat,
+// matched to the architect's compositor delay so every deliberate hold in the
+// product coincides (the readers' inventory is at that declaration). Every
+// LATER fire is THE COMPOSITOR'S ADVERTISED KEY-REPEAT INTERVAL
 // (GuiPlatform::key_repeat_period_ms), read PER FIRE because repeat_info may be
 // re-sent at any time, and a compositor advertising rate 0 has key repeat
 // DISABLED — so the buttons stop repeating there too, which is the honest

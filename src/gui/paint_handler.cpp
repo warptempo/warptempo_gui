@@ -1377,7 +1377,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // corner is unchanged and the div still fills its background last and
         // covers the tail of the left float's labels. THE DEPLOYMENTS ARE NOT
         // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at its
-        // own 250% is ~922 logical px against a ~420 logical-px float pair.
+        // own 225% is 1024 logical px against a ~420 logical-px float pair.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -2107,13 +2107,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // panel): the walk fits while 925·factor ≤ 2304, so the row now lands
     // WHOLE UP TO gui_scale 249 (925·2.49 = 2303) and clips at 250 by 3
     // authored px — where the 1041-px roster of 2026-08-26 fitted only to 220,
-    // clipping HistoryNewer by 17 authored px at the 225 the tablet was assumed
-    // to run that day. THE TABLET'S FIRST-RUN SCALE IS 250, one step past this
-    // row's fit ceiling: 925·2.5 = 2312 against the panel's 2304, so the
-    // rightmost history icon loses its last ~3 authored px (~8 device px). That
-    // is the crop-at-the-floor allowance at kMinWindowWidthPx doing exactly what
-    // it already names — the sanctioned casualty, not a new rule — and 249 is
-    // the scale at which the walk still lands whole.
+    // clipping HistoryNewer by 17 authored px at the 225 the tablet runs.
+    // THE TABLET'S FIRST-RUN SCALE IS 225 AND THE WHOLE WALK
+    // LANDS THERE: 925·2.25 = 2081 against the panel's 2304, 223 px of slack,
+    // every icon fitting. (250 was the template for one afternoon on
+    // 2026-08-27, one step past this row's fit ceiling — 925·2.5 = 2312, so the
+    // rightmost history icon lost its last ~3 authored px (~8 device px) under
+    // the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
+    // casualty rather than a new rule — and the architect stepped it back to
+    // 225 that evening for exactly that crop.)
     // (Counting the trailing pad the ceiling is 246 rather than 249 — the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
     // Both older deployments clear it outright: 933 of 1024 at 100% on the
@@ -2127,7 +2129,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // four companions out and no radios. Today's twenty-six matches neither of
     // those, having a different group count. THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
-    // GROUP costs 41, which at the tablet's 250% is 85 and ~103 device px
+    // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
     // against its panel.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1

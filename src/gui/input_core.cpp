@@ -44,10 +44,10 @@ namespace {
 // common"). A down on the navigation surface runs its window to this
 // deadline, and the EXPIRY there is the REGION HOLD: the region former armed
 // through the region hooks, so hold-then-drag sweeps a region on glass. The
-// duration is kHoldBeatMs (gui_input.h), the product's ONE hold beat — the
-// same number the chrome roster's shift long press reads, matched by
-// convention with the compositor's key-repeat delay, so it is a beat the hand
-// already knows from every held key on the desktop — and it is long past any
+// duration is kHoldBeatMs (gui_input.h), the product's ONE hold beat, matched
+// by convention with the compositor's key-repeat delay, so it is a beat the
+// hand already knows from every held key on the desktop (that declaration
+// carries the readers' inventory) — and it is long past any
 // aimed drag's natural dwell, the lesson
 // of the dead kTouchTrimHoldMs (the trim band's hold-a-beat deadline of
 // 2026-08-11, whose first cut rode the 60 ms window and turned every

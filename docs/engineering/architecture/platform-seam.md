@@ -94,7 +94,7 @@ drag coordinates floor instead of truncating.
   both-sides member. `gui_scale` and `audio_player` are per-DEVICE
   preferences (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
-  the laptop answers 100 % / `audacious`, Android 250 % / blank (no
+  the laptop answers 100 % / `audacious`, Android 225 % / blank (no
   spawnable player exists there, so `l` reports "No audio_player set"
   through the ordinary opt-out road). `gui_main` asks it before
   `GuiPlatform::init` and stamps the file if none exists, which is what
@@ -215,13 +215,15 @@ Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 249 since the 2026-08-27
 Series relocation cut it to 925 authored px — it fitted only to 220 before
-that. THE TABLET'S FIRST-RUN SCALE IS 250, one step past that fit ceiling and
-chosen on the glass 2026-08-27: the architect's question is whether a marker
-flag is TAPPABLE — whether the second tap of a double-tap lands on the flag
-rather than on the waveform — which the rig's cursor-width 225 does not settle.
-The icon row's rightmost authored pixels therefore crop, which is the standing
-crop-at-the-floor allowance at `kMinWindowWidthPx` and the sanctioned casualty
-it already names, not a new rule), 90 Hz panel PINNED (`ANativeWindow_setFrameRate(90, FIXED_SOURCE)` at
+that. THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
+the whole icon row lands (925*2.25 = 2081 of the panel's 2304) and the layout
+is the one the redesign was drawn against. 250 held the template for one
+afternoon that day — the architect's question was whether a marker flag is
+TAPPABLE, whether the second tap of a double-tap lands on the flag rather than
+on the waveform — and he stepped it back that evening: one step past the fit
+ceiling was one step too far for the ~3 authored px it cropped off the
+rightmost history icon, and with the press road's lengths now scaling with
+`gui_scale` the double-tap holds together at 225), 90 Hz panel PINNED (`ANativeWindow_setFrameRate(90, FIXED_SOURCE)` at
 every window adoption; the backend ticks at 5 ms, the Wayland rule's own half
 of the pinned refresh period, where it took the 60 Hz fallback's 8 ms until
 2026-08-27), PAGE_SIZE 4096 (the

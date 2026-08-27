@@ -241,16 +241,22 @@ GuiPlatform::~GuiPlatform() {
 // ---------------------------------------------------------------------------
 
 // The tablet's device-config template (contract at the declaration, rationale
-// at this backend's own). 250 % IS THE ARCHITECT'S OWN ANSWER, taken on the
-// glass 2026-08-27: a marker flag has to be tappable without the second tap of
-// a double-tap landing on the waveform instead, and that is what 250 buys on
-// this 249 PPI panel. (It is not the 225 that reproduces the retired rig's 1024
-// logical pixels — the rig was a pointer device, and a finger is wider than a
-// cursor.) The BLANK player beside it is the real answer for a device with
-// nothing spawnable on it rather than a placeholder.
+// at this backend's own). 225 % IS THE ARCHITECT'S OWN ANSWER, settled on the
+// glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
+// logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
+// the whole redesign was drawn against — every icon in the row fits, where the
+// fit ceiling is 249 % and anything past it crops the rightmost history icons.
+// 250 was tried for one afternoon that same day for the finger's sake — a
+// marker flag has to be tappable without the second tap of a double-tap landing
+// on the waveform instead — and stepped back that evening: it was one step too
+// far for a ~3 authored px crop, and with the press-road thresholds now scaling
+// with gui_scale (and the double-click window on the product's one beat, same
+// evening) the double-tap holds together at 225 anyway. The BLANK player
+// beside it is the real answer for a device with nothing spawnable on it rather
+// than a placeholder.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale    = 250;
+    cfg.gui_scale    = 225;
     cfg.audio_player = "";
     return cfg;
 }

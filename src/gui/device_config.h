@@ -13,7 +13,7 @@
 //
 // WHY IT EXISTS. Both were `.settings` keys until 2026-08-27, which made them
 // facts about the PIECE: the same project opened on the laptop and on the
-// tablet wants 100 and 250, and the laptop can spawn audacious where the tablet
+// tablet wants 100 and 225, and the laptop can spawn audacious where the tablet
 // has nothing spawnable at all. Carrying them in the sidecar meant every sync
 // of a project between the two devices had to rewrite them on the way over and
 // put them back on the way home. They are the panel's business, so they follow
@@ -77,9 +77,11 @@ struct DeviceConfig {
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
 // 925 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-six-button left-to-right walk runs past the window's right edge — which
-// is why the tablet's own 250 shaves the rightmost history icon by ~3 authored
-// px — and the redesign
+// twenty-six-button left-to-right walk runs past the window's right edge — the
+// tablet's own 225 clears it with room to spare (2304/2.25 = 1024 logical px,
+// 99 past the walk) and 249 is the fit ceiling on that panel; 250 was tried for
+// an afternoon on 2026-08-27 and stepped back the same evening for the ~3
+// authored px it shaved off the rightmost history icon — and the redesign
 // carries no collision rule anywhere — the crop-at-the-floor allowance recorded
 // at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
 // VOCABULARY; which of its values lays out well is the architect's call on his
@@ -126,7 +128,7 @@ bool write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 100 % and audacious, the tablet 250 % and no
+// a GUI one: the laptop wants 100 % and audacious, the tablet 225 % and no
 // player at all), so a first run on either device lands a file that is already
 // right for it and the user edits from there rather than from a wrong guess.
 // A missing parent directory is created.
