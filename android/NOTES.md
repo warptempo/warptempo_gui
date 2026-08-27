@@ -510,20 +510,48 @@ cmake --build android/app/build-android -j$(nproc)
 tree under it is wiped on every run, the CMake tree is not.
 
 Installing a project is a push into the app's own external files dir, which
-needs **no permission at all** — the source plus its three sidecars, renamed to
-one stem:
+needs **no permission at all**. Since 2026-08-27 the app opens **the current
+project**, and the layout under `<externalDataPath>` =
+`/sdcard/Android/data/com.warptempo.gui/files` is the laptop's `projects/`
+mirrored:
 
-```bash
-adb push <src>.wav              /sdcard/Android/data/com.warptempo.gui/files/source.wav
-adb push <src>.warpmarkers      .../files/source.warpmarkers
-adb push <src>.phaseresetmarkers .../files/source.phaseresetmarkers
-adb push <src>.settings          .../files/source.settings   # with gui_scale=175
+```
+current                  one line: a project folder's name
+projects/<name>/         the source .wav, its three sidecars sharing that
+                         stem, and renders/ beside them
 ```
 
-`android_main` reads `<externalDataPath>/source.wav` and the GUI derives the
-sidecars from the stem. That directory — the app's external files dir — is the
-**laptop-tablet sync convention's**, which owns what lands in it;
-`resolve_source_path` documents the path it answers with.
+`resolve_source_path` reads `current`, then answers with the ONE `.wav` in
+`projects/<name>/` whose stem has a `.warpmarkers` sibling — the sync script's
+own rule for "the source", so a render sitting beside it (published title, no
+sidecars) never matches. `current` absent, naming no folder, that folder holding
+no such `.wav`, or two of them: each is logged at FATAL through `__android_log`
+and aborts, since the sync script writes `current` on every run and a fallback
+would have no producer.
+
+The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`
+from a project folder pushes it and makes it current, `wts fp` brings the
+sidecars and renders home and commits them. Placing one by hand is the same
+four pushes plus the folder name:
+
+```bash
+FAR=/sdcard/Android/data/com.warptempo.gui/files
+adb push "<src>.wav"              "$FAR/projects/<name>/"
+adb push "<src>.warpmarkers"      "$FAR/projects/<name>/"
+adb push "<src>.phaseresetmarkers" "$FAR/projects/<name>/"
+adb push "<src>.settings"         "$FAR/projects/<name>/"   # with gui_scale=225
+adb shell "find '$FAR/projects' -type d -exec chmod 777 {} +"
+printf '<name>\n' > /tmp/current && adb push /tmp/current "$FAR/current"
+```
+
+**The chmod is load-bearing.** `files/` belongs to the app, so a file pushed
+straight into it is readable — which is why the old flat convention never met
+this. But a DIRECTORY that `adb push` creates below it belongs to `shell` with
+mode 770, and the app's uid is neither its owner nor in its group: `opendir()`
+answers EACCES and the app dies at launch saying `current` names no folder
+(measured on the device 2026-08-27). `chmod` does take on this device's external
+storage, so one pass over the directories is the whole fix; the files under them
+are already world-readable. `wts tp` runs it after every push.
 
 ### 10.2 What the backend is, and what it stubs
 

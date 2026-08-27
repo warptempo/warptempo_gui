@@ -28,6 +28,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -1178,26 +1180,99 @@ double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_
 
 namespace {
 
-// THE SOURCE PATH. The GUI takes exactly one audio file and derives its three
-// sidecars from the stem, so a path is all this owes. It answers with
-// <externalDataPath>/source.wav — THE APP'S EXTERNAL FILES DIR, which is
-// /sdcard/Android/data/<pkg>/files: adb can push into it with no permission
-// granted and the app reads and writes it without MANAGE_EXTERNAL_STORAGE.
-// WHAT PUTS THE FILES THERE IS THE LAPTOP-TABLET SYNC CONVENTION, which owns
-// that directory whole — source.wav with source.warpmarkers,
-// source.phaseresetmarkers and source.settings beside it.
+// THE SOURCE PATH — THE APP OPENS THE CURRENT PROJECT AND NOTHING ELSE. The GUI
+// takes exactly one audio file and derives its three sidecars from the stem, so
+// a path is all this owes; what has to be decided here is WHICH path, and there
+// is no file picker on this platform to ask.
+//
+// THE CONVENTION lives under <externalDataPath> = /sdcard/Android/data/<pkg>/
+// files — THE APP'S EXTERNAL FILES DIR, which adb can push into with no
+// permission granted and the app reads and writes without
+// MANAGE_EXTERNAL_STORAGE:
+//
+//     current              a one-line file holding a project folder's name
+//     projects/<name>/     the laptop's own projects/<name>/ mirrored: the
+//                          source .wav, the three sidecars sharing its stem,
+//                          and renders/ beside them
+//
+// THE SOURCE IS THE ONE .wav IN THAT FOLDER WHOSE STEM HAS A .warpmarkers
+// SIBLING. That is the sync script's own rule for "the source", spelled here the
+// same way so the two ends cannot disagree about which file a project is about;
+// a finished render sitting beside it carries the published title and no
+// sidecars of its own, so it never matches and needs no exclusion.
+//
+// EVERY FAILURE HERE IS FATAL, deliberately. The sync script is the ONE producer
+// of this tree, it writes the project folder and then `current` on every run, and
+// a laptop is what puts a project on the device at all — so a fallback arm would
+// have no producer: nothing could ever place files where it looked. Each failure
+// therefore names itself in logcat at FATAL and aborts, rather than opening the
+// wrong piece or a path that does not exist — and the directory refusal carries
+// the system's own words, because one of them is "Permission denied" and means
+// something specific: a directory `adb push` creates below `files/` belongs to
+// `shell` with mode 770, which this app's uid cannot walk into. The sync script
+// chmods what it pushes for exactly that reason (android/NOTES.md §10.1).
+[[noreturn]] void source_fatal(const std::string& why) {
+    __android_log_write(ANDROID_LOG_FATAL, kLogTag, why.c_str());
+    abort();
+}
+
 std::string resolve_source_path(ANativeActivity* activity) {
-    const char* dir = activity->externalDataPath;
+    const char* dir = activity ? activity->externalDataPath : nullptr;
     if (!dir || !*dir) {
-        // No external storage mounted: fall back to the internal directory,
-        // which always exists. adb can reach it only through run-as, so this
-        // is the degraded arm and it says so.
-        std::fprintf(stderr,
-                     "warptempo_gui: no externalDataPath; using internal "
-                     "storage for the source\n");
-        dir = activity->internalDataPath;
+        source_fatal("no externalDataPath: the whole sync convention lives "
+                     "there and nothing else puts a project on this device");
     }
-    return std::string(dir ? dir : ".") + "/source.wav";
+    const std::filesystem::path files(dir);
+
+    // `current`. std::getline takes the line without its terminator; the \r trim
+    // beside it costs nothing and the name is otherwise taken VERBATIM, since a
+    // project folder may legitimately end in any character but a newline.
+    std::string name;
+    {
+        std::ifstream in(files / "current", std::ios::binary);
+        if (!in) {
+            source_fatal("no `current` file in " + files.string() +
+                         ": run `wts tp` from the laptop");
+        }
+        std::getline(in, name);
+    }
+    while (!name.empty() && (name.back() == '\r' || name.back() == '\n')) {
+        name.pop_back();
+    }
+    if (name.empty()) {
+        source_fatal("`current` names no project folder");
+    }
+
+    std::error_code             ec;
+    const std::filesystem::path project = files / "projects" / name;
+    if (!std::filesystem::is_directory(project, ec)) {
+        source_fatal("`current` names '" + name + "', which is not a folder "
+                     "under " + (files / "projects").string() + " (" +
+                     ec.message() + ")");
+    }
+
+    std::filesystem::path source;
+    for (const auto& de : std::filesystem::directory_iterator(project, ec)) {
+        if (!de.is_regular_file()) continue;
+        if (de.path().extension() != ".wav") continue;
+        std::filesystem::path markers = de.path();
+        markers.replace_extension(".warpmarkers");
+        if (!std::filesystem::is_regular_file(markers, ec)) continue;
+        if (!source.empty()) {
+            // TWO SOURCES IN ONE FOLDER is not a state the sync script can
+            // produce, and directory_iterator's order is unspecified, so there
+            // is no honest way to choose between them. It says which two.
+            source_fatal("two sources in '" + name + "': " +
+                         source.filename().string() + " and " +
+                         de.path().filename().string());
+        }
+        source = de.path();
+    }
+    if (source.empty()) {
+        source_fatal("no source in '" + name +
+                     "': no .wav there has a .warpmarkers sibling");
+    }
+    return source.string();
 }
 
 // LOAD THE TWO BUNDLED FACES OUT OF THE APK, or die. A missing or unreadable
