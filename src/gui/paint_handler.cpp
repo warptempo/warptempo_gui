@@ -1996,11 +1996,13 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         // ink is the row's ordinary label colour.
         //
         // THE BOX IS RE-DERIVED FOR THIS ROW, and that is the one thing the
-        // chain's move changed about it (2026-08-13). The flag's box is 20 tall
-        // with its baseline at row 16 — kMarkerLaneHeightPx and
-        // kMarkerFlagBaselinePx, both authored off the row-5 crop — which is
-        // that lane's OWN height and a 16/4 split that only describes the crop
-        // it came from. What the two numbers actually express is the face's own
+        // chain's move changed about it (2026-08-13). The flag's box is 22 tall
+        // with its baseline at row 17 — kMarkerLaneHeightPx and
+        // kMarkerFlagBaselinePx, authored off the row-5 crop and retuned by the
+        // architect on 2026-08-27 — which is that lane's OWN height and a 17/5
+        // split that describes only that lane (the crop it came from read
+        // 20/16, and this row followed neither pair then or now). What the two
+        // numbers actually express is the face's own
         // (ascent + descent) band wrapped tight around the label, so the
         // anatomy transfers by asking THIS row's face for that band instead of
         // importing a lane height that does not belong here: ascent above the
