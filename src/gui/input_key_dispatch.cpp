@@ -17,6 +17,8 @@
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
                                   // cycle's playhead-anchored seed)
 #include "warpmarkers.h"
+#include "warp_frame_map_build.h"  // warp_coincident_collapse_members (the `m`
+                                   // gate's coincident-owner refusal)
 
 #include <fcntl.h>
 #include <signal.h>
@@ -5382,8 +5384,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // propagate. The gate requires a NON-EMPTY, CONTIGUOUS run of selected
     // markers with no effectively-enabled label_ref in
     // [owner .. boundary marker] inclusive and, since 2026-08-26, ONE TEMPO
-    // across the run (each selected marker a pass or the owner's own value);
-    // any other selection is a silent no-op. Under the contiguity rule every in-span marker up to the last
+    // across the run (each selected marker a pass or the owner's own value)
+    // and an owner outside every coincident-collapse run; any other selection
+    // is a silent no-op. Under the contiguity rule every in-span marker up to the last
     // selected one IS selected, so a selected span-internal marker may be
     // disabled and is still converted to a plain pass per sweep cell — as are
     // the disabled markers the extended boundary sweeps in past it; a
@@ -5453,6 +5456,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // Owner must satisfy the BPM-eligibility predicate (owning, no ref,
         // and — now — enabled).
         if (!bpm_popup_eligible_marker(mv[owner])) return true;
+        // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (codex 2026-08-26,
+        // the ref refusal's own class): the resolver's stage 2 collapses an
+        // exact-frame run with two or more effectively-enabled members to
+        // ONE synthetic 1.00 owner, so a span owned from inside such a run
+        // renders at 1.00 in every cell whatever the editor derived — and
+        // when the coincident partner is the boundary itself the span's
+        // duration is zero, the commit gate has nothing to measure and the
+        // sweep derives nothing, closing the mode on an empty batch. The
+        // verdict is the classifier's, warp_coincident_collapse_members
+        // (warp_frame_map_build.h — the render's stage 2 and the lane's red
+        // cue consult the same one), never re-spelled here.
+        if (warp_coincident_collapse_members(
+                slice_to_warp_markers(mv))[static_cast<size_t>(owner)])
+            return true;   // silent no-op
         // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected marker
         // is a pass or carries the owner's own tempo — cents AND typed scale,
         // the effective value — else `m` is a silent no-op like the other

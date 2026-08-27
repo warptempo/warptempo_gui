@@ -70,8 +70,10 @@ struct GuiWarpMarker : WarpMarker {
     // enabled marker follows, so the last section runs to total_frames and
     // there is no closing marker. When bpm_endpoint < size, the marker at that
     // index is the boundary: it is effectively enabled, it owns the FOLLOWING
-    // section (outside the span), and it is left untouched by the sweep. -1
-    // when unset. Not serialized.
+    // section (outside the span), and the sweep treats it exactly as it
+    // treats every other marker outside the span — rescaled when it owns
+    // its tempo, left as it is when it is a pass or a ref. -1 when unset.
+    // Not serialized.
     int  bpm_endpoint = -1;
 };
 

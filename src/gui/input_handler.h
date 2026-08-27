@@ -165,6 +165,19 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // only add rounding). A rescaled value outside [kTempoMinCents, kTempoMaxCents]
 // REFUSES the cell (nullopt), never clamps — a clamped section would deform
 // the very shape this exists to preserve.
+//
+// THE RESOLVER'S OWN 1.00s STAND OUTSIDE THE RESCALE (recorded asymmetry,
+// codex 2026-08-26): the rewrite moves AUTHORED values, and what the render
+// resolver normalizes it normalizes afterwards — the frame-0 seed ahead of the
+// first marker, a leading pass's fallback, a pass inheriting through an
+// enabled ref, and a ref whose implied tempo leaves the resolver's envelope
+// (ExtremeRatio, the lane's red flag) all render at the resolver's 1.00 in
+// the cell as they do in the source. A def's rescale can push an outside ref
+// across that envelope exactly as a cent step on the def can today; under
+// the load-lenient, render-normalizing doctrine that is a red flag on the
+// loaded cell, never a refusal here. The coincident-collapse run is the one
+// such state the `m` gate refuses up front (input_key_dispatch.cpp) — an
+// owner inside it can take no tempo at all.
 inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
     const std::vector<GuiWarpMarker>& base,
     int owner_idx, int endpoint_idx,
