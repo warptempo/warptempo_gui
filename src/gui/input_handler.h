@@ -2759,7 +2759,7 @@ private:
     // inter-cap bridge only). Arms a PendingTrimDrag (the pending+threshold
     // pattern): the
     // press CLAIMS the cap/bridge geometry, but the trim-drag machinery begins
-    // only once the pointer crosses kDragMovedThresholdPx. A full ordered pair
+    // only once the pointer crosses drag_moved_threshold_px(). A full ordered pair
     // always rests (the unset state died 2026-07-30), so the claim is purely
     // GEOMETRIC. Returns true iff the press landed on trim
     // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
@@ -2782,7 +2782,7 @@ private:
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
-    // only once on_motion crosses kDragMovedThresholdPx from the press. TWO
+    // only once on_motion crosses drag_moved_threshold_px() from the press. TWO
     // SURFACES ARM IT since 2026-08-18 (the region IS the trim): the 9 px bar's
     // endcaps and bridge, and the waveform OVERLAY's bounds and interior, which
     // pass `waveform_click_act` so that a motionless lift there falls to the

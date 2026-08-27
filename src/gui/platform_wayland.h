@@ -170,6 +170,11 @@ public:
     // GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
 
+    // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
+    // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
+    // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
+    void set_touch_slop_px(double px);
+
     // Fired ONCE PER ITERATION of run()'s loop, at the TAIL of the body — below
     // the display dispatch, the tick and both worker completions, so it observes
     // the iteration's FULLY SETTLED state. That placement is the whole point: a

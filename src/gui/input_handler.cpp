@@ -2630,6 +2630,13 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // (the settings editor's `gui_scale=` commit) gates the no-op case.
     app.gui_scale = percent;
     set_gui_scale_percent(percent);
+    // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
+    // below the GUI model and cannot resolve it (the contract and the
+    // two-call-site inventory are at GuiInputCore::set_touch_slop_px). This is
+    // the LIVE road — the settings editor's `gui_scale=` commit; the source
+    // load's tail is the other. The push must follow set_gui_scale_percent:
+    // drag_moved_threshold_px() reads the value that call just installed.
+    gui.set_touch_slop_px(drag_moved_threshold_px());
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
 }

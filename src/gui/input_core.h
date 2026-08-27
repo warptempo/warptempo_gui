@@ -156,6 +156,12 @@ inline int containing_pixel(double v) {
     return static_cast<int>(std::floor(v));
 }
 
+// THE TOUCH SLOP AT gui_scale 100, in device pixels — the value a freshly
+// built core carries until the GUI pushes its own (set_touch_slop_px). It is
+// the AUTHORED length; this layer never resolves it, because this layer never
+// learns the scale.
+inline constexpr double kDefaultTouchSlopPx = 8.0;
+
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
 // microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
 // disambiguation window and the backend's own bounded clipboard read all read
@@ -529,7 +535,7 @@ public:
     //     finger-distance ratio against the previous DELIVERED frame, and the
     //     finger count — four measurements and the count the GUI forks on,
     //     every field read. The latch is the platform's: nothing is
-    //     delivered until the centroid has travelled kTouchSlopPx (Chebyshev)
+    //     delivered until the centroid has travelled the touch slop (Chebyshev)
     //     from the gesture's start OR the finger distance has changed by that
     //     same slop, and the crossing update folds the whole accumulated
     //     delta — the strip drag's own press-becomes-drag model, so a
@@ -610,6 +616,52 @@ public:
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end);
+
+    // THE TOUCH SLOP'S ONE DOOR — the travel, in DEVICE pixels, that this layer
+    // measures every finger against. THREE USES, all Chebyshev and all `>=`:
+    // the disambiguation window's EARLY resolve (a finger already dragging
+    // should not wait the window out; the resolution forks on the down point's
+    // pan-zone answer — single-finger nav on the pan surface, the pointer
+    // elsewhere), the navigation gestures' LATCH (centroid travel or
+    // finger-distance change past it starts navigating, so a two-finger tap
+    // navigates nothing and a single-finger nav is born past it by
+    // construction), and the live translation's MOVED latch (the Pointer clause
+    // at the state block: a second finger forks on it — moved drags ignore,
+    // motionless holds upgrade).
+    //
+    // IT IS A LENGTH, SO IT RIDES gui_scale — AND THE CORE NEVER LEARNS THE
+    // SCALE. The authored 8 is 1.7 mm on the retired road rig's 1024x600 panel
+    // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's roll crosses
+    // during a relaxed double tap; the GUI resolves it and pushes it here,
+    // so this layer keeps measuring raw device pixels and knows nothing about
+    // percent. The default is kDefaultTouchSlopPx, which is the authored value
+    // and therefore exactly right at gui_scale 100 — so a core nobody ever
+    // pushes to behaves as it always did.
+    //
+    // THE TWIN-GATE INVARIANT, and why this is a setter rather than a second
+    // constant: the slop DELIBERATELY EQUALS the GUI's one generic
+    // press-becomes-drag gate, because a slop-crossing resolution delivers its
+    // crossing motion in the same burst as the press and that motion must clear
+    // the GUI's gate by construction — a touch drag becomes a drag the moment
+    // it resolves. ONE NUMBER NOW FLOWS TO BOTH: the pushed value IS
+    // drag_moved_threshold_px() (app_state.h), so the two cannot drift at any
+    // scale, where before they were two literals kept equal by comment.
+    //
+    // THE PUSH HAS TWO CALL SITES, one per gui_scale application point, and
+    // this is their inventory (there is no third; set_gui_scale_percent,
+    // render.h, has exactly these two callers):
+    //   * the source load's tail — file_loader.cpp, beside its
+    //     set_gui_scale_percent push. This is the INIT road on BOTH backends:
+    //     the scale arrives from the sidecar, and the load is the first thing
+    //     the startup tick does once the surface is configured. Before it there
+    //     is no source on screen and the default stands, which is the authored
+    //     value — so the pre-load window cannot be wrong in kind.
+    //   * the settings editor's `gui_scale=` commit —
+    //     GuiInputHandler::apply_gui_scale, input_handler.cpp. This is the LIVE
+    //     road, and the new slop is in force from that commit onward.
+    // Reached through GuiPlatform, which re-exports it like every other door of
+    // this class.
+    void set_touch_slop_px(double px) { touch_slop_px_ = px; }
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
@@ -1110,7 +1162,7 @@ private:
     //     and every off-zone press-and-hold gesture alive on glass), ON the
     //     zone the beat's expiry is THE REGION HOLD (-> Region below —
     //     hold-then-drag sweeps a region, the deliberate act's glass form);
-    //     on MOTION beyond kTouchSlopPx it FORKS on the same
+    //     on MOTION beyond the touch slop it FORKS on the same
     //     captured pan-zone answer (the PHONE MODEL, second glass session
     //     2026-08-11): inside the pan surface -> SINGLE-FINGER Nav (the
     //     finger drags the pan; no press was ever delivered — nothing to
@@ -1127,7 +1179,7 @@ private:
     //     faces from resting lit where a finger last was; a sibling-held
     //     logical left suppresses ALL of it — see the UP clauses below). The
     //     phase tracks whether the translation has MOVED — Chebyshev >=
-    //     kTouchSlopPx from the down point, latched once — and a SECOND
+    //     the touch slop from the down point, latched once — and a SECOND
     //     finger landing here FORKS on that latch (the edge inventory below):
     //     a moved drag ignores it whole, a motionless hold UPGRADES to
     //     two-finger Nav.
@@ -1188,7 +1240,7 @@ private:
     //     drift inside the window stages as the gesture's first frame); OFF
     //     it -> Pointer at the kTouchDisambiguateMs mark
     //     (hold-unlocks-the-pointer, the Pending clause above).
-    //   * motion beyond kTouchSlopPx inside the window — FORK on the down
+    //   * motion beyond the touch slop inside the window — FORK on the down
     //     point's captured pan-zone answer (the phone model): pan surface ->
     //     SINGLE-FINGER Nav (the nav seed measures its latch from the DOWN
     //     point, so the first delivered frame folds the whole accumulated
@@ -1367,6 +1419,11 @@ private:
     // resolve through containing_pixel, the product's one fractional
     // coordinate -> pixel conversion.
     int32_t    touch_owner_id_    = 0;
+    // The travel every finger is measured against, in DEVICE pixels — the
+    // three uses, the gui_scale story and the twin-gate invariant are at
+    // set_touch_slop_px. Born at the authored 100 % value so a core nobody
+    // pushes to is the core this file always had.
+    double     touch_slop_px_     = kDefaultTouchSlopPx;
     double     touch_down_x_      = 0.0;
     double     touch_down_y_      = 0.0;
     double     touch_last_x_      = 0.0;
@@ -1399,7 +1456,7 @@ private:
     // Region: a finger position staged for the touch_frame boundary
     // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
     bool       touch_region_frame_dirty_ = false;
-    // Pointer: the translation has MOVED — Chebyshev >= kTouchSlopPx from the
+    // Pointer: the translation has MOVED — Chebyshev >= the touch slop from the
     // down point, LATCHED ONCE (the sixth glass ruling, 2026-08-12). Seeded
     // by the resolver from the window's own travel (a slop-crossing
     // resolution enters already moved, expiry enters motionless), latched by

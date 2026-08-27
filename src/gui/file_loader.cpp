@@ -610,6 +610,19 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // full-surface damage. ONE scale feeds that table since row 7, so the one
     // push must land before the single rebuild below.
     set_gui_scale_percent(app.gui_scale);
+    // THE INPUT CORE'S TOUCH SLOP RIDES THE SAME PUSH, and must: the core sits
+    // below the GUI model and never learns the scale, so the GUI resolves the
+    // gate and hands it down (contract and two-call-site inventory at
+    // GuiInputCore::set_touch_slop_px; the other site is the settings editor's
+    // gui_scale commit). THIS IS THE INIT ROAD ON BOTH BACKENDS: the scale
+    // arrives from the sidecar this load just parsed, and this load is the
+    // first thing the startup tick does once the surface is configured. The
+    // window before it — a mapped surface with no source in it — is the ONLY
+    // one in which a delivered finger meets the core's authored default, and
+    // that default is the 100 % value, so nothing there can be wrong in kind.
+    // It follows set_gui_scale_percent because drag_moved_threshold_px() reads
+    // what that call installed.
+    gui.set_touch_slop_px(drag_moved_threshold_px());
     paint_handler.on_resize(app.width, app.height);
 
     const double load_ms =

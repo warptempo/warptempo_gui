@@ -3259,8 +3259,8 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
                                      int x, int y) {
     return dc.surface == DoubleClickSurface::TrimBar &&
            monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-           std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-           std::abs(y - dc.press_y) <= kDoubleClickSlackPx;
+           std::abs(x - dc.press_x) <= double_click_slack_px() &&
+           std::abs(y - dc.press_y) <= double_click_slack_px();
 }
 
 // THE MARKER CLICK ACT — the whole flag click, AT THE PRESS (architect
@@ -3429,8 +3429,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     if (dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
-        std::abs(x - dc_at_press.press_x) <= kDoubleClickSlackPx &&
-        std::abs(y - dc_at_press.press_y) <= kDoubleClickSlackPx &&
+        std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
+        std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         !active_view_state(app).read_only) {
         if (dc_at_press.span == MarkerClickSpan::Measure) {
             // Every open route opens fully SELECTED (open-selected); the seed
@@ -3877,8 +3877,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const DoubleClickCandidate& dc = dc_at_press;
                 if (dc.surface == DoubleClickSurface::EditorText &&
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                    std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-                    std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                    std::abs(x - dc.press_x) <= double_click_slack_px() &&
+                    std::abs(y - dc.press_y) <= double_click_slack_px()) {
                     text_editor::select_word_at(
                         *g.ed, editor_byte_index_at(g, x));
                     // The dialog editors' repaint owner is the bottom row's
@@ -5034,8 +5034,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                        std::abs(x - dc.press_x) <= double_click_slack_px() &&
+                        std::abs(y - dc.press_y) <= double_click_slack_px()) {
                         create_marker_at_empty_lane(x - area.x);
                         return;
                     }
@@ -5608,16 +5608,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // because only the release can tell a click from a drag. The press recorded
     // the trim-bar point (TrimBarPressSeed); this seeds the candidate when the
     // pointer never left the slack AND no trim drag went live — the two spellings
-    // of "it stayed a click", equal by construction (kDoubleClickSlackPx ==
-    // kDragMovedThresholdPx). A moved endcap/bridge drag therefore seeds nothing
+    // of "it stayed a click", equal by construction AT EVERY gui_scale
+    // (double_click_slack_px() == drag_moved_threshold_px(): equal authored
+    // constants through the one scaled_px conversion — the contracts are at the
+    // two accessors, app_state.h). A moved endcap/bridge drag therefore seeds nothing
     // and, its own press having cleared any candidate at the top-of-frame, leaves
     // none behind. The record is consumed either way.
     {
         const TrimBarPressSeed seed = app.trim_bar_press;
         app.trim_bar_press = TrimBarPressSeed{};
         if (seed.active && !app.trim_drag.active &&
-            std::abs(x - seed.press_x) <= kDoubleClickSlackPx &&
-            std::abs(y - seed.press_y) <= kDoubleClickSlackPx) {
+            std::abs(x - seed.press_x) <= double_click_slack_px() &&
+            std::abs(y - seed.press_y) <= double_click_slack_px()) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::TrimBar,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
@@ -7776,7 +7778,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     if (!app.region_drag.moved) {
         if (std::max(std::abs(mouse_x - app.region_drag.press_x),
                      std::abs(mouse_y - app.region_drag.press_y)) <
-                kDragMovedThresholdPx) {
+                drag_moved_threshold_px()) {
             return;
         }
     }
@@ -8178,7 +8180,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!app.overview_drag.moved &&
             std::max(std::abs(mouse_x - app.overview_drag.press_x),
                      std::abs(mouse_y - app.overview_drag.press_y)) <
-                kDragMovedThresholdPx) {
+                drag_moved_threshold_px()) {
             return;
         }
         app.overview_drag.moved = true;
@@ -8234,7 +8236,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!sd.moved) {
             if (std::max(std::abs(mouse_x - sd.press_x),
                          std::abs(mouse_y - sd.press_y)) <
-                    kDragMovedThresholdPx) {
+                    drag_moved_threshold_px()) {
                 return;
             }
             sd.moved = true;
@@ -8324,7 +8326,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_click.press_x),
                      std::abs(mouse_y - app.pending_click.press_y)) <
-                kDragMovedThresholdPx) {
+                drag_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // THE CROSSING SPENDS THE ARM. Read, disarm, then
@@ -8378,7 +8380,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
                      std::abs(mouse_y - app.pending_trim_drag.press_y)) <
-                kDragMovedThresholdPx) {
+                drag_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // Threshold crossed: begin the trim drag anchored at the PRESS column so
@@ -8463,7 +8465,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_press.press_x),
                      std::abs(mouse_y - app.pending_marker_press.press_y)) <
-                kDragMovedThresholdPx) {
+                drag_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // THE CROSSING SPENDS THE ARM into the drag. Read, disarm, then act —

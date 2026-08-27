@@ -55,24 +55,13 @@ namespace {
 // beat revives only its two-deadline PATTERN, on a surface whose quick drag
 // is the pan, not a pointer drag, so the dwell collision cannot recur).
 //
-// kTouchSlopPx is the physical-pixel travel that resolves the window EARLY
-// (a finger that is already dragging should not wait out the window; the
-// resolution FORKS on the down point's pan-zone answer — single-finger nav
-// on the pan surface, the pointer elsewhere) and, reused, the navigation
-// gestures' latch (centroid travel or finger-distance change past it starts
-// navigating; under it a two-finger tap navigates nothing, and a
-// single-finger nav is born past it by construction) and, a third time, the
-// live translation's MOVED latch (the Pointer clause at the state block: a
-// second finger forks on it — moved drags ignore, motionless holds upgrade).
-// 8 px DELIBERATELY EQUALS the GUI's one generic press-becomes-drag gate
-// (kDragMovedThresholdPx, app_state.h — not included here; the platform sits
-// below the GUI model, so the twin value is stated rather than shared): a
-// slop-crossing resolution delivers its crossing motion in the same burst as
-// the press, and that motion crosses the GUI's own drag gate by
-// construction, so a touch drag becomes a drag the moment it resolves.
+// THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
+// member whose default is the authored kDefaultTouchSlopPx and whose live
+// value the GUI pushes down scaled (set_touch_slop_px, input_core.h — the
+// contract, the three uses and the twin-gate invariant are all stated there,
+// since the value's owner is now the door rather than this block).
 constexpr int    kTouchDisambiguateMs = 60;
 constexpr int    kTouchRegionHoldMs   = kHoldBeatMs;
-constexpr double kTouchSlopPx         = 8.0;
 
 } // namespace
 
@@ -1071,12 +1060,12 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // THE MOVED LATCH SEEDS FROM THE WINDOW'S OWN TRAVEL (the sixth glass
     // ruling's second-down fork, 2026-08-12): a slop-crossing resolution
     // enters Pointer already MOVED — its condition is the latch's own
-    // definition, Chebyshev >= kTouchSlopPx from the down point — while the
+    // definition, Chebyshev >= touch_slop_px_ from the down point — while the
     // expiry and tap resolutions enter motionless (their drift is sub-slop
     // by construction). The Pointer motion arm latches it afterward.
     touch_translation_moved_ =
         std::max(std::abs(touch_last_x_ - touch_down_x_),
-                 std::abs(touch_last_y_ - touch_down_y_)) >= kTouchSlopPx;
+                 std::abs(touch_last_y_ - touch_down_y_)) >= touch_slop_px_;
     // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION (codex round 2): the finger
     // has factually been down since the window opened, so EVERY delivery in
     // this burst — the entry motion included — reads primary_button_held
@@ -1127,7 +1116,7 @@ void GuiInputCore::resolve_touch_window_to_single_nav() {
     // raised. The seed is the two-finger seed's own shape measured from the
     // DOWN point, unlatched with last_cx still holding the start, so the
     // first delivered frame runs deliver_touch_nav_frame's ordinary latch
-    // test — the crossing position is already >= kTouchSlopPx away in the
+    // test — the crossing position is already >= touch_slop_px_ away in the
     // same Chebyshev metric — and FOLDS the whole accumulated delta, exactly
     // as the two-finger latch folds. The distance fields stay 0.0: the pinch
     // latch arm is structurally false and the ratio guard delivers 1.0 (no
@@ -1713,10 +1702,11 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // on the pan surface the drag IS the pan (single-finger nav, no
             // press ever delivered); elsewhere the crossing
             // position is the queued motion the resolution replays, and at
-            // kTouchSlopPx == the GUI's own drag gate it crosses that gate in
-            // the same burst as the press (the constants' comment).
+            // touch_slop_px_ IS the GUI's own drag gate — the one number pushed
+            // down scaled — it crosses that gate in the same burst as the press
+            // (the invariant at set_touch_slop_px, input_core.h).
             if (std::max(std::abs(x - touch_down_x_),
-                         std::abs(y - touch_down_y_)) >= kTouchSlopPx) {
+                         std::abs(y - touch_down_y_)) >= touch_slop_px_) {
                 if (touch_down_in_pan_zone_)
                     resolve_touch_window_to_single_nav();
                 else
@@ -1735,7 +1725,7 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // still a drag).
             if (!touch_translation_moved_ &&
                 std::max(std::abs(x - touch_down_x_),
-                         std::abs(y - touch_down_y_)) >= kTouchSlopPx)
+                         std::abs(y - touch_down_y_)) >= touch_slop_px_)
                 touch_translation_moved_ = true;
             // Coalesced to the touch_frame boundary — the pointer-frame
             // precedent: a panel can report at sensor rate, and the strip
@@ -1817,9 +1807,9 @@ void GuiInputCore::deliver_touch_nav_frame() {
         // crossing model): last_cx/last_dist still hold the gesture start.
         const bool travel =
             std::max(std::abs(cx - touch_nav_start_cx_),
-                     std::abs(cy - touch_nav_start_cy_)) >= kTouchSlopPx;
+                     std::abs(cy - touch_nav_start_cy_)) >= touch_slop_px_;
         const bool pinch =
-            std::abs(dist - touch_nav_start_dist_) >= kTouchSlopPx;
+            std::abs(dist - touch_nav_start_dist_) >= touch_slop_px_;
         if (!travel && !pinch) return;
         touch_nav_latched_ = true;
     }

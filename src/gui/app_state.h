@@ -158,7 +158,7 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // constants (kStripSegmentClassifyPx 8.0, kStripSegmentZoomAngleDeg 60.0,
 // kStripSegmentPauseMs 75) and the ruled last resort they carried are git
 // history; the generic 8 px press-becomes-drag gate below is a DIFFERENT job
-// (kDragMovedThresholdPx — press-becomes-drag, not classification) and
+// (drag_moved_threshold_px() — press-becomes-drag, not classification) and
 // stands untouched.)
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
@@ -555,7 +555,7 @@ struct UndoHistory {
 // stays the range click) — does its press-time work (deselect-all, playhead
 // placement, live-playback reseek — it never SELECTS a marker) and arms this
 // drag; motion past the shared press-becomes-drag threshold
-// (kDragMovedThresholdPx) writes the trim from the press frame to the pointer
+// (drag_moved_threshold_px()) writes the trim from the press frame to the pointer
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
 // input_trim.cpp — which enforces no width, only the song walls). THE PRESS ITSELF
 // WRITES NO TRIM: a motionless shift click is the placement and nothing else.
@@ -676,7 +676,7 @@ enum class MarkerClickSpan { Flag, Measure };
 // owns input, and the consume must preempt the drag arm). A MOTIONLESS RELEASE
 // seeds the next Marker double-click candidate and nothing else (the seed is a
 // release act by family rule — only the release knows the press stayed still).
-// A CROSSING of kDragMovedThresholdPx (Chebyshev from the press; the one
+// A CROSSING of drag_moved_threshold_px() (Chebyshev from the press; the one
 // generic 8px gate shared by every press-becomes-drag surface) begins the
 // reposition drag — the click's acts already stand from the press, so the
 // crossing runs no act. A lost button, the force-end finalizer and the touch
@@ -753,7 +753,7 @@ struct PendingMarkerPress {
 // bridge press and the ctrl deferred-set pending died with the arc's revert.)
 // The trim sibling of PendingMarkerPress: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
-// machinery takes over) only once the pointer crosses kDragMovedThresholdPx
+// machinery takes over) only once the pointer crosses drag_moved_threshold_px()
 // (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS A CONSUMED
 // NOTHING again (architect 2026-07-30): the lane-click model gave it one act —
 // publishing the trim window as a region highlight — and that publish is retired
@@ -818,7 +818,7 @@ enum class PendingClickKind {
 // THE SHAPE IS THE PRODUCT'S: the press ARMS a record carrying what the act
 // will need (its press POINT and which bound the click writes); a MOTIONLESS
 // release runs the set, RE-ASKING every live gate (they all live inside
-// set_trim_bound_at_click); a CROSSING of kDragMovedThresholdPx runs the set
+// set_trim_bound_at_click); a CROSSING of drag_moved_threshold_px() runs the set
 // and hands over to the endcap drag; and a lost button, the force-end
 // finalizer and the touch layer's ABNORMAL end all commit nothing. Read
 // PendingMarkerPress above for the neighbouring press-time model.
@@ -944,7 +944,7 @@ struct TrimDragState {
 // arms this and DOES NOTHING ELSE — nothing pops at press anywhere now (the
 // deferred-hide model, the one-day ruler former's own pattern generalized
 // to the whole surface):
-//   * a MOTIONLESS RELEASE (never crossed kDragMovedThresholdPx) runs THE
+//   * a MOTIONLESS RELEASE (never crossed drag_moved_threshold_px()) runs THE
 //     CLICK ACT at the press column, forked on the pressed half
 //     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
@@ -1556,7 +1556,7 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // four surfaces since 2026-08-15, when the marker click moved to the lift and
 // its press-time seed (the last of them) went with it; the NEXT press on the
 // SAME surface,
-// if it lands within kDoubleClickMs and kDoubleClickSlackPx of the recorded
+// if it lands within kDoubleClickMs and double_click_slack_px() of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
 // surface's double-click action instead of the single-click action. A drag that
 // MOVED records nothing and clears any candidate. Surfaces:
@@ -1649,9 +1649,11 @@ struct DoubleClickCandidate {
 // (any spot in the band — endcap, bridge, or bare ground; read-only included and
 // the `h` history view too, the framing
 // being pure navigation in both) records this; the left release seeds the TrimBar
-// candidate when the pointer is still within kDoubleClickSlackPx of the recorded
-// point and no trim drag went live. That slack IS the motionless test: it equals
-// kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
+// candidate when the pointer is still within double_click_slack_px() of the
+// recorded point and no trim drag went live. That slack IS the motionless test:
+// it equals drag_moved_threshold_px() at every gui_scale (both accessors resolve
+// their equal authored constants through the one scaled_px conversion), so
+// "never became a drag" and "never left the slack" are
 // the same condition by construction — STILL TRUE with the framing consume back
 // at the press (2026-08-17; it spent one day at the lift, 2026-08-15..17): the
 // press that CONSUMES records no seed at all (a consumed press never seeds, the
@@ -3072,8 +3074,31 @@ inline int dropdown_h_px(DropdownMenu m) {
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
 // double-click.
+//
+// THE WINDOW IS A DURATION AND THE SLACK IS A LENGTH, and only the length
+// rides gui_scale (architect 2026-08-27). A finger's roll between two taps is
+// a physical distance — about 0.8 mm on the tablet's 249 PPI panel at the raw
+// 8 px, against 1.7 mm on the retired road rig's 1024x600 panel, which is why a relaxed
+// double tap arrived as two single clicks there. The AUTHORED value stays the
+// 100 % one; the RESOLVED value is double_click_slack_px() below, and every
+// compare site reads that accessor and never the constant. The 500 ms window,
+// like every other duration in the product, is untouched by the scale.
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
+
+// The slack in DEVICE pixels at the live gui_scale — the five compare sites'
+// one reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
+// from the recorded press).
+//
+// IT EQUALS drag_moved_threshold_px() AT EVERY SCALE because the two authored
+// constants are equal and both resolve through the one scaled_px conversion —
+// the same strength the pre-scale pair had, and what makes "never became a
+// drag" and "never left the slack" one answer (the note at the seed test,
+// input_pointer.cpp). Floor 1: a zero slack would demand a pixel-exact second
+// press and starve double-click detection outright.
+inline int double_click_slack_px() {
+    return scaled_px(kDoubleClickSlackPx, 1);
+}
 
 // THE CHROME ROSTER'S SHIFT LONG-PRESS BEAT (architect 2026-08-13) — how long a
 // press must be HELD on a shift-admitting button (the membership is
@@ -3149,9 +3174,16 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // what it says it is: the line between a click and a drag. A jitter drag that
 // crosses it commits the sliver it drew, nothing dissolving it and — since the
 // minimum width floor's retirement, 2026-08-19 — nothing widening it either.)
-// The TOUCH slop is a separate constant deliberately equal to it
-// (kTouchSlopPx, input_core.cpp — the input layer sits below this header),
-// which is what makes a quick finger drag cross both gates at once.
+// THE TOUCH SLOP IS THIS SAME NUMBER, PUSHED DOWN (2026-08-27, when the gate
+// learned the scale). The core's disambiguation-window travel gate sits BELOW
+// this header and must never learn gui_scale, so it cannot resolve the value
+// itself: it keeps a settable slop whose default is the authored 8 and takes
+// drag_moved_threshold_px() through GuiPlatform::set_touch_slop_px at both
+// gui_scale application points (the inventory is at that setter,
+// input_core.h). One number reaches both gates at every scale, which is what
+// makes a quick finger drag cross both at once — the slop crossing delivers
+// its crossing motion in the same burst as the press, and that motion clears
+// this gate by construction.
 // UNIFIED to 8px (architect
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
 // kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
@@ -3178,7 +3210,24 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // RECORDED FALLBACK: if the strip/trim feel degrades at 8, re-split into a
 // per-surface pair (the pre-2026-07-24 form: strip/region/trim at 3, markers
 // at 8).
+// THE 8 IS AN AUTHORED 100 % LENGTH, NOT A DEVICE COUNT (architect
+// 2026-08-27). The grab slop above is a PHYSICAL distance — the millimetres a
+// fingertip or a hand rolls before it means to drag — so it rides gui_scale
+// like every other length in the tree: 8 raw px is 1.7 mm on the retired road
+// rig's 1024x600 panel and 0.8 mm on the tablet's 249 PPI one, and a fingertip's
+// roll crossed the smaller one during a relaxed double tap (the flag drag that
+// ate the second tap). The RESOLVED value is drag_moved_threshold_px() below;
+// every gate reads that accessor and never this constant, and at gui_scale 100
+// it is this number exactly.
 constexpr int     kDragMovedThresholdPx = 8;
+
+// The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
+// SURFACE in the list above (six `<` compares in input_pointer.cpp) and the
+// value pushed into the input core's touch slop at both gui_scale application
+// points. Floor 1: a zero gate would make every click a drag.
+inline int drag_moved_threshold_px() {
+    return scaled_px(kDragMovedThresholdPx, 1);
+}
 
 // THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
 // one hovered marker's identity, its composed lane text, its pass/ref resolved

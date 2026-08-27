@@ -1174,6 +1174,7 @@ void GuiPlatform::set_touch_nav_hooks(
                                std::move(region_end));
 }
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
+void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
 void GuiPlatform::set_capture_restore_x(double surface_x)   { input_.set_capture_restore_x(surface_x); }
 void GuiPlatform::clear_capture_restore_x()                 { input_.clear_capture_restore_x(); }
 void GuiPlatform::set_capture_restore_kind(GuiCursorKind kind) { input_.set_capture_restore_kind(kind); }
