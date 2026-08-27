@@ -57,13 +57,6 @@ THE PAYLOAD-EDITOR INTERPLAY: the payload buffer NEVER contains the measure (its
 
 HOME VIEW: measures are the FOURTH ruled exception to the home-view binding (tempo-and-home-view.md). READ-ONLY still refuses — a measure is serialized content — and the `h` view swallows bare `/` at its own allowlist and paints no measure boxes at all.
 
-### The Lane's Height and the Label Baseline — AN EXPERIMENT (architect 2026-08-27, revertible whole)
-"Add one more pixel of padding to the flags — two more pixels of height to the marker lane." The flags read one pixel roomier above and below their label, on the laptop and on glass alike. TWO CONSTANTS AND NOTHING ELSE (render.h, which is authoritative): `kMarkerLaneHeightPx` 20 → 22 and `kMarkerFlagBaselinePx` 16 → 17, so cap ink runs rows 5..16 of the 22 with a 5-row descender band where the kdenlive crop (row_5_full.png, marker y37..56) gave rows 4..15 of 20 with a 4-row band. The lane height IS the flag box height, so the two pixels land inside the flag; the baseline moving by one puts exactly one of them above the cap ink and one below the descender.
-
-EVERYTHING ELSE FOLLOWS BY CONSTRUCTION, which is why this is two edits. The vertical stack takes the +2 out of the TOP FLEXIBLE GAP through main.cpp's one owner — the waveform's 500px clamp and the midpoint rule are untouched, so at 1920x1080 the waveform still spans y 290..790 and only gap 1 moves (97 → 95); where centering is infeasible (a short window, and the tablet at gui_scale 225, whose leftover is far under the scaled clamp) both gaps stay floored at 0 and the WAVEFORM pays the retune off its own top edge. Every flag surface derives from the LANE RECT (`top_marker_row_area`) and the one baseline accessor: the painted box, the published hit rect, `PendingMarkerPress`, the measure box continuing the flag rightward, the `h` view's diff flags, the flag editor's field, caret and selection band, the empty-lane create band, the lane's damage rects and the stems, which begin at the waveform top wherever that now falls. No second site knows either number. The bottom row's CRITICAL CHIP is unaffected by design: it re-derives its own box from its row's font extents rather than importing this lane's height (kdenlive-redesign.md).
-
-**IT IS AN EXPERIMENT — the architect is "not so sure" — landed as its own commit.** A revert is those two constants back to 20 and 16, plus the dated notes at them, at main.cpp's stack record and here.
-
 ### The Seam Divider — AN EXPERIMENT (architect 2026-08-20, revertible whole)
 THIS SECTION DESCRIBES A TRIAL, NOT A SETTLED RULING, and it landed as its own commit so it can be reverted without touching anything else. Nothing below has been driven for long on the glass.
 

@@ -206,30 +206,24 @@ namespace {
 // (the top block being taller than the bottom row) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
-// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 195 =
-// menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 22, of
-// which 164 is the block above the waveform; the MENU LANE is 31 since
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 193 =
+// menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20, of
+// which 162 is the block above the waveform; the MENU LANE is 31 since
 // 2026-08-21, when its content went back to kdenlive's own 30 and everything
-// below row 1 rose 4px in the lane table; the MARKER LANE is 22 since
-// 2026-08-27, the one-pixel-of-air retune at kMarkerLaneHeightPx; the BOTTOM
-// ROW 47 since
+// below row 1 rose 4px in the lane table; the BOTTOM ROW 47 since
 // 2026-08-14, when it took the icon row's 46px content in place of its own 50
 // — every number below is re-derived from that table rather than adjusted):
-//   1920x1080: leftover 838 -> waveform CLAMPED at 500, gap 1 = 95, gap 2 = 243
-//     — 31 menu / 95 blank / 164 block / 500 waveform / 243 blank / 47 row,
+//   1920x1080: leftover 840 -> waveform CLAMPED at 500, gap 1 = 97, gap 2 = 243
+//     — 31 menu / 97 blank / 162 block / 500 waveform / 243 blank / 47 row,
 //     the waveform still spanning y 290..790 about the window's midline 540
 //     (the clamp fixes its height and the midpoint rule its centre, so the
-//     four pixels the menu row gave back and the two the marker lane took go
-//     into gap 1 and the centered block does not move).
-//   1024x600: leftover 358 -> waveform UNCLAMPED at 358, both gaps 0
-//     — 31 / 0 / 164 / 358 / 0 / 47. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -74), so the waveform keeps everything
-//     and pays the two pixels itself, which is the rule's own floor rather
-//     than a special case. THE TABLET behaves the same way and for the same
-//     reason: 2304x1440 at gui_scale 225 gives top lanes 439 (block 369),
-//     bottom row 106 and leftover 895, well under the scaled clamp of 1125, so
-//     both gaps floor at 0 and the waveform absorbs the retune's 5 scaled
-//     pixels off its own top edge (434..1334 -> 439..1334).
+//     four pixels the menu row gave back go into gap 1 and the centered
+//     block does not move).
+//   1024x600 (the Pi): leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
+//     — 31 / 0 / 162 / 360 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -73), so the waveform keeps everything
+//     and takes the four pixels itself, which is the rule's own floor rather
+//     than a special case.
 //
 // THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
 // chrome erase paints both and no lane painter covers them; a press in either

@@ -1331,10 +1331,8 @@ inline int icon_row_h_px() {
 // These replace the four legacy lanes (trim chip / marker text / flag /
 // triangle) and, like every redesigned row, ride gui_scale_factor() rather than
 // the monospace font's axis. (The trim lane ADDITIONALLY scales by its own
-// factor below, so the crop's y-map holds for the ruler alone now: the trim
-// lane is taller than its measured 9 rows whenever its factor moves off 100,
-// and the MARKER lane is 22 rather than the crop's 20 since the 2026-08-27
-// one-pixel-of-air retune at kMarkerLaneHeightPx.)
+// factor below, so the crop's y-map holds for the ruler and marker lanes while
+// the trim lane is taller than its measured 9 rows now.)
 //
 // THE TRIM BAR'S OWN SCALE FACTOR — a RULED RETUNABLE, back at 100 (architect
 // 2026-08-12, the seventh glass ruling). The 150 experiment lived one commit,
@@ -1360,21 +1358,7 @@ inline int icon_row_h_px() {
 inline constexpr int kTrimBarScalePercent = 100;
 inline constexpr int kTrimLaneHeightPx   = 9;
 inline constexpr int kRulerLaneHeightPx  = 28;
-// THE MARKER LANE IS 22, NOT THE CROP'S 20 — ONE PIXEL OF AIR ABOVE AND BELOW
-// THE LABEL (architect 2026-08-27: "add one more pixel of padding to the flags
-// — two more pixels of height to the marker lane"). The flag BOX height IS the
-// lane height (kMarkerFlagBaselinePx), so the two pixels land inside the flag,
-// and its partner kMarkerFlagBaselinePx moved 16 -> 17 in the same breath so
-// one of them sits above the cap ink and one below the descender band. THE
-// 20/16 PAIR WAS KDENLIVE'S OWN CROP (row_5_full.png, marker y37..56); 22/17 is
-// the architect's retune on top of it, and it is AN EXPERIMENT — "not so sure"
-// — landed as its own commit so it reverts to 20/16 without touching anything
-// else. Everything downstream follows by construction: the vertical stack takes
-// the +2 out of the top flexible gap (main.cpp's one owner, the waveform's
-// clamp and midpoint untouched), and every flag surface — box, hit rect,
-// measure box, diff flag, the flag editor's field, caret and selection band —
-// is derived from the LANE RECT, so no second site knows this number.
-inline constexpr int kMarkerLaneHeightPx = 22;
+inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
     return scaled_px(
         kTrimLaneHeightPx * (kTrimBarScalePercent / 100.0), 3);
@@ -1407,18 +1391,15 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 195
-// (menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 22 —
-// the overview lane and the tab row each grew a border row 2026-08-13, the menu
-// lane fell to 31 on 2026-08-21 and the marker lane rose to 22 on 2026-08-27)
+// produces by construction. At 100% scale, with the top lanes summing 197
+// (menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
+// the overview lane and the tab row each grew a border row 2026-08-13)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 838, so the
-// waveform CLAMPS at 500 and the two gaps take 95 (top) + 243 (bottom); a
-// 1024x600 leftover is 358, UNCLAMPED, and the centering is infeasible
-// there so both gaps floor at 0 and the waveform keeps the whole 358. THE FULL
-// STACKS ARE RECORDED AT main.cpp's VERTICAL BLOCK, which is the one
-// authoritative site for them — this illustration re-derives from the same lane
-// table and states only what the clamp needs.
+// 1920x1080 monitor's leftover is 836, so the
+// waveform CLAMPS at 500 and the two gaps take 93 (top) + 243 (bottom); the
+// Pi's 1024x600 leftover is 356, UNCLAMPED, and the centering is infeasible
+// there so both gaps floor at 0 and the waveform keeps the whole 356. The full
+// stacks are recorded at main.cpp's vertical block.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
@@ -1666,19 +1647,13 @@ inline constexpr int kMarkerFlagBorderPx = 1;
 inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
 }
-// The label BASELINE, measured from the box's top edge. Cap ink runs rows 5..16
-// of the 22 — a 12-row cap height, which is what 16px Liberation Sans produces
-// — so the baseline is row 17 and the remaining 5 rows are the descender band.
-// Authored as a length rather than solved from font extents because the box
-// height (kMarkerLaneHeightPx) is authored too: the two must agree with each
-// other, not with a font's internal leading.
-//
-// 16 OF 20 WAS THE KDENLIVE CROP (cap ink rows 4..15, a 4-row descender band);
-// 17 OF 22 IS THE ARCHITECT'S ONE-PIXEL-OF-AIR RETUNE (2026-08-27) — the lane
-// grew by two, the baseline by one, so exactly one of the new pixels sits above
-// the cap ink and one below the descender band. It is AN EXPERIMENT and reverts
-// with its partner; the pair's record is at kMarkerLaneHeightPx.
-inline constexpr int kMarkerFlagBaselinePx = 17;
+// The label BASELINE, measured from the box's top edge. The crop's cap ink runs
+// rows 4..15 of the 20 — a 12-row cap height, which is what 16px Liberation
+// Sans produces — so the baseline is row 16 and the remaining 4 rows are the
+// descender band. Authored as a length rather than solved from font extents
+// because the box height (kMarkerLaneHeightPx) is authored too: both come off
+// the same crop and must agree with it, not with a font's internal leading.
+inline constexpr int kMarkerFlagBaselinePx = 16;
 inline int marker_flag_baseline_px() {
     return scaled_px(kMarkerFlagBaselinePx, 1);
 }
