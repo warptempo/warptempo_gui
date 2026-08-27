@@ -2171,8 +2171,11 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     if (W <= 0.0 || spp <= 0.0) return;
 
     // Incremental off the live level, pre-clamped into the chokepoint's own
-    // window exactly as every apply_strip_drag_zoom caller pre-clamps.
-    double new_level = app.zoom_level - dx / kNavZoomPxPerLevel;
+    // window exactly as every apply_strip_drag_zoom caller pre-clamps. The
+    // divisor is the RESOLVED rate — device px per level at the live gui_scale
+    // — and never the authored constant; why the rate scales is at
+    // nav_zoom_px_per_level(), app_state.h.
+    double new_level = app.zoom_level - dx / nav_zoom_px_per_level();
     const double max_l = effective_max_zoom_level(wf_area.w, total,
                                                   audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;

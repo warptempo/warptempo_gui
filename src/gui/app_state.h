@@ -117,16 +117,56 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // derivation with the overshoot taken off, not a new one.
 //
 // WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [kMinZoom, effective
-// ceiling] span is roughly 3200 px of travel — over a screen and a half at the
-// deployment size — and that is fine BECAUSE OF THE CAPTURE. The notional-x
-// freeze (its record is at GuiPlatform::set_notional_x_frozen) is what makes
-// the zoom phase's sideways travel unlimited: the pointer's notional position
-// stops accumulating while the ctrl phase spends that travel on the level, so
-// the hand never runs into a window wall and the span is reachable inside one
-// gesture whatever the screen is.
+// ceiling] span is roughly 3200 authored px of travel — over a screen and a
+// half at the deployment size — and that is fine BECAUSE OF THE CAPTURE. The
+// notional-x freeze (its record is at GuiPlatform::set_notional_x_frozen) is
+// what makes the zoom phase's sideways travel unlimited: the pointer's
+// notional position stops accumulating while the ctrl phase spends that
+// travel on the level, so the hand never runs into a window wall and the span
+// is reachable inside one gesture whatever the screen is.
+//
+// THIS IS THE AUTHORED 100 % RATE, NOT A DEVICE COUNT: the resolved rate is
+// nav_zoom_px_per_level() below and the one reader divides by that accessor,
+// never by this constant. The scaling rule and its rationale are stated there.
 //
 // Architect-tunable on the rig, exactly as the vertical one is.
 constexpr double kNavZoomPxPerLevel = 200.0;
+
+// The rate in DEVICE pixels per zoom level at the live gui_scale — the ONE
+// READER's divisor (apply_nav_zoom_at, input_pointer.cpp).
+//
+// A RATE IS A LENGTH AND RIDES gui_scale (architect 2026-08-27, on glass:
+// "it is zooming a little fast"). The band the 200 was landed inside is a
+// PHYSICAL one — the millimetres of hand travel a pinch spends on one level
+// (the derivation above) — so a level has to cost the same distance across
+// the panel on every host, not the same count of device pixels: 200 device px
+// is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
+// panel, which is exactly the "too fast" the architect drove. At the tablet's
+// ~225 % a level costs ~450 device px and the drag zooms at the rig's rate per
+// millimetre again. Durations never scale; lengths do — the same split the
+// press road's three pixel thresholds take (drag_moved_threshold_px,
+// double_click_slack_px, GuiInputCore::set_touch_slop_px).
+//
+// THE PINCH NEEDS NO SUCH TERM AND MUST NOT GET ONE: its level is log2 of the
+// FINGER-GAP RATIO (input_pointer.cpp's touch nav frame), and a ratio of two
+// distances on the same panel is dimensionless — the same spread of the hand
+// is the same number of levels at any PPI or scale. That invariance is what
+// the desk's derivation borrowed in the first place, so scaling this rate is
+// what keeps the two surfaces on the band they were tuned to share, not a
+// divergence from it.
+//
+// IT DOES NOT COME THROUGH scaled_px: this is a DOUBLE-domain quantity, a
+// divisor rather than a painted dimension, and rounding it to an int would
+// quantize the feel for no gain (render.h's conversion pair states that the
+// double-domain readers deliberately stay out of it). The multiply is exact
+// at gui_scale 100, so the laptop's default is the authored 200 byte for byte.
+// The floor keeps the divisor away from zero at any factor the schema could
+// ever admit; inside the live [50, 400] bracket the value rests in
+// [100, 800] and the floor cannot fire.
+inline double nav_zoom_px_per_level() {
+    const double rate = kNavZoomPxPerLevel * gui_scale_factor();
+    return rate < 1.0 ? 1.0 : rate;
+}
 
 // (THE DIRECTIONAL SEGMENT AXIS LOCK IS DELETED — architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -988,7 +1028,7 @@ struct TrimDragState {
 // axis of zoom, because on the touchpad zoom is also a horizontal pinch motion
 // — it just happens to have two fingers"): while ctrl is up each event's dx
 // pans 1:1, while ctrl is held each event's dx zooms
-// (dx/kNavZoomPxPerLevel, about the seated pivot), and dy is DISCARDED IN
+// (dx/nav_zoom_px_per_level(), about the seated pivot), and dy is DISCARDED IN
 // BOTH. The vertical axis has left this drag entirely.
 // THE MODIFIER CHANGES WHAT HORIZONTAL TRAVEL MEANS rather than which axis is
 // live, and that is the whole argument: on glass ONE finger sliding sideways
@@ -1000,14 +1040,14 @@ struct TrimDragState {
 // difference stopped being real: the same hand motion means the same thing on
 // both, so there is nothing left to except.
 // THE SIGN: RIGHT ZOOMS IN, LEFT ZOOMS OUT (`new_level = zoom_level -
-// dx/kNavZoomPxPerLevel`, and a smaller level is deeper in). THE DERIVATION IS
-// THE PINCH THIS DRAG STANDS IN FOR (architect 2026-08-14, from the rig, on
-// the dominant hand's own evidence: "what it should really do is imitate what
-// the right hand does, because I'm right handed — on the touch screen, for
-// zoom, if I move my fingers apart, the right finger is moving to the right,
-// and that zooms in"): take the DOMINANT HAND'S FINGER as the one the mouse
-// imitates, and spreading the fingers apart moves it RIGHT and zooms IN while
-// bringing them together moves it left and zooms OUT.
+// dx/nav_zoom_px_per_level()`, and a smaller level is deeper in). THE
+// DERIVATION IS THE PINCH THIS DRAG STANDS IN FOR (architect 2026-08-14, from
+// the rig, on the dominant hand's own evidence: "what it should really do is
+// imitate what the right hand does, because I'm right handed — on the touch
+// screen, for zoom, if I move my fingers apart, the right finger is moving to
+// the right, and that zooms in"): take the DOMINANT HAND'S FINGER as the one
+// the mouse imitates, and spreading the fingers apart moves it RIGHT and zooms
+// IN while bringing them together moves it left and zooms OUT.
 // THE SUPERSEDED DERIVATION IS KEPT VISIBLE because it is the
 // plausible-sounding wrong answer someone will re-derive: it reasoned from the
 // PAN — dragging LEFT advances the view forward through the piece, and a piece
@@ -1020,7 +1060,10 @@ struct TrimDragState {
 // THE RATE IS ITS OWN CONSTANT since the rotation (kNavZoomPxPerLevel, above),
 // and since 2026-08-15 it is the product's ONLY one: it was separate from the
 // overview lane's vertical rate while that lane still zoomed, and the lane's
-// zoom is gone (the record at the deleted kZoomStripPxPerLevel).
+// zoom is gone (the record at the deleted kZoomStripPxPerLevel). The constant
+// is the AUTHORED 100 % rate and the phase divides by the resolved
+// nav_zoom_px_per_level(), which rides gui_scale — the rate being a length,
+// with the argument stated at that accessor.
 // THE ZOOM PHASE ALSO FREEZES THE POINTER'S OWN X, AND
 // THAT IS A SECOND STATEMENT RATHER THAN A RESTATEMENT OF THE ARITHMETIC
 // (architect 2026-08-14, from the rig: "I've been operating under the

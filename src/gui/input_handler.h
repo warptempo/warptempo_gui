@@ -1910,8 +1910,9 @@ struct GuiInputHandler {
     double nav_stem_column_x() const;
 
     // THE NAV DRAG'S ZOOM PHASE, one event: dx off the live level
-    // (kNavZoomPxPerLevel, RIGHT zooming in — the pinch's own sign, the
-    // superseded pan-derived one at the contract) through
+    // (nav_zoom_px_per_level(), the gui_scale-resolved rate whose scaling
+    // argument is at that accessor; RIGHT zooming in — the pinch's own sign,
+    // the superseded pan-derived one at the contract) through
     // Viewport::apply_strip_drag_zoom about the seated pivot, dy discarded —
     // the same axis the pan phase reads, the modifier deciding what horizontal
     // travel means — while the POINTER'S OWN x is frozen for the phase's whole
