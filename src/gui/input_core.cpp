@@ -2288,7 +2288,7 @@ void GuiInputCore::relative_motion(double dx, double dy) {
 
 void GuiInputCore::set_on_key(KeyCallback cb)                    { on_key_ = std::move(cb); }
 void GuiInputCore::set_on_key_release(KeyReleaseCallback cb)     { on_key_release_ = std::move(cb); }
-void GuiInputCore::set_on_button_press(ButtonCallback cb)        { on_button_press_ = std::move(cb); }
+void GuiInputCore::set_on_button_press(ButtonPressCallback cb)   { on_button_press_ = std::move(cb); }
 void GuiInputCore::set_on_button_release(ButtonCallback cb)      { on_button_release_ = std::move(cb); }
 void GuiInputCore::set_on_wheel(WheelCallback cb)                { on_wheel_ = std::move(cb); }
 void GuiInputCore::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }
