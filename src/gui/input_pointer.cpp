@@ -3542,10 +3542,18 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // on a key (the right button is unbound product-wide).
     if (button != GuiMouseButton::Left) return true;
 
-    // The lamps, through their one owner, read ONCE: the layer decides which
-    // key is under the finger and the shift arm decides what that key types, so
-    // both must be the same answer the last paint used.
-    const AppState::OnscreenKeyboard& kb = onscreen_keyboard::sync(app);
+    // THE SESSION-CHANGE OWNER RUNS FIRST, ahead of the hit test and ahead of
+    // every read below (the contract is at its declaration): a close and a
+    // reopen, or a flag-editor RETARGET, can both complete inside one drained
+    // input batch with no tick between them, and this press must not be routed
+    // against lamps the previous edit armed. It damages the band on a real
+    // change and does nothing at all otherwise.
+    onscreen_keyboard::reconcile_session(app, gui, viewport);
+
+    // The lamps, read ONCE: the layer decides which key is under the finger and
+    // the shift arm decides what that key types, so both must be the same
+    // answer the last paint used.
+    const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
     const bool symbol_layer = kb.symbol_layer;
     const bool shift_armed  = kb.shift_armed;
 
@@ -3564,17 +3572,20 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
         app.onscreen_keyboard.pressed_keysym = 0;
         if (def.role == Role::Shift) {
             // ONE-SHOT, and a second tap while armed clears it — a toggle, not
-            // a latch (there is no caps lock).
+            // a latch (there is no caps lock). Inside one edit the arm has
+            // exactly two clearers — this tap and the letter it capitalizes,
+            // below; the edit ENDING is the third, and belongs to the
+            // session-change owner (onscreen_keyboard.h).
             app.onscreen_keyboard.shift_armed = !shift_armed;
         } else {
+            // THE LAYER TOGGLE LEAVES A PENDING CAPITAL STANDING, like every
+            // other key that types no letter (the rule is stated whole at the
+            // ordinary key's spend, below). It costs nothing to keep: the only
+            // thing an arm can ever change is a LETTER, and every letter is on
+            // the page this key came from, so a round trip to the symbols and
+            // back finds the arm exactly where it was left — with the lamp lit
+            // again the moment the shift key is painted again.
             app.onscreen_keyboard.symbol_layer = !symbol_layer;
-            // LEAVING THE LETTER PAGE ABANDONS A PENDING CAPITAL. The shift
-            // lamp does not paint on the symbol page (its slot is blank there),
-            // and an armed state nothing shows is a state that surprises: the
-            // arm would come back alive under the next letter typed after the
-            // round trip. Clearing it is the honest half of "the lamp is the
-            // state".
-            app.onscreen_keyboard.shift_armed = false;
         }
         // BOTH KEYS REPAINT THE WHOLE SURFACE: shift moves every letter cap's
         // case and the layer moves every key on three rows.
@@ -3585,12 +3596,15 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // AN ORDINARY KEY. Resolve what it types from the layout table's own two
     // derivations — never a second list — and hand it to the platform's key
     // door with the key's PLACE as the core's stable per-key identity.
-    GuiKey   keysym    = 0;
-    uint32_t codepoint = 0;
+    GuiKey   keysym      = 0;
+    uint32_t codepoint   = 0;
+    // Did this key SPEND the arm? Only a letter can (see the spend below).
+    bool     capitalized = false;
     switch (def.role) {
         case Role::Character: {
             const char typed = onscreen_keyboard::shifted_char(def.ch,
                                                                shift_armed);
+            capitalized = (typed != def.ch);
             // The keysym is the LOWERCASE base (GuiKey is ASCII case-folded);
             // the CASE travels in the codepoint, which is what the editors'
             // printable classification reads. The reasoning is at keysym_of.
@@ -3617,11 +3631,29 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     viewport.invalidate_rect(
         onscreen_keyboard::key_rect(app, symbol_layer, hit));
 
-    // A SHIFT ARM IS SPENT BY THE KEY IT CAPITALIZED, and the whole surface
-    // repaints because every other letter cap drops back to lowercase with it.
-    // Done BEFORE the act for the reason the damage above is: after Enter there
-    // may be no surface left to talk about.
-    if (shift_armed) {
+    // A SHIFT ARM IS SPENT BY THE LETTER IT CAPITALIZED AND BY NOTHING ELSE.
+    // ONE-SHOT SHIFT MEANS THE NEXT LETTER (planner ruling 2026-08-27), so a
+    // key that types no capital leaves the arm standing: the comma and the
+    // period, the space bar, backspace, Enter, Esc, the layer toggle and every
+    // digit and symbol on the other page. Shift, comma, `q` types `,Q`. The
+    // test is the layout table's own case derivation moving this key's
+    // character (`capitalized`, set at the Character arm above) rather than a
+    // list of exempt roles — a list would be a second statement of which keys
+    // have a capital form, and shifted_char is already the one.
+    //
+    // THE REPEAT KEEPS THE CASE IT WAS PRESSED WITH, and that is the ruling
+    // rather than a leak: the PRESS'S CODEPOINT IS THE KEY EVENT'S IDENTITY, so
+    // a held `q` pressed with the arm up repeats `Q` for the whole hold,
+    // exactly as a physical Shift+Q hold repeats Q with the shift key still
+    // down. The arm clears at the PRESS, not at the repeats — the lamp is dark
+    // from that first press onward — and the backend's codepoint table
+    // (platform_android.cpp's synthesize_key) is what re-answers each
+    // synthesized repeat, deliberately not re-derived against the live lamp.
+    //
+    // The whole surface repaints because every other letter cap drops back to
+    // lowercase with it. Done BEFORE the act for the reason the damage above
+    // is: after Enter there may be no surface left to talk about.
+    if (capitalized) {
         app.onscreen_keyboard.shift_armed = false;
         viewport.invalidate_rect(surf);
     }

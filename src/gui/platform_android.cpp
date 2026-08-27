@@ -1062,6 +1062,14 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     // press. A release carries no character and must not erase the press's:
     // the repeat that reads it is already gone by then, but a stale entry
     // costs nothing and an erased one would be a hole with no producer.
+    //
+    // THIS IS ALSO WHY A HELD SHIFTED LETTER REPEATS IN UPPER CASE, which is
+    // the ruling and not a leak: the PRESS'S CODEPOINT IS THE KEY EVENT'S
+    // IDENTITY, so a `Q` typed off the painted keyboard's one-shot arm repeats
+    // `Q` for the whole hold exactly as a physical Shift+Q hold does. The arm
+    // itself cleared at that press (the rule and its whole statement are at the
+    // press router, input_pointer.cpp), and nothing here re-derives a repeat's
+    // character against the live lamp.
     if (pressed) key_codepoints_[stable_code] = codepoint;
     input_.key_event(key, stable_code, pressed, codepoint);
 }

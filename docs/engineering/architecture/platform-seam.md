@@ -14,8 +14,11 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (65 declarations, proved by a comment-stripped diff of the two
-  headers; Android adds exactly one, `synthesize_key`): `platform_wayland.{h,cpp}`
+  public API (67 declarations, proved by a comment-stripped diff of the two
+  headers; there is NO Android-only member any more — the on-screen keyboard's
+  two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
+  answered differently, which is the seam's own shape rather than an
+  exception): `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
@@ -89,7 +92,17 @@ drag coordinates floor instead of truncating.
   Linux `main()` is a thin wrapper, Android's `android_main` pins
   `LC_ALL=C` (bionic starts in C.UTF-8), sets `XDG_CACHE_HOME`/`HOME` to
   the app's files dir, installs the fonts, waits for the window and calls
-  it with `<externalFilesDir>/source.wav` — the sync layer's convention.
+  it with THE CURRENT PROJECT'S SOURCE — the app opens that and nothing else,
+  there being no file picker on this platform. The convention lives under
+  `<externalDataPath>` (`/sdcard/Android/data/<pkg>/files`, which adb pushes
+  into with no permission granted): a one-line `current` names a folder under
+  `projects/`, mirroring the laptop's own `projects/<name>/`, and THE SOURCE IS
+  THE ONE `.wav` THERE WHOSE STEM HAS A `.warpmarkers` SIBLING (the sync
+  script's own rule for "the source", so the two ends cannot disagree; a
+  finished render beside it carries no sidecars and never matches). EVERY
+  FAILURE IS FATAL — the sync script is the tree's one producer, so a fallback
+  arm would have nothing that could ever place files where it looked. The app
+  half is `platform_android.cpp`'s `resolve_source_path`, which is authoritative.
 - **Android stubs** (each named at its site with its Wayland twin):
   clipboard over one stored string, pointer capture as no-ops (the notional-x
   FIELD survives and tracks the finger), cursor kinds stored and never
@@ -98,6 +111,25 @@ drag coordinates floor instead of truncating.
   (architect 2026-08-23: labwc's numbers by convention; the platform
   advertises none). Hardware keyboards are out of scope; the owned painted
   keyboard reaches the core through `synthesize_key`.
+
+## The on-screen keyboard
+
+The glass has no hardware keys, so the product paints its own (2026-08-27): a
+four-row Maliit-shaped surface standing while ANY OF THE SEVEN TEXT EDITORS
+stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
+directly above the bottom row over the waveform area's lower part, whose every
+key press goes through `synthesize_key` into the ORDINARY key path — so the
+editors' grammars, their refusals, the undo coalescing and the core's repeat
+synthesis are inherited whole rather than mirrored, and a new editor gets a
+working keyboard by existing. `src/gui/onscreen_keyboard.h` IS AUTHORITATIVE
+for all of it — the layout table and the two derivations off it, the geometry
+walk the painter and the press router share, the one-shot shift and the symbol
+layer, the session-change owner that clears them ahead of the next press, and
+the rule that the waveform is not painted under the opaque band — with the
+painter in `paint_handler.cpp` and the press router in `input_pointer.cpp`
+beside every other painter and router. The standing predicate is false forever
+on Wayland, which is what makes the laptop build's behaviour identical by
+construction rather than by care.
 
 ## The Java sliver
 
@@ -119,7 +151,10 @@ arms; `-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__` mandatory; no
 are STATIC from `android/prebuilt/arm64-v8a` (gitignored; rebuilt by
 `android/deps/build_all.sh` from pinned checksummed sources — fftw double
 +NEON+threads, freetype without fontconfig, harfbuzz, pixman, cairo
-image+ft); DT_NEEDED is exactly the NDK stable-ABI set. targetSdk is PINNED
+image+ft); DT_NEEDED is exactly the NDK stable-ABI set — `libdl libm
+libaaudio libandroid libnativewindow liblog libc`, `libnativewindow` since the
+frame-rate pin (`ANativeWindow_setFrameRate` lives there rather than in
+libandroid), and nothing to ship beside the app. targetSdk is PINNED
 at 35 (Android gates behavior on it; sideload has no ceiling), the whole
 freeze story: a decade-later replacement tablet runs the same APK. The
 Linux target's flags and object set are byte-identical to before the port.
@@ -128,8 +163,12 @@ Linux target's flags and object set are byte-identical to before the port.
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
-wide, every icon fits up to 220), 90 Hz panel (the backend ticks at 8 ms —
-the 60 Hz fallback, pending a Choreographer query), PAGE_SIZE 4096 (the
+wide, and the icon row fits WHOLE up to gui_scale 249 since the 2026-08-27
+Series relocation cut it to 925 authored px — it fitted only to 220 before
+that), 90 Hz panel PINNED (`ANativeWindow_setFrameRate(90, FIXED_SOURCE)` at
+every window adoption; the backend ticks at 5 ms, the Wayland rule's own half
+of the pinned refresh period, where it took the 60 Hz fallback's 8 ms until
+2026-08-27), PAGE_SIZE 4096 (the
 16 KB alignment is headroom), `/storage` is 0711 (traversable, never
 listable — discovery through `/proc/mounts`), one USB-C port (cable and
 any OTG device are mutually exclusive; wireless adb for the rest),

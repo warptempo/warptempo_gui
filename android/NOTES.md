@@ -688,7 +688,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
 | Full PGHI target render, 7:36 output | **~8.7 s** |
 | Stripped `.so` | 6.7 MB; APK 7.4 MB |
-| DT_NEEDED | `libdl libm libaaudio libandroid liblog libc` — nothing to ship beside the app, no `libc++_shared` |
+| DT_NEEDED | `libdl libm libaaudio libandroid libnativewindow liblog libc` — nothing to ship beside the app, no `libc++_shared` (`libnativewindow` since the 90 Hz pin below: `ANativeWindow_setFrameRate` lives there, not in libandroid) |
 
 **The tick is 5 ms and the panel is pinned to 90 Hz (architect 2026-08-27),
 which closes the mismatch this section used to record.** The Wayland rule is

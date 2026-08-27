@@ -6142,10 +6142,14 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // the BIT above waits for a full one.
     if (!rects_intersect(exposed, surf)) return;
 
-    // The lamps, reconciled against the live editor session by their one owner
-    // (the contract is there): read ONCE here, so every key below is painted
-    // against one answer.
-    const AppState::OnscreenKeyboard& kb = onscreen_keyboard::sync(app);
+    // The keyboard's state, READ ONCE here so every key below is painted
+    // against one answer. THIS BODY ONLY READS IT: the reset that follows a
+    // change of the live editor session has its own owner
+    // (onscreen_keyboard::reconcile_session), called from the tick and from the
+    // head of the press router, and deliberately not from here — the exposure
+    // gates above would decide when a painter noticed the change, and a painter
+    // may declare no damage.
+    const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
     const bool  symbol_layer = kb.symbol_layer;
     const bool  shift_armed  = kb.shift_armed;
     const int   held         = kb.pressed_key;
@@ -6186,6 +6190,14 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
         [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
             const GuiRect& r) {
             using Role = onscreen_keyboard::Role;
+            // PER-KEY EXPOSURE. The band's ground is laid across the whole
+            // surface above (one fill, bounded by the outer damage clip), but a
+            // KEY costs a face box and either an icon or a shaped run, so a
+            // narrow damage crossing this band pays for the keys it actually
+            // crosses and for no other. That matters at the panel's tick rate:
+            // the scanner's own damage is a column a few pixels wide, and
+            // without this test every one of them walked forty-odd keys.
+            if (!rects_intersect(exposed, r)) return;
             // A blank slot is ground and nothing else — the symbol layer's
             // answer to "what does shift do here" (the table states it).
             if (k.role == Role::Blank) return;
@@ -6389,7 +6401,25 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // (no gutter exists at 1920/2560/3840).
     {
         const GuiRect canvas = waveform_area(app);
+        // AND NOT UNDER THE ON-SCREEN KEYBOARD. The painted rect's one owner is
+        // onscreen_keyboard::waveform_paint_area (the rule is stated there):
+        // the band is opaque and paints after everything below, so the ground
+        // under it is a fill nobody ever sees. The rect handed to render_canvas
+        // is still the WHOLE area — its own two black border rows are its
+        // geometry, and a shortened rect would draw the bottom one as a line
+        // across the keyboard's top seam — so the band is subtracted with a
+        // CLIP rather than with a smaller rectangle. Nothing at all on a
+        // platform with no painted keyboard.
+        const GuiRect painted =
+            onscreen_keyboard::waveform_paint_area(app, gui);
+        const bool band_cuts = painted.h < canvas.h;
+        if (band_cuts) {
+            cairo_save(cr);
+            cairo_rectangle(cr, painted.x, painted.y, painted.w, painted.h);
+            cairo_clip(cr);
+        }
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
+        if (band_cuts) cairo_restore(cr);
     }
 
     // THE THREE REDESIGNED TOP BUTTON ROWS, THE UNIFIED BOTTOM ROW AND THE
@@ -6467,6 +6497,32 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect top_strip  = top_strip_area(app);
         const GuiRect exposed{x, y, w, h};
 
+        // WHERE THE WAVEFORM'S PIXELS MAY LAND — `area` minus the on-screen
+        // keyboard's opaque band, through that rule's one owner
+        // (onscreen_keyboard::waveform_paint_area). `area` itself is unchanged
+        // and stays what every pass below MAPS with; this rect is what they are
+        // GATED on, and the clip below is what keeps a pass that straddles the
+        // band's top edge from rasterizing the half nobody sees. Equal to
+        // `area` on any platform with no painted keyboard, where both are
+        // therefore exactly what they were.
+        const GuiRect wave_paint =
+            onscreen_keyboard::waveform_paint_area(app, gui);
+        const bool    band_cuts  = wave_paint.h < area.h;
+        if (band_cuts) {
+            // TWO RECTANGLES, ONE CLIP: this branch paints in the TOP STRIP and
+            // in the waveform and nowhere else, so the union of the two is the
+            // whole region it is entitled to — and cairo clips to the union of
+            // a path's rectangles. The passes that own pixels in BOTH lanes
+            // (the trim bar, the cursor's head and stem) keep their strip half
+            // whole and lose only what the band covers.
+            cairo_save(cr);
+            cairo_rectangle(cr, top_strip.x, top_strip.y, top_strip.w,
+                            top_strip.h);
+            cairo_rectangle(cr, wave_paint.x, wave_paint.y, wave_paint.w,
+                            wave_paint.h);
+            cairo_clip(cr);
+        }
+
         // The live viewport / target-warp_frame_map computations live in the
         // cache rebuild paths (waveform via the worker, flags via
         // maybe_rebuild_flag_cache), not in on_redraw, which reads
@@ -6508,6 +6564,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  12. the ON-SCREEN KEYBOARD (paint_onscreen_keyboard, 2026-08-27 —
         //      outside this branch), whose opaque ground covers the waveform
         //      area's lower part and so follows every waveform pass above.
+        //      Which is why those passes do not paint there at all: they are
+        //      gated and clipped on the waveform's PAINTED rect while the
+        //      surface stands (onscreen_keyboard::waveform_paint_area, read
+        //      just above this block).
         //  13. the flag editor's box, then the dropdown — the floating
         //      surfaces, after every pass above and outside this branch — then
         //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
@@ -6538,7 +6598,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     and 2026-08-01 lifted the SCANNER alone above the stems, so the
         //     moving line does not blink out at every marker it crosses.)
 
-        if (rects_intersect(exposed, area)) {
+        if (rects_intersect(exposed, wave_paint)) {
             // THE REGION HIGHLIGHT'S TWO HALVES, straddling the blit.
             // GROUND, under the plate: render_canvas already laid
             // the kWaveformCanvas ground for the whole area above; this repaints the
@@ -6564,7 +6624,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // exposed top-strip pixel above, so a strip-only damage (hover text, a
         // flag change) must repaint the strip-resident trim pixels; the outer
         // Cairo damage clip bounds the actual work either way.
-        if (rects_intersect(exposed, area) ||
+        if (rects_intersect(exposed, wave_paint) ||
             rects_intersect(exposed, top_strip)) {
             paint_trim(cr, area, top_strip);
         }
@@ -6579,7 +6639,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // blit composites source-over and never erases the playheads it does not
         // cover. Gated on area OR top_strip: the cursor line lives in the waveform
         // area, its head in the top strip.
-        if (rects_intersect(exposed, area) ||
+        if (rects_intersect(exposed, wave_paint) ||
             rects_intersect(exposed, top_strip)) {
             paint_playheads(cr, area);
         }
@@ -6593,7 +6653,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // selected stem occupied. The stems are the flags' waveform half and
         // must not be split across the cursor by paint order. (The full
         // sequence is the paint-order block above.)
-        if (rects_intersect(exposed, area)) {
+        if (rects_intersect(exposed, wave_paint)) {
             paint_marker_stems(cr, area);
         }
 
@@ -6602,7 +6662,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // being erased column by column as it sweeps past every marker. Only the
         // scanner moved — the cursor stayed in paint_playheads above, under the
         // stems and under the flags. Waveform-only, so no top_strip arm.
-        if (rects_intersect(exposed, area)) {
+        if (rects_intersect(exposed, wave_paint)) {
             paint_scanner(cr, area);
         }
 
@@ -6622,10 +6682,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // this overlap is transient and the pivot affordance reading on top is
         // acceptable. The flag editor's box likewise ends up after the
         // playheads, but on the non-overlapping marker lane.
-        if (rects_intersect(exposed, area)) {
+        if (rects_intersect(exposed, wave_paint)) {
             paint_strip_drag_anchor(cr, area);
         }
 
+        if (band_cuts) cairo_restore(cr);
     }
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), between the waveform passes above

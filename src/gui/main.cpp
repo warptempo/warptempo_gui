@@ -2088,7 +2088,17 @@ int gui_main(const char* source_path) {
         //
         // It costs one platform query and one integer compare per tick with the
         // surface down, which on the laptop is its permanent state.
+        //
+        // THE SHOW AND HIDE ARE NOT THE WHOLE OF IT: this comparator watches
+        // STANDING and nothing else, and the live editor SESSION can change
+        // without it moving — a flag-editor retarget, or a close and a reopen
+        // inside one drained batch. That change is the other owner's, called
+        // first here so the tick observes the session identity too; it clears
+        // the two lamps and damages the band, and does nothing at all with the
+        // surface down (the contract is at reconcile_session).
         {
+            onscreen_keyboard::reconcile_session(app, gui, viewport);
+
             const bool kb_live = onscreen_keyboard::stands(app, gui);
             if (kb_live != app.onscreen_keyboard.painted_standing) {
                 viewport.invalidate_waveform_area();

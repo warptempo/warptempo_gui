@@ -3309,7 +3309,10 @@ private:
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole
     // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the
     // editor's own vocabulary, the undo coalescing, the core's repeat arming —
-    // runs unchanged from there.
+    // runs unchanged from there. Ahead of the hit test it runs the SESSION-
+    // CHANGE OWNER (onscreen_keyboard::reconcile_session, which the run loop's
+    // tick also calls), so a press can never be routed against lamps the
+    // previous edit armed.
     //
     // THE RELEASE OWES THE KEY-UP AND NOTHING ELSE. It is guarded on the held
     // index alone, which only this surface's own press ever sets, so it can sit

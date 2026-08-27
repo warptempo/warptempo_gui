@@ -3,15 +3,17 @@
 // THE ON-SCREEN KEYBOARD — the painted key surface the GLASS types on
 // (architect + planner 2026-08-27). This header is the surface's ONE OWNER of
 // everything that is not pixels or a press body: the layout table, the
-// geometry, the two lamps' reconciliation and the predicate that says whether
-// the surface stands at all. The PAINTER lives in paint_handler.cpp beside
+// geometry, the two lamps' session-change reset, the rule that the waveform is
+// not painted under the band, and the predicate that says whether the surface
+// stands at all. The PAINTER lives in paint_handler.cpp beside
 // every other painter, and the PRESS ROUTER in input_pointer.cpp beside every
 // other press router; both walk this file's table through the one walker below,
 // so paint and hit cannot describe different keys.
 //
 // WHAT IT IS. A four-row Maliit-shaped keyboard (the reference is Plasma
 // Mobile's, Breeze Dark), full window width, sitting DIRECTLY ABOVE THE BOTTOM
-// ROW and painting over the waveform area's lower part. It stands while ANY OF
+// ROW and painting over the waveform area's lower part — which the waveform's
+// own passes then do not paint at all (waveform_paint_area, below). It stands while ANY OF
 // THE SEVEN TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a dialog
 // editor keeps painting in the bottom row with its own buttons, and this sits
@@ -48,6 +50,7 @@
 #include "icons.h"
 #include "platform.h"
 #include "render.h"
+#include "viewport.h"
 
 #include <cmath>
 #include <cstdint>
@@ -217,7 +220,10 @@ inline constexpr bool layer_of_key_index(int index) {
 // lamp turns it into the cap the key WEARS and the codepoint it TYPES through
 // this one function, so the two can never disagree about what a shifted key is.
 // Non-letters are unmoved — this keyboard has no shifted punctuation, the
-// symbol layer being where the rest of ASCII lives.
+// symbol layer being where the rest of ASCII lives. THAT PROPERTY IS ALSO THE
+// ONE-SHOT ARM'S TEST: the press router spends the arm exactly where this
+// function moved the character, so "the arm is spent by the next LETTER" needs
+// no second list of which keys have a capital form.
 inline char shifted_char(char base, bool shift_armed) {
     if (!shift_armed) return base;
     if (base >= 'a' && base <= 'z') return static_cast<char>(base - 'a' + 'A');
@@ -301,7 +307,7 @@ inline int surface_height_px() {
            (kRowCount - 1) * key_gap_px();
 }
 
-// -- Standing, and the two lamps --------------------------------------------
+// -- Standing ----------------------------------------------------------------
 
 // DOES THE SURFACE STAND? Two terms and no third: the PLATFORM must want a
 // painted keyboard (false forever on Wayland — the ruling is at that backend's
@@ -319,29 +325,7 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
     return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
 }
 
-// THE ONE LAMP OWNER. Every reader of the shift arm or the symbol layer — the
-// painter, the press router, and nothing else — comes through here, and the
-// reconciliation is the whole reason: the lamps belong to the EDIT they were
-// set in, so a close, a reopen or a retarget of the live flag editor must clear
-// them. Keying them to the live editor session turns that into a comparison
-// with no call sites to keep in step (the contract is at
-// AppState::OnscreenKeyboard).
-//
-// `pressed_key` is deliberately NOT reconciled here: it is a fact about the
-// FINGER, not about the edit, and its key-up is owed even when the press's own
-// act (Enter, Esc) closed the editor under it. The release path is its one
-// clearer.
-inline const AppState::OnscreenKeyboard& sync(AppState& a) {
-    const uint64_t live = a.text_editor_session();
-    if (a.onscreen_keyboard.lamp_session != live) {
-        a.onscreen_keyboard.lamp_session = live;
-        a.onscreen_keyboard.shift_armed  = false;
-        a.onscreen_keyboard.symbol_layer = false;
-    }
-    return a.onscreen_keyboard;
-}
-
-// -- The geometry, and the ONE walk -----------------------------------------
+// -- The surface's rect ------------------------------------------------------
 
 // THE SURFACE'S RECT: full window width, its BOTTOM edge flush on the bottom
 // row's top edge, so the two lanes touch with no window ground between them.
@@ -349,9 +333,11 @@ inline const AppState::OnscreenKeyboard& sync(AppState& a) {
 // moved to make room (main.cpp's stack owner is untouched by this feature), and
 // the waveform simply is not painted where this paints.
 //
-// It answers a zero rect when the surface does not stand, which is what every
-// caller's own gate already means; the callers still ask stands() first,
-// because a zero rect is a fact about geometry and not a decision.
+// IT DOES NOT ASK WHETHER THE SURFACE STANDS — a rect is a fact about geometry
+// and standing is a decision, which every caller makes for itself through
+// stands() (or, for the two readers below, keeps inside its own body). The one
+// zero rect it answers is the degenerate one: a bottom row with no width, or a
+// surface height that scales to nothing.
 inline GuiRect surface_rect(const AppState& a) {
     // THE BOTTOM ROW'S OWN BAND, lifted by this surface's height: x and w are
     // taken from that lane rather than from a.width so the two rects are the
@@ -363,6 +349,90 @@ inline GuiRect surface_rect(const AppState& a) {
     if (bottom.w <= 0 || h <= 0) return GuiRect{0, 0, 0, 0};
     return GuiRect{bottom.x, bottom.y - h, bottom.w, h};
 }
+
+// -- The session-change owner, and the waveform's painted rect --------------
+
+// THE SESSION-CHANGE OWNER, and the ONE writer of the transient state's reset.
+// THE TWO LAMPS BELONG TO THE EDIT THEY WERE SET IN, so a close, a reopen or a
+// RETARGET of the live flag editor must clear them — and the PIXELS MUST SAY SO
+// BEFORE THE NEXT PRESS IS ROUTED, because the lamps decide both which key is
+// under the finger (the layer) and what that key types (the arm): a surface
+// left describing one key while the press dispatches another is the defect this
+// owner exists to make impossible.
+//
+// So the reset is a WRITE THAT RUNS ON ITS OWN, never a reconciliation a reader
+// happens to discover. Its two callers are:
+//   * the TICK (main.cpp), beside the show/hide comparator — which watches
+//     standing/not-standing alone, and a RETARGET moves neither; this call is
+//     what makes the tick observe the SESSION IDENTITY;
+//   * the HEAD OF THE PRESS ROUTER (input_pointer.cpp), which covers a close
+//     and a reopen completed inside ONE DRAINED INPUT BATCH, with no tick
+//     between them.
+// THE PAINTER DOES NOT CALL IT: a painter that reconciled would discover the
+// change only on a frame whose exposure happened to reach this band, and it
+// would be declaring damage from inside a frame (the paint loop may not — the
+// contract is at GuiPlatform::paint_one_frame).
+//
+// IT DAMAGES THE WHOLE BAND because both lamps are whole-surface facts: the
+// arm moves every letter cap's case and the layer moves every key on three
+// rows.
+//
+// `pressed_key` IS DELIBERATELY NOT CLEARED HERE. It is a fact about the
+// FINGER, not about the edit, and THE KEY-UP IT OWES THE CORE IS OWED EXACTLY
+// IN THIS CASE: the press that moved the session is the Enter or the Esc that
+// closed the editor under itself, and dropping its release would leave the
+// core's repeat arm standing on a key nothing will ever release (the contract
+// is at GuiInputCore::key_event). The release path — and the touch hard-end
+// beside it — is its one clearer.
+//
+// IT IS A NO-OP WHEREVER THE SURFACE DOES NOT STAND, the laptop forever
+// included: one platform query, no write, no damage.
+inline void reconcile_session(AppState& a, const GuiPlatform& gui,
+                              Viewport& viewport) {
+    if (!stands(a, gui)) return;
+    const uint64_t live = a.text_editor_session();
+    if (a.onscreen_keyboard.lamp_session == live) return;
+    a.onscreen_keyboard.lamp_session = live;
+    a.onscreen_keyboard.shift_armed  = false;
+    a.onscreen_keyboard.symbol_layer = false;
+    viewport.invalidate_rect(surface_rect(a));
+}
+
+// THE WAVEFORM'S PAINTED RECT — waveform_area minus this surface's band, and
+// the ONE OWNER of the rule that THE WAVEFORM IS NOT PAINTED WHERE THIS PAINTS.
+// The surface's ground is fully opaque and every waveform pass runs BEFORE it
+// (the authoritative paint order, paint_handler.cpp), so a waveform pixel under
+// the band is work whose result is thrown away in the same frame: a narrow
+// scanner damage column crossing the band would otherwise pay the plate blit,
+// the region ink and every vertical over the band's whole height, at the
+// panel's own tick rate.
+//
+// IT IS THE EXPOSURE GATE AND THE CLIP, NEVER A GEOMETRY INPUT: the column
+// mapping and every hit test keep reading waveform_area itself (the displayed
+// basis, pointer-hit-testing.md), so paint and hit cannot drift — this rect
+// says only WHERE THE PIXELS MAY LAND.
+//
+// The band is a full-width lane flush on the bottom row's top edge, so what it
+// hides off the waveform is always a BOTTOM SLICE and the answer is a rect. A
+// band that reaches no higher than the waveform's own bottom (a tall window
+// whose flexible gap 2 is deeper than the surface) subtracts nothing; a band
+// that swallows the waveform whole answers a ZERO-HEIGHT rect, and it is the
+// CLIP rather than the gate that makes that case paint nothing (rects_intersect
+// can still answer true for an empty rect an exposure straddles — it compares
+// edges, not areas).
+inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
+    const GuiRect area = waveform_area(a);
+    if (!stands(a, gui)) return area;
+    const GuiRect surf = surface_rect(a);
+    if (surf.w <= 0 || surf.h <= 0) return area;
+    const int hidden = (area.y + area.h) - surf.y;
+    if (hidden <= 0) return area;
+    GuiRect painted = area;
+    painted.h = hidden >= area.h ? 0 : area.h - hidden;
+    return painted;
+}
+
+// -- The ONE walk over the keys ----------------------------------------------
 
 // THE ONE WALK OVER THE KEYS, and the reason paint and hit cannot drift: both
 // go through it. `fn(index, def, rect)` is called for every key of `layer` in
