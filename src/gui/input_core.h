@@ -668,9 +668,21 @@ public:
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
-    // the touch state block below, beside the phases it reads; the ONE
-    // consumer is main.cpp's pre-paint follow chase, which must not page the
-    // song out from under a finger that is aiming or gesturing.
+    // the touch state block below, beside the phases it reads. TWO consumers,
+    // re-grepped 2026-08-27:
+    //   * main.cpp's pre-paint follow chase, which must not page the song out
+    //     from under a finger that is aiming or gesturing;
+    //   * the GUI press router (GuiInputHandler::on_button_press), which reads
+    //     it ONCE per press to ask "is this delivery a finger" and threads the
+    //     answer into every flag hit test the press makes — the marker flag's
+    //     TOUCH-ONLY vertical hit halo (kMarkerFlagTouchHaloPx, app_state.h).
+    //     THE PHASE ORDERING IS WHAT MAKES THAT READ HONEST, and it is a
+    //     property of this class rather than of the reader: a translation
+    //     RAISES the phase to Pointer before it delivers its entry motion and
+    //     press (resolve_touch_window_to_pointer), and LOWERS it only after the
+    //     release has ridden out (touch_up's Pointer arm), so both edges of a
+    //     tap read true. A host with no touch capability never leaves Idle, so
+    //     the answer there is a compile-time-constant false in effect.
     bool touch_contact_active() const {
         return touch_phase_ != TouchPhase::Idle;
     }

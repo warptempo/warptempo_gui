@@ -1184,7 +1184,13 @@ struct GuiInputHandler {
     // painter's published rects through hit_test_flag — a finger landing on
     // a flag resolves to the POINTER, so a quick flag drag is the immediate
     // marker drag, the mouse's own carve-out; in the `h` view the same
-    // carve-out serves the diff flags). THE LOWER HALF JOINED THE ZONE with
+    // carve-out serves the diff flags). THE CARVE-OUT IS THE FINGER'S,
+    // HALO AND ALL (2026-08-27): this query passes `finger` true — it IS the
+    // touch query — so the band the flag claims above and below the lane
+    // (kMarkerFlagTouchHaloPx, app_state.h) is out of the zone exactly as the
+    // box is, which is what lets a tap there deliver a press instead of
+    // becoming the phone-model pan or, at the beat, the region hold.
+    // THE LOWER HALF JOINED THE ZONE with
     // the scrub's move to the lift: it is no longer a different surface, so
     // a one-finger drag pans there and the region hold reaches it, and a
     // motionless tap's press-release burst runs the deferred scrub — the
@@ -1939,8 +1945,15 @@ struct GuiInputHandler {
     // on_button_press's marker claims: the ctrl toggle branch and the
     // plain / shift branch. Contract at PendingMarkerPress (app_state.h),
     // reasoning at the definition (input_pointer.cpp).
+    // `finger` IS THE PRESS'S OWN TOUCH ANSWER, threaded down from the router
+    // rather than re-asked here so ONE reading of the contact bit serves the
+    // whole press (the halo's gate — kMarkerFlagTouchHaloPx, app_state.h). Its
+    // one use in this body is the SPAN test that stamps the double-click seed:
+    // the span must come off the same walk the router's hit came off, or the
+    // seed would describe a box that walk did not choose.
     void run_marker_click_act(int hit, int x, int y, bool shift, bool ctrl,
-                              const DoubleClickCandidate& dc_at_press);
+                              const DoubleClickCandidate& dc_at_press,
+                              bool finger);
 
     // THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (begin) /
     // ctrl+shift (end) bound set (2026-08-17: its press IS the endcap drag's
@@ -2967,7 +2980,9 @@ private:
     //   plain drag is the flag drag in a live view at home, while an off-home
     //   flag, a locked tab and the `h` view's click-only diff flags wear it
     //   too — through the press path's own hit_test_flag, so the live lane and
-    //   the diff lane answer on one term.
+    //   the diff lane answer on one term. IT IS THE POINTER-EXACT TERM: this
+    //   map passes `finger` false everywhere, the touch halo being a
+    //   fingertip's reach and this map the mouse cursor's dress.
     // - TrimBoundBegin / TrimBoundEnd: EXTENDING ONE BOUNDARY, in the routes
     //   that do it — the trim bar's BEGIN / END endcap on a plain hover (the
     //   single-bound drags), the bound-set clicks that write the same two
@@ -3512,9 +3527,15 @@ private:
     void republish_history_lane_now();
     void set_history_reading(GuiHistoryWalkSource source,
                              GuiHistoryCompare    compare);
+    // `finger` is the press's own touch answer, read once by on_button_press
+    // and handed down so the mode's diff-flag claims take the SAME vertical hit
+    // halo the live lanes take (kMarkerFlagTouchHaloPx, app_state.h — same
+    // lane, same box shape, same fingertip, so the symmetry is the ruling
+    // rather than a choice made here).
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
-                                   const DoubleClickCandidate& dc_at_press);
+                                   const DoubleClickCandidate& dc_at_press,
+                                   bool finger);
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit, bool extend);
     void close_history_mode();

@@ -4553,7 +4553,13 @@ struct AppState {
     // can see rather than the one the live viewport would put there.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
-    // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
+    // it BACKWARDS: last painted = topmost = what a click grabs. THE PUBLISHED
+    // RECT IS THE PAINTED EXTENT AND NOTHING ELSE — the touch halo of
+    // 2026-08-27 (kMarkerFlagTouchHaloPx, far below) is applied INSIDE the hit
+    // test on the finger's own presses and is deliberately not baked in here,
+    // because this stash's whole doctrine is that the rect IS the pixels: a
+    // fattened publish would make the pointer's reach disagree with the paint
+    // and would hand every other reader a lie. `marker_stems`
     // carries one entry per DRAWN stem, which on the two LIVE columns means one
     // per ENABLED marker — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
@@ -9416,6 +9422,45 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
 
+// THE MARKER FLAG'S TOUCH-ONLY VERTICAL HIT HALO (architect 2026-08-27, on
+// glass) — THE ONE DELIBERATE EXCEPTION to the no-global-halo ruling
+// (pointer-hit-testing.md, "Mouse Reach: No Global Halo, One Grab Constant Per
+// Surface"), and it is an exception only because it is not the MOUSE'S reach: a
+// pointer never sees it, so the desk keeps paint-equals-hit exactly.
+//
+// THE PROBLEM IS THE FLAG'S HEIGHT, NOT THE TIMING. With the scaled press
+// thresholds and the 575 ms double-click window landed, a double tap on a flag
+// still occasionally fell through to the waveform (the playhead moved) while a
+// tap on the waveform itself was exactly precise: the lane is 20 authored px =
+// 45 device px = 4.6 mm at the tablet's 225 %, and a fingertip's contact patch
+// is 7-9 mm. Growing the LANE was tried and reverted — it is too large on the
+// laptop, where the same pixels are a mouse target. So the reach grows for a
+// FINGER alone and nothing painted changes anywhere.
+//
+// VERTICAL ONLY, and that asymmetry is the ruling's: horizontal precision is
+// what carries marker IDENTITY (neighbouring flags must stay separable, and a
+// flag box is already as wide as its label), while the lane's height is the
+// axis a fingertip cannot resolve. Added ABOVE and BELOW the published rect
+// inside the hit test; the published rect is untouched.
+//
+// 4 IS THE ARCHITECT'S OWN NUMBER FROM GLASS AND IS THE RETUNE KNOB, the only
+// one: 9 device px per side at 225 %, so a 45 px flag becomes a 63 px target —
+// ~6.4 mm, near enough a fingertip's own size while leaving the neighbouring
+// surfaces most of their band. It is an AUTHORED 100 % length like every other
+// in the tree (the 2026-08-27 press-road ruling), resolved through the one
+// scaled_px conversion. It cannot reach
+// the TRIM BAR: the ruler lane above the marker lane is 28 authored px, wider
+// than this at every scale, so the band above stops inside the ruler; below,
+// the waveform is the whole rest of the window. And it never overlaps ANOTHER
+// FLAG, the flags all sharing one lane — so the halo adds no flag-vs-flag
+// ambiguity and the topmost-wins walk is unchanged.
+// Floor 0, the two other grab tolerances' floor: a tolerance may legitimately
+// vanish at a small scale, unlike a structural dimension.
+constexpr int kMarkerFlagTouchHaloPx = 4;
+inline int marker_flag_touch_halo_px() {
+    return scaled_px(kMarkerFlagTouchHaloPx, 0);
+}
+
 // Promoted from lambdas in main(). Mode-aware hit-tests against
 // the visible marker / flag / popup geometry. Bodies live in app_state.cpp
 // and pull in cairo + paint_handler.h for the popup-rect math; the
@@ -9439,8 +9484,17 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
 // edge (the flag continued in blue), and it is part of the same rect: one
 // marker, one clickable surface for press, drag and select.
+// `finger` IS THE TOUCH HALO'S ONE GATE (2026-08-27): true inflates the test by
+// marker_flag_touch_halo_px() above and below — and by nothing horizontally —
+// so a fingertip gets a taller target than the pixels. FALSE IS THE MOUSE'S
+// ANSWER AND IT IS THE OLD ONE EXACTLY, which is what keeps paint-equals-hit
+// standing for the pointer. It is a PARAMETER rather than a query inside this
+// body because the answer belongs to the EVENT being routed, not to the
+// geometry: the caller reads GuiPlatform::touch_contact_active() at its own
+// press delivery and passes it down, so nothing is cached across a gesture and
+// a pointer-only consumer (the cursor zone map) can pass a literal false.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
-                  int mouse_x, int mouse_y);
+                  int mouse_x, int mouse_y, bool finger);
 
 // WHICH HALF of that box the point landed on — the topmost rect's published
 // boundary compared against mouse_x, nothing more. Its ONE consumer is the
@@ -9450,8 +9504,13 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // harmless answer: a caller with no hit has nothing to fork. Same backward
 // walk, same topmost-wins arbitration as hit_test_flag — literally the same
 // walk, so the two can never disagree about which box was hit.
+// `finger` IS THE SAME GATE and must carry the SAME VALUE its caller gave
+// hit_test_flag: the two answers describe one press, so a span asked without
+// the halo over a rect the hit found WITH it would name a box neither walk
+// chose. THE FORK ITSELF IS UNTOUCHED BY THE HALO — it compares mouse_x against
+// the painter's published boundary, and the halo is vertical only.
 MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
-                                   int mouse_x, int mouse_y);
+                                   int mouse_x, int mouse_y, bool finger);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box
