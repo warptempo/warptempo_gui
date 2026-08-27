@@ -1004,22 +1004,38 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // ITS PREDECESSOR WAS a derivation, and the distinction is the point: 200 came
 // off the crop, whose items are 401px for labels of ~150px ink with roughly
 // half that width going to an accelerator and submenu column — taking the text
-// half alone and scaling to our label set (widest "Playback speed" at 113px)
-// landed there. The measurement still stands; it is simply no longer what sets
-// the floor.
+// half alone and scaling to THE LABEL SET OF THAT DAY (widest "Playback speed"
+// at 113px — a row that left with its key when playback_speed retired whole,
+// 2026-08-27) landed there. That measurement is the record of where 200 came
+// from and nothing more: it is neither what sets the floor now nor a current
+// roster figure.
 //
-// WHICH MENU IT BINDS ON, measured: the SETTINGS menu, whose content asks for
-// 57 + 113 + 30 − 8 = 192 at 100% (384 at 200%), so the floor answers at both
-// scales — and the whole +42 therefore lands on that popup's width, 208 -> 250
-// at 100% and 416 -> 500 at 200%. IT BINDS ON THE FILE MENU TOO, and by a wide
-// margin: one row, "Quit" beside "Ctrl+Q", so its content is nowhere near the
-// floor and the floor IS its width — which is what gives a one-row menu a box
-// that reads as a menu at all. (The deleted NAVIGATION menu was the one that
-// did not move: its accelerator column put content at 57 + 117 ("Previous
-// marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already past both
-// floors, so its box stayed 318px wide. That measurement is the record of the
-// only menu this floor never touched, kept because it is what shows the floor
-// and the derived column composing.)
+// WHICH MENUS IT BINDS ON, measured against the width rule this file paints by
+// (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
+// right margin − 8 chrome, at 100%):
+//
+//   File      "Quit" | "Ctrl+Q"                              -> 168   FLOOR
+//   Series    "Iterations" | "M"                             -> 171   FLOOR
+//   Settings  "Waveform magnification level" (no column)     -> 288   content
+//   Edit      "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
+//
+// THE SETTINGS MENU LEFT THE FLOOR ON 2026-08-26, when "Waveform magnification
+// level" joined its roster and took the widest-label slot at 209px (the item's
+// own note is at kSettingsPopupItems, app_state.h — the box "simply grows",
+// and this is what it grew into). Its content asks 288 at 100%, past the 242,
+// so that popup is DERIVED at every scale now — 296px wide with its chrome —
+// and the +42 no longer lands on it at all.
+//
+// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS: FILE, one row of "Quit"
+// beside "Ctrl+Q", and SERIES, two rows of "BPM"/"Iterations" beside single
+// letters. Neither is anywhere near 242, so the floor IS their width — which is
+// what gives a one- or two-row menu a box that reads as a menu at all, and is
+// the whole of what this constant is for. (The deleted NAVIGATION menu was the
+// one that never reached it: its accelerator column put content at 57 + 117
+// ("Previous marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already
+// past both floors, so its box stayed 318px wide. That measurement is kept
+// because it is what shows the floor and the derived column composing — the
+// shape the Edit and Settings menus now stand in.)
 //
 // What the 2026-08-03 harmonization did to the SETTINGS box is separate and
 // still true: the labels now start on the shared 57px indent rather than a 12px
@@ -1360,8 +1376,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // Navigation era's 165 — and it changes nothing, because the KIND of
         // corner is unchanged and the div still fills its background last and
         // covers the tail of the left float's labels. THE DEPLOYMENTS ARE NOT
-        // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at 225%
-        // is 1024 logical px against a ~420 logical-px float pair.
+        // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at its
+        // own 250% is ~922 logical px against a ~420 logical-px float pair.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -2090,9 +2106,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (the gui_scale ceiling went to 400 on 2026-08-26 for exactly this
     // panel): the walk fits while 925·factor ≤ 2304, so the row now lands
     // WHOLE UP TO gui_scale 249 (925·2.49 = 2303) and clips at 250 by 3
-    // authored px — where the 1041-px roster of 2026-08-26 fitted only to 220
-    // and clipped HistoryNewer by 17px at 225. AT THE TABLET'S OWN 225% EVERY
-    // ICON FITS WITH ROOM TO SPARE: 925·2.25 = 2081, 223 device px of slack.
+    // authored px — where the 1041-px roster of 2026-08-26 fitted only to 220,
+    // clipping HistoryNewer by 17 authored px at the 225 the tablet was assumed
+    // to run that day. THE TABLET'S FIRST-RUN SCALE IS 250, one step past this
+    // row's fit ceiling: 925·2.5 = 2312 against the panel's 2304, so the
+    // rightmost history icon loses its last ~3 authored px (~8 device px). That
+    // is the crop-at-the-floor allowance at kMinWindowWidthPx doing exactly what
+    // it already names — the sanctioned casualty, not a new rule — and 249 is
+    // the scale at which the walk still lands whole.
     // (Counting the trailing pad the ceiling is 246 rather than 249 — the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
     // Both older deployments clear it outright: 933 of 1024 at 100% on the
@@ -2106,8 +2127,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // four companions out and no radios. Today's twenty-six matches neither of
     // those, having a different group count. THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
-    // GROUP costs 41, which at 225% is 77 and 92 device px against the
-    // tablet's panel.)
+    // GROUP costs 41, which at the tablet's 250% is 85 and ~103 device px
+    // against its panel.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground

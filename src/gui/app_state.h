@@ -142,8 +142,9 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// ~225 % a level costs ~450 device px and the drag zooms at the rig's rate per
-// millimetre again. Durations never scale; lengths do — the same split the
+// own 250 % a level costs 500 device px — ~51 mm on that panel, back on the
+// rig's ~43 mm order of hand travel instead of half it. Durations never scale;
+// lengths do — the same split the
 // press road's three pixel thresholds take (drag_moved_threshold_px,
 // double_click_slack_px, GuiInputCore::set_touch_slop_px).
 //

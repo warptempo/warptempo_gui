@@ -13,7 +13,7 @@
 //
 // WHY IT EXISTS. Both were `.settings` keys until 2026-08-27, which made them
 // facts about the PIECE: the same project opened on the laptop and on the
-// tablet wants 100 and 225, and the laptop can spawn audacious where the tablet
+// tablet wants 100 and 250, and the laptop can spawn audacious where the tablet
 // has nothing spawnable at all. Carrying them in the sidecar meant every sync
 // of a project between the two devices had to rewrite them on the way over and
 // put them back on the way home. They are the panel's business, so they follow
@@ -31,14 +31,23 @@
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the two keys
-// in the order above, every key REQUIRED, one canonical spelling per value, and
-// the FIRST error is fatal at startup with a blunt terminal line naming the
-// path and the offending line. No repair, no partial apply, no silent fallback
-// to defaults — a fallback would silently discard a value the user typed. The
-// lexing itself is not respelled here: the shared scanner
+// and each of them exactly once, every key REQUIRED, one canonical spelling per
+// value, and the FIRST error is fatal at startup with a blunt terminal line
+// naming the path and the offending line. No repair, no partial apply, no
+// silent fallback to defaults — a fallback would silently discard a value the
+// user typed. The lexing itself is not respelled here: the shared scanner
 // (warptempo_settings::scan_key_value_file, settings_file.h) owns "split at the
 // first '=', no blank/comment/whitespace tolerance, no duplicate key, every
 // required key present", and this file owns only the per-key grammar over it.
+//
+// ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
+// The key list in device_config.cpp is the EMITTED order (gui_scale, then
+// audio_player) and it is what every file this program writes carries; the
+// shared scanner checks MEMBERSHIP, duplicates and presence and never position,
+// so a hand-swapped pair still loads. That costs nothing and buys the sidecar's
+// symmetry: there, kSettingsOrder owns the write order and the reader has
+// always been order-insensitive. A position rule would be a second guard for a
+// state the writer cannot produce.
 //
 // NO UNDO, NO DIRTY, NO Ctrl+S. Both keys are history-less GUI-kind values
 // committed through their own gesture chokepoints, and each of those
@@ -67,8 +76,10 @@ struct DeviceConfig {
 // render.h's scaled_px accessors still has a floor holding it above zero.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 1040 px of LOGICAL width (device width divided by the factor) the icon row's
-// left-to-right walk runs past the window's right edge, and the redesign
+// 925 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-six-button left-to-right walk runs past the window's right edge — which
+// is why the tablet's own 250 shaves the rightmost history icon by ~3 authored
+// px — and the redesign
 // carries no collision rule anywhere — the crop-at-the-floor allowance recorded
 // at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
 // VOCABULARY; which of its values lays out well is the architect's call on his
@@ -115,7 +126,7 @@ bool write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 100 % and audacious, the tablet 225 % and no
+// a GUI one: the laptop wants 100 % and audacious, the tablet 250 % and no
 // player at all), so a first run on either device lands a file that is already
 // right for it and the user edits from there rather than from a wrong guess.
 // A missing parent directory is created.

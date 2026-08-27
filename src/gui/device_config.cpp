@@ -15,9 +15,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop. One list, so a key cannot be
-// written and not demanded (the `.settings` schema keeps the same discipline
-// across two lists because its writer is GUI-side and its reader parser-side;
+// set the shared scanner enforces after the loop. The scanner takes it as a
+// SET: it checks that each key ARRIVED, never that it arrived here, so this
+// order is the writer's alone and the reader is order-insensitive (the header's
+// schema paragraph owns that ruling). One list, so a key cannot be written and
+// not demanded (the `.settings` schema keeps the same discipline across two
+// lists because its writer is GUI-side and its reader parser-side;
 // here both halves are in this file, so one list is the honest shape).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
