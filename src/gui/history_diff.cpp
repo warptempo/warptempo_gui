@@ -113,9 +113,11 @@ constexpr const char* kSidecarExtensions[] = {
 constexpr std::size_t kMaxDiffLines = 10000;
 constexpr std::size_t kMaxDiffCells = 16u * 1024u * 1024u;
 
-// The one settings key this mode displays. Matched as a whole-line PREFIX, so
-// `gui_scale=100` — which contains "scale=" but does not start with it — is
-// correctly not the scale line.
+// The one settings key this mode displays. Matched as a whole-line PREFIX, not
+// as a substring: a key ENDING in `scale=` would contain this text without
+// being this key, and until 2026-08-27 the sidecar shipped exactly such a key
+// (`gui_scale=100`, which moved to the per-device config that day). The rule
+// outlives its one demonstration.
 constexpr std::string_view kScaleKeyPrefix = "scale=";
 
 // HOW LONG A MUTATION MAY HOLD THE GUI. The commit act runs on the Wayland
@@ -1826,8 +1828,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 }
 
 // THE SETTINGS WRITER'S GUI HALF, HELD BY VALUE — the storable form of the
-// call-shaped NonEngineSettingsSnapshot (which borrows a ViewState pair and two
-// strings). It is opaque in the header because ViewState is app_state.h's and
+// call-shaped NonEngineSettingsSnapshot (which borrows a ViewState pair and a
+// string). It is opaque in the header because ViewState is app_state.h's and
 // this module is included BY that header; nothing outside this file needs its
 // shape.
 struct GuiHistoryGuiSide {
@@ -1837,10 +1839,7 @@ struct GuiHistoryGuiSide {
     char        active_audio_view   = 'S';
     char        active_markers_view = 'W';
     char        active_tab_view     = 'A';
-    float       playback_speed      = 1.0f;
-    int         gui_scale           = 100;
     int         waveform_magnification_level = 0;
-    std::string audio_player;
     std::string projects_repo;
 };
 
@@ -1867,10 +1866,7 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     gui->active_audio_view   = app.active_audio_view;
     gui->active_markers_view = app.active_markers_view;
     gui->active_tab_view     = app.active_tab_view;
-    gui->playback_speed      = app.playback_speed;
-    gui->gui_scale           = app.gui_scale;
     gui->waveform_magnification_level = app.waveform_magnification_level;
-    gui->audio_player        = app.audio_player;
     gui->projects_repo       = app.projects_repo;
     return gui;
 }
@@ -1880,8 +1876,7 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
     const NonEngineSettingsSnapshot snap{
         gui.tab_a, gui.tab_b, gui.follow,
         gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
-        gui.playback_speed, gui.gui_scale, gui.waveform_magnification_level,
-        gui.audio_player,
+        gui.waveform_magnification_level,
         gui.projects_repo};
     return format_settings_text(snap, engine);
 }

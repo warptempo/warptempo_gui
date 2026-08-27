@@ -1,4 +1,5 @@
 #pragma once
+#include "device_config.h"
 #include "gui_input.h"
 #include "input_core.h"
 #include <cairo/cairo.h>
@@ -47,6 +48,18 @@ public:
     ~GuiPlatform();
 
     bool init(int width, int height, const char* title);
+
+    // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE — the per-device preferences this
+    // BACKEND is born with, stamped into
+    // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
+    // file there and never consulted again (device_config.h owns the file, its
+    // schema and its two keys). It is a PLATFORM FACT and lives on the seam for
+    // exactly that reason: the scale a panel wants and whether the system has a
+    // spawnable audio player are answers only the backend has, and routing them
+    // through here is what keeps the GUI proper free of the `#ifdef` the
+    // alternative would need. STATIC because it is asked before any window
+    // exists — gui_main resolves the config ahead of init().
+    static DeviceConfig device_config_defaults();
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui" clean, "K551 * - warptempo_gui" with unsaved work.

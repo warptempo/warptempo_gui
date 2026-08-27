@@ -134,6 +134,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/viewport.cpp
     src/gui/selection.cpp
     src/gui/settings_io.cpp
+    # THE PER-DEVICE PREFERENCES FILE (gui_scale + audio_player, 2026-08-27).
+    # GUI-ONLY by construction: warptempo_cli never read either key, and the
+    # file describes the panel in front of the user rather than the piece.
+    src/gui/device_config.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp
     src/gui/phase_reset_propagate.cpp

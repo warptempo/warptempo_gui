@@ -7,6 +7,7 @@
 #include <functional>
 #include <istream>
 #include <optional>
+#include <span>
 #include <string>
 
 // Whole-file strict schema for the `.settings` sidecar — the single owner
@@ -15,11 +16,18 @@
 // (GuiFileLoader::load_file and warptempo_cli) before any value is applied.
 // A sidecar set is loadable in the GUI and the CLI, or in neither.
 //
+// IT IS THE PIECE'S FILE AND NOTHING ELSE (architect 2026-08-27, the grant this
+// paragraph lands under): the three keys that were about the DEVICE or about
+// nothing left it that day — `gui_scale` and `audio_player` to the GUI's own
+// per-device config (src/gui/device_config.h), `playback_speed` to retirement —
+// and the record of all three, with the consequence for a file still carrying
+// one, is at kCanonicalSettingsKeys in settings_file.cpp.
+//
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
 // the FIRST error only: an unknown key, a keyless line, a duplicate of ANY
-// key, a malformed or out-of-vocabulary value (an off-preset playback_speed
-// included), and a missing canonical key all refuse. Lexing is byte-exact:
+// key, a malformed or out-of-vocabulary value, and a missing canonical key all
+// refuse. Lexing is byte-exact:
 // each line is split at its first '=' verbatim, with no BOM, blank-line,
 // comment, or whitespace tolerance (a product writer emits none of those,
 // so a '#' line is not a comment — it takes the keyless-line refusal like any
@@ -201,48 +209,32 @@ struct SettingsFile {
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
-    // (architect approval 2026-08-24: default 1.0, was 0.7)
-    float  playback_speed          = 1.0f;  // preset vocabulary only
-    // (font_size left this struct and the schema with row 7's monospace
-    // deletion — architect approval 2026-08-01. Nothing in either product sizes
-    // text from a setting any more; gui_scale is the one scale axis.)
-    // GUI rendering scale as an integer PERCENT in [50, 400]; 100 is the
-    // design baseline (1920x1080), 200 the 4K case, 400 the fine-panel ceiling
-    // (a 280 dpi tablet panel, where matching a coarser display's apparent size
-    // lands above 200), 50 the half-size floor.
-    // LIVE in the GUI since 2026-07-31: the redesigned rows size on it (the
-    // menu row is the first consumer), and the row-by-row GUI redesign adds
-    // the rest one row at a time. Inert in the CLI, like every other GUI-kind
-    // key here (architect approval 2026-07-30 — the settings/parser grant this
-    // key landed under; comment-only retell of the retired DORMANT wording,
-    // architect approval 2026-07-31; the floor 100->50 comment corrections are
-    // text-only under the same architect approval 2026-08-10 that moved the
-    // range arm in settings_file.cpp, where the ruling's own record lives; the
-    // CEILING's return 200->400 is that same arm's change, architect approval
-    // 2026-08-26, and its record lives there too).
-    int    gui_scale               = 100;   // percent, [50, 400]
+    // (THREE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
+    // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
+    // row 7's monospace deletion, architect approval 2026-08-01; `gui_scale`,
+    // `audio_player` and `playback_speed` went 2026-08-27, architect approval
+    // 2026-08-27 — the first two to the GUI's per-device config
+    // (src/gui/device_config.h, which owns their types, their range and their
+    // semantics now), the third to retirement. Nothing in either product sizes
+    // text from a setting, and nothing in either product plays at a speed other
+    // than the source's own.)
     // THE WAVEFORM'S VISUAL MAGNIFICATION — the DOUBLING COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping
     // of every waveform picture (the plate and the overview strip alike),
     // CLAMPED to the lane so a loud passage clips flat at the edges while its
     // troughs still dip. THE PICTURE ONLY: it touches no sample, no playback
     // path and no render, and the CLI reads it and ignores it exactly as it
-    // ignores gui_scale.
+    // ignores every other GUI-kind key here.
     // The key is required, so the reader always assigns this field; the
     // initializer is construction state.
     // (architect approval 2026-08-26 — the settings/parser grant this key
     // landed under, extended the same day to the first retune of it, and again
     // 2026-08-27 to the second.)
     int    waveform_magnification_level = 0; // [0, kWaveformMagnificationLevelMax]
-    // GUI-kind launcher for the `l` render-listen command: an external player
-    // name or path. A BLANK value (`audio_player=`) is the deliberate
-    // no-player opt-out — the only spelling of it. The key is required, so the
-    // reader always assigns this field.
-    std::string audio_player;
     // GUI-kind name of the repository that is the PROJECTS HOME — where the
     // architect's committed working checkpoints of a piece live, and the
     // corpus the GitHub recheck reads history out of. Free text, UTF-8
-    // verbatim like audio_player, host/path form by convention (the recheck
+    // verbatim, host/path form by convention (the recheck
     // normalizes both sides before comparing, so a scheme, an scp-style
     // `git@host:path`, or a trailing `.git` all compare equal).
     // (architect approval 2026-08-03 — the frozen-parser grant this key landed
@@ -250,7 +242,7 @@ struct SettingsFile {
     // kCanonicalSettingsKeys.)
     //
     // The key is required, so the reader always assigns this field on a
-    // successful load — exactly like audio_player above. The initializer is
+    // successful load, like every other key here. The initializer is
     // CONSTRUCTION STATE, not a fallback for a missing line: there is no such
     // line to fall back for any more. It reads kDefaultProjectsRepo rather than
     // repeating the text so that a default-constructed SettingsFile names the
@@ -292,6 +284,22 @@ using SettingsLineFn = std::function<std::expected<void, std::string>(
 std::expected<void, std::string> scan_settings_file(std::istream& in,
                                                     const SettingsLineFn& on_pair);
 
+// THE SAME SCAN OVER A CALLER-SUPPLIED REQUIRED-KEY SET — the shared lexical
+// contract with a different SCHEMA over it, and the whole of what
+// scan_settings_file is (that function is this one plus the `.settings`
+// canonical list). It exists because the GUI's per-device config
+// (src/gui/device_config.h) is the same kind of file — program-written,
+// `key=value` lines, every key required, one canonical spelling per value —
+// and a second hand-spelled copy of "split at the first '=', refuse a keyless
+// line, refuse a duplicate, refuse a missing required key" would be exactly the
+// duplicate predicate the validation topology forbids. The device config's own
+// per-key grammar stays its own; only the lexing and the requirement check are
+// shared. `required_keys` is borrowed for the call.
+// (architect approval 2026-08-27 — the device config grant.)
+std::expected<void, std::string> scan_key_value_file(
+    std::istream& in, const SettingsLineFn& on_pair,
+    std::span<const char* const> required_keys);
+
 // Shared engine-key arm. If `key` is a canonical engine key, validate
 // (key, value) into `engine` and return the outcome (`{}` on accept, a
 // bad_value refusal otherwise). If `key` is not an engine key, returns
@@ -307,14 +315,15 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // 2026-08-04 — comment-only, the owner list catching up with the key that
 // landed under the 2026-08-03 grant and became required under the 2026-08-04
 // one — and lost the four render-environment `*_hash` keys 2026-08-09 when they
-// left the schema, comment-only again under that day's grant.)
+// left the schema, comment-only again under that day's grant. THE `float f`
+// MEMBER WENT WITH `playback_speed` 2026-08-27, architect approval 2026-08-27:
+// it was that key's alone, and no key in the schema carries a float now.)
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
-    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, gui_scale, waveform_magnification_level
-    float       f    = 0.0f;    // playback_speed
+    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, waveform_magnification_level
     double      d    = 0.0;     // tab_X_zoom
-    std::string text;           // audio_player, projects_repo
+    std::string text;           // projects_repo
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the

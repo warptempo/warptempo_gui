@@ -1,4 +1,5 @@
 #pragma once
+#include "device_config.h"
 #include "gui_input.h"
 #include "input_core.h"
 #include <cairo/cairo.h>
@@ -20,11 +21,14 @@
 // platform_wayland.h keeps for the same reason.
 //
 // THE PUBLIC API IS THE SEAM AND IS IDENTICAL TO platform_wayland.h's, member
-// for member and signature for signature — WITH NO ADDITIONS SINCE 2026-08-27,
-// when the on-screen keyboard landed and its two members (synthesize_key, which
-// had stood here alone as the seam's one addition, and the new
-// wants_onscreen_keyboard) grew Wayland twins: the keyboard's press router is
-// an ordinary consumer, so both had to be callable against either backend. The
+// for member and signature for signature. It last grew on 2026-08-27, twice and
+// both times on BOTH sides: the on-screen keyboard's two members
+// (synthesize_key, which had stood here alone as the seam's one addition, and
+// the new wants_onscreen_keyboard) grew Wayland twins, because the keyboard's
+// press router is an ordinary consumer and both had to be callable against
+// either backend; and device_config_defaults() landed on both because the
+// per-device preferences file (device_config.h) needs a first-run template only
+// the platform can answer. The
 // seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
 // input_handler) include platform.h and compile against either backend
@@ -73,6 +77,19 @@ public:
     // size wins, since a NativeActivity has no say in its window size — and
     // the title argument is unused (no titlebar exists to carry it).
     bool init(int width, int height, const char* title);
+
+    // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
+    // platform_wayland.h, which owns it): this backend answers 250 % and NO
+    // PLAYER. 250 is the architect's own answer on the glass — the scale at
+    // which a marker flag is tappable without the second tap of a double-tap
+    // landing on the waveform — and the blank player is not a placeholder but
+    // the real answer: nothing on the tablet can be spawned to play a render,
+    // so `l` reports "No audio_player set" through the existing opt-out road.
+    // The
+    // XDG_CONFIG_HOME the config resolves under is pointed at the app's private
+    // internal directory by android_main before gui_main runs, beside the cache
+    // home it has always set.
+    static DeviceConfig device_config_defaults();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-locked with no titlebar, so both setters store nothing and

@@ -20,13 +20,17 @@ struct GuiInputHandler;
 // dark inset field whose recolor is the red flash, OK and Cancel right-
 // aligned) instead of over the flag rect.
 //
-// The editor is a keyboard front-end to EVERY key that can appear in a
-// `.settings` file: it funnels each key into the SAME code its gesture uses
+// The editor is a keyboard front-end to EVERY key the product persists: every
+// key that can appear in a `.settings` file, plus the two the per-device config
+// carries — gui_scale and audio_player, which left the sidecar 2026-08-27 and
+// kept this surface. It funnels each key into the SAME code its gesture uses
 // (no parallel writers). commit() routes the typed key through:
 // 1. audio_player (a launcher path with no gesture) and projects_repo (the
 //    projects-home repository name, likewise gesture-less): set directly.
+//    audio_player's set also WRITES THE DEVICE CONFIG — that commit is its
+//    whole persist, Ctrl+S carrying only the sidecar keys.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
-//    active_markers_view / active_tab_view / playback_speed / per-tab trim /
+//    active_markers_view / active_tab_view / per-tab trim /
 //    per-tab read_only / gui_scale / waveform_magnification_level):
 //    commit_gui_setting
 //    parses strictly (red-flash on any malformed or out-of-vocabulary value,
@@ -90,7 +94,7 @@ struct GuiSettingsEditor {
     void commit();
     // The value completion, run on BARE TAB in the field and by open_prefilled:
     // when any settable key is typed with an empty
-    // value side (e.g. `notes=`, `playback_speed=`, `tab_a_trim_begin=`),
+    // value side (e.g. `notes=`, `gui_scale=`, `tab_a_trim_begin=`),
     // replace the value side with that key's current live value for recall and
     // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance
     // text included since the 2026-08-02 relaxation (the old non-ASCII

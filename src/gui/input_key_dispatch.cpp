@@ -4511,7 +4511,10 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // close and the stderr line, and the apply itself is read there. NO tab bands,
 // NO playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs —
 // here because a timeline state does not carry them at all, there because the
-// act reads past the ones a sidecar set does.
+// act reads past the ones a sidecar set does. (The first two clauses are
+// tombstones as of 2026-08-27: playback_speed retired whole and gui_scale left
+// the sidecar for the per-device config, so neither is a thing a sidecar set
+// could offer any more.)
 //
 // THE STATE IS TAKEN AS TYPED SNAPSHOTS, never through the member's three TEXTS:
 // those are the DIFF's medium, and re-parsing them would put the strict loaders

@@ -52,11 +52,12 @@ struct GuiFileLoader {
 
 // Apply a parsed settings file's engine block and the scalar session prefs
 // (follow, active_audio_view, active_markers_view, active_tab_view,
-// playback_speed, gui_scale, waveform_magnification_level, audio_player,
-// projects_repo) into `app`. VALUES
+// waveform_magnification_level, projects_repo) into `app`. VALUES
 // ONLY — no side
-// effects: the caller runs set_speed / set_gui_scale_percent / on_resize itself,
-// owning its own side-effect timing. THE SOURCE LOAD IS THE ONLY CALLER since
+// effects: the caller runs on_resize itself, owning its own side-effect timing.
+// (The list lost three prefs 2026-08-27: playback_speed retired, and gui_scale
+// and audio_player became per-DEVICE values gui_main reads before the window
+// exists — device_config.h. A source load must not write either.) THE SOURCE LOAD IS THE ONLY CALLER since
 // 2026-08-24, when a load in place narrowed to what its undo entry restores —
 // the marker pair and the engine block — and so stopped applying a file's view
 // keys, tab bands and session prefs at all (the rule is stated at

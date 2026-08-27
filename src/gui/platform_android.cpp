@@ -240,6 +240,21 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
+// The tablet's device-config template (contract at the declaration, rationale
+// at this backend's own). 250 % IS THE ARCHITECT'S OWN ANSWER, taken on the
+// glass 2026-08-27: a marker flag has to be tappable without the second tap of
+// a double-tap landing on the waveform instead, and that is what 250 buys on
+// this 249 PPI panel. (It is not the 225 that reproduces the retired rig's 1024
+// logical pixels — the rig was a pointer device, and a finger is wider than a
+// cursor.) The BLANK player beside it is the real answer for a device with
+// nothing spawnable on it rather than a placeholder.
+DeviceConfig GuiPlatform::device_config_defaults() {
+    DeviceConfig cfg;
+    cfg.gui_scale    = 250;
+    cfg.audio_player = "";
+    return cfg;
+}
+
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     app_ = g_android_app;
     if (!app_) {
@@ -1460,6 +1475,14 @@ void android_main(android_app* app) {
     const char* internal = app->activity ? app->activity->internalDataPath : nullptr;
     if (internal && *internal) {
         setenv("XDG_CACHE_HOME", internal, 1);
+        // XDG_CONFIG_HOME joined 2026-08-27 with the device config
+        // (device_config.h), for the same reason and by the same rule: the GUI
+        // has ONE resolver for that file — XDG first, then HOME/.config — and
+        // pointing the variable here is what keeps it free of an Android arm.
+        // The HOME below would already carry it, but naming the variable is
+        // what makes the resolver's first branch the one that answers on both
+        // platforms.
+        setenv("XDG_CONFIG_HOME", internal, 1);
         setenv("HOME", internal, 1);
         setenv("TMPDIR", internal, 1);
     }

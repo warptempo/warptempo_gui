@@ -55,11 +55,8 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     // Session prefs the per-entry .settings writer needs, captured live at
     // dispatch so the file carries the session's real values.
     s.active_markers_view = app.active_markers_view;
-    s.playback_speed      = app.playback_speed;
     s.follow              = app.follow_mode;
-    s.gui_scale           = app.gui_scale;
     s.waveform_magnification_level = app.waveform_magnification_level;
-    s.audio_player        = app.audio_player;
     s.projects_repo       = app.projects_repo;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is

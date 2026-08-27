@@ -585,6 +585,17 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
+// The laptop's device-config template (contract at the declaration): the design
+// baseline scale, and audacious as the `l` command's player — the one installed
+// on the authoring machine, and the value the `.settings` first-open template
+// stamped for every project until the key moved here 2026-08-27.
+DeviceConfig GuiPlatform::device_config_defaults() {
+    DeviceConfig cfg;
+    cfg.gui_scale    = 100;
+    cfg.audio_player = "audacious";
+    return cfg;
+}
+
 bool GuiPlatform::init(int width, int height, const char* title) {
     wl_display_ = wl_display_connect(nullptr);
     if (!wl_display_) {

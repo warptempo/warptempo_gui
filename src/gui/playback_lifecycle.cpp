@@ -253,13 +253,13 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // public API speaks the bound buffer's domain (playback.h), so the
 // bounds pass straight through: [domain_begin(), domain_end()) is the
 // target buffer's full-target-frame extent and play() takes the
-// validated launch position unchanged. Speed is forced to 1.0 here:
-// target view's whole purpose is that
-// audio plays the user's authored warp, so an extra speed multiplier
-// on top would defeat that purpose. The persistent app.playback_speed
-// is left untouched; toggling back to source view restores it naturally
-// because every launch re-applies from app.playback_speed (a speed set
-// while in target view only stores, taking effect at this launch site).
+// validated launch position unchanged.
+// (THE PER-LAUNCH SPEED PUSH IS GONE — architect 2026-08-27. This site forced
+// 1.0 in target view and applied app.playback_speed otherwise, on the reasoning
+// that target view's whole purpose is to hear the user's authored warp and an
+// extra multiplier on top would defeat it. That reasoning outlived the feature:
+// the key retired, so every view plays at the source's own rate and there is
+// nothing left to force.)
 bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // THE LAUNCH-BODY CLEAR (architect 2026-08-26): every launch begins a
     // fresh session, so the A/B audition sequence ends here whoever asked and
@@ -352,8 +352,6 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // deactivates the scanner), so no stale line can survive a relaunch.
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    const bool force_one_x = (app.active_audio_view == 'T');
-    playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     playback.play(start, end);
     return true;
 }
@@ -446,20 +444,9 @@ void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
     }
 }
 
-// Sets the persistent playback speed (the settings editor is the authoring
-// surface). In target view the write STORES only: target view's audio is the
-// warped target buffer, played at its natural rate, so a playback-speed
-// multiplier on top would defeat the premise (the audible result must match
-// the authored warp, not the warp scaled by an extra factor). The stored
-// value takes effect on the return to source view, where the next playback
-// launch re-applies it from app.playback_speed. This is the only path that
-// writes app.playback_speed.
-void GuiPlaybackLifecycle::set_playback_speed(float s) {
-    app.playback_speed = s;
-    if (app.active_audio_view == 'T') return;  // target view: store only (see above)
-    playback.set_speed(s);
-    // Speed change without resync would cause a backward cursor jump:
-    // the predictor would retroactively apply the new speed to the
-    // entire elapsed-since-anchor period.
-    if (playback.is_playing()) playback.resync_predictor();
-}
+// (set_playback_speed IS GONE — architect 2026-08-27, with the
+// `playback_speed` key it was the one writer of. It stored the value, pushed it
+// to the engine outside target view, and resynced the predictor so the speed
+// change could not retroactively rewrite the elapsed-since-anchor period. All
+// three concerns died with the feature; the resync events that remain are
+// listed at playback.h.)

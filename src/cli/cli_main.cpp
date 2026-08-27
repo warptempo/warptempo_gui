@@ -114,8 +114,9 @@ int main(int argc, char** argv) {
     {
         // The whole-file strict schema (settings_file.h), the same reader
         // the GUI runs at source load: a sidecar set is loadable in both
-        // products or neither, GUI-kind keys included (an off-preset
-        // playback_speed refuses here exactly as it refuses the GUI load).
+        // products or neither, GUI-kind keys included (an out-of-range
+        // waveform_magnification_level refuses here exactly as it refuses the
+        // GUI load, though nothing in this binary paints).
         auto parsed = read_settings_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,

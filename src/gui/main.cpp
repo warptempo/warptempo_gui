@@ -21,6 +21,7 @@
 #include "history_commit_worker.h"
 #include "history_prefetch.h"
 #include "audio.h"
+#include "device_config.h"
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -1051,6 +1052,45 @@ int gui_main(const char* source_path) {
     // GuiPaintHandler::paint_trim; marker stems are the
     // live overlay paint_marker_stems, off this cache's own published stash.)
     FlagCache     flag_cache;
+
+    // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
+    // `gui_scale` and `audio_player` describe the MACHINE, not the piece, so
+    // they live in `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a
+    // source's `.settings` (the file, its schema and its strictness are
+    // device_config.h's). A first run on either device stamps the BACKEND's own
+    // template — the seam's device_config_defaults(), the one platform fact the
+    // GUI proper needs here — and then reads it back like any other launch.
+    //
+    // IT IS FATAL AND IT IS EARLY. A malformed config is the adversarial class
+    // (the file is program-written, so a violation is a hand edit): one blunt
+    // terminal line naming the path and the offending line, and no window at
+    // all — no repair, no partial apply, and above all no silent fallback to
+    // defaults, which would quietly discard a value the user typed.
+    //
+    // THIS IS THE SCALE'S INIT ROAD ON BOTH BACKENDS, and it runs BEFORE
+    // gui.init(): the two pushes below install the scale into the renderer and
+    // the input core, so the FIRST configure and the FIRST painted frame are
+    // already at the user's scale. That is strictly earlier than the sidecar
+    // road it replaces — which could not run until a source had been parsed on
+    // the startup tick, so the tablet's first frame used to paint at 100 % and
+    // jump. The other road is the settings editor's `gui_scale=` commit
+    // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
+    // GuiInputCore::set_touch_slop_px.
+    {
+        auto cfg = load_device_config(GuiPlatform::device_config_defaults());
+        if (!cfg) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", cfg.error().c_str());
+            return 1;
+        }
+        app.gui_scale    = cfg->gui_scale;
+        app.audio_player = cfg->audio_player;
+    }
+    set_gui_scale_percent(app.gui_scale);
+    // The touch slop is a SCALED LENGTH and the core sits below the GUI model,
+    // so the GUI resolves it and hands it down; it follows the push above
+    // because drag_moved_threshold_px() reads what that call installed.
+    gui.set_touch_slop_px(drag_moved_threshold_px());
+
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
     }
@@ -1062,7 +1102,7 @@ int gui_main(const char* source_path) {
     // invalidate_status_chain_area and the bottom row's own two,
     // invalidate_clock_area and invalidate_modal_dialog_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
-    // below — stop_playback_if_playing / toggle_playback / set_playback_speed
+    // below — stop_playback_if_playing / toggle_playback
     // on playback_lifecycle, save on save_ops, request_close /
     // activate_response on prompt, refresh_active_tab_view_from_app on
     // active_views — reached by their callsites as direct method calls.

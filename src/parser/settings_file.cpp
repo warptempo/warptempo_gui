@@ -3,12 +3,12 @@
 
 #include "frame_format.h"
 #include "parse_text_util.h"
-#include "playback_speed_presets.h"
 #include "value_format.h"
 
 #include <expected>
 #include <fstream>
 #include <set>
+#include <span>
 #include <string>
 
 namespace {
@@ -77,11 +77,26 @@ using warptempo_parse::prefix_line_error;
 // from half-doublings to WHOLE DOUBLINGS over the shorter bracket [0, 4]: the
 // name is unchanged, so a file carrying a level above 4 keeps a canonical key
 // and takes the value refusal below instead — the same re-save once more.
+//
+// THREE KEYS LEFT THE SCHEMA 2026-08-27 (architect approval 2026-08-27) and the
+// consequence is the standing one, in the UNKNOWN-key direction:
+// `playback_speed` RETIRED WHOLE — the architect runs 1.0 everywhere, so the
+// key, its preset vocabulary and the variable-speed machinery behind it are
+// gone from both products; `gui_scale` and `audio_player` are per DEVICE rather
+// than per piece and moved to the GUI's own device config
+// (src/gui/device_config.h, `$XDG_CONFIG_HOME/warptempo_gui/config`), which the
+// CLI has no business reading. A `.settings` still carrying any of the three is
+// load-fatal in both products by the ordinary unknown-key refusal below —
+// hand-editing the lines out is the whole recovery, no migration and no reader
+// leniency, exactly as for `font_size` and the four attestation keys before
+// them. The architect accepted both consequences with his eyes open: a
+// `renders/` recipe written before the cut refuses `'`, and every checkpoint
+// committed before it drops out of the `h` walk through the same strict gate.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "playback_speed", "follow", "gui_scale", "waveform_magnification_level",
-    "audio_player", "projects_repo",
+    "follow", "waveform_magnification_level",
+    "projects_repo",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -101,6 +116,12 @@ std::unexpected<std::string> bad_value(int ln, const std::string& key,
 
 std::expected<void, std::string> scan_settings_file(
         std::istream& in, const SettingsLineFn& on_pair) {
+    return scan_key_value_file(in, on_pair, kCanonicalSettingsKeys);
+}
+
+std::expected<void, std::string> scan_key_value_file(
+        std::istream& in, const SettingsLineFn& on_pair,
+        std::span<const char* const> required_keys) {
     std::set<std::string> seen;
     std::string line;
     int ln = 0;
@@ -138,7 +159,7 @@ std::expected<void, std::string> scan_settings_file(
         return std::unexpected(std::string("i/o read error"));
     }
 
-    for (const char* k : kCanonicalSettingsKeys) {
+    for (const char* k : required_keys) {
         if (seen.count(k) == 0) {
             return std::unexpected(
                 std::string("missing required key '") + k + "'");
@@ -251,77 +272,46 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.c = value[0];
         return R(out);
     }
-    if (key == "playback_speed") {
-        // Preset-vocabulary-only on disk, matched by exact TEXT: the GUI
-        // authors playback_speed through the settings editor
-        // (:playback_speed=), whose commit red-flashes any value outside
-        // kPlaybackSpeedPresets (the shared source of truth), so any
-        // off-preset spelling is a state the GUI can never produce. The table
-        // pairs each on-disk spelling the writer emits (%.1f) with its
-        // nearest-float value; a byte match adopts the paired float. No float
-        // parse at the boundary — ".7", "0.70", and "00.7" are not the
-        // spelling and refuse.
-        for (const PlaybackSpeedPreset& p : kPlaybackSpeedPresets) {
-            if (value == p.text) {
-                out.f = p.value;
-                return R(out);
-            }
-        }
-        return err("must be a preset speed");
-    }
-    // (font_size IS GONE FROM THE SCHEMA — architect approval 2026-08-01. It was
-    // the GUI-wide monospace text size, and row 7 of the kdenlive redesign
-    // deleted the monospace face itself: every surface in the product now sizes
-    // on gui_scale. The key is not deprecated or tolerated — it is UNKNOWN, so a
-    // sidecar still carrying it is load-fatal in both products by the ordinary
-    // unknown-key rule. NO legacy path, by the architect's explicit instruction;
-    // he updates his own files.)
-    if (key == "gui_scale") {
-        // GUI rendering scale, an integer PERCENT in [50, 400]. One canonical
-        // spelling: plain digits through parse_authored_frame (no sign, point,
-        // or leading zeros — exactly the writer's %d output), then the range
-        // check. 100 is the design baseline; 200 is the 4K case; 400 is the
-        // fine-panel ceiling; 50 is the half-size floor.
-        //
-        // THE CEILING WENT BACK UP TO 400 (architect approval 2026-08-26),
-        // where it stood until 2026-07-31. That day's 400->200 cut read 200 as
-        // the largest scale the supported 1920x1080 window has room for, and a
-        // 280 dpi panel is what re-opened it: on a 2304x1440 tablet, matching
-        // the apparent size of a coarser display lies ABOVE 200 (225% gives the
-        // 1024 logical width of the old rig, ~305% matches an 82 PPI external),
-        // so the useful range now sits inside the vocabulary rather than past
-        // its end.
-        //
-        // THE LAYOUT IS NOT WIDENED WITH IT, deliberately. Below roughly 1040 px
-        // of LOGICAL width (device width divided by the factor) the icon row's
-        // left-to-right walk runs past the window's right edge, and the redesign
-        // carries no collision rule anywhere — the crop-at-the-floor allowance
-        // recorded at kMinWindowWidthPx (render.h) is the standing answer. A
-        // scale is a VOCABULARY; which of its values lays out well is the
-        // architect's call on his own panel, not the parser's.
-        //
-        // THE FLOOR CAME DOWN FROM 100 TO 50 (architect approval 2026-08-10 —
-        // the gui_scale floor 100->50). Below 100% the per-metric FLOORS in the
-        // GUI's scaled_px accessors (render.h) stop being defensive and start
-        // firing: a 1px border, pad or edge rounds to 0 at s = 0.5 (banker's
-        // rounding takes 0.5 down), and each such metric names the minimum that
-        // keeps its surface visible. 50 is where every structural dimension
-        // still has a floor that holds it above zero.
-        //
-        // This is the ONE range owner — the editor's grammar and the file
-        // loader both reach the domain through here, so nothing else moves.
-        // The defensive waveform-height floor (waveform_area, main.cpp) STAYS:
-        // it guards gui_scale against the font-size ceiling it never had to
-        // budget for anyway (font_size left the schema in row 7, architect
-        // approval 2026-08-01).
-        // (architect approval 2026-07-30 — the settings/parser grant this key
-        // landed under, extended 2026-08-26 for the ceiling's return to 400.)
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || v < 50 || v > 400)
-            return err("must be an integer in [50, 400] in canonical spelling");
-        out.i64 = v;
-        return R(out);
-    }
+    // THE KEYS THAT LEFT THIS SCHEMA, recorded here because the refusal that
+    // answers each of them is the unknown-key arm in read_settings_file below,
+    // and a reader looking for the arm that used to be here needs to find the
+    // reason instead. NONE of them is deprecated or tolerated: a `.settings`
+    // still carrying one is load-fatal in BOTH products by the ordinary
+    // unknown-key rule, hand-editing the line out is the whole recovery, and
+    // there is no migration tool and no reader leniency — the architect updates
+    // his own files, by his explicit instruction.
+    //
+    // `font_size` (architect approval 2026-08-01): the GUI-wide monospace text
+    // size, deleted with the monospace face itself in row 7 of the kdenlive
+    // redesign. Every surface in the product sizes on gui_scale now.
+    //
+    // `playback_speed` (architect approval 2026-08-27): RETIRED WHOLE. It was
+    // the audition's tenths-preset speed multiplier, and the architect runs 1.0
+    // everywhere in his one live project — so the key, its preset vocabulary
+    // (the deleted playback_speed_presets.h) and the GUI's variable-speed
+    // playback machinery went together, leaving the render body's plain
+    // source-to-output RATE ratio behind.
+    //
+    // `gui_scale` (architect approval 2026-08-27): MOVED, not retired. The
+    // GUI's rendering scale is a fact about the PANEL in front of the user
+    // rather than about the piece, and the two devices that run this product
+    // want different values for the same project — so it lives in the GUI's own
+    // per-device config now (`$XDG_CONFIG_HOME/warptempo_gui/config`,
+    // src/gui/device_config.h), which also took over the [50, 400] RANGE this
+    // schema used to own: the ONE owner is is_gui_scale_percent there, called
+    // by that file's reader and by the settings editor's red-flash alike. The
+    // CLI never read the key.
+    //
+    // `audio_player` (architect approval 2026-08-27): MOVED beside gui_scale
+    // and for the same reason — which player binary exists is a fact about the
+    // DEVICE. The laptop launches audacious on `l`; the tablet has nothing
+    // spawnable and carries the blank no-player opt-out, which is exactly the
+    // semantics this schema used to load. The device config took the
+    // free-UTF-8-verbatim rule with it.
+    //
+    // The four render-environment `*_hash` attestation keys (architect approval
+    // 2026-08-09) left under the same rule; their record is at
+    // kCanonicalSettingsKeys above.
     if (key == "waveform_magnification_level") {
         // THE WAVEFORM'S VISUAL MAGNIFICATION — the count of doublings on
         // the ladder in settings_file.h, and the PICTURE'S alone: the gain it
@@ -343,16 +333,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         if (!parse_authored_frame(value, v) || !is_waveform_magnification_level(v))
             return err("must be an integer in [0, 4] in canonical spelling");
         out.i64 = v;
-        return R(out);
-    }
-    if (key == "audio_player") {
-        // GUI-kind launcher for the `l` render-listen command: an external
-        // player binary name or path. Any value is accepted (no path/binary
-        // grammar — it is user-supplied), INCLUDING empty: an empty value is
-        // legal and means "no external player". The key is always present in a
-        // product-written .settings, so the shared schema loads `audio_player=`
-        // in both products.
-        out.text = value;
         return R(out);
     }
     if (key == "projects_repo") {
@@ -445,19 +425,11 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.active_markers_view = gv.c;
         } else if (key == "active_tab_view") {
             out.active_tab_view = gv.c;
-        } else if (key == "playback_speed") {
-            out.playback_speed = gv.f;
-        } else if (key == "gui_scale") {
-            // Range-checked into [50, 400] by validate_gui_setting above, so
-            // the narrowing to int is exact (architect approval 2026-07-30).
-            out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "waveform_magnification_level") {
             // Range-checked into [0, kWaveformMagnificationLevelMax] by
             // validate_gui_setting above, so the narrowing to int is exact
             // (architect approval 2026-08-26).
             out.waveform_magnification_level = static_cast<int>(gv.i64);
-        } else if (key == "audio_player") {
-            out.audio_player = gv.text;
         } else if (key == "projects_repo") {
             // The reader ALWAYS assigns, like every other required key: a file
             // omitting the line never reaches this arm, since the required-key

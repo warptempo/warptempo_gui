@@ -10,8 +10,8 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play), the keep-alive reseek, follow mode, and
-// the speed set. AppState, Viewport and GuiAudio are captured directly.
+// the one play), the keep-alive reseek and follow mode.
+// AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
 // was restore_playhead_to_lsp's top-strip invalidate, deleted with that function
@@ -183,7 +183,6 @@ struct GuiPlaybackLifecycle {
     // true. A live session never launches (the caller always arrives stopped —
     // the tick's natural end or the act's own tab switch precede every call).
     bool launch_bounded_audition(int64_t start, int64_t span);
-    void set_playback_speed(float s);
 
     // Reseek the active playback session to a new starting sample, keeping
     // audio alive. The sample is expressed in the active playhead domain
@@ -225,8 +224,8 @@ private:
     // THE ONE LAUNCH BODY (contract at the definition): validate `start`,
     // seed the scanner, and play [start, end). Every launch in the product
     // ends here — the view-end launch above and the bounded audition — so the
-    // gates, the scanner seed, the follow check, the launch damage and the
-    // speed rule are written once. It also ends the A/B audition sequence at
+    // gates, the scanner seed, the follow check and the launch damage are
+    // written once. It also ends the A/B audition sequence at
     // its head (the launch-body clear, the edge inventory at
     // GuiAuditionSequence): a launch is a fresh session, whoever asked.
     bool launch_playback_window(int64_t start, int64_t end);

@@ -546,7 +546,7 @@ FAR=/sdcard/Android/data/com.warptempo.gui/files
 adb push "<src>.wav"              "$FAR/projects/<name>/"
 adb push "<src>.warpmarkers"      "$FAR/projects/<name>/"
 adb push "<src>.phaseresetmarkers" "$FAR/projects/<name>/"
-adb push "<src>.settings"         "$FAR/projects/<name>/"   # with gui_scale=225
+adb push "<src>.settings"         "$FAR/projects/<name>/"
 adb shell "find '$FAR/projects' -type d -exec chmod 777 {} +"
 printf '<name>\n' > /tmp/current && adb push /tmp/current "$FAR/current"
 ```
@@ -559,6 +559,16 @@ answers EACCES and the app dies at launch saying `current` names no folder
 (measured on the device 2026-08-27). `chmod` does take on this device's external
 storage, so one pass over the directories is the whole fix; the files under them
 are already world-readable. `wts tp` runs it after every push.
+
+**THE SIDECAR TRAVELS VERBATIM since 2026-08-27.** `gui_scale` left the
+`.settings` for the per-device config that day (`$XDG_CONFIG_HOME/warptempo_gui/
+config`, which `android_main` points at the app's internal dir), so the pushed
+copy carries no opinion about the tablet's screen and `wts tp` no longer rewrites
+it on the way over — nor `wts fp` on the way back. The tablet's scale is written
+once, by the app itself, on its first launch after an install onto a clean
+internal dir: `gui_scale=250`, from the backend's own first-run template. Editing
+it later is `:gui_scale=` in the settings prompt on the device, which rewrites
+that file at the commit.
 
 ### 10.2 What the backend is, and what it stubs
 
@@ -1168,8 +1178,10 @@ Widths are authored in QUARTERS of a standard key and a row is 40 of them; a row
 whose spans sum to less is centred (row 2's nine letters, the reference's own
 half-key indent). The key PITCH is therefore the window's — ten keys across 2304
 px is 230 px each — and only the row height (40), the gaps (4) and the outer pad
-(4) are authored at 100% and scaled on `gui_scale`. At the tablet's 225% that is
-a 407 px surface of 90 px keys.
+(4) are authored at 100% and scaled on `gui_scale`. At 225% that is a 407 px
+surface of 90 px keys — the figure the off-device harness measured (§ below).
+The tablet's first-run scale is 250% since 2026-08-27, where a key is 100 px
+tall and the surface grows in proportion.
 
 `SHIFT` is **one-shot**: tap it, the next letter is a capital, then it clears; a
 second tap while armed clears it; there is no caps lock. `&123` toggles the

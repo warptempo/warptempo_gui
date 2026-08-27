@@ -102,10 +102,7 @@ bool GuiSaveOps::save() {
             app.active_audio_view,
             app.active_markers_view,
             app.active_tab_view,
-            app.playback_speed,
-            app.gui_scale,
             app.waveform_magnification_level,
-            app.audio_player,
             app.projects_repo};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {

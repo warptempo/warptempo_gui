@@ -2734,15 +2734,15 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
 // LABEL (the redesign's capitalization ruling; "GUI scale" and "URL" keep their
-// acronym case) with the .settings KEY the click prefills into the editor, and
+// acronym case) with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the two GUI
 // keys, then the four metadata keys.
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
-// the popup's own geometry (item count). The keys are the canonical .settings
-// spellings, so the prefill goes through the ordinary recall serializer with
-// nothing translated on the way.
+// the popup's own geometry (item count). The keys are the canonical spellings
+// the settings editor takes, so the prefill goes through the ordinary recall
+// serializer with nothing translated on the way.
 struct SettingsPopupItem {
     const char* label;
     const char* key;
@@ -2750,7 +2750,15 @@ struct SettingsPopupItem {
 };
 // (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. "Playback speed"
 // was the widest label from then until 2026-08-26; only the item count and the
-// height derived from it moved at that deletion.)
+// height derived from it moved at that deletion — and the item itself left with
+// ITS key 2026-08-27, when playback_speed retired whole.)
+//
+// "GUI scale" IS NOT A `.settings` KEY ANY MORE and is still here (2026-08-27):
+// it moved to the per-device config (device_config.h), the settings editor is
+// still its authoring surface, and the click still prefills through the
+// ordinary recall serializer — which answers for it off the live AppState
+// exactly as it does for a sidecar key (recall_gui_setting_value, settings_io.h).
+// A menu of KEYS TO EDIT does not care which file a key rests in.
 //
 // THE WAVEFORM MAGNIFICATION LEVEL JOINED THE GUI HALF 2026-08-26, a third GUI
 // key beside the two — it is settable here like every key that can appear in a
@@ -2763,7 +2771,6 @@ struct SettingsPopupItem {
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI scale",      "gui_scale",      false},
     {"Waveform magnification level", "waveform_magnification_level", false},
-    {"Playback speed", "playback_speed", false},
     {"Title",          "title",          true},
     {"Notes",          "notes",          false},
     {"URL",            "url",            false},
@@ -3847,8 +3854,6 @@ struct AppState {
     // scrub act launches it independently of the cursor, from a clicked
     // frame). The cursor is
     // per-tab; the scanner is session-only and not persisted.
-    // `playback_speed` is authoritative on the main thread and pushed
-    // to the playback engine on every change.
     int64_t playhead_scanner_sample = 0;
     // Continuous (sub-frame) sibling of playhead_scanner_sample: the scanner's
     // DRAWN pixel is computed from this double (scanner_pixel_x) so a per-frame
@@ -3862,7 +3867,13 @@ struct AppState {
     // timestamp readout). Meaningful only while active, like the integer sample.
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
-    float   playback_speed          = 1.0f;
+    // (THE playback_speed FIELD IS GONE — architect 2026-08-27. It was the
+    // audition's tenths-preset multiplier, pushed to the playback engine on
+    // every change; the architect runs 1.0 everywhere in his one live project,
+    // so the key, the setting and the whole variable-speed machinery behind it
+    // retired together. Playback reads the source at the source's own rate
+    // now — the render body's one increment is the device rate ratio and
+    // nothing else, playback_common.h.)
 
     // THE A/B AUDITION SEQUENCE — session-only, never persisted; the model
     // and the complete edge inventory are at GuiAuditionSequence (above this
@@ -3877,23 +3888,27 @@ struct AppState {
     // the value any more — a sidecar still holding it is load-fatal as an
     // unknown key, by the architect's explicit no-legacy instruction.)
 
-    // GUI rendering scale in PERCENT (the gui_scale setting; [50, 400], default
-    // 100). 100 is the design baseline — 1920x1080, the one supported
-    // resolution — 200 is the 4K case, 400 the fine-panel ceiling (a 280 dpi
-    // tablet) and 50 the half-size floor; the parser's range arm
-    // (settings_file.cpp) is the domain's ONE owner and this is a retell. A display
-    // preference: not engine input, not authoring state, persisted on Ctrl+S,
-    // applied at file load, and set through the settings editor
-    // (`:gui_scale=`, no hotkey). LIVE since
-    // 2026-07-31: pushed to the renderer's file-scope state via
-    // set_gui_scale_percent at both application points (file load and the
-    // settings-editor commit — the `'` load-in-place left the list 2026-08-24,
-    // the act no longer applying a file's session prefs), and the editor commit
-    // APPLIES it
-    // live through GuiInputHandler::apply_gui_scale (the resize-path geometry
-    // rebuild). SINCE ROW 7 IT IS THE ONE SCALE AXIS — every painted dimension
-    // in the product rides it, the former font_size axis having died with the
-    // monospace face.
+    // GUI rendering scale in PERCENT (the gui_scale preference; [50, 400]).
+    // is_gui_scale_percent (device_config.h) is the domain's ONE owner and
+    // spells the bracket's four landmarks; this is a retell.
+    //
+    // IT IS A PER-DEVICE PREFERENCE, NOT A PROPERTY OF THE PIECE (architect
+    // 2026-08-27): it left the `.settings` sidecar that day for the device
+    // config, because the same project wants 100 on the laptop and 250 on the
+    // tablet and the sidecar travels between them. Ctrl+S does not carry it and
+    // no load writes it — gui_main reads the config ONCE at startup, before the
+    // window exists, and the editor commit rewrites the file at the moment it
+    // changes. The member initializer below is construction state for the
+    // window between AppState's constructor and that read, and nothing else.
+    //
+    // Not engine input, not authoring state, no undo, no dirty. Set through the
+    // settings editor (`:gui_scale=`, no hotkey), which APPLIES it live through
+    // GuiInputHandler::apply_gui_scale (the resize-path geometry rebuild) —
+    // LIVE since 2026-07-31. Pushed to the renderer's file-scope state via
+    // set_gui_scale_percent at both application points (that commit, and
+    // gui_main's startup read). SINCE ROW 7 IT IS THE ONE SCALE AXIS — every
+    // painted dimension in the product rides it, the former font_size axis
+    // having died with the monospace face.
     int     gui_scale               = 100;
 
     // THE WAVEFORM'S VISUAL MAGNIFICATION (the waveform_magnification_level
@@ -3928,17 +3943,21 @@ struct AppState {
     // the engine block, and this is neither.
     int     waveform_magnification_level = 0;
 
-    // GUI-kind launch preference: the external audio player the `l`
-    // ("Listen to renders") command spawns with the rendered wavs. The
-    // "audacious" default lives in exactly two places: this member initializer
-    // (the pre-load state) and the first-open template's audio_player line
-    // (settings_io.cpp) — the key is required in every `.settings`, so a load
-    // always assigns this field from the file. A BLANK value
-    // (`audio_player=`) is the deliberate opt-out, and `l` then reports
-    // "no audio_player set" and does nothing. Persisted on Ctrl+S. The one
-    // GUI-kind key with NO gesture: the settings editor
-    // (`:audio_player=<path>`) is its sole authoring surface; consumed only
-    // by the `l` launcher.
+    // Launch preference: the external audio player the `l`
+    // ("Listen to renders") command spawns with the rendered wavs. A BLANK
+    // value is the deliberate opt-out, and `l` then reports
+    // "No audio_player set" and does nothing — which is the TABLET's standing
+    // state, nothing there being spawnable.
+    //
+    // IT IS A PER-DEVICE PREFERENCE, gui_scale's twin in provenance since
+    // 2026-08-27 (the rationale is at that field): which player binary exists
+    // is a fact about the machine. It left the `.settings` for the device
+    // config, Ctrl+S does not carry it, gui_main reads it once at startup, and
+    // its one authoring surface — the settings editor's `:audio_player=<path>`,
+    // the one preference with NO gesture at all — writes the config at the
+    // commit. The "audacious" initializer below is construction state for the
+    // window before that read; the LAPTOP backend's first-run template is where
+    // that value now means anything (platform_wayland.cpp).
     std::string audio_player = "audacious";
 
     // GUI-kind preference: the repository that is the PROJECTS HOME — where
@@ -6245,10 +6264,13 @@ struct AppState {
     // bpm, notes, url, cover; editor commits carry undo history) — participate
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
-    // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // gui_scale, audio_player, projects_repo) — do
+    // active_markers_view, active_tab_view, waveform_magnification_level, trim,
+    // read_only, projects_repo) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
-    // dirty, so quitting without saving simply drops them. Trim is
+    // dirty, so quitting without saving simply drops them. The two DEVICE keys
+    // (gui_scale, audio_player) are outside this question entirely since
+    // 2026-08-27: they are not in the sidecar at all, and each commit writes the
+    // device config immediately (device_config.h). Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but
     // deliberately treated as transient view state.
     bool        warp_dirty           = false;
@@ -9118,8 +9140,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE TITLE CASE IS DELIBERATE AND SCOPED TO THE TWO HINT STRINGS carrying
 // the old labels (architect
 // 2026-08-03 for the capital I, 2026-08-04 for the capital C beside it): every
-// other multi-word GUI label in the product stays sentence case ("Playback
-// speed", "Center on focus", "Next marker") — these two are the named
+// other multi-word GUI label in the product stays sentence case ("Center on
+// focus", "Next marker") — these two are the named
 // exceptions, not a precedent to copy outward or "fix". The joining word stays
 // LOWERCASE ("and"), which is what title case means and what the architect
 // spelled.

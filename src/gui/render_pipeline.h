@@ -42,14 +42,15 @@ struct AuthoringSnapshot {
     // the request does not otherwise carry. Types match the AppState fields
     // they are captured from.
     char        active_markers_view = 'W';   // 'W' or 'P'
-    float       playback_speed      = 1.0f;
     bool        follow              = true;
-    int         gui_scale           = 100;   // percent, [50, 400]
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.
     int         waveform_magnification_level = 0;  // the schema's [0, 4]
-    std::string audio_player;                // empty = unset
+    // (THREE FIELDS LEFT THIS BLOCK 2026-08-27 with their keys — playback_speed
+    // retired, gui_scale and audio_player moved to the per-device config. An
+    // entry's `.settings` carries exactly what a source's does, so this block
+    // tracks that schema and nothing else.)
     // The projects-home repository name, carried into the entry's .settings
     // like every other always-emitted key. (architect approval 2026-08-03.)
     std::string projects_repo;

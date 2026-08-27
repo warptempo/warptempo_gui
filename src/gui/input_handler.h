@@ -2530,8 +2530,9 @@ private:
     // reset store and the engine settings — what push_undo_both captures — and
     // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
-    // tab, the camera, follow, playback_speed, gui_scale, audio_player and
-    // projects_repo. A recipe is a set of markers and an engine block; where
+    // tab, the camera, follow, the waveform magnification level and
+    // projects_repo — and gui_scale and audio_player are outside the question
+    // entirely since 2026-08-27, an entry's sidecar not carrying them at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the
     // whole-file apply that stood until this date, which was 1:1 with a source

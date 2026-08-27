@@ -650,12 +650,15 @@ public:
     // THE PUSH HAS TWO CALL SITES, one per gui_scale application point, and
     // this is their inventory (there is no third; set_gui_scale_percent,
     // render.h, has exactly these two callers):
-    //   * the source load's tail — file_loader.cpp, beside its
-    //     set_gui_scale_percent push. This is the INIT road on BOTH backends:
-    //     the scale arrives from the sidecar, and the load is the first thing
-    //     the startup tick does once the surface is configured. Before it there
-    //     is no source on screen and the default stands, which is the authored
-    //     value — so the pre-load window cannot be wrong in kind.
+    //   * gui_main's startup, beside its set_gui_scale_percent push and BEFORE
+    //     GuiPlatform::init — main.cpp. This is the INIT road on BOTH backends:
+    //     the scale arrives from the per-device config (device_config.h), which
+    //     is read before a window exists, so no frame is ever painted and no
+    //     finger is ever delivered at a scale other than the user's. IT MOVED
+    //     HERE 2026-08-27, from the source load's tail, when the scale stopped
+    //     being a `.settings` key and became a device fact — and the window that
+    //     used to run at the authored default (a mapped surface with no source
+    //     in it) closed with the move.
     //   * the settings editor's `gui_scale=` commit —
     //     GuiInputHandler::apply_gui_scale, input_handler.cpp. This is the LIVE
     //     road, and the new slop is in force from that commit onward.

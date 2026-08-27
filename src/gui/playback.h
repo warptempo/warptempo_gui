@@ -30,15 +30,20 @@
 //
 // Thread model:
 //   - Audio thread (the device's callback thread: JACK's process thread,
-//     AAudio's data callback): reads cursor_/speed_, writes
+//     AAudio's data callback): reads cursor_, writes
 //     cursor_ and is_playing_ via relaxed atomics. No allocation, no I/O,
 //     no locks.
-//   - Main thread: calls init/play/stop/set_speed/shutdown; snapshots
+//   - Main thread: calls init/play/stop/shutdown; snapshots
 //     cursor() and is_playing() per redraw.
 //
-// Playback is naive sample-rate rescaling: speed 0.7 reads every 0.7th
-// source sample, which shifts pitch along with tempo. This matches the
-// user's Reaper-style workflow expectation.
+// PLAYBACK PLAYS THE SOURCE AT THE SOURCE'S OWN RATE. The read is fractional —
+// the device may ask for frames at a rate the source is not recorded at, and
+// the render body's one increment rescales for exactly that (playback_common.h)
+// — but there is no SPEED factor on top of it any more: the variable-speed
+// machinery and its `playback_speed` settings key retired together
+// (architect 2026-08-27, the architect running 1.0 everywhere in his one live
+// project). What it did was naive sample-rate rescaling — speed 0.7 read every
+// 0.7th source sample, shifting pitch along with tempo.
 //
 // Predictor design note
 // ---------------------
@@ -47,7 +52,7 @@
 // visible discontinuity, never inside the audio callback. The set of
 // resync events: playhead jumps via move_playhead, zoom in/out via the shared
 // apply_zoom_change helper, the resize zoom-out reclamp,
-// set_playback_speed, follow-mode off-to-on,
+// follow-mode off-to-on,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport
 // (the alt+wheel stepped pan and PageUp/PageDown), and viewport recenter via
 // center_viewport_on_playhead (C key). There is no loop-wrap resync event any
@@ -111,14 +116,10 @@ public:
     // its last value so the main thread can snapshot where it stopped.
     void stop();
 
-    // Clamp to [0.10, 1.00] and publish to the audio thread. The change
-    // takes effect on the next callback buffer.
-    void set_speed(float speed);
-
     // Re-anchor the free-running cursor predictor at the audio thread's
     // current cursor and the current steady_clock time. Call from the main
     // thread at events where a small visible discontinuity is acceptable
-    // (jumps, viewport reflows, speed changes) so the predictor remains a
+    // (jumps, viewport reflows) so the predictor remains a
     // smooth linear function of wall-clock between resyncs. Safe to call
     // when not playing — the next play() will overwrite the anchor.
     void resync_predictor();

@@ -4,6 +4,7 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
+#include "device_config.h"
 #include "settings_io.h"
 #include "text_editor.h"
 #include "warp_frame_map_view.h"
@@ -2619,22 +2620,33 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 }
 
 void GuiInputHandler::apply_gui_scale(int percent) {
-    // The shared live sequence a source load's apply_settings_engine_and_prefs
-    // tail runs, and the only one left since row 7 deleted apply_font_size with
-    // its key (architect approval 2026-08-01): the value feeds main.cpp's
+    // THE LIVE ROAD for the product's one scale axis: the value feeds main.cpp's
     // per-lane height table and every other painted dimension, so a change moves
-    // every strip boundary and the waveform area with them. Four steps —
-    // assign, push, full
+    // every strip boundary and the waveform area with them. Five steps —
+    // assign, PERSIST, push, full
     // invalidate, resize-path geometry-and-cache rebuild — so the new layout is
     // on screen at the commit rather than at the next restart. The sole caller
     // (the settings editor's `gui_scale=` commit) gates the no-op case.
+    //
+    // THE PERSIST IS PART OF THE COMMIT since 2026-08-27: the scale is a
+    // per-DEVICE preference now (device_config.h) and Ctrl+S does not carry it,
+    // so the only moment it can be written is the moment it changes. The write
+    // is advisory — it prints its own line on failure and the live value stands
+    // either way — and it carries audio_player along because the file holds both
+    // keys and is rewritten whole; app.audio_player is the live truth for that
+    // key, so the rewrite preserves it by construction.
     app.gui_scale = percent;
+    DeviceConfig cfg;
+    cfg.gui_scale    = app.gui_scale;
+    cfg.audio_player = app.audio_player;
+    (void)write_device_config(cfg);
     set_gui_scale_percent(percent);
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the
     // two-call-site inventory are at GuiInputCore::set_touch_slop_px). This is
-    // the LIVE road — the settings editor's `gui_scale=` commit; the source
-    // load's tail is the other. The push must follow set_gui_scale_percent:
+    // the LIVE road — the settings editor's `gui_scale=` commit; gui_main's
+    // startup read of the device config is the other. The push must follow
+    // set_gui_scale_percent:
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
     viewport.invalidate_all();

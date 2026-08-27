@@ -14,11 +14,16 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (67 declarations, proved by a comment-stripped diff of the two
-  headers; there is NO Android-only member any more — the on-screen keyboard's
+  public API (67 declarations as of 2026-08-27 — 13 `using` aliases and 54
+  members including the constructor and destructor — counted as the
+  semicolon-terminated declarations in the `public:` section of each header
+  with `//` comments and blank lines stripped, and the identity proved by
+  diffing those two stripped sections, which come out line-for-line equal;
+  there is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
-  exception): `platform_wayland.{h,cpp}`
+  exception, and `device_config_defaults` is a third of the same kind):
+  `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
@@ -71,10 +76,12 @@ drag coordinates floor instead of truncating.
 
 - **Playback**: `playback.h` is the contract on both backends. Its
   portable half — the render body (fractional source cursor; the
-  per-frame increment `speed * source_rate / output_rate`, where
+  per-frame increment `source_rate / output_rate`, where
   `output_rate` was the JACK graph rate and is now either device's granted
-  rate, 0 = the suspended device), the predictor, the domain-offset / bind
-  / speed logic — is `playback_common.{h,cpp}`, proved statement-identical
+  rate, 0 = the suspended device; the increment carried a `speed *` factor
+  until 2026-08-27, when `playback_speed` retired whole and left the RATE
+  ratio alone behind it), the predictor, the domain-offset / bind
+  logic — is `playback_common.{h,cpp}`, proved statement-identical
   to the old body with five recorded deviations. `playback.cpp` is the JACK
   device half, `playback_aaudio.cpp` the AAudio one (granted-rate open —
   48 000 on the S10 FE's speaker, natively; LOW_LATENCY granted, burst 96;
@@ -82,6 +89,16 @@ drag coordinates floor instead of truncating.
   dead latch and otherwise keeps waiting; a disconnect marks the stream
   dead and the next `play()` reopens at the new device's rate, no
   auto-resume). NOTHING LOOPS holds on both.
+- **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
+  ONE static accessor each backend answers, and the seam's third
+  both-sides member. `gui_scale` and `audio_player` are per-DEVICE
+  preferences (settings.md owns the file and its schema), and the values a
+  fresh device should start from are the one thing only the platform knows:
+  the laptop answers 100 % / `audacious`, Android 250 % / blank (no
+  spawnable player exists there, so `l` reports "No audio_player set"
+  through the ordinary opt-out road). `gui_main` asks it before
+  `GuiPlatform::init` and stamps the file if none exists, which is what
+  keeps the GUI proper free of the `#ifdef` the alternative would need.
 - **Fonts**: `gui_font.h` is the ONE face owner (`GuiFontFamily::Sans/Mono`);
   the ten former `cairo_select_font_face` sites call it. Linux resolves
   through fontconfig (`gui_font_fontconfig.cpp`, byte-identical to before);
@@ -142,8 +159,14 @@ rect are one number by construction.
 EVERY CAP IS TEXT, on the one sans face at the product's one text size through
 the one shaping chokepoint — the letter caps, the layer toggle's `abc` / `&123`
 and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
-**Cancel**, **Enter**, on both layers (the symbol layer's second space bar
-included). The function keys wore unmodified Breeze glyphs for their first day
+**Cancel**, **Enter**. **Backspace** is on both layers (each layer's own row 2
+ends with one), and **Space**, **Cancel** and **Enter** are on both by
+construction — row 3 is one array shared by the two. **Shift** is the LETTER
+layer's alone: the symbol layer's row 2 opens with a `Role::Blank` slot in its
+place, which is the whole answer to what shift would do on a symbol page. The
+symbol layer's SECOND SPACE is not that row's leading slot either but a
+deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
+symbol layer for the `/` of `12 7/8` need not go looking for the bar. The function keys wore unmodified Breeze glyphs for their first day
 and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's
 own height beside a 12pt letter — and a full-width row has room for words, so
 they say what they do. `onscreen_keyboard::cap_word` is the words' ONE owner,
@@ -192,7 +215,13 @@ Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 249 since the 2026-08-27
 Series relocation cut it to 925 authored px — it fitted only to 220 before
-that), 90 Hz panel PINNED (`ANativeWindow_setFrameRate(90, FIXED_SOURCE)` at
+that. THE TABLET'S FIRST-RUN SCALE IS 250, one step past that fit ceiling and
+chosen on the glass 2026-08-27: the architect's question is whether a marker
+flag is TAPPABLE — whether the second tap of a double-tap lands on the flag
+rather than on the waveform — which the rig's cursor-width 225 does not settle.
+The icon row's rightmost authored pixels therefore crop, which is the standing
+crop-at-the-floor allowance at `kMinWindowWidthPx` and the sanctioned casualty
+it already names, not a new rule), 90 Hz panel PINNED (`ANativeWindow_setFrameRate(90, FIXED_SOURCE)` at
 every window adoption; the backend ticks at 5 ms, the Wayland rule's own half
 of the pinned refresh period, where it took the 60 Hz fallback's 8 ms until
 2026-08-27), PAGE_SIZE 4096 (the

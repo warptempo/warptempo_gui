@@ -45,7 +45,7 @@ std::string format_default_settings_template(const std::string& stem,
 // The complete non-engine (GUI-kind) value set the settings writer
 // serializes, gathered into one snapshot. Constructed at each call site and
 // consumed within the call: the reference members borrow the caller's
-// storage (the two tab bands and the audio_player string), the scalars are
+// storage (the two tab bands and the projects_repo string), the scalars are
 // copied. One struct so the writer and the autocomplete recall
 // (format_nonengine_value in settings_io.cpp) take the identical value set
 // without a positional parameter list.
@@ -56,16 +56,15 @@ struct NonEngineSettingsSnapshot {
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;
-    float              playback_speed;
-    int                gui_scale;
     // The waveform PICTURE's magnification LEVEL — a count of doublings in
     // the range settings_file.h owns, whose gain render.h derives. A display
-    // preference like gui_scale beside it — it scales no audio anywhere.
+    // preference, but a per-PIECE one: how loud the picture wants to be drawn
+    // is a fact about the material, which is why it stayed in the sidecar when
+    // gui_scale left it 2026-08-27. It scales no audio anywhere.
     int                waveform_magnification_level;
-    const std::string& audio_player;
     // The repository that is the projects home (the GitHub recheck's corpus).
-    // A reference member like audio_player: the caller's storage, borrowed for
-    // the call. (architect approval 2026-08-03.)
+    // A reference member: the caller's storage, borrowed for the call.
+    // (architect approval 2026-08-03.)
     const std::string& projects_repo;
 };
 
@@ -101,5 +100,15 @@ std::string format_settings_text(
 // settings editor falls back to format_engine_setting_value) and for unknown
 // keys; a trim bound recalls as its actual frame, exactly as the writer emits
 // it. Used by the settings prompt's Tab autocomplete.
+//
+// THE DEVICE CONFIG'S TWO KEYS RECALL HERE TOO, off the same live AppState,
+// even though they left the `.settings` schema 2026-08-27: the settings editor
+// is still their authoring surface — the Settings dropdown's "GUI scale" item
+// prefills through this very call — so a recall that answered nothing for them
+// would have broken the menu item and the Tab completion together. What they
+// recall is byte-identical to what the device config file carries, through that
+// file's own serializer (format_gui_scale_percent, device_config.h): the same
+// "recall and the file can never diverge" rule the `.settings` keys keep, only
+// against a different file.
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

@@ -15,24 +15,32 @@
 //     device-shaped (JACK counts process cycles, AAudio waits on the stream
 //     state machine; each states its choice at its own site).
 //   * PORTABLE (here): the state every backend keeps, the audio-thread RENDER
-//     BODY, and the main-thread predictor / domain / bind / speed logic that
-//     the public methods are thin wrappers over.
+//     BODY, and the main-thread predictor / domain / bind logic that the public
+//     methods are thin wrappers over.
 // A backend file therefore holds its device calls plus one-line forwards; a
 // change to the ENGINE is a change to this file and reaches both platforms.
 //
 // THE OUTPUT RATE IS THE ONE THING THE TWO DEVICES DISAGREE ABOUT NUMERICALLY.
 // `output_rate` is the rate the device asks its frames at, and the render
-// body's per-output-frame source increment is `speed * source_rate /
-// output_rate` — one multiply that is the rate rescaling and the speed
-// rescaling at once, and the fractional read it drives is the resampler. On
-// JACK that is the graph's rate (44100 on a graph pinned to the source, so the
-// ratio is 1.0 and the increment is bare `speed`); on AAudio it is the rate the
-// stream was GRANTED (48000 on the tablet's own speaker, which is 48 k
+// body's per-output-frame source increment is `source_rate / output_rate` — the
+// RATE RESCALING AND NOTHING ELSE, with the fractional read it drives as the
+// resampler. On JACK that is the graph's rate (44100 on a graph pinned to the
+// source, so the ratio is 1.0 and the increment is bare 1); on AAudio it is the
+// rate the stream was GRANTED (48000 on the tablet's own speaker, which is 48 k
 // hardware — 44.1 can never be native there), so the ratio is 44100/48000 and
 // every output frame reads a fractional source position. A rate of 0 is the
 // SUSPENDED device in both: the render body emits silence and holds position,
 // and cursor() holds at the integer cursor rather than extrapolating
 // (playback.h's graph-suspension clause).
+//
+// THERE IS NO SPEED FACTOR ANY MORE (architect 2026-08-27): the increment
+// carried a `speed *` multiplier until that day, authored through the
+// `playback_speed` settings key over a tenths-preset vocabulary. The architect
+// runs 1.0 everywhere in his one live project, so the key retired whole and the
+// factor went with it — the setter, the atomic word it published, and the
+// predictor's speed input. What STAYS is the rate ratio above, which is not the
+// same thing and never was: AAudio may hand the engine a rate the source is not
+// recorded at, and that has to be rescaled whatever the speed.
 
 // Sources are stereo-only (the channels != 2 load refusal), so playback runs
 // exactly two output channels on every backend — two JACK ports, or the two
@@ -69,7 +77,7 @@ struct GuiPlaybackState {
     // Free-running cursor predictor anchor. The main thread extrapolates
     // linearly from (anchor_sample, anchor_ns) using wall-clock time.
     // Re-anchored at events of acceptable visible discontinuity (play(),
-    // playhead jumps, viewport reflows, speed changes, follow-mode on),
+    // playhead jumps, viewport reflows, follow-mode on),
     // and continuously by cursor() while the device is suspended (output_rate
     // reads 0) so the playhead holds and resume extrapolates from the held
     // position. Main-thread-only; never inside the audio callback. Drift
@@ -78,7 +86,6 @@ struct GuiPlaybackState {
     // for typical resync intervals).
     std::atomic<int64_t> anchor_sample{0};
     std::atomic<int64_t> anchor_ns{0};
-    std::atomic<int32_t> speed_x1000{1000};  // speed * 1000, so we can store in int
     std::atomic<bool>    playing{false};
 
     // Audio-thread-only fractional source cursor. Tracking the fractional
@@ -108,8 +115,8 @@ struct GuiPlaybackState {
 void playback_write_silence(float* const* channel_buffers, int channel_count,
                             int64_t stride, int64_t first, int64_t frames);
 
-// THE RENDER BODY. Copy `frame_count` output frames at the current speed and
-// output rate, advancing the cursor. Stops early and fills the remainder with
+// THE RENDER BODY. Copy `frame_count` output frames at the current output rate,
+// advancing the cursor. Stops early and fills the remainder with
 // silence if the cursor would pass end_sample. Writes the final source-cursor
 // back to state.cursor before returning; on natural end, also clears
 // state.playing. Audio thread only; the backend's callback calls this after
@@ -147,7 +154,6 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample);
 
 void   playback_resync_predictor(GuiPlaybackState& state);
-void   playback_set_speed(GuiPlaybackState& state, float speed);
 bool   playback_is_playing(const GuiPlaybackState& state);
 int64_t playback_cursor(GuiPlaybackState& state);
 double playback_cursor_precise(const GuiPlaybackState& state);

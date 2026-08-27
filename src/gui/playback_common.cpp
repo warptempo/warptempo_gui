@@ -10,7 +10,7 @@
 // The render body runs on the backend's audio thread (JACK's process thread,
 // AAudio's data-callback thread). Its contract with the main thread is through
 // a small set of atomics. Most are relaxed scalar reads whose value we want to
-// see "eventually" (cursor, speed). The exception is the `playing` flag:
+// see "eventually" (the cursor). The exception is the `playing` flag:
 // playback_publish_play stores it with release ordering as the last step of its
 // publish block, and the backend's callback loads it with acquire ordering at
 // its gate, so a callback that sees playing == true is guaranteed to see the
@@ -18,9 +18,11 @@
 // is read-only from the audio thread's point of view, and its address lives
 // across the device's entire life.
 //
-// Speed changes are applied at buffer granularity. A set_speed() call
-// between callback invocations is picked up on the next fill; the speed
-// stays constant within one fill, avoiding mid-buffer rate artefacts.
+// (THE SPEED FACTOR AND ITS BUFFER-GRANULARITY NOTE WENT WITH THE
+// `playback_speed` KEY — architect 2026-08-27. The rate ratio that stayed is
+// read at the top of each fill for the same reason the speed was: the device
+// may change it at a reopen, and one value per fill is what keeps a buffer free
+// of mid-block rate artefacts.)
 
 void playback_write_silence(float* const* channel_buffers, int channel_count,
                             int64_t stride, int64_t first, int64_t frames) {
@@ -41,15 +43,13 @@ void playback_render_block(GuiPlaybackState& state,
                            int64_t frame_count,
                            int channel_count) {
     const int    src_channels = state.channels;
-    const double speed        = static_cast<double>(
-                                    state.speed_x1000.load(std::memory_order_relaxed))
-                                / 1000.0;
     const uint32_t output_rate = state.output_rate.load(std::memory_order_relaxed);
-    // The device asks for output-rate frames; fold the output-to-source rate
-    // ratio into the existing fractional source read increment.
+    // The device asks for output-rate frames; the output-to-source rate ratio
+    // IS the fractional source read increment (bare 1.0 whenever the device
+    // runs at the source's own rate, which is every JACK graph pinned to it).
     const double increment = output_rate == 0
         ? 0.0
-        : speed * static_cast<double>(state.source_rate) / static_cast<double>(output_rate);
+        : static_cast<double>(state.source_rate) / static_cast<double>(output_rate);
     const int64_t end         = state.end_sample.load(std::memory_order_relaxed);
     const int64_t total       = state.total_frames;
 
@@ -141,7 +141,6 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     state.anchor_sample.store(0, std::memory_order_relaxed);
     state.anchor_ns.store(0, std::memory_order_relaxed);
     state.end_sample.store(0, std::memory_order_relaxed);
-    state.speed_x1000.store(1000, std::memory_order_relaxed);
     state.playing.store(false, std::memory_order_relaxed);
     state.pending_start.store(-1, std::memory_order_relaxed);
     state.fractional_cursor = 0.0;
@@ -223,19 +222,6 @@ void playback_resync_predictor(GuiPlaybackState& state) {
     state.anchor_ns.store(now_ns, std::memory_order_relaxed);
 }
 
-void playback_set_speed(GuiPlaybackState& state, float speed) {
-    if (speed < 0.10f) speed = 0.10f;
-    if (speed > 1.00f) speed = 1.00f;
-    // x1000 in DOUBLE, rounded with std::nearbyint — the project's rounding
-    // rule. NOT an audio change: the speed vocabulary is the tenths presets
-    // (kPlaybackSpeedPresets, 0.1 .. 1.0), whose x1000 products all lie within
-    // a float ulp of an integer and nowhere near a tie, so the stored word is
-    // identical to what the old float `std::lround(speed * 1000.0f)` produced.
-    const int32_t v = static_cast<int32_t>(
-        std::nearbyint(static_cast<double>(speed) * 1000.0));
-    state.speed_x1000.store(v, std::memory_order_relaxed);
-}
-
 bool playback_is_playing(const GuiPlaybackState& state) {
     // ACQUIRE, not relaxed: this load pairs with the audio thread's release
     // store of playing = false at the natural end (playback_render_block), which
@@ -277,11 +263,12 @@ int64_t playback_cursor(GuiPlaybackState& state) {
         std::chrono::steady_clock::now().time_since_epoch()).count();
     const int64_t elapsed_ns = now_ns - a_ns;
     if (elapsed_ns <= 0) return a_sample + off;
-    const double speed = static_cast<double>(
-        state.speed_x1000.load(std::memory_order_relaxed)) / 1000.0;
+    // The cursor is in SOURCE frames and the device is asked for output frames
+    // at the ratio above, so wall-clock time advances it at the SOURCE rate
+    // whatever rate the device runs.
     const int64_t sr = static_cast<int64_t>(state.source_rate);
     const double advance_samples =
-        static_cast<double>(elapsed_ns) * 1e-9 * speed * static_cast<double>(sr);
+        static_cast<double>(elapsed_ns) * 1e-9 * static_cast<double>(sr);
     int64_t predicted = a_sample + static_cast<int64_t>(advance_samples);
     const int64_t end = state.end_sample.load(std::memory_order_relaxed);
     if (predicted > end) predicted = end;
@@ -314,11 +301,12 @@ double playback_cursor_precise(const GuiPlaybackState& state) {
         std::chrono::steady_clock::now().time_since_epoch()).count();
     const int64_t elapsed_ns = now_ns - a_ns;
     if (elapsed_ns <= 0) return static_cast<double>(a_sample) + off;
-    const double speed = static_cast<double>(
-        state.speed_x1000.load(std::memory_order_relaxed)) / 1000.0;
+    // The cursor is in SOURCE frames and the device is asked for output frames
+    // at the ratio above, so wall-clock time advances it at the SOURCE rate
+    // whatever rate the device runs.
     const int64_t sr = static_cast<int64_t>(state.source_rate);
     const double advance_samples =
-        static_cast<double>(elapsed_ns) * 1e-9 * speed * static_cast<double>(sr);
+        static_cast<double>(elapsed_ns) * 1e-9 * static_cast<double>(sr);
     double predicted = static_cast<double>(a_sample) + advance_samples;
     const double end = static_cast<double>(
         state.end_sample.load(std::memory_order_relaxed));

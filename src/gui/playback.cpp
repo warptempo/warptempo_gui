@@ -14,7 +14,7 @@
 #include <type_traits>
 
 // THE JACK DEVICE HALF of playback.h's contract. The ENGINE — the render body,
-// the predictor, the domain translation, the bind and speed logic — is
+// the predictor, the domain translation and the bind logic — is
 // playback_common.{h,cpp}, shared verbatim with the AAudio backend
 // (playback_aaudio.cpp); the split and its rationale are stated once at the
 // head of playback_common.h. What lives here is the JACK client: opening and
@@ -251,10 +251,6 @@ void GuiPlayback::stop() {
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-}
-
-void GuiPlayback::set_speed(float speed) {
-    playback_set_speed(impl_->state, speed);
 }
 
 bool GuiPlayback::is_playing() const {

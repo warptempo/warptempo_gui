@@ -1,6 +1,7 @@
 #include "settings_io.h"
 
 #include "app_state.h"
+#include "device_config.h"
 #include "frame_format.h"
 #include "value_format.h"
 
@@ -25,11 +26,8 @@ enum class SettingKind {
     ActiveAudioViewChar,
     ActiveMarkersViewChar,
     ActiveTabViewChar,
-    PlaybackSpeedFloat,
     FollowFlag,
-    GuiScalePercent,
     WaveformMagnificationLevel,
-    AudioPlayerPath,
     ProjectsRepoName,
     TrimBegin_A,
     TrimEnd_A,
@@ -73,43 +71,33 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.0" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
-    // percent. 100 is the design baseline (1920x1080, the supported
-    // resolution); 200 is the 4K case; 400 is the fine-panel ceiling; 50 is the
-    // half-size floor. Valid range
-    // [50, 400]. Applied at load and live at the editor commit. It is THE
-    // scale axis since row 7 — every
-    // painted dimension in the product rides it, and the font_size key that
-    // used to own the text half of that job left the schema with the monospace
-    // face (architect approval 2026-08-01).
-    { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
+    // (THREE DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
+    // `playback_speed` retired whole, `gui_scale` and `audio_player` moved to
+    // the per-device config, device_config.h. The parser-side record of all
+    // three, and the consequence for a sidecar still carrying one, is at
+    // kCanonicalSettingsKeys, settings_file.cpp.)
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
     // LEVEL, a count of doublings in the range settings_file.h owns for both
     // products. 0 is the untouched picture and the template's stamp. The
     // gain it stands for multiplies the peaks the painter maps to rows and
     // NOTHING ELSE — no sample, no playback path, no render input — so it never
-    // enters kEngineKeys and never reaches the render fingerprint. Placed
-    // immediately after gui_scale because the two are the same kind of thing:
-    // display preferences with no bearing on the piece.
+    // enters kEngineKeys and never reaches the render fingerprint. It sat
+    // immediately after gui_scale while that key was here, the two being the
+    // same kind of thing to look at; they parted 2026-08-27 on the question
+    // this one answers differently — how loud to draw THIS material is the
+    // piece's business, how big to draw the whole GUI is the panel's.
     // (architect approval 2026-08-26 for the schema addition and for the
     // same-day retune that renamed it; the parser-side record is at
     // kCanonicalSettingsKeys.)
     { "waveform_magnification_level",SettingKind::WaveformMagnificationLevel, EngineField::Title,            "0"        },
-    // GUI-kind launch preference, NOT an engine key: an external audio player
-    // for the `l` render-listen command. Default "audacious" so the first-open
-    // template writes `audio_player=audacious` (read back at load) and a fresh
-    // source launches audacious on `l`; the writer always emits the line, and
-    // an explicit empty value (`audio_player=`) is the deliberate opt-out
-    // meaning "no external player".
-    { "audio_player",                SettingKind::AudioPlayerPath,      EngineField::Title,                   "audacious" },
     // GUI-kind name of the repository holding the projects corpus — the home
     // of the architect's committed working checkpoints, and what the GitHub
-    // recheck reads history out of. Placed BESIDE audio_player because the two
-    // are the same shape and the same concern: free-text environment
-    // preferences with no dedicated gesture, sitting at the tail of the
-    // non-tab GUI band so the per-tab bands stay contiguous below.
+    // recheck reads history out of. A free-text environment preference with no
+    // dedicated gesture, sitting at the tail of the non-tab GUI band so the
+    // per-tab bands stay contiguous below. (It stood beside audio_player, the
+    // one key of the same shape, until that key moved to the device config
+    // 2026-08-27; the corpus is a property of the PROJECT, so this one stayed.)
     // The default is non-empty (unlike url/cover), and it is LITERALLY the same
     // constant both structs that carry the setting are constructed with — this
     // descriptor names kDefaultProjectsRepo (settings_file.h) rather than
@@ -141,8 +129,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 // autocomplete recall (recall_gui_setting_value) reads it back, so the two
 // can never diverge. Every key emits a concrete value — the trim bounds
 // ALWAYS write actual frames now (the `-1` unset spelling died with the unset
-// state, 2026-07-30).
-// audio_player's empty value is the free-text no-player opt-out. Returns
+// state, 2026-07-30). Returns
 // std::nullopt only for EnginePassthrough (engine kinds serialize through
 // format_engine_field_value).
 std::optional<std::string> format_nonengine_value(
@@ -158,27 +145,16 @@ std::optional<std::string> format_nonengine_value(
             return std::string(1, gui.active_markers_view);
         case SettingKind::ActiveTabViewChar:
             return std::string(1, gui.active_tab_view);
-        case SettingKind::PlaybackSpeedFloat:
-            std::snprintf(buf, sizeof(buf), "%.1f", gui.playback_speed);
-            return std::string(buf);
         case SettingKind::FollowFlag:
             return std::string(gui.follow ? "true" : "false");
-        case SettingKind::GuiScalePercent:
-            // Plain digits, matching the canonical integer spelling
-            // validate_gui_setting accepts (parse_authored_frame): the default
-            // round-trips as `100`.
-            std::snprintf(buf, sizeof(buf), "%d", gui.gui_scale);
-            return std::string(buf);
         case SettingKind::WaveformMagnificationLevel:
             // Plain digits, the one canonical spelling validate_gui_setting's
             // range arm accepts (parse_authored_frame): the default
             // round-trips as `0`.
             std::snprintf(buf, sizeof(buf), "%d", gui.waveform_magnification_level);
             return std::string(buf);
-        case SettingKind::AudioPlayerPath:
-            return gui.audio_player;
         case SettingKind::ProjectsRepoName:
-            // Free text, emitted verbatim in UTF-8 exactly as audio_player is.
+            // Free text, emitted verbatim in UTF-8.
             return gui.projects_repo;
         case SettingKind::TrimBegin_A:
             return format_authored_frame(gui.tab_a.trim.begin_frame);
@@ -365,6 +341,14 @@ bool write_settings_file(
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key) {
+    // THE DEVICE CONFIG'S TWO KEYS, ahead of the `.settings` walk because they
+    // are not in it any more (2026-08-27) and the settings editor still edits
+    // them — the whole rationale is at the declaration. Each recalls through
+    // the device config's own serializer, so a recall and that file agree byte
+    // for byte exactly as a `.settings` recall and a Ctrl+S do.
+    if (key == "gui_scale")    return format_gui_scale_percent(app.gui_scale);
+    if (key == "audio_player") return app.audio_player;
+
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {
         if (key == d.key) { desc = &d; break; }
@@ -396,8 +380,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.playback_speed, app.gui_scale, app.waveform_magnification_level,
-        app.audio_player,
+        app.waveform_magnification_level,
         app.projects_repo};
     return format_nonengine_value(desc->kind, gui);
 }

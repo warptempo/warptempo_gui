@@ -1953,8 +1953,8 @@ void render_history_diff_flags(
 
 namespace {
     // Current GUI scale, in PERCENT. Set by set_gui_scale_percent from the two
-    // application points (file load and the settings editor's gui_scale
-    // commit). EVERY painted pixel quantity in the product reads it
+    // application points (gui_main's startup read of the device config, and the
+    // settings editor's gui_scale commit). EVERY painted pixel quantity in the product reads it
     // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
 } // namespace

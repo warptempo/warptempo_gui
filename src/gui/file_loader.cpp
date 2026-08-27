@@ -57,24 +57,21 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
-    app.playback_speed      = sf.playback_speed;
-    // GUI rendering scale percent, applied verbatim; this routine assigns
-    // VALUES ONLY and the side-effect push lives at the caller's tail. Since
-    // row 7 it is the product's one scale axis — every painted dimension rides
-    // gui_scale_factor() (architect approval 2026-08-01 for the font_size
-    // removal this paragraph used to name).
-    app.gui_scale           = sf.gui_scale;
-    // The waveform PICTURE's magnification LEVEL, applied verbatim beside the
-    // scale above. It is consumed by the painter alone — the plate fingerprint
+    // (THREE ASSIGNMENTS LEFT THIS ROUTINE 2026-08-27 with their keys. The
+    // sidecar no longer carries playback_speed, gui_scale or audio_player: the
+    // first retired whole, and the two DEVICE preferences moved to the per-device
+    // config, which gui_main reads ONCE at startup before the window exists
+    // (device_config.h) — a per-source routine is the wrong place to apply a
+    // fact about the panel, and this load must not overwrite what the config
+    // said.)
+    // The waveform PICTURE's magnification LEVEL, applied verbatim. It is
+    // consumed by the painter alone — the plate fingerprint
     // and the overview bar cache both key on it — so this routine's VALUES-ONLY
     // contract holds with no side effect at the caller's tail: the load's own
     // full rebuild repaints both surfaces.
     app.waveform_magnification_level = sf.waveform_magnification_level;
-    // GUI launch preference for the `l` render-listen command, applied
-    // verbatim: a blank value is the deliberate no-player opt-out.
-    app.audio_player        = sf.audio_player;
-    // The projects home for the GitHub recheck, applied verbatim like the
-    // launcher above: the key is required, so a successful load always carries
+    // The projects home for the GitHub recheck, applied verbatim like every
+    // other key here: the key is required, so a successful load always carries
     // the file's own value here and there is no "was it present" question to
     // ask. An empty value is legal and simply disables the feature.
     app.projects_repo       = sf.projects_repo;
@@ -185,17 +182,14 @@ bool GuiFileLoader::load_file(const std::string& path) {
         waveform_area(app).w, audio.total_frames(), audio.sample_rate()));
     clamp_viewport_start(app, audio);
 
-    // Reset playback bookkeeping; the device is brought up after markers
-    // are parsed so the initial playhead has the final trim-begin.
-    app.playback_speed = 1.0f;
-    // Mirror for gui_scale: construction-state default before the .settings
-    // parse below. The schema requires the key, so the parse always assigns it;
-    // this initializer only covers the no-.settings / first-open path. Pushed to
-    // the renderer after the parse, beside set_speed.
-    app.gui_scale      = 100;
-    // Same mirror for the waveform magnification level: construction-state
+    // (NO PLAYBACK-SPEED OR gui_scale RESET HERE ANY MORE — 2026-08-27. The
+    // speed retired with its key, and the scale is the DEVICE's: gui_main has
+    // already read it out of the device config and applied it before this load
+    // begins, so re-seeding it to 100 here would throw away the live value the
+    // whole file exists to carry.)
+    // Mirror for the waveform magnification level: construction-state
     // default before the .settings parse below, which the required key always
-    // overwrites. Unlike gui_scale it needs no push — the painter reads
+    // overwrites. It needs no push at all — the painter reads
     // app.waveform_magnification_level directly.
     app.waveform_magnification_level = 0;
 
@@ -378,8 +372,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // The whole-file strict settings schema (read_settings_file,
     // settings_file.h), shared verbatim with warptempo_cli so a sidecar set
     // is loadable in both products or neither. Any schema violation —
-    // unknown key, duplicate, malformed value, off-preset playback_speed,
-    // missing required engine key — aborts the load with the first error,
+    // unknown key, duplicate, malformed value, missing required
+    // key — aborts the load with the first error,
     // the same shape as a corrupt audio file: the load fails and the
     // process exits, so the user never sees a half-loaded state. Persisted
     // viewport/playhead positions are display scratch, not authored data:
@@ -439,12 +433,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, gui_scale, waveform_magnification_level,
-        // audio_player,
-        // projects_repo),
+        // waveform_magnification_level, projects_repo),
         // VALUES ONLY. The
-        // side effects that consume these (set_speed, set_gui_scale_percent,
-        // on_resize) stay below where they always ran.
+        // one side effect that consumes these (on_resize) stays below where it
+        // always ran.
         apply_settings_engine_and_prefs(app, viewport, sf);
         // Per-tab trim: both bounds are always meaningful in the schema (the
         // `-1` unset spelling died 2026-07-30 and is now a load-fatal malformed
@@ -594,35 +586,23 @@ bool GuiFileLoader::load_file(const std::string& path) {
         std::fprintf(stderr,
             "warptempo_gui: Playback disabled; space bar will no-op.\n");
     }
-    // Push the loaded speed to the engine so playback starts at the
-    // persisted rate rather than the engine's default 1.0.
-    playback.set_speed(app.playback_speed);
-
-    // Push the loaded gui scale to the renderer's file-scope state and
-    // route the geometry consequences through the same rebuild path a
+    // Route the load's geometry consequences through the same rebuild path a
     // window resize performs: on_resize re-clamps zoom/viewport against
-    // the (possibly changed) strip geometry, the next redraw re-measures
+    // the strip geometry, the next redraw re-measures
     // the grid metrics, and the cache fingerprints (area dims keyed off the
     // strip heights, which sum the per-lane metrics — main.cpp's
     // top_lane_height table is the one place that enumerates which metric
-    // sizes which lane) rebuild the waveform/flag surfaces. The full-window invalidation at the end of
-    // this load supplies the damage, mirroring the resize path's
-    // full-surface damage. ONE scale feeds that table since row 7, so the one
-    // push must land before the single rebuild below.
-    set_gui_scale_percent(app.gui_scale);
-    // THE INPUT CORE'S TOUCH SLOP RIDES THE SAME PUSH, and must: the core sits
-    // below the GUI model and never learns the scale, so the GUI resolves the
-    // gate and hands it down (contract and two-call-site inventory at
-    // GuiInputCore::set_touch_slop_px; the other site is the settings editor's
-    // gui_scale commit). THIS IS THE INIT ROAD ON BOTH BACKENDS: the scale
-    // arrives from the sidecar this load just parsed, and this load is the
-    // first thing the startup tick does once the surface is configured. The
-    // window before it — a mapped surface with no source in it — is the ONLY
-    // one in which a delivered finger meets the core's authored default, and
-    // that default is the 100 % value, so nothing there can be wrong in kind.
-    // It follows set_gui_scale_percent because drag_moved_threshold_px() reads
-    // what that call installed.
-    gui.set_touch_slop_px(drag_moved_threshold_px());
+    // sizes which lane) rebuild the waveform/flag surfaces. The full-window
+    // invalidation at the end of this load supplies the damage, mirroring the
+    // resize path's full-surface damage.
+    //
+    // (THE gui_scale PUSH AND THE TOUCH-SLOP PUSH THAT RODE IT LEFT THIS SITE
+    // 2026-08-27. The scale is a DEVICE fact now, read out of the device config
+    // by gui_main before the window is even created, so it is already installed
+    // — and already right on the first painted frame, which it never was while
+    // it arrived with the source — long before this load runs. The INIT road
+    // for both pushes is that one place; the inventory is at
+    // GuiInputCore::set_touch_slop_px.)
     paint_handler.on_resize(app.width, app.height);
 
     const double load_ms =

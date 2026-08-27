@@ -403,9 +403,9 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 // The view zoom / typed live prefs all sit inside the strict
                 // schema's vocabularies by construction (the live zoom rests in
-                // the persisted zoom vocabulary [kMinZoom, kMaxZoom],
-                // playback_speed is a live preset, gui_scale is the live
-                // in-range value), so the file strict-parses under
+                // the persisted zoom vocabulary [kMinZoom, kMaxZoom], the
+                // magnification level in its own bracket), so the file
+                // strict-parses under
                 // read_settings_file — same writer, same canonical key order
                 // as a source save — with no validation added here.
                 const std::filesystem::path st_path =
@@ -417,10 +417,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
                     req.authoring.active_tab,
-                    req.authoring.playback_speed,
-                    req.authoring.gui_scale,
                     req.authoring.waveform_magnification_level,
-                    req.authoring.audio_player,
                     req.authoring.projects_repo};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {

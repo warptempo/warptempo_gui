@@ -20,9 +20,9 @@
 //
 // THE RATE. The stream is opened at AAUDIO_UNSPECIFIED and the GRANTED rate
 // becomes the engine's `output_rate`, so the render body's one increment
-// (`speed * source_rate / output_rate`, the head of playback_common.h) does the
-// 44100 -> whatever-the-device-wants rescaling in the same multiply that does
-// the speed rescaling, through the fractional read the body already performs.
+// (`source_rate / output_rate`, the head of playback_common.h) does the
+// 44100 -> whatever-the-device-wants rescaling through the fractional read the
+// body already performs.
 // The tablet's own speaker grants 48000 and its hardware IS 48 k — 44.1 can
 // never be native there — so this ratio is live on every play, and the
 // architect's standing ruling is that the audition resample is preview-
@@ -399,10 +399,6 @@ void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
     impl_->state.playing.store(false, std::memory_order_seq_cst);
     fence_stopped(*impl_);
-}
-
-void GuiPlayback::set_speed(float speed) {
-    playback_set_speed(impl_->state, speed);
 }
 
 bool GuiPlayback::is_playing() const {

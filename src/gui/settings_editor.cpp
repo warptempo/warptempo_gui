@@ -2,12 +2,14 @@
 
 #include "input_handler.h"
 #include "render_output_naming.h"
+#include "device_config.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
+#include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
 
 #include <cctype>
 #include <cstdio>
@@ -129,8 +131,11 @@ void GuiSettingsEditor::exit_no_commit() {
 // schema runs), red-flashes with the returned reason on any malformed or
 // out-of-vocabulary value, and otherwise applies the typed value through the
 // key's own gesture chokepoint — no parallel state writer, no grammar spelled
-// twice. GUI-kind commits touch no undo history and no dirty state (launch/view
-// state, like audio_player); a same-value commit no-op-deactivates like the
+// twice. ITS ONE ARM AHEAD OF THAT OWNER is `gui_scale`, which left the load
+// schema 2026-08-27 for the per-device config and reaches its grammar owner
+// there instead; the rule is unchanged, only the file the value lands in.
+// GUI-kind commits touch no undo history and no dirty state (launch/view
+// state); a same-value commit no-op-deactivates like the
 // engine no-op gate. Playback is already stopped (the editor is modal), so the
 // appliers need no playback special-casing. Returns false when `key` is not a
 // GUI-kind key, so the caller falls through to the engine-key path.
@@ -157,6 +162,36 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
 
+    // THE DEVICE CONFIG'S SCALE, ahead of the shared schema owner because it is
+    // not in that schema any more (2026-08-27): `gui_scale` is a per-DEVICE
+    // preference living in its own file, and this editor is still its authoring
+    // surface. THE GRAMMAR IS SPELLED ONCE ANYWAY — the canonical integer
+    // spelling through parse_authored_frame and the RANGE through
+    // is_gui_scale_percent (device_config.h), which is the very predicate that
+    // file's reader runs, so "loadable iff it commits" still holds across the
+    // move. (audio_player, the other device key, has no vocabulary at all and
+    // takes its free-text arm in commit() beside projects_repo, exactly as it
+    // did when both were `.settings` keys.)
+    if (key == "gui_scale") {
+        int64_t v64 = 0;
+        if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
+            reject("must be an integer in [50, 400] in canonical spelling");
+            return true;
+        }
+        // History-less, and APPLIED LIVE: the store write is no longer the
+        // whole commit — since
+        // 2026-07-31 the redesigned rows size on this value, so the commit
+        // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
+        // runs the resize-path rebuild), and a `:gui_scale=200` is visible
+        // without a restart. It marks nothing dirty and Ctrl+S does not carry
+        // it: since 2026-08-27 the applier WRITES THE DEVICE CONFIG at the
+        // commit, so the value is persisted the moment it is applied.
+        const int v = static_cast<int>(v64);
+        if (v == app.gui_scale) { unchanged(); return true; }
+        input->apply_gui_scale(v);
+        applied(); return true;
+    }
+
     // The shared grammar/vocabulary owner. std::nullopt: `key` is not a
     // GUI-kind key — fall through to the engine path. An error: malformed or
     // out-of-vocabulary value — red-flash with the returned reason. Otherwise
@@ -169,31 +204,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     const warptempo_settings::GuiSettingValue& gv = **g;
 
     // -- non-tab GUI keys ------------------------------------------------
-    if (key == "playback_speed") {
-        if (gv.f == app.playback_speed) { unchanged(); return true; }
-        // Stores always; silent-inaudible in target view (the ruled behavior,
-        // not a rejection). The one path that writes app.playback_speed.
-        playback_lifecycle.set_playback_speed(gv.f);
-        applied(); return true;
-    }
     if (key == "follow") {
         if (gv.b == app.follow_mode) { unchanged(); return true; }
         playback_lifecycle.set_follow_mode(gv.b);
-        applied(); return true;
-    }
-    if (key == "gui_scale") {
-        // History-less, and APPLIED LIVE: the store write is no longer the
-        // whole commit — since
-        // 2026-07-31 the redesigned rows size on this value, so the commit
-        // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
-        // runs the resize-path rebuild), and a `:gui_scale=200` is visible
-        // without a restart. The value still persists on the next ordinary
-        // Ctrl+S and marks nothing dirty. The [50, 400] integer grammar was
-        // already enforced by validate_gui_setting above; applied() prints the
-        // one stderr line and deactivates.
-        const int v = static_cast<int>(gv.i64);
-        if (v == app.gui_scale) { unchanged(); return true; }
-        input->apply_gui_scale(v);
         applied(); return true;
     }
     if (key == "waveform_magnification_level") {
@@ -444,20 +457,24 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // audio_player is the one GUI-kind key with no dedicated gesture at all —
+    // audio_player is the one preference with no dedicated gesture at all —
     // a free-text launcher path, so the settings editor is its sole authoring
     // surface. Handled here rather than through commit_gui_setting (which
     // routes every OTHER GUI key into its gesture chokepoint). Set it directly
-    // (an empty value means no external player — the writer always emits the
-    // line as `audio_player=`, which re-loads as no-player). A launch
-    // preference: no undo history, no dirty tracking, silently
-    // persisted on Ctrl+S. A same-value commit no-op-deactivates like every
-    // routed GUI-kind key (the empty value included).
-    // projects_repo is audio_player's twin in every respect that matters here
-    // — free text, no gesture, no undo history, no dirty tracking, silently
-    // persisted on Ctrl+S — so it takes the same direct-set arm rather than a
-    // chokepoint route that does not exist for it. An empty value simply never
-    // matches any remote, which disables the GitHub recheck.
+    // (an empty value means no external player — the device config always emits
+    // the line as `audio_player=`, which re-loads as no-player). A launch
+    // preference: no undo history, no dirty tracking. IT IS A DEVICE
+    // PREFERENCE since 2026-08-27, not a sidecar key, so Ctrl+S does not carry
+    // it: THIS COMMIT IS ITS PERSIST — the device config is written right here,
+    // which is what makes the arm the whole act. A same-value commit
+    // no-op-deactivates like every routed GUI-kind key (the empty value
+    // included) and writes nothing.
+    // projects_repo is audio_player's twin in shape — free text, no gesture, no
+    // undo history, no dirty tracking — so it takes the same direct-set arm
+    // rather than a chokepoint route that does not exist for it. It is NOT its
+    // twin in provenance: the projects corpus is a property of the piece, so it
+    // stayed in the `.settings` and is still persisted on Ctrl+S. An empty
+    // value simply never matches any remote, which disables the GitHub recheck.
     // (architect approval 2026-08-03.)
     if (key == "projects_repo") {
         if (value == app.projects_repo) {
@@ -486,6 +503,14 @@ void GuiSettingsEditor::commit() {
             return;
         }
         app.audio_player = value;
+        // THE PERSIST IS THE COMMIT (2026-08-27): the value's home is the
+        // device config, and nothing else writes it — no Ctrl+S, no load. A
+        // failed write is advisory and prints its own line there; the live
+        // value stands for this session either way.
+        DeviceConfig cfg;
+        cfg.gui_scale    = app.gui_scale;
+        cfg.audio_player = app.audio_player;
+        (void)write_device_config(cfg);
         std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
             value.c_str());
         viewport.invalidate_modal_dialog_area();
@@ -651,7 +676,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // playback_speed, follow, gui_scale, waveform_magnification_level,
+    // follow, gui_scale, waveform_magnification_level,
     // audio_player, projects_repo, per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.

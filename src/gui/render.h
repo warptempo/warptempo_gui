@@ -1099,11 +1099,13 @@ inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 //
 // THE PRODUCT'S ONE SCALE AXIS since row 7 (it was the redesign's own, beside a
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
-// [50, 400] (100 = the 1920x1080 design baseline, 200 = the 4K case, 400 = the
-// fine-panel ceiling since 2026-08-26, 50 = the half-size floor since
-// 2026-08-10); the current value lives as file-scope
-// state in render.cpp, pushed by TWO application points (file load and the
-// settings editor's `gui_scale=` commit; the `'` load-in-place left the list
+// [50, 400] — the RANGE's one owner is is_gui_scale_percent (device_config.h),
+// where the bracket and its four landmarks are spelled once. It is a PER-DEVICE
+// preference since 2026-08-27, read out of the device config rather than out of
+// a source's `.settings`; the current value lives as file-scope
+// state in render.cpp, pushed by TWO application points (gui_main's startup,
+// before the window exists, and the settings editor's `gui_scale=` commit; the
+// `'` load-in-place left the list
 // 2026-08-24, the act no longer applying a file's session prefs at all).
 //
 // EVERY PAINTED DIMENSION IN THE TREE RIDES IT: crop-measured 100% values are
