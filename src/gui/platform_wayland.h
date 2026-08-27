@@ -380,6 +380,38 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
+    // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS (2026-08-27) ------------
+    //
+    // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Wayland answers
+    // NO, permanently and by construction: the laptop has a physical keyboard
+    // and the compositor delivers its keys, so a painted one would be a second
+    // road onto the same key path. The GUI's keyboard surface is gated on this
+    // ALONE at every paint and hit site it has (onscreen_keyboard.h), which is
+    // what makes "the laptop build is behaviourally identical" a structural
+    // fact rather than a promise: the surface's rect is empty here, its
+    // painter returns at its head and its press claim never fires.
+    //
+    // It is a PLATFORM question and not a settings one deliberately. A backend
+    // knows whether the machine it runs on has keys; a preference would let
+    // the laptop grow a surface with no reason to exist, and the glass has no
+    // choice to offer.
+    bool wants_onscreen_keyboard() const;
+
+    // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD — the road
+    // the painted on-screen keyboard takes into the core's key path. THE
+    // ARGUMENTS' CONTRACT IS THE CORE'S, at GuiInputCore::key_event
+    // (input_core.h), and is not copied here.
+    //
+    // IT EXISTS ON THIS BACKEND FOR THE SEAM'S SAKE AND IS NEVER CALLED HERE:
+    // the one caller is the keyboard's press router, which asks
+    // wants_onscreen_keyboard() first and gets false on this platform. The
+    // declaration is what lets that caller compile against either backend —
+    // the seam's whole promise — and the forward below is the honest body for
+    // it rather than a stub, since a synthesized key on THIS platform would
+    // mean exactly what it means on the other one.
+    void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
+                        uint32_t codepoint);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`

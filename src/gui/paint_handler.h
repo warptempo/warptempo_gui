@@ -961,4 +961,32 @@ private:
     // button claims and click-to-caret read. The full design record is at the
     // definition; the field's sampled chrome is at render.h's kModal* block.
     void paint_modal_dialog(cairo_t* cr);
+
+    // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full
+    // window width, directly above the bottom row, over the waveform area's
+    // lower part. It paints AFTER every waveform pass and BEFORE the three
+    // floating surfaces, which is where it sits in the picture: the flag editor
+    // is above it in the marker lane, a dialog editor below it in the bottom
+    // row, and the waveform under it is simply not painted where this paints.
+    //
+    // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
+    // layout table, the geometry and the two lamps all live there): this body
+    // returns at its head on the laptop, permanently, because that predicate's
+    // platform term is false there.
+    //
+    // AND THEN ON ITS OWN EXPOSURE, exactly as the four redesigned rows are and
+    // for their reason: this pass shapes up to nine cap runs and draws up to
+    // nine icons per row, which the outer Cairo clip would NOT elide, and a
+    // narrow per-frame damage must not pay for them — the caret blink damages
+    // the editor's box every half second, and the flag editor is the one
+    // keyboard-modal surface that does not stop playback, so the scanner's own
+    // clock-cell damage can run at tick cadence underneath it.
+    //
+    // The as-painted bit refreshes only on a rect that FULLY COVERS the band —
+    // the roster publisher's own rule, and the body carries the two edges that
+    // demand it. It publishes no geometry otherwise: the press router derives
+    // its rects from the same walker this does, so there is no stash for a
+    // skipped run to strand and no reason to run unconditionally the way the
+    // floating surfaces do.
+    void paint_onscreen_keyboard(cairo_t* cr, const GuiRect& exposed);
 };

@@ -320,6 +320,32 @@ void GuiPlatform::adopt_window(bool fire_resize) {
                      "(RGBA_8888) refused (%d)\n", static_cast<int>(geom_rc));
     }
 
+    // PIN THE PANEL TO 90 Hz (architect 2026-08-27). One device, one rate: the
+    // Tab S10 FE's panel is variable-refresh and the system otherwise picks a
+    // rate from what it sees the app doing, which for a program that paints
+    // only on damage reads as "hardly ever" and lands on 60. The playhead and
+    // the waveform under a drag are the surfaces that show the difference.
+    //
+    // FIXED_SOURCE is the honest compatibility: this is not a video player with
+    // frames arriving at a fixed cadence that the panel should divide into — it
+    // is a program that would like this rate — but FIXED_SOURCE is the value
+    // that asks the display to run AT the number rather than at some multiple
+    // it finds convenient, which is what the pin is for.
+    //
+    // THE RESULT IS LOGGED AND NOTHING ELSE: it is a REQUEST, the system is
+    // free to refuse it (a battery saver, a thermal cap, another window), and
+    // a refusal costs frames rather than correctness — so there is no error arm
+    // and no fallback, exactly as the buffers-geometry refusal above has none.
+    // API 30 is minSdk, and this symbol landed in 30, so no availability guard
+    // is owed.
+    {
+        const int32_t rate_rc = ANativeWindow_setFrameRate(
+            window_, 90.0f, ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+        std::fprintf(stderr,
+                     "warptempo_gui: ANativeWindow_setFrameRate(90, "
+                     "FIXED_SOURCE) -> %d\n", static_cast<int>(rate_rc));
+    }
+
     const int w = ANativeWindow_getWidth(window_);
     const int h = ANativeWindow_getHeight(window_);
     if (w <= 0 || h <= 0) {
@@ -624,17 +650,25 @@ void GuiPlatform::paint_now() {
 // ---------------------------------------------------------------------------
 
 int GuiPlatform::detect_refresh_rate_ms() {
-    // 60 Hz, HALF-PERIOD, and stated as an assumption rather than a reading:
-    // the NDK exposes no display refresh rate to a native activity below the
-    // Choreographer's own vsync callbacks, and standing up a Choreographer to
-    // time two frames would buy one number at the cost of a second cadence in
-    // a loop whose whole design is ONE wakeup. 8 ms is at or below half the
-    // period of every panel this runs on (a 90 Hz panel's half-period is
-    // 5.6 ms, a 60 Hz one's 8.3), which is the direction that costs nothing:
-    // the tick only POLLS deadlines and drives the playback scanner, so a tick
-    // faster than half the refresh is wasted work and never a wrong frame,
-    // while a slower one would visibly step the playhead.
-    return 8;
+    // 5 ms (architect 2026-08-27), and stated as a CHOICE rather than a
+    // reading: the NDK exposes no display refresh rate to a native activity
+    // below the Choreographer's own vsync callbacks, and standing up a
+    // Choreographer to time two frames would buy one number at the cost of a
+    // second cadence in a loop whose whole design is ONE wakeup.
+    //
+    // IT IS THE PINNED 90 Hz PANEL'S HALF-PERIOD, ROUNDED DOWN. adopt_window
+    // asks the window for 90 Hz outright (the ruling and the call are there),
+    // so this loop's cadence and the panel's are two halves of one decision
+    // rather than a guess about the other: 90 Hz is an 11.1 ms period and 5 ms
+    // is under half of it. There is ONE DEVICE and it is pinned, which is what
+    // makes a hard-coded number honest here.
+    //
+    // THE DIRECTION THAT COSTS NOTHING is still downward: the tick only POLLS
+    // deadlines (key repeat, the touch window, the audition's rests) and drives
+    // the playback scanner, so a tick faster than half the refresh is wasted
+    // work and never a wrong frame, while a slower one would visibly step the
+    // playhead. It was 8 ms — 60 Hz's half-period — until the pin.
+    return 5;
 }
 
 bool GuiPlatform::arm_playback_timer() {
@@ -1009,6 +1043,14 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // off it. It follows every translated action, not just MOVE: a down and an
     // up each close their own batch too.
     input_.touch_frame();
+}
+
+// THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract at the declarations;
+// the platform-question ruling is at platform_wayland.h's twin). YES,
+// unconditionally: this backend translates no hardware key event, so the
+// painted surface is the only key producer the platform has.
+bool GuiPlatform::wants_onscreen_keyboard() const {
+    return true;
 }
 
 void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,

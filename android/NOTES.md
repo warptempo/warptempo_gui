@@ -401,7 +401,8 @@ whole class of fight for nothing. The `AAsset`s stay open for the process's life
 because `FT_New_Memory_Face` does not copy.
 
 **Run loop: research §3.4 Model 1, no `AChoreographer`.** The first
-`ALooper_pollOnce` of an iteration waits 8 ms and the rest drain with a 0 timeout,
+`ALooper_pollOnce` of an iteration blocks for one tick period (5 ms since
+2026-08-27, 8 ms when this was written) and the rest drain with a 0 timeout,
 so a busy event source can never starve the repaint; `unlockAndPost`'s blocking on
 buffer availability is the real pacer. `ANativeActivity_setWindowFlags(…
 AWINDOW_FLAG_KEEP_SCREEN_ON, 0)` is the whole kiosk stay-awake implementation.
@@ -532,7 +533,8 @@ declaration lines with comments stripped), plus ONE addition — `synthesize_key
 which no consumer calls and which is the road an owned on-screen keyboard would
 take into the core's key path.
 
-- **Run loop**: a periodic `timerfd` at 8 ms is the ONE wakeup, added to the
+- **Run loop**: a periodic `timerfd` at 5 ms (8 ms until 2026-08-27; §10.4
+  carries the pin that moved it) is the ONE wakeup, added to the
   glue's own `ALooper` alongside the four worker eventfds (idents
   `LOOPER_ID_USER`..`+4`) and the glue's cmd/input sources.
   `ALooper_pollOnce(-1)` blocks, then the pass drains everything pending. The
@@ -653,25 +655,50 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
 | Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
-| Backend tick | **8 ms** (60 Hz assumed — see below) |
+| Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
 | WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
 | Full PGHI target render, 7:36 output | **~8.7 s** |
 | Stripped `.so` | 6.7 MB; APK 7.4 MB |
 | DT_NEEDED | `libdl libm libaaudio libandroid liblog libc` — nothing to ship beside the app, no `libc++_shared` |
 
-**The tick is 8 ms and the panel is 90 Hz, which is a real (small) mismatch.**
-The Wayland rule is "half the refresh period", which for 90 Hz would be 5 ms.
-The NDK exposes no refresh-rate query to a native activity below
-`AChoreographer`'s own vsync callbacks, and standing a Choreographer up would
-put a second cadence into a loop whose whole design is ONE wakeup — so the
-backend takes the documented 60 Hz fallback. The cost is that some panel frames
-get one tick and some get two, i.e. up to one tick of jitter on the playhead
-scanner; nothing is missed, since 8 ms is still faster than the 11.1 ms frame.
-The measured cadence above says the paint keeps up regardless: the app presents
-at every vsync during a pan, paced by `ANativeWindow_unlockAndPost` blocking on
-buffer availability rather than by our timer. **A fixed 5 ms tick, or a real
-AChoreographer query, is the open refinement.**
+**The tick is 5 ms and the panel is pinned to 90 Hz (architect 2026-08-27),
+which closes the mismatch this section used to record.** The Wayland rule is
+"half the refresh period", which at 90 Hz is 5 ms; the backend now takes that
+number outright instead of the 60 Hz fallback's 8, and `adopt_window` asks the
+window for 90 Hz outright:
+
+```c
+ANativeWindow_setFrameRate(window, 90.0f,
+                           ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+```
+
+The two halves are one decision — the loop's cadence is the pinned panel's
+half-period — which is what makes a hard-coded number honest here: **there is
+one device and it is pinned.** `FIXED_SOURCE` is the compatibility that asks
+the display to run AT the rate rather than at a multiple it finds convenient;
+the panel is variable-refresh, and a program that paints only on damage
+otherwise reads to the system as "hardly ever" and lands on 60. The call's
+return is LOGGED and nothing else: it is a request, the system may refuse it
+(battery saver, thermal cap, another window), and a refusal costs frames rather
+than correctness — so there is no error arm and no fallback, exactly as the
+buffers-geometry refusal beside it has none. `ANativeWindow_setFrameRate` landed
+in API 30, which is minSdk, so no `__builtin_available` guard is owed — but it
+lives in **libnativewindow**, not in libandroid, so the root `CMakeLists.txt`'s
+Android link list grew `nativewindow` beside `android` (most of the
+`ANativeWindow_*` surface this backend uses is re-exported by libandroid, which
+is why the line was not needed until now, and `--no-undefined` made the absence
+a build failure rather than a launch-time surprise).
+
+**Observed:** `ANativeWindow_setFrameRate(90, FIXED_SOURCE) -> 0` in the log on
+every window adoption (three per launch: init's, plus the two the glue's
+INIT_WINDOW / CONFIG_CHANGED pair produce), and `window 2304x1440, tick 5 ms`.
+The panel-side effect — whether SurfaceFlinger actually holds the mode at 90 —
+is NOT verified: the tablet's book cover was shut for this session's whole
+drive, which dozes the display, so `dumpsys SurfaceFlinger` reports the doze
+mode and no screenshot is obtainable. The measured pan cadence in the table
+above (median 11.09 ms) was already 90 fps before the pin, so the pin's value is
+in what it prevents rather than in a number this session could re-measure.
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
 `verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a
@@ -1065,3 +1092,144 @@ platform's own defaults.
   and it is the price of the row being reachable at all.
 - **No `System.loadLibrary`, no JNI, no callbacks** — see 12.2. The class is
   deliberately the smallest thing that solves the input problem.
+
+## 13. The on-screen keyboard (M5, 2026-08-27)
+
+The glass had no way to type. This is the surface that gives it one, and it is
+PRODUCT code in `src/gui/` rather than anything Android-specific: the only
+platform-shaped parts are the two seam members that gate it.
+
+### 13.1 The shape
+
+A four-row Maliit-shaped keyboard (reference: Plasma Mobile's own, Breeze Dark),
+**full window width, directly above the bottom row**, painting over the waveform
+area's lower part. It stands while **any of the seven text editors** stands and
+leaves with it. It replaces nothing — the flag editor still paints in the marker
+lane, a dialog editor still paints in the bottom row with its own buttons — and
+there is **no second text buffer anywhere**: the live editor's own
+`text_editor::State` is the only text state in the product, exactly as before.
+
+| Row | Letters | Symbols (`&123`) |
+|---|---|---|
+| 1 | `q w e r t y u i o p` | `1 2 3 4 5 6 7 8 9 0` |
+| 2 | `a s d f g h j k l` | `. / + - * : # \| '` |
+| 3 | `SHIFT` `z x c v b n m` `BACKSPACE` | *(blank)* `, ; = [ ] _ ␣` `BACKSPACE` |
+| 4 | `&123` `,` `SPACE` `.` `ESC` `ENTER` | *(the same row — one array, shared)* |
+
+Widths are authored in QUARTERS of a standard key and a row is 40 of them; a row
+whose spans sum to less is centred (row 2's nine letters, the reference's own
+half-key indent). The key PITCH is therefore the window's — ten keys across 2304
+px is 230 px each — and only the row height (40), the gaps (4) and the outer pad
+(4) are authored at 100% and scaled on `gui_scale`. At the tablet's 225% that is
+a 407 px surface of 90 px keys.
+
+`SHIFT` is **one-shot**: tap it, the next letter is a capital, then it clears; a
+second tap while armed clears it; there is no caps lock. `&123` toggles the
+symbol layer and reads `abc` while it stands, and leaving the letter page clears
+a pending capital (the shift lamp does not paint on the symbol page, and a state
+nothing shows is a state that surprises). The two lamps are session-scoped: they
+are keyed to the live editor's `text_editor::State::session`, so a close, a
+reopen or a retarget clears them by comparison rather than by a list of close
+sites. No globe, no language label, no hide key, no long-press alternates, no
+chords, no Left/Right keys.
+
+### 13.2 Keys are HOTKEYS and act at the PRESS
+
+A key's press calls `GuiPlatform::synthesize_key(keysym, stable_code, true,
+codepoint)` and its lift the matching `false`, so the **ordinary key path runs
+unchanged** from there: `GuiInputHandler::on_key`, the keyboard-modal gate,
+`route_modal_editor_key`, each editor's own vocabulary and byte cap and
+red-flash, the undo coalescing, and the core's repeat synthesis for a held key.
+Nothing about the editors was mirrored, and a new editor gets a working keyboard
+by existing.
+
+- `stable_code` is the key's PLACE in the layout table (layer, row, column) —
+  not the keysym, because two layers put different characters on one slot and
+  one character sits in two slots.
+- The CASE travels in the `codepoint` alone; the keysym is the lowercase base,
+  which is what `GuiKey` (ASCII case-folded) already is. No modifier bit is set
+  for a capital — `text_editor::classify_key`'s `PrintableKey` arm reads the
+  codepoint, and this backend sets no modifiers at all.
+- Every printable ASCII character IS its own X11 keysym, so the punctuation this
+  keyboard types needed no new names in `GuiKeys`.
+- A held key repeats because the core arms on the press: `pointer_button` clears
+  `repeat_key_` BEFORE dispatching the press, so the arm made inside the press
+  body survives, and the Android backend's `key_codepoints_` map — which
+  `synthesize_key` fills — is what re-answers the codepoint probe per repeat.
+  That map has had exactly this consumer in mind since M3b; this is the first
+  one.
+- The editors' own **buttons** (a dialog's OK / Cancel) are unchanged chrome and
+  still act at the LIFT. That is the modality ruling's split read straight.
+
+### 13.3 The two seam members
+
+`wants_onscreen_keyboard()` and `synthesize_key()` are now on BOTH backends with
+identical declarations, so `platform_android.h`'s public surface has **no
+additions to the seam at all** for the first time (`synthesize_key` had stood
+there alone as the one addition; the keyboard's press router is an ordinary
+consumer, so it had to be callable against either backend). Wayland answers
+`false` and forwards; Android answers `true`.
+
+That predicate is the laptop's whole guarantee: `onscreen_keyboard::stands()` is
+`gui.wants_onscreen_keyboard() && app.text_editor_session() != 0`, and **every**
+paint and hit site asks it and nothing else — the painter returns at its head,
+the press claim returns false, the pan-zone yield returns false, and the tick
+comparator sees no drift. On the laptop the feature costs one bool per frame and
+one per tick, and changes no pixel and no route.
+
+### 13.4 Hit, paint and damage
+
+- **Hit**: the press claim sits ABOVE EVERY GATE in `on_button_press` — above
+  the dialog editors' VEIL in particular, which would otherwise swallow the
+  press that types into the very editor raising it. It claims the whole rect: a
+  finger in a gap, in the margin or on the blank slot **consumes** rather than
+  falling through to the waveform's pan underneath. The release mirrors it at the
+  head of `on_button_release`, guarded on the held index alone, and fires even
+  when the press's own act (Enter, Esc) closed the editor under it — the key-down
+  was delivered, so its pair is owed.
+- **The pan zone yields under the surface** (`touch_point_in_pan_zone`), for the
+  same reason the shown trim overlay yields: the whole waveform is a pan zone, so
+  without this a finger on a key would become the phone-model pan and never
+  deliver a press — every key would need a hold beat to type one character.
+- **Paint**: `GuiPaintHandler::paint_onscreen_keyboard`, between the waveform
+  passes and the three floating surfaces. Colours are three EXISTING constants
+  (architect ruling, measured off his own Maliit screenshot): key face
+  `kRedesignRowGround`, the ground around and between keys
+  `kRedesignContentGround`, caps and glyphs `kRedesignLabel`. Pressed and armed
+  reuse the icon row's own CLICK and SELECTED faces verbatim.
+- **Damage**: per key on press and lift; the show and hide are the tick
+  comparator's (`main.cpp`, the roster faces' own mechanism) — the editors' open
+  and close damage the marker lane or the bottom row, never this band, so the
+  live answer is compared against an as-painted bit and a drift pays a full
+  waveform-area repaint plus the surface's own rect.
+
+### 13.5 The five new icons
+
+`keyboard-caps-disabled` / `keyboard-caps-enabled` (SHIFT's two faces off the one
+lamp bit — the stateful-glyph shape Save and Render already wear),
+`keyboard-enter`, `keyboard-spacebar` and `edit-clear-locationbar-rtl`
+(BACKSPACE — the left-pointing tag with an X, which is what Plasma's own virtual
+keyboard puts there). ESC wears the already-committed `dialog-cancel`. All five
+are unmodified breeze-dark files, committed under `assets/icons/breeze/` with
+their `d` strings transcribed verbatim (checked byte-for-byte against the
+assets), and every one is a single `<path>` the interpreter's oldest arms already
+cover — no departures, no new grammar. `kIconCount` 48 → 53.
+
+### 13.6 What is NOT verified
+
+**Nothing of this was driven on the device.** The tablet's book cover was shut
+for the whole session (`dumpsys power`: `mIsCoverClosed: true`,
+`mLastSleepReason=cover_close`), which dozes the display and disables the touch
+panel; `KEYCODE_WAKEUP`, `KEYCODE_POWER` and `svc power stayon` all leave
+`mWakefulness=Dozing`, and `adb` is not root on a production build, so the hall
+sensor cannot be overridden. Every screenshot comes back pure black.
+
+What WAS verified: the APK builds and installs, the process launches and runs
+(marker parse, AAudio open, target render all logged as before), and the
+frame-rate pin returns 0. The keyboard's GEOMETRY and its GLYPHS were verified
+off-device with a scratchpad harness that links the real
+`onscreen_keyboard.h` walk and the real `icons.cpp` against the real
+`main.cpp` lane stack at 2304x1440 / 225%: 34 keys per layer, rows aligned and
+centred as designed, surface 2304x407 seated at y=927 flush on the bottom row at
+1334, and all five new glyphs render. **The device drive — open the flag editor,
+type, commit, hold backspace — is owed.**

@@ -4491,6 +4491,63 @@ struct AppState {
         return prompt.active ? prompt.session : dialog_editor_session();
     }
 
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editors, 0 when none
+    // stands — the accessor above widened by the two top-strip kinds it names
+    // as deliberate non-members (FlagPayload and MeasureText). It exists for
+    // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
+    // with the edit they were armed in: keying them to this id turns "reset
+    // when the editor closes" into a comparison rather than a list of close
+    // sites to keep — every `text_editor::enter` mints a fresh session, so a
+    // close, a reopen and a RETARGET of the live flag editor all read as a
+    // different number here.
+    // At most one editor stands at a time (every opener refuses or ends what
+    // was standing), so the fall-through order is free exactly as it is above.
+    uint64_t text_editor_session() const {
+        const uint64_t dialog = dialog_editor_session();
+        if (dialog != 0) return dialog;
+        if (text_editor::is_active(top_flag_editor))
+            return top_flag_editor.session;
+        return 0;
+    }
+
+    // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
+    //
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the seven
+    // editors does, on a backend that asks for one, and it holds NOTHING that
+    // is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
+    // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
+    // is the text_editor_session() they were set in, and the one owner
+    // onscreen_keyboard::lamps (which every reader goes through, painter and
+    // press router alike) hands back a cleared pair whenever the live session
+    // has moved. So the reset owns no call sites and cannot be forgotten by an
+    // editor route added later.
+    //
+    // `pressed_key` is the layout index the finger is holding, -1 for none —
+    // the CLICK FACE and the release's own subject, since a key acts at the
+    // PRESS and its lift owes only the matching key-up. It is cleared by the
+    // session comparison beside the lamps: a press whose editor closed under
+    // it (Enter, Esc) has nothing left to release into.
+    //
+    // `painted_standing` is the as-painted bit the tick comparator reads
+    // (main.cpp), the roster faces' own mechanism: the surface appears and
+    // disappears with facts that damage no pixel of its own band, so the drift
+    // between this and the live answer is what pays for the show/hide repaint.
+    // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
+    // that synthesizes nothing (the layer toggle, the shift arm, a blank
+    // slot). It is stored rather than re-derived from `pressed_key` because
+    // the press's own act may have moved the layer under the index — the layer
+    // toggle is exactly that key — and a release must never resolve through a
+    // table that has changed since the finger landed.
+    struct OnscreenKeyboard {
+        uint64_t lamp_session     = 0;
+        bool     shift_armed      = false;
+        bool     symbol_layer     = false;
+        int      pressed_key      = -1;
+        GuiKey   pressed_keysym   = 0;
+        bool     painted_standing = false;
+    };
+    OnscreenKeyboard onscreen_keyboard;
+
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
     // pointer-derived face state in the roster's own model (the hover walk
     // writes it, the painter reads it, a change damages the box). Cleared by

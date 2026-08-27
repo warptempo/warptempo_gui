@@ -2,6 +2,7 @@
 
 #include "gui_font.h"
 #include "icons.h"
+#include "onscreen_keyboard.h"
 #include "render.h"
 #include "text_editor.h"
 #include "text_shape.h"
@@ -5992,6 +5993,182 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+// -- GuiPaintHandler::paint_onscreen_keyboard ----------------------------
+//
+// THE GLASS'S KEY SURFACE (2026-08-27). Contract, gate and paint order are at
+// the declaration; the layout table, the geometry walk and the two lamps are at
+// onscreen_keyboard.h, which this body reads and never restates.
+//
+// THE PALETTE IS THREE EXISTING CONSTANTS AND NOTHING ELSE (architect ruling
+// 2026-08-27, MEASURED off his own Maliit screenshot — means over the key
+// faces, the ground between and around them, and the caps — then matched to
+// the constants already in render.h's palette block rather than sampled into
+// new ones):
+//   the KEY FACE          -> kRedesignRowGround     #292C30 (measured 45,48,52)
+//   the GROUND around and
+//     between the keys    -> kRedesignContentGround #202326 (measured 30,34,37)
+//   the CAPS and the
+//     function GLYPHS     -> kRedesignLabel         #FCFCFC
+// (The measured pairs carry the source JPEG's own drift; the constants are the
+// values, per the palette block's hard-coded-whole rule.) The ground is also
+// the BOTTOM ROW'S, so the keyboard and the row it sits on read as one block,
+// and the 1px top seam is that row's own kRedesignTabLine.
+//
+// THE OTHER TWO FACES ARE THE ICON ROW'S, BORROWED WHOLE — nothing here is
+// keyboard-specific (the architect's ruling: reuse what the chrome button
+// painter already does for a pressed button and for a lit lamp):
+//   REST      — the face colour alone, no frame, which is the icon row's own
+//               resting shape said with a fill (a key cap is always there,
+//               where a toolbar icon is not).
+//   ARMED     — kRedesignSelectedFill under a 1px kRedesignLine frame, the
+//               roster's SELECTED face verbatim. Worn by SHIFT while it is
+//               armed and by the LAYER TOGGLE while the symbol layer stands:
+//               the two lamps, one face, the icon row's own lamp.
+//   PRESSED   — the interior at kRedesignClickMix toward kRedesignAccent under
+//               an accent frame, the roster's CLICK face verbatim — the same
+//               expression over the same ground — AND IT WINS OVER ARMED while
+//               the finger is down, which is the roster's own rule for the
+//               same collision (a press is transient and should feel the same
+//               wherever it lands).
+// Every key is drawn with redesign_face_box, the one path every button-like
+// surface in the product is filled and framed on.
+// NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
+// pointer, so a hover has no producer and a hint has nowhere to hang.
+//
+// STATE-AXIS: every one of the three faces is decided ONCE per key, from the
+// two lamp bits and the one held index this body reads at its head, and the
+// glyph and the cap come from the layout table's own derivations (shifted_char,
+// icon_of). There is no second list of what a key looks like anywhere.
+void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
+                                              const GuiRect& exposed) {
+    // THE AS-PAINTED BIT, AND IT DESCRIBES PIXELS — the roster publisher's own
+    // rule (publish_button_face, above), taken for its own reason. The tick
+    // comparator (main.cpp) pays this surface's show and hide off the drift
+    // between the live answer and this bit, and on_redraw runs ONCE PER DAMAGE
+    // RECT under a clip to exactly that rect, so a bit stamped from a frame
+    // whose rect never touched the band would be a claim about pixels this pass
+    // did not write. Both edges break on that:
+    //   * the SHOW — an editor opens, its own route damages the marker lane or
+    //     the bottom row and nothing else, and a bit stamped true there would
+    //     let the comparator see agreement while the band still shows waveform;
+    //   * the HIDE — the editor closes, some unrelated narrow damage paints
+    //     first, and a bit stamped false there would leave the keyboard's
+    //     pixels standing with nothing left to erase them.
+    // So it refreshes only on a rect that FULLY COVERS the band, which is the
+    // frame the comparator's own damage produces; every other frame leaves it
+    // alone and the drift survives to be repaired.
+    const bool    standing = onscreen_keyboard::stands(app, gui);
+    const GuiRect surf     = onscreen_keyboard::surface_rect(app);
+    const bool    covers_band =
+        surf.w > 0 && surf.h > 0 &&
+        exposed.x <= surf.x && exposed.y <= surf.y &&
+        exposed.x + exposed.w >= surf.x + surf.w &&
+        exposed.y + exposed.h >= surf.y + surf.h;
+    if (covers_band) app.onscreen_keyboard.painted_standing = standing;
+
+    if (!standing) return;
+    if (surf.w <= 0 || surf.h <= 0) return;
+    // A PARTIAL exposure still paints, and correctly — the clip bounds it. Only
+    // the BIT above waits for a full one.
+    if (!rects_intersect(exposed, surf)) return;
+
+    // The lamps, reconciled against the live editor session by their one owner
+    // (the contract is there): read ONCE here, so every key below is painted
+    // against one answer.
+    const AppState::OnscreenKeyboard& kb = onscreen_keyboard::sync(app);
+    const bool  symbol_layer = kb.symbol_layer;
+    const bool  shift_armed  = kb.shift_armed;
+    const int   held         = kb.pressed_key;
+
+    cairo_save(cr);
+
+    // The lane's chrome: the 1px seam across the whole width, then the ground.
+    const int border = onscreen_keyboard::border_px();
+    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                         kRedesignTabLine.b);
+    cairo_rectangle(cr, surf.x, surf.y, surf.w, border);
+    cairo_fill(cr);
+    cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                         kRedesignContentGround.g,
+                         kRedesignContentGround.b);
+    cairo_rectangle(cr, surf.x, surf.y + border, surf.w, surf.h - border);
+    cairo_fill(cr);
+
+    // THE ONE SANS FACE at the product's ONE text size, selected through the
+    // one face owner and shaped through the one chokepoint (text_shape.h) like
+    // every other label in the product. A cap is one or four glyphs, which are
+    // the cheapest runs there are.
+    gui_select_font_face(cr, GuiFontFamily::Sans);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double radius = std::nearbyint(onscreen_keyboard::kCornerPx *
+                                         gui_scale_factor());
+    // The icon box inside a key: the roster's own 22-in-32 proportion carried
+    // onto a box that is not 32 tall, so the glyph grows with the key instead
+    // of sitting lost in the middle of it.
+    const int glyph_px = static_cast<int>(std::nearbyint(
+        onscreen_keyboard::key_height_px() * (kIconGlyphPx / kIconBtnPx)));
+
+    onscreen_keyboard::for_each_key(
+        app, symbol_layer,
+        [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
+            const GuiRect& r) {
+            using Role = onscreen_keyboard::Role;
+            // A blank slot is ground and nothing else — the symbol layer's
+            // answer to "what does shift do here" (the table states it).
+            if (k.role == Role::Blank) return;
+
+            const bool pressed = (static_cast<int>(index) == held);
+            const bool armed   =
+                (k.role == Role::Shift       && shift_armed) ||
+                (k.role == Role::LayerToggle && symbol_layer);
+
+            // The three faces (the block above): the fill is always painted,
+            // the frame only where a face has one — a resting key has none,
+            // exactly as a resting icon-row button has none.
+            const GuiColor fill =
+                pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
+                                    kRedesignClickMix)
+                        : (armed ? kRedesignSelectedFill : kRedesignRowGround);
+            const GuiColor line = pressed ? kRedesignAccent : kRedesignLine;
+            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius, &fill,
+                              (pressed || armed) ? &line : nullptr);
+
+            if (onscreen_keyboard::wears_icon(k)) {
+                icons::draw(cr, onscreen_keyboard::icon_of(k, shift_armed),
+                            static_cast<double>(r.x + (r.w - glyph_px) / 2),
+                            static_cast<double>(r.y + (r.h - glyph_px) / 2),
+                            static_cast<double>(glyph_px));
+                return;
+            }
+
+            // THE CAP: the layer toggle's word, or the character key's own
+            // letter through the ONE case derivation (shifted_char) — never a
+            // second uppercase table.
+            char one[2] = {'\0', '\0'};
+            const char* cap = nullptr;
+            if (k.role == Role::LayerToggle) {
+                cap = onscreen_keyboard::layer_toggle_cap(symbol_layer);
+            } else {
+                one[0] = onscreen_keyboard::shifted_char(k.ch, shift_armed);
+                cap    = one;
+            }
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, cap);
+            const double cap_x = std::nearbyint(
+                r.x + (r.w - run.width_px) * 0.5);
+            const double baseline = redesign_baseline(
+                font, static_cast<double>(r.y), static_cast<double>(r.h));
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(cr, run, cap_x, baseline);
+        });
+
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -6258,7 +6435,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      reasoning is at that block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
-        //  12. the flag editor's box, then the dropdown — the floating
+        //  12. the ON-SCREEN KEYBOARD (paint_onscreen_keyboard, 2026-08-27 —
+        //      outside this branch), whose opaque ground covers the waveform
+        //      area's lower part and so follows every waveform pass above.
+        //  13. the flag editor's box, then the dropdown — the floating
         //      surfaces, after every pass above and outside this branch — then
         //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
         //      row the prompts and the five modal editors paint in since
@@ -6377,6 +6557,23 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
     }
+
+    // THE ON-SCREEN KEYBOARD (2026-08-27), between the waveform passes above
+    // and the three floating surfaces below — which is exactly where it sits in
+    // the picture. It OVERLAYS the waveform area's lower part with its own
+    // opaque ground, so it must follow every pass that paints there (the plate,
+    // the region ink, the stems, the scanner, the anchor) and precede the flag
+    // editor's box, the dropdown and the modal, none of which it overlaps
+    // anyway. It is OUTSIDE the loading / total>0 branch above for the flag
+    // editor's own reason: an editor can stand with no audio loaded, and the
+    // keyboard must stand with it.
+    //
+    // NOT exposure-gated: the body's own gate is the surface's standing
+    // predicate, and it must run on EVERY frame class to write the as-painted
+    // bit the tick comparator reads (the contract is at the declaration). With
+    // the surface down that is one platform query and one integer compare; with
+    // it up the outer Cairo clip makes a narrow damage cheap.
+    paint_onscreen_keyboard(cr, GuiRect{x, y, w, h});
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because both hang below the top strip and overlap whatever

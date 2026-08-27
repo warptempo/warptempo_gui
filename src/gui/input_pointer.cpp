@@ -3,6 +3,7 @@
 #include "gui_display_context.h"
 #include "warp_frame_map_view.h"
 #include "marker_drag.h"
+#include "onscreen_keyboard.h"
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
@@ -2783,6 +2784,18 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // overlay no longer sweeps a new window — a hold started outside it, or a
     // tap to hide the overlay first, both still do.
     if (region_manipulation_hit(x, y) != RegionHit::None) return false;
+    // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27), for the overlay
+    // clause's reason exactly: the keyboard paints over the waveform's lower
+    // part, the whole waveform is the pan zone, and a finger landing on a key
+    // inside a pan zone would become the phone-model pan and NEVER DELIVER A
+    // PRESS — so every key would need a hold beat to type one character.
+    // Answering false lets the finger resolve to the pointer translation and
+    // reach the keyboard's own press claim, which is where a key acts.
+    // ONE SPELLING OF "ON THE KEYBOARD": this asks the same owner the press
+    // claim asks, so the two cannot disagree.
+    if (onscreen_keyboard::stands(app, gui) &&
+        rect_contains(onscreen_keyboard::surface_rect(app), x, y))
+        return false;
     return point_on_nav_surface(app, audio, x, y);
 }
 
@@ -3482,6 +3495,153 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     set_trim_bound_at_click(press.is_begin, press.press_x);
 }
 
+// -- THE ON-SCREEN KEYBOARD'S TWO EDGES (2026-08-27) -------------------------
+//
+// Contracts, the placement rule and the act-at-the-press ruling are at the
+// declarations (input_handler.h); the layout table, the geometry walk and the
+// two lamps are at onscreen_keyboard.h. What is here is the press's own
+// dispatch and the release's owed key-up.
+
+// THERE IS NO CURSOR ZONE FOR THIS SURFACE, and that is a decision rather than
+// an omission (pointer-hit-testing.md's zone map is derived from the press
+// routers, so a new press zone would ordinarily earn one). The map's whole job
+// is that THE CURSOR PROMISES THE GESTURE — and this surface exists only where
+// wants_onscreen_keyboard() is true, which is only on glass, where there is no
+// cursor to promise with; on the one platform that HAS a cursor the surface can
+// never stand, so an arm there would answer for a rect that is permanently empty. An
+// arm with no producer is residue, so there is none: `pointer_cursor_kind` is
+// untouched by this feature.
+bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
+                                                    int x, int y) {
+    if (!onscreen_keyboard::stands(app, gui)) return false;
+    const GuiRect surf = onscreen_keyboard::surface_rect(app);
+    if (!rect_contains(surf, x, y)) return false;
+
+    // CONSUMED FROM HERE, whatever it lands on and whichever button it was —
+    // the surface is opaque to the pointer, and a non-left press has no meaning
+    // on a key (the right button is unbound product-wide).
+    if (button != GuiMouseButton::Left) return true;
+
+    // The lamps, through their one owner, read ONCE: the layer decides which
+    // key is under the finger and the shift arm decides what that key types, so
+    // both must be the same answer the last paint used.
+    const AppState::OnscreenKeyboard& kb = onscreen_keyboard::sync(app);
+    const bool symbol_layer = kb.symbol_layer;
+    const bool shift_armed  = kb.shift_armed;
+
+    onscreen_keyboard::KeyDef def{};
+    const int hit = onscreen_keyboard::key_at(app, symbol_layer, x, y, def);
+    if (hit < 0) return true;   // a gap, the margin: consumed, no key
+
+    using Role = onscreen_keyboard::Role;
+    if (def.role == Role::Blank) return true;
+
+    // THE TWO LAMP KEYS ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still
+    // take the held index (so the finger sees the click face) with a keysym of
+    // 0, which is what the release reads as "this key owed no key-up".
+    if (def.role == Role::Shift || def.role == Role::LayerToggle) {
+        app.onscreen_keyboard.pressed_key    = hit;
+        app.onscreen_keyboard.pressed_keysym = 0;
+        if (def.role == Role::Shift) {
+            // ONE-SHOT, and a second tap while armed clears it — a toggle, not
+            // a latch (there is no caps lock).
+            app.onscreen_keyboard.shift_armed = !shift_armed;
+        } else {
+            app.onscreen_keyboard.symbol_layer = !symbol_layer;
+            // LEAVING THE LETTER PAGE ABANDONS A PENDING CAPITAL. The shift
+            // lamp does not paint on the symbol page (its slot is blank there),
+            // and an armed state nothing shows is a state that surprises: the
+            // arm would come back alive under the next letter typed after the
+            // round trip. Clearing it is the honest half of "the lamp is the
+            // state".
+            app.onscreen_keyboard.shift_armed = false;
+        }
+        // BOTH KEYS REPAINT THE WHOLE SURFACE: shift moves every letter cap's
+        // case and the layer moves every key on three rows.
+        viewport.invalidate_rect(surf);
+        return true;
+    }
+
+    // AN ORDINARY KEY. Resolve what it types from the layout table's own two
+    // derivations — never a second list — and hand it to the platform's key
+    // door with the key's PLACE as the core's stable per-key identity.
+    GuiKey   keysym    = 0;
+    uint32_t codepoint = 0;
+    switch (def.role) {
+        case Role::Character: {
+            const char typed = onscreen_keyboard::shifted_char(def.ch,
+                                                               shift_armed);
+            // The keysym is the LOWERCASE base (GuiKey is ASCII case-folded);
+            // the CASE travels in the codepoint, which is what the editors'
+            // printable classification reads. The reasoning is at keysym_of.
+            keysym    = onscreen_keyboard::keysym_of(def.ch);
+            codepoint = static_cast<uint32_t>(
+                static_cast<unsigned char>(typed));
+            break;
+        }
+        case Role::Backspace: keysym = GuiKeys::BackSpace; break;
+        case Role::Enter:     keysym = GuiKeys::Return;    break;
+        case Role::Escape:    keysym = GuiKeys::Escape;    break;
+        case Role::Shift:
+        case Role::LayerToggle:
+        case Role::Blank:     return true;   // handled above; unreachable
+    }
+
+    app.onscreen_keyboard.pressed_key    = hit;
+    app.onscreen_keyboard.pressed_keysym = keysym;
+    // The click face, before the act: the act can close the editor and take the
+    // surface with it, and a damage queued after that would name a rect nothing
+    // paints. One key's rect — the discrete-command rule applies to the SHOW
+    // and HIDE of the whole surface (the tick comparator's, main.cpp), not to a
+    // key changing face.
+    viewport.invalidate_rect(
+        onscreen_keyboard::key_rect(app, symbol_layer, hit));
+
+    // A SHIFT ARM IS SPENT BY THE KEY IT CAPITALIZED, and the whole surface
+    // repaints because every other letter cap drops back to lowercase with it.
+    // Done BEFORE the act for the reason the damage above is: after Enter there
+    // may be no surface left to talk about.
+    if (shift_armed) {
+        app.onscreen_keyboard.shift_armed = false;
+        viewport.invalidate_rect(surf);
+    }
+
+    // THE ACT, at the press. Everything downstream is the ordinary key path.
+    gui.synthesize_key(keysym, static_cast<uint32_t>(hit), /*pressed=*/true,
+                       codepoint);
+    return true;
+}
+
+bool GuiInputHandler::finish_onscreen_keyboard_release() {
+    const int held = app.onscreen_keyboard.pressed_key;
+    if (held < 0) return false;
+    const GuiKey keysym = app.onscreen_keyboard.pressed_keysym;
+    app.onscreen_keyboard.pressed_key    = -1;
+    app.onscreen_keyboard.pressed_keysym = 0;
+
+    // Un-press the face, on the layer the INDEX names rather than the live one:
+    // the layer toggle's own press moved the live layer, and its key would be
+    // looked up on a page it is not on (the reason is at layer_of_key_index).
+    // The surface may be GONE altogether (the press's own Enter or Esc closed
+    // the editor), in which case the rect is empty and this is a no-op — the
+    // show/hide damage is the tick comparator's, not this path's.
+    if (onscreen_keyboard::stands(app, gui)) {
+        viewport.invalidate_rect(onscreen_keyboard::key_rect(
+            app, onscreen_keyboard::layer_of_key_index(held), held));
+    }
+
+    // The owed key-up. A lamp key synthesized nothing and owes nothing; every
+    // other key owes exactly this, and the core's repeat cancel is the reason
+    // it may not be skipped (contract at GuiInputCore::key_event: the arm dies
+    // on the matching stable code and on nothing else this path can reach).
+    // A release carries no character, exactly as a physical one does not.
+    if (keysym != 0) {
+        gui.synthesize_key(keysym, static_cast<uint32_t>(held),
+                           /*pressed=*/false, /*codepoint=*/0);
+    }
+    return true;
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
@@ -3530,6 +3690,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // below with its four siblings.)
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
+
+    // THE ON-SCREEN KEYBOARD, ABOVE EVERY GATE (2026-08-27). While it stands
+    // its rect belongs to no other surface, so there is nothing below to
+    // arbitrate with — and it MUST outrank the dialog editors' veil further
+    // down, which would otherwise swallow the press that types into the very
+    // editor raising it. It stands only where a platform asks for one
+    // (false forever on the laptop, at GuiPlatform::wants_onscreen_keyboard),
+    // so this is one platform query and one integer compare everywhere else.
+    // Its rect is opaque: a press inside it never reaches the waveform's
+    // gestures underneath, key or gap. (Contract at the declaration; the act
+    // runs at the PRESS, inside.)
+    if (claim_onscreen_keyboard_press(button, x, y)) return;
 
     // Prompt-modal input handling: while a prompt dialog is up, its BUTTONS
     // are the pointer's only targets — and since 2026-08-13 a plain left press
@@ -5285,6 +5457,14 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // modifiers just names it again.
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
+    // THE ON-SCREEN KEYBOARD'S OWED KEY-UP, above every gate and above even the
+    // dropdown's release — the press's mirror. It is guarded on the held key
+    // index alone, which only that surface's own press ever sets, so it claims
+    // nothing that is not its; and it fires even when the press's act closed
+    // the editor under it, because a delivered key-down owes its pair whatever
+    // became of the surface (contract at the declaration).
+    if (button == GuiMouseButton::Left && finish_onscreen_keyboard_release())
+        return;
     // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
     // pointer, and its items were the redesign's FIRST act-on-release surface
     // (the modal's dialog buttons joined it 2026-08-13, and the whole chrome
@@ -7491,6 +7671,20 @@ void GuiInputHandler::clear_redesign_button_press() {
 // press has just vanished, and any pointer still in the window re-derives the
 // face on its very next motion.
 void GuiInputHandler::clear_release_time_press_arms() {
+    // THE ON-SCREEN KEYBOARD'S HELD KEY IS THE FOURTH MEMBER (2026-08-27) and
+    // it is the one that DELIVERS rather than merely clears: a key acts at the
+    // press, so what its lift still owes is the KEY-UP — and the core's repeat
+    // arm dies on that stable code and on nothing else this edge can reach, so
+    // a key whose lift never came would repeat forever. The producer is real
+    // and is the touch stream's own: the SECOND-FINGER UPGRADE delivers no
+    // button release at all (the fork is at GuiInputCore::end_touch_left_hold),
+    // only this unheld motion — so a second finger landing while a letter is
+    // held is exactly the case, and typing on glass is where it happens.
+    // Running the ordinary release body is the right end for it: that body is
+    // the key-up plus the un-press damage, and neither depends on where the
+    // finger was.
+    if (app.onscreen_keyboard.pressed_key >= 0)
+        finish_onscreen_keyboard_release();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
         app.modal_dialog_pressed < 0 &&
         app.dropdown.pressed_item < 0 &&

@@ -27,6 +27,7 @@
 #include "gui_display_context.h"
 #include "gui_main.h"
 #include "input_handler.h"
+#include "onscreen_keyboard.h"
 #include "paint_handler.h"
 #include "playback.h"
 #include "playback_lifecycle.h"
@@ -2065,6 +2066,34 @@ int gui_main(const char* source_path) {
             if (drift_top) invalidate_top_strip();
             if (drift_transport)
                 viewport.invalidate_rect(bottom_row_area(app));
+        }
+
+        // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
+        // comparator's own mechanism applied to a whole surface rather than to
+        // a face. The keyboard appears and disappears with the SEVEN EDITORS'
+        // open and close, and those routes damage the marker lane or the bottom
+        // row — never the band this surface paints in, which is the waveform
+        // area's lower part. So the live answer is compared against the
+        // as-painted bit, which the painter refreshes only on a frame whose
+        // rect FULLY COVERS that band (the roster publisher's own rule, argued
+        // at the painter): every other frame leaves the drift standing, and
+        // this is where it is paid.
+        //
+        // THE DAMAGE IS BOTH RECTS ON EITHER EDGE, and the reason is the
+        // discrete-command rule: on the HIDE the waveform under the surface has
+        // to come back whole, and on the SHOW the surface's own band has to be
+        // covered — the band overhangs the waveform's bottom into gap 2, so
+        // neither rect contains the other. Two cheap calls the platform
+        // coalesces, exactly as the tooltip's show edge pays.
+        //
+        // It costs one platform query and one integer compare per tick with the
+        // surface down, which on the laptop is its permanent state.
+        {
+            const bool kb_live = onscreen_keyboard::stands(app, gui);
+            if (kb_live != app.onscreen_keyboard.painted_standing) {
+                viewport.invalidate_waveform_area();
+                viewport.invalidate_rect(onscreen_keyboard::surface_rect(app));
+            }
         }
 
         // HOVER IS NO LONGER MOTION-ONLY. It is resolved from the pointer's last

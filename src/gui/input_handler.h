@@ -1696,6 +1696,10 @@ struct GuiInputHandler {
     // button-lost arm exactly as every drag state's does. Adding it here would
     // be a second owner for an edge that already has one, which is the failure
     // this family's own finding was about.
+    // THE ON-SCREEN KEYBOARD'S HELD KEY JOINED 2026-08-27 as the family's
+    // fourth member and its first DELIVERING one — the argument is at the
+    // body, and its producer is the second-finger upgrade, which delivers this
+    // motion and no button release.
     void clear_release_time_press_arms();
 
     // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
@@ -3287,6 +3291,34 @@ private:
     int  modal_dialog_button_hit(int x, int y) const;
     void update_modal_dialog_hover(int x, int y);
     void dispatch_modal_dialog_editor_act(bool ok);
+
+    // -- THE ON-SCREEN KEYBOARD'S POINTER HALF (2026-08-27) ----------------
+    //
+    // The surface itself — the layout table, the geometry and the two lamps —
+    // is onscreen_keyboard.h's; these are its two edges, and they sit ABOVE
+    // EVERY OTHER GATE in on_button_press / on_button_release for one reason:
+    // while the surface stands, its own rect belongs to no other surface, so
+    // there is nothing below to arbitrate with. In particular it must outrank
+    // the dialog editors' VEIL, which would otherwise swallow the press that
+    // types into the very editor raising the veil.
+    //
+    // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
+    // it, key or not: the gaps between keys, the outer margin and a blank slot
+    // all CONSUME: a finger that misses a key must not fall through to the
+    // waveform's pan underneath. A key's
+    // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole
+    // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the
+    // editor's own vocabulary, the undo coalescing, the core's repeat arming —
+    // runs unchanged from there.
+    //
+    // THE RELEASE OWES THE KEY-UP AND NOTHING ELSE. It is guarded on the held
+    // index alone, which only this surface's own press ever sets, so it can sit
+    // above every gate without claiming a release that is not its. It fires
+    // even when the press's own act closed the editor under it (Enter, Esc):
+    // the key-down was delivered, so its pair is owed whatever became of the
+    // surface — and the core's repeat cancel is that pair's other job.
+    bool claim_onscreen_keyboard_press(GuiMouseButton button, int x, int y);
+    bool finish_onscreen_keyboard_release();
 
     // THE DIALOG BUTTONS ACT AT THE RELEASE (architect 2026-08-13,
     // "everything else acts on lift"), which is what these three own — the

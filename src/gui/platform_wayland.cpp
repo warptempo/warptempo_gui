@@ -2028,6 +2028,22 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
     input_.key_event(key, xkb_keycode, pressed, codepoint);
 }
 
+// THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS (contracts at the declarations).
+// This platform has real keys, so it wants no painted ones — and the synthesis
+// door is the plain forward its Android twin's is, minus that backend's
+// codepoint table: the xkb state above is what re-answers a synthesized
+// repeat's codepoint probe here, and it cannot know about a key no keyboard
+// pressed. That difference is why this body would be WRONG for a producer on
+// this platform and is exactly right for the one it has, which is none.
+bool GuiPlatform::wants_onscreen_keyboard() const {
+    return false;
+}
+
+void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
+                                 uint32_t codepoint) {
+    input_.key_event(key, stable_code, pressed, codepoint);
+}
+
 void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
                                         uint32_t depressed,
                                         uint32_t latched,

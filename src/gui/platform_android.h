@@ -20,8 +20,12 @@
 // platform_wayland.h keeps for the same reason.
 //
 // THE PUBLIC API IS THE SEAM AND IS IDENTICAL TO platform_wayland.h's, member
-// for member and signature for signature (plus exactly one addition,
-// synthesize_key, which no consumer calls — see its declaration). The seven
+// for member and signature for signature — WITH NO ADDITIONS SINCE 2026-08-27,
+// when the on-screen keyboard landed and its two members (synthesize_key, which
+// had stood here alone as the seam's one addition, and the new
+// wants_onscreen_keyboard) grew Wayland twins: the keyboard's press router is
+// an ordinary consumer, so both had to be callable against either backend. The
+// seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
 // input_handler) include platform.h and compile against either backend
 // unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
@@ -242,13 +246,23 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
-    // -- THE ONE ADDITION TO THE SEAM'S PUBLIC SURFACE ---------------------
+    // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS -------------------------
+    //
+    // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Android answers YES,
+    // unconditionally: the glass has no keys and this backend translates no
+    // hardware ones, so the painted surface is the ONLY key producer the
+    // platform can have. The declaration's contract — why it is a platform
+    // question rather than a setting, and what the false answer buys the
+    // laptop build — is at platform_wayland.h's own, which this file does not
+    // copy.
+    bool wants_onscreen_keyboard() const;
+
     // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. Hardware
     // keyboards are out of scope on this platform (touch.md) and this backend
     // translates none: AInputEvent key events are handed back to the system so
-    // BACK still leaves the app. THIS IS THE ROAD AN OWNED ON-SCREEN KEYBOARD
+    // BACK still leaves the app. THIS IS THE ROAD THE OWNED ON-SCREEN KEYBOARD
     // TAKES INTO THE CORE'S KEY PATH — a painted surface emitting keysyms
-    // directly, which is the only key producer this platform can have.
+    // directly (onscreen_keyboard.h; its press router is the one caller).
     //
     // `key` is a GuiKey (an X11 keysym, ASCII case-folded, standalone
     // modifiers and F1..F35 already dropped — the backend's contract, at
@@ -260,9 +274,11 @@ public:
     // core's codepoint probe can re-answer for a synthesized repeat, which is
     // the whole reason this is a method rather than a bare forward.
     //
-    // NO CONSUMER CALLS IT TODAY and none may: main.cpp compiles against both
-    // backends, so a call from there would break the Wayland build. It is
-    // reachable from inside this backend alone.
+    // IT HAS A CONSUMER SINCE 2026-08-27 and that is why its Wayland twin
+    // exists: the keyboard's press router calls it through the seam like any
+    // other member, having asked wants_onscreen_keyboard() first. (Until then
+    // no consumer could call it — main.cpp compiles against both backends —
+    // and it was reachable from inside this backend alone.)
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
                         uint32_t codepoint);
 
@@ -330,10 +346,10 @@ private:
     bool worker_fired_[4] = {false, false, false, false};
 
     // -- Idle-tick timing --
-    // The ONE wakeup: a periodic timerfd (bionic has them) at half the
-    // refresh period, exactly the Wayland model. The rate query and its
-    // fallback are at detect_refresh_rate_ms().
-    int  playback_tick_ms_ = 8;
+    // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
+    // Wayland model. The number and its whole rationale are at
+    // detect_refresh_rate_ms().
+    int  playback_tick_ms_ = 5;
     int  timerfd_ = -1;
 
     // -- Async renderer completion fd (owned by GuiAsyncRenderer; this is just

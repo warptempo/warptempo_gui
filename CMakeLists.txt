@@ -263,6 +263,15 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         -Wl,--end-group
         aaudio
         android
+        # libnativewindow, and it is NOT covered by libandroid (2026-08-27).
+        # Most of the ANativeWindow_* surface this backend uses — the geometry
+        # setter, lock/unlockAndPost, the width and height queries — is
+        # re-exported by libandroid, which is why this line was not needed
+        # until the 90 Hz frame-rate pin at window adoption:
+        # ANativeWindow_setFrameRate (API 30) lives in libnativewindow alone,
+        # and --no-undefined turns its absence into the build failure it should
+        # be rather than a launch-time surprise.
+        nativewindow
         log
         m
         dl
