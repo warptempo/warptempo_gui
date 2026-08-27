@@ -597,10 +597,11 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
         // EVERY PAN SUPPRESSES FOLLOW FOR THE SESSION (architect 2026-07-30).
-        // This is the pan funnel — PageUp/PageDown, the plain wheel's stepped pan,
+        // This is the pan funnel — PageUp/PageDown, the alt+wheel stepped pan,
         // touchpad scroll
-        // and the plain-drag grab-pan all land here (both plain since
-        // 2026-08-12, pan-primary; the alt forms are deleted) — so one line covers the whole
+        // and the plain-drag grab-pan all land here (the DRAG plain since
+        // 2026-08-12, pan-primary; the WHEEL back on alt since 2026-08-27, the
+        // plain form being the waveform magnification) — so one line covers the whole
         // class by construction. Inside the CHANGED guard, because a pan that
         // moved nothing (wall-saturated) suppresses nothing, and gated on
         // playback being live, matching the placement body's own `was_playing`
@@ -615,7 +616,7 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // invalidation covers every marker pixel the move affects.
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // A discrete pan (the plain wheel, PageUp/PageDown) re-anchors here -
+        // A discrete pan (the alt+wheel, PageUp/PageDown) re-anchors here -
         // a single snap is invisible. A continuous drag pan passes
         // continuous=true and does NOT resync per motion event: the
         // predictor keeps extrapolating smoothly for the gesture's
@@ -626,7 +627,7 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // viewport change takes: the incremental shift-and-strip fast-path this
         // used to drive was retired 2026-07-26 so a scrolling plate and a
         // resting one come off one code path. Every scroll class lands here —
-        // touchpad, the plain wheel, PageUp/PageDown, the plain-drag grab-pan — and the
+        // touchpad, the alt+wheel, PageUp/PageDown, the plain-drag grab-pan — and the
         // synchronous render also gives them all the grab-pan's old guarantee:
         // no frame paints overlays against a plate from an older basis.
         kick_waveform_sync();

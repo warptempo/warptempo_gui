@@ -687,7 +687,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // through 2026-08-08, the trim button opened its group 2026-08-11 at
     // seventeen buttons in six groups, and the 2026-08-12 relayout landed the
     // toolbar four above plus the zoom and marker-verb groups below —
-    // twenty-nine members in nine groups, of which the mode-collapsing roster
+    // twenty-nine members in nine groups then, of which the mode-collapsing roster
     // painted a subset per frame. The 2026-08-13 revision moved the history
     // group left, ahead of the mass-marker category; 2026-08-14 took the
     // group's four companions to the BOTTOM ROW, brought the READ-ONLY toggle
@@ -701,8 +701,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // WALK RADIOS made it TWENTY-EIGHT in EIGHT later that day, landing inside
     // the history group between the opener and the cumulative toggle; the
     // WAVEFORM MAGNIFICATION three closed the zoom group on 2026-08-26 — the
-    // stepping pair, then the reset later the same day — which is TWENTY-NINE
-    // in EIGHT.)
+    // stepping pair, then the reset later the same day — which was TWENTY-NINE
+    // in EIGHT, and the reset's deletion on 2026-08-27 put it back to
+    // TWENTY-EIGHT in EIGHT.)
     // THE TRIM GROUP (2026-08-11 for the scissors that opened it, 2026-08-16
     // for the Show trim region button that filled and then led it, 2026-08-18 for
     // the scissors' deletion that left it one member), a SEPARATOR-LED GROUP
@@ -730,9 +731,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // consumer.)
     {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
     // THE ZOOM GROUP (2026-08-12, the grand relayout — the architect's live
-    // placement, "the rest in the icon row, after the trim"): zoom in (bare
-    // `=`), zoom out (bare `-`), full zoom out (bare `0`) and working-zoom
-    // center (bare `c`), a separator-led group of four navigation acts. The
+    // placement, "the rest in the icon row, after the trim"): zoom in
+    // (Ctrl+`=`), zoom out (Ctrl+`-`), full zoom out (bare `0`) and
+    // working-zoom center (bare `c`), a separator-led group of four navigation
+    // acts — the stepping pair's chords bare until 2026-08-27, when they traded
+    // spellings with the magnification pair below them. The
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair is
     // SUPERSEDED by this order: these buttons are the same commands' pointer
     // home for the glass rig, and they kept their rows in the Navigation
@@ -743,19 +746,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // THE WAVEFORM MAGNIFICATION THREE (2026-08-26), closing the same group:
-    // the picture's VERTICAL gain, magnify (Ctrl+=) then reduce (Ctrl+-) then
-    // reset to the untouched picture (Ctrl+0), wearing Breeze's zoom-in-y /
-    // zoom-out-y / zoom-fit-height — the magnifier construction beside them
-    // with an AXIS RULER down the left of the lens (the reset's is the
-    // horizontal tick pair that reads as fitting the height), which is what
-    // tells the three apart from the four horizontal magnifiers at row size.
-    // They join the zoom group rather than opening one, so the row gains three
-    // boxes and three 2px gaps and no separator moves. The reset landed later
-    // the same day, with the ladder's own retune that day.
+    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the same group:
+    // the picture's VERTICAL gain, magnify (bare `=`) then reduce (bare `-`),
+    // wearing Breeze's zoom-in-y / zoom-out-y — the magnifier construction
+    // beside them with an AXIS RULER down the left of the lens, which is what
+    // tells the pair apart from the four horizontal magnifiers at row size.
+    // They join the zoom group rather than opening one, so the row gains two
+    // boxes and two 2px gaps and no separator moves.
+    // (A THIRD BUTTON SAT HERE FOR ONE DAY — the MAGNIFICATION RESET on
+    // Ctrl+0, wearing zoom-fit-height — and the architect deleted it on
+    // 2026-08-27 when the pair moved onto the bare keys; the glyph went with
+    // it, having had no other consumer.)
     {RedesignButton::IconWaveformMagnify, icons::Icon::ZoomInY},
     {RedesignButton::IconWaveformReduce,  icons::Icon::ZoomOutY},
-    {RedesignButton::IconWaveformMagnificationReset, icons::Icon::ZoomFitHeight},
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the

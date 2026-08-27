@@ -2211,11 +2211,14 @@ private:
                                 text_editor::State& s);
 
     // Shared wheel handler for source and target view; on_wheel is its only
-    // caller. Exact-match modifiers, TWO arms (2026-08-12): PLAIN = the stepped
-    // pan (a tenth of the visible span per detent, through the scroll_viewport
-    // funnel) and CTRL = the zoom step (one whole level per detent, up = in,
-    // through Viewport::zoom_steps — the `=`/`-` commands' own coalesced body).
-    // Every other combination — Alt+wheel, Shift+wheel and every mixed pair —
+    // caller. Exact-match modifiers, THREE arms (2026-08-27): PLAIN = the
+    // waveform magnification step (one ladder rung per detent, up = taller,
+    // through apply_waveform_magnification_level, the frame's whole count
+    // clamped and applied in one call), ALT = the stepped pan (a tenth of the
+    // visible span per detent, through the scroll_viewport funnel) and CTRL =
+    // the zoom step (one whole level per detent, up = in, through
+    // Viewport::zoom_steps — the Ctrl+`=`/Ctrl+`-` commands' own coalesced
+    // body). Every other combination — Shift+wheel and every mixed pair —
     // no-ops. `inside_waveform` is true over the waveform area or the overview
     // lane, `inside_top` anywhere over the top strip; both mean "a wheel-live
     // navigation surface" and neither forks the vocabulary.
@@ -2979,7 +2982,8 @@ private:
     // - Arrow: everything else — the button rows, the gap band, and every
     //   modified press with no claim (SHIFT deliberately unnamed: it is the
     //   region former, which carries no cue — the deferred placement's own
-    //   model; ALT unnamed because its pointer vocabulary is empty). The FLAG
+    //   model; ALT unnamed because its one pointer binding is the WHEEL's
+    //   stepped pan, which no press can wear a cue for). The FLAG
     //   BOXES left this list 2026-08-13 for the TrimResize arm above.
     // THE TRIM BAR'S THREE ZONES READ THE ROUTER'S OWN OWNERS and re-derive
     // nothing: hit_test_trim_endcap and point_in_trim_bridge_span for the plain
@@ -3108,14 +3112,20 @@ private:
 
     // THE WAVEFORM MAGNIFICATION'S ONE WRITER — the gesture chokepoint every
     // route to app.waveform_magnification_level goes through, and the only site
-    // in the product that assigns that field. THREE HOTKEYS reach it (Ctrl+=
-    // steps up, Ctrl+- steps down, Ctrl+0 resets to 0), the three icon-row
-    // buttons reach it through those same chords, and the settings editor's
-    // `:waveform_magnification_level=` commit calls it directly. `level` must
+    // in the product that assigns that field. TWO HOTKEYS reach it (bare `=`
+    // steps up, bare `-` steps down, since 2026-08-27), the two icon-row
+    // buttons reach it through those same chords, THE PLAIN WHEEL reaches it
+    // per frame (handle_wheel's own arm), and the settings editor's
+    // `:waveform_magnification_level=` commit calls it directly — which is also
+    // the reset road, level 0 having no chord of its own since Ctrl+0 was
+    // retired with its button. `level` must
     // be in the schema's range (is_waveform_magnification_level,
     // settings_file.h); an out-of-range level is REFUSED WHOLE and never
     // clamped, which is also what makes a step at either end a consumed no-op —
-    // the caller asks for cur ± 1 and the bracket answers. A typed out-of-range
+    // the caller asks for cur ± 1 and the bracket answers. THE WHEEL'S BURST IS
+    // THE ONE CALLER THAT CLAMPS BEFORE ASKING, a frame's several detents
+    // having to land on the ladder's end rather than refuse whole. A typed
+    // out-of-range
     // value never gets this far: the editor's own red flash comes from the
     // shared grammar owner validate_gui_setting one step earlier.
     //
@@ -3222,8 +3232,8 @@ private:
     // dispatch_modal_dialog_button, both of which ask
     // modal_dialog_stash_current instead, a strictly narrower question that
     // implies this one): SIX ask about a POINTER fact and TWO about a KEY.
-    //   wheel_context's swallow (input_handler.cpp), because the wheel's
-    //     stepped pan is NAVIGATION, not a chord, so it still punches through
+    //   wheel_context's swallow (input_handler.cpp), because the wheel is
+    //     NAVIGATION and display, not a chord, so it still punches through
     //     an open top-strip flag editor;
     //   pointer_cursor_kind (2026-08-03), because these five editors are
     //     exactly the ones whose veil SWALLOWS a pointer press, so they are

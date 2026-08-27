@@ -140,31 +140,35 @@ enum class Icon {
     // 2026-08-02; the architect's 2026-08-12 relayout ruling supersedes that
     // for these four (the roster's record at kIconRowButtons), so the two
     // magnifiers return as fresh transcriptions beside two new siblings.
-    ZoomIn,              // Zoom in (bare `=`)
-    ZoomOut,             // Zoom out (bare `-`)
+    ZoomIn,              // Zoom in (Ctrl+`=`)
+    ZoomOut,             // Zoom out (Ctrl+`-`)
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
-    // THE WAVEFORM MAGNIFICATION'S THREE FACES (2026-08-26), the zoom group's
-    // last buttons: Breeze's zoom-in-y / zoom-out-y / zoom-fit-height — the
+    // THE WAVEFORM MAGNIFICATION'S TWO FACES (2026-08-26), the zoom group's
+    // last buttons: Breeze's zoom-in-y / zoom-out-y — the
     // SAME magnifier construction as the four above, each carrying a Y-AXIS
     // MARK: a ruler of tick marks down the left of the lens with the plus or
-    // the minus in the dial for the stepping pair, and a pair of horizontal
-    // rules across the lens — the fit-to-height bracket — for the reset. The
+    // the minus in the dial. The
     // axis marks are the whole reason these are the right pick: the act IS a
     // zoom, of the amplitude axis rather than the time axis, and the mark is
-    // what tells the three apart from their four horizontal neighbours at row
-    // size. All three are single `.ColorScheme-Text` paths in the family's own
+    // what tells the pair apart from their four horizontal neighbours at row
+    // size. Both are single `.ColorScheme-Text` paths in the family's own
     // idiom, so the interpreter was asked for nothing new.
     //
-    // ONE OF THE THREE IS A SYMLINK IN THE INSTALLED THEME — zoom-in-y.svg
+    // ONE OF THE TWO IS A SYMLINK IN THE INSTALLED THEME — zoom-in-y.svg
     // points at y-zoom-in.svg, byte-identical — and the committed asset is the
-    // resolved bytes, exactly as edit-comment's was before it; the other two
-    // are real files. The names here are the PROVENANCE names (the
+    // resolved bytes, exactly as edit-comment's was before it; the other is a
+    // real file. The names here are the PROVENANCE names (the
     // theme-provenance rule), while the product act they face is the waveform
     // magnification.
-    ZoomInY,             // Magnify waveform (Ctrl+=)
-    ZoomOutY,            // Reduce waveform (Ctrl+-)
-    ZoomFitHeight,       // Reset waveform magnification (Ctrl+0)
+    //
+    // (ZOOMFITHEIGHT WAS A THIRD FACE FOR ONE DAY — breeze's zoom-fit-height,
+    // the full-length handle with a bracketed pair of rules across the lens,
+    // worn by the MAGNIFICATION RESET from 2026-08-26 to 2026-08-27. Its def
+    // and its asset are deleted with the button, no button being left that
+    // wears them — edit-comment's own precedent.)
+    ZoomInY,             // Magnify waveform (bare `=`)
+    ZoomOutY,            // Reduce waveform (bare `-`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -331,6 +335,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 48 since 2026-08-27: zoom-fit-height is deleted with the MAGNIFICATION
+// RESET button, the third zoom-group member the architect retired when the
+// magnification pair moved onto the bare keys — 49 − 1, the glyph having had
+// no second consumer.
 // 49 since 2026-08-26 (later the same day): zoom-fit-height joined for the
 // MAGNIFICATION RESET, the third zoom-group member the ladder's 2026-08-26
 // retune brought with it — 48 + 1, one more fresh transcription in the same
@@ -367,7 +375,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 49;
+inline constexpr int kIconCount = 48;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

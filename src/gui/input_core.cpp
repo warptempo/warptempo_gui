@@ -346,8 +346,9 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
     if (modeled_edge) {
         // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
-        // scroll frame that would re-probe. TWO live wheel chords since
-        // 2026-08-12 (the plain stepped pan and the Ctrl zoom step), which is
+        // scroll frame that would re-probe. THREE live wheel chords since
+        // 2026-08-27 (the plain magnification step, the Alt stepped pan and the
+        // Ctrl zoom step), which is
         // exactly the case the shape-general rule exists for — remainder
         // accumulated while panning must never assemble a detent as a zoom, or
         // the reverse — and every other modified wheel is a swallowed non-chord
@@ -506,8 +507,7 @@ void GuiInputCore::maybe_fire_repeat() {
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
     // held BUTTON — the four cardinal arrow buttons and the waveform
-    // magnification STEPPING pair (its reset button is idempotent and does not
-    // repeat), whose hold-repeat returned 2026-08-16. The button producer never passes through this class (it calls
+    // magnification pair, whose hold-repeat returned 2026-08-16. The button producer never passes through this class (it calls
     // on_key application-side) and buys the adjacency property below from
     // its own edge, so nothing here has to account for it; this site is the KEY
     // surface's whole producer.
@@ -920,7 +920,8 @@ void GuiInputCore::pointer_frame() {
     // modifier-state change clears scroll_accum_ outright at the modifiers
     // event (and at keyboard leave / capability loss), so remainder can never
     // bridge a chord release — the routing differs by chord (plain = the
-    // stepped pan, Ctrl = the zoom step; every other combination no-ops), so
+    // waveform magnification step, Alt = the stepped pan, Ctrl = the zoom
+    // step; every other combination no-ops), so
     // remainder grown under one must not complete a detent under another.
     //
     // Accepted: a remainder contributed in an accepted context, interrupted

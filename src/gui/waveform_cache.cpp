@@ -569,7 +569,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      this function. The jumps this governs: zoom, center-on-playhead, the
 //      viewport-shift playhead moves (Home / End and navigate-to-marker), the
 //      A/B tab switch, the source/target toggle, undo / redo — AND ALL PANNING
-//      (touchpad scroll, the plain wheel's stepped pan, PageUp/PageDown, the
+//      (touchpad scroll, the alt+wheel stepped pan, PageUp/PageDown, the
 //      plain-drag grab-pan).
 //      They arrive at a bounded rate: pointer detents
 //      coalesce to one action per pointer frame, and key repeat is compositor-
