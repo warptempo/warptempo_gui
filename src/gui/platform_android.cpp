@@ -207,11 +207,14 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 // The bands outside the content rect
 // ---------------------------------------------------------------------------
 
-// THE PRODUCT'S CONTENT GROUND, in the WINDOW's own byte order. The two bands
-// (above the content rect, under the status bar; below it, under the taskbar)
-// are covered by the system's own windows, so nothing of ours is meant to be
-// seen there — but a translucent bar over a buffer nobody wrote would show a
-// stale frame, so they are filled. These pixels never pass through the
+// THE PRODUCT'S CONTENT GROUND, in the WINDOW's own byte order. The bands are
+// whatever the surface holds outside the content rect — above it and below it,
+// each existing only insofar as the framework's rect leaves room for it (on the
+// Tab S10 FE's 2026-08-27 measurement the rect started at y=53 and ran to the
+// panel's bottom edge, so only the top one had any rows). They are covered by
+// the system's own windows, so nothing of ours is meant to be seen there — but
+// a translucent bar over a buffer nobody wrote would show a stale frame, so
+// they are filled. These pixels never pass through the
 // backbuffer, so they never meet copy_swap_rb's swap either: the word is built
 // R,G,B,A directly, from the palette constant rather than from a second
 // spelling of #202326 (render.h is the one color owner; a retune follows).
@@ -1129,8 +1132,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // GuiInputCore identical to the Wayland build's.
     //
     // A TOUCH IN A BAND IS DELIVERED, NOT CLAMPED AND NOT DROPPED: translated,
-    // it is simply outside the window — a negative y over the status bar, y >=
-    // height_ under the taskbar — which is exactly the shape a Wayland pointer
+    // it is simply outside the window — a negative y above the rect, y >=
+    // height_ below it — which is exactly the shape a Wayland pointer
     // drag past an edge takes under labwc's implicit grab, and the GUI's own
     // hit tests are what answer it there (the case is written out at
     // containing_pixel, input_core.h). Clamping would invent a second policy
@@ -1335,7 +1338,7 @@ void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void(
 // -- The input doors: every one of them is the core's, forwarded --
 void GuiPlatform::set_on_key(KeyCallback cb)                    { input_.set_on_key(std::move(cb)); }
 void GuiPlatform::set_on_key_release(KeyReleaseCallback cb)     { input_.set_on_key_release(std::move(cb)); }
-void GuiPlatform::set_on_button_press(ButtonCallback cb)        { input_.set_on_button_press(std::move(cb)); }
+void GuiPlatform::set_on_button_press(ButtonPressCallback cb)   { input_.set_on_button_press(std::move(cb)); }
 void GuiPlatform::set_on_button_release(ButtonCallback cb)      { input_.set_on_button_release(std::move(cb)); }
 void GuiPlatform::set_on_wheel(WheelCallback cb)                { input_.set_on_wheel(std::move(cb)); }
 void GuiPlatform::set_on_motion(MotionCallback cb)              { input_.set_on_motion(std::move(cb)); }

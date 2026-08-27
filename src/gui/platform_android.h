@@ -60,6 +60,7 @@ public:
     using KeyCallback          = GuiInputCore::KeyCallback;
     using KeyReleaseCallback   = GuiInputCore::KeyReleaseCallback;
     using ButtonCallback       = GuiInputCore::ButtonCallback;
+    using ButtonPressCallback  = GuiInputCore::ButtonPressCallback;
     using WheelCallback        = GuiInputCore::WheelCallback;
     using MotionCallback       = GuiInputCore::MotionCallback;
     using CloseCallback        = std::function<void()>;
@@ -136,7 +137,7 @@ public:
     void set_on_key(KeyCallback cb);
     // Contract at GuiInputCore::set_on_key_release, input_core.h.
     void set_on_key_release(KeyReleaseCallback cb);
-    void set_on_button_press(ButtonCallback cb);
+    void set_on_button_press(ButtonPressCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
@@ -350,9 +351,22 @@ private:
     // (its own layout params carry FLAG_LAYOUT_IN_SCREEN | FLAG_LAYOUT_INSET_-
     // DECOR, and "fitting the system windows" is DecorView PADDING, which a
     // NativeActivity never sees because it takes the WINDOW's surface), so the
-    // band between the status bar and the taskbar arrives as the CONTENT RECT
-    // instead — measured on the Tab S10 FE 2026-08-27 as frame [0,0][2304,1440]
-    // with a 53 px status bar and an 84 px taskbar, content 2304x1303 at (0,53).
+    // band inside the system bars arrives as the CONTENT RECT instead.
+    //
+    // THE RECT IS WHATEVER THE FRAMEWORK REPORTS — this backend measures
+    // nothing and subtracts no inset of its own. Measured on the Tab S10 FE
+    // 2026-08-27: surface frame [0,0][2304,1440], content 2304x1387 at (0,53),
+    // i.e. the STATUS BAR ALONE. One UI's 84 px taskbar was NOT part of the
+    // rect: dumpsys reported `InsetsSource type=navigationBars
+    // frame=[0,1356][2304,1440] visible=false` and a `tappableElement` source
+    // on that same frame with visible=true, alongside
+    // `mAppBounds=(0,0-2304,1356)` — and the reading was taken with the panel
+    // DOZING (the cover shut), so the taskbar was not a visible navigation
+    // inset at that moment. WHETHER IT OVERLAYS THE BOTTOM ROW ON AN AWAKE
+    // PANEL IS OPEN (the architect's next look). If it does, the recorded next
+    // step is to read WindowInsets.Type.tappableElement()'s bottom through the
+    // Java sliver — a JNI call this side makes at each content-rect / config
+    // change — and subtract it from the rect here. Not done.
     //
     // ORIGIN IS THIS BACKEND'S ALONE. Nothing above the seam knows it exists:
     // it is ADDED on the way out (present, the one blit) and SUBTRACTED on the

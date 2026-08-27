@@ -9490,9 +9490,12 @@ inline int marker_flag_touch_halo_px() {
 // ANSWER AND IT IS THE OLD ONE EXACTLY, which is what keeps paint-equals-hit
 // standing for the pointer. It is a PARAMETER rather than a query inside this
 // body because the answer belongs to the EVENT being routed, not to the
-// geometry: the caller reads GuiPlatform::touch_contact_active() at its own
-// press delivery and passes it down, so nothing is cached across a gesture and
-// a pointer-only consumer (the cursor zone map) can pass a literal false.
+// geometry: the press router receives the bit WITH the press it is routing
+// (ButtonPressCallback's `finger`, input_core.h — the touch translation's
+// synthesized press is its one producer of a true) and passes it down, so the
+// answer is the delivery's own rather than a query about the glass's current
+// state, nothing is cached across a gesture, and a pointer-only consumer (the
+// cursor zone map) can pass a literal false.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y, bool finger);
 

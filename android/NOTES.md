@@ -88,9 +88,10 @@ carry absolute paths, the NDK version and the API level. Re-run
 
 ## 3. API levels — and the minSdk choice
 
-**targetSdk 35, not 36** (given): Android 16 silently revokes `screenOrientation`
+**Not 36** (given): Android 16 silently revokes `screenOrientation`
 and `resizableActivity` on displays ≥ 600dp, which the Tab S10 FE is. `android.jar`
-is therefore the android-35 one.
+is therefore the android-35 one, and the DECLARED TARGET was 35 with it until
+2026-08-27.
 
 > **targetSdk is 34 since 2026-08-27** (§12's note): 35 turned out to carry
 > Android 15's edge-to-edge enforcement, which lays the window over the system
@@ -169,9 +170,15 @@ paint). It additionally takes the **address** of
 the linker must resolve the two entry points the whole no-fontconfig design
 rests on.
 
-It is built as a **shared object**, twice — at API 30 (the sysroot's own level /
-minSdk) and at API 35 (targetSdk) — because a static archive has no LOAD
-segments and the alignment is only observable on a linked image.
+It is built as a **shared object**, twice — the script loops `$WT_API`
+`$WT_TARGET_SDK`, today **30** (the sysroot's own level / minSdk) and **34**
+(the declared target) — because a static archive has no LOAD segments and the
+alignment is only observable on a linked image. Those are two of the THREE
+numbers this build carries: the third is the COMPILE platform `$WT_PLATFORM_SDK`
+= 35, the only `android.jar` installed, which the smoke link never touches.
+
+The captured run below PREDATES the 35 → 34 target step (§12), so its second
+level reads 35; it is kept verbatim as the record of that run.
 
 ```
 ==> linking smoke TU at API 30
@@ -711,7 +718,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Fact | Value |
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
-| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect inside the system bars, 2304x1303 at (0,53) — §12's note) |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, measured that day as 2304x1387 at (0,53) — the status bar alone; §12's note, including what is still open about the taskbar) |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
@@ -1064,16 +1071,32 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > SPLIT_TOUCH | KEEP_SCREEN_ON`, `Frames: frame=[0,0][2304,1440]`. "Fitting the
 > system windows" is DecorView PADDING, and a `NativeActivity` never sees it
 > because it takes the WINDOW's own surface (`Window#takeSurface`). The inset
-> area reaches native code as the CONTENT RECT instead: `mAppBounds=(0,0-2304,
-> 1356)`, `InsetsSource statusBars frame=[0,0][2304,53] visible=true`,
-> `navigationBars` (the taskbar) `frame=[0,1356][2304,1440]` = 84 px. So THE
+> area reaches native code as the CONTENT RECT instead. THE DUMPSYS RECORD OF
+> THAT MEASUREMENT: `mAppBounds=(0,0-2304,1356)`, `InsetsSource statusBars
+> frame=[0,0][2304,53] visible=true`, `InsetsSource type=navigationBars
+> frame=[0,1356][2304,1440] visible=false` (= the taskbar's 84 px band), and a
+> `tappableElement` source on that SAME frame with visible=true. So THE
 > CONTENT RECT IS THE WINDOW, implemented in the backend: `APP_CMD_CONTENT_-
 > RECT_CHANGED` is handled, `adopt_window` re-reads the rect on all four window
 > commands, `width()`/`height()` are the rect's, the origin is ADDED at the one
 > blit (`present`, which also fills the two bands with `kRedesignContentGround`)
 > and SUBTRACTED at the one touch decode, and nothing above the seam learns it
 > exists. The startup line carries both now:
-> `window 2304x1303 at (0,53) of surface 2304x1440, tick 5 ms`.
+> `window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms`.
+>
+> **WHAT THE RECT ACTUALLY CONTAINED, AND WHAT IS STILL OPEN.** The rect is
+> WHATEVER THE FRAMEWORK REPORTS — the backend measures no bar and subtracts no
+> inset of its own — and what it reported was 2304x1387 at (0,53): the STATUS
+> BAR ALONE, 1440 − 53. The taskbar's 84 px band was NOT taken out of it; it was
+> reported as a tappable element and as `mAppBounds`, not as a visible
+> navigation inset. AND THE READING WAS TAKEN WITH THE PANEL DOZING (the cover
+> shut). WHETHER THE TASKBAR OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL IS
+> THEREFORE OPEN — the architect's next look, and §11.7's escalation is what it
+> would cost if it does. THE RECORDED NEXT STEP if it does: read
+> `WindowInsets.Type.tappableElement()`'s bottom through the sliver — a `native`
+> method on `MainActivity` handing the native side that number at each
+> content-rect / config change — and subtract it from the rect in the backend.
+> Not built.
 >
 > **THE SLIVER STAYS**: `setDecorFitsSystemWindows(true)` plus target 34 is what
 > makes the framework report an inset content rect at all, and the SAF /

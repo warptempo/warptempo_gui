@@ -1725,10 +1725,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // BOX is lane vocabulary (select / range / toggle), which carries no cue —
     // Arrow, through the owner's own carve-out.
     // NO TOUCH HALO HERE, and the literal false is the statement of it: this
-    // map answers for the MOUSE CURSOR and nothing else. There is no cursor
-    // under a fingertip to promise anything to, and reading the live contact
-    // bit would let a finger resting on the glass change the shape the MOUSE
-    // wears somewhere else in the window. (The halo is at
+    // map answers for the MOUSE CURSOR and nothing else — there is no cursor
+    // under a fingertip to promise anything to, and no press is being routed
+    // here whose provenance could say otherwise. (The halo is at
     // kMarkerFlagTouchHaloPx, app_state.h.)
     const bool on_nav_surface =
         point_on_nav_surface(app, audio, x, y, /*finger=*/false);
@@ -3305,14 +3304,19 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // lift deferral of 2026-08-15 is inverted, its reasoning at
 // PendingMarkerPress, app_state.h). ONE owner with TWO call sites, both in
 // on_button_press's marker claims: the ctrl-exact toggle branch and the
-// plain / shift branch. BOTH ARE FLAG HITS AND NOTHING ELSE (re-greped
-// 2026-08-18): each sits behind a resolved `mh_index >= 0` inside the top
-// strip, so the empty marker lane — its plain click, its double-click create —
-// never reaches this body, and the `h` view's diff flags are a different press
-// router with its own mode-local multi-selection. THE TOGGLE ARM HAS TWO
-// PRODUCERS since 2026-08-18: a real ctrl press, and a plain press while the
-// ADD TO SELECTION mode stands (the fold, and the shift rule that goes with
-// it, are at the `toggle` term below).
+// plain / shift branch. BOTH ARE FLAG HITS AND NOTHING ELSE (re-grepped
+// 2026-08-27): each sits behind a resolved `mh_index >= 0`, and that hit's own
+// gate is the TWO BANDS A FLAG CAN CLAIM IN rather than the top strip alone —
+// the marker lane for a pointer press, the lane PLUS the vertical halo band
+// that spills into the ruler above and the waveform below for a finger's
+// (kMarkerFlagTouchHaloPx, app_state.h; the gate is at the hit's resolution).
+// So the empty marker lane — its plain click, its double-click create — never
+// reaches this body, a mouse press over the waveform still resolves -1 exactly
+// as it did when the waveform was not asked at all, and the `h` view's diff
+// flags are a different press router with its own mode-local multi-selection.
+// THE TOGGLE ARM HAS TWO PRODUCERS since 2026-08-18: a real ctrl press, and a
+// plain press while the ADD TO SELECTION mode stands (the fold, and the shift
+// rule that goes with it, are at the `toggle` term below).
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -3737,7 +3741,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
-                                      GuiInputState mods) {
+                                      GuiInputState mods, bool finger) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
     // say, and a hint left floating over the thing the user just clicked is
     // noise. It also resets the dwell, so a fresh hover starts a fresh wait.
@@ -4308,18 +4312,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top = rect_contains(top, x, y);
-    // IS THIS PRESS A FINGER? — read ONCE here, at the delivery, and threaded
-    // into every flag question this router asks (the marker hit, the span
-    // stamp, the navigation surface's carve-out). The truth is the platform's
-    // live contact bit, so it is never cached across a gesture: a touch
-    // translation's synthesized press arrives with the phase machine already
-    // out of Idle (the resolution raises the phase before it delivers the entry
-    // motion and the press), and the phase falls back only after the release
-    // rides out. On a seatless-of-glass host — the laptop — it is always false
-    // and every compare below is the one it has always been. Its ONE effect is
-    // the marker flag's vertical hit halo (kMarkerFlagTouchHaloPx,
-    // app_state.h).
-    const bool finger = gui.touch_contact_active();
+    // IS THIS PRESS A FINGER? — the parameter, and nothing else. The bit is the
+    // DELIVERY's own (ButtonPressCallback, input_core.h): true only for the
+    // press the touch translation synthesizes, false for every pointer press on
+    // either backend, fixed when the press was made and so incapable of
+    // changing under a gesture or of answering for a different device. It is
+    // threaded into every flag question this router asks (the marker hit, the
+    // span stamp, the navigation surface's carve-out); its ONE effect is the
+    // marker flag's vertical hit halo (kMarkerFlagTouchHaloPx, app_state.h). On
+    // a host with no touch device — the laptop — no producer of a true exists
+    // and every compare below is the one it has always been.
+    // It replaced a live read of GuiPlatform::touch_contact_active() here
+    // (2026-08-27): that query is CONTACT PRESENCE, so on a host carrying both
+    // a touchscreen and a mouse it would have put the halo under a MOUSE press
+    // made while a finger rested on the glass.
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;

@@ -15,10 +15,20 @@ import android.os.Bundle;
  * NativeActivity never sees, because it takes the WINDOW's own surface through
  * Window#takeSurface. Measured on the tablet 2026-08-27: frame=[0,0][2304,1440]
  * with this call in place, at targetSdk 35 and again at 34. What this call and
- * the target DO buy is the framework reporting a real CONTENT RECT --
- * mAppBounds 2304x1356, status bar 53 px, taskbar 84 px -- which reaches native
- * code as onContentRectChanged. THE ANDROID BACKEND MAKES THAT RECT THE WINDOW
- * (src/gui/platform_android.cpp; the rule is at origin_x_ in its header): the
+ * the target DO buy is the framework reporting a real CONTENT RECT, whatever
+ * the framework decides that rect is -- measured that day as 2304x1387 at
+ * (0,53), the STATUS BAR ALONE. One UI's 84 px taskbar was not in it: dumpsys
+ * showed `InsetsSource type=navigationBars frame=[0,1356][2304,1440]
+ * visible=false` plus a `tappableElement` source on the same frame with
+ * visible=true, and `mAppBounds=(0,0-2304,1356)`; the reading was taken with
+ * the panel DOZING (cover shut), so the taskbar was not a visible navigation
+ * inset at that moment. WHETHER IT OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL
+ * IS OPEN (the architect's next look); if it does, the recorded next step is a
+ * `native` method on THIS class handing the native side
+ * WindowInsets.Type.tappableElement()'s bottom at each content-rect / config
+ * change, for the backend to subtract from the rect. Not done. The rect
+ * reaches native code as onContentRectChanged. THE ANDROID BACKEND MAKES THAT
+ * RECT THE WINDOW (src/gui/platform_android.cpp; the rule is at origin_x_ in its header): the
  * GUI is told the rect's size, the origin is added at the blit and subtracted
  * at the touch decode, and nothing above the seam knows either exists.
  *

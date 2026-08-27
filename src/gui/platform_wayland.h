@@ -35,6 +35,7 @@ public:
     using KeyCallback          = GuiInputCore::KeyCallback;
     using KeyReleaseCallback   = GuiInputCore::KeyReleaseCallback;
     using ButtonCallback       = GuiInputCore::ButtonCallback;
+    using ButtonPressCallback  = GuiInputCore::ButtonPressCallback;
     using WheelCallback        = GuiInputCore::WheelCallback;
     using MotionCallback       = GuiInputCore::MotionCallback;
     using CloseCallback        = std::function<void()>;
@@ -139,7 +140,7 @@ public:
     void set_on_key(KeyCallback cb);
     // Contract at GuiInputCore::set_on_key_release, input_core.h.
     void set_on_key_release(KeyReleaseCallback cb);
-    void set_on_button_press(ButtonCallback cb);
+    void set_on_button_press(ButtonPressCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);

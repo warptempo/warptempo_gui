@@ -1519,9 +1519,13 @@ int gui_main(const char* source_path) {
         // again at this iteration's tail, past everything above.)
     });
 
+    // The press carries one bit the release does not: `finger`, the platform's
+    // own answer for THIS delivery (true only for the press the touch
+    // translation synthesizes — ButtonPressCallback, input_core.h). It is
+    // handed straight down; the router owns what it means.
     gui.set_on_button_press([&](GuiMouseButton button, int x, int y,
-                                GuiInputState mods) {
-        input_handler.on_button_press(button, x, y, mods);
+                                GuiInputState mods, bool finger) {
+        input_handler.on_button_press(button, x, y, mods, finger);
     });
 
     gui.set_on_button_release([&](GuiMouseButton button, int x, int y,

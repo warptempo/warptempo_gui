@@ -976,7 +976,15 @@ struct GuiInputHandler {
     // bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
     // in input_key_dispatch.cpp beside the ring that arms it.
     void on_key_release(GuiKey key);
-    void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
+    // `finger` IS THE PRESS'S PROVENANCE, delivered with the press rather than
+    // asked for: true only for the press the touch translation synthesizes,
+    // false for every pointer press on either backend (ButtonPressCallback,
+    // input_core.h). This router reads it and threads it into every flag
+    // question the press asks — the marker flag's touch-only vertical hit halo
+    // (kMarkerFlagTouchHaloPx, app_state.h). The RELEASE takes no such
+    // parameter: no release path re-runs a flag hit test.
+    void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods,
+                         bool finger);
     void on_button_release(GuiMouseButton button, int x, int y,
                            GuiInputState mods);
     // Coalesced scroll-wheel entry. `count` is the net detent count for one
@@ -1945,12 +1953,12 @@ struct GuiInputHandler {
     // on_button_press's marker claims: the ctrl toggle branch and the
     // plain / shift branch. Contract at PendingMarkerPress (app_state.h),
     // reasoning at the definition (input_pointer.cpp).
-    // `finger` IS THE PRESS'S OWN TOUCH ANSWER, threaded down from the router
-    // rather than re-asked here so ONE reading of the contact bit serves the
-    // whole press (the halo's gate — kMarkerFlagTouchHaloPx, app_state.h). Its
-    // one use in this body is the SPAN test that stamps the double-click seed:
-    // the span must come off the same walk the router's hit came off, or the
-    // seed would describe a box that walk did not choose.
+    // `finger` IS THE PRESS'S OWN PROVENANCE, threaded down from the router
+    // rather than re-asked here — the press arrived carrying it, so the whole
+    // press has one answer (the halo's gate — kMarkerFlagTouchHaloPx,
+    // app_state.h). Its one use in this body is the SPAN test that stamps the
+    // double-click seed: the span must come off the same walk the router's hit
+    // came off, or the seed would describe a box that walk did not choose.
     void run_marker_click_act(int hit, int x, int y, bool shift, bool ctrl,
                               const DoubleClickCandidate& dc_at_press,
                               bool finger);
@@ -3527,11 +3535,11 @@ private:
     void republish_history_lane_now();
     void set_history_reading(GuiHistoryWalkSource source,
                              GuiHistoryCompare    compare);
-    // `finger` is the press's own touch answer, read once by on_button_press
-    // and handed down so the mode's diff-flag claims take the SAME vertical hit
-    // halo the live lanes take (kMarkerFlagTouchHaloPx, app_state.h — same
-    // lane, same box shape, same fingertip, so the symmetry is the ruling
-    // rather than a choice made here).
+    // `finger` is the press's own provenance, delivered with the press to
+    // on_button_press and handed down so the mode's diff-flag claims take the
+    // SAME vertical hit halo the live lanes take (kMarkerFlagTouchHaloPx,
+    // app_state.h — same lane, same box shape, same fingertip, so the symmetry
+    // is the ruling rather than a choice made here).
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press,

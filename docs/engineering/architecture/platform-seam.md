@@ -14,7 +14,7 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (67 declarations as of 2026-08-27 — 13 `using` aliases and 54
+  public API (70 declarations as of 2026-08-27 — 14 `using` aliases and 56
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
@@ -36,7 +36,14 @@ contract. The port split them:
   notional-x / capture bookkeeping, the pointer-frame and deferred-motion
   scratch, and every consumer hook those bodies fire. A backend hands it
   PLAIN VALUES — window-pixel doubles, bools, ids, X11 keysyms — and installs
-  ONE downward probe (the codepoint re-fill per synthesized repeat). Every
+  ONE downward probe (the codepoint re-fill per synthesized repeat). IT ALSO
+  HANDS UP ONE FACT ONLY IT KNOWS: a press is delivered with its PROVENANCE
+  (`ButtonPressCallback`'s `finger`, true only for the press the touch
+  translation synthesizes), because whether a delivery came from a fingertip or
+  a pointer device is the translation's own knowledge and not a question the
+  GUI can ask afterwards — `touch_contact_active()` answers CONTACT PRESENCE,
+  which is a different question. The release keeps `ButtonCallback`: no release
+  path reads the bit. Every
   moved body is line-for-line the pre-move Wayland body (verified by
   diffing the extracted ranges); the backend forwards its public API to the
   core. Comments in the core speak the core's event names
@@ -212,7 +219,22 @@ band translates to a coordinate outside the window and is delivered as such,
 neither clamped nor dropped — the shape a Wayland drag past an edge already
 takes (`containing_pixel`, input_core.h); the bars' own windows take those
 touches in practice. The startup line reports both:
-`window 2304x1303 at (0,53) of surface 2304x1440, tick 5 ms`.
+`window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms`.
+
+THE RECT IS WHATEVER THE FRAMEWORK REPORTS — the backend measures no bar and
+subtracts no inset of its own, which is why nothing here names a height as a
+constant. On the Tab S10 FE that reading was 2304x1387 at (0,53): THE STATUS BAR
+ALONE. One UI's 84 px taskbar was not in it, and the dumpsys record of the
+measurement says why it need not have been: `InsetsSource type=navigationBars
+frame=[0,1356][2304,1440] visible=false`, a `tappableElement` source on that
+same frame with visible=true, and `mAppBounds=(0,0-2304,1356)` — the taskbar
+reported as a tappable element and as app bounds, NOT as a visible navigation
+inset. The measurement was taken with the panel DOZING (the cover shut).
+WHETHER THE TASKBAR OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL IS OPEN — the
+architect's next look. If it does, the recorded next step is to read
+`WindowInsets.Type.tappableElement()`'s bottom through the Java sliver (a JNI
+call the native side makes at each content-rect / config change) and subtract it
+from the rect; that is a next step, not something built.
 
 A surface pixel is still a panel pixel — there is no scaling anywhere on this
 platform — and the window is now the content rect rather than the surface.
@@ -242,7 +264,8 @@ key-repeat cadence) joins this class as a method. Launch component:
 ## Build and freeze posture
 
 `android/app/build_apk.sh` = configure (NDK toolchain, arm64-v8a, API 30
-min / 35 target) → cross-build (`add_library(warptempo_gui SHARED)` over the
+min / 34 target; the COMPILE platform is a third number, 35) → cross-build
+(`add_library(warptempo_gui SHARED)` over the
 same `WARPTEMPO_GUI_SOURCES` the Linux target draws, three per-backend
 arms; `-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__` mandatory; no
 `-march=native`) → javac/d8 → aapt2 → zipalign `-P 16` → apksigner. Deps
