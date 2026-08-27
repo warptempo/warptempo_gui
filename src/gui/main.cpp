@@ -573,12 +573,12 @@ GuiRect top_flex_gap_area(const AppState& a) {
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
-// ground carrying the left float's File/Settings menu buttons and
+// ground carrying the left float's four menu buttons and
 // the right float's view
 // bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
 // below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-eight view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these, and
 // the history group's seven close them since 2026-08-18 —

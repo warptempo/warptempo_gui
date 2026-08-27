@@ -1998,8 +1998,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the three anchors alone, which have no chord to ask about: Settings and,
-// since 2026-08-20, Edit both dead on the toggle_dropdown lockout, File live
+// for the four anchors alone, which have no chord to ask about: Settings,
+// Edit since 2026-08-20 and Series since 2026-08-27 all dead on the
+// toggle_dropdown lockout, File live
 // since 2026-08-13 — another, Navigation, was live from 2026-08-08 until its
 // 2026-08-15 deletion), never
 // hand-listed —

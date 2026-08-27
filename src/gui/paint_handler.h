@@ -773,13 +773,13 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE FOUR REDESIGNED BUTTON ROWS — the MENU ROW (top lane 0, row 1: the
     // flat
-    // sampled ground plus the "File" and "Settings" menu
+    // sampled ground plus the four menu
     // buttons and the view bar), the TAB ROW
     // (top lane 1, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
     // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
     // the
-    // ICON ROW (top lane 2, row 4: the twenty-eight view/mode/action buttons —
+    // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
     // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame

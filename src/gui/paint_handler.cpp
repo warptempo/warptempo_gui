@@ -261,6 +261,19 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // does re-enter the right float's collision corner, which is recorded (and
     // deliberately not acted on) in that note below.
     {RedesignButton::Edit,       "Edit"},
+    // THE SERIES MENU (architect 2026-08-27) — the row's FOURTH dropdown,
+    // painted between Edit and Settings. THE ORDER RULE IS SETTINGS-LAST
+    // (architect 2026-08-03): File and Edit lead as the standard pair, the
+    // application's own menus follow, and Settings paints last in the left
+    // float — so this landed in front of it without re-opening that ruling.
+    // A COMMAND MENU of TWO rows, "BPM" and "Iterations", and a RELOCATION:
+    // IconBpm and IconIter were deleted from the icon row in the same ruling,
+    // so this menu is those two commands' one pointer home rather than a
+    // second road to them. Nothing here needed a width or pad term — the row
+    // is one left-to-right accumulation over this table — but the LABEL'S
+    // WIDTH re-enters the right float's collision corner, which is recorded
+    // (and deliberately not acted on) in that note below.
+    {RedesignButton::Series,     "Series"},
     // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
     // of the zoom and stepping commands — painted between these two from that
     // day until 2026-08-15, when the architect deleted it whole: every one of
@@ -704,14 +717,21 @@ constexpr IconRowDef kIconRowButtons[] = {
     // WAVEFORM MAGNIFICATION three closed the zoom group on 2026-08-26 — the
     // stepping pair, then the reset later the same day — which was TWENTY-NINE
     // in EIGHT, and the reset's deletion on 2026-08-27 put it back to
-    // TWENTY-EIGHT in EIGHT.)
-    // THE TRIM GROUP (2026-08-11 for the scissors that opened it, 2026-08-16
-    // for the Show trim region button that filled and then led it, 2026-08-18 for
-    // the scissors' deletion that left it one member), a SEPARATOR-LED GROUP
-    // after the warp/phase radios — the
-    // architect's placement ("place it after the warp/phase radio buttons,
-    // create a new separator"), a group intended to collect VIEWPORT-RELATED
-    // ACTS later, and the second such act is what filled it. THIS TABLE IS THE
+    // TWENTY-EIGHT in EIGHT. THE SERIES RELOCATION later that same day is what
+    // makes it TWENTY-SIX in SIX: the BPM and ITERATION buttons left the
+    // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
+    // joined the zoom group, dissolving two separator-led groups into it.)
+    // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
+    // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
+    // it then, the Show trim region button filled it on 2026-08-16 and led it
+    // later that day, the scissors were deleted on 2026-08-18 leaving it one
+    // member, and this ruling merged that one member into the zoom four behind
+    // it by DELETING THE BOUNDARY IN FRONT OF IconZoomIn. The architect's
+    // 2026-08-11 placement ("place it after the warp/phase radio buttons,
+    // create a new separator") is where the merged group still sits, and the
+    // group he opened it as — a home for VIEWPORT-RELATED ACTS — is what the
+    // merge finishes: the trim overlay, the four horizontal magnifiers, the
+    // vertical pair and FOLLOW, all in one separator-led run. THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
     // plus the group's leader in redesign_button_opens_icon_group
@@ -731,11 +751,13 @@ constexpr IconRowDef kIconRowButtons[] = {
     // chord is untouched; the glyph went with the row, having had no other
     // consumer.)
     {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
-    // THE ZOOM GROUP (2026-08-12, the grand relayout — the architect's live
+    // THE ZOOM FOUR (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): zoom in
     // (Ctrl+`=`), zoom out (Ctrl+`-`), full zoom out (bare `0`) and
-    // working-zoom center (bare `c`), a separator-led group of four navigation
-    // acts — the stepping pair's chords bare until 2026-08-27, when they traded
+    // working-zoom center (bare `c`), four navigation acts which OPENED the
+    // group until the 2026-08-27 merge above put them behind the trim
+    // overlay's own separator — the stepping pair's chords bare until
+    // 2026-08-27, when they traded
     // spellings with the magnification pair below them. The
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair is
     // SUPERSEDED by this order: these buttons are the same commands' pointer
@@ -764,23 +786,20 @@ constexpr IconRowDef kIconRowButtons[] = {
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
     // bottom row's own table below.)
-    // THE MASS-MARKER CATEGORY — three mode/editor buttons, and the group's
-    // LEADER since 2026-08-20. It was the one group the `h` view dropped whole
-    // (2026-08-13); it greys in there like everything else now.
-    // (THE PHASE-RESET CLIPBOARD PAIR OPENED THIS GROUP UNTIL 2026-08-20, when
-    // the architect's propagate relocation deleted both buttons: all five
+    // (THE MASS-MARKER CATEGORY OPENED A SEPARATOR-LED GROUP HERE and no
+    // longer exists. The PHASE-RESET CLIPBOARD PAIR led it until 2026-08-20,
+    // when the architect's propagate relocation deleted both buttons: all five
     // propagate commands took the new EDIT MENU as their one pointer home, and
     // edit-copy and edit-paste went with them — the glyphs had no second
-    // consumer, the trim scissors' own precedent. The separator now falls in
-    // front of the BPM opener.)
-    {RedesignButton::IconBpm,    icons::Icon::MusicNote16th},
-    // ITERATION MODE WEARS MATHMODE since 2026-08-18 (architect): the slot
-    // keeps a MATH SYMBOL and f(x) names the operation — a render as a function
-    // of a variable swept across a bracket. It wore black_sum, the summation
-    // sigma, from 2026-08-01 until then; that glyph moved to the CUMULATIVE
-    // reading's toggle in the same ruling, where the summing it names is the
-    // reading itself, so no two buttons carry one math symbol.
-    {RedesignButton::IconIter,   icons::Icon::Mathmode},
+    // consumer, the trim scissors' own precedent — and the separator fell in
+    // front of the BPM opener. On 2026-08-27 the SERIES RELOCATION did the
+    // same thing to the two that were left: bare `m` and bare `i` took the new
+    // SERIES MENU as their one pointer home, IconBpm's MUSIC-NOTE-16TH and
+    // IconIter's MATHMODE went with them (neither glyph had a second consumer;
+    // Mathmode had been iteration mode's since 2026-08-18, when it took the
+    // summation sigma's slot and the sigma moved to the CUMULATIVE toggle), and
+    // the separator went too — FOLLOW, the survivor, joined the ZOOM GROUP
+    // above rather than standing alone behind a divider.)
     // Follow's icon walked twice: the provisional "F" letter, then
     // media-seek-forward (2026-07-31), then go-jump (2026-08-01) — the architect
     // settling on the chevron-and-dot, which reads as GOING to a place rather
@@ -1199,7 +1218,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — whichever of the three anchors emitted the open
+        // well as on hover — whichever of the four anchors emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the
@@ -1328,6 +1347,21 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // BY ~65px — narrower than the Navigation era's 165 and the same KIND of
         // corner. NO RULE IS BUILT FOR IT, deliberately and for the reason the
         // record below already gives: the painters answer it themselves.
+        //
+        // AND RE-ENTERED AGAIN ON 2026-08-27 BY THE SERIES ANCHOR, with the
+        // same answer a third time. MEASURED by the same advance-width method
+        // (which still reproduces the 2026-08-02 walk's Quit 29, Navigation 76
+        // and Settings 58 exactly): "Series" shapes to 45px at 100%, the six
+        // glyphs putting it between Edit's 28 and Settings' 58, so its slot is
+        // 65px with its two 10px pads. The FOUR-button float is 237 at 100%
+        // (46 + 48 + 65 + 78) and ~473 at 200%. At 100% it is still nowhere:
+        // 237 + 183 = 420 of the 640px floor. At 200% it is ~473 + 366 = ~839
+        // on that floor, an overlap of ~199px, which finally passes the
+        // Navigation era's 165 — and it changes nothing, because the KIND of
+        // corner is unchanged and the div still fills its background last and
+        // covers the tail of the left float's labels. THE DEPLOYMENTS ARE NOT
+        // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at 225%
+        // is 1024 logical px against a ~420 logical-px float pair.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -2013,21 +2047,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
     // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members
-    // in EIGHT groups since 2026-08-18: the toolbar four (Save / Undo / Redo /
-    // Render, the deleted row 2's, leading the row), the S/T and W/P view
-    // radios, THE TRIM GROUP (the Show trim region button alone — the scissors
-    // opened that group on 2026-08-11, that button filled its second
-    // slot on 2026-08-16 and took the lead later that same day at the
-    // architect's reorder, and the scissors were retired whole on 2026-08-18),
-    // the ZOOM GROUP (2026-08-12), the phase-reset copy/paste pair with the
-    // bpm / iteration / follow modes, the RENDER-ENTRY group — listen,
-    // load-in-place, the READ-ONLY toggle, the architect's own order on
-    // 2026-08-14 — and THE HISTORY GROUP, the opener leading the TWO WALK
+    // in SIX groups since 2026-08-27, RE-COUNTED off the roster enum and the
+    // divider owner rather than adjusted: the toolbar four (Save / Undo /
+    // Redo / Render, the deleted row 2's, leading the row), the S/T and W/P
+    // view radios, THE ZOOM GROUP — the VIEWPORT CLASS whole since the
+    // architect's 2026-08-27 merge: the Show trim region button leading (it
+    // had a group of its own from 2026-08-11, when the scissors opened it,
+    // until that ruling), then the zoom four (2026-08-12), the waveform
+    // magnification pair (2026-08-26) and FOLLOW, which came in from the
+    // dissolved mass-marker group the same day — the RENDER-ENTRY group
+    // (listen, load-in-place, the READ-ONLY toggle, the architect's own order
+    // on 2026-08-14) and THE HISTORY GROUP, the opener leading the TWO WALK
     // RADIOS and its four companions (2026-08-18, the companions back from the
     // bottom row and the radios down from row 3 later that day).
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-eight paint on every
+    // hiding/showing icons in top icon row"): all twenty-six paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2043,17 +2078,36 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 28·32 + (28−8)·2 + (8−1)·9 = 8 + 896 + 40 + 63 = 1007px,
+    //   8 + 26·32 + (26−6)·2 + (6−1)·9 = 8 + 832 + 40 + 45 = 925px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 1015,
-    // inside the Pi's 1024 panel BY 9px at gui_scale 100. (It was 939px at
+    // outside it. Add the 8px trailing pad and the row's ink ends at 933.
+    //
+    // THAT IS THE 2026-08-27 SERIES RELOCATION'S ARITHMETIC AND IT IS THE
+    // BIGGEST SINGLE CUT THIS ROW HAS TAKEN: two boxes (−68) and two
+    // separators (−18) off the 1007/1015 it stood at that morning, 82px
+    // narrower authored. WHAT IT BUYS IS SCALE HEADROOM ON THE TABLET, which
+    // is the measurement that matters now that the deployment panel is 2304px
+    // (the gui_scale ceiling went to 400 on 2026-08-26 for exactly this
+    // panel): the walk fits while 925·factor ≤ 2304, so the row now lands
+    // WHOLE UP TO gui_scale 249 (925·2.49 = 2303) and clips at 250 by 3
+    // authored px — where the 1041-px roster of 2026-08-26 fitted only to 220
+    // and clipped HistoryNewer by 17px at 225. AT THE TABLET'S OWN 225% EVERY
+    // ICON FITS WITH ROOM TO SPARE: 925·2.25 = 2081, 223 device px of slack.
+    // (Counting the trailing pad the ceiling is 246 rather than 249 — the pad
+    // is ground, not ink, so the icons themselves are the thing measured.)
+    // Both older deployments clear it outright: 933 of 1024 at 100% on the
+    // retired Pi panel, 933 of 1920 on the laptop.
+    //
+    // (It was 1007px at twenty-eight in eight groups from 2026-08-26; 939px at
     // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at
     // twenty-seven from 2026-08-16; and 939 at twenty-six before that — the
     // 2026-08-16 and the relayout rosters matching by coincidence rather than
     // by symmetry, the earlier one being this one with the four verbs in, the
-    // four companions out and no radios. THE MARGIN IS THE
-    // THING TO WATCH on this row: every further member costs 34px against the
-    // Pi's panel, and a NEW GROUP costs 41.)
+    // four companions out and no radios. Today's twenty-six matches neither of
+    // those, having a different group count. THE MARGIN IS THE
+    // THING TO WATCH on this row: every further member costs 34px and a NEW
+    // GROUP costs 41, which at 225% is 77 and 92 device px against the
+    // tablet's panel.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -2193,7 +2247,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // statements — that is what earns them the face, a refusal alone never
         // does. Since 2026-08-14 EVERY
         // button in this row the view consumes wears it — Undo / Redo /
-        // Render, the Show trim region button, the mass-marker five,
+        // Render, the Show trim region button, FOLLOW (the mass-marker
+        // category's one survivor since the 2026-08-27 relocation),
         // listen, load-in-place, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
         // the walk any more; the S/T + W/P radios, the zoom group and the
@@ -2209,11 +2264,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived nor hand-listed here — it is their own arm at
         // redesign_button_enabled, which states why the derived partition
         // cannot express it.
-        // THE LOCK'S TEN are the four marker verbs (the BOTTOM row's since
-        // 2026-08-18, so six of the ten are this row's), the copy/paste pair,
-        // the BPM and iteration openers, listen and the load-in-place, HAND-
-        // LISTED at redesign_button_enabled with read_only_key_blocked named as
-        // their owner — the one place in this face's membership that is not
+        // THE LOCK'S SET IS HAND-LISTED at redesign_button_enabled with
+        // read_only_key_blocked named as its owner, and that arm's own case
+        // list is where the membership is stated — the four marker verbs and
+        // the measure are the BOTTOM row's since 2026-08-18, leaving LISTEN and
+        // the LOAD-IN-PLACE as this row's two (the copy/paste pair left with
+        // the 2026-08-20 propagate relocation and the BPM and iteration
+        // openers with the 2026-08-27 Series one; all four are still blocked
+        // by the gate and simply have no face here to grey) — the one place in
+        // this face's membership that is not
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
@@ -2221,8 +2280,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // one disabled blend, row 2's rule applied to this row's glyph and
         // box: everything retains that fraction of itself over what sits under
         // it, so a dead button dims as ONE object. A dead SELECTED toggle
-        // (iteration or follow left on) keeps its fill and outline muted rather
-        // than dropped: the mode cannot change that state, so hiding it would be
+        // (follow left on, or the cumulative reading) keeps its fill and
+        // outline muted rather than dropped: the mode cannot change that
+        // state, so hiding it would be
         // a lie, and dimming it says "true, but not yours right now". Colour
         // only — gui_scale moves geometry, so the face is identical at 100% and
         // 200%.
@@ -3153,13 +3213,23 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
     // and the accelerator's right margin.
     //
+    // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD: the
+    // SERIES menu's "Iterations" row toggles a MODE, which is the first item
+    // in this product that could have worn one, and it does not — the label is
+    // the constant act's name and the mode says what it is doing on the screen
+    // itself (every warp flag grows its iteration bracket, and the Render
+    // button's hint reads "Render Iterations"). A checkbox column would exist
+    // for one row in one menu, and the roster's own no-blink argument answers
+    // it: a badge would restate what the picture already shows. The full
+    // record is at kSeriesPopupItems (app_state.h).
+    //
     // THE MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
-    // accelerator COLUMN, which the two COMMAND menus (File, and Edit since
-    // 2026-08-20) have and Settings does not. The width
-    // FOLLOWS from it — one expression with an optional term — rather than being
-    // a second difference of its own, and everything else (chrome, item height,
-    // insets, separator, faces, baseline, and now the label indent and right
-    // margin) is one set of numbers by construction.
+    // accelerator COLUMN, which the three COMMAND menus (File, Edit since
+    // 2026-08-20 and Series since 2026-08-27) have and Settings does not. The
+    // width FOLLOWS from it — one expression with an optional term — rather
+    // than being a second difference of its own, and everything else (chrome,
+    // item height, insets, separator, faces, baseline, and now the label
+    // indent and right margin) is one set of numbers by construction.
     //
     // (THE PER-ITEM DISABLED STATE, 2026-08-08 to 2026-08-15, was not a second
     // difference either, for the same reason the accelerator column is not two

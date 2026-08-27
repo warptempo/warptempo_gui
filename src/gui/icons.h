@@ -188,19 +188,25 @@ enum class Icon {
     // clipboard, transcribed from the shipped SVGs; the provenance files went
     // with them, the trim scissors' own precedent. A menu ROW carries text and
     // an accelerator, never a glyph, so nothing replaced them.)
-    MusicNote16th,       // BPM editor
+    // (MUSIC-NOTE-16TH AND MATHMODE ARE DELETED — 2026-08-27, with their
+    // buttons: the architect's Series relocation gave the BPM opener (bare
+    // `m`) and iteration mode (bare `i`) the new SERIES MENU as their one
+    // pointer home, and neither glyph had a second consumer. Breeze's
+    // music-note-16th (the flagged quaver) and mathmode (an italic f beside a
+    // multiplication cross, f(x)), transcribed from the shipped SVGs; the
+    // provenance files went with them, edit-copy and edit-paste's own
+    // precedent seven days earlier. A menu ROW carries text and an
+    // accelerator, never a glyph, so nothing replaced them. Mathmode had held
+    // iteration mode's slot only since 2026-08-18, when the SUMMATION SIGMA
+    // below left it for the cumulative reading.)
     // THE SUMMATION SIGMA, ON THE CUMULATIVE READING SINCE 2026-08-18
     // (architect): a cumulative delta is a SUM over the walk's members, read
     // against the iterative reading's one step at a time — the Σ says exactly
     // that, which deep-history's swept clock only implied. It dressed
     // ITERATION MODE from 2026-08-01 until this move (an iteration sweep is
-    // also a sum over cells), and that slot took mathmode below.
+    // also a sum over cells), and that slot took mathmode, which is deleted
+    // with the button on 2026-08-27.
     BlackSum,            // The cumulative reading (`u`)
-    // ITERATION MODE'S GLYPH SINCE 2026-08-18 (architect): the slot keeps a
-    // MATH SYMBOL and f(x) names the operation — a render as a function of a
-    // variable swept across a bracket — where the Σ it yields to says summing,
-    // which is the reading the history walk wanted.
-    Mathmode,            // Iteration mode (bare `i`)
     GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
@@ -357,6 +363,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 51 SINCE 2026-08-27, THE SERIES RELOCATION (the day's third move here):
+// 53 − music-note-16th and mathmode, deleted with the two icon-row buttons the
+// SERIES MENU replaced. Both commands survive whole on their bare keys and as
+// menu rows; the glyphs had no other consumer, exactly as edit-copy and
+// edit-paste had none when the EDIT MENU took their buttons.
 // 53 since 2026-08-27: 48 + the ON-SCREEN KEYBOARD's five (keyboard-caps-
 // disabled / keyboard-caps-enabled / keyboard-enter / keyboard-spacebar /
 // edit-clear-locationbar-rtl). Five fresh transcriptions, no departures beside
@@ -402,7 +413,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 53;
+inline constexpr int kIconCount = 51;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

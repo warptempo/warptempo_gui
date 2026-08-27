@@ -189,18 +189,14 @@ constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 // would have to move independently if a crop ever disagreed with a scheme.
 constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
 
-constexpr IconPath kMusicNote16thPaths[] = {
-    {kIconText,
-     "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
-     "14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 "
-     "9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,"
-     "0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 "
-     "16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z m 1,1.0957031 c "
-     "1.132773,0.1936395 2.194743,0.6800469 3,1.2460938 l 0,2.8046875 C "
-     "14.137786,7.634143 13.107988,7.23782 12,7.0800781 Z M 9,15 c 1.104569,0 "
-     "2,0.671573 2,1.5 C 11,17.328427 10.104569,18 9,18 7.8954305,18 7,"
-     "17.328427 7,16.5 7,15.671573 7.8954305,15 9,15 Z"},
-};
+
+// (MUSIC-NOTE-16TH IS DELETED — 2026-08-27, with the BPM opener's button: the
+// architect's Series relocation gave bare `m` and bare `i` the new SERIES MENU
+// as their one pointer home, and the glyph had no second consumer, exactly as
+// edit-copy and edit-paste had none when the propagate relocation took their
+// buttons. Breeze's music-note-16th, the flagged quaver, transcribed from the
+// shipped SVG; the provenance asset went with it. A menu ROW carries text and
+// an accelerator, never a glyph, so nothing replaced it.)
 
 // THE CUMULATIVE READING'S ICON SINCE 2026-08-18 (architect, with the roster
 // relayout): black_sum, the summation sigma — a CUMULATIVE delta is a sum over
@@ -208,8 +204,9 @@ constexpr IconPath kMusicNote16thPaths[] = {
 // the Σ says so outright where deep-history's swept clock only implied it.
 // (It dressed ITERATION MODE from 2026-08-01, architect-picked then over
 // media-playlist-repeat on the same reading — an iteration sweep is also a sum
-// over cells. That slot took mathmode below in the same ruling; the sigma
-// moved rather than being duplicated, so no two buttons wear one math symbol.)
+// over cells. That slot took mathmode in the same ruling and the sigma moved
+// rather than being duplicated, so no two buttons ever wore one math symbol;
+// mathmode is deleted with iteration mode's button, 2026-08-27.)
 constexpr IconPath kBlackSumPaths[] = {
     {kIconText,
      "M 3 3 L 7 11 L 3 19 L 3.5 19 L 4 19 L 4.0625 19 L 4.5 19 L 19 19 L 19 16 "
@@ -218,23 +215,14 @@ constexpr IconPath kBlackSumPaths[] = {
      "7 L 19 6 L 19 3 L 4.5 3 L 4.0625 3 L 4 3 L 3.5 3 L 3 3 z "},
 };
 
-// ITERATION MODE's icon since 2026-08-18 (architect, with the roster relayout,
-// taking the slot the summation sigma left for the cumulative reading):
-// mathmode — an italic f beside a multiplication cross, which reads as f(x).
-// THE SLOT KEEPS A MATH SYMBOL and this one names the OPERATION: a render as a
-// function of a variable swept across a bracket, which is what an iteration
-// sweep is. Command coverage: absolute M / C / L / z with implicit
-// absolute-lineto repetition, every family already committed here many times
-// over.
-constexpr IconPath kMathmodePaths[] = {
-    {kIconText,
-     "M 9 3 C 7.34315 3 6 4.3431 6 6 L 6 8 L 4 8 L 4 9 L 6 9 L 6 10 L 6 19 L "
-     "7 19 L 7 9 L 8 9 L 9 9 L 9 8 L 8 8 L 7 8 L 7 6 C 7 4.89543 7.89543 4 9 4 "
-     "L 10 4 L 10 3 L 9 3 z M 12.742188 13 L 12 13.732422 L 14.292969 16 L 12 "
-     "18.267578 L 12.742188 19 L 15.035156 16.732422 L 17.257812 18.931641 L "
-     "18 18.199219 L 15.775391 16 L 18 13.800781 L 17.257812 13.068359 L "
-     "15.035156 15.267578 L 12.742188 13 z "},
-};
+// (MATHMODE IS DELETED — 2026-08-27, with iteration mode's button, in the
+// same Series relocation that took music-note-16th above. It had dressed that
+// button since 2026-08-18, taking the slot the summation sigma left when the
+// sigma moved to the CUMULATIVE reading (the record is at kBlackSumPaths
+// above); it had no second consumer, so it goes with the button rather than
+// resting unreferenced. Breeze's mathmode, an italic f beside a
+// multiplication cross reading as f(x); the provenance asset went with it.)
+
 
 // FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
 // media-seek-forward): go-jump, the chevron with its destination dot — the
@@ -1065,9 +1053,7 @@ constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
 constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
 constexpr IconDef kSpeedometer        {22.0, kSpeedometerPaths,         1};
 constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
-constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
-constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
@@ -1122,9 +1108,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DocumentImport:      return kDocumentImport;
         case Icon::Speedometer:         return kSpeedometer;
         case Icon::ChronometerStart:    return kChronometerStart;
-        case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::BlackSum:            return kBlackSum;
-        case Icon::Mathmode:            return kMathmode;
         case Icon::GoJump:              return kGoJump;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
