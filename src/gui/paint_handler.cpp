@@ -5364,10 +5364,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   and names its key on its TOOLTIP instead — the bracketed accelerators are
 //   retired for the second time and with their reason recorded at PromptState,
 //   which owns the label rule; the codepoint-exact lowercase match is
-//   untouched, so a typed capital still does not answer. THE LAST BUTTON
-//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
-//   block's "no default face: this prompt system has no Enter answer, so every
-//   button is plain") — it is the Escape sentinel, and Enter answers it; the
+//   untouched, so a typed capital still does not answer. ONE BUTTON WEARS THE
+//   PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this block's
+//   "no default face: this prompt system has no Enter answer, so every button
+//   is plain") — the LAST, the Escape sentinel, on every prompt but the render
+//   player's load confirmation, which is raised on its FIRST (PromptState's
+//   PromptInitialFocus owns the choice); Enter answers whichever it is, the
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
 //   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
@@ -5580,7 +5582,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // reads the session rather than the owner as it did until 2026-08-14.
     // Read before the branches below write anything.
     // THE RESET IS ALSO THE PROMPT'S FOCUS ASSIGNMENT (2026-08-13): a prompt is
-    // raised with PASSIVE focus on its last button, so the frame that resets is
+    // raised with PASSIVE focus on a button, so the frame that resets is
     // the frame that assigns. The assignment itself waits until the buttons
     // exist, a few dozen lines down — this only remembers that this frame owes
     // it.
@@ -5717,18 +5719,26 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
 
-    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON ITS LAST BUTTON (architect
-    // 2026-08-13, the ruling that gave this prompt system an Enter answer —
-    // PromptState owns the supersession and the two facts that make it safe,
-    // the first of which is that the last button is always the ESCAPE
-    // SENTINEL). This is the ONE assignment site: it rides the same reset the
+    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON (architect 2026-08-13,
+    // the ruling that gave this prompt system an Enter answer — PromptState
+    // owns the supersession and the two facts that make it safe, the first of
+    // which is that the last button is always the ESCAPE SENTINEL). WHICH
+    // button is the RAISE'S OWN CHOICE (PromptInitialFocus, carried on the
+    // question since 2026-08-28): the last on every prompt but the render
+    // player's load confirmation, which asks for its FIRST — its OK is one
+    // undo entry away from being undone rather than destructive, and its Enter
+    // then means what the `h` view's Load editor's Enter means on the same
+    // act. This is the ONE assignment site: it rides the same reset the
     // focus's other three edges ride, so a fresh prompt and a prompt replacing
     // a prompt are one case, and it runs HERE rather than at the reset because
-    // "the last button" is not known until the plan exists. An EDITOR dialog is
+    // the plan's ends are not known until the plan exists. An EDITOR dialog is
     // deliberately not touched: it opens with focus in its FIELD, which is what
     // -1 already means there.
     if (face_state_reset && prompt_up && !plan.empty()) {
-        app.modal_dialog_focus        = static_cast<int>(plan.size()) - 1;
+        app.modal_dialog_focus =
+            app.prompt.initial_focus == PromptInitialFocus::FirstButton
+                ? 0
+                : static_cast<int>(plan.size()) - 1;
         app.modal_dialog_focus_active = false;
     }
 

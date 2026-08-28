@@ -150,12 +150,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // because it is navigation and activation over an unanswered question
         // and must obey the same "only a surface the user has seen" rule the
         // answers do.
-        // A PROMPT IS RAISED WITH PASSIVE FOCUS ON ITS LAST BUTTON since later
-        // that day, SUPERSEDING this gate's own "a prompt opens with no button
+        // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON since later that
+        // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
-        // what makes it safe is that the last button is the ESCAPE SENTINEL
-        // plus the painted gate directly above (PromptState carries the
-        // supersession in full). The route is shared with the editor dialogs' —
+        // what makes it safe is that the focused button is the ESCAPE SENTINEL
+        // — on every prompt but the render player's load confirmation, whose
+        // OK is one undo entry away from being undone and which asks for that
+        // button deliberately (PromptState's PromptInitialFocus) — plus the
+        // painted gate directly above (PromptState carries the supersession in
+        // full). The route is shared with the editor dialogs' —
         // one ring, one owner (route_modal_dialog_focus_key,
         // input_key_dispatch.cpp); a prompt has no field, so the editors'
         // completion-first Tab arm has no counterpart here and this call is the

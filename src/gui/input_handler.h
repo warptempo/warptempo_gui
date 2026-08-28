@@ -3523,10 +3523,12 @@ private:
     // lock's silent refusal on a read-only tab, "Only batch renders load in
     // place" on any highlight that is not a load-capable wav, and otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
-    // the highlighted entry. The prompt's OK runs confirm_render_player_load
-    // (the shared act load_render_entry_in_place, whose success closes the
-    // player and whose refusal says "Load refused" on the status line — its
-    // own cause is on stderr); Cancel runs cancel_render_player_load.
+    // the highlighted entry — the one prompt raised with its FIRST button
+    // focused, so a bare Enter answers OK (the reason is at the raise). The
+    // prompt's OK runs confirm_render_player_load (the shared act
+    // load_render_entry_in_place, whose success closes the player and whose
+    // refusal says "Load refused" on the status line — its own cause is on
+    // stderr); Cancel runs cancel_render_player_load.
     // THE TWO-ROAD SANCTION is recorded at load_render_entry_in_place.
     void render_player_load_in_place();
     // (confirm_render_player_load / cancel_render_player_load — the prompt's

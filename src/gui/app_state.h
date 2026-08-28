@@ -3443,12 +3443,15 @@ enum class DialogTrigger {
     PASTE_CONFIRM,
     ERROR_NOTICE,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load `<id>` in
-    // place?", OK / Cancel, raised by a long press (shift-click on plastic,
-    // Shift+Enter on a focused row) on a load-capable wav row of the folder
-    // overlay. OK runs the shared load_render_entry_in_place act on the entry
-    // parked at AppState::RenderPlayer::pending_load; Cancel drops it. The
-    // raise and the answers are GuiRenderPlayer's (render_player.cpp), which
-    // the prompt reaches through its input-handler back-pointer.
+    // place?", OK / Cancel, raised by the modal row's Load in place button or
+    // bare `'` on a load-capable wav row of the folder overlay. OK runs the
+    // shared load_render_entry_in_place act on the entry parked at
+    // AppState::RenderPlayer::pending_load; Cancel drops it. THE ONE PROMPT
+    // RAISED WITH ITS FIRST BUTTON FOCUSED, so a bare Enter answers OK the way
+    // the `h` view's Load editor's Enter commits (PromptInitialFocus owns the
+    // choice and its reason). The raise and the answers live on
+    // GuiInputHandler (render_player_load_in_place, input_key_dispatch.cpp),
+    // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
 };
 
@@ -3495,11 +3498,12 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All four raisers put
-//        '\x1b' last: the unsaved-work prompt (Save / Discard / CANCEL), its
-//        save-failed restatement (Retry / Discard / CANCEL), the paste
-//        confirmation (Yes / CANCEL) and the error notice (OK, whose one
-//        response IS the sentinel). So the key that answers without asking
+//        by construction rather than by convention. All five raisers put
+//        '\x1b' last (re-grepped 2026-08-28): the unsaved-work prompt (Save /
+//        Discard / CANCEL), its save-failed restatement (Retry / Discard /
+//        CANCEL), the paste confirmation (Yes / CANCEL), the error notice (OK,
+//        whose one response IS the sentinel) and the render player's load
+//        confirmation (OK / CANCEL). So the key that answers without asking
 //        answers the way Esc already does, and no destructive response is ever
 //        one Enter away.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
@@ -3551,6 +3555,20 @@ enum class DialogTrigger {
 // shape is the prompt's ONE-KEY ANSWERS, which is exactly what this bit
 // guards. A frame deferral (both buffers in flight) simply keeps the bit
 // false longer — keys consumed, which is the correct answer.
+// WHICH BUTTON A RAISE FOCUSES (architect 2026-08-28). Every prompt is raised
+// with PASSIVE focus on a button — the Enter answer above — and this says
+// which one; the BUTTON ORDER is untouched by either value, so Cancel stays
+// LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
+//   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
+//                 every raise whose Enter must not commit anything.
+//   FirstButton — the RENDER PLAYER'S LOAD CONFIRMATION alone: its OK is not a
+//                 destructive answer (the load lands one undo entry, which the
+//                 ordinary Ctrl+Z takes back), and its keyboard contract
+//                 mirrors the `h` view's Load editor — the product's other `'`
+//                 road onto the same act, whose Enter is its commit. The two
+//                 roads answer the same way rather than opposite ways.
+enum class PromptInitialFocus { LastButton, FirstButton };
+
 struct PromptState {
     bool                     active = false;
     bool                     painted = false;   // see the block above
@@ -3566,20 +3584,28 @@ struct PromptState {
     std::vector<char>        response_keys;     // lowercase
     std::vector<std::string> response_labels;   // plain words, e.g. "Save"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
+    // WHICH BUTTON THE PAINTER'S RAISE FOCUSES (the enum above owns the
+    // choice). Written only by present, read only by paint_modal_dialog's
+    // one assignment site.
+    PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the three raisers
-    // (the unsaved-work prompt, the error notice, the paste confirmation) and
-    // the save-failed rung's in-place restatement, which is a raise as far as
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the four raisers
+    // (re-grepped 2026-08-28: the unsaved-work prompt, the error notice, the
+    // paste confirmation and the render player's load confirmation) and the
+    // save-failed rung's in-place restatement, which is a raise as far as
     // this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
     // forgot to clear it, because there is nowhere else to write the question.
     // The callers own their own damage (invalidate_all — the modal's rect
     // does not exist before the first paint, which the painted gate's own
     // reasoning depends on) and the modal playback stop.
+    // `focus` is REQUIRED, not defaulted: a new raise states which button its
+    // Enter answers rather than inheriting one silently.
     void present(std::string t,
                  std::vector<char> keys,
                  std::vector<std::string> labels,
-                 DialogTrigger trig) {
+                 DialogTrigger trig,
+                 PromptInitialFocus focus) {
         active          = true;
         painted         = false;
         session         = text_editor::next_session_id();
@@ -3587,6 +3613,7 @@ struct PromptState {
         response_keys   = std::move(keys);
         response_labels = std::move(labels);
         trigger         = trig;
+        initial_focus   = focus;
     }
 };
 
@@ -5093,7 +5120,8 @@ struct AppState {
     // FIELD, a real ring stop and where every editor opens (the user is there
     // to type, which is also what keeps the editors' keyboard contract
     // byte-identical); on a PROMPT -1 is nothing at all, because a prompt is
-    // RAISED with its last button focused and its ring is its buttons alone,
+    // RAISED with a button focused (its last, or its first where the raise
+    // asked for that — PromptInitialFocus) and its ring is its buttons alone,
     // wrapping. (The "a prompt opens with NO button focused" rule and the
     // no-focus stop in its cycle are RETIRED with the Enter answer's arrival
     // the same day; the supersession and what makes it safe are at
@@ -5148,8 +5176,10 @@ struct AppState {
     // it wears. What separates them is HOW THE FOCUS WAS ACQUIRED and what
     // the button then looks like:
     //   PASSIVE is ASSIGNED, never walked onto. Two producers, and they are
-    //   the whole list: a PROMPT'S RAISE (the painter, onto the last button —
-    //   the Escape sentinel; PromptState owns why that is the safe one) and a
+    //   the whole list: a PROMPT'S RAISE (the painter, onto the button the
+    //   raise named — the last, the Escape sentinel, on every prompt but the
+    //   render player's load confirmation; PromptState's PromptInitialFocus
+    //   owns the choice and why each is safe) and a
     //   FEINT (a press that armed a button, then dragged off it —
     //   update_modal_dialog_hover's leave edge; the rule is at
     //   modal_dialog_pressed). A feint's assignment REPLACES whatever focus

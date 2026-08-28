@@ -244,7 +244,8 @@ void PhaseResetPropagate::open_paste_confirmation() {
         "Existing phase resets in matched ranges will be cleared.",
         {'y', '\x1b'},
         {"Yes", "Cancel"},
-        DialogTrigger::PASTE_CONFIRM);
+        DialogTrigger::PASTE_CONFIRM,
+        PromptInitialFocus::LastButton);
     viewport.invalidate_all();
 }
 

@@ -52,7 +52,8 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     app.prompt.present("Save unsaved changes?",
                        {'s', '\x7f', '\x1b'},
                        {"Save", "Discard", "Cancel"},
-                       t);
+                       t,
+                       PromptInitialFocus::LastButton);
     viewport.invalidate_all();
 }
 
@@ -71,7 +72,8 @@ void GuiPrompt::open_error_notice(std::string text) {
     // The one raise route (PromptState::present), so the painted gate holds
     // here too.
     app.prompt.present(std::move(text), {'\x1b'}, {"OK"},
-                       DialogTrigger::ERROR_NOTICE);
+                       DialogTrigger::ERROR_NOTICE,
+                       PromptInitialFocus::LastButton);
     viewport.invalidate_all();
 }
 
@@ -142,7 +144,8 @@ void GuiPrompt::activate_response(char k) {
                 app.prompt.present("Save failed.",
                                    {'r', '\x7f', '\x1b'},
                                    {"Retry", "Discard", "Cancel"},
-                                   trigger);
+                                   trigger,
+                                   PromptInitialFocus::LastButton);
                 viewport.invalidate_all();
                 return;
             }

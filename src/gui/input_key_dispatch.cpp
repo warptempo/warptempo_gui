@@ -4896,9 +4896,11 @@ void GuiInputHandler::load_editor_commit() {
 //            and Space still types a space, byte-identical to before the ring.
 //            A prompt has no field, so on a prompt they always mean the focused
 //            button — which since the same day's passive-focus ruling is the
-//            Escape sentinel at every raise (PromptState owns the supersession
-//            of "this prompt system has no Enter answer" and the two facts that
-//            make it safe).
+//            button the raise focused: the Escape sentinel everywhere but the
+//            render player's load confirmation, which asks for its OK
+//            (PromptState owns the supersession of "this prompt system has no
+//            Enter answer", the two facts that make it safe and that one
+//            exception's own reason).
 //
 // THE WALK ASSIGNS THE ACTIVE STRENGTH, and it is the strength's ONE producer:
 // every landing on a button here is a deliberate keyboard step, which is the
@@ -5940,15 +5942,21 @@ void GuiInputHandler::render_player_load_in_place() {
     // at stop_playback_for_modal_open.
     if (app.render_player.transport_live) render_player.toggle_pause();
     app.render_player.pending_load = *entry;
-    // THE CONFIRMATION (R15): the entry's id in the load editor's own
-    // spelling, OK / Cancel — Cancel the Escape sentinel LAST, so the raise's
-    // passive focus and a bare Enter answer the non-destructive way every
-    // prompt does; `o` is OK's letter. Through PromptState::present, the one
-    // raise route, so the painted gate holds.
+    // THE CONFIRMATION: the entry's id in the load editor's own spelling,
+    // OK / Cancel — Cancel the Escape sentinel LAST like every prompt's, so
+    // Esc's own answer is derived rather than declared; `o` is OK's letter.
+    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, this prompt alone
+    // (architect 2026-08-28): a bare ENTER here answers OK, because the load
+    // is not a destructive answer — it lands ONE undo entry, which the
+    // ordinary Ctrl+Z takes back — and because the product's other `'` road
+    // onto this same act, the `h` view's Load editor, commits on its Enter.
+    // The two roads answer alike instead of opposite ways. Through
+    // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
                        {'o', '\x1b'},
                        {"OK", "Cancel"},
-                       DialogTrigger::LOAD_IN_PLACE_CONFIRM);
+                       DialogTrigger::LOAD_IN_PLACE_CONFIRM,
+                       PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
 }
 
