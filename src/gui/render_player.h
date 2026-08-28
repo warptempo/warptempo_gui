@@ -169,13 +169,13 @@ struct GuiRenderPlayer {
     void open_row(int index);
     // One folder up; a consumed no-op at the root.
     void up();
-    // Move the highlight by `delta` rows, clamped, scrolling the band to keep
-    // it visible.
+    // The widget's three mechanics with the player's damage on top
+    // (folder_overlay.h owns the clamps and the scroll-into-view; the picker
+    // drives the same three through its own damage): move the highlight by
+    // `delta` rows, seat it on `index` — the motionless click's act — and
+    // scroll the band by `rows` rows, the wheel's detent step.
     void move_highlight(int delta);
-    // Seat the highlight on `index` (clamped into the listing; -1 for an empty
-    // one) — the motionless click's act. Damages the band.
     void set_highlight(int index);
-    // Scroll the band by `rows` rows (the wheel's detent step), clamped.
     void scroll_rows(int rows);
     // The highlighted row's render entry — non-null exactly when the highlight
     // is a LOAD-CAPABLE wav (a batch cell). The load road's one question.

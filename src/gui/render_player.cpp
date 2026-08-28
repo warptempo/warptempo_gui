@@ -234,36 +234,19 @@ void GuiRenderPlayer::open_row(int index) {
     }
 }
 
+// The three below are the WIDGET'S mechanics (folder_overlay.h owns where the
+// band may sit and how far the offset may run, for both contents alike); what
+// this cluster adds is the player's own damage.
 void GuiRenderPlayer::move_highlight(int delta) {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    const int n = static_cast<int>(ov.rows.size());
-    if (n <= 0) return;
-    const int from = ov.highlight_row < 0 ? 0 : ov.highlight_row;
-    set_highlight(std::clamp(from + delta, 0, n - 1));
+    if (folder_overlay::move_highlight(app, delta)) damage_band();
 }
 
 void GuiRenderPlayer::set_highlight(int index) {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    const int n = static_cast<int>(ov.rows.size());
-    const int to = n <= 0 ? -1 : std::clamp(index, 0, n - 1);
-    if (to != ov.highlight_row) {
-        ov.highlight_row = to;
-        damage_band();
-    }
-    if (to >= 0) {
-        const int before = ov.scroll_px;
-        folder_overlay::scroll_row_into_view(app, to);
-        if (ov.scroll_px != before) damage_band();
-    }
+    if (folder_overlay::set_highlight(app, index)) damage_band();
 }
 
 void GuiRenderPlayer::scroll_rows(int rows) {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    const int before = ov.scroll_px;
-    ov.scroll_px += rows * (folder_overlay::row_height_px() +
-                            folder_overlay::row_gap_px());
-    folder_overlay::clamp_scroll(app);
-    if (ov.scroll_px != before) damage_band();
+    if (folder_overlay::scroll_rows(app, rows)) damage_band();
 }
 
 const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
@@ -590,7 +573,11 @@ bool GuiRenderPlayer::open() {
     rp.painted_cursor = -1;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
-    app.folder_overlay = AppState::FolderOverlay{};
+    // THE BAND OPENS WITH THE PLAYER AS ITS OWNER — the tag is the panel's
+    // standing predicate (folder_overlay_stands), so it is what raises the
+    // overlay, and every other field of the panel is reset with it.
+    app.folder_overlay       = AppState::FolderOverlay{};
+    app.folder_overlay.owner = AppState::FolderOverlay::Owner::Player;
     rebuild_rows();
     // A modal OPEN damages the whole window: the row's chrome greys, the band
     // appears over the waveform, and the modal row has no rect before its
@@ -637,6 +624,8 @@ void GuiRenderPlayer::close() {
     rp.item.clear();
     rp.item_folder.clear();
     rp.item_index = -1;
+    // The panel comes down with the mode: the reset restores Owner::None,
+    // which IS the band's standing predicate answering false.
     app.folder_overlay = AppState::FolderOverlay{};
     viewport.invalidate_all();
     // The head unit: the session goes INACTIVE with the mode, and the audio

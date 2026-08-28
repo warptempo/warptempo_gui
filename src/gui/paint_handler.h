@@ -91,7 +91,7 @@ inline int icon_row_pad_x() {
 // geometry IS the painted one rather than a re-derivation that could drift.
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
-// The OPEN PROJECT prompt's label (File → Open, 2026-08-27) — ONE WAY TO SHOW
+// The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
 // THE LEVEL (architect 2026-08-27): a path prompt prints the device config
 // VARIABLE'S NAME in literal angle brackets, never the long path, and the
 // typed folder name renders directly after the slash, so the constant carries

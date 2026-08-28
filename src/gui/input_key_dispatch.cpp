@@ -3324,6 +3324,18 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((app.prompt.active || modal_dialog_editor_active()) &&
         modal_ring_tab_shape(key, mods) != ModalRingTab::None)
         return true;
+    // THE OPEN PROJECT PICKER'S LIST WALK REPEATS (2026-08-28), the ring's
+    // own reason one surface over: bare Up / Down are a continuous step that
+    // decides nothing but where the band is — and, since the band and the
+    // field are one thing here, what the buffer spells. Ranked ABOVE the
+    // focused-button refusal below because the walk is legal from a focused
+    // button too, exactly as the ring's Tab is. A prompt over the picker is
+    // the prompt's own answer, which the blanket below gives.
+    if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::ProjectPicker &&
+        !app.prompt.active && !mods.ctrl && !mods.shift && !mods.alt &&
+        (key == GuiKeys::Up || key == GuiKeys::Down))
+        return true;
     // AND THE WALK IS THE ONLY THING THAT REPEATS ONCE THE FOCUS IS ON A BUTTON
     // (2026-08-13): from there no key reaches the field at all
     // (route_modal_editor_key's wall), so there is nothing left that a hold
@@ -3502,13 +3514,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
 // so the only NotConsumed keys that can reach route_modal_editor_key's command
 // tail are those last two chords.
-// THE ADMITTED SET HAS GROWN TWICE since the dialog arc, both times by the TAB
-// FAMILY AND NOTHING ELSE: bare Tab, from "the settings and load editors only"
-// to "any dialog editor", when the focus ring landed 2026-08-13; and THE
-// RING'S REVERSE WALK the same day (architect: "also, shift+tab should cycle
+// THE ADMITTED SET HAS GROWN THREE TIMES since the dialog arc. Twice by the
+// TAB FAMILY: bare Tab, from "the settings and load editors only" to "any
+// dialog editor", when the focus ring landed 2026-08-13; and THE RING'S
+// REVERSE WALK the same day (architect: "also, shift+tab should cycle
 // backward"), which admits Shift+Tab and the IsoLeftTab keysym in the live
 // marker cycle's own spellings — one predicate, modal_ring_tab_shape above,
-// read here and by the ring alike. (WHAT A TAB DOES inside the set was re-ruled
+// read here and by the ring alike. And once by the OPEN PROJECT PICKER's bare
+// Up / Down (2026-08-28), the only growth scoped to ONE editor: the picker's
+// band is a list the prompt's field has no keys for, and the pair is admitted
+// exactly while that band stands. (WHAT A TAB DOES inside the set was re-ruled
 // twice more that day and settled on the one autocomplete model — completion
 // first, ring if it did not advance, stated at route_modal_editor_key — without
 // moving the admission either time.) Nothing else about
@@ -3540,11 +3555,24 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_dialog_focus_tab =
         (modal_dialog_editor_active() &&
          modal_ring_tab_shape(key, mods) != ModalRingTab::None);
+    // THE OPEN PROJECT PICKER'S LIST WALK, the set's third growth and the
+    // same shape as the ring's (2026-08-28): while the picker stands over the
+    // Open prompt, BARE Up and Down are the band's walk — the one pair the
+    // editor's own keymap does not own and the prompt still needs. Scoped to
+    // the picker's owner tag, so no other editor's Up / Down changes meaning,
+    // and BARE-EXACT, so every modified spelling stays the strict rule's
+    // no-op. handle_open_project_editor_key is what acts on them.
+    const bool is_picker_walk =
+        (app.folder_overlay.owner ==
+             AppState::FolderOverlay::Owner::ProjectPicker &&
+         !ctrl && !shift && !alt &&
+         (key == GuiKeys::Up || key == GuiKeys::Down));
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    return !(is_editor_key || is_dialog_focus_tab || is_save || is_ctrl_q);
+    return !(is_editor_key || is_dialog_focus_tab || is_picker_walk ||
+             is_save || is_ctrl_q);
 }
 
 // The Esc-cancel semantics as a callable body, used by the Esc key
@@ -5207,6 +5235,12 @@ void GuiInputHandler::open_project_editor() {
                        /*target=*/0,
                        std::string(),
                        text_editor::Kind::OpenProject);
+    // THE PICKER RISES WITH THE PROMPT: the same captured names, filtered by
+    // the model's own validity, as the folder overlay's rows. On glass it
+    // takes the on-screen keyboard's band (onscreen_keyboard::stands carries
+    // the panel's negation), so the prompt shows THE LIST there and not a
+    // keyboard — the architect's R3, "neither use needs typing".
+    build_project_picker_rows();
     // A modal-dialog OPEN damages the whole window (the box's rect does not
     // exist before its first paint — the settings opener carries the rule).
     viewport.invalidate_all();
@@ -5214,9 +5248,105 @@ void GuiInputHandler::open_project_editor() {
 
 void GuiInputHandler::open_project_editor_exit_no_commit() {
     if (!text_editor::is_active(app.open_project_editor)) return;
-    viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.open_project_editor);
     app.open_project_candidates.clear();
+    // THE OVERLAY LEAVES WITH THE PROMPT, through this one body: the reset
+    // restores Owner::None, which IS the band's standing predicate answering
+    // false. The damage is the whole window, as the open's is — the band's
+    // pixels sit over the waveform and the roster's grey lifts with them.
+    app.folder_overlay = AppState::FolderOverlay{};
+    viewport.invalidate_all();
+}
+
+// -- THE OPEN PROJECT PICKER (the folder overlay's second content) ----------
+//
+// The three bodies the overlay's row acts fork into while its owner is
+// ProjectPicker; the contract, and why a second road onto this one field is
+// sanctioned, are at the declarations.
+
+void GuiInputHandler::build_project_picker_rows() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov       = AppState::FolderOverlay{};
+    ov.owner = AppState::FolderOverlay::Owner::ProjectPicker;
+    // ONE LIST, FILTERED: the prompt's candidates are the folder names under
+    // projects_path and the rows are exactly those the model ACCEPTS, so the
+    // completion and the band can never disagree about what a project is. An
+    // invalid folder just does not show up (architect R8). No `..` row and no
+    // folder inside a project: the picker's tree is one level deep.
+    const std::filesystem::path root(app.device_config->projects_path);
+    for (const std::string& name : app.open_project_candidates) {
+        const std::filesystem::path folder = root / name;
+        if (!resolve_project(folder)) continue;
+        AppState::FolderOverlayRow row;
+        row.kind = AppState::FolderOverlayRow::Kind::Folder;
+        row.name = name;
+        row.path = folder;
+        ov.rows.push_back(std::move(row));
+    }
+    // THE BAND OPENS ON THE CURRENT PROJECT, which the field does not yet
+    // spell — the prompt enters empty and its Tab seed is unchanged. From the
+    // first select or the first keystroke the two move together.
+    ov.highlight_row = -1;
+    for (size_t i = 0; i < ov.rows.size(); ++i) {
+        if (ov.rows[i].name == app.project_name) {
+            ov.highlight_row = static_cast<int>(i);
+            break;
+        }
+    }
+    folder_overlay::clamp_scroll(app);
+    if (ov.highlight_row >= 0)
+        folder_overlay::scroll_row_into_view(app, ov.highlight_row);
+}
+
+void GuiInputHandler::project_picker_select(int index) {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::ProjectPicker) return;
+    if (!text_editor::is_active(app.open_project_editor)) return;
+    const int n = static_cast<int>(ov.rows.size());
+    if (n <= 0) return;
+    const bool band = folder_overlay::set_highlight(app, index);
+    // THE FIELD FOLLOWS THE BAND, through the editor's ONE incoming filter
+    // (text_editor::replace_selection) over a select-all: the buffer becomes
+    // the row's name, the caret lands at its end, the anchor is dropped by the
+    // erase and the red state clears with the accepted write. A row name is
+    // whatever the filesystem spells, so it passes the filter like any other
+    // incoming text rather than being trusted.
+    text_editor::State& ed = app.open_project_editor;
+    ed.selection_anchor    = 0;
+    ed.cursor_pos          = static_cast<int>(ed.pending.size());
+    text_editor::replace_selection(
+        ed, ov.rows[static_cast<size_t>(app.folder_overlay.highlight_row)].name);
+    ed.selection_anchor = -1;
+    ed.red              = false;
+    if (band) viewport.invalidate_rect(folder_overlay::surface_rect(app));
+    viewport.invalidate_modal_dialog_area();
+}
+
+void GuiInputHandler::project_picker_track_field() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.owner != AppState::FolderOverlay::Owner::ProjectPicker) return;
+    if (!text_editor::is_active(app.open_project_editor)) return;
+    // A TYPED NAME THAT SPELLS A LISTED PROJECT MOVES THE BAND ONTO IT, and a
+    // buffer that spells none leaves the list unmarked — the exact compare,
+    // never a prefix: the band promises what Enter opens, and a prefix names
+    // no one project.
+    int match = -1;
+    for (size_t i = 0; i < ov.rows.size(); ++i) {
+        if (ov.rows[i].name == app.open_project_editor.pending) {
+            match = static_cast<int>(i);
+            break;
+        }
+    }
+    bool changed = false;
+    if (match < 0) {
+        if (ov.highlight_row != -1) {
+            ov.highlight_row = -1;
+            changed          = true;
+        }
+    } else {
+        changed = folder_overlay::set_highlight(app, match);
+    }
+    if (changed) viewport.invalidate_rect(folder_overlay::surface_rect(app));
 }
 
 // Bare Tab. THE EMPTY FIELD SEEDS THE MOST RECENT PROJECT — `last_project`
@@ -5240,11 +5370,15 @@ bool GuiInputHandler::open_project_editor_autocomplete() {
             static_cast<int>(app.open_project_editor.pending.size());
         app.open_project_editor.selection_anchor = -1;
         app.open_project_editor.red              = false;
+        // The seed is a text change like any other, so the band follows it.
+        project_picker_track_field();
         viewport.invalidate_modal_dialog_area();
         return true;
     }
-    return complete_editor_prefix(app.open_project_editor,
-                                  app.open_project_candidates);
+    const bool advanced = complete_editor_prefix(app.open_project_editor,
+                                                 app.open_project_candidates);
+    if (advanced) project_picker_track_field();
+    return advanced;
 }
 
 // Enter. Validity through the project model, then the strict sidecar dry-run,
@@ -5310,7 +5444,7 @@ void GuiInputHandler::open_project_editor_commit() {
 // reached from the File menu's Synchronize row alone, whose release has
 // already closed the popup.
 void GuiInputHandler::synchronize_to_external_storage() {
-    // The Open row's own three gates, mirrored: a menu row's refusals belong
+    // The Open project row's own three gates, mirrored: a menu row's refusals belong
     // to the menu, not to the act. Each returns without touching playback —
     // and neither does the act itself, which is silent and changes no audio.
     if (app.prompt.active || keyboard_modal_editor_active()) return;
@@ -5374,13 +5508,38 @@ void GuiInputHandler::on_external_sync_complete(
 
 bool GuiInputHandler::handle_open_project_editor_key(GuiKey key,
                                                      GuiInputState mods) {
+    // THE PICKER'S LIST WALK, ahead of the shared route because that route
+    // knows only a field and a ring: bare Up / Down move the band AND
+    // prepopulate the field, the two being one thing here, and they walk from
+    // the field or from a focused button alike — the walk decides nothing but
+    // where the band is. They reach this body at all because
+    // modal_editor_key_blocked admits them while the picker stands; every
+    // modified spelling stays the strict rule's no-op, dropped at that gate.
+    if (app.folder_overlay.owner ==
+            AppState::FolderOverlay::Owner::ProjectPicker &&
+        !mods.ctrl && !mods.shift && !mods.alt &&
+        (key == GuiKeys::Up || key == GuiKeys::Down)) {
+        const int n = static_cast<int>(app.folder_overlay.rows.size());
+        if (n > 0) {
+            const int from = app.folder_overlay.highlight_row < 0
+                                 ? 0 : app.folder_overlay.highlight_row +
+                                       (key == GuiKeys::Up ? -1 : +1);
+            project_picker_select(std::clamp(from, 0, n - 1));
+        }
+        return true;
+    }
     return route_modal_editor_key(
         app.open_project_editor, key, mods,
         [this] { return open_project_editor_autocomplete(); },
         [this] { open_project_editor_commit(); },
         [this] { open_project_editor_exit_no_commit(); },
         [this] { open_project_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_modal_dialog_area(); });
+        [this] {
+            // A TEXT CHANGE MOVES THE BAND (or takes it off the list): the
+            // picker's other direction, on the route's own repaint edge.
+            project_picker_track_field();
+            viewport.invalidate_modal_dialog_area();
+        });
 }
 
 // P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash

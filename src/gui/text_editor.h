@@ -119,7 +119,7 @@ constexpr int kMaxPendingCharsMeasure =
 // in-bracket source and there is nothing longer to type. A tight bound rather
 // than a policy cap, the measure field's own arrangement.
 constexpr int kMaxPendingCharsMeasureOffset = 6;
-// The OPEN PROJECT prompt (File → Open). Holds a project folder's NAME under
+// The OPEN PROJECT prompt (File → Open project). Holds a project folder's NAME under
 // the device config's projects_path — "550 - 1" — typed or Tab-completed over
 // the folder names there. 256 is the load prompt's own generous ceiling for a
 // program-named path component, and a folder name is one such component.
@@ -142,7 +142,7 @@ constexpr int kMaxPendingCharsOpenProject = 256;
 // the field's 2026-08-20 rebrand, judged at the commit by marker_measure.h and
 // not at all on the keyboard); and the MEASURE PROPAGATE's paste-offset editor
 // uses MeasureOffset (one signed decimal integer, likewise judged at its commit
-// and not on the keyboard); and the OPEN PROJECT prompt (File → Open) uses
+// and not on the keyboard); and the OPEN PROJECT prompt (File → Open project) uses
 // OpenProject (a project folder's name under the projects path, resolved
 // against the project model at commit). THERE ARE EIGHT KINDS AND SIX OF THEM
 // ARE DIALOG EDITORS — the sixth Kind was architect-blessed 2026-08-19, the

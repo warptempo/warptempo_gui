@@ -2497,7 +2497,7 @@ private:
     bool complete_editor_prefix(text_editor::State& ed,
                                 const std::vector<std::string>& candidates);
 
-    // THE OPEN PROJECT PROMPT (architect 2026-08-27) — File → Open's own, the
+    // THE OPEN PROJECT PROMPT (architect 2026-08-27) — File → Open project's own, the
     // load editor's exact pattern for the project model's one act: choosing a
     // project REOPENS IN PLACE (gui_main's loop rebuilds the object set around
     // the chosen source; the contract is at main.cpp). It MIMICS LOAD IN
@@ -2509,7 +2509,7 @@ private:
     // 2026-08-28 and ONE body — CTRL+O, the act's chord (is_open_project_key,
     // gui_input.h; on_key's arm dispatches it at the press, and the read-only
     // allowlist admits it because the prompt authors nothing), and the File
-    // menu's Open row, which is that same chord dispatched through on_key at
+    // menu's Open project row, which is that same chord dispatched through on_key at
     // the lift like Quit's. It was the menu row's alone, on the
     // GuiPopupAct::OpenProject fork, while the chord was deferred; the
     // enumerator died with the binding. Refuses silently, without
@@ -2542,10 +2542,43 @@ private:
     // the unsaved-tab prompt EXACTLY as Ctrl+Q's, its answer completing a
     // reopen instead of an exit (GuiCloseTarget, prompt.h).
     // open_project_editor_exit_no_commit: Esc / Ctrl+Q teardown; the candidate
-    // list dies with the session.
+    // list and THE PICKER'S BAND die with the session. It is the prompt's ONE
+    // close body — Esc, Cancel, Ctrl+Q, the same-project no-op and the
+    // reopen's own tail all pass through it — which is what makes "the
+    // overlay leaves with the prompt" a fact rather than a list.
     // handle_open_project_editor_key: the key router, through
     // route_modal_editor_key like the five editors before it, with the
-    // completion as its Tab hook.
+    // completion as its Tab hook — plus the picker's own bare Up / Down ahead
+    // of that route (the list walk; the shared route knows no list).
+    //
+    // THE PICKER IS THE SECOND ROAD ONTO THIS ONE FIELD, and it is the
+    // no-second-road doctrine's stated exception rather than a breach
+    // (architect design 2026-08-28, R8): GLASS NEEDS A ROAD THAT IS NOT
+    // TYPING, and the tablet cannot type a project name — on that backend the
+    // picker even takes the on-screen keyboard's band, so the list is the only
+    // road there. It is a second road onto the FIELD, never a second ACT: a
+    // row's name is written into this same buffer through the editor's one
+    // incoming filter, and Enter, OK and a row's double-click all reach
+    // open_project_editor_commit. The three picker bodies below are what the
+    // overlay's row acts fork into when its owner is ProjectPicker:
+    //   build_project_picker_rows: the band's rows AT THE OPEN — the captured
+    //     candidate names FILTERED BY resolve_project, so the list and the
+    //     completion cannot disagree about what a project is, and an invalid
+    //     folder simply does not show. Never kept fresh (a project that
+    //     appears or vanishes while the prompt stands shows at the next open),
+    //     no `..` row and no folder inside a project: a project is a leaf
+    //     here. The band opens on the CURRENT project's row.
+    //   project_picker_select: THE HIGHLIGHT AND THE FIELD ARE ONE THING —
+    //     seat the band on a row AND write its name into the buffer through
+    //     text_editor::replace_selection over a select-all, clearing the red
+    //     state. A row click, a row double-click's own first act and Up / Down
+    //     all call it, so what the band marks is always what Enter opens.
+    //   project_picker_track_field: the other direction, on every text change
+    //     — the buffer compared against the row names, the band moving onto an
+    //     exact match and leaving the list when there is none.
+    void build_project_picker_rows();
+    void project_picker_select(int index);
+    void project_picker_track_field();
     // No undo (a reopen discards the stack by construction, and the prompt
     // authors nothing); LEGAL ON A READ-ONLY TAB for the same reason, which
     // since the chord landed is a named entry on read_only_key_blocked's
@@ -2572,7 +2605,7 @@ private:
     //
     // synchronize_to_external_storage: the opener. It refuses silently, without
     // touching playback, while a prompt or any editor stands, in the `h`
-    // history view and during a load — the Open row's own three gates, mirrored
+    // history view and during a load — the Open project row's own three gates, mirrored
     // because a menu row's refusals are the menu's, not the act's — and it
     // refuses with no source loaded, having nothing to mirror. It is LEGAL ON A
     // READ-ONLY TAB (it authors nothing: it reads two output folders and writes
@@ -3486,19 +3519,31 @@ private:
     // above it in on_key).
     void toggle_render_player();
 
-    // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp): the row press
-    // claim (arm at the press; a recognized DOUBLE-CLICK opens the row at the
-    // press and arms nothing; a modified press is consumed), the release (a
-    // motionless lift highlights and seeds the double-click candidate; a
-    // scroll drag ends), the motion (past the vertical drag gate the arm is
-    // the band's scroll drag; inside it the feint's inside bit), the hover
-    // walk, and the hard end (the pointer-leave hook, the button-lost edge and
-    // the force-end finalizer — the arm dropped, nothing committed).
-    bool claim_folder_overlay_press(int x, int y, GuiInputState mods,
+    // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
+    // FOR BOTH CONTENTS: the row press claim (arm at the press; a recognized
+    // DOUBLE-CLICK opens the row at the press and arms nothing; a modified or
+    // non-left press is consumed), the release (a motionless lift highlights
+    // and seeds the double-click candidate; a scroll drag ends), the motion
+    // (past the vertical drag gate the arm is the band's scroll drag; inside
+    // it the feint's inside bit), the hover walk, and the hard end (the
+    // pointer-leave hook, the button-lost edge and the force-end finalizer —
+    // the arm dropped, nothing committed). The claim is RANKED under the
+    // prompt gate and ABOVE both veils, which is what admits the picker's
+    // band while the Open prompt stands; it owns its own button gate so the
+    // rank costs the veils nothing.
+    bool claim_folder_overlay_press(int x, int y, GuiMouseButton button,
+                                    GuiInputState mods,
                                     const DoubleClickCandidate& dc_at_press);
     bool finish_folder_overlay_release(int x, int y);
     void update_folder_overlay_press_motion(int x, int y);
     void update_folder_overlay_hover(int x, int y);
+    // THE TWO ROW ACTS, FORKED ON THE OWNER and nowhere else: the motionless
+    // lift's highlight (the player moves the band; the picker moves the band
+    // AND the Open prompt's field, one thing there) and the open act (the
+    // player enters a folder, goes up or plays a wav; the picker seats the row
+    // and runs the prompt's own commit).
+    void folder_overlay_highlight_row(int index);
+    void folder_overlay_open_row(int index);
     // (clear_folder_overlay_press is public, beside clear_modal_dialog_press:
     // main.cpp's pointer-leave hook and the force-end finalizer are its other
     // callers.)

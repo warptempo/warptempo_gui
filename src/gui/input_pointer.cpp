@@ -2887,6 +2887,19 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     if (onscreen_keyboard::stands(app, gui) &&
         rect_contains(onscreen_keyboard::surface_rect(app), x, y))
         return false;
+    // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the two
+    // clauses above's reason exactly and for one more: the panel paints over
+    // the waveform's lower part, the whole waveform is the pan zone, and
+    // BOTH of the band's gestures live on the POINTER — the row press, whose
+    // act is at the lift, and the band's own SCROLL DRAG, which is that same
+    // arm past the vertical gate. Left in the zone, a finger crossing the
+    // slop on a row would resolve to the phone-model pan and a held one to
+    // the region former (which both contents refuse), so the list would
+    // answer a tap and nothing else. ONE SPELLING OF "ON THE BAND": the same
+    // rect the press claim reads.
+    if (folder_overlay::stands(app) &&
+        rect_contains(folder_overlay::surface_rect(app), x, y))
+        return false;
     return point_on_nav_surface(app, audio, x, y);
 }
 
@@ -3802,7 +3815,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     return true;
 }
 
-// -- THE FOLDER OVERLAY'S POINTER HALF (2026-08-28, the render player) --------
+// -- THE FOLDER OVERLAY'S POINTER HALF (2026-08-28) ---------------------------
 //
 // The panel's geometry and its one row walk are folder_overlay.h's; the row
 // table and the press arm are AppState::folder_overlay's, where every field
@@ -3812,11 +3825,54 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // HIGHLIGHTS. The one press whose identity IS certain — a recognized
 // double-click's second press — acts at the press and arms nothing, exactly
 // as the marker flag's does.
+//
+// ONE PRESS ROUTER, TWO CONTENTS. The claim below stands ABOVE the dialog
+// editors' veil for the picker's sake — the band joins the field and the
+// buttons as the veil's third admitted surface — and BELOW the prompt gate,
+// which outranks every surface as it always has. What a lift and a
+// double-click MEAN is the owner's, and the two forks below are the whole of
+// it: nothing else in this file asks which content fills the rows.
+
+// THE MOTIONLESS LIFT'S ACT. Under the player the band simply moves; under
+// the picker the band and the Open prompt's field move together, which is
+// what makes "what the band marks is what Enter opens" true of a click.
+void GuiInputHandler::folder_overlay_highlight_row(int index) {
+    switch (app.folder_overlay.owner) {
+        case AppState::FolderOverlay::Owner::None:
+            return;
+        case AppState::FolderOverlay::Owner::Player:
+            render_player.set_highlight(index);
+            return;
+        case AppState::FolderOverlay::Owner::ProjectPicker:
+            project_picker_select(index);
+            return;
+    }
+}
+
+// THE OPEN ACT (the double-click's second press, and Enter on the highlight).
+// Under the player a folder enters, the up row goes to the parent and a wav
+// plays; under the picker the row is seated in the field and the prompt's own
+// commit runs — the same body Enter and OK reach, so the picker adds a road
+// and never an act.
+void GuiInputHandler::folder_overlay_open_row(int index) {
+    switch (app.folder_overlay.owner) {
+        case AppState::FolderOverlay::Owner::None:
+            return;
+        case AppState::FolderOverlay::Owner::Player:
+            render_player.open_row(index);
+            return;
+        case AppState::FolderOverlay::Owner::ProjectPicker:
+            project_picker_select(index);
+            open_project_editor_commit();
+            return;
+    }
+}
 
 bool GuiInputHandler::claim_folder_overlay_press(
-        int x, int y, GuiInputState mods,
+        int x, int y, GuiMouseButton button, GuiInputState mods,
         const DoubleClickCandidate& dc_at_press) {
     if (!folder_overlay::stands(app)) return false;
+    if (button != GuiMouseButton::Left) return false;
     const GuiRect surf = folder_overlay::surface_rect(app);
     if (!rect_contains(surf, x, y)) return false;
     // CONSUMED FROM HERE: the band is opaque to the pointer. A MODIFIED
@@ -3836,7 +3892,7 @@ bool GuiInputHandler::claim_folder_overlay_press(
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px()) {
-        render_player.open_row(hit);
+        folder_overlay_open_row(hit);
         return true;
     }
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
@@ -3895,7 +3951,7 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
     // double-click candidate — the press coordinates with the release stamp,
     // the marker seed's own split. A lift elsewhere is a consumed nothing.
     if (folder_overlay::row_at(app, x, y) != press.row) return true;
-    render_player.set_highlight(press.row);
+    folder_overlay_highlight_row(press.row);
     app.double_click = DoubleClickCandidate{
         .surface = DoubleClickSurface::FolderRow,
         .time_ms = monotonic_ms(),
@@ -4094,18 +4150,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         return;
     }
 
+    // THE FOLDER OVERLAY'S BAND, claimed for BOTH its contents and ranked
+    // here — under the prompt gate above (a prompt outranks every surface;
+    // the player's load confirmation paints over its own row) and above the
+    // player's veil and the dialog editors' veil below. The rank is what the
+    // PICKER needs: while the Open prompt stands, its editor's veil would
+    // otherwise consume the very press that picks a project, so the band
+    // joins the field and the buttons as the veil's THIRD ADMITTED SURFACE.
+    // The claim is opaque and owns its own button gate, so a non-left press
+    // on the band falls to whichever veil stands and is consumed there.
+    if (claim_folder_overlay_press(x, y, button, mods, dc_at_press)) return;
+
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
     // else: while the mode stands the pointer has THREE targets, the folder
-    // overlay's rows (arm at the press, highlight at the lift, the
-    // double-click's open at the press), the play-scrub (a seek at the press
+    // overlay's rows (claimed above), the play-scrub (a seek at the press
     // on the track, the marker drag on its band) and the modal row's buttons
     // (the arm every dialog button takes), and EVERY OTHER PRESS IS CONSUMED
     // — the tabs, the flags, the waveform, the menu anchors, the dead roster.
     // The whole rule is stated at render_player_active (input_handler.h).
     if (app.render_player.active) {
         if (button != GuiMouseButton::Left) return;
-        if (claim_folder_overlay_press(x, y, mods, dc_at_press)) return;
         if (claim_player_scrub_press(x, y, mods)) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
             modal_dialog_stash_current()) {
@@ -4222,10 +4287,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // box's field and buttons is CONSUMED, closing nothing (the
             // architect's words: "once I've done that pop-up modal, I can't
             // do anything else in the window behind it"; the dialog closes
-            // only by its own buttons and keys, and since 2026-08-13 the veil
-            // has no exception at all). A flag-editor press that
-            // isn't on the lane text falls through to the guard-free close
-            // below.
+            // only by its own buttons and keys). ITS ONE ADMITTED SURFACE
+            // BEYOND THE BOX IS THE FOLDER OVERLAY'S BAND (2026-08-28), which
+            // the claim far above already took while the Open project picker
+            // stands: the band belongs to this very prompt, feeding its field,
+            // so admitting it is not an escape from the veil but a third
+            // piece of the dialog. A flag-editor press that isn't on the lane
+            // text falls through to the guard-free close below.
             if (g.dialog) return;
         }
     }
@@ -5876,16 +5944,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
-    // THE RENDER PLAYER'S RELEASES (2026-08-28), the press block's mirror:
-    // the overlay's row arm (a motionless lift highlights, a scroll drag
-    // ends), the scrub's marker drag (the seek commits here), and the modal
+    // THE FOLDER OVERLAY'S ROW ARM ENDS HERE, the hoisted claim's mirror and
+    // at the same rank: a motionless lift highlights (and, under the picker,
+    // prepopulates the prompt's field), a scroll drag simply ends. It is a
+    // no-op with no arm standing, so it costs the other releases one test.
+    if (button == GuiMouseButton::Left && finish_folder_overlay_release(x, y))
+        return;
+    // THE RENDER PLAYER'S OTHER RELEASES (2026-08-28), the press block's
+    // mirror: the scrub's marker drag (the seek commits here) and the modal
     // row's armed button through the one shared dispatch. Every other lift
     // is consumed — a chrome arm taken above dies here undispatched, the
     // veil's answer (no chrome can arm under the player anyway, its roster
     // being dead).
     if (app.render_player.active) {
         if (button == GuiMouseButton::Left) {
-            if (finish_folder_overlay_release(x, y)) return;
             if (finish_player_scrub_release(x, y)) return;
             dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
         }
@@ -8507,27 +8579,36 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         recompute_redesign_button_hover();
         return;
     }
-    // THE RENDER PLAYER'S MOTION (2026-08-28): a standing row arm follows the
-    // pointer (the feint's inside bit, or the band's scroll drag once the
-    // vertical gate is crossed), a standing scrub drag moves the marker, and
-    // otherwise the overlay's row hover, the modal buttons' hover face and the
-    // roster recompute (all-false under the veil term) run — nothing below
-    // this branch does. A LOST BUTTON under either arm is the hard end: the
-    // arm drops and nothing commits, the chrome arm's own rule.
+    // THE FOLDER OVERLAY'S MOTION, for BOTH contents and at the press
+    // claim's own rank: a standing row arm follows the pointer (the feint's
+    // inside bit, or the band's scroll drag once the vertical gate is
+    // crossed) and owns the motion whole, and with no arm standing the band
+    // takes its row hover and the motion carries on below — which is what
+    // lets the PICKER's own text drag inside the Open prompt's field keep
+    // working under a standing band. A LOST BUTTON is the hard end: the arm
+    // drops and nothing commits, the chrome arm's own rule.
+    if (app.folder_overlay.press.armed) {
+        if (!mods.primary_button_held) {
+            clear_folder_overlay_press();
+            return;
+        }
+        update_folder_overlay_press_motion(mouse_x, mouse_y);
+        return;
+    }
+    update_folder_overlay_hover(mouse_x, mouse_y);
+    // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
+    // the marker, and otherwise the modal buttons' hover face and the roster
+    // recompute (all-false under the veil term) run — nothing below this
+    // branch does.
     if (app.render_player.active) {
-        if (app.folder_overlay.press.armed || app.render_player.scrub.armed) {
+        if (app.render_player.scrub.armed) {
             if (!mods.primary_button_held) {
-                clear_folder_overlay_press();
                 clear_player_scrub_drag();
                 return;
             }
-            if (app.folder_overlay.press.armed)
-                update_folder_overlay_press_motion(mouse_x, mouse_y);
-            else
-                update_player_scrub_motion(mouse_x);
+            update_player_scrub_motion(mouse_x);
             return;
         }
-        update_folder_overlay_hover(mouse_x, mouse_y);
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

@@ -24,7 +24,7 @@
 
 // WHAT A CLOSE COMPLETES — the one prompt body, two completions (architect
 // 2026-08-27, with the reopen loop). EXIT is Ctrl+Q's and the WM close's:
-// the run loop stops and the process ends. REOPEN is File → Open's: the run
+// the run loop stops and the process ends. REOPEN is File → Open project's: the run
 // loop stops and gui_main's loop builds the next object set around the
 // project the prompt chose (AppState::reopen_project, already seated by the
 // commit). The unsaved-work question, its three answers, its Save-failed

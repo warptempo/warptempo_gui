@@ -112,6 +112,6 @@ std::vector<std::string> enumerate_project_names(
 //     script.
 //
 // The app always has a project open: there is no empty state and no picker
-// at startup — the picker is File → Open, a dialog over a running project.
+// at startup — the picker is File → Open project, a dialog over a running project.
 std::expected<GuiProjectSource, std::string> startup_source(
     const DeviceConfig& config, const char* argument);

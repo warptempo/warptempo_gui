@@ -1861,7 +1861,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // load_file (file_loader.{h,cpp}) is the sole loader, invoked once from
     // the startup tick below. The GUI has no in-session file open or
     // drag-and-drop INTO A STANDING SET: the source is fixed for this
-    // session's whole life, and File → Open reopens by ending this session
+    // session's whole life, and File → Open project reopens by ending this session
     // and starting the next around the chosen source (gui_main's loop), so
     // there is nothing to wire here.
 

@@ -1,11 +1,15 @@
 #pragma once
 
 // THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28, the render player's surface; the Open project picker is its
-// designed second content). This header is the panel's ONE OWNER of
-// everything that is not pixels or a press body: the standing predicate, the
-// geometry (the band, the row pitch, the scroll clamp), and the one walk over
-// the rows. The PAINTER lives in paint_handler.cpp beside every other painter
+// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, and the OPEN PROJECT PICKER's valid project folders. Which
+// one fills it is AppState::FolderOverlay::owner, and that tag IS the
+// standing predicate (folder_overlay_stands, app_state.h; stands() below
+// forwards to it). This header is the panel's ONE OWNER of everything that is
+// not pixels, a press body or a content: the geometry (the band, the row
+// pitch, the scroll clamp), the one walk over the rows, and the highlight and
+// scroll mechanics both contents drive.
+// The PAINTER lives in paint_handler.cpp beside every other painter
 // and the PRESS ROUTER in input_pointer.cpp beside every other press router;
 // both walk this file's row table through the one walker below, so paint and
 // hit cannot describe different rows. The ROW TABLE ITSELF is
@@ -39,13 +43,16 @@
 // THE ROWS ARE CHROME (conventions.md's third clause): a row press ARMS —
 // the same press may become the band's scroll drag — and a motionless lift
 // HIGHLIGHTS the row (the band moves onto it and nothing else happens:
-// architect 2026-08-28, "a single click highlights"). OPENING a row — a
-// folder ENTERS, the up row goes to the parent, a wav PLAYS from its start —
-// is the DOUBLE-CLICK (the marker flag's own seed shape, the second press
-// acting at the press) or Enter on the highlight; the Play button and Space
-// play the highlighted wav or open a highlighted folder. The arm's whole
-// state is AppState::FolderOverlayPress; a shift or ctrl press on a row is a
-// consumed no-op, and no row reads a hold.
+// architect 2026-08-28, "a single click highlights"). OPENING a row is the
+// DOUBLE-CLICK (the marker flag's own seed shape, the second press acting at
+// the press) or Enter on the highlight. The arm's whole state is
+// AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
+// no-op, and no row reads a hold. WHAT THE TWO ACTS MEAN IS THE OWNER'S: under
+// the PLAYER a lift only highlights and an open enters a folder, goes up, or
+// plays a wav (the Play button and Space act on the highlight too); under the
+// PICKER a lift highlights AND writes the row's name into the Open prompt's
+// field, and an open runs that prompt's own commit. The fork is at the press
+// router and the key router, never here — the panel knows rows, not projects.
 
 #include "app_state.h"
 #include "onscreen_keyboard.h"
@@ -75,13 +82,15 @@ inline int pad_px()        { return onscreen_keyboard::pad_px(); }
 
 // -- Standing ----------------------------------------------------------------
 
-// DOES THE PANEL STAND? One term today: the RENDER PLAYER's mode bit. (The
-// Open project picker will OR its own in here when it lands; nothing else
-// asks for the band.) It takes no platform term, unlike the keyboard's: the
-// panel serves the pointer and the finger alike, so it stands on both
-// backends. EVERY paint site and EVERY hit site asks this and nothing else.
+// DOES THE PANEL STAND? THE OWNER TAG DECIDES and this is the panel's own
+// name for that one question (the predicate itself is folder_overlay_stands,
+// app_state.h — it has to live there because onscreen_keyboard.h reads it too
+// and this header includes that one). It takes no platform term, unlike the
+// keyboard's: the panel serves the pointer and the finger alike, so it stands
+// on both backends. EVERY paint site and EVERY hit site asks this and nothing
+// else.
 inline bool stands(const AppState& a) {
-    return a.render_player.active;
+    return folder_overlay_stands(a);
 }
 
 // -- The surface's rect ------------------------------------------------------
@@ -171,6 +180,55 @@ inline void scroll_row_into_view(AppState& a, int index) {
         a.folder_overlay.scroll_px += (r.y + r.h) - bottom;
     }
     clamp_scroll(a);
+}
+
+// -- The highlight and the scroll, the mechanics both contents drive ---------
+//
+// THE DAMAGE IS THE CALLER'S: each of the three answers whether the band's
+// pixels changed and writes none of them, so the panel needs no Viewport and
+// no include of one — the player damages through its own helper, the picker
+// through the input handler's. Nothing else about the highlight lives
+// anywhere else: what the band MEANS is the owner's, where it can sit is
+// here.
+
+// Seat the highlight on `index`, clamped into the listing (-1 for an empty
+// one), scrolling the band to keep it visible. Returns whether the band
+// changed.
+inline bool set_highlight(AppState& a, int index) {
+    AppState::FolderOverlay& ov = a.folder_overlay;
+    const int n  = static_cast<int>(ov.rows.size());
+    const int to = n <= 0 ? -1 : std::clamp(index, 0, n - 1);
+    bool changed = false;
+    if (to != ov.highlight_row) {
+        ov.highlight_row = to;
+        changed          = true;
+    }
+    if (to >= 0) {
+        const int before = ov.scroll_px;
+        scroll_row_into_view(a, to);
+        if (ov.scroll_px != before) changed = true;
+    }
+    return changed;
+}
+
+// Move the highlight by `delta` rows, clamped; an empty listing has nothing
+// to move and a -1 highlight walks from row 0. Returns whether the band
+// changed.
+inline bool move_highlight(AppState& a, int delta) {
+    const int n = static_cast<int>(a.folder_overlay.rows.size());
+    if (n <= 0) return false;
+    const int from = a.folder_overlay.highlight_row < 0
+                         ? 0 : a.folder_overlay.highlight_row;
+    return set_highlight(a, std::clamp(from + delta, 0, n - 1));
+}
+
+// Scroll the band by `rows` rows (the wheel's detent step), clamped. Returns
+// whether the offset moved.
+inline bool scroll_rows(AppState& a, int rows) {
+    const int before = a.folder_overlay.scroll_px;
+    a.folder_overlay.scroll_px += rows * (row_height_px() + row_gap_px());
+    clamp_scroll(a);
+    return a.folder_overlay.scroll_px != before;
 }
 
 } // namespace folder_overlay

@@ -1,7 +1,7 @@
 #include "input_handler.h"
 
 #include "engine/engine_geometry.h"  // kN
-#include "folder_overlay.h"          // the render player's wheel context
+#include "folder_overlay.h"          // the overlay's wheel context and scroll
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
@@ -394,7 +394,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_measure_offset_editor_key(key, mods)) return;
     }
 
-    // Open project prompt (File → Open). The same modal shape as the four
+    // Open project prompt (File → Open project). The same modal shape as the four
     // blocks above, and mutually exclusive with them by construction: its
     // opener refuses while any editor owns the keyboard.
     if (text_editor::is_active(app.open_project_editor)) {
@@ -2160,23 +2160,26 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // owns the close and this owns only the swallow, which is also what keeps
     // the sub-detent accumulator from growing remainder under a popup.
     if (app.dropdown.open()) return -1;
-    if (modal_dialog_editor_active()) return -1;
-    // THE LIVE-GESTURE REFUSAL IS RANKED ABOVE THE PLAYER (2026-08-28), not
+    // THE LIVE-GESTURE REFUSAL IS RANKED ABOVE THE OVERLAY (2026-08-28), not
     // below it as it was when the player's context landed: the overlay's row
     // press and the scrub's marker drag are members of the predicate now, and
-    // the player's own context is the one wheel arm a live gesture could
+    // the overlay's own context is the one wheel arm a live gesture could
     // otherwise have moved — a detent under a held row press would scroll the
     // list out from under the arm the lift re-hits. Its rank against the
-    // loading test below is free (both refuse).
+    // editor and loading tests below is free (all three refuse).
     if (any_pointer_gesture_active(app)) return -1;
-    // THE RENDER PLAYER'S WHEEL (2026-08-28): live over the FOLDER OVERLAY'S
-    // band alone — context 4, the list's one-row-per-detent scroll — and
-    // swallowed everywhere else, the veil's own answer for the wheel. The
-    // band is the keyboard slot's rect; the overlay's standing predicate is
-    // the mode bit this test reads.
-    if (app.render_player.active) {
+    // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
+    // context 4, the list's one-row-per-detent scroll — and swallowed
+    // everywhere else, the veil's own answer for the wheel. It is RANKED
+    // ABOVE the dialog editors' swallow below for the PICKER's sake, exactly
+    // as the press claim is ranked above their veil: the band belongs to the
+    // Open prompt while the picker stands, so the one surface the wheel may
+    // still reach under that editor is the list it feeds. The band is the
+    // keyboard slot's rect; the standing predicate is the owner tag.
+    if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
+    if (modal_dialog_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
 
     // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
@@ -2267,11 +2270,14 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     if (ctx < 0) return;
     // ctx 4 — THE FOLDER OVERLAY (2026-08-28): one row per detent, the wheel's
     // direction the list's (down = later rows), every modifier ignored — the
-    // band scrolls and nothing else moves. The whole player wheel is this
-    // arm; every other position is swallowed at the context.
+    // band scrolls and nothing else moves, whichever content fills it. The
+    // whole wheel vocabulary under either owner is this arm; every other
+    // position is swallowed at the context. The mechanics are the widget's
+    // and the damage this file's, the band being the only thing that moved.
     if (ctx == 4) {
-        render_player.scroll_rows(dir == GuiMouseButton::WheelDown ? count
-                                                                    : -count);
+        const int rows = dir == GuiMouseButton::WheelDown ? count : -count;
+        if (folder_overlay::scroll_rows(app, rows))
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
         return;
     }
     // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take

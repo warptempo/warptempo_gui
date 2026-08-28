@@ -2943,7 +2943,7 @@ inline constexpr int kSettingsPopupItemCount =
 // have met — the modal refusals, the `h` view's allowlist, the loading state —
 // in its own body.
 //
-// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open) sat beside it while
+// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open project) sat beside it while
 // Open's chord was merely DEFERRED rather than refused, and the architect then
 // bound it to Ctrl+O — the one spelling the convention allows, bare `o` being
 // the read-only toggle and the two neighbours rather than partners. So Open is
@@ -2964,9 +2964,12 @@ struct CommandPopupItem {
 };
 
 // THE FILE DROPDOWN'S ITEMS — THREE ROWS since 2026-08-27, in two categories
-// over one separator: **Open** first (architect 2026-08-27, the project
-// model's one pointer home on both platforms — the picker is this prompt and
-// nothing else) and **Synchronize to external storage** under it (architect
+// over one separator: **Open project** first (architect 2026-08-27, the
+// project model's one pointer home on both platforms; the label is the
+// architect's own, R8: "we would call it open project instead of open file",
+// and the row raises the Open prompt with the folder-list picker standing in
+// the keyboard's band above it) and **Synchronize to external storage** under
+// it (architect
 // 2026-08-27, the deliverable and the batch cells mirrored onto the one
 // mounted removable volume — the act is external_sync.h's and this row is its
 // ONLY road, on either platform), then **Quit** (architect 2026-08-13, the
@@ -2991,7 +2994,7 @@ struct CommandPopupItem {
 // in its own body the gates a chord would have met.
 // EACH ROW ANSWERS THE `h` HISTORY VIEW IN ITS OWN WAY, and all three answers
 // are the keyboard's: Ctrl+Q is on the view's allowlist, so Quit works in there
-// exactly as it does outside; Ctrl+O is not, so the Open row is a consumed
+// exactly as it does outside; Ctrl+O is not, so the Open project row is a consumed
 // no-op in the view — the same refusal the opener's own history-mode guard
 // gives, which is the allowlist's standing answer for a dialog open — and the
 // Synchronize act refuses in its body for the same reason.
@@ -3031,7 +3034,7 @@ struct CommandPopupItem {
 // clause, and a future item whose LABEL would lie in some mode needs the
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Open", "Ctrl+O", GuiKeys::O, true,  false, false, false},
+    {"Open project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     {"Synchronize to external storage", nullptr, 0, false, false, false, false,
      GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
@@ -6721,7 +6724,7 @@ struct AppState {
     bool measure_offset_editor_blink_last = false;
 
     // THE OPEN PROJECT EDITOR (architect 2026-08-27), the SIXTH dialog modal
-    // and File → Open's own: the menu item and Ctrl+O — one chord, the row
+    // and File → Open project's own: the menu item and Ctrl+O — one chord, the row
     // dispatching it like every other command row — open it empty, its field
     // completes
     // over the FOLDER NAMES under the device config's projects_path (the
@@ -6967,13 +6970,26 @@ struct AppState {
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
     };
 
-    // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28, the render player) --
+    // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. The render player fills it with the project's output folders
-    // and their wavs; nothing else does yet (the Open project picker is the
-    // designed second content and refills this same struct). Everything the
-    // panel remembers is here and nothing else is:
+    // fills it. TWO CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // output folders and their wavs, and the OPEN PROJECT PICKER, with the
+    // valid project folders under `projects_path`. Everything the panel
+    // remembers is here and nothing else is:
+    //   `owner`       WHOSE CONTENT THE ROWS ARE, and THE PANEL'S ONE
+    //                 STANDING PREDICATE: the overlay stands iff this is not
+    //                 None (folder_overlay_stands, below — every paint site,
+    //                 hit site, wheel context and greying arm asks that one
+    //                 function). The player writes Player at its open and
+    //                 None at its close; the Open prompt writes ProjectPicker
+    //                 at its open and None at every close path (the commit's
+    //                 reopen included, all of them through
+    //                 open_project_editor_exit_no_commit). The ROW ACTS fork
+    //                 on it: under Player a lift highlights and a double
+    //                 click opens the row, under ProjectPicker a lift
+    //                 highlights AND prepopulates the prompt's field and a
+    //                 double click runs the prompt's own commit;
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
     //                 never kept fresh (a render completing meanwhile shows on
     //                 the next entry of its folder);
@@ -6989,11 +7005,20 @@ struct AppState {
     //                 2026-08-28, the revision after the design's first pass:
     //                 "a single click highlights; opening is the double-click
     //                 or Enter"). A motionless click moves it, Up/Down walk it
-    //                 (scrolling to keep it visible), every listing rebuild
-    //                 seats it on the transport's item's row if that row is
-    //                 in the new listing, else on row 0; -1 only for an empty
-    //                 listing. It is what Enter, Space, the Play button and
-    //                 the Load in place button act on;
+    //                 (scrolling to keep it visible), every player listing
+    //                 rebuild seats it on the transport's item's row if that
+    //                 row is in the new listing, else on row 0; -1 only for an
+    //                 empty listing. Under the PLAYER it is what Enter, Space,
+    //                 the Play button and the Load in place button act on;
+    //                 under the PICKER THE HIGHLIGHT AND THE FIELD ARE ONE
+    //                 THING — every road that moves the band also writes the
+    //                 row's name into the prompt's field, and a field typed
+    //                 into moves the band onto the row whose name it now
+    //                 spells (no match, no band), so what the band marks is
+    //                 always what Enter opens. The picker seats it on the
+    //                 CURRENT project's row at the open, and -1 there means
+    //                 "the field names no listed project", not only an empty
+    //                 listing;
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
     //                 nothing at all (false, the open state). It changes
     //                 nothing visible — Up/Down walk the highlight either way
@@ -7007,7 +7032,8 @@ struct AppState {
     //                 bit, and `scrolling` — once the pointer has moved past
     //                 the drag gate vertically the arm IS a scroll drag (the
     //                 band's own drag, the glass scroll) and its act is gone.
-    //                 A motionless lift HIGHLIGHTS the row and seeds the
+    //                 A motionless lift HIGHLIGHTS the row (and, under the
+    //                 picker, prepopulates the field with it) and seeds the
     //                 double-click candidate; the double-click's second press
     //                 runs the row's OPEN act at the press and arms nothing.
     //                 Ends at the release (finish_folder_overlay_release) and
@@ -7034,6 +7060,8 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
+        enum class Owner { None, Player, ProjectPicker };
+        Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
         int                highlight_row = -1;
@@ -7109,6 +7137,21 @@ struct AppState {
     };
     RenderPlayer render_player;
 };
+
+// DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
+// cannot be half-standing: the band exists exactly while it has an OWNER.
+// Every site that asks reads this one answer — the keyboard's third term and
+// the waveform's paint gate here, and through folder_overlay::stands (the
+// panel's own name for it, forwarding to this) the slot's paint dispatch and
+// the panel's painter, the row press claim, the hover walk, the press clear's
+// damage, the touch pan zone's carve-out and the run loop's slot reconcile;
+// the wheel context and the roster's greying arm call this directly. (It
+// lives here rather than beside the geometry because onscreen_keyboard.h
+// needs it and folder_overlay.h INCLUDES that header, so the panel's own
+// header cannot be the owner.)
+inline bool folder_overlay_stands(const AppState& a) {
+    return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
+}
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
 // the player's own act vocabulary: the word is the act's, the key is the
@@ -8386,12 +8429,14 @@ inline bool playback_launch_playable(const AppState& a,
 // modal that greyed the chrome under it would be a fourth face nobody asked
 // for (the HOVER faces do go dark under the veil — the hover walk's veil
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
-// not a face state this predicate answers). THE RENDER PLAYER IS THE
+// not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
-// view"): while it stands EVERY roster button is dead — the arm at the head
-// of the body, ranked above the `h` partition — because the player is a MODE
-// like the `h` view rather than a question like a prompt, and the whole
-// chrome is what it takes away.
+// view"): while the band stands — under the render player OR under the Open
+// project picker — EVERY roster button is dead, the arm at the head of the
+// body, ranked above the `h` partition. The player is a MODE like the `h`
+// view rather than a question like a prompt, and the whole chrome is what it
+// takes away; the picker is a prompt whose veil already makes the chrome
+// inert, and the grey is that veil's honest face rather than a second rule.
 // THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
@@ -8426,15 +8471,18 @@ inline bool playback_launch_playable(const AppState& a,
 inline bool redesign_button_enabled(const AppState& a,
                                     int64_t total_frames,
                                     RedesignButton b) {
-    // THE RENDER PLAYER GREYS THE WHOLE ROSTER (architect 2026-08-28, the
-    // ruled exception recorded above the signature): the mode's pointer rule
-    // is the veil (every press outside the overlay band and the modal row is
-    // consumed — render_player_active, input_handler.h) and this line is the
-    // face that says so. First-ranked because it outranks the `h` partition
-    // below — the player never opens inside the `h` view, so the two are
-    // never asked together, and the rank only states which mode is the
-    // whole answer while it stands.
-    if (a.render_player.active) return false;
+    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER, whichever content owns it
+    // (architect 2026-08-28, the ruled exception recorded above the
+    // signature: "everything else greys as in the `h` view"). Under the
+    // PLAYER the pointer rule is the veil (every press outside the overlay
+    // band and the modal row is consumed — render_player_active,
+    // input_handler.h); under the PICKER the dialog editor's veil already
+    // makes the chrome inert, and this line is the face that says so on both.
+    // First-ranked because it outranks the `h` partition below — neither
+    // content opens inside the `h` view, so the two are never asked together,
+    // and the rank only states which surface is the whole answer while it
+    // stands.
+    if (folder_overlay_stands(a)) return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and

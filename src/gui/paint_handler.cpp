@@ -6527,10 +6527,16 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 
 // -- GuiPaintHandler::paint_folder_overlay -----------------------------------
 //
-// THE KEYBOARD-SLOT LIST PANEL (2026-08-28). Contract and gate are at the
-// declaration; the geometry, the scroll clamp and the one row walk are at
-// folder_overlay.h, which this body reads and never restates; the row table
-// and every state bit are AppState::folder_overlay.
+// THE KEYBOARD-SLOT LIST PANEL (2026-08-28), ONE PAINTER FOR BOTH CONTENTS —
+// the render player's folders and wavs, and the Open project picker's project
+// folders. Contract and gate are at the declaration; the geometry, the scroll
+// clamp and the one row walk are at folder_overlay.h, which this body reads
+// and never restates; the row table and every state bit are
+// AppState::folder_overlay. Nothing here asks WHOSE rows these are: the
+// picker's are all Folder rows, so they take the folder glyph and the resting
+// face by the same ladder the player's do, and the transport mark below is
+// structurally absent there (the player holds no item while the picker
+// stands).
 //
 // THE PALETTE IS EXISTING CONSTANTS AND NOTHING ELSE — the architect's ruling
 // that the panel's ground, row height and type are the KEYBOARD'S, plus the

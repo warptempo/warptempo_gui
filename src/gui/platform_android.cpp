@@ -1916,7 +1916,7 @@ namespace {
 // and walked that folder for the one .wav with a .warpmarkers sibling; the
 // project model retired both halves — the app opens the device config's
 // `last_project`, or the first valid project in name order, through the one
-// portable owner (startup_source, project_model.h), and File → Open is the
+// portable owner (startup_source, project_model.h), and File → Open project is the
 // picker. What this backend still owns of the convention is WHERE the projects
 // are: the template's projects_path, device_config_defaults above.)
 
