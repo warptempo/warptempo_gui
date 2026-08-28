@@ -2487,11 +2487,18 @@ private:
     // completes over the FOLDER NAMES under the device config's projects_path
     // (project_model.h), built when the prompt opens and never kept fresh.
     //
-    // open_project_editor: the opener, reached from ONE place — the File
-    // menu's Open row (finish_dropdown_release, the GuiPopupAct::OpenProject
-    // item; no keyboard chord binds it). Refuses silently, without
+    // open_project_editor: the opener, reached from TWO places since
+    // 2026-08-28 and ONE body — CTRL+O, the act's chord (is_open_project_key,
+    // gui_input.h; on_key's arm dispatches it at the press, and the read-only
+    // allowlist admits it because the prompt authors nothing), and the File
+    // menu's Open row, which is that same chord dispatched through on_key at
+    // the lift like Quit's. It was the menu row's alone, on the
+    // GuiPopupAct::OpenProject fork, while the chord was deferred; the
+    // enumerator died with the binding. Refuses silently, without
     // touching playback, while a prompt or any editor stands, in the `h`
-    // history view (the allowlist's own answer for a dialog open), and during
+    // history view (the allowlist's own answer for a dialog open — the key
+    // road never even arrives, history_mode_key_blocked admitting no Ctrl+O),
+    // and during
     // a load; stops playback through the shared modal stop only once the
     // editor is definitely opening, then enters it EMPTY with the candidate
     // list captured.
@@ -2519,7 +2526,13 @@ private:
     // route_modal_editor_key like the five editors before it, with the
     // completion as its Tab hook.
     // No undo (a reopen discards the stack by construction, and the prompt
-    // authors nothing); legal on a read-only tab for the same reason.
+    // authors nothing); LEGAL ON A READ-ONLY TAB for the same reason, which
+    // since the chord landed is a named entry on read_only_key_blocked's
+    // allowlist rather than a property of the one route that reached it.
+    // Ctrl+O admits no shift and no alt, so Ctrl+Shift+O stays the strict
+    // rule's consumed no-op, and no editor admits the chord: an open editor
+    // swallows it whole through route_modal_editor_key like every chord that
+    // is not one of its own.
     void open_project_editor();
     bool open_project_editor_autocomplete();
     void open_project_editor_commit();
@@ -2527,7 +2540,8 @@ private:
     bool handle_open_project_editor_key(GuiKey key, GuiInputState mods);
 
     // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — the File menu's
-    // other chordless act, reached from ONE place, the menu's own row
+    // ONE chordless act since 2026-08-28 (Open took Ctrl+O that day), reached
+    // from ONE place, the menu's own row
     // (finish_dropdown_release, the GuiPopupAct::SyncExternal item; NO KEYBOARD
     // CHORD BINDS IT and none is deferred — Ctrl+Alt+Shift+R keeps its current
     // meaning). WHAT it mirrors onto the volume, and the mirror's own scope and

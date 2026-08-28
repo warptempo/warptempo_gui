@@ -188,6 +188,23 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Space && !mods.ctrl && mods.shift && !mods.alt;
 }
 
+// True for the chord that opens the OPEN PROJECT prompt (architect
+// 2026-08-28): CTRL+O exactly — no shift, no alt. Open was the File menu's one
+// act with no key of its own; the convention for it is too strong to spell it
+// anywhere else, and Ctrl+O was the strict rule's consumed no-op until this
+// date. IT IS NOT bare `o`, which stays the active tab's read-only toggle: the
+// two are NEIGHBOURS ON ONE LETTER, NOT TWO HALVES OF ONE ACT, so neither
+// reader may fold them together. The same two readers as the Space pair above
+// — on_key's dispatch arm (input_handler.cpp) and the read-only allowlist
+// (read_only_key_blocked, input_key_dispatch.cpp, which admits the chord
+// because the prompt authors nothing) — and the same one-owner reason. The act
+// is GuiInputHandler::open_project_editor, whose own body carries the gates
+// (the modal refusals, the `h` view, the loading state); the File menu's Open
+// row dispatches this very chord through on_key like every other command row.
+inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
+}
+
 enum class GuiMouseButton {
     Left,
     Middle,

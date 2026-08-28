@@ -6876,11 +6876,14 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // (loading/blank, the modal gates, the read-only allowlist, the arm's own
         // refusals) applies identically, so an item whose command cannot act
         // right now simply does nothing — the buttons-never-grey rule, one
-        // surface further out. No stop, no modal, nothing restated here. THE
-        // FILE MENU'S ONE ROW RIDES THIS BODY WHOLE: Ctrl+Q reaches on_key's own
-        // close route — the drag-modal hatch, the dirty prompt, the WM-close
-        // ordering — with no second body anywhere, which is the whole reason the
-        // Quit BUTTON could be retired for a menu item without moving the act.
+        // surface further out. No stop, no modal, nothing restated here. TWO OF
+        // THE FILE MENU'S THREE ROWS RIDE THIS BODY WHOLE since 2026-08-28:
+        // Ctrl+Q reaches on_key's own close route — the drag-modal hatch, the
+        // dirty prompt, the WM-close ordering — with no second body anywhere,
+        // which is the whole reason the Quit BUTTON could be retired for a menu
+        // item without moving the act, and Ctrl+O reaches the Open project
+        // prompt's one opener, whose own guards answer the states the keyboard
+        // route does not.
         // THAT IS ALSO HOW THE `h` HISTORY VIEW ANSWERS THIS MENU (the ruling
         // is 2026-08-08's, made for the Navigation menu's seven rows): per item,
         // at the mode's own two gates — its allowlist carries Ctrl+Q, and
@@ -6890,16 +6893,15 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // Nothing greys now: that menu and its predicate are deleted.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
-        // THE TWO ROWS WITH NO CHORD (the File menu's Open and Synchronize to
-        // external storage): no key binds either, so the release calls the act
-        // directly, and each act carries the gates a chord would have met in
-        // its own body — the modal refusals, the `h` view, the loading state
-        // (open_project_editor's and synchronize_to_external_storage's
-        // declarations). Still CLOSE FIRST, THEN ACT, for the reason above.
-        if (it.act == GuiPopupAct::OpenProject) {
-            open_project_editor();
-            return true;
-        }
+        // THE ONE ROW WITH NO CHORD (the File menu's Synchronize to external
+        // storage): no key binds it — the binding was refused rather than
+        // deferred — so the release calls the act directly, and the act carries
+        // the gates a chord would have met in its own body: the modal refusals,
+        // the `h` view, the loading state (synchronize_to_external_storage's
+        // declaration). Still CLOSE FIRST, THEN ACT, for the reason above.
+        // (THE FILE MENU'S OPEN ROW LEFT THIS FORK on 2026-08-28, when the
+        // architect bound the prompt to Ctrl+O: it is an ordinary chord row now
+        // and rides the dispatch below like Quit, which is the standing model.)
         if (it.act == GuiPopupAct::SyncExternal) {
             synchronize_to_external_storage();
             return true;

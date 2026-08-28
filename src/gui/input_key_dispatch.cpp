@@ -189,7 +189,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // ELSE. The per-tab BAND is not content: viewport, zoom, playhead, TRIM and the
 // read_only bit itself are all read-only-LEGAL, and so are SAVE and RENDER,
 // which author nothing — a save writes the state the tab already holds and a
-// render reads it.
+// render reads it — and so, since 2026-08-28, is THE OPEN PROJECT PROMPT on
+// Ctrl+O, which leaves this session for another project rather than writing
+// into it.
 // THE DRIVING CASE IS TRIM'S (the architect's own): a finished section's tab
 // locked against accidental marker movement, while its trim window is moved
 // freely to compare a passage against the other tab in target view, re-rendered,
@@ -254,6 +256,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool is_o =
         (key == GuiKeys::O && !ctrl && !shift && !alt);
+    // THE OPEN PROJECT PROMPT (architect 2026-08-28), Ctrl+O — the same letter
+    // as the escape chord above and a wholly different act, which is why each
+    // gets its own term rather than one loosened test. It is admitted on the
+    // header's own standard, exactly as Ctrl+Q and Ctrl+S are: the prompt
+    // authors nothing — it asks for a name, and choosing one REOPENS the
+    // program around another project, discarding this session rather than
+    // writing into it, so there is no marker and no engine setting for the lock
+    // to protect. Ctrl-exact, through the shared predicate the dispatch arm
+    // reads, so the key and this gate cannot drift.
+    const bool is_open_project = is_open_project_key(key, mods);
     const bool is_play_pause = is_play_pause_key(key, mods);
     // THE A/B AUDITION (2026-08-26) is admitted on the header's own standard:
     // it plays and switches tabs — playback and navigation, both already on
@@ -454,7 +466,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
     // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
     // see is_trim_region_toggle above.
-    return !(is_o || is_play_pause || is_ab_audition || is_playhead_step ||
+    return !(is_o || is_open_project || is_play_pause || is_ab_audition ||
+             is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
@@ -5233,8 +5246,12 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
 // The opener. Every guard returns without touching playback (the modal-open
 // precedent open_load_editor sets: a refused open never interrupts a
 // listening session); the shared modal stop runs only once the editor is
-// definitely opening. It is reached from the File menu's Open row alone,
-// whose release has already closed the popup.
+// definitely opening. TWO ROADS REACH IT since 2026-08-28 and both are the
+// same chord: Ctrl+O's own dispatch arm in on_key, and the File menu's Open
+// row, whose release dispatches that chord through on_key with the popup
+// already closed. The guards below serve both — the `h` view's, which the key
+// road also meets one gate earlier at history_mode_key_blocked, and the modal
+// and loading refusals, which the key road meets earlier still.
 void GuiInputHandler::open_project_editor() {
     if (app.prompt.active || keyboard_modal_editor_active()) return;
     // The `h` history view admits no dialog open but its own two (the

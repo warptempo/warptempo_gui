@@ -560,6 +560,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is deleted, so a bare Esc with no render
     //                              running is a plain no-op
     //   - Ctrl+Q                 → close-prompt routing
+    //   - Ctrl+O                 → the Open project prompt (2026-08-28). It
+    //                              authors nothing: it asks for a name, and
+    //                              choosing one reopens the program around
+    //                              another project rather than writing into
+    //                              this one. Bare `o` above is the other act
+    //                              on the letter, not this one's other half
     //   - Ctrl+S                 → the save (2026-08-07). It writes the state
     //                              the tab already holds and authors nothing —
     //                              and the close prompt's Save answer, which sits
@@ -805,6 +811,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
         prompt.request_close(GuiCloseTarget::Exit);
+        return;
+    }
+
+    // CTRL+O — THE OPEN PROJECT PROMPT (architect 2026-08-28). Open was the
+    // File menu's one act whose chord was merely DEFERRED rather than refused,
+    // and this is the one spelling the convention allows it: bare `o` is the
+    // read-only toggle, and the two are neighbours on a letter rather than two
+    // halves of one act. It is a
+    // HOTKEY and so acts at the PRESS; ctrl-exact through the shared predicate
+    // the read-only allowlist reads, so Ctrl+Shift+O stays the strict rule's
+    // consumed no-op. IT SITS BESIDE QUIT because it is the same family — the
+    // two acts on the session as a whole — and the placement is otherwise free:
+    // every state that must refuse the prompt refuses it ABOVE this line (a
+    // standing prompt, an open dropdown, loading-or-absent audio, the editor
+    // text drag, any keyboard-modal editor, the `h` view's allowlist, which
+    // admits no Ctrl+O and so drops the press as a consumed no-op exactly as
+    // the opener's own history-mode guard would) or inside the opener's own
+    // body, which is the road the File menu's row takes and carries the gates
+    // for both. Nothing is restated here. Not repeat-eligible: that gate is an
+    // allowlist of the stepping keys and this letter is not on it, so a held
+    // Ctrl+O opens the prompt once.
+    if (is_open_project_key(key, mods)) {
+        open_project_editor();
         return;
     }
 

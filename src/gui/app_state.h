@@ -2906,15 +2906,22 @@ inline constexpr int kSettingsPopupItemCount =
 // WHAT A COMMAND ROW DISPATCHES. `Chord` is the standing model — THE ITEM IS
 // ITS KEY, dispatched through on_key so every keyboard gate applies (the rule
 // is stated at kFilePopupItems and at the release body,
-// finish_dropdown_release). THE OTHER TWO ARE THE ROWS WITH NO CHORD, both the
-// File menu's: `OpenProject` (File → Open) and `SyncExternal` (File →
-// Synchronize to external storage) have no keyboard binding at all — Open's
-// was left for later and the sync act's was refused outright (architect
-// 2026-08-27: Ctrl+Alt+Shift+R keeps its current meaning, and the act gets a
-// menu row instead of a chord) — so each one's release calls its own act
-// directly, and each act carries the gates a chord would have met — the modal
-// refusals, the `h` view's allowlist, the loading state — in its own body.
-enum class GuiPopupAct : uint8_t { Chord, OpenProject, SyncExternal };
+// finish_dropdown_release). THE OTHER ONE IS THE ROW WITH NO CHORD, the File
+// menu's `SyncExternal` (File → Synchronize to external storage): its keyboard
+// binding was REFUSED outright (architect 2026-08-27: Ctrl+Alt+Shift+R keeps
+// its current meaning, and the act gets a menu row instead of a chord), so its
+// release calls the act directly, and the act carries the gates a chord would
+// have met — the modal refusals, the `h` view's allowlist, the loading state —
+// in its own body.
+//
+// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open) sat beside it while
+// Open's chord was merely DEFERRED rather than refused, and the architect then
+// bound it to Ctrl+O — the one spelling the convention allows, bare `o` being
+// the read-only toggle and the two neighbours rather than partners. So Open is
+// an ordinary `Chord` row now, dispatching through on_key like Quit, and the
+// enumerator is deleted rather than left producer-less. A future act that
+// genuinely cannot have a chord takes SyncExternal's shape.
+enum class GuiPopupAct : uint8_t { Chord, SyncExternal };
 
 struct CommandPopupItem {
     const char* label;
@@ -2939,33 +2946,41 @@ struct CommandPopupItem {
 // two categories, the two acts on the project from an exit, exactly as
 // kdenlive's own File menu does.
 //
-// NEITHER OF THE FIRST TWO HAS A CHORD or an accelerator text: they are the two
-// non-`Chord` GuiPopupAct rows, their releases calling
-// GuiInputHandler::open_project_editor and
-// GuiInputHandler::synchronize_to_external_storage directly. Open's keyboard
-// binding is DEFERRED; the sync act's is REFUSED — the architect kept
-// Ctrl+Alt+Shift+R's current meaning and gave the act a menu row instead, so
-// there is no chord to add later without taking one from the render family.
-// QUIT IS ITS CHORD:
-// Ctrl+Q dispatched through on_key, so the drag-modal hatch, the dirty prompt
-// and the WM-close ordering are the keyboard route's own with no second body.
-// Ctrl+Q is on the history view's own allowlist, so that row works inside the
-// `h` view exactly as it does outside it; Open's opener refuses in the view
-// itself, the allowlist's own answer for a dialog open.
+// TWO OF THE THREE ARE THEIR CHORDS, dispatched through on_key so the keyboard
+// route's own gates and body serve the row with nothing restated: QUIT IS
+// Ctrl+Q — the drag-modal hatch, the dirty prompt and the WM-close ordering are
+// all the key's — and OPEN IS Ctrl+O since 2026-08-28, when the architect gave
+// the project picker the one spelling the convention allows (bare `o` is the
+// read-only toggle; the two are neighbours on one letter, not partners). Open's
+// row was the `OpenProject` GuiPopupAct until that date, calling the opener
+// directly because no key bound it, and the enumerator died with the binding.
+// ONLY SYNCHRONIZE HAS NO CHORD now — its binding was REFUSED rather than
+// deferred, the architect keeping Ctrl+Alt+Shift+R's current meaning and giving
+// the act a menu row instead, so there is no chord to add later without taking
+// one from the render family — and its release calls
+// GuiInputHandler::synchronize_to_external_storage directly, that act carrying
+// in its own body the gates a chord would have met.
+// EACH ROW ANSWERS THE `h` HISTORY VIEW IN ITS OWN WAY, and all three answers
+// are the keyboard's: Ctrl+Q is on the view's allowlist, so Quit works in there
+// exactly as it does outside; Ctrl+O is not, so the Open row is a consumed
+// no-op in the view — the same refusal the opener's own history-mode guard
+// gives, which is the allowlist's standing answer for a dialog open — and the
+// Synchronize act refuses in its body for the same reason.
 //
 // IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
 // no-gesture-hints-in-UI preference is about hint PROSE inside labels, and the
 // architect ordered kdenlive's accelerator column on the command menus (its own
-// crop, dropdown_full_hotkeys.png, is the anatomy). Since 2026-08-15 this one
-// row is the accelerator column's WHOLE producer — the Navigation menu, which
-// the column was authored for, is deleted — so the column's metrics and its
-// layout term survive on this row alone and are not producer-less. The crop's
-// spelling convention is "modifiers spelled out with `+`", which "Ctrl+Q" is;
-// the convention's OTHER half — a bare letter written UPPERCASE — has no
-// instance left in the product and is recorded at RedesignTooltipText, where it
-// used to be contrasted with the tooltips' lowercase rule. The Open and
-// Synchronize rows carry no hotkey text, which the painter reads per row (a
-// null hotkey paints no accelerator on that row alone).
+// crop, dropdown_full_hotkeys.png, is the anatomy). The Navigation menu the
+// column was authored for is deleted, and the column's metrics and its layout
+// term survive on the command tables that remain — this one, Edit's five rows
+// and Series' two — so nothing about it is producer-less. The crop's spelling
+// convention is "modifiers spelled out with `+`", which "Ctrl+Q" and "Ctrl+O"
+// both are; the convention's OTHER half — a bare letter written UPPERCASE — is
+// the SERIES table's two rows ("M", "I") and is recorded at
+// RedesignTooltipText, where it is contrasted with the tooltips' lowercase
+// rule. The Synchronize row carries no hotkey text, which the painter reads per
+// row (a null hotkey paints no accelerator on that row alone) — it was the
+// second such row until Open took its chord on 2026-08-28.
 //
 // AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE, with NO EXCEPTION since
 // 2026-08-15: a command that cannot act right now still dispatches and its own
@@ -2987,8 +3002,7 @@ struct CommandPopupItem {
 // clause, and a future item whose LABEL would lie in some mode needs the
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Open", nullptr,  0,          false, false, false, false,
-     GuiPopupAct::OpenProject},
+    {"Open", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     {"Synchronize to external storage", nullptr, 0, false, false, false, false,
      GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
@@ -6604,7 +6618,9 @@ struct AppState {
     bool measure_offset_editor_blink_last = false;
 
     // THE OPEN PROJECT EDITOR (architect 2026-08-27), the SIXTH dialog modal
-    // and File → Open's own: the menu item opens it empty, its field completes
+    // and File → Open's own: the menu item and Ctrl+O — one chord, the row
+    // dispatching it like every other command row — open it empty, its field
+    // completes
     // over the FOLDER NAMES under the device config's projects_path (the
     // candidates below, built when the prompt opens and never kept fresh),
     // and Enter resolves the typed name through the project model
