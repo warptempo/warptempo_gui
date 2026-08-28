@@ -526,36 +526,41 @@ cmake --build android/app/build-android -j$(nproc)
 tree under it is wiped on every run, the CMake tree is not.
 
 Installing a project is a push into the app's own external files dir, which
-needs **no permission at all**. Since 2026-08-27 the app opens **the current
-project**, and the layout under `<externalDataPath>` =
+needs **no permission at all**. Since 2026-08-28 the app no longer reads a
+`current` file at all: it opens the project model's own `last_project` (a
+device config key, `src/gui/device_config.h` — the config lives in the app's
+internal files dir, readable with `adb shell run-as com.warptempo.gui cat
+files/warptempo_gui/config`), or, when that name is empty or its folder is
+gone or invalid, the first valid project folder under `<externalDataPath>/
+projects` in name order. Opening a DIFFERENT project is done from inside the
+running app — File → Open, the on-screen keyboard's symbol page carrying the
+`Tab` key the prompt's autocomplete needs (docs/HELP.md's Opening another
+project). The layout under `<externalDataPath>` =
 `/sdcard/Android/data/com.warptempo.gui/files` is the laptop's `projects/`
 mirrored:
 
 ```
-current                  one line: a project folder's name
 projects/<name>/         the source .wav, its three sidecars sharing that
-                         stem, and renders/ beside them
+                         stem, render/ (the deliverable) and tmp/ (the
+                         disposable batch cells) beside them
 ```
 
-`resolve_source_path` reads `current`, then answers with the ONE `.wav` in
-`projects/<name>/` whose stem has a `.warpmarkers` sibling — the sync script's
-own rule for "the source", so a render sitting beside it (published title, no
-sidecars) never matches. `current` absent, empty, holding a second line of
-payload, naming anything but ONE relative component (a `/`, `.` or `..`, an
-absolute path), naming no folder, a folder that refuses to be enumerated, that
-folder holding no such `.wav`, or two of them: each is logged at FATAL through
-`__android_log` and aborts, since the sync script writes `current` on every run
-and a fallback would have no producer. The grammar refusals are the
-adversarial-load class read onto this file — a name carrying a separator would
-compose a path leaving the folder it claims to name, and the app would open and
-edit a piece the laptop never put here — and every filesystem refusal carries
-the system's own words, because "Permission denied" is the one that means the
-mode-770 directory this section records below.
+`resolve_project` (`src/gui/project_model.h`) names a folder's source by its
+sidecar stem, or, for a folder with no sidecar at all, the one `.wav` it
+holds — the whole rule is in `src/gui/project_model.h`'s head comment, shared
+verbatim with the laptop. There is no longer a `current`-shaped grammar to
+refuse on this device: an invalid folder shape refuses with its own reason
+(read on the status line if it was `last_project`, or skipped silently by the
+startup fallback if it was some other folder in the walk), and a filesystem
+refusal — including the mode-770 one below — carries the system's own words.
 
 The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`
-from a project folder pushes it and makes it current, `wts fp` brings the
-sidecars and renders home and commits them. Placing one by hand is the same
-four pushes plus the folder name:
+from a project folder pushes it, `wts fp` brings the sidecars and renders home
+and commits them. **`wts` still writes a `current` file on every push, and
+nothing in the app reads it any more** — the script is personal tooling and is
+updated separately from this arc; the file sits harmlessly in
+`<externalDataPath>` until it is. Placing one by hand is the same four pushes
+plus the folder name:
 
 ```bash
 FAR=/sdcard/Android/data/com.warptempo.gui/files
@@ -564,17 +569,18 @@ adb push "<src>.warpmarkers"      "$FAR/projects/<name>/"
 adb push "<src>.phaseresetmarkers" "$FAR/projects/<name>/"
 adb push "<src>.settings"         "$FAR/projects/<name>/"
 adb shell "find '$FAR/projects' -type d -exec chmod 777 {} +"
-printf '<name>\n' > /tmp/current && adb push /tmp/current "$FAR/current"
 ```
 
 **The chmod is load-bearing.** `files/` belongs to the app, so a file pushed
 straight into it is readable — which is why the old flat convention never met
 this. But a DIRECTORY that `adb push` creates below it belongs to `shell` with
 mode 770, and the app's uid is neither its owner nor in its group: `opendir()`
-answers EACCES and the app dies at launch saying `current` names no folder
-(measured on the device 2026-08-27). `chmod` does take on this device's external
-storage, so one pass over the directories is the whole fix; the files under them
-are already world-readable. `wts tp` runs it after every push.
+answers EACCES, and before this arc that made the app die at launch saying
+`current` names no folder (measured on the device 2026-08-27) — the same
+permission failure now surfaces as `resolve_project`'s own "Permission denied"
+on whichever folder it hit. `chmod` does take on this device's external
+storage, so one pass over the directories is the whole fix; the files under
+them are already world-readable. `wts tp` runs it after every push.
 
 **THE SIDECAR TRAVELS VERBATIM since 2026-08-27.** `gui_scale` left the
 `.settings` for the per-device config that day (`$XDG_CONFIG_HOME/warptempo_gui/
