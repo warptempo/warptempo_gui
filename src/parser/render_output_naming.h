@@ -42,10 +42,12 @@ std::filesystem::path compose_render_output_path(
 // The staging name a deliverable publishes through: the final path's spelling
 // with ".tmp" appended (path string plus ".tmp", never an extension swap).
 // Every deliverable publication — the CLI's wav render, the GUI's wav engine
-// path and reuse rungs — writes under this name first and rename-publishes to
-// the final name. This is the single owner of the staging spelling, so the
-// two products cannot drift, and render_output_source_collision below checks
-// this staging name against the source alongside the final.
+// path and reuse rungs, and the Synchronize act's staged copies
+// (external_sync.cpp) (architect approval 2026-08-28) — writes under this
+// name first and rename-publishes to the final name. This is the single
+// owner of the staging spelling, so the two products cannot drift, and
+// render_output_source_collision below checks this staging name against the
+// source alongside the final.
 std::string render_staging_path(const std::string& final_path);
 
 // Source-clobber guard. The render output must never overwrite the source
