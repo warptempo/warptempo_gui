@@ -617,6 +617,11 @@ consumer, and the seam has no addition at all — §13.3.)*
   the loop-settled hook → paint-if-dirty. The timer and worker fds are FLAGGED
   during the drain and acted on after it, because the looper hands events back
   in readiness order and the order above is policy, not protocol.
+  *(SUPERSEDED 2026-08-28: there are FIVE worker eventfds now — the Synchronize
+  to external storage act's joined the four — plus ONE MORE SOURCE, the car's
+  media-command eventfd under its own ident after the worker range, drained
+  into its own flag and dispatched after the worker completions. The live
+  account is platform-seam.md's loop contract and car section.)*
   `drain_events()` — whose live caller is a blocking LOAD's progress callback —
   **is the paint and nothing else**. Its Wayland counterpart is
   `wl_display_dispatch_pending`, which dispatches already-read events and reads

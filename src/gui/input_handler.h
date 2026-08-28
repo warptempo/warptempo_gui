@@ -2562,10 +2562,13 @@ private:
     // open_project_editor_commit. The three picker bodies below are what the
     // overlay's row acts fork into when its owner is ProjectPicker:
     //   build_project_picker_rows: the band's rows AT THE OPEN — the captured
-    //     candidate names FILTERED BY resolve_project, so the list and the
-    //     completion cannot disagree about what a project is, and an invalid
-    //     folder simply does not show. Never kept fresh (a project that
-    //     appears or vanishes while the prompt stands shows at the next open),
+    //     candidate names filtered by BOTH of the commit's tests, the name
+    //     grammar (is_last_project_name) and the model (resolve_project), so
+    //     THE ROWS ARE EXACTLY THE SET THE COMMIT WOULD ACCEPT and the list,
+    //     the completion and Enter cannot disagree about what a project is;
+    //     an invalid folder simply does not show. Never kept fresh (a project
+    //     that appears or vanishes while the prompt stands shows at the next
+    //     open),
     //     no `..` row and no folder inside a project: a project is a leaf
     //     here. The band opens on the CURRENT project's row.
     //   project_picker_select: THE HIGHLIGHT AND THE FIELD ARE ONE THING —

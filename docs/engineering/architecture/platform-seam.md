@@ -500,9 +500,18 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   it and never fires it (the `set_on_close` shape). Android's road DOWN:
   `MainActivity`'s `MediaSession.Callback` (`onPlay`, `onPause`, `onStop`,
   `onSkipToNext`, `onSkipToPrevious`, `onFastForward`, `onRewind`,
-  `onSeekTo`; `onMediaButtonEvent` is NOT overridden — the framework's default
-  maps `KEYCODE_MEDIA_*` onto those itself, splitting the play/pause key by
-  the session's PUBLISHED state) and its focus listener each call the one
+  `onSeekTo` — reached now only by a controller calling an action directly —
+  and `onMediaButtonEvent`, WHICH IS OVERRIDDEN and takes every media KEY
+  first: the framework's default is not this product's behaviour, holding a
+  `KEYCODE_MEDIA_PLAY_PAUSE` press for `ViewConfiguration.getDoubleTapTimeout()`
+  and turning two quick presses into `onSkipToNext` while `ACTION_SKIP_TO_NEXT`
+  is declared — a hidden delay and an unruled double-tap gesture. So the
+  override reads the `KeyEvent` off `Intent.EXTRA_KEY_EVENT`, acts on
+  ACTION_DOWN with no repeat (the press timing the product's own hotkeys keep;
+  the UP and the repeats are consumed and dropped), maps the keycodes itself
+  — PLAY_PAUSE and HEADSETHOOK to the UNDIVIDED `PlayPause` kind, the rest
+  one to one — and hands anything it does not map to `super`) and its focus
+  listener each call the one
   `native` method, whose JNI entry
   (`Java_com_warptempo_gui_MainActivity_nativeMediaCommand`,
   `platform_android.cpp`, name-based resolution, no `JNI_OnLoad`) does exactly
@@ -535,7 +544,10 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   four-byte sequence), inside a local frame. That method builds the
   `MediaMetadata` (TITLE = the wav's spelling with its folder, ARTIST and ALBUM
   = the project's name, DURATION) and the `PlaybackState` (PLAYING / PAUSED /
-  STOPPED with the position at speed 1.0 and every action declared), calls
+  STOPPED with the position, every action declared, and THE SPEED THE RATE OF
+  PLAYBACK — 1.0 for PLAYING and 0.0 otherwise, since a controller
+  extrapolates the position off that speed from the moment of the push and a
+  resting transport must not have its clock run on), calls
   `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER
   STANDS (R7), created in `onCreate` on the UI thread so its callbacks land
   there and released in `onDestroy` — and owns the AUDIO FOCUS machine:

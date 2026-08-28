@@ -26,7 +26,7 @@
 // platform_wayland.h keeps for the same reason.
 //
 // THE PUBLIC API IS THE SEAM AND IS IDENTICAL TO platform_wayland.h's, member
-// for member and signature for signature. It last grew on 2026-08-27, three
+// for member and signature for signature. It grew on 2026-08-27, three
 // times and each time on BOTH sides: the on-screen keyboard's two members
 // (synthesize_key, which had stood here alone as the seam's one addition, and
 // the new wants_onscreen_keyboard) grew Wayland twins, because the keyboard's
@@ -36,11 +36,17 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). It
-// grew twice more the same day, both on both sides: removable_volume(), the
+// grew twice more on 2026-08-28, both on both sides: removable_volume(), the
 // Synchronize to external storage act's destination — a platform fact like the
 // config template, since where a machine mounts a stick is an answer only the
 // backend has — and set_sync_worker_completion_fd, that act's worker taking
-// the loop's fifth watched eventfd beside the other four. The
+// the loop's fifth watched eventfd beside the other four. IT LAST GREW THE
+// SAME DAY, twice, by the car's pair (gui_media.h carries their vocabulary;
+// the mechanism is platform-seam.md's car section): set_on_media_command, the
+// hook the loop fires with each head-unit button the Java sliver's
+// MediaSession hands down — stored and never fired on Wayland,
+// set_on_close's shape — and publish_media_state, the push back up into that
+// session's metadata and playback state, whose Wayland body is empty. The
 // seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
 // input_handler) include platform.h and compile against either backend
@@ -472,7 +478,8 @@ private:
     // this.
     bool initial_resize_owed_ = false;
 
-    // THE TWO DEFERRABLE SOURCES, recorded by the drain and consumed by the
+    // THE DEFERRABLE SOURCES — the timer, the five workers and the car's
+    // media eventfd below — recorded by the drain and consumed by the
     // loop pass's tail. They are MEMBERS rather than locals because the drain
     // hands the looper's events back in readiness order while the ORDER THEY
     // ARE ACTED ON IN IS POLICY (stated at pump): a tick and a worker
@@ -592,17 +599,20 @@ private:
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
     // Add one fd to the glue's looper under `ident`; a negative fd is the
-    // "nothing registered" answer and is a silent no-op. The four worker
-    // registrations and the timerfd all go through it, and unwatch_fd is its
-    // counterpart at shutdown (a looper holding a closed fd is the one thing
-    // teardown must not leave behind).
+    // "nothing registered" answer and is a silent no-op. SEVEN REGISTRATIONS
+    // GO THROUGH IT (re-grepped 2026-08-28): the timerfd and the car's media
+    // eventfd, both once per PROCESS in init(), and the FIVE worker
+    // completion fds, each re-registered per project by its own
+    // set_*_worker_completion_fd setter. unwatch_fd is its counterpart at
+    // shutdown (a looper holding a closed fd is the one thing teardown must
+    // not leave behind).
     void watch_fd(int fd, int ident);
     void unwatch_fd(int fd);
-    // Drain the looper into the two flag members above. Window-system sources
+    // Drain the looper into the flag members above. Window-system sources
     // (the glue's cmd pipe and input queue) are processed ON THE SPOT — their
     // process() bodies are the glue's own and deferring one would mean holding
-    // an unfinished AInputEvent — while the timer and the worker fds are only
-    // recorded. `timeout_ms` is -1 to block for the first event and 0 to take
+    // an unfinished AInputEvent — while the timer, the five worker fds and the
+    // car's media eventfd are only recorded. `timeout_ms` is -1 to block for the first event and 0 to take
     // whatever is already there.
     void drain_looper(int timeout_ms);
     // One pass of the loop body: the blocking drain, then the fixed dispatch

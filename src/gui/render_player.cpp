@@ -667,6 +667,13 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
 
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
+        case Kind::PlayPause:
+            // THE UNDIVIDED TOGGLE KEY TAKES NO STATE GATE: it says "the
+            // other one", and Space in the player is exactly that act
+            // (play_button_act's own fork). The gate below exists only
+            // because Play and Pause name a direction.
+            press(GuiKeys::Space);
+            return;
         case Kind::Play:
             // The state gate (the declaration): a "play" said to a live
             // transport is already true and must not toggle it off.
@@ -696,8 +703,19 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // THE ROAD'S ONE DIRECT ACT (the declaration): no keysym carries
             // an absolute position. Milliseconds to frames at the device's
             // rate; seek_to clamps into the item and refuses with no item.
+            //
+            // THE CLAMP IS ON THE MILLISECONDS, BEFORE THE CONVERSION, and
+            // that ordering is the rule: the position comes from a head unit
+            // over binder and is any int64 at all, so `ms * rate` would
+            // overflow — signed overflow being undefined — long before
+            // seek_to's own clamp on the frame could see it. A negative or
+            // absurd target lands at 0 or at the item's end instead.
             const int64_t rate = audio.sample_rate();
-            const int64_t ms   = cmd.position_ms < 0 ? 0 : cmd.position_ms;
+            if (rate <= 0) return;
+            const int64_t duration_ms =
+                rp.frames > 0 ? rp.frames * 1000 / rate : 0;
+            const int64_t ms =
+                std::clamp<int64_t>(cmd.position_ms, 0, duration_ms);
             seek_to(ms * rate / 1000);
             return;
         }

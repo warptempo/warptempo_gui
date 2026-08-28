@@ -21,29 +21,32 @@
 struct GuiMediaCommand {
     // THE KIND TABLE IS SHARED WITH THE JAVA SLIVER BY NUMBER: each enumerator's
     // integer value is the `MEDIA_*` constant MainActivity.java hands
-    // nativeMediaCommand, in this order, 0-based. A new kind is added at the
-    // END on both sides, and kGuiMediaCommandKindCount below moves with it —
-    // the static_assert under it is what keeps the two tables the same length.
+    // nativeMediaCommand, in this order, 0-based. THE TWO TABLES ARE ONE LIST
+    // AND ARE EDITED IN ONE ACT — the numbers are an in-build identity and
+    // nothing persists them, so a kind lands where it belongs rather than
+    // always at the end; kGuiMediaCommandKindCount below moves with the list
+    // and the static_assert under it is what keeps the two the same length.
     //
-    // THERE IS NO TOGGLE KIND, and that is the framework's own doing: the
-    // default onMediaButtonEvent splits KEYCODE_MEDIA_PLAY_PAUSE into onPlay /
-    // onPause against the session's PUBLISHED state before it ever reaches the
-    // sliver, so a PlayPause enumerator would have no producer on the one
-    // backend that produces anything — an arm with no producer (the validation
-    // topology's own smell). A backend that one day delivers an undivided
-    // toggle adds it at the END of this table, with the Java side's number.
+    // THE TOGGLE HAS ITS OWN KIND because the sliver MAPS THE KEYCODES ITSELF
+    // (MainActivity's onMediaButtonEvent override): the framework's default
+    // would split KEYCODE_MEDIA_PLAY_PAUSE against the session's published
+    // state — after holding the press for a double-tap window it turns into a
+    // skip — so the sliver bypasses it and hands the undivided key down as
+    // PlayPause, which the player answers with its own Space toggle rather
+    // than with a state gate. HEADSETHOOK arrives as the same kind.
     enum class Kind : int {
         Play              = 0,   // MEDIA_PLAY
         Pause             = 1,   // MEDIA_PAUSE
-        Stop              = 2,   // MEDIA_STOP
-        Next              = 3,   // MEDIA_NEXT
-        Previous          = 4,   // MEDIA_PREVIOUS
-        FastForward       = 5,   // MEDIA_FAST_FORWARD
-        Rewind            = 6,   // MEDIA_REWIND
-        SeekTo            = 7,   // MEDIA_SEEK_TO (position_ms carries the target)
-        FocusLost         = 8,   // MEDIA_FOCUS_LOST (AUDIOFOCUS_LOSS)
-        FocusLostTransient = 9,  // MEDIA_FOCUS_LOST_TRANSIENT (AUDIOFOCUS_LOSS_TRANSIENT*)
-        FocusGained       = 10,  // MEDIA_FOCUS_GAINED (AUDIOFOCUS_GAIN)
+        PlayPause         = 2,   // MEDIA_PLAY_PAUSE (the undivided toggle key)
+        Stop              = 3,   // MEDIA_STOP
+        Next              = 4,   // MEDIA_NEXT
+        Previous          = 5,   // MEDIA_PREVIOUS
+        FastForward       = 6,   // MEDIA_FAST_FORWARD
+        Rewind            = 7,   // MEDIA_REWIND
+        SeekTo            = 8,   // MEDIA_SEEK_TO (position_ms carries the target)
+        FocusLost         = 9,   // MEDIA_FOCUS_LOST (AUDIOFOCUS_LOSS)
+        FocusLostTransient = 10, // MEDIA_FOCUS_LOST_TRANSIENT (AUDIOFOCUS_LOSS_TRANSIENT*)
+        FocusGained       = 11,  // MEDIA_FOCUS_GAINED (AUDIOFOCUS_GAIN)
     };
     Kind    kind        = Kind::Play;
     // Milliseconds into the item; read for SeekTo alone, 0 otherwise.
@@ -52,7 +55,7 @@ struct GuiMediaCommand {
 
 // THE COUNT THE JAVA TABLE MUST MATCH (MainActivity.java's MEDIA_KIND_COUNT).
 // The JNI entry drops any integer outside [0, count) rather than casting it.
-inline constexpr int kGuiMediaCommandKindCount = 11;
+inline constexpr int kGuiMediaCommandKindCount = 12;
 static_assert(static_cast<int>(GuiMediaCommand::Kind::FocusGained) + 1 ==
                   kGuiMediaCommandKindCount,
               "the media command kind table and its count have drifted");

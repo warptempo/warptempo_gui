@@ -1,6 +1,7 @@
 package com.warptempo.gui;
 
 import android.app.NativeActivity;
+import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -11,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
@@ -102,12 +104,11 @@ import android.view.WindowManager;
  * INTEGER DOWN through nativeMediaCommand -- the native side queues it and
  * wakes its own loop, then turns it into the player's OWN KEYS (Space, Page
  * Up / Page Down, Left / Right), so every car button is a chord the player
- * already binds and there is no second dispatch road. onMediaButtonEvent is
- * deliberately NOT overridden: the framework's default maps KEYCODE_MEDIA_*
- * onto onPlay / onPause / onSkipToNext / ... itself, splitting the toggle key
- * by the PUBLISHED playback state, which is why every push keeps that state
- * honest. Audio focus is REQUESTED when a push says playing and none is held
- * and ABANDONED when a push says inactive; a loss pauses the player through
+ * already binds and there is no second dispatch road. onMediaButtonEvent IS
+ * OVERRIDDEN and the keycodes are mapped here, at once, rather than left to
+ * the framework's default (the reasons are at the override). Audio focus is
+ * REQUESTED when a push says playing and none is held and ABANDONED when a
+ * push says inactive; a loss pauses the player through
  * the same command road ("Android's one imposed interrupt"), a refused
  * request is logged and playback proceeds (the AAudio stream is already
  * running; focus decides who else ducks, not whether we sound).
@@ -135,24 +136,28 @@ public class MainActivity extends NativeActivity {
 
     // THE COMMAND TABLE, SHARED WITH THE NATIVE SIDE BY NUMBER: these are
     // GuiMediaCommand::Kind's enumerator values (src/gui/gui_media.h), in that
-    // order, 0-based, and MEDIA_KIND_COUNT is its kGuiMediaCommandKindCount. A
-    // new kind is added at the END on both sides. THERE IS NO PLAY_PAUSE ROW:
-    // the default onMediaButtonEvent splits the toggle key into onPlay /
-    // onPause by the published state (the class comment), so nothing here
-    // could ever send one -- ACTION_PLAY_PAUSE stays DECLARED below because
-    // that split only happens for a declared action.
+    // order, 0-based, and MEDIA_KIND_COUNT is its kGuiMediaCommandKindCount.
+    // THE TWO TABLES ARE ONE LIST AND ARE EDITED IN ONE ACT -- the numbers are
+    // an in-build identity and nothing persists them. THERE IS A PLAY_PAUSE
+    // ROW because onMediaButtonEvent below maps the keycodes itself: the
+    // undivided toggle key goes down as its own kind and the native side
+    // answers it with its own toggle, rather than the framework guessing a
+    // direction from the published state. ACTION_PLAY_PAUSE stays declared
+    // below all the same -- the routing dispatches a key only for a declared
+    // action, and that is true of the override's keys too.
     private static final int MEDIA_PLAY                 = 0;
     private static final int MEDIA_PAUSE                = 1;
-    private static final int MEDIA_STOP                 = 2;
-    private static final int MEDIA_NEXT                 = 3;
-    private static final int MEDIA_PREVIOUS             = 4;
-    private static final int MEDIA_FAST_FORWARD         = 5;
-    private static final int MEDIA_REWIND               = 6;
-    private static final int MEDIA_SEEK_TO              = 7;
-    private static final int MEDIA_FOCUS_LOST           = 8;
-    private static final int MEDIA_FOCUS_LOST_TRANSIENT = 9;
-    private static final int MEDIA_FOCUS_GAINED         = 10;
-    private static final int MEDIA_KIND_COUNT           = 11;
+    private static final int MEDIA_PLAY_PAUSE           = 2;
+    private static final int MEDIA_STOP                 = 3;
+    private static final int MEDIA_NEXT                 = 4;
+    private static final int MEDIA_PREVIOUS             = 5;
+    private static final int MEDIA_FAST_FORWARD         = 6;
+    private static final int MEDIA_REWIND               = 7;
+    private static final int MEDIA_SEEK_TO              = 8;
+    private static final int MEDIA_FOCUS_LOST           = 9;
+    private static final int MEDIA_FOCUS_LOST_TRANSIENT = 10;
+    private static final int MEDIA_FOCUS_GAINED         = 11;
+    private static final int MEDIA_KIND_COUNT           = 12;
 
     // THE ONE ROAD DOWN (Java_com_warptempo_gui_MainActivity_nativeMediaCommand,
     // src/gui/platform_android.cpp): lock, push, wake. Called on the UI thread
@@ -260,12 +265,15 @@ public class MainActivity extends NativeActivity {
         // nothing while the waveform is being edited. The state is seeded
         // STOPPED with the full action set so the framework's default
         // media-button routing has actions to dispatch against from the first
-        // activation.
+        // activation. SPEED 0: nothing is playing, and the speed a state
+        // carries is the RATE OF PLAYBACK, off which a controller
+        // extrapolates the position from the moment of the push (the rule at
+        // mediaState).
         session = new MediaSession(this, TAG);
         session.setCallback(new TransportCallback());
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(SESSION_ACTIONS)
-                .setState(PlaybackState.STATE_STOPPED, 0L, 1.0f)
+                .setState(PlaybackState.STATE_STOPPED, 0L, 0.0f)
                 .build());
         session.setActive(false);
 
@@ -349,9 +357,17 @@ public class MainActivity extends NativeActivity {
         } else {
             state = PlaybackState.STATE_PAUSED;
         }
+        // THE SPEED IS THE RATE OF PLAYBACK, not a constant: a controller
+        // EXTRAPOLATES the position from `positionMs` at this speed and the
+        // moment of this push, so 1.0 while paused or stopped would make the
+        // head unit's clock run on over a still transport until the next
+        // push. 1.0 for PLAYING and 0.0 for everything else is what makes the
+        // published triple true between pushes, which is the whole reason
+        // there is no per-tick push.
+        final float speed = state == PlaybackState.STATE_PLAYING ? 1.0f : 0.0f;
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(SESSION_ACTIONS)
-                .setState(state, positionMs, 1.0f)
+                .setState(state, positionMs, speed)
                 .build());
         session.setActive(active);
 
@@ -373,9 +389,10 @@ public class MainActivity extends NativeActivity {
         }
     }
 
-    // THE HEAD UNIT'S BUTTONS, one integer each. onMediaButtonEvent is NOT
-    // overridden: its default maps KEYCODE_MEDIA_* onto these, splitting the
-    // play/pause key by the published state (the class comment). Every
+    // THE HEAD UNIT'S BUTTONS, one integer each. The transport methods below
+    // remain because a controller can call them directly (a system UI, an
+    // AVRCP command that arrives as an action rather than as a key), but the
+    // MEDIA KEYS DO NOT REACH THEM: onMediaButtonEvent takes them first. Every
     // callback runs on the UI thread (the session's creating Looper).
     private final class TransportCallback extends MediaSession.Callback {
         @Override public void onPlay()           { nativeMediaCommand(MEDIA_PLAY, 0L); }
@@ -386,6 +403,66 @@ public class MainActivity extends NativeActivity {
         @Override public void onFastForward()    { nativeMediaCommand(MEDIA_FAST_FORWARD, 0L); }
         @Override public void onRewind()         { nativeMediaCommand(MEDIA_REWIND, 0L); }
         @Override public void onSeekTo(long pos) { nativeMediaCommand(MEDIA_SEEK_TO, pos); }
+
+        // THE KEYS ARE MAPPED HERE, AT ONCE, AND THE FRAMEWORK'S DEFAULT IS
+        // BYPASSED. That default is not this product's behaviour: given a
+        // declared ACTION_SKIP_TO_NEXT it HOLDS a KEYCODE_MEDIA_PLAY_PAUSE
+        // press for ViewConfiguration.getDoubleTapTimeout() to see whether a
+        // second press follows, and turns two quick presses into
+        // onSkipToNext. That is a delay between the wheel button and the
+        // sound with nothing on screen to explain it, and a double-tap-to-Next
+        // gesture nobody ruled -- Next is its own button on the wheel. So the
+        // key is read straight off the intent and sent down undivided
+        // (MEDIA_PLAY_PAUSE), and the native side answers it with the
+        // player's own Space toggle.
+        //
+        // ACTION_DOWN ONLY. A repeat (a held button) and the matching
+        // ACTION_UP are consumed and dropped: every car command is an act at
+        // the press, exactly as the product's own hotkeys are, and none of
+        // them repeats. A keycode this does not map -- anything that is not a
+        // transport key -- goes to super, which is where a controller's own
+        // handling still belongs.
+        @Override
+        public boolean onMediaButtonEvent(Intent intent) {
+            // getParcelableExtra(String) is deprecated in the API 35 jar this
+            // compiles against; its typed replacement landed in API 33 and
+            // the manifest's minSdk is 30, so the deprecated call is the one
+            // that runs on every device this ships to. One javac warning is
+            // expected.
+            @SuppressWarnings("deprecation")
+            final KeyEvent key = intent == null
+                    ? null
+                    : (KeyEvent) intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+            if (key == null) return super.onMediaButtonEvent(intent);
+
+            final int kind;
+            switch (key.getKeyCode()) {
+                case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                case KeyEvent.KEYCODE_HEADSETHOOK:
+                    kind = MEDIA_PLAY_PAUSE;      break;
+                case KeyEvent.KEYCODE_MEDIA_PLAY:
+                    kind = MEDIA_PLAY;            break;
+                case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                    kind = MEDIA_PAUSE;           break;
+                case KeyEvent.KEYCODE_MEDIA_STOP:
+                    kind = MEDIA_STOP;            break;
+                case KeyEvent.KEYCODE_MEDIA_NEXT:
+                    kind = MEDIA_NEXT;            break;
+                case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                    kind = MEDIA_PREVIOUS;        break;
+                case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:
+                    kind = MEDIA_FAST_FORWARD;    break;
+                case KeyEvent.KEYCODE_MEDIA_REWIND:
+                    kind = MEDIA_REWIND;          break;
+                default:
+                    return super.onMediaButtonEvent(intent);
+            }
+            if (key.getAction() == KeyEvent.ACTION_DOWN
+                    && key.getRepeatCount() == 0) {
+                nativeMediaCommand(kind, 0L);
+            }
+            return true;
+        }
     }
 
     // THE FOCUS MACHINE'S OTHER HALF: a permanent LOSS releases the hold (the

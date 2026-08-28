@@ -251,21 +251,28 @@ struct GuiRenderPlayer {
     // AppState::modal_dialog_key_pressed), then modal_dialog_focus = -1 and
     // modal_dialog_focus_active = false, damaging the modal box.
     //
-    // THE TABLE (design §3, R6): Play -> Space ONLY WITH
-    // THE TRANSPORT DOWN; Pause, Stop, FocusLost and FocusLostTransient ->
-    // Space ONLY WITH THE TRANSPORT LIVE (stop is a pause by ruling; a focus
-    // loss pauses, Android's one imposed interrupt); Next / Previous ->
-    // PageDown / PageUp; FastForward / Rewind -> Right / Left (5 s per press,
-    // nothing depending on repeat); FocusGained -> nothing (NOTHING RECOVERS
-    // BY ITSELF — the AAudio posture; the user presses play). The state gate
-    // on the play/pause family is a SEMANTIC PRE-FILTER, not a second
-    // dispatch: Space is the toggle, and a head unit saying "play" to a live
-    // transport must not pause it, so the gate decides whether the toggle is
-    // sent and the act still runs through the key road.
+    // THE TABLE (design §3, R6): PlayPause -> Space UNCONDITIONALLY (the
+    // undivided toggle key, which the sliver maps itself rather than letting
+    // the framework split it — gui_media.h; Space is play_button_act's own
+    // toggle, so the key and the act say the same thing and no gate belongs
+    // between them); Play -> Space ONLY WITH THE TRANSPORT DOWN; Pause, Stop,
+    // FocusLost and FocusLostTransient -> Space ONLY WITH THE TRANSPORT LIVE
+    // (stop is a pause by ruling; a focus loss pauses, Android's one imposed
+    // interrupt); Next / Previous -> PageDown / PageUp; FastForward / Rewind
+    // -> Right / Left (5 s per press, nothing depending on repeat);
+    // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
+    // posture; the user presses play). The state gate on the DIRECTIONAL
+    // play/pause family is a SEMANTIC PRE-FILTER, not a second dispatch:
+    // Space is the toggle, and a head unit saying "play" to a live transport
+    // must not pause it, so the gate decides whether the toggle is sent and
+    // the act still runs through the key road.
     //
     // THE ROAD'S ONE RECORDED ASYMMETRY: SeekTo calls seek_to(frame) DIRECT,
     // because no keysym carries an absolute position — the seeks the keys
-    // bind are relative (Left / Right / Home).
+    // bind are relative (Left / Right / Home). Its milliseconds are clamped
+    // to the item's own length BEFORE the conversion to frames, the arriving
+    // position being any int64 a head unit cares to send (the rule at the
+    // site).
     //
     // EACH KEY IS A PRESS AND A RELEASE, synthesized back to back: the release
     // is what cancels the core's repeat arm for the repeat-eligible keys

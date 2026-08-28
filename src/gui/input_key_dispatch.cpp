@@ -5269,12 +5269,19 @@ void GuiInputHandler::build_project_picker_rows() {
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::ProjectPicker;
     // ONE LIST, FILTERED: the prompt's candidates are the folder names under
-    // projects_path and the rows are exactly those the model ACCEPTS, so the
-    // completion and the band can never disagree about what a project is. An
-    // invalid folder just does not show up (architect R8). No `..` row and no
-    // folder inside a project: the picker's tree is one level deep.
+    // projects_path and THE ROWS ARE EXACTLY THE SET THE COMMIT WOULD ACCEPT
+    // — both of open_project_editor_commit's tests, in its own order: the
+    // NAME grammar (is_last_project_name, device_config.h) and then the model
+    // (resolve_project). A row that would refuse at Enter is not a row, so
+    // the band, the completion and the commit can never disagree about what a
+    // project is, and an invalid folder just does not show up (architect R8).
+    // The commit's remaining arms are not filters: the same-project no-op is
+    // a legal answer and the dry run reads the disk, which this walk does not
+    // re-do per row. No `..` row and no folder inside a project: the picker's
+    // tree is one level deep.
     const std::filesystem::path root(app.device_config->projects_path);
     for (const std::string& name : app.open_project_candidates) {
+        if (!is_last_project_name(name)) continue;
         const std::filesystem::path folder = root / name;
         if (!resolve_project(folder)) continue;
         AppState::FolderOverlayRow row;

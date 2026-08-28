@@ -307,13 +307,24 @@ constexpr int kWorkerCount  = 5;
 constexpr int kIdentMedia   = LOOPER_ID_USER + 1 + kWorkerCount;   // 9
 
 // THE MEDIA COMMAND SINK, reached from the JNI entry below on the UI thread.
-// ONE MUTEX GUARDS BOTH THE POINTER AND THE QUEUE BEHIND IT: init() parks
-// `this` here and shutdown() clears it under the lock, the JNI entry reads
-// the pointer and pushes under the same lock, and pump()'s drain swaps the
-// queue out under it too — so a command can never reach an object that is
-// being dismantled, and neither side needs a second lock. A command that
-// arrives before init() or after shutdown() finds the pointer null and is
-// DROPPED (the first drop rule). A file-scope pointer rather than
+// ONE MUTEX GUARDS THE POINTER, THE QUEUE BEHIND IT AND THE WAKE EVENTFD'S
+// LIFETIME: init() parks `this` here and shutdown() clears it under the lock,
+// the JNI entry reads the pointer, pushes AND WRITES THE EVENTFD under the
+// same lock, and pump()'s drain swaps the queue out under it too — so a
+// command can never reach an object that is being dismantled, and neither
+// side needs a second lock. THE WAKE IS INSIDE THE CRITICAL SECTION ON
+// PURPOSE (the rule the whole road rests on: after the synchronized shutdown
+// edge no producer can touch the retired wake source): the descriptor is read
+// and written with the sink still proved live, so shutdown's close — which
+// happens after it has nulled the sink under this lock, and therefore after
+// every producer that could still find the fd has finished — can never race a
+// write onto a closed or reused descriptor. Holding the lock across the write
+// costs nothing: an 8-byte write to a NONBLOCKING eventfd never blocks, it
+// either adds to the counter or fails EAGAIN at once, so the drain thread is
+// never kept waiting on a producer.
+//
+// A command that arrives before init() or after shutdown() finds the pointer
+// null and is DROPPED (the first drop rule). A file-scope pointer rather than
 // g_android_app->userData because that pair is written by the glue thread
 // with no lock the UI thread could take.
 std::mutex   g_media_mutex;
@@ -324,10 +335,25 @@ GuiPlatform* g_media_sink = nullptr;
 // debuggable build) aborts the process on one — so the conversion is done
 // here and NewString takes UTF-16 code units, supplementary planes as
 // surrogate pairs. A title is a file name off the disk, and the project's
-// `title=` is free UTF-8; a malformed byte becomes U+FFFD rather than an
-// abort, since a bad name on the head unit's display is a name and a dead
-// app is not.
+// `title=` is free UTF-8; nothing here refuses, since a bad name on the head
+// unit's display is a name and a dead app is not.
+//
+// THE CONTRACT, EXACTLY: every input byte is consumed, and a byte that does
+// not open a well-formed sequence yields ONE U+FFFD, after which the scan
+// resumes at the NEXT byte — so the tail of a rejected sequence is examined
+// again on its own terms and each stray continuation byte becomes its own
+// U+FFFD. A sequence is well-formed only if it is the SHORTEST spelling of
+// its scalar — an overlong form decodes as no character at all, because
+// accepting one would let `C0 AF` spell '/' and `E0 80 80` spell U+0000,
+// which is how an overlong sequence smuggles a separator or a terminator past
+// a check made on the decoded text. So the lead byte's own range excludes
+// C0/C1 and F5..FF, and the decoded scalar is compared against the minimum
+// its length may spell; surrogates and anything past U+10FFFF are refused the
+// same way.
 void append_utf16(std::vector<jchar>& out, std::string_view s) {
+    // The smallest scalar a sequence of each length is allowed to spell,
+    // indexed by that length.
+    static constexpr uint32_t kMinScalar[5] = {0, 0, 0x80, 0x800, 0x10000};
     size_t i = 0;
     while (i < s.size()) {
         const unsigned char c = static_cast<unsigned char>(s[i]);
@@ -335,9 +361,13 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
         size_t   len  = 1;
         if (c < 0x80) {
             cp = c;
-        } else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; len = 2; }
-        else if ((c & 0xF0) == 0xE0)   { cp = c & 0x0F; len = 3; }
-        else if ((c & 0xF8) == 0xF0)   { cp = c & 0x07; len = 4; }
+        } else if (c >= 0xC2 && c <= 0xDF) { cp = c & 0x1F; len = 2; }
+        else if (c >= 0xE0 && c <= 0xEF)   { cp = c & 0x0F; len = 3; }
+        else if (c >= 0xF0 && c <= 0xF4)   { cp = c & 0x07; len = 4; }
+        // Anything else is a lead byte no well-formed sequence has — a bare
+        // continuation byte, the overlong two-byte leads C0 and C1, or
+        // F5..FF, which lead only past U+10FFFF — and stays the U+FFFD this
+        // started as.
         if (len > 1) {
             if (i + len > s.size()) { len = 1; cp = 0xFFFD; }
             else {
@@ -346,8 +376,16 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
                     if ((cc & 0xC0) != 0x80) { cp = 0xFFFD; len = 1; break; }
                     cp = (cp << 6) | (cc & 0x3F);
                 }
+                if (len > 1 &&
+                    (cp < kMinScalar[len] || cp > 0x10FFFF ||
+                     (cp >= 0xD800 && cp <= 0xDFFF))) {
+                    // An overlong, a surrogate or an out-of-range scalar: one
+                    // U+FFFD, and the scan resumes at the byte after the lead
+                    // rather than swallowing the whole sequence.
+                    cp  = 0xFFFD;
+                    len = 1;
+                }
             }
-            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) cp = 0xFFFD;
         }
         if (cp >= 0x10000) {
             const uint32_t v = cp - 0x10000;
@@ -376,21 +414,19 @@ struct AndroidCallbacks {
         return self ? self->on_input_event(event) : 0;
     }
     // THE MEDIA COMMAND'S ONE ROAD IN, on the UI THREAD (the JNI entry below
-    // is its only caller). ITS WHOLE BODY IS: lock, push, unlock, write the
-    // eventfd. IT TOUCHES NOTHING ELSE — not the core, not the hook, not the
-    // damage list, none of which is synchronized — exactly as the AAudio error
-    // callback confines itself to three atomics and a log line
-    // (playback_aaudio.cpp). The 8-byte write is the wake; EAGAIN on a
-    // saturated counter is ignored, the counter being nonzero is still one
-    // wake, and the drain reads it back to zero.
+    // is its only caller). ITS WHOLE BODY IS: lock, push, wake, unlock — the
+    // write inside the critical section, which is what makes the descriptor
+    // safe (the sink's comment above). IT TOUCHES NOTHING ELSE — not the
+    // core, not the hook, not the damage list, none of which is synchronized
+    // — exactly as the AAudio error callback confines itself to three atomics
+    // and a log line (playback_aaudio.cpp). The 8-byte write is the wake;
+    // EAGAIN on a saturated counter is ignored, the counter being nonzero is
+    // still one wake, and the drain reads it back to zero.
     static void media_command(GuiMediaCommand cmd) {
-        int fd = -1;
-        {
-            std::lock_guard<std::mutex> lock(g_media_mutex);
-            if (!g_media_sink) return;   // before init() or after shutdown()
-            g_media_sink->media_queue_.push_back(cmd);
-            fd = g_media_sink->media_command_fd_;
-        }
+        std::lock_guard<std::mutex> lock(g_media_mutex);
+        if (!g_media_sink) return;   // before init() or after shutdown()
+        g_media_sink->media_queue_.push_back(cmd);
+        const int fd = g_media_sink->media_command_fd_;
         if (fd < 0) return;
         const uint64_t one = 1;
         (void)write(fd, &one, sizeof(one));
@@ -960,10 +996,14 @@ void GuiPlatform::shutdown() {
     // THE CAR'S BRIDGE COMES DOWN FIRST: the sink is cleared under the one
     // mutex, so a button press on the UI thread from here on finds nothing
     // (the first drop rule), and only then is the eventfd unwatched and
-    // closed and whatever was still queued discarded. The glue thread
-    // detaches from the VM if init() attached it — a thread that exits
-    // attached is a VM abort — and the pair goes null so a push after this
-    // drops.
+    // closed and whatever was still queued discarded. THE CLOSE IS SAFE
+    // OUTSIDE THE LOCK BECAUSE THE WAKE IS INSIDE IT: a producer reads the
+    // descriptor and writes it with the sink still proved live, so once this
+    // critical section has ended no producer can reach the fd at all, and the
+    // close cannot land under one (the whole rule is at g_media_sink). The
+    // glue thread detaches from the VM if init() attached it — a thread that
+    // exits attached is a VM abort — and the pair goes null so a push after
+    // this drops.
     {
         std::lock_guard<std::mutex> lock(g_media_mutex);
         if (g_media_sink == this) g_media_sink = nullptr;
@@ -1302,10 +1342,10 @@ void GuiPlatform::unwatch_fd(int fd) {
  * THE DRAIN. The window-system sources (the glue's cmd pipe and its input
  * queue) are processed ON THE SPOT — their process() bodies are the glue's own,
  * and deferring one would mean holding an unfinished AInputEvent — while the
- * timer and the four worker fds are only RECORDED, because the looper hands
- * events back in readiness order and the order they are acted on in is policy
- * (see pump). Drained to empty at timeout 0 after the first poll, so a busy
- * source can never starve the repaint.
+ * timer, the FIVE worker fds and the car's media eventfd are only RECORDED,
+ * because the looper hands events back in readiness order and the order they
+ * are acted on in is policy (see pump). Drained to empty at timeout 0 after
+ * the first poll, so a busy source can never starve the repaint.
  */
 void GuiPlatform::drain_looper(int timeout_ms) {
     if (!app_) return;   // after shutdown there is nothing left to drain
