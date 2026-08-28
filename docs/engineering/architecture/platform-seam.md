@@ -14,7 +14,7 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (67 declarations as of 2026-08-27 — 13 `using` aliases and 54
+  public API (74 declarations as of 2026-08-28 — 13 `using` aliases and 61
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
@@ -22,7 +22,8 @@ contract. The port split them:
   there is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
-  exception, and `device_config_defaults` is a third of the same kind):
+  exception, `device_config_defaults` is a third of the same kind, and
+  `removable_volume` (Synchronize to external storage, below) is a fourth):
   `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
@@ -51,8 +52,11 @@ contract. The port split them:
   → worker completions in registration order → the settled hook →
   paint-if-dirty — and the touch window is ALSO checked eagerly at the head
   of every touch event (without which a fast tap resolves a tick late).
-  Wayland polls the display fd + timerfd + four worker eventfds; Android
-  puts the same fds on the glue's ALooper. `drain_events` is paint-only on
+  Wayland polls the display fd + timerfd + five worker eventfds (the `pfds`
+  array is 7 slots; `pfds[6]` is the fifth worker eventfd,
+  `set_sync_worker_completion_fd` — the Synchronize to external storage
+  act's, below); Android puts the same fds on the glue's ALooper
+  (`kWorkerCount` = 5). `drain_events` is paint-only on
   Android because Wayland's `wl_display_dispatch_pending` reads no socket —
   a blocking load observes no new input on either platform (Android's ANR
   watchdog at ~5 s against ~0.5 s loads is the recorded accepted cost).
@@ -210,6 +214,105 @@ their lamp bits — together with the letter caps, every one of which turns
 capital while the arm stands. No new colour; the caps pair's stateful glyph is
 what the face replaced.
 
+## Synchronize to external storage
+
+`GuiPopupAct::SyncExternal`, the File menu's one chordless row (architect
+2026-08-27, landed 2026-08-28 in `b92ea097`/`95ea84d4`), mirrors the open
+project onto the one mounted removable volume, found and never configured.
+The lift runs `GuiInputHandler::synchronize_to_external_storage`
+(`input_key_dispatch.cpp`), which refuses silently through the Open row's own
+three gates (a prompt or editor standing, the `h` history view, a load in
+progress) and with nothing loaded; it is LEGAL ON A READ-ONLY TAB and STOPS
+NO PLAYBACK, since it authors nothing and writes outside the project
+entirely. A second dispatch while one is already running writes
+`Synchronization already running` to the status line and stops there — the
+checkpoint act's own single-in-flight shape, answered in words since a menu
+item never greys. Otherwise it asks `GuiPlatform::removable_volume()` for the
+destination; that call's own refusal (`No removable volume mounted` /
+`Several removable volumes mounted: a, b`) ends the act there too. Passing
+both, it composes the job — the render folder's deliverable wav, composed
+exactly as a render composes it, and the `tmp/` batch root — writes
+`Synchronizing to <volume>...` and dispatches to `GuiExternalSyncWorker`.
+
+THE MIRROR'S LAYOUT AND SCOPE are `external_sync.h`'s whole statement:
+`<volume>/<project name>/` holds the deliverable directly and each `tmp/`
+batch folder AS ITSELF (folder name and NN numbering verbatim), wav files
+only — no sidecars, no `.fingerprint`, no `peaks/`, the volume being played
+from and not authored in. Copies run first; afterward every file and folder
+under that one destination folder which is not in the set is deleted, so an
+act interrupted mid-way (a pulled stick, a killed process) leaves the volume
+with at most EXTRA files, never fewer. The scope is that destination folder
+alone, never the volume root or another project's folder on it, which is
+what lets one stick carry several projects side by side. Nothing is skipped
+or retried on an mtime guess: the stick is carried between two clocks, so
+every file is copied with `overwrite_existing` on every act.
+
+THE WORKER, `GuiExternalSyncWorker` (`external_sync.{h,cpp}`), is shaped
+exactly like `GuiHistoryCommitWorker`: its own thread, a condition variable,
+one completion eventfd the platform polls. SINGLE JOB IN FLIGHT structurally,
+and NO CANCEL — `shutdown()` JOINS an act already running rather than
+interrupting it, a copy left half-written being worse than a mirror caught
+between its copies and its deletions. The worker's own verdict lands back on
+the main thread through `on_external_sync_complete`, which writes it to the
+status line and nothing else: `Synchronized <N> file(s) to <path>` on
+success, or, on the first failure, the destination path and the system's own
+words (`Could not copy '<path>': <...>` / `Could not remove '<path>':
+<...>`). A FAILURE IS A STATUS LINE ONLY, never the permanent critical chip —
+that chip is the checkpoint act's, whose failure needs the terminal; a failed
+synchronization is retried by pressing the row again.
+
+THE SEAM GREW TWO MEMBERS FOR IT, declared identically on both backends
+(contract at `platform_wayland.h`, which owns it) and each answered
+per-backend:
+
+- **`GuiPlatform::removable_volume()`** — static, needing no window, like
+  `device_config_defaults`. EACH BACKEND OWNS ITS DISCOVERY, the COUNTING is
+  shared (`sole_removable_volume`, `external_sync.h`): zero candidates
+  answers `No removable volume mounted`, several answers `Several removable
+  volumes mounted: a, b` naming them (sorted and de-duplicated once, so two
+  mount-table lines naming one mount point are one volume, not several).
+  LAPTOP: the directory entries under `/run/media/<user>/`, the udisks mount
+  root (`<user>` from `getpwuid(geteuid())`, `$USER` the fallback spelling);
+  ENOENT on that root is the ONE error that honestly means zero — udisks
+  creates the directory at the first mount and removes it with the last —
+  and any other read failure refuses out loud with the system's own words
+  rather than counting as empty. ANDROID: the `/storage/<name>` mount points
+  in the process's own mount table (`/proc/self/mounts`) whose `<name>` is
+  neither `emulated` (the app-visible view of the device's own internal
+  storage) nor `self` (the per-process mount namespace's own link). THIS IS
+  THE MOUNT TABLE AND NOT `opendir("/storage")`, and that is a fact of the
+  platform rather than a preference: `/storage` is `drwx--x--x` to the app's
+  uid — TRAVERSABLE BUT NOT LISTABLE — so a directory listing there answers
+  EACCES, a permission the app was denied and not an empty device, measured
+  on the tablet 2026-08-28 with the stick mounted (the listing road answered
+  `No removable volume mounted` where the mount-table road answers
+  correctly). A `/mnt/media_rw/<name>` line is NEVER A CANDIDATE: that is
+  vold's own mount and the app's uid cannot open it — All-files access
+  reaches the volume through the `/storage/<uuid>` view alone — so a device
+  where only that line appears has nothing this app can write and stays `No
+  removable volume mounted` rather than a path that would fail at the first
+  copy. An unreadable mount table refuses out loud too, for the laptop
+  root's own reason.
+- **`set_sync_worker_completion_fd`** — the FIFTH worker completion eventfd,
+  ordinary in shape (store the fd, store the callback) beside the async
+  render, waveform, checkpoint and history-prefetch workers' own setters.
+  Retelling the loop contract's own inventory (section C, above): Wayland's
+  `pfds` array is now 7 slots (the display fd, the timerfd, five worker
+  eventfds — `pfds[6]` is this one); Android's `kWorkerCount` is 5,
+  dispatched in registration order (async renderer, waveform, checkpoint,
+  prefetch, synchronization) over the glue's ALooper idents
+  `kIdentWorker0 .. kIdentWorker0+4`.
+
+THE OPEN DEVICE FACT: on this One UI build the OTG stick mounts with
+`mountFlags=0`, not VISIBLE, so no `/storage/<uuid>` view exists for ANY app
+and `removable_volume()` on Android finds nothing — the act refuses `No
+removable volume mounted` on the tablet until this is solved (2026-08-28).
+THE SAF ROAD THROUGH THE JAVA SLIVER — a Storage Access Framework picker
+(`ACTION_OPEN_DOCUMENT_TREE`) granting a scoped tree URI regardless of
+`mountFlags` — is the design's named contingency for this and IS NOT BUILT.
+What the shell showed, 2026-08-28: `sm list-volumes` — `public:8,81 mounted
+067C-8690`; `dumpsys mount` — `mountFlags=0`, `path=/mnt/media_rw/067C-8690`.
+
 ## The content rect is the window
 
 THE SURFACE IS THE WHOLE PANEL AND THE WINDOW IS NOT. An app window's frame on
@@ -355,7 +458,11 @@ every window adoption; the backend ticks at 5 ms, the Wayland rule's own half
 of the pinned refresh period, where it took the 60 Hz fallback's 8 ms until
 2026-08-27), PAGE_SIZE 4096 (the
 16 KB alignment is headroom), `/storage` is 0711 (traversable, never
-listable — discovery through `/proc/mounts`), one USB-C port (cable and
+listable — discovery through `/proc/mounts`), the OTG stick mounts with
+`mountFlags=0` and no `/storage/<uuid>` view for any app (Synchronize to
+external storage refuses on the tablet until this is solved, 2026-08-28;
+`sm list-volumes`: `public:8,81 mounted 067C-8690`; `dumpsys mount`:
+`mountFlags=0`, `path=/mnt/media_rw/067C-8690`), one USB-C port (cable and
 any OTG device are mutually exclusive; wireless adb for the rest),
 `block_usb_lock` blocks USB while locked (reads like Auto Blocker; is
 not). The provisioning log is the architect's, outside the repo.
