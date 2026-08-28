@@ -31,8 +31,9 @@
 // the sidecar stem is what names the piece.
 //
 // A WAV IN THE ROOT THAT IS NOT THE SOURCE IS THE LEGACY LAYOUT. Outputs live
-// outside the project root (the deliverable in `render/`, the batch cells in
-// `tmp/` — renders_dir.h owns both names), so a second wav beside the source is
+// outside the project root (the deliverable in `render/`, named by the parser's
+// render_output_naming.h because both products write it; the batch cells in
+// `tmp/`, named by renders_dir.h), so a second wav beside the source is
 // a file that has not moved yet, and the refusal names the move rather than
 // guessing: "Move `<name>.wav` into render/". The folder is not opened until it
 // is done. BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY

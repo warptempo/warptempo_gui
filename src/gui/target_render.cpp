@@ -4,7 +4,6 @@
 #include "engine/engine_geometry.h"
 #include "phase_reset_frame_map_build.h"
 #include "render_output_naming.h"
-#include "renders_dir.h"
 #include "trimmer.h"
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
@@ -443,8 +442,9 @@ void GuiTargetRender::dispatch_render_now() {
     }
 
     // This rung auditions the current-title archival deliverable only — the
-    // one in the project's `render/` folder (project_deliverable_root,
-    // renders_dir.h), composed exactly as do_render composes it. There is no
+    // one in the project's `render/` folder (render_output_directory,
+    // render_output_naming.h), composed exactly as do_render composes it, and
+    // exactly where warptempo_cli publishes the same deliverable. There is no
     // directory scan and no retitle reuse (every engine field is
     // in the key, so a provenance edit changes the fingerprint and simply
     // re-renders). Fresh renders, cache hits, and archival artifact loads all
@@ -454,7 +454,7 @@ void GuiTargetRender::dispatch_render_now() {
     ArtifactStatIdentity candidate_identity{};
     const std::string artifact_candidate =
         compose_render_output_path(
-            project_deliverable_root(app.source_audio_path),
+            render_output_directory(app.source_audio_path),
             render_output_stem(app.engine_settings))
             .string();
     if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_,

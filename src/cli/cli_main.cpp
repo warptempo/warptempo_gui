@@ -151,9 +151,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- output path: the shared composer's wav path, title-named beside the
-    // source — exactly where the GUI writes the same project's deliverable.
-    // Wav is the only render product. ---
+    // --- output path: the shared composer's wav path, title-named in the
+    // project's `render/` folder — exactly where the GUI writes the same
+    // project's deliverable, from the one composition both products call
+    // (render_output_naming.h). Wav is the only render product. ---
     const std::string out_path =
         compose_render_output_path(render_output_directory(source_path),
                                    render_output_stem(es))
@@ -284,6 +285,26 @@ int main(int argc, char** argv) {
     const std::vector<double> full_phase_reset_frame_map =
         derive_phase_reset_frame_map(*phase_reset_source_frames_r,
                                      full_warp_frame_map);
+
+    // --- The deliverable's folder is created here when it is missing, in the
+    // GUI dispatch's own place in the order (do_render, render_pipeline.cpp:
+    // after every refusal that can still end the run without a render, and
+    // ahead of the framemap pair and synthesis below), so a run that refuses
+    // leaves no empty folder behind. A creation failure ends the run with its
+    // own line rather than letting the staging write fail with a stranger
+    // diagnostic. (architect approval 2026-08-28) ---
+    {
+        const std::filesystem::path out_dir =
+            std::filesystem::path(out_path).parent_path();
+        std::error_code mkec;
+        std::filesystem::create_directories(out_dir, mkec);
+        if (mkec) {
+            std::fprintf(stderr,
+                "warptempo_cli: Could not create '%s': %s\n",
+                out_dir.string().c_str(), mkec.message().c_str());
+            return 1;
+        }
+    }
 
     // --- Cache-dir framemap pair (future-proofing; 1:1 with the GUI's
     // archival disk-route write in do_render — this CLI is disk-only). Drop

@@ -2,12 +2,14 @@
 
 #include <system_error>
 
+// The project folder, then the deliverable's folder beside the source
+// (architect approval 2026-08-28).
 std::filesystem::path render_output_directory(
     const std::string& source_audio_path) {
     std::filesystem::path dir =
         std::filesystem::path(source_audio_path).parent_path();
     if (dir.empty()) dir = std::filesystem::path(".");
-    return dir;
+    return dir / kDeliverableFolderName;
 }
 
 std::string render_output_stem(const EngineSettings& es) {

@@ -8,7 +8,6 @@
 #include "map_output.h"
 #include "phase_reset_frame_map_build.h"
 #include "render_output_naming.h"
-#include "renders_dir.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
 #include "trimmer.h"
@@ -153,15 +152,14 @@ RenderOutcome do_render(const RenderRequest& req,
     // composes exactly one path.
     //   THE DELIVERABLE'S FOLDER (architect 2026-08-27): the outputs left the
     // project root, so the title-named wav and its .fingerprint live in
-    // `render/` beside the batch cells' `tmp/` (project_batch_root /
-    // project_deliverable_root, renders_dir.h). RECORDED ASYMMETRY: the
-    // parser's render_output_directory — the composition warptempo_cli shares
-    // — still names the source's own parent, so the CLI's insurance render
-    // publishes into the project root until that owner moves too.
+    // `render/` beside the batch cells' `tmp/` (project_batch_root,
+    // renders_dir.h). The deliverable's folder is composed by the parser's
+    // render_output_directory, which warptempo_cli calls too, so both products
+    // publish the same command's output into the same folder.
     const bool batch_render = !req.batch_folder.empty();
     auto compose_deliverable_path = [&]() {
         return compose_render_output_path(
-            project_deliverable_root(req.source_audio_path),
+            render_output_directory(req.source_audio_path),
             render_output_stem(req.engine_settings));
     };
     const std::filesystem::path output_path =
@@ -180,7 +178,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // or the source literally named `<final>.tmp`) would destroy it just as
     // surely. This is the render-time inode backstop, so it also covers
     // batch-folder stagings, whose finals are composed from the batch folder
-    // rather than the source sibling.
+    // rather than the deliverable folder.
     for (const std::filesystem::path& candidate :
              {output_path,
               std::filesystem::path(

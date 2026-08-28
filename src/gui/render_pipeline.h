@@ -199,9 +199,10 @@ RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token =
                             nullptr);
 
-// Output-path composition (render_output_stem / compose_render_output_path)
-// lives parser-side in render_output_naming.h so the GUI render pipeline and
-// the headless CLI binaries compose byte-identical paths from one
+// Output-path composition (render_output_directory / render_output_stem /
+// compose_render_output_path) lives parser-side in render_output_naming.h so
+// the GUI render pipeline and the headless CLI binaries compose byte-identical
+// paths — the deliverable's `render/` folder included — from one
 // implementation.
 
 // Assemble a RenderRequest from GUI authoring state. Single construction point

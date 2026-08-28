@@ -7,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-// The two output folders' path composition and the batch folder's enumeration:
-// the flat list of valid render entries under <source parent>/tmp/, plus the
-// per-entry .settings path helper. The `l` launcher and the `'` load editor
-// call the latter two.
+// The batch folder's path composition and its enumeration: the flat list of
+// valid render entries under <source parent>/tmp/, plus the per-entry
+// .settings path helper. The `l` launcher and the `'` load editor call the
+// latter two.
 
-// The project folder: the source's parent, or "." for a bare filename — the
-// one spelling both roots below are composed from.
+// The project folder: the source's parent, or "." for a bare filename.
 static std::filesystem::path project_folder_of(
         const std::string& source_audio_path) {
     std::filesystem::path parent =
@@ -25,11 +24,6 @@ static std::filesystem::path project_folder_of(
 std::filesystem::path project_batch_root(
         const std::string& source_audio_path) {
     return project_folder_of(source_audio_path) / kBatchFolderName;
-}
-
-std::filesystem::path project_deliverable_root(
-        const std::string& source_audio_path) {
-    return project_folder_of(source_audio_path) / kDeliverableFolderName;
 }
 
 // Enumerate the flat render-entry list under <source parent>/tmp/.

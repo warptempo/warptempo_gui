@@ -127,7 +127,7 @@ std::optional<std::string> source_load_dry_run(
 // named routine rather than folding into load_file: it is the whole-file
 // values-only apply, and that is one act worth reading as one. SettingsFile is
 // visible here via app_state.h -> settings_file.h.
-// THE VIEWPORT IS FOR ONE THING AND NOTHING ELSE (codex round 21): this routine
+// THE VIEWPORT IS FOR ONE THING AND NOTHING ELSE: this routine
 // is the product's ONLY wholesale write of the three active-view fields, so it
 // carries the seated pinch's clear (clear_touch_zoom_seat, input_handler.h,
 // whose declaration owns the membership) with its own damage. That is a
