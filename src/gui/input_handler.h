@@ -1349,9 +1349,10 @@ struct GuiInputHandler {
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
     // the four companions) and the bottom
-    // row's sixteen — the transport three, then the right block's four marker
-    // verbs with the MARKER MEASURE (2026-08-19) and ADD TO SELECTION
-    // (2026-08-18) behind them, three walk steps and four cardinal arrows. EVERY ONE OF THEM
+    // row's seventeen — the transport three, then the right block's four marker
+    // verbs with the EDIT FLAG button (2026-08-27), the MARKER MEASURE
+    // (2026-08-19) and ADD TO SELECTION (2026-08-18) behind them, three walk
+    // steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside

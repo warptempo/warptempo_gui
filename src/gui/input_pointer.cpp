@@ -487,14 +487,21 @@ constexpr ToolbarChord kToolbarChords[] = {
     // line), and it admits NEITHER shift NOR ctrl, so a modified press is
     // refused at the band gate and the long press reaches nothing.
     //
-    // A PRESS WHILE THE FLAG EDITOR ALREADY STANDS IS CLOSE-THEN-REOPEN, and
-    // it needs no arm of its own: the editor is pointer-TRANSPARENT (it raises
-    // no veil), so the press arms like any roster press, the outside-press
-    // owner closes the editor without committing ahead of every band claim,
-    // and the lift's dispatched Return then opens it afresh on the focused
-    // marker. That is the flag DOUBLE-CLICK's own documented shape on the
-    // marker under an open editor, reached here by the same two owners and
-    // nothing new.
+    // THE BUTTON IS ENTER IN EVERY STATE, A STANDING EDITOR INCLUDED
+    // (architect 2026-08-27, naming the button by its hotkey: "just say Enter,
+    // because that's what triggers the editor"). A button that IS a key does
+    // what the key does, so a press while the flag or the measure editor stands
+    // COMMITS that editor on valid text and RED-FLASHES it on invalid — exactly
+    // what the keyboard's Enter does there, and what the on-screen keyboard's
+    // own Enter key does. No second road and no special case: the bottom row's
+    // band claim sits ABOVE the outside-press closer in on_button_press, so the
+    // editor is never torn down under this press, and the lift's dispatched
+    // Return arrives at the editor's own key route like any other Return.
+    // THE FLAG DOUBLE-CLICK DIFFERS, AND THE DIFFERENCE IS THE POINT: it stays
+    // close-then-reopen, because a double-click on a flag names a MARKER — the
+    // outside-press closer runs on its first press and the second press opens
+    // the editor on the marker under the finger — while this button names the
+    // KEY, which has no marker under it at all.
     //
     // ITS GATES ARE THE MEASURE'S but one exception narrower: the `h` view
     // consumes bare Return and greys it with the verbs, and so does the
@@ -521,8 +528,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // home-view binding — but that refusal was never a face anyway.
     {RedesignButton::IconMarkerMeasure,
      GuiKeys::Slash,  false, false, false, false, true},                             // bare /
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's sixth and the
-    // roster's newest chord: BARE `k`, which was free — he picked it over `n`
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH since
+    // 2026-08-27 (its sixth before that): BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key
     // flips and button-is-its-chord holds literally: the press dispatches bare

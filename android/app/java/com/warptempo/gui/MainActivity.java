@@ -6,10 +6,11 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
 /**
- * The product's ONE Java class: a NativeActivity subclass. Its body is three
- * calls: setDecorFitsSystemWindows(true), which ASKS for the window's content
- * to be laid out inside the system bars' insets rather than under them, and the
- * two that give the STATUS BAR the product's own title-bar colour.
+ * The product's ONE Java class: a NativeActivity subclass. Its whole body is
+ * setDecorFitsSystemWindows(true), which ASKS for the window's content to be
+ * laid out inside the system bars' insets rather than under them, and the
+ * window calls that give the STATUS BAR the product's own title-bar colour and
+ * the band under the TASKBAR the product's content ground.
  *
  * <p>IT DOES NOT SHRINK THE NATIVE SURFACE, and nothing here can. An app
  * window's frame is the whole display by construction on modern Android
@@ -18,18 +19,19 @@ import android.view.WindowManager;
  * NativeActivity never sees, because it takes the WINDOW's own surface through
  * Window#takeSurface. Measured on the tablet 2026-08-27: frame=[0,0][2304,1440]
  * with this call in place, at targetSdk 35 and again at 34. What this call and
- * the target DO buy is the framework reporting a real CONTENT RECT, whatever
- * the framework decides that rect is -- measured that day as 2304x1387 at
- * (0,53), the STATUS BAR ALONE. One UI's 84 px taskbar was not in it: dumpsys
- * showed `InsetsSource type=navigationBars frame=[0,1356][2304,1440]
- * visible=false` plus a `tappableElement` source on the same frame with
- * visible=true, and `mAppBounds=(0,0-2304,1356)`; the reading was taken with
- * the panel DOZING (cover shut), so the taskbar was not a visible navigation
- * inset at that moment. WHETHER IT OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL
- * IS OPEN (the architect's next look); if it does, the recorded next step is a
- * `native` method on THIS class handing the native side
- * WindowInsets.Type.tappableElement()'s bottom at each content-rect / config
- * change, for the backend to subtract from the rect. Not done. The rect
+ * the target DO buy is the framework reporting a real CONTENT RECT, and THAT
+ * RECT ALREADY EXCLUDES BOTH BARS. Measured on an AWAKE panel under the
+ * architect's own Screen zoom (override density 320): `window 2304x1268 at
+ * (0,76) of surface 2304x1440` -- a 60 px status bar plus the 16 px of air the
+ * native side adds above it, and a 96 px taskbar below. Nothing here has to
+ * measure or subtract a bar. (History, one line: an earlier reading of
+ * 2304x1387 at (0,53) showed the status bar alone, because the taskbar
+ * reported no inset while the panel DOZED with the cover shut -- dumpsys had
+ * it as a `tappableElement` and as `mAppBounds`, with
+ * `type=navigationBars ... visible=false`. The next step recorded from that
+ * reading -- a `native` method handing the backend
+ * WindowInsets.Type.tappableElement()'s bottom to subtract -- IS RETIRED: on
+ * an awake panel it would subtract the taskbar twice.) The rect
  * reaches native code as onContentRectChanged. THE ANDROID BACKEND MAKES THAT
  * RECT THE WINDOW (src/gui/platform_android.cpp; the rule is at origin_x_ in its header): the
  * GUI is told the rect's size, the origin is added at the blit and subtracted
@@ -59,8 +61,14 @@ import android.view.WindowManager;
  * CONTENT ground and so a shade off the menu row below it. The native side
  * leaves air under the bar in the same ground (kStatusBarAirPx,
  * src/gui/platform_android.cpp), so bar, air and menu row read as one strip.
- * THE TASKBAR IS NOT TOUCHED: the architect -- "the taskbar looks great, it's
- * already the correct color".
+ * THE TASKBAR'S ICONS ARE THE LAUNCHER'S AND NOTHING HERE TOUCHES THEM: the
+ * architect -- "the taskbar looks great, it's already the correct color". THE
+ * BAND UNDER THEM IS OURS, and has been since the bar-backgrounds flag landed:
+ * the window draws BOTH bars' backgrounds, so that strip took the inherited
+ * navigationBarColor (measured on the device at (33,35,38) -- the system
+ * default, and the same #202326 we would have picked). It is now set on
+ * purpose to kRedesignContentGround, the ground the taskbar's icons already
+ * sit on.
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
  * class. Three are already known: the SAF picker's onActivityResult (which is
@@ -109,7 +117,28 @@ public class MainActivity extends NativeActivity {
         // above). A second javac deprecation warning is expected.
         getWindow().setStatusBarColor(0xFF292C30);
 
-        // LIGHT ICONS ON IT, by CLEARING the light-background appearance:
+        // THE TASKBAR'S BAND IS OURS TOO, and stating it is the point. The
+        // FLAG above makes this window draw BOTH bars' backgrounds, so the
+        // strip under the taskbar has been painted by us since that flag
+        // landed -- with the INHERITED navigationBarColor, measured on the
+        // device at (33,35,38), which is the system default and is also
+        // #202326, so nothing visibly changed by luck rather than by
+        // intention. This is the intention: #202326 is
+        // kRedesignContentGround (the palette block in src/gui/render.h), the
+        // product's content ground and the ground the taskbar's icons already
+        // sit on. It is NOT a labwc colour -- the taskbar itself is the
+        // launcher's and we paint none of it; we own only the band beneath.
+        // Its ICONS are left exactly as they are: nothing here touches
+        // APPEARANCE_LIGHT_NAVIGATION_BARS. setNavigationBarColor is
+        // deprecated at API 35 -- the jar this compiles against -- and
+        // honoured at the 34 the manifest targets, the same note the status
+        // colour above carries, and a third javac deprecation warning is
+        // expected.
+        getWindow().setNavigationBarColor(0xFF202326);
+
+        // LIGHT ICONS ON THE STATUS BAR, by CLEARING the light-background
+        // appearance (the NAVIGATION bar's own appearance bit is deliberately
+        // not touched -- the taskbar's icons are the launcher's):
         // APPEARANCE_LIGHT_STATUS_BARS means "the bar's background is light,
         // draw its icons dark", so a dark bar is the flag ABSENT -- the mask
         // names the flag and the value clears it. getInsetsController() is

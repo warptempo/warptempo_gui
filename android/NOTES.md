@@ -718,7 +718,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Fact | Value |
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
-| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, measured that day as 2304x1387 at (0,53) — the status bar alone — LESS the 16 px of air added under the bar that evening, so 2304x1371 at (0,69); §12's note and §12.6, including what is still open about the taskbar) |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, which on an AWAKE panel EXCLUDES BOTH BARS — 60 px status bar, 96 px taskbar — LESS the 16 px of air added under the bar that evening, so **2304x1268 at (0,76)** under the architect's Screen zoom (override density 320); §12's note and §12.6) |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
@@ -1107,23 +1107,24 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > — the TOP band takes `kRedesignRowGround` since §12.6) and SUBTRACTED at the
 > one touch decode, and nothing above the seam learns it exists. The startup
 > line carries both now:
-> `window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms` — and
-> `window 2304x1371 at (0,69) of surface 2304x1440` since §12.6's air.
+> `window 2304x1268 at (0,76) of surface 2304x1440, tick 5 ms`.
 >
-> **WHAT THE RECT ACTUALLY CONTAINED, AND WHAT IS STILL OPEN.** The rect is
-> WHATEVER THE FRAMEWORK REPORTS — the backend measures no bar and subtracts no
-> inset of its own, §12.6's air being the one thing it takes off — and what it
-> reported was 2304x1387 at (0,53): the STATUS
-> BAR ALONE, 1440 − 53. The taskbar's 84 px band was NOT taken out of it; it was
-> reported as a tappable element and as `mAppBounds`, not as a visible
-> navigation inset. AND THE READING WAS TAKEN WITH THE PANEL DOZING (the cover
-> shut). WHETHER THE TASKBAR OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL IS
-> THEREFORE OPEN — the architect's next look, and §11.7's escalation is what it
-> would cost if it does. THE RECORDED NEXT STEP if it does: read
-> `WindowInsets.Type.tappableElement()`'s bottom through the sliver — a `native`
-> method on `MainActivity` handing the native side that number at each
-> content-rect / config change — and subtract it from the rect in the backend.
-> Not built.
+> **WHAT THE RECT ACTUALLY CONTAINS.** The rect is WHATEVER THE FRAMEWORK
+> REPORTS — the backend measures no bar and subtracts no inset of its own,
+> §12.6's air being the one thing it takes off — and ON AN AWAKE PANEL IT
+> EXCLUDES BOTH BARS. Measured with the architect's own Screen zoom (override
+> density 320): `window 2304x1268 at (0,76) of surface 2304x1440` = a 60 px
+> status bar plus §12.6's 16 px of air above, and a 96 px taskbar below
+> (1440 − 76 − 1268 = 96). Nothing has to be subtracted in the backend, and
+> §11.7's escalation does not arise.
+>
+> *History, one line:* the first reading was taken with the panel DOZING (the
+> cover shut) and came back 2304x1387 at (0,53), the STATUS BAR ALONE — the
+> taskbar reported no inset at that moment (a `tappableElement` and
+> `mAppBounds`, with `type=navigationBars ... visible=false`). THE NEXT STEP
+> RECORDED FROM THAT READING — a `native` method on `MainActivity` handing the
+> backend `WindowInsets.Type.tappableElement()`'s bottom to subtract — IS
+> RETIRED: on an awake panel it would subtract the taskbar twice.
 >
 > **THE SLIVER STAYS**: `setDecorFitsSystemWindows(true)` plus target 34 is what
 > makes the framework report an inset content rect at all, and the SAF /
@@ -1153,8 +1154,18 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > `setStatusBarColor`'s documented precondition and `Theme.NoTitleBar` — the
 > legacy theme this activity uses — does not set it the way the Material /
 > DeviceDefault themes do. Both are deprecated at API 35 and honoured at the 34
-> the manifest targets. The TASKBAR IS UNTOUCHED ("the taskbar looks great, it's
-> already the correct color"). Because the bar and the menu row are now the same
+> the manifest targets. THE TASKBAR'S ICONS ARE THE LAUNCHER'S and nothing
+> touches them ("the taskbar looks great, it's already the correct color"), but
+> THE BAND UNDER THEM IS OURS the moment that flag is set — the window then
+> draws BOTH bars' backgrounds, and the band took the inherited
+> `navigationBarColor`, measured on the device at (33,35,38): the system
+> default, and the same #202326 we would have picked, so nothing visibly
+> changed by luck. It is stated on purpose now:
+> `setNavigationBarColor(0xFF202326)` = `kRedesignContentGround`, the ground
+> the taskbar's icons already sit on (provenance: the palette block in
+> `src/gui/render.h`; NOT a labwc colour). `APPEARANCE_LIGHT_NAVIGATION_BARS`
+> is left alone, so the icons are exactly as they were, and the setter carries
+> the status colour's own deprecation note. Because the bar and the menu row are now the same
 > ground, the air between them would read as a darker stripe if it took the
 > content ground, so `present` picks the band word per row: TOP band =
 > `kRedesignRowGround`, everything else `kRedesignContentGround`. Bar, air and

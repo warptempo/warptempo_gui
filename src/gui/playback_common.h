@@ -12,8 +12,9 @@
 //   * DEVICE (per backend, in the backend's own file): opening and closing the
 //     device, registering the callbacks, the callback's own entry/exit, and
 //     stop()'s QUIESCENCE FENCE — the one piece of the contract whose proof is
-//     device-shaped (JACK counts process cycles, AAudio waits on the stream
-//     state machine; each states its choice at its own site).
+//     device-shaped: BOTH count callback cycles, and only AAudio adds a
+//     terminal-state escape (`fence_state_is_quiesced`, playback_aaudio.cpp);
+//     each states its choice at its own site.
 //   * PORTABLE (here): the state every backend keeps, the audio-thread RENDER
 //     BODY, and the main-thread predictor / domain / bind logic that the public
 //     methods are thin wrappers over.

@@ -9170,7 +9170,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerEditFlag:
             return {"Edit flag (Enter)", nullptr};
-        // THE MARKER MEASURE (2026-08-19), the verb group's fifth, ONE LINE
+        // THE MARKER MEASURE (2026-08-19), the verb group's sixth since
+        // 2026-08-27 and its fifth before that, ONE LINE
         // like its neighbours: the act named, no shift line, the button
         // admitting no shift press. (Its second line advertised the
         // score-video jump from 2026-08-20 until the 2026-08-21 sunset removed
@@ -9179,7 +9180,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
             return {"Measure (/)", nullptr};
-        // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and a MODE
+        // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH since
+        // 2026-08-27 and a MODE
         // rather than an act — the hint names it in the architect's own words
         // and stops there. ONE LINE, no shift line (it admits no shift press)
         // and NO GESTURE HINT: the words never explain how to use the mode,

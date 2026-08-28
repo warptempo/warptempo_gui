@@ -156,8 +156,9 @@ namespace {
 // UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
-// pad and, flush right, the four single-marker verbs with the Marker Measure
-// and Add to Selection behind them, the marker-walk three and the four
+// pad and, flush right, the four single-marker verbs with the Edit flag
+// button, the Marker Measure and Add to Selection behind them, the
+// marker-walk three and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
 // rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
@@ -2016,11 +2017,11 @@ int gui_main(const char* source_path) {
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its sixteen roster
-            // buttons (the transport three, and the right block's four marker
-            // verbs with the Marker Measure and Add to Selection behind them,
-            // three walk steps and four cardinal arrows since
-            // 2026-08-18) and the MODAL's own buttons
+            // second arm covers both of the row's surfaces, its seventeen
+            // roster buttons (the transport three, and the right block's four
+            // marker verbs with the Edit flag button, the Marker Measure and
+            // Add to Selection behind them, three walk steps and four cardinal
+            // arrows) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.
             const AppState::RedesignTooltip::Owner tip_owner =

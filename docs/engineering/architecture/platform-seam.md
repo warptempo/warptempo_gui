@@ -223,7 +223,7 @@ band translates to a coordinate outside the window and is delivered as such,
 neither clamped nor dropped — the shape a Wayland drag past an edge already
 takes (`containing_pixel`, input_core.h); the bars' own windows take those
 touches in practice. The startup line reports both:
-`window 2304x1371 at (0,69) of surface 2304x1440, tick 5 ms`.
+`window 2304x1268 at (0,76) of surface 2304x1440, tick 5 ms`.
 
 THE RECT IS THE FRAMEWORK'S MINUS THE AIR — the backend measures no bar and
 subtracts no inset of its own, which is why nothing here names a bar height as a
@@ -234,18 +234,18 @@ future gets no blank band: the clock sat closer to our first row than to the top
 of the panel (architect 2026-08-27), and the rows given up join the top band,
 which paints `kRedesignRowGround` — the status bar's own colour and the menu
 row's — so bar, air and menu row read as one title strip. Origin, size, damage
-and every touch coordinate follow from that one function. On the Tab S10 FE that reading was 2304x1387 at (0,53): THE STATUS BAR
-ALONE. One UI's 84 px taskbar was not in it, and the dumpsys record of the
-measurement says why it need not have been: `InsetsSource type=navigationBars
-frame=[0,1356][2304,1440] visible=false`, a `tappableElement` source on that
-same frame with visible=true, and `mAppBounds=(0,0-2304,1356)` — the taskbar
-reported as a tappable element and as app bounds, NOT as a visible navigation
-inset. The measurement was taken with the panel DOZING (the cover shut).
-WHETHER THE TASKBAR OVERLAYS THE BOTTOM ROW ON AN AWAKE PANEL IS OPEN — the
-architect's next look. If it does, the recorded next step is to read
-`WindowInsets.Type.tappableElement()`'s bottom through the Java sliver (a JNI
-call the native side makes at each content-rect / config change) and subtract it
-from the rect; that is a next step, not something built.
+and every touch coordinate follow from that one function. THE FRAMEWORK'S RECT ALREADY EXCLUDES BOTH BARS, measured on an AWAKE Tab S10
+FE under the architect's own Screen zoom (override density 320):
+`window 2304x1268 at (0,76) of surface 2304x1440` — a 60 px status bar plus the
+16 px of air we add above, and a 96 px taskbar below. So the backend subtracts
+no bar and needs none of its own arithmetic; the air is still the only thing it
+takes off. (History, one line: an earlier reading of 2304x1387 at (0,53) showed
+the status bar alone, because the taskbar reported no inset while the panel
+DOZED with the cover shut — dumpsys had it as `tappableElement` and as
+`mAppBounds`, `type=navigationBars ... visible=false`. The next step recorded
+from that reading — a JNI call handing the native side
+`WindowInsets.Type.tappableElement()`'s bottom to subtract — IS RETIRED: on an
+awake panel it would subtract the taskbar a second time.)
 
 A surface pixel is still a panel pixel — there is no scaling anywhere on this
 platform — and the window is now the content rect rather than the surface.
@@ -254,7 +254,7 @@ platform — and the window is now the content rect rather than the surface.
 
 `android/app/java/com/warptempo/gui/MainActivity.java` is the product's ONE
 Java class: a `NativeActivity` subclass whose `onCreate` body is
-`setDecorFitsSystemWindows(true)` plus the status bar's colour. The first ASKS
+`setDecorFitsSystemWindows(true)` plus both bars' colours. The first ASKS
 for the inset layout; what actually delivers the inset area is the content rect
 above, and the pair (target 34 + this call) is what makes the framework report
 one. THE SYSTEM BARS
@@ -272,9 +272,19 @@ which IS `kRedesignRowGround`, with its `window.active.label.text.color: #fcfcfc
 `APPEARANCE_LIGHT_STATUS_BARS` bit is CLEARED — it means dark icons for a light
 bar). `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand beside it because
 `setStatusBarColor` needs it and the legacy theme below does not set it; both
-are deprecated at API 35 and honoured at the 34 the manifest targets. The
-TASKBAR is untouched — the architect: "the taskbar looks great, it's already the
-correct color". The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
+are deprecated at API 35 and honoured at the 34 the manifest targets. THE
+TASKBAR'S ICONS ARE THE LAUNCHER'S and nothing here touches them — the
+architect: "the taskbar looks great, it's already the correct color" — but THE
+BAND UNDER THEM IS OURS, and has been since `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS`
+made the window draw BOTH bars' backgrounds: it took the inherited
+`navigationBarColor`, measured on the device at (33,35,38), which is the system
+default and is also #202326, so nothing visibly changed by luck. It is now
+stated: `setNavigationBarColor(0xFF202326)` = `kRedesignContentGround`, the
+ground the taskbar's icons already sit on (provenance: the palette block in
+`src/gui/render.h` — NOT a labwc colour, this one). `APPEARANCE_LIGHT_NAVIGATION_BARS`
+is untouched, so the icons stay exactly as they were, and
+`setNavigationBarColor` carries the status colour's own deprecation note
+(deprecated at 35, honoured at the 34 the manifest targets). The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
 and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
