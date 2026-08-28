@@ -1677,9 +1677,12 @@ struct GuiInputHandler {
     void clear_modal_dialog_press();
     // THE RENDER PLAYER'S TWO ARMS' HARD ENDS (2026-08-28): the folder
     // overlay's row press and the play-scrub's marker drag, dropped
-    // uncommitted on the pointer-leave edge (main.cpp's hook) and the
-    // button-lost edge (clear_release_time_press_arms) — the contracts are
-    // with their press routers, in the player's block below.
+    // uncommitted on the pointer-leave edge (main.cpp's hook), the
+    // button-lost edge (clear_release_time_press_arms) and the FORCE-END
+    // FINALIZER (finalize_active_drags, which owes them because both arms are
+    // members of any_pointer_gesture_active and its callers promise a
+    // gesture-free state) — the contracts are with their press routers, in
+    // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
@@ -3489,15 +3492,16 @@ private:
     // motionless lift highlights and seeds the double-click candidate; a
     // scroll drag ends), the motion (past the vertical drag gate the arm is
     // the band's scroll drag; inside it the feint's inside bit), the hover
-    // walk, and the hard end (the pointer-leave hook and the button-lost
-    // edge — the arm dropped, nothing committed).
+    // walk, and the hard end (the pointer-leave hook, the button-lost edge and
+    // the force-end finalizer — the arm dropped, nothing committed).
     bool claim_folder_overlay_press(int x, int y, GuiInputState mods,
                                     const DoubleClickCandidate& dc_at_press);
     bool finish_folder_overlay_release(int x, int y);
     void update_folder_overlay_press_motion(int x, int y);
     void update_folder_overlay_hover(int x, int y);
     // (clear_folder_overlay_press is public, beside clear_modal_dialog_press:
-    // main.cpp's pointer-leave hook is its second caller.)
+    // main.cpp's pointer-leave hook and the force-end finalizer are its other
+    // callers.)
 
     // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
     // painter's published track (AppState::ModalDialogGeometry::scrub): a
@@ -3505,13 +3509,14 @@ private:
     // marker drag — the marker's painted x follows the pointer while playback
     // continues where it was, and the RELEASE commits the seek (the product's
     // deferred-click shape); a press on the track elsewhere SEEKS AT THE
-    // PRESS (identity certain) and arms nothing. The hard end drops the arm
-    // and commits nothing.
+    // PRESS (identity certain) and arms nothing. The hard end — the
+    // pointer-leave hook, the button-lost edge and the force-end finalizer —
+    // drops the arm and commits nothing.
     bool claim_player_scrub_press(int x, int y, GuiInputState mods);
     bool finish_player_scrub_release(int x, int y);
     void update_player_scrub_motion(int x);
     // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
-    // for the same hook.)
+    // for the same hook and the same finalizer.)
 
     // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
     // Load in place button's act and bare `'`'s inside the player — refuses
@@ -3525,7 +3530,8 @@ private:
     // load_render_entry_in_place, whose success closes the player and whose
     // refusal says "Load refused" on the status line — its own cause is on
     // stderr); Cancel runs cancel_render_player_load.
-    // THE TWO-ROAD SANCTION is recorded at load_render_entry_in_place.
+    // THE TWO-ROAD SANCTION RETIRED with the typed renders road the same day;
+    // the record is at load_render_entry_in_place, which has this one caller.
     void render_player_load_in_place();
     // (confirm_render_player_load / cancel_render_player_load — the prompt's
     // two answers — are public, beside the hard-end clearers above: GuiPrompt

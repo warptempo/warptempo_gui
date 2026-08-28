@@ -29,8 +29,8 @@
 inline constexpr const char* kBatchFolderName = "tmp";
 
 // `<source parent>/tmp` — the batch root every batch dispatcher creates into,
-// the `l` listen walk and the `'` load editor enumerate, and the load in
-// place's tail trashes.
+// the RENDER PLAYER lists (its `tmp/` folders) and the Synchronize act
+// mirrors, and the load in place's tail trashes.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
 // Batch-folder enumeration. The directory scan of

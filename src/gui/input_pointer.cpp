@@ -6165,6 +6165,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // same order, each now a call to the gesture's own end owner.
 // The gestures are mutually exclusive in practice, so this reads as a chain of
 // no-ops around the one that is live.
+// ITS MEMBERSHIP IS any_pointer_gesture_active's, EXACTLY (re-grepped
+// 2026-08-28): the two lists must agree, because a caller's whole promise is
+// that what follows lands on a gesture-free state, and that predicate is what
+// "gesture-free" means to the keyboard, the wheel and the cursor. THE ELEVEN,
+// in this body's order: the editor text drag, the marker reposition drag, the
+// trim drag, the sweep (region_drag), the nav drag (scroll_drag), the overview
+// drag, the three pendings (marker press, trim, deferred click) and THE RENDER
+// PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
+// marker drag, which joined this body 2026-08-28 through their own hard-end
+// clears. WHAT EACH LEAVES DIFFERS AND EACH ARM SAYS SO: the drags COMMIT what
+// stands, the pendings and the player's arms commit NOTHING (a force-end is
+// not a click — the standing abnormal-end rule).
 // NO CALLER OWES THE CURSOR ANYTHING, and the three that used to are the reason
 // the model changed: every one of them does MORE after this returns — the two
 // prompt routes raise the unsaved-work box (which the zone map answers with the
@@ -6267,6 +6279,17 @@ void GuiInputHandler::finalize_active_drags() {
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_trim_drag    = PendingTrimDrag{};
     app.pending_click        = PendingClickAct{};
+    // THE RENDER PLAYER'S TWO ARMS END HERE TOO, through the same clears the
+    // pointer-leave hook and the button-lost edge call — the row press with NO
+    // act (its highlight and its double-click seed are the motionless LIFT's,
+    // and there is no lift here) and the scrub's marker drag with NO seek
+    // beyond the motion already applied (the seek is the release's, and the
+    // sound never followed the marker). Each clear damages the face its arm
+    // painted: the armed row's rect and the published scrub track, which the
+    // resize caller then repaints under the new geometry anyway — the leave
+    // hook's caller does not, which is why the damage lives in the clears.
+    clear_folder_overlay_press();
+    clear_player_scrub_drag();
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
     // end) — and neither may the trim bar's press record, which would otherwise

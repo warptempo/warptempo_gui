@@ -6668,12 +6668,15 @@ struct AppState {
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
-    // Load prompt editor. Opens on bare `'` from an authoring view,
-    // takes a render entry's identifier relative to tmp/
-    // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
-    // Enter loads that render's frozen sidecar recipe in place as the new
-    // authoring baseline (GuiInputHandler::load_render_entry_in_place). A
-    // dialog modal like
+    // THE HISTORY VIEW'S LOAD PROMPT (the renders half deleted 2026-08-28,
+    // when the render player took `'` outside the view). Its ONE opener is
+    // open_history_load_editor and its ONE subject is the VIEWED WALK'S
+    // MEMBER: a commit spelling on the Remote tab, a member number on the
+    // Local one, each seeded with what the corner displays, and Enter loads
+    // that member's sidecars in place. It reaches no render entry — the
+    // player's Load in place button is that road, and this editor's
+    // entry-identifier vocabulary and its autocomplete went with the half.
+    // A dialog modal like
     // the settings editor; separate State so the two paint regions stay
     // independent.
     text_editor::State load_editor;
@@ -6729,8 +6732,10 @@ struct AppState {
     // MIMICS LOAD IN PLACE on the same machinery and the same Tab contract —
     // completion first, the ring when it did not advance — with one seed of
     // its own: on an EMPTY field Tab fills `last_project` (the most recent
-    // project, exactly as load's empty-field Tab fills the most recent entry),
-    // or the first candidate when nothing has been opened yet. A refusal at
+    // project), or the first candidate when nothing has been opened yet. It is
+    // `complete_editor_prefix`'s ONE caller since 2026-08-28, when the load
+    // editor's entry-name completion went with its renders half (the settings
+    // editor's value recall is its own body, not this completer's). A refusal at
     // Enter red-flashes and stays open with its reason on the status line;
     // choosing the project already open is a consumed no-op that closes it.
     // A dialog modal like the four above, with its own State so the paint
@@ -7005,9 +7010,11 @@ struct AppState {
     //                 A motionless lift HIGHLIGHTS the row and seeds the
     //                 double-click candidate; the double-click's second press
     //                 runs the row's OPEN act at the press and arms nothing.
-    //                 Ends at the release (finish_folder_overlay_release), the
-    //                 pointer-leave hook and the button-lost edge
-    //                 (clear_folder_overlay_press). No hold and no modifier
+    //                 Ends at the release (finish_folder_overlay_release) and
+    //                 at its three hard ends — the pointer-leave hook, the
+    //                 button-lost edge and the force-end finalizer, all three
+    //                 through clear_folder_overlay_press, the arm dropped with
+    //                 no act. No hold and no modifier
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     struct FolderOverlayRow {
@@ -7073,7 +7080,10 @@ struct AppState {
     //              marker's grab band, the marker's painted x following the
     //              pointer while playback continues where it was, the seek
     //              committing at the release (the product's deferred-click
-    //              shape); the hard end drops it and commits nothing;
+    //              shape); each of the three hard ends — the pointer-leave
+    //              hook, the button-lost edge and the force-end finalizer,
+    //              through clear_player_scrub_drag — drops it and seeks
+    //              nowhere;
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
     //              asks about; consumed by its OK, dropped by its Cancel.
     struct RenderPlayer {
@@ -7412,6 +7422,13 @@ inline int64_t snap_authored_frame(double frame) {
 // clock, a prompt over a live gesture having its release swallowed at the
 // prompt's own gate. It went with the modal, which became a paint-only slot.
 // Nothing ASYNCHRONOUS asks this question now.)
+// THE FORCE-END FINALIZER IS NOT A CONSUMER EITHER — it asks this question
+// nowhere — but it is the one body whose MEMBERSHIP must equal this one:
+// finalize_active_drags (input_pointer.cpp) ends all eleven members, because
+// its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
+// lands on a state this predicate calls free. The two lists are grepped
+// against each other whenever either grows; the finalizer's own head comment
+// spells its eleven in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A SEVENTH CONSUMER: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags plus the two pendings

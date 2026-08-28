@@ -131,8 +131,11 @@ constexpr int kMaxPendingCharsOpenProject = 256;
 // commit-time validator). The flag editor uses FlagPayload (payload text,
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
-// load prompt uses LoadInPlace (a render entry's relative-path
-// identifier, resolved against the tmp/ listing at commit); the history
+// history view's load prompt uses LoadInPlace (the viewed walk's member — a
+// commit spelling on the Remote tab, a member number on the Local one,
+// resolved against the walk at commit; the render-entry identifier it held
+// until 2026-08-28 went with the renders half, the player owning that road);
+// the history
 // mode's commit-title editor uses CommitTitle (free one-line text, the message
 // the checkpoint commit carries); the MARKER MEASURE editor uses MeasureText
 // (the ` //<measure>` suffix a marker line may carry — an ASCII GRAMMAR since

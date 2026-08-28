@@ -3525,13 +3525,15 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
     // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
-    // (2026-08-13) — a superset of what this gate admitted before: the LOAD
-    // editor's entry-name autocomplete keeps the FORWARD key as its first
-    // meaning, as the SETTINGS editor does, while the commit-title and BPM
-    // editors let it walk the ring from the first press (route_modal_editor_key
-    // owns which of the two a given forward Tab is, under the one autocomplete
-    // model), and the REVERSE shapes walk backwards for all four, completing
-    // nothing anywhere. The top-strip FLAG
+    // (2026-08-13) — a superset of what this gate admitted before: the two
+    // editors that HAVE a completion, SETTINGS (its value recall) and OPEN
+    // PROJECT (the folder-name prefix), keep the FORWARD key as its first
+    // meaning, while the LOAD, commit-title, BPM and measure-offset editors
+    // let it walk the ring from the first press (route_modal_editor_key owns
+    // which of the two a given forward Tab is, under the one autocomplete
+    // model; the load editor joined that side on 2026-08-28, its entry-name
+    // completion deleted with its renders half), and the REVERSE shapes walk
+    // backwards for all six, completing nothing anywhere. The top-strip FLAG
     // editor is deliberately outside it: it is not a dialog, publishes no
     // buttons, and so has no ring for Tab to walk — its whole Tab family still
     // drops here while it stands.
@@ -4146,12 +4148,17 @@ void GuiInputHandler::apply_recipe_in_place(
     target_render.trigger();
 }
 
-// -- Standalone render-entry load-in-place (the `'` load editor) ------
+// -- Standalone render-entry load-in-place (the render player's load) ------
 //
 // Load render entry `e`'s frozen sidecar recipe in place as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
-// takes an explicit entry, and the caller owns the visible refusal (the `'`
-// editor red-flashes).
+// takes an explicit entry, and the caller owns the visible refusal. ONE
+// CALLER, re-greped: confirm_render_player_load, the player's Load in place
+// button through its confirmation, which acts on the HIGHLIGHTED batch cell
+// and so has no name to fail to resolve — its own refusals (the lock, a
+// running render, a highlight that is not a batch cell) all run before the
+// prompt is raised. The retired two-road sanction is recorded at the
+// declaration.
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
 // three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
@@ -4160,17 +4167,18 @@ void GuiInputHandler::apply_recipe_in_place(
 // failure leaves authoring untouched. THE GENUINE-FAILURE ARMS NAME THEIR CAUSE
 // ON STDERR (architect 2026-08-02), one line each with the offending path, since
 // a trusted sidecar failing to read is a real fault the user cannot diagnose
-// from a flash; first-error-only holds by construction (each arm returns). The
-// caller's own unknown-id refusal — a typed identifier matching no entry — stays
-// SILENT: a typo is not a fault, and the flash is the whole answer. Returns true
-// after the recipe is applied and tmp/ wiped.
+// from a status line; first-error-only holds by construction (each arm
+// returns). The caller says "Load refused" on the status line and leaves the
+// cause to those stderr lines. Returns true after the recipe is applied and
+// tmp/ wiped.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
     // Self-guard on the standalone mutator: a successful load-in-place wipes
     // tmp/,
-    // which must never race a batch publishing into it. The `'` opener
-    // already refuses on this same condition, so the keyboard route never
-    // reaches here; this backstop protects any other caller.
+    // which must never race a batch publishing into it. The player's load act
+    // already refuses on this same condition with its own words ("Render
+    // running; Esc cancels it") before it raises the confirmation, so the one
+    // caller never reaches here; this backstop protects any other caller.
     if (app.queue_running || app.pending_archival.armed) {
         std::fprintf(stderr,
             "warptempo_gui: Load in place refused: a render batch is running or an "
@@ -4180,8 +4188,8 @@ bool GuiInputHandler::load_render_entry_in_place(
 
     // NOT a modal open, so NOT the modal-open owner's business
     // (stop_playback_for_modal_open belongs to the sites that open a surface):
-    // this is the standalone mutator's own self-guard. The `'` editor's open
-    // already froze playback through that owner on the keyboard route; stopping
+    // this is the standalone mutator's own self-guard. The player's load act
+    // already paused its transport when it raised the confirmation; stopping
     // again here keeps the mutator correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
 

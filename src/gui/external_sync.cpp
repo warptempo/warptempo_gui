@@ -188,7 +188,7 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
 
     // THE BATCH FOLDERS, walked off the batch root itself rather than through
     // GuiRendersDir: that walk holds AppState and belongs to the GUI thread,
-    // and what this act wants is simpler than what the `'` load editor wants —
+    // and what this act wants is simpler than what the render player wants —
     // every directory under `tmp/` and every `.wav` directly inside it, with no
     // opinion about the `N_tag` and `NN` spellings the dispatchers write. The
     // order is plain byte order on both levels, the product's one order for
