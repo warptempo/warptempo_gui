@@ -107,13 +107,18 @@ public:
     void play(int64_t start_sample, int64_t end_sample);
 
     // Stop playback and block until any in-flight audio callback has exited,
-    // normally within about two of the device's callback periods (JACK counts
-    // process cycles; AAudio waits for the stream's STOPPED state). The wait
-    // has no deadline on either backend: it returns only once the callback has
-    // quiesced, so a stalled or dead device hangs here rather than letting the
-    // caller mutate a buffer the audio thread may still read. Safe to call
-    // when not playing; it still fences. Main thread only. The cursor retains
-    // its last value so the main thread can snapshot where it stopped.
+    // normally within about two of the device's callback periods. BOTH BACKENDS
+    // COUNT CALLBACK INVOCATIONS for that proof — a JACK client's process
+    // callback and an AAudio stream's data callback both keep running (silent)
+    // between plays, each backend's device staying live from init to shutdown,
+    // so two counted invocations after the playing flag is lowered prove the
+    // callback is out of the sample buffer. THE DEVICE IS NOT STOPPED HERE on
+    // either platform. The wait has no deadline on either backend: it returns
+    // only once the callback has quiesced, so a stalled or dead device hangs
+    // here rather than letting the caller mutate a buffer the audio thread may
+    // still read. Safe to call when not playing; it still fences. Main thread
+    // only. The cursor retains its last value so the main thread can snapshot
+    // where it stopped.
     void stop();
 
     // Re-anchor the free-running cursor predictor at the audio thread's

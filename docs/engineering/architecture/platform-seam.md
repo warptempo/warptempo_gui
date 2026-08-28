@@ -85,10 +85,20 @@ drag coordinates floor instead of truncating.
   to the old body with five recorded deviations. `playback.cpp` is the JACK
   device half, `playback_aaudio.cpp` the AAudio one (granted-rate open —
   48 000 on the S10 FE's speaker, natively; LOW_LATENCY granted, burst 96;
-  the stop fence exits only on STOPPED / a positively terminal state / the
-  dead latch and otherwise keeps waiting; a disconnect marks the stream
-  dead and the next `play()` reopens at the new device's rate, no
-  auto-resume). NOTHING LOOPS holds on both.
+  a disconnect marks the stream dead and the next `play()` reopens at the
+  new device's rate, no auto-resume). THE AAUDIO STREAM IS OPENED ONCE,
+  STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS (architect 2026-08-27, on
+  glass — starting a stream unmutes the device's output path and that
+  transient was audible as a click at the head of every audition): it is
+  started at open, stopped only where it is about to be closed (shutdown,
+  the dead-stream reopen — `close_stream` holds the file's one
+  `requestStop`), and between plays it runs while the callback's `playing`
+  gate writes silence and reads no sample. So the fence is now the SAME
+  PROOF ON BOTH BACKENDS — counting callback invocations, two after the
+  flag is lowered, unbounded and hanging rather than weakening, with
+  AAudio's escape on a dead or positively terminal stream (no callback
+  left to count) — and `stop()` touches neither device. NOTHING LOOPS
+  holds on both.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. `gui_scale` and `audio_player` are per-DEVICE
@@ -201,9 +211,10 @@ RESIZED, CONFIG_CHANGED, CONTENT_RECT_CHANGED) and fires the ordinary resize,
 so the vertical stack (`main.cpp`, which takes any height) lays out inside the
 bars and the waveform pays the difference. THE ORIGIN IS THE BACKEND'S OWN
 CONTAINMENT and crosses the seam nowhere: it is ADDED at the one blit
-(`present`, which also fills the two bands outside the rect with
-`kRedesignContentGround` — one owed full-surface post per adoption, and
-`ANativeWindow_lock`'s own dirty-rect widening after that) and SUBTRACTED at
+(`present`, which also fills the two bands outside the rect — the TOP one with
+`kRedesignRowGround`, everything else with `kRedesignContentGround`; one owed
+full-surface post per adoption, and `ANativeWindow_lock`'s own dirty-rect
+widening after that) and SUBTRACTED at
 the one input decode (`on_motion_event`'s two coordinate lambdas — the key path
 carries no coordinates and the capture doors take GUI coordinates that never
 reach the window). `GuiInputCore`, `main.cpp` and every painter are identical
@@ -212,11 +223,18 @@ band translates to a coordinate outside the window and is delivered as such,
 neither clamped nor dropped — the shape a Wayland drag past an edge already
 takes (`containing_pixel`, input_core.h); the bars' own windows take those
 touches in practice. The startup line reports both:
-`window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms`.
+`window 2304x1371 at (0,69) of surface 2304x1440, tick 5 ms`.
 
-THE RECT IS WHATEVER THE FRAMEWORK REPORTS — the backend measures no bar and
-subtracts no inset of its own, which is why nothing here names a height as a
-constant. On the Tab S10 FE that reading was 2304x1387 at (0,53): THE STATUS BAR
+THE RECT IS THE FRAMEWORK'S MINUS THE AIR — the backend measures no bar and
+subtracts no inset of its own, which is why nothing here names a bar height as a
+constant. The one thing it does subtract is `kStatusBarAirPx` (16 DEVICE pixels,
+the retune knob), added to the rect's TOP inset inside `resolve_content_rect`
+and only when the framework reports a top inset at all, so that a fullscreen
+future gets no blank band: the clock sat closer to our first row than to the top
+of the panel (architect 2026-08-27), and the rows given up join the top band,
+which paints `kRedesignRowGround` — the status bar's own colour and the menu
+row's — so bar, air and menu row read as one title strip. Origin, size, damage
+and every touch coordinate follow from that one function. On the Tab S10 FE that reading was 2304x1387 at (0,53): THE STATUS BAR
 ALONE. One UI's 84 px taskbar was not in it, and the dumpsys record of the
 measurement says why it need not have been: `InsetsSource type=navigationBars
 frame=[0,1356][2304,1440] visible=false`, a `tappableElement` source on that
@@ -235,17 +253,28 @@ platform — and the window is now the content rect rather than the surface.
 ## The Java sliver
 
 `android/app/java/com/warptempo/gui/MainActivity.java` is the product's ONE
-Java class: a `NativeActivity` subclass whose whole body is one call in
-`onCreate`, `setDecorFitsSystemWindows(true)`. It ASKS for the inset layout;
-what actually delivers the inset area is the content rect above, and the pair
-(target 34 + this call) is what makes the framework report one. THE SYSTEM BARS
+Java class: a `NativeActivity` subclass whose `onCreate` body is
+`setDecorFitsSystemWindows(true)` plus the status bar's colour. The first ASKS
+for the inset layout; what actually delivers the inset area is the content rect
+above, and the pair (target 34 + this call) is what makes the framework report
+one. THE SYSTEM BARS
 SHOW PERMANENTLY (architect 2026-08-27): immersive mode — both bars hidden
 sticky-immersive at create and every focus gain — is RETIRED as a reversible
 experiment, because a swipe brought the taskbar's icons up OVER the app with no
 background of their own (Android's transient bars, its behaviour rather than
 ours) and read as a bug, and the waveform is tall enough to lose the bars'
-height; the bars' colors and theme are the system's and are not expected to
-match the app. The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
+height. THE STATUS BAR IS THIS WINDOW'S TITLE BAR and takes the colour the
+architect's own labwc theme gives one (architect 2026-08-27): `setStatusBarColor
+(0xFF292C30)` — the provenance is a chain, not a derivation, from
+`~/.config/labwc/themerc-override`'s `window.active.title.bg.color: #292c30`,
+which IS `kRedesignRowGround`, with its `window.active.label.text.color: #fcfcfc`
+= `kRedesignLabel` the reason the bar's icons stay light (the
+`APPEARANCE_LIGHT_STATUS_BARS` bit is CLEARED — it means dark icons for a light
+bar). `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand beside it because
+`setStatusBarColor` needs it and the legacy theme below does not set it; both
+are deprecated at API 35 and honoured at the 34 the manifest targets. The
+TASKBAR is untouched — the architect: "the taskbar looks great, it's already the
+correct color". The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
 and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a

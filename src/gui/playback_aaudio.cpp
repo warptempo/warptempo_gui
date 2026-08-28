@@ -5,8 +5,10 @@
 #include <aaudio/AAudio.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <thread>
 
 // THE AAUDIO DEVICE HALF of playback.h's contract — the Android arm, replacing
 // the silent stub the port ran on before there was a sound. The ENGINE is
@@ -30,11 +32,33 @@
 // recomputed at every open, which is what makes a reopen onto a DIFFERENT
 // device (a DAC plugged in after a disconnect) correct without any other edit.
 //
+// THE STREAM'S LIFECYCLE: OPENED ONCE, STARTED ONCE, NEVER STOPPED BETWEEN
+// PLAYS (architect 2026-08-27, on glass — "a little click sound, like a
+// keyboard's haptic click" at the start of every audition). STARTING AN AAUDIO
+// STREAM IS AUDIBLE: the framework brings the output path up and the device's
+// own unmute transient rides out with the first frames. The backend used to
+// start the stream at every play() and stop it at every stop(), so every
+// audition began with one of those transients — the click. It now starts the
+// stream ONCE, at open (init, and the reopen after a disconnect), and stops it
+// only where the stream is about to be CLOSED: shutdown, and the dead-stream
+// reopen. Both live in close_stream, which is the only requestStop left in the
+// file.
+//
+// So the transient happens once per session, at launch, with no audition under
+// it, and no play() or stop() touches the device's run state at all. BETWEEN
+// PLAYS THE STREAM RUNS AND THE CALLBACK WRITES SILENCE — its `playing` gate
+// takes the silence arm and the render body is never reached, so an idle stream
+// reads no samples and costs the tablet a few mW of an already screen-on
+// device, which is the price the architect accepted for the click. (A
+// step-shaped click at the START of a play, from the render body beginning
+// mid-waveform at whatever sample value sits there with no ramp, is a
+// different thing and is untouched here.)
+//
 // THREADING, above playback.h's own thread model. Three threads touch this
 // file:
 //   * MAIN owns the stream handle outright — every AAudio call in this file
-//     (open, requestStart, requestStop, waitForStateChange, close) is made
-//     from init/play/stop/shutdown and from nowhere else. There is no mutex
+//     (open, requestStart, getState, requestStop, close) is made from
+//     init/play/stop/shutdown and from nowhere else. There is no mutex
 //     and none is needed: no other thread reads `stream`.
 //   * The DATA CALLBACK thread runs the engine's render body and touches
 //     nothing else — no allocation, no I/O, no locks, no AAudio call.
@@ -70,7 +94,9 @@ struct GuiPlayback::Impl {
     // is AAudio's own.
     GuiPlaybackState state;
 
-    // MAIN THREAD ONLY (the head comment's threading block).
+    // MAIN THREAD ONLY (the head comment's threading block). `started` is
+    // true from the stream's one successful requestStart until the stream is
+    // CLOSED — no longer a per-play bit (the lifecycle block at the head).
     AAudioStream* stream       = nullptr;
     bool          started      = false;
     // init() bound a source AND opened a device. play()/stop() gate on it
@@ -82,6 +108,13 @@ struct GuiPlayback::Impl {
     // produce sound again.
     std::atomic<bool>    stream_dead{false};
     std::atomic<int32_t> stream_error{0};
+
+    // Incremented once at the end of every data-callback invocation, playing
+    // or silent. stop()'s fence counts it (fence_quiesced) — the JACK
+    // backend's own proof, available here only because the stream now stays
+    // STARTED between plays and so keeps calling its callback. Written by the
+    // callback thread with release, read by the main thread with acquire.
+    std::atomic<uint64_t> callback_cycles{0};
 };
 
 namespace {
@@ -105,16 +138,21 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     if (!impl->state.playing.load(std::memory_order_acquire)) {
         playback_write_silence(channel_buffers, channel_count,
                                kPlaybackOutputChannels, 0, frames);
-        // CONTINUE, never STOP: a stopped-by-the-callback stream would leave
-        // the main thread's `started` flag lying about the device. The stream
-        // is stopped from stop() alone, which every playback teardown reaches
-        // — the natural end included, the run loop's own tick taking that edge
-        // within one tick period.
+        // CONTINUE, never STOP: this arm is what the stream spends most of its
+        // life in now (the lifecycle block at the head — the stream stays
+        // started between plays), and a stopped-by-the-callback stream would
+        // both leave the main thread's `started` flag lying about the device
+        // and put the start transient back into the next play. NO SAMPLE IS
+        // READ HERE, which is what lets stop()'s fence count callbacks and
+        // what makes an idle stream harmless to a buffer the main thread is
+        // about to replace.
+        impl->callback_cycles.fetch_add(1, std::memory_order_release);
         return AAUDIO_CALLBACK_RESULT_CONTINUE;
     }
 
     playback_render_block(impl->state, channel_buffers,
                           kPlaybackOutputChannels, frames, channel_count);
+    impl->callback_cycles.fetch_add(1, std::memory_order_release);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
 
@@ -152,15 +190,17 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
         static_cast<int>(error), AAudio_convertResultToText(error));
 }
 
-// THE FENCE'S EXIT TEST. QUIESCENCE IS PROVED POSITIVELY OR NOT AT ALL: the
-// only ways out are the stream reporting STOPPED — which AAudio reaches only
-// after its callback thread has left the callback — and the stream being
-// positively terminal, meaning DISCONNECTED / CLOSING / CLOSED or the error
-// callback's `stream_dead` latch (the disconnect rule at the error callback:
-// the framework retires the callback thread BEFORE that callback runs, so a
-// dead stream has nothing left to wait for and waiting would hang forever on a
-// quiesced device). Anything else — STARTED, STOPPING, PAUSING, a state this
-// build has never heard of — is NOT a proof and does not end the wait.
+// THE STREAM HAS NO CALLBACK LEFT TO COUNT. The fence below waits on callback
+// invocations, so it needs one test for the states where none are coming: the
+// stream reporting STOPPED — which AAudio reaches only after its callback
+// thread has left the callback — and the stream being positively terminal,
+// meaning DISCONNECTED / CLOSING / CLOSED or the error callback's `stream_dead`
+// latch (the disconnect rule at the error callback: the framework retires the
+// callback thread BEFORE that callback runs, so a dead stream has nothing left
+// to wait for and waiting would hang forever on a quiesced device). Each of
+// these is ALSO a positive proof of quiescence, which is why the fence may
+// return on them. Anything else — STARTED, STARTING, a state this build has
+// never heard of — is NOT a proof and does not end the wait.
 bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
                              aaudio_stream_state_t state) {
     return state == AAUDIO_STREAM_STATE_STOPPED ||
@@ -171,51 +211,64 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 }
 
 // THE QUIESCENCE FENCE (playback.h's stop() contract: "returns only once the
-// callback has quiesced"). The JACK backend counts process cycles, which works
-// because a JACK client's callback keeps running silently while the client is
-// active. AAudio's does not: the data callback stops being called when the
-// stream stops, so counting would never advance. The fence here is the STREAM
-// STATE MACHINE — requestStop, then wait until `fence_state_is_quiesced`
-// above says so.
+// callback has quiesced"). IT COUNTS CALLBACK INVOCATIONS, exactly as the JACK
+// backend counts process cycles, and for exactly the JACK backend's reason: a
+// stream that stays STARTED keeps calling its data callback whether or not
+// anything is playing (the lifecycle block at the head of this file), so the
+// counter keeps advancing and counting is a proof. It could not be one while
+// the stream was stopped between plays — the old fence therefore drove the
+// STREAM STATE MACHINE (requestStop, then wait for STOPPED), and that
+// requestStop is exactly the click this backend no longer makes.
 //
-// NO RESULT CODE IS EVER READ AS QUIESCENCE, which is what makes the fence a
-// fence. `requestStop` failing is logged and then ignored: a refused stop
-// request is a reason to keep waiting, not a licence to return into a buffer
-// the callback may still be reading. `waitForStateChange` has exactly two arms
-// — AAUDIO_OK takes the state it reported, and EVERY other result (TIMEOUT and
-// unclassified errors alike, AAudio's result domain being neither closed nor
-// documented as one) re-queries the state and waits again. There is no
-// iteration cap and no deadline.
+// THE PROOF. stop() lowers `playing` (seq_cst) before calling here. One
+// increment after that store retires a callback that may have loaded `playing`
+// before the store became visible; a second proves a full callback ran
+// start-to-finish afterwards, and its release increment paired with the
+// acquire loads here orders every sample read it made before anything the
+// caller mutates once stop() returns. The bound is conservative: a callback
+// that sees playing == false takes the silence arm and reads no sample at all.
+// Normally about two callback periods — a few ms at the granted burst.
 //
-// SO THIS CAN HANG, AND HANGING IS THE CONTRACT'S SAFE FAILURE MODE. A stalled
-// device freezes the main thread here, visibly and loudly; the alternative — a
-// weakened fence — lets a rebind, a buffer replacement or a shutdown free
-// samples out from under a live audio thread, silently and unreproducibly.
-// The state is queried once BEFORE the first wait, so the ordinary paths cost
-// nothing: a natural end or a stream requestStop finished synchronously reads
-// STOPPED and exits without a single wait.
-void fence_stopped(GuiPlayback::Impl& impl) {
-    if (!impl.stream) {
-        impl.started = false;
-        return;
-    }
+// THE ESCAPE, and why this cannot hang on a device that has gone away: a
+// stream that is dead or positively terminal has no callback left to count, so
+// `fence_state_is_quiesced` above ends the wait on those states (it is a proof
+// of quiescence in its own right, which is what makes returning on it safe),
+// and a stream that was never started has nothing in flight to begin with.
+//
+// OTHERWISE THE WAIT IS UNBOUNDED, AND HANGING IS THE CONTRACT'S SAFE FAILURE
+// MODE — the JACK fence's own choice. A framework that has stopped running
+// callbacks on a live stream is a broken environment; freezing the main thread
+// here is visible and loud, while a weakened fence lets a rebind, a buffer
+// replacement or a shutdown free samples out from under a live audio thread,
+// silently and unreproducibly.
+void fence_quiesced(GuiPlayback::Impl& impl) {
+    if (!impl.stream || !impl.started) return;
 
-    const aaudio_result_t stop_r = AAudioStream_requestStop(impl.stream);
-    if (stop_r != AAUDIO_OK) {
+    const uint64_t c0 = impl.callback_cycles.load(std::memory_order_acquire);
+    while (impl.callback_cycles.load(std::memory_order_acquire) < c0 + 2) {
+        if (fence_state_is_quiesced(impl, AAudioStream_getState(impl.stream))) {
+            return;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+// START THE STREAM, once per open (the lifecycle block at the head). Idempotent
+// on `started`, so the init path's start and play()'s own are one road: a start
+// refused at init is logged there and RETRIED at the next play, which owns the
+// failure arm (it closes the stream, and the play after that reopens).
+bool start_stream(GuiPlayback::Impl& impl) {
+    if (impl.started) return true;
+    if (!impl.stream) return false;
+    const aaudio_result_t r = AAudioStream_requestStart(impl.stream);
+    if (r != AAUDIO_OK) {
         std::fprintf(stderr,
-            "warptempo_gui: AAudio requestStop failed (%s); waiting for the "
-            "stream to quiesce anyway.\n",
-            AAudio_convertResultToText(stop_r));
+            "warptempo_gui: AAudio requestStart failed (%s); playback "
+            "stopped.\n", AAudio_convertResultToText(r));
+        return false;
     }
-
-    aaudio_stream_state_t now = AAudioStream_getState(impl.stream);
-    while (!fence_state_is_quiesced(impl, now)) {
-        aaudio_stream_state_t next = now;
-        const aaudio_result_t r = AAudioStream_waitForStateChange(
-            impl.stream, now, &next, 100 * 1000 * 1000L);  // 100 ms per wait
-        now = (r == AAUDIO_OK) ? next : AAudioStream_getState(impl.stream);
-    }
-    impl.started = false;
+    impl.started = true;
+    return true;
 }
 
 void close_stream(GuiPlayback::Impl& impl) {
@@ -231,6 +284,11 @@ void close_stream(GuiPlayback::Impl& impl) {
     impl.state.output_rate.store(0, std::memory_order_relaxed);
     impl.stream_dead.store(false, std::memory_order_relaxed);
     impl.stream_error.store(0, std::memory_order_relaxed);
+    // THE FILE'S ONE requestStop, and it is here because the stream is being
+    // CLOSED (shutdown, or the dead-stream reopen) — never between plays. The
+    // close is the stronger fence anyway: it blocks until the callback thread
+    // is gone, which is what makes it safe on a stream this function may be
+    // stopping while a callback is mid-flight.
     AAudioStream_requestStop(s);
     AAudioStream_close(s);  // blocks until the callback thread is gone
 }
@@ -305,6 +363,7 @@ bool open_stream(GuiPlayback::Impl& impl) {
 
     impl.stream  = stream;
     impl.started = false;
+    impl.callback_cycles.store(0, std::memory_order_relaxed);
     impl.stream_dead.store(false, std::memory_order_relaxed);
     impl.stream_error.store(0, std::memory_order_relaxed);
     impl.state.output_rate.store(static_cast<uint32_t>(rate),
@@ -356,6 +415,12 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         return false;
     }
     impl_->device_ready = true;
+    // STARTED AT OPEN, so the device's start transient lands here — at launch,
+    // under no audition — instead of at the first play (the lifecycle block at
+    // the head of this file). The result is deliberately not read: a refused
+    // start has already logged, playback is not disabled by it, and play()'s
+    // own start arm retries and owns the failure road.
+    start_stream(*impl_);
     return true;
 }
 
@@ -376,17 +441,15 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // must not spin the device up at all.
     if (!playback_publish_play(impl_->state, start_sample, end_sample)) return;
 
-    if (!impl_->started) {
-        const aaudio_result_t r = AAudioStream_requestStart(impl_->stream);
-        if (r != AAUDIO_OK) {
-            std::fprintf(stderr,
-                "warptempo_gui: AAudio requestStart failed (%s); playback "
-                "stopped.\n", AAudio_convertResultToText(r));
-            impl_->state.playing.store(false, std::memory_order_release);
-            close_stream(*impl_);
-            return;
-        }
-        impl_->started = true;
+    // ORDINARILY A NO-OP, and that is the point of the new lifecycle: the
+    // stream was started at open and has been running ever since, so an
+    // ordinary play makes no device call at all. Two paths still arrive here
+    // with a stopped stream and are started by this call — the reopen just
+    // above, and an init whose own start was refused — and a refusal here
+    // disables the device until the next play reopens it.
+    if (!start_stream(*impl_)) {
+        impl_->state.playing.store(false, std::memory_order_release);
+        close_stream(*impl_);
     }
 }
 
@@ -397,8 +460,12 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
+    // THE DEVICE IS NOT TOUCHED HERE. Lower the flag, then fence on the
+    // callback counter (fence_quiesced): the stream keeps running and the
+    // callback keeps writing silence, which is the whole of the no-click
+    // lifecycle at the head of this file.
     impl_->state.playing.store(false, std::memory_order_seq_cst);
-    fence_stopped(*impl_);
+    fence_quiesced(*impl_);
 }
 
 bool GuiPlayback::is_playing() const {

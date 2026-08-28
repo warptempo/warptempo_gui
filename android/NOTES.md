@@ -718,7 +718,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Fact | Value |
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
-| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, measured that day as 2304x1387 at (0,53) — the status bar alone; §12's note, including what is still open about the taskbar) |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, measured that day as 2304x1387 at (0,53) — the status bar alone — LESS the 16 px of air added under the bar that evening, so 2304x1371 at (0,69); §12's note and §12.6, including what is still open about the taskbar) |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
@@ -924,26 +924,48 @@ at its own site:
 
 - **JACK** counts `process_cycles`. That works because an active JACK client's
   process callback keeps running (silent) forever.
-- **AAudio** cannot count: its data callback stops being called the moment the
-  stream stops, so a counter would never advance. The fence is the STREAM STATE
-  MACHINE — `requestStop`, then `waitForStateChange` until the stream proves
-  quiescence POSITIVELY: STOPPED, or a positively terminal stream
-  (DISCONNECTED / CLOSING / CLOSED, or the error callback's `stream_dead`
-  latch — a disconnected stream has had its callback thread retired by the
-  framework before that callback ran, so there is nothing left to wait for and
-  waiting would hang forever on a quiesced device).
+- **AAudio** counts too, since 2026-08-27, and for the JACK reason: THE STREAM
+  NOW STAYS STARTED between plays (the click ruling below), so its data callback
+  keeps running — silent, reading no sample — and `callback_cycles` keeps
+  advancing. Two increments after `playing` is lowered are the proof, exactly as
+  on JACK.
 
-  **NO RESULT CODE IS EVER READ AS QUIESCENCE.** A failed `requestStop` is
-  logged and then ignored, and `waitForStateChange` has two arms only:
-  `AAUDIO_OK` takes the state it reported, and every other result — TIMEOUT and
-  unclassified errors alike, AAudio's result domain being neither closed nor
-  documented as one — re-queries the state and waits again. No iteration cap,
-  no deadline, no early exit on "some error". **So a stalled device hangs the
-  main thread here, and that is the contract's safe failure mode**: the
-  alternative is a rebind, a buffer replacement or a shutdown freeing samples
-  out from under a live audio thread, silently. The state is read once before
-  the first wait, so an already-stopped stream (the natural end, a synchronous
-  `requestStop`) exits without waiting at all.
+  **THE ESCAPE** is what is left of the old state test: a stream that is dead or
+  positively terminal (DISCONNECTED / CLOSING / CLOSED, or the error callback's
+  `stream_dead` latch) has no callback left to count — the framework retires the
+  callback thread before the error callback runs — so the wait ends there, that
+  state being a proof of quiescence in its own right. Otherwise there is no
+  deadline and no iteration cap. **So a stalled device hangs the main thread
+  here, and that is the contract's safe failure mode**: the alternative is a
+  rebind, a buffer replacement or a shutdown freeing samples out from under a
+  live audio thread, silently.
+
+  UNTIL THAT DAY the fence drove the STREAM STATE MACHINE instead — `requestStop`
+  then `waitForStateChange` until STOPPED or a terminal state, no result code
+  ever read as quiescence — because a stream stopped between plays calls no
+  callback and a counter would never have advanced. That `requestStop` at every
+  stop, with the matching `requestStart` at every play, is exactly what made the
+  click.
+
+### 11.4a The click at every play (architect 2026-08-27, on glass)
+
+"When I click the lower half of the waveform I hear a little click sound, like a
+keyboard's haptic click, behind the waveform." Android's own touch and haptic
+sounds were off on the device, so it was ours: STARTING AN AAUDIO STREAM IS
+AUDIBLE — the framework brings the output path up and the device's unmute
+transient rides out with the first frames — and the backend started the stream
+at every `play()` and stopped it at every `stop()`.
+
+THE STREAM IS NOW OPENED ONCE, STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS. It
+starts at open (`init`, and the reopen after a disconnect) and is stopped only
+where it is about to be CLOSED — shutdown and the dead-stream reopen, both in
+`close_stream`, which holds the file's one remaining `requestStop`. Between
+plays the callback's `playing` gate writes silence and never reaches the render
+body. The cost is a running stream on an already screen-on tablet (a few mW, no
+wakelock change), accepted; the benefit is that the one start transient of a
+session happens at launch, with no audition under it. A step-shaped click at a
+play START — the render body beginning mid-waveform at whatever sample sits
+there, with no ramp — is a different thing and is untouched.
 
 ### 11.5 The disconnect (UNTESTED ON HARDWARE)
 
@@ -1044,8 +1066,10 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > the glass a swipe brought the taskbar's icons up OVER the app with no
 > background of their own (§12.5's "the transient bars behave" — Android's
 > behaviour, not ours) and it read as a bug, and the waveform is plenty tall
-> enough to lose the bars' height. Their colors and theme are the system's and
-> are not expected to match the app. What changed: `hideSystemBars()` and both
+> enough to lose the bars' height. THE STATUS BAR'S COLOUR WAS THEN CLAIMED
+> LATER THE SAME DAY (§12.6 below): showing permanently, it reads as this
+> window's title bar, so the sliver paints it `kRedesignRowGround` from the
+> architect's labwc theme; the taskbar's colors stay the system's. What changed: `hideSystemBars()` and both
 > its call sites are gone with the `onWindowFocusChanged` override,
 > `setDecorFitsSystemWindows(false)` became `(true)`, and the activity's theme
 > is `Theme.NoTitleBar` rather than `.Fullscreen`, and **`targetSdk` stepped 35
@@ -1079,14 +1103,17 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > CONTENT RECT IS THE WINDOW, implemented in the backend: `APP_CMD_CONTENT_-
 > RECT_CHANGED` is handled, `adopt_window` re-reads the rect on all four window
 > commands, `width()`/`height()` are the rect's, the origin is ADDED at the one
-> blit (`present`, which also fills the two bands with `kRedesignContentGround`)
-> and SUBTRACTED at the one touch decode, and nothing above the seam learns it
-> exists. The startup line carries both now:
-> `window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms`.
+> blit (`present`, which also fills the two bands with `kRedesignContentGround`
+> — the TOP band takes `kRedesignRowGround` since §12.6) and SUBTRACTED at the
+> one touch decode, and nothing above the seam learns it exists. The startup
+> line carries both now:
+> `window 2304x1387 at (0,53) of surface 2304x1440, tick 5 ms` — and
+> `window 2304x1371 at (0,69) of surface 2304x1440` since §12.6's air.
 >
 > **WHAT THE RECT ACTUALLY CONTAINED, AND WHAT IS STILL OPEN.** The rect is
 > WHATEVER THE FRAMEWORK REPORTS — the backend measures no bar and subtracts no
-> inset of its own — and what it reported was 2304x1387 at (0,53): the STATUS
+> inset of its own, §12.6's air being the one thing it takes off — and what it
+> reported was 2304x1387 at (0,53): the STATUS
 > BAR ALONE, 1440 − 53. The taskbar's 84 px band was NOT taken out of it; it was
 > reported as a tappable element and as `mAppBounds`, not as a visible
 > navigation inset. AND THE READING WAS TAKEN WITH THE PANEL DOZING (the cover
@@ -1103,6 +1130,36 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > clipboard / key-repeat needs still join it. Everything below is the record of
 > what 2026-08-26 landed; `docs/engineering/architecture/platform-seam.md` and
 > the class's own head comment are authoritative for what stands.
+>
+> ### 12.6 The title strip (architect 2026-08-27, evening, on glass)
+>
+> Two changes, one picture. **THE AIR**: "the clock and everything else looks
+> too close to the bottom — the distance between the top of the screen and the
+> battery icon is much greater than between the battery's bottom and our first
+> row; we have plenty of waveform, give some to the top." `kStatusBarAirPx` = 16
+> DEVICE pixels (the retune knob, and device pixels because it pairs with the
+> bar's own density-scaled geometry, not with `gui_scale`) is added to the
+> content rect's TOP inset inside `resolve_content_rect`, and only when the
+> framework reports a top inset at all — a fullscreen future gets no blank band.
+> Origin, size, damage and touch all follow from that one function.
+> **THE COLOUR**: the status bar takes the labwc title bar's, PROVENANCE BY
+> CHAIN rather than derivation — `~/.config/labwc/themerc-override`'s
+> `window.active.title.bg.color: #292c30` IS `kRedesignRowGround`, and its
+> `window.active.label.text.color: #fcfcfc` is `kRedesignLabel`, which is why
+> the bar's icons stay light (`APPEARANCE_LIGHT_STATUS_BARS` CLEARED — the flag
+> means dark icons for a light bar). The system had been painting it ~#212326,
+> near the CONTENT ground. `MainActivity` calls `setStatusBarColor(0xFF292C30)`
+> and sets `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` by hand, because that flag is
+> `setStatusBarColor`'s documented precondition and `Theme.NoTitleBar` — the
+> legacy theme this activity uses — does not set it the way the Material /
+> DeviceDefault themes do. Both are deprecated at API 35 and honoured at the 34
+> the manifest targets. The TASKBAR IS UNTOUCHED ("the taskbar looks great, it's
+> already the correct color"). Because the bar and the menu row are now the same
+> ground, the air between them would read as a darker stripe if it took the
+> content ground, so `present` picks the band word per row: TOP band =
+> `kRedesignRowGround`, everything else `kRedesignContentGround`. Bar, air and
+> menu row read as one title strip — the clock at its top, the menus beneath —
+> which is kdenlive's own arrangement.
 
 The APK has Java in it now: **one class**, `com.warptempo.gui.MainActivity`,
 `android/app/java/com/warptempo/gui/MainActivity.java`, ~30 lines of body. It is

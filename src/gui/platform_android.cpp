@@ -207,17 +207,19 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 // The bands outside the content rect
 // ---------------------------------------------------------------------------
 
-// THE PRODUCT'S CONTENT GROUND, in the WINDOW's own byte order. The bands are
-// whatever the surface holds outside the content rect — above it and below it,
-// each existing only insofar as the framework's rect leaves room for it (on the
-// Tab S10 FE's 2026-08-27 measurement the rect started at y=53 and ran to the
-// panel's bottom edge, so only the top one had any rows). They are covered by
-// the system's own windows, so nothing of ours is meant to be seen there — but
+// THE BAND WORDS, in the WINDOW's own byte order. The bands are whatever the
+// surface holds outside the content rect — above it and below it, each existing
+// only insofar as the framework's rect leaves room for it (on the Tab S10 FE's
+// 2026-08-27 measurement the rect started at y=53, under the status bar, and
+// ran to the panel's bottom edge, so only the top one had any rows; the air
+// below widens that top band by kStatusBarAirPx). The rows under a system
+// window are covered by it, so nothing of ours is meant to be seen there — but
 // a translucent bar over a buffer nobody wrote would show a stale frame, so
-// they are filled. These pixels never pass through the
-// backbuffer, so they never meet copy_swap_rb's swap either: the word is built
-// R,G,B,A directly, from the palette constant rather than from a second
-// spelling of #202326 (render.h is the one color owner; a retune follows).
+// they are filled; the air's own rows are meant to be seen. These pixels never
+// pass through the backbuffer, so they never meet copy_swap_rb's swap either:
+// the word is built R,G,B,A directly, from the palette constants rather than
+// from a second spelling of their hex (render.h is the one color owner; a
+// retune follows).
 constexpr uint32_t window_word(GuiColor c) {
     const auto ch = [](double v) {
         return static_cast<uint32_t>(v * 255.0 + 0.5) & 0xFFu;
@@ -225,11 +227,35 @@ constexpr uint32_t window_word(GuiColor c) {
     return 0xFF000000u | (ch(c.b) << 16) | (ch(c.g) << 8) | ch(c.r);
 }
 
-constexpr uint32_t kBandWord = window_word(kRedesignContentGround);
+// TWO WORDS, and which one a band row takes is decided at the row (present()).
+// The TOP band is the title strip's ground; every other band pixel — a bottom
+// band, or a side band beside content rows — is the content's own.
+constexpr uint32_t kBandWord    = window_word(kRedesignContentGround);
+constexpr uint32_t kTopBandWord = window_word(kRedesignRowGround);
 
-void fill_band(uint32_t* dst, int n) {
-    for (int x = 0; x < n; ++x) dst[x] = kBandWord;
+void fill_band(uint32_t* dst, int n, uint32_t word) {
+    for (int x = 0; x < n; ++x) dst[x] = word;
 }
+
+// THE AIR UNDER THE STATUS BAR (architect 2026-08-27, on glass): "the clock and
+// everything else looks too close to the bottom — the distance between the top
+// of the screen and the battery icon is much greater than between the battery's
+// bottom and our first row; we have plenty of waveform, give some to the top."
+// The framework's content rect begins immediately under the status bar (53 px
+// on the Tab S10 FE, whose clock glyphs end about 8 px above where our menu row
+// began), so this many pixels come off the TOP of that rect and are left to the
+// band. DEVICE pixels, deliberately: the air pairs with the status bar's own
+// density-scaled geometry, not with anything gui_scale sizes. THE RETUNE KNOB
+// IS THIS NUMBER and nothing else.
+//
+// IT PAINTS kTopBandWord, not the content ground. The status bar above it is
+// kRedesignRowGround (the Java sliver sets it, from the labwc title bar the
+// architect names as the color he expects) and the MENU ROW directly beneath it
+// is the same ground, so a content-ground band between two identical grounds
+// would read as a darker stripe — a defect, not air. Filled with the row
+// ground, the status bar, the air and the menu row read as ONE title strip: the
+// clock at its top, the menus beneath it, which is kdenlive's own arrangement.
+constexpr int kStatusBarAirPx = 16;
 
 // ---------------------------------------------------------------------------
 // The looper identifiers this backend adds
@@ -479,6 +505,11 @@ void GuiPlatform::adopt_window(bool fire_resize) {
  * otherwise hand the GUI a window of nothing. There is no producer for those
  * on this device; the fallback exists because the alternative is a black app,
  * not because a fault is expected.
+ *
+ * THE ONE THING THIS FUNCTION ADDS TO THE FRAMEWORK'S ANSWER is the air under
+ * the status bar (kStatusBarAirPx, at the end of the body), and it is added
+ * here so that origin, size, damage and every touch coordinate follow from it
+ * for free.
  */
 void GuiPlatform::resolve_content_rect(int surf_w, int surf_h,
                                        int& ox, int& oy,
@@ -500,6 +531,19 @@ void GuiPlatform::resolve_content_rect(int surf_w, int surf_h,
     oy = top;
     cw = right - left;
     ch = bottom - top;
+
+    // THE AIR, ADDED TO THE TOP INSET AND ONLY THERE (kStatusBarAirPx, with the
+    // reasoning and the color at its declaration). A rect that starts at y == 0
+    // has no status bar over it — a fullscreen future — and gets no air: a
+    // blank band at the top of the panel would be nothing but lost picture. The
+    // rows given up become the top band, and because origin, size, damage and
+    // every touch coordinate follow from this one function, nothing else in the
+    // backend knows the air exists. A rect too short to give the air up keeps
+    // its whole height, the same fallback every degenerate answer above takes.
+    if (top > 0 && top + kStatusBarAirPx < bottom) {
+        oy = top + kStatusBarAirPx;
+        ch = bottom - oy;
+    }
 }
 
 /*
@@ -765,14 +809,19 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
         for (int row = cy0; row < cy1; ++row) {
             uint32_t* drow = dst + static_cast<size_t>(row) * buf.stride;
             const int brow = row - origin_y_;
+            // WHICH GROUND THIS ROW'S BAND TAKES (the two words at kBandWord):
+            // above the content rect is the title strip — the status bar and
+            // the air under it, one ground with the menu row below — and
+            // everything else is the content's own.
+            const uint32_t band_word = (brow < 0) ? kTopBandWord : kBandWord;
             if (brow < 0 || brow >= back_h_ || ix1 <= ix0) {
                 // A band row (above or below the content rect), or a rect that
                 // misses the content horizontally: all ground.
-                fill_band(drow + cx0, cx1 - cx0);
+                fill_band(drow + cx0, cx1 - cx0, band_word);
                 continue;
             }
-            if (ix0 > cx0) fill_band(drow + cx0, ix0 - cx0);
-            if (cx1 > ix1) fill_band(drow + ix1, cx1 - ix1);
+            if (ix0 > cx0) fill_band(drow + cx0, ix0 - cx0, band_word);
+            if (cx1 > ix1) fill_band(drow + ix1, cx1 - ix1, band_word);
             const uint32_t* srow =
                 src + static_cast<size_t>(brow) * src_stride_px +
                 (ix0 - origin_x_);

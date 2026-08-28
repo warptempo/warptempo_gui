@@ -352,8 +352,11 @@ private:
     // NativeActivity never sees because it takes the WINDOW's surface), so the
     // band inside the system bars arrives as the CONTENT RECT instead.
     //
-    // THE RECT IS WHATEVER THE FRAMEWORK REPORTS — this backend measures
-    // nothing and subtracts no inset of its own. Measured on the Tab S10 FE
+    // THE RECT IS THE FRAMEWORK'S, MINUS THE AIR — this backend measures no
+    // inset of its own; the one thing it subtracts is kStatusBarAirPx, the air
+    // it leaves between the status bar and the first row, and that subtraction
+    // lives in resolve_content_rect with its reasoning at the constant
+    // (platform_android.cpp). Measured on the Tab S10 FE
     // 2026-08-27: surface frame [0,0][2304,1440], content 2304x1387 at (0,53),
     // i.e. the STATUS BAR ALONE. One UI's 84 px taskbar was NOT part of the
     // rect: dumpsys reported `InsetsSource type=navigationBars
@@ -379,8 +382,9 @@ private:
     int  surface_w_ = 0;
     int  surface_h_ = 0;
     // ONE FULL-SURFACE POST IS OWED AFTER EVERY ADOPTION, so the two bands
-    // outside the content rect get the product's content ground at least once
-    // per window rather than showing whatever the buffer held. Later frames
+    // outside the content rect get their ground (present picks it per row —
+    // the top band's is the title strip's) at least once per window rather
+    // than showing whatever the buffer held. Later frames
     // keep them right through lock()'s own widening, which is the same
     // mechanism partial damage already relies on (present).
     bool surface_bands_owed_ = false;
@@ -471,9 +475,10 @@ private:
     // initial_resize_owed_) and true everywhere else.
     void adopt_window(bool fire_resize);
     // Resolve the glue's current content rect against the surface size: the
-    // origin and the size the GUI will be told. Falls back to the whole
-    // surface for the zero rect the glue starts with and for anything empty,
-    // inverted or out of bounds — the window is never nothing.
+    // origin and the size the GUI will be told, the status-bar air already
+    // taken off the top (kStatusBarAirPx, platform_android.cpp). Falls back to
+    // the whole surface for the zero rect the glue starts with and for anything
+    // empty, inverted or out of bounds — the window is never nothing.
     void resolve_content_rect(int surf_w, int surf_h,
                               int& ox, int& oy, int& cw, int& ch) const;
     void ensure_backbuffer(int w, int h);

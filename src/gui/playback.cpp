@@ -41,11 +41,11 @@ struct GuiPlayback::Impl {
     // playing flag is lowered, observing two further increments proves any
     // callback that could have seen playing == true has exited, so the
     // borrowed sample buffer is no longer being read by the audio thread.
-    // JACK'S OWN FENCE MECHANISM, not the engine's: a JACK client's process
-    // callback keeps running (silent) while the client is active, which is
-    // what makes counting cycles a proof. AAudio's stream stops calling its
-    // data callback the moment the stream stops, so that backend fences on the
-    // stream state machine instead and keeps no counter.
+    // A DEVICE FACT, not the engine's: a JACK client's process callback keeps
+    // running (silent) while the client is active, which is what makes counting
+    // cycles a proof. The AAudio backend keeps its own counter and fences the
+    // same way, its stream likewise staying started between plays
+    // (playback_aaudio.cpp's lifecycle block).
     std::atomic<uint64_t> process_cycles{0};
 };
 

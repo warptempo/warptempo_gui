@@ -5,8 +5,9 @@
 
      hasCode="true" since the Java sliver: the APK carries a classes.dex
      holding exactly ONE class, .MainActivity (a NativeActivity subclass), and
-     build_apk.sh grew a javac -> d8 step for it. Its body is one call,
-     setDecorFitsSystemWindows(true) — Java-only, and it ASKS rather than wins:
+     build_apk.sh grew a javac -> d8 step for it. Its body is
+     setDecorFitsSystemWindows(true) plus the status bar's colour — Java-only,
+     and the first of them ASKS rather than wins:
      the native surface is the whole panel whatever this or the theme says, and
      what the call plus targetSdk 34 actually buy is the framework reporting a
      real CONTENT RECT — the band inside the system bars, which the Android
@@ -46,11 +47,15 @@
          exists. Component name: com.warptempo.gui/.MainActivity
 
          Theme.NoTitleBar, not .Fullscreen: the status bar and the taskbar SHOW
-         (architect 2026-08-27, retiring immersive mode — their colors are the
-         system's and are not expected to match the app), and no title bar
-         because an app of this kind carries none. No windowLayoutInDisplay-
-         CutoutMode: the default never lays a landscape window into a cutout,
-         and this panel has none anyway. resizeableActivity="false" with the
+         (architect 2026-08-27, retiring immersive mode), and no title bar
+         because an app of this kind carries none — the STATUS bar is this
+         window's title bar and MainActivity paints it the product's row ground
+         (which is why that class also sets FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+         by hand: this legacy theme does not), while the taskbar's colors stay
+         the system's.
+
+         No windowLayoutInDisplayCutoutMode: the default never lays a landscape
+         window into a cutout, and this panel has none anyway. resizeableActivity="false" with the
          landscape lock keeps the one geometry; screenSize|screenLayout are in
          configChanges so a bar coming or going resizes the window instead of
          recreating the activity. -->
