@@ -1,5 +1,7 @@
 #include "prompt.h"
 
+#include "input_handler.h"   // the load confirmation's two answers
+
 #include <utility>
 
 void GuiPrompt::proceed(DialogTrigger t) {
@@ -17,7 +19,9 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
-        // Both are dispatched directly by activate_response, outside proceed.
+    case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
+        // All three are dispatched directly by activate_response, outside
+        // proceed.
         break;
     }
 }
@@ -100,6 +104,27 @@ void GuiPrompt::activate_response(char k) {
         }
         if (k == '\x1b') {
             cancel_paste_confirmation();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::LOAD_IN_PLACE_CONFIRM) {
+        // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): `o` is OK and
+        // runs the shared act through the input handler (which closes the
+        // player on success); Escape drops the parked entry. The prompt
+        // closes first either way, so the act runs on the ordinary modal
+        // state — the player's own row comes back under it.
+        if (k == 'o') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->confirm_render_player_load();
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->cancel_render_player_load();
             return;
         }
         return;

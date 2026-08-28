@@ -6,10 +6,9 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Five keys live here and nowhere else:
+// piece (architect 2026-08-27). Four keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 400]
-//   audio_player=<name>      the `l` command's external player; BLANK = none
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
 //                            projects (project_model.h owns the model)
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -17,13 +16,17 @@
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
 //
-// WHY IT EXISTS. The first two were `.settings` keys until 2026-08-27, which
-// made them facts about the PIECE: the same project opened on the laptop and
-// on the tablet wants 100 and 225, and the laptop can spawn audacious where the
-// tablet has nothing spawnable at all. Carrying them in the sidecar meant every
-// sync of a project between the two devices had to rewrite them on the way over
-// and put them back on the way home. They are the panel's business, so they
-// follow the panel. THE OTHER THREE JOINED THE SAME DAY with the project model:
+// WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
+// made it a fact about the PIECE: the same project opened on the laptop and
+// on the tablet wants 100 and 225. Carrying it in the sidecar meant every
+// sync of a project between the two devices had to rewrite it on the way over
+// and put it back on the way home. It is the panel's business, so it
+// follows the panel. (`audio_player`, the `l` command's external player, made
+// the same move beside it and RETIRED WHOLE 2026-08-28 with the in-app render
+// player — `l` now plays a render through the product's own playback engine
+// on both devices, so there is no spawnable player to name; a config still
+// carrying the key is unknown-key fatal, no migration, the architect's
+// ruling.) THE OTHER THREE JOINED 2026-08-27 with the project model:
 // where the projects live is a fact about the device (the clone's `projects/`
 // on the laptop, the app's external files dir on the tablet); which repository
 // is the projects home is ONE user's ONE repo, not a property of each piece,
@@ -43,7 +46,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the five keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the four keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -55,7 +58,7 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// audio_player, projects_path, projects_repo, last_project) and it is what
+// projects_path, projects_repo, last_project) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -70,10 +73,9 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// five.
+// four.
 struct DeviceConfig {
     int         gui_scale = 100;
-    std::string audio_player;
     std::string projects_path;
     std::string projects_repo;
     std::string last_project;
@@ -190,10 +192,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THE FOUR CALLERS ARE THE FOUR COMMITS, and this is their inventory: the
+// THE THREE CALLERS ARE THE THREE COMMITS, and this is their inventory: the
 // scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp),
-// the settings editor's `audio_player=` arm and its `projects_repo=` arm
-// (settings_editor.cpp), and gui_main's `last_project` write on the success
+// the settings editor's `projects_repo=` arm (settings_editor.cpp; its
+// `audio_player=` twin retired with the key 2026-08-28), and gui_main's
+// `last_project` write on the success
 // path of every open (main.cpp). A same-value commit never reaches any of them
 // — each gates the no-op ahead of the write — so a file rewrite means a value
 // actually moved. `projects_path` has no in-app writer: it is stamped by the
@@ -203,8 +206,8 @@ bool write_device_config(const DeviceConfig& cfg);
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: the laptop wants 100 %, audacious and the clone's `projects/`,
-// the tablet 225 %, no player at all and its external files dir's `projects/`;
+// a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
+// 225 % and its external files dir's `projects/`;
 // both stamp kDefaultProjectsRepo and a blank last_project), so a first run on
 // either device lands a file that is already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is

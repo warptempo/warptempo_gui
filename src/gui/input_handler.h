@@ -16,6 +16,7 @@
 #include "selection.h"
 #include "active_views.h"
 #include "ab_audition.h"
+#include "render_player.h"
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
@@ -763,6 +764,11 @@ struct GuiInputHandler {
     // THE A/B AUDITION (2026-08-26). ONE reader here: on_key's Shift+Space
     // arm, which calls its start; the advance is the tick's (main.cpp).
     GuiAbAudition&           ab_audition;
+    // THE RENDER PLAYER (2026-08-28). Its readers here: the two openers'
+    // arms (bare `l` in handle_mode_keys, bare `'` in on_key), the player's
+    // own key router (route_render_player_key), the overlay's and the
+    // scrub's press routers, and the load road; the tick is main.cpp's.
+    GuiRenderPlayer&         render_player;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
@@ -897,6 +903,7 @@ struct GuiInputHandler {
                     GuiRendersDir&           renders_dir_,
                     GuiActiveViews&          active_views_,
                     GuiAbAudition&           ab_audition_,
+                    GuiRenderPlayer&         render_player_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
@@ -922,6 +929,7 @@ struct GuiInputHandler {
           renders_dir(renders_dir_),
           active_views(active_views_),
           ab_audition(ab_audition_),
+          render_player(render_player_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
@@ -1667,6 +1675,19 @@ struct GuiInputHandler {
     // are private, beside the modal's other pointer readers; the contract is at
     // the definition and the full edge list at AppState::modal_dialog_pressed.
     void clear_modal_dialog_press();
+    // THE RENDER PLAYER'S TWO ARMS' HARD ENDS (2026-08-28): the folder
+    // overlay's row press and the play-scrub's marker drag, dropped
+    // uncommitted on the pointer-leave edge (main.cpp's hook) and the
+    // button-lost edge (clear_release_time_press_arms) — the contracts are
+    // with their press routers, in the player's block below.
+    void clear_folder_overlay_press();
+    void clear_player_scrub_drag();
+    // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
+    // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers
+    // OK or Cancel; the road's contract is at render_player_load_in_place in
+    // the player's block below.
+    void confirm_render_player_load();
+    void cancel_render_player_load();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
@@ -2652,8 +2673,8 @@ private:
     // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, follow, the waveform magnification level and
-    // projects_repo — and gui_scale and audio_player are outside the question
-    // entirely since 2026-08-27, an entry's sidecar not carrying them at all. A recipe is a set of markers and an engine block; where
+    // projects_repo — and gui_scale is outside the question
+    // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the
     // whole-file apply that stood until this date, which was 1:1 with a source
@@ -2697,6 +2718,14 @@ private:
     // behind its red flash; otherwise applies the recipe through
     // apply_recipe_in_place above — the marker pair and the engine block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
+    // TWO SANCTIONED ROADS ONTO THIS ONE ACT (architect design 2026-08-28,
+    // §4 — the no-second-road doctrine's stated exception: glass needs a road
+    // that is not typing, and the history view's binding to the typed prompt
+    // is not worth untangling): the `'` load editor's Enter
+    // (load_editor_commit, matching the typed id) and the RENDER PLAYER's
+    // Load in place button through its confirmation
+    // (confirm_render_player_load, the highlighted batch cell). Both callers
+    // copy the entry before calling — the tail wipes tmp/.
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
@@ -3388,6 +3417,13 @@ private:
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // waveform press reaches the audio under it, and its roster presses were
     // never blocked to begin with.
+    // THE RENDER PLAYER IS DELIBERATELY NOT IN IT (2026-08-28): it is a MODE
+    // and not a text editor, so it has its own predicate (render_player_active,
+    // below) and every reader here was audited for whether the player belongs
+    // in its answer — the veil, the wheel, the cursor, the hover walk's veil
+    // term and the chrome release's re-ask took a player term of their own;
+    // the field's I-beam, the editors' Tab admission and the repeat arms did
+    // not.
     // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
     // not decided here — but it is no longer scattered either: since 2026-07-28
     // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
@@ -3403,6 +3439,94 @@ private:
     // text_editor::Kind).
     bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
+
+    // -- THE RENDER PLAYER'S INPUT HALF (2026-08-28) ------------------------
+    //
+    // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
+    // press outside the folder overlay's band and the modal row is CONSUMED —
+    // the tab row's tabs, the marker lane's flags, the waveform, the menu
+    // anchors, all of it — and the roster's buttons are dead through
+    // redesign_button_enabled's first arm (their faces grey, their press
+    // claims refuse). The wheel scrolls the overlay one row per detent over
+    // the band and is consumed everywhere else; the cursor is the Arrow; the
+    // tooltip dwell is the modal buttons' own. THE CHORD MODALITY is the key
+    // router below, which runs in on_key ahead of every ordinary dispatch (the
+    // prompt gate and the dropdown gate above it, a prompt outranking the
+    // player). This predicate is what every one of those readers asks; it is
+    // the mode bit and nothing else, named so the readers say what they mean.
+    // (modal_dialog_editor_active stays the six-editor question and is NOT
+    // widened: the player is a mode, not a text editor, and the readers that
+    // ask about text — the field's I-beam, the editors' Tab admission, the
+    // repeat arms — must not see it.)
+    bool render_player_active() const { return app.render_player.active; }
+
+    // THE PLAYER'S KEY ROUTER — the whole plastic vocabulary while the mode
+    // stands (architect 2026-08-28, revised the same day): Tab / Shift+Tab
+    // walk the ring [list, buttons…]; Enter presses a ring-focused button
+    // (press-at-press, commit-at-release, the modal's own) or, with none
+    // focused, OPENS the highlight (a folder enters, `..` goes up, a wav
+    // plays); Space is the Play button's act; Up / Down move the highlight;
+    // Left / Right seek ∓5 s; Home the item's start; Backspace up one folder
+    // (a consumed no-op at the root); Page Up / Page Down previous / next in
+    // the item's folder; `'` the Load in place button's chord; `l` and Esc
+    // close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
+    // closes the player and falls through to the quit road. EVERY OTHER
+    // CHORD IS CONSUMED (strict modifier validation's no-op). Returns true
+    // when the key is consumed here, false for the two fall-throughs.
+    bool route_render_player_key(GuiKey key, GuiInputState mods);
+
+    // THE PLAYER'S OPENER TOGGLE for bare `l` and bare `'` outside the `h`
+    // view: closes a standing player on `l`, opens it otherwise through the
+    // one opener (GuiRenderPlayer::open). Its callers have already refused
+    // the modal states (a prompt, an editor, the `h` view, loading — all
+    // above it in on_key).
+    void toggle_render_player();
+
+    // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp): the row press
+    // claim (arm at the press; a recognized DOUBLE-CLICK opens the row at the
+    // press and arms nothing; a modified press is consumed), the release (a
+    // motionless lift highlights and seeds the double-click candidate; a
+    // scroll drag ends), the motion (past the vertical drag gate the arm is
+    // the band's scroll drag; inside it the feint's inside bit), the hover
+    // walk, and the hard end (the pointer-leave hook and the button-lost
+    // edge — the arm dropped, nothing committed).
+    bool claim_folder_overlay_press(int x, int y, GuiInputState mods,
+                                    const DoubleClickCandidate& dc_at_press);
+    bool finish_folder_overlay_release(int x, int y);
+    void update_folder_overlay_press_motion(int x, int y);
+    void update_folder_overlay_hover(int x, int y);
+    // (clear_folder_overlay_press is public, beside clear_modal_dialog_press:
+    // main.cpp's pointer-leave hook is its second caller.)
+
+    // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
+    // painter's published track (AppState::ModalDialogGeometry::scrub): a
+    // press ON THE MARKER's grab band (kTrimEndcapGrabPx, scaled) arms the
+    // marker drag — the marker's painted x follows the pointer while playback
+    // continues where it was, and the RELEASE commits the seek (the product's
+    // deferred-click shape); a press on the track elsewhere SEEKS AT THE
+    // PRESS (identity certain) and arms nothing. The hard end drops the arm
+    // and commits nothing.
+    bool claim_player_scrub_press(int x, int y, GuiInputState mods);
+    bool finish_player_scrub_release(int x, int y);
+    void update_player_scrub_motion(int x);
+    // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
+    // for the same hook.)
+
+    // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
+    // Load in place button's act and bare `'`'s inside the player — refuses
+    // "Render running; Esc cancels it" over a running or parked render, the
+    // lock's silent refusal on a read-only tab, "Only batch renders load in
+    // place" on any highlight that is not a load-capable wav, and otherwise
+    // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
+    // the highlighted entry. The prompt's OK runs confirm_render_player_load
+    // (the shared act load_render_entry_in_place, whose success closes the
+    // player and whose refusal says "Load refused" on the status line — its
+    // own cause is on stderr); Cancel runs cancel_render_player_load.
+    // THE TWO-ROAD SANCTION is recorded at load_render_entry_in_place.
+    void render_player_load_in_place();
+    // (confirm_render_player_load / cancel_render_player_load — the prompt's
+    // two answers — are public, beside the hard-end clearers above: GuiPrompt
+    // reaches them through its back-pointer.)
 
     // THE MODAL DIALOG'S POINTER HALF (2026-08-12; bodies in
     // input_pointer.cpp — the painter's stash is AppState::modal_dialog and

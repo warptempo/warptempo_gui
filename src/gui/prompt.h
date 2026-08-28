@@ -8,9 +8,12 @@
 #include "viewport.h"
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
-// unsaved-work dialog and the paste-confirm dialog. Two entry points are
-// exposed: request_close (called by Ctrl+Q, the WM-close callback and the
-// Open prompt's commit) and activate_response (called by the keyboard handler
+// unsaved-work dialog and the paste-confirm dialog, and ANSWERS the render
+// player's load confirmation (LOAD_IN_PLACE_CONFIRM, raised by
+// GuiInputHandler::render_player_load_in_place and answered back through the
+// input-handler back-pointer below). Two entry points are exposed:
+// request_close (called by Ctrl+Q, the WM-close callback and the Open
+// prompt's commit) and activate_response (called by the keyboard handler
 // when a prompt is active). The other two former lambdas (open_unsaved,
 // proceed) are private helpers; they have no callers outside this cluster.
 //
@@ -28,6 +31,8 @@
 // the request and not a second prompt.
 enum class GuiCloseTarget { Exit, Reopen };
 
+struct GuiInputHandler;
+
 struct GuiPrompt {
     AppState&             app;
     GuiPlatform&          gui;
@@ -35,6 +40,15 @@ struct GuiPrompt {
     PhaseResetPropagate&  phase_reset_propagate;
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
+    // Back-pointer to the input handler, wired in main.cpp after both are
+    // constructed (the input handler holds this prompt by reference, so the
+    // dependency is a cycle resolved with a pointer set post-construction —
+    // the settings editor's own shape). ONE READER: the render player's load
+    // confirmation, whose OK and Cancel reach the acts that live on
+    // GuiInputHandler (confirm_render_player_load, cancel_render_player_load)
+    // — the shared load_render_entry_in_place is a private act of that
+    // struct and the player is its second sanctioned road.
+    GuiInputHandler*      input = nullptr;
 
     GuiPrompt(AppState&             app_,
               GuiPlatform&          gui_,
@@ -62,9 +76,12 @@ struct GuiPrompt {
     // it with the COMMIT-TITLE EDITOR: the act asks for the message instead of
     // asking for permission, and a bare Enter over the prefilled default is the
     // old `y`. The prompt kind, this opener and the back-pointer to the input
-    // handler that its `y` reached the act through are all deleted; the editor
+    // handler that its `y` reached the act through were all deleted; the editor
     // lives with the mode's other machinery, at
-    // GuiInputHandler::open_history_commit_editor.)
+    // GuiInputHandler::open_history_commit_editor. THE BACK-POINTER IS BACK
+    // SINCE 2026-08-28 for a different question — the render player's load
+    // confirmation, whose raise lives on the input handler beside the act it
+    // confirms; the member above records its one reader.)
 
     // Dismiss-only modal error notice (ERROR_NOTICE), painted in the CENTERED
     // MODAL DIALOG like every other prompt since 2026-08-12.

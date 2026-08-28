@@ -73,7 +73,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
     // `playback_speed` retired whole; `gui_scale`, `audio_player` and
-    // `projects_repo` moved to the per-device config, device_config.h. The
+    // `projects_repo` moved to the per-device config, device_config.h, where
+    // `audio_player` then retired whole 2026-08-28. The
     // parser-side record of all four, and the consequence for a sidecar still
     // carrying one, is at kCanonicalSettingsKeys, settings_file.cpp.)
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
@@ -339,14 +340,13 @@ bool write_settings_file(
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key) {
-    // THE DEVICE CONFIG'S THREE EDITABLE KEYS, ahead of the `.settings` walk
+    // THE DEVICE CONFIG'S TWO EDITABLE KEYS, ahead of the `.settings` walk
     // because they are not in it any more (2026-08-27) and the settings editor
     // still edits them — the whole rationale is at the declaration. Each
     // recalls through the device config's own serializer or verbatim, so a
     // recall and that file agree byte for byte exactly as a `.settings` recall
     // and a Ctrl+S do.
     if (key == "gui_scale")     return format_gui_scale_percent(app.gui_scale);
-    if (key == "audio_player")  return app.audio_player;
     if (key == "projects_repo") return app.projects_repo;
 
     const SettingDescriptor* desc = nullptr;

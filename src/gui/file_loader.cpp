@@ -60,7 +60,8 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // (THREE ASSIGNMENTS LEFT THIS ROUTINE 2026-08-27 with their keys. The
     // sidecar no longer carries playback_speed, gui_scale or audio_player: the
     // first retired whole, and the two DEVICE preferences moved to the per-device
-    // config, which gui_main reads ONCE at startup before the window exists
+    // config (where audio_player retired whole 2026-08-28 with the in-app
+    // render player), which gui_main reads ONCE at startup before the window exists
     // (device_config.h) — a per-source routine is the wrong place to apply a
     // fact about the panel, and this load must not overwrite what the config
     // said.)

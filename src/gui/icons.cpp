@@ -698,6 +698,54 @@ constexpr IconPath kTextFieldPaths[] = {
      "15 L 18 16 L 9 16 L 9 15 L 8 15 z "},
 };
 
+// -- THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player) ------
+//
+// PROVENANCE, per the theme-provenance rule: breeze-dark's places/22/folder.svg
+// and mimetypes/22/audio-x-wav.svg, both REAL FILES and not symlinks on this
+// host; the committed assets/icons/breeze/folder.svg and audio-x-wav.svg are
+// those installs' bytes verbatim, so a diff between this table and either
+// asset is a transcription bug and nothing else.
+//
+// FOLDER: one `<path>` with `fill:currentColor` under the file's own
+// `.ColorScheme-Text { color: #fcfcfc }` stylesheet, so kIconText is what it
+// resolves to — the three edit icons' shape exactly. Absolute `M` / `L` with
+// a closing `z` on three subpaths (the outer outline, the tab's cutout and the
+// body's cutout, which wind against it so the nonzero rule leaves the folder
+// hollow as the file draws it). Nothing new for the interpreter.
+//
+// AUDIO-X-WAV: one `<path>` in the file's OWN LITERAL `fill:#44aaeb` — Breeze's
+// audio-mimetype blue, recorded here as the value the file states (kIconWav
+// below) and not as a palette key; it is neither kIconAccent's #3daee9 nor
+// anything render.h names. Absolute `M` / `L` and the ARC `A` (the four
+// note-head circles as eight elliptical arcs), the interpreter's existing arm
+// (media-record's and speedometer's precedent). THE ONE THING WORTH READING
+// TWICE: the file wraps the path in a layer group carrying
+// `transform="matrix(1 0 0 1 -326 -534.3622)"` and the path itself carries
+// `transform="matrix(1 0 0 1 326 534.3622)"` — Inkscape's document-offset
+// pair, whose composition is EXACTLY THE IDENTITY (a translate and its
+// inverse), so the row takes no `xform` and the `d` stays byte-verbatim: the
+// numbers in the `d` are already viewBox coordinates (every one lands in
+// [3, 19]). A reader comparing this row against the file should expect no
+// transform here and find those two in the file.
+constexpr GuiColor kIconWav = hex(0x44AAEB);
+
+constexpr IconPath kFolderPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 4 L 3 19 L 4 19 L 19 19 L 19 18 L 19 5 L 12 5 L 10 3 L 10 3 L "
+     "10 3 L 4 3 L 3 3 z M 4 4 L 7 4 L 9.6 4 L 10.6 5 L 6.6 9 L 6.6 9 L 4 9 L "
+     "4 4 z M 9 8 L 18 8 L 18 18 L 4 18 L 4 10 L 5.6 10 L 7 10 L 7 10 L 7 10 "
+     "L 9 8 z "},
+};
+
+constexpr IconPath kAudioXWavPaths[] = {
+    {kIconWav,
+     "M 7 3 L 7 4 L 7 14.503906 A 2.5 2.5 0 0 0 5.5 14 A 2.5 2.5 0 0 0 3 16.5 "
+     "A 2.5 2.5 0 0 0 5.5 19 A 2.5 2.5 0 0 0 8 16.5 L 8 7 L 18 7 L 18 "
+     "12.503906 A 2.5 2.5 0 0 0 16.5 12 A 2.5 2.5 0 0 0 14 14.5 A 2.5 2.5 0 0 "
+     "0 16.5 17 A 2.5 2.5 0 0 0 19 14.5 L 19 4 L 19 3.5 L 19 3 L 8 3 L 7 3 z "
+     "M 8 4 L 18 4 L 18 6 L 8 6 L 8 4 z "},
+};
+
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
 //
 // Same rules as every entry above: `d` verbatim from the committed file, the
@@ -1051,6 +1099,8 @@ constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
 constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
 constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
+constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
+constexpr IconDef kAudioXWav          {22.0, kAudioXWavPaths,           1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1100,6 +1150,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditSelect:          return kEditSelect;
         case Icon::MinuetScales:        return kMinuetScales;
         case Icon::TextField:           return kTextField;
+        case Icon::Folder:              return kFolder;
+        case Icon::AudioXWav:           return kAudioXWav;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;

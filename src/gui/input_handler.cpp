@@ -1,6 +1,7 @@
 #include "input_handler.h"
 
 #include "engine/engine_geometry.h"  // kN
+#include "folder_overlay.h"          // the render player's wheel context
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
@@ -215,6 +216,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor opens under a popup either.
     if (app.dropdown.open()) {
         if (dropdown_key_blocked(key, mods)) return;
+    }
+
+    // THE RENDER PLAYER IS KEYBOARD-MODAL (2026-08-28), ranked under the
+    // prompt (its load confirmation is a prompt and outranks it) and the
+    // dropdown (a popup cannot be open while it stands — the veil consumes
+    // the anchors' presses, and `l` under a popup dies at the gate above),
+    // and above everything else: while the mode stands ITS ROUTER IS THE
+    // WHOLE VOCABULARY (the contract at route_render_player_key), and only
+    // Ctrl+S and Ctrl+Q fall through to the ordinary dispatch — Ctrl+S to the
+    // save, which touches no transport, and Ctrl+Q with the player already
+    // closed, so the quit road runs on the ordinary state. No editor and no
+    // pointer gesture can stand under it (its opener refuses under every
+    // editor; the veil arms none), so the gates below never contend with it.
+    if (app.render_player.active) {
+        if (route_render_player_key(key, mods)) return;
     }
 
     // Blank / loading state: only the quit / close-gesture bindings run;
@@ -585,6 +601,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              writes none at all, which only made the
     //                              admission easier). Trim is
     //                              BAND, not content
+    //   - l (no mods)            → the render player (2026-08-28): it plays
+    //                              a rendered wav and authors nothing; its
+    //                              one authoring act, Load in place, refuses
+    //                              inside the player on a locked tab
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
@@ -742,11 +762,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
-    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FIVE
-    // PLACES AND NOWHERE ELSE (re-derived 2026-08-21 — the drag-modal gate above
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN SIX
+    // PLACES AND NOWHERE ELSE (re-derived 2026-08-28 — the drag-modal gate above
     // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
-    // other key while a gesture is in flight; it is NOT one of the five), each of
-    // the five earlier in this function than this point, so reaching here means
+    // other key while a gesture is in flight; it is NOT one of the six), each of
+    // the six earlier in this function than this point, so reaching here means
     // the press has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
@@ -776,6 +796,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
+    //   (c3) THE RENDER PLAYER (2026-08-28, the sixth) — Esc closes the mode
+    //       (route_render_player_key, under the dropdown gate and over every
+    //       gate below it). It ranks below the prompt because its load
+    //       confirmation IS a prompt, and it cannot collide with (a)/(b): the
+    //       player never opens under an editor and admits no editor opener;
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
@@ -1358,8 +1383,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // refused open leaves a listening session undisturbed (once open, Space is
     // inside the modal blocked set, so playback cannot restart until the editor
     // closes).
+    // BARE `'` OUTSIDE THE `h` VIEW OPENS THE RENDER PLAYER (architect design
+    // 2026-08-28): the player is the load-in-place road on glass — its Load
+    // in place button, bare `'` again inside the player — while the `h` view
+    // keeps the typed prompt as its own road (the design's U8: "untangling
+    // that will be complicated"). The fork is the mode bit, read here rather
+    // than inside open_load_editor so that opener stays the typed prompt's
+    // whole owner in both of its remaining subjects.
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
-        open_load_editor();
+        if (app.history_mode.active) open_load_editor();
+        else                         toggle_render_player();
         return;
     }
 
@@ -2108,6 +2141,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // the sub-detent accumulator from growing remainder under a popup.
     if (app.dropdown.open()) return -1;
     if (modal_dialog_editor_active()) return -1;
+    // THE RENDER PLAYER'S WHEEL (2026-08-28): live over the FOLDER OVERLAY'S
+    // band alone — context 4, the list's one-row-per-detent scroll — and
+    // swallowed everywhere else, the veil's own answer for the wheel. The
+    // band is the keyboard slot's rect; the overlay's standing predicate is
+    // the mode bit this test reads.
+    if (app.render_player.active) {
+        return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
+    }
     if (app.loading || audio.total_frames() <= 0) return -1;
     if (any_pointer_gesture_active(app)) return -1;
 
@@ -2197,6 +2238,15 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     hide_shift_tooltip();
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
+    // ctx 4 — THE FOLDER OVERLAY (2026-08-28): one row per detent, the wheel's
+    // direction the list's (down = later rows), every modifier ignored — the
+    // band scrolls and nothing else moves. The whole player wheel is this
+    // arm; every other position is swallowed at the context.
+    if (ctx == 4) {
+        render_player.scroll_rows(dir == GuiMouseButton::WheelDown ? count
+                                                                    : -count);
+        return;
+    }
     // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take
     // the same three-arm vocabulary — plain = the waveform magnification step,
     // alt = the stepped pan, ctrl = the zoom step (2026-08-27, on the 2026-08-12
@@ -2639,6 +2689,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     viewport.kick_waveform_sync();
     gui.invalidate_region(0, 0, app.width, app.height);
 
+    // THIS FORK IS THE RENDER PLAYER'S CLOSE RE-EXPRESS TOO (2026-08-28):
+    // GuiRenderPlayer::close takes the same two-arm fork verbatim to hand
+    // the engine back to the VIEW's buffer after the player's item, so a
+    // change here is a change there.
     if (going_to_target) {
         // S → T: ensure playback is bound to a current target buffer.
         // ensure_ready short-circuits to a clean rebind if no edits

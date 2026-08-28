@@ -992,11 +992,32 @@ private:
     // keyboard-modal surface that does not stop playback, so the scanner's own
     // clock-cell damage can run at tick cadence underneath it.
     //
-    // The as-painted bit refreshes only on a rect that FULLY COVERS the band —
-    // the roster publisher's own rule, and the body carries the two edges that
-    // demand it. It publishes no geometry otherwise: the press router derives
-    // its rects from the same walker this does, so there is no stash for a
-    // skipped run to strand and no reason to run unconditionally the way the
-    // floating surfaces do.
+    // It publishes no geometry: the press router derives its rects from the
+    // same walker this does, so there is no stash for a skipped run to strand.
+    // (The slot's as-painted bit is the dispatch's below, since 2026-08-28.)
     void paint_onscreen_keyboard(cairo_t* cr, const GuiRect& exposed);
+
+    // THE KEYBOARD SLOT (2026-08-28): the ONE band above the bottom row that
+    // the on-screen keyboard and the FOLDER OVERLAY (folder_overlay.h) share
+    // — the overlay replaces the keyboard there, so at most one tenant
+    // stands. This dispatch is the slot's one paint entry and THE ONE WRITER
+    // of AppState::keyboard_slot_painted_standing (the tick comparator's
+    // as-painted bit, main.cpp): it refreshes the bit only on a rect that
+    // FULLY COVERS the band — the roster publisher's own rule, for the two
+    // edges the keyboard's body used to carry (a show whose route damaged
+    // only the marker lane or the bottom row, a hide painted first by an
+    // unrelated narrow damage) — then paints whichever tenant stands.
+    // NOT exposure-gated, for the bit's sake: it runs on EVERY frame class
+    // (one platform query and two bit reads with the slot down).
+    void paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed);
+
+    // THE FOLDER OVERLAY (2026-08-28, the render player): the keyboard-slot
+    // list panel — folder / wav / up rows with their Breeze glyphs, the
+    // highlight band, the hover and pressed faces, the ring's focus outline,
+    // and the transport glyph on the playing item's row, all under the band's
+    // clip and the live scroll offset. Gated whole on folder_overlay::stands
+    // and then on its own exposure per row, as the keyboard is. It publishes
+    // no geometry: the press router walks the same row table through the same
+    // walker (folder_overlay::for_each_row / row_at).
+    void paint_folder_overlay(cairo_t* cr, const GuiRect& exposed);
 };

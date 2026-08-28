@@ -359,11 +359,28 @@ enum class Icon {
     // theme-provenance rule), so this is TextField and not IconEditFlag —
     // MinuetScales' own precedent, one entry above.
     TextField,           // Edit flag (Enter)
+
+    // THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player):
+    // places/22/folder, the Breeze dark folder every file picker on the
+    // architect's desktop paints beside a folder row (pcmanfm-qt and
+    // kdenlive's Open dialog alike), and mimetypes/22/audio-x-wav, the glyph
+    // pcmanfm-qt paints beside a wav — a bracket-shaped double note in
+    // Breeze's own #44aaeb (the file's literal fill; audio-x-generic stays
+    // the program's logo alone, the architect's ruling). Both are painted by
+    // folder_overlay rows (paint_handler.cpp) and by nothing else; the names
+    // are their Breeze file names, the theme-provenance rule.
+    Folder,              // a folder row (render / tmp / a batch / `..`)
+    AudioXWav,           // a wav row
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 49 SINCE 2026-08-28, THE FOLDER OVERLAY: 47 + folder and audio-x-wav, the
+// render player's two row glyphs — two fresh transcriptions; audio-x-wav is
+// the table's first path whose file wraps it in a group transform and its
+// own inverse (a net identity, recorded at the entry), and its arcs take the
+// interpreter's existing `A` arm.
 // 47 SINCE 2026-08-27, THE EDIT FLAG BUTTON: 46 + text-field, one fresh
 // transcription with no departure beside it — the bottom row's new verb needed
 // a glyph and no existing one said "open the editor over this text".
@@ -426,7 +443,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 47;
+inline constexpr int kIconCount = 49;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

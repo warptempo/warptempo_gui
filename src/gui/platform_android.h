@@ -90,14 +90,15 @@ public:
     bool init(int width, int height, const char* title);
 
     // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
-    // platform_wayland.h, which owns it): this backend answers 225 %, NO
-    // PLAYER, and `<externalDataPath>/projects` as the projects path. 225 is
+    // platform_wayland.h, which owns it): this backend answers 225 % and
+    // `<externalDataPath>/projects` as the projects path. 225 is
     // the architect's own answer on the glass — the scale that reproduces the
     // retired rig's 1024 logical pixels on this panel, with the whole icon row
-    // fitting (rationale at the definition, platform_android.cpp) — and the
-    // blank player is not a placeholder but the real answer: nothing on the
-    // tablet can be spawned to play a render, so `l` reports "No audio_player
-    // set" through the existing opt-out road. The projects path is the
+    // fitting (rationale at the definition, platform_android.cpp). (Until
+    // 2026-08-28 the template also stamped a blank `audio_player`, nothing on
+    // the tablet being spawnable; the key retired whole with the in-app
+    // render player, which plays a render through the product's own engine
+    // on both devices.) The projects path is the
     // activity's own absolute path stamped literally — exactly the folder the
     // sync convention pushes into — and it is read off the backend's one
     // file-scope pointer (g_android_app), which android_main parks before

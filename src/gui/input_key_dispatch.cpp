@@ -6,6 +6,7 @@
 #include "input_handler.h"
 
 #include "file_loader.h"     // source_load_dry_run (the Open prompt's Enter)
+#include "folder_overlay.h"  // the render player's key router (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
 #include "project_model.h"   // resolve_project / enumerate_project_names
 #include "prompt.h"          // GuiCloseTarget (the Open prompt's reopen)
@@ -27,8 +28,6 @@
                                    // gate's coincident-owner refusal)
 
 #include <fcntl.h>
-#include <signal.h>
-#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -44,53 +43,7 @@
 #include <utility>
 #include <vector>
 
-// The child's environment for the external audio-player spawn below. POSIX
-// exposes the process environment through this global; passing it as
-// posix_spawnp's envp gives the launched player the GUI's own environment.
-extern char** environ;
-
 namespace {
-
-// Launch `player` DETACHED with `wavs` as its arguments, searching $PATH so a
-// bare binary name (e.g. `audacious`) works and an absolute path works too.
-// Fire-and-forget: the GUI neither tracks nor waits on the child (SIGCHLD is
-// SIG_IGN from startup, so it auto-reaps). The child, however, is spawned with
-// SIGCHLD AND SIGPIPE RESET TO DEFAULT (SETSIGDEF), because an ignored
-// disposition is the one signal state that SURVIVES exec: the parent's
-// SIG_IGN on SIGCHLD would give a player that waitpid()s its own
-// helper/decoder an ECHILD, breaking its sequencing, and the parent's SIG_IGN
-// on SIGPIPE (added for the clipboard write, see main.cpp) would leave the
-// player's own pipelines returning EPIPE where the ordinary tool contract is
-// death by SIGPIPE. Both are the GUI's private arrangements and neither is
-// the child's business. posix_spawnp wants a NULL-terminated
-// char* const argv[]; the backing std::strings (player and the wavs vector)
-// stay alive across the call, so const_cast'ing their c_str() pointers is safe
-// — POSIX does not modify them. Returns true iff the spawn started.
-bool spawn_audio_player(const std::string& player,
-                        const std::vector<std::string>& wavs) {
-    std::vector<char*> argv;
-    argv.reserve(wavs.size() + 2);
-    argv.push_back(const_cast<char*>(player.c_str()));
-    for (const std::string& w : wavs) {
-        argv.push_back(const_cast<char*>(w.c_str()));
-    }
-    argv.push_back(nullptr);
-
-    posix_spawnattr_t attr;
-    posix_spawnattr_init(&attr);
-    sigset_t def;
-    sigemptyset(&def);
-    sigaddset(&def, SIGCHLD);
-    sigaddset(&def, SIGPIPE);
-    posix_spawnattr_setsigdefault(&attr, &def);
-    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF);
-
-    pid_t pid = 0;
-    const int rc = posix_spawnp(&pid, player.c_str(), nullptr, &attr,
-                                argv.data(), environ);
-    posix_spawnattr_destroy(&attr);
-    return rc == 0;
-}
 
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
@@ -449,6 +402,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // navigation. Bare-exact, exactly the dispatch arm's own spelling.
     const bool is_add_to_selection =
         (!ctrl && !shift && !alt && key == GuiKeys::K);
+    // BARE `l` — THE RENDER PLAYER (2026-08-28) — is admitted on the header's
+    // own standard: it plays a rendered wav through the engine and authors
+    // nothing; the player's one authoring act, the Load in place button,
+    // refuses on a locked tab inside the player (the lock's rule, at the act).
+    // Bare `'` stays BLOCKED: its purpose outside the `h` view is the same
+    // player, but its name is the load's and a locked tab keeps refusing it.
+    const bool is_play_renders =
+        (!ctrl && !shift && !alt && key == GuiKeys::L);
     // BARE `/` IS BLOCKED and is not admitted by any entry here: it opens the
     // measure EDITOR, and a measure is serialized content. (Shift+`/` was the
     // score-video jump's lock-legal admission from 2026-08-20 until the
@@ -476,7 +437,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
-             is_add_to_selection);
+             is_add_to_selection || is_play_renders);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------
@@ -3373,6 +3334,21 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((app.prompt.active || modal_dialog_editor_active()) &&
         modal_dialog_focus_live() >= 0)
         return false;
+    // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
+    // highlight walk (Up/Down), the seeks (Left/Right) and the item walk
+    // (Page Up/Down) — and nothing else does: Enter and Space are the
+    // modal's one-shot press or the open/play acts, the closers and the load
+    // chord are one-shot commands, and the ring's Tab repeats through the
+    // arm below exactly as every ring's does. A prompt over the player is
+    // the prompt's own answer, which the arm above and the blanket below
+    // already give.
+    if (app.render_player.active && !app.prompt.active) {
+        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
+        return !mods.ctrl && !mods.shift && !mods.alt &&
+               (key == GuiKeys::Left || key == GuiKeys::Right ||
+                key == GuiKeys::Up || key == GuiKeys::Down ||
+                key == GuiKeys::PageUp || key == GuiKeys::PageDown);
+    }
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
     // one-shot, because a held response key repeating is the destructive shape
@@ -4072,16 +4048,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     return false;
 }
 
-// Identify a render entry by its path relative to tmp/ —
-// `<batch_dir>/<basename>.wav` — always folder-qualified. One path per file,
-// so the id is unique by filesystem construction; Tab autocomplete then
-// discriminates on the short leading batch-folder name instead of deep value
-// decimals inside near-identical cell basenames, and the painted
-// `Load: <projects_path>/<name>/tmp/<id>` line is the entry's real on-disk path. The `'`
-// load editor resolves the typed identifier against these strings.
-static std::string render_entry_id(const AppState::RenderEntry& e) {
-    return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
-}
+// (render_entry_id — the entry's `<batch_dir>/<basename>.wav` spelling —
+// moved to renders_dir.h 2026-08-28 when the render player became its second
+// reader.)
 
 // -- THE RECIPE APPLY, the two sidecar load-in-places' one body -------
 //
@@ -4961,31 +4930,49 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     if (!dlg.valid || dlg.buttons.empty()) return false;
     if (!modal_dialog_stash_current()) return false;
     const bool prompt_up = app.prompt.active;
+    // THE RENDER PLAYER'S RING (architect R9, 2026-08-28) is [LIST, buttons…]:
+    // the folder overlay's list is one member, standing where an editor's
+    // field stands (-1) with one difference — the player OPENS with the ring
+    // NOWHERE (-1 and `list_focused` false), and the first Tab lands on the
+    // list. Landing there changes nothing visible (Up/Down walk the
+    // highlight either way) and only what a bare Enter means. Left/Right are
+    // NOT the ring's here: they are the seeks, the car's rewind and
+    // fast-forward, on a button or off it.
+    const bool player_up = !prompt_up && app.render_player.active;
+    const bool on_list   = player_up && app.folder_overlay.list_focused;
     const int n = static_cast<int>(dlg.buttons.size());
     const int at = (app.modal_dialog_focus >= 0 &&
                     app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
 
-    int next = at;
+    int  next      = at;
+    bool list_next = on_list;
     if (tab_shape == ModalRingTab::Forward) {
         // The field is a stop only on an editor dialog, which is the one
-        // place -1 is a place to come back to.
-        if (at < 0)            next = 0;
+        // place -1 is a place to come back to — and the player's list is
+        // that place for the player, reached first from nowhere.
+        if (player_up && at < 0 && !on_list) { next = -1; list_next = true; }
+        else if (at < 0)       { next = 0; list_next = false; }
         else if (at + 1 < n)   next = at + 1;
-        else                   next = prompt_up ? 0 : -1;
+        else                   { next = prompt_up ? 0 : -1;
+                                 list_next = player_up; }
     } else if (tab_shape == ModalRingTab::Reverse) {
         // The exact inverse of the forward arm — the same stops in the same
         // order, walked the other way, with the same wrap: on an editor
         // field -> last button -> ... -> first button -> field, on a prompt
-        // the buttons alone, wrapping. (The prompt's `at < 0` arm below is a
+        // the buttons alone, wrapping, on the player list -> last button ->
+        // ... -> first button -> list. (The prompt's `at < 0` arm below is a
         // cold answer only: a standing prompt always has a focused button,
         // assigned at its raise.)
-        if (at < 0)            next = n - 1;
+        if (at < 0)            { next = n - 1; list_next = false; }
         else if (at > 0)       next = at - 1;
-        else                   next = prompt_up ? n - 1 : -1;
+        else                   { next = prompt_up ? n - 1 : -1;
+                                 list_next = player_up; }
     } else if (key == GuiKeys::Right) {
+        if (player_up) return false;              // the player's seek
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? 0 : (at + 1) % n;
     } else if (key == GuiKeys::Left) {
+        if (player_up) return false;              // the player's seek
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? n - 1 : (at + n - 1) % n;
     } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
@@ -5031,6 +5018,13 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // landing back on an editor's field carries none.
         app.modal_dialog_focus_active = next >= 0;
         viewport.invalidate_rect(dlg.box);
+    }
+    // THE PLAYER'S LIST BIT, written on the same walk: the highlight's
+    // outline says which strength the list has (the accent while the ring is
+    // on it, the passive line otherwise), so the band repaints with it.
+    if (player_up && app.folder_overlay.list_focused != list_next) {
+        app.folder_overlay.list_focused = list_next;
+        viewport.invalidate_rect(folder_overlay::surface_rect(app));
     }
     return true;
 }
@@ -5805,42 +5799,174 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `l` (no modifiers): "Listen to renders" — launch the external audio
-    // player (the audio_player setting, default "audacious") with every
-    // rendered wav under <source parent>/tmp/, in the numeric order
-    // enumerate_render_entries returns them. THE BATCH CELLS ALONE: the
-    // deliverable in `render/` is auditioned by the target view, so this walk
-    // has never reached it and does not now. Fire-and-forget; the GUI's own
-    // playback is unaffected. The modal / editor / read-only gates in on_key
-    // run before this handler, so `l` is inert while any of them owns the
-    // keyboard (like p/i/m). An explicitly-blank player (the deliberate
-    // opt-out) or an empty render set reports a one-line bottom-strip status
-    // and does nothing.
+    // `l` (no modifiers): "Play renders" — THE RENDER PLAYER (architect
+    // design 2026-08-28, retiring the external `audio_player` spawn whole):
+    // the in-app player over the project's `render/` and `tmp/` folders,
+    // through the product's own engine on both devices. TWO PRODUCERS, ONE
+    // ROUTE: this key and the icon row's Play renders button, which
+    // synthesizes exactly this bare chord. The modal / editor / `h` /
+    // loading gates in on_key run before this handler, so `l` is inert while
+    // any of them owns the keyboard; inside the player the key is the mode's
+    // own closer (route_render_player_key) and never reaches here. "No
+    // renders to play" is the opener's one status refusal.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
-        if (app.audio_player.empty()) {
-            app.transient_status_message = "No audio_player set";
-            viewport.invalidate_status_chain_area();
-            return true;
-        }
-        std::vector<AppState::RenderEntry> list =
-            renders_dir.enumerate_render_entries();
-        if (list.empty()) {
-            app.transient_status_message = "No renders to play";
-            viewport.invalidate_status_chain_area();
-            return true;
-        }
-        std::vector<std::string> wavs;
-        wavs.reserve(list.size());
-        for (const auto& e : list) wavs.push_back(e.wav_path.string());
-        if (!spawn_audio_player(app.audio_player, wavs)) {
-            std::fprintf(stderr,
-                "warptempo_gui: Could not launch audio_player '%s'\n",
-                app.audio_player.c_str());
-        }
+        toggle_render_player();
         return true;
     }
 
     return false;
+}
+
+// -- THE RENDER PLAYER'S KEYBOARD HALF (2026-08-28) ----------------------------
+//
+// The contracts are at the declarations (input_handler.h); the acts are
+// GuiRenderPlayer's (render_player.h). What lives here is the routing.
+
+void GuiInputHandler::toggle_render_player() {
+    if (app.render_player.active) {
+        render_player.close();
+        return;
+    }
+    (void)render_player.open();
+}
+
+bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    const bool bare  = !ctrl && !shift && !alt;
+
+    // THE TWO FALL-THROUGHS: Ctrl+S saves with the player standing (no
+    // transport is touched); Ctrl+Q closes the player FIRST and lets the
+    // ordinary quit road run on the ordinary state.
+    if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+        render_player.close();
+        return false;
+    }
+
+    // THE RING: Tab / Shift+Tab walk [list, buttons…] through the one modal
+    // ring route, whose player arm owns the list's membership.
+    if (route_modal_dialog_focus_key(key, mods)) return true;
+
+    // A RING-FOCUSED BUTTON takes Enter and Space as its own press
+    // (press-at-press, commit-at-release — the modal's own rule, the route
+    // above already armed it and returned true). Reaching here with the
+    // focus on a button means the key was not one of the ring's, so the
+    // player's vocabulary below applies to it; Left/Right are the seeks even
+    // then, deliberately — the player's ring has no Left/Right walk, since
+    // those keys are the car's rewind and fast-forward.
+
+    if (!bare) return true;   // every other modified chord: consumed
+
+    const int highlight = app.folder_overlay.highlight_row;
+    switch (key) {
+        case GuiKeys::Escape:
+        case GuiKeys::L:
+            render_player.close();
+            return true;
+        case GuiKeys::Apostrophe:
+            render_player_load_in_place();
+            return true;
+        case GuiKeys::Return:
+        case GuiKeys::KpEnter:
+            // With no button focused, Enter OPENS the highlight.
+            if (mods.synthesized_repeat) return true;
+            render_player.open_row(highlight);
+            return true;
+        case GuiKeys::Space:
+            if (mods.synthesized_repeat) return true;
+            render_player.play_button_act();
+            return true;
+        case GuiKeys::Up:
+            render_player.move_highlight(-1);
+            return true;
+        case GuiKeys::Down:
+            render_player.move_highlight(+1);
+            return true;
+        case GuiKeys::Left:
+            render_player.seek_by(-render_player.seek_step_frames());
+            return true;
+        case GuiKeys::Right:
+            render_player.seek_by(+render_player.seek_step_frames());
+            return true;
+        case GuiKeys::Home:
+            render_player.home();
+            return true;
+        case GuiKeys::BackSpace:
+            render_player.up();
+            return true;
+        case GuiKeys::PageUp:
+            render_player.previous();
+            return true;
+        case GuiKeys::PageDown:
+            render_player.next();
+            return true;
+        default:
+            return true;   // consumed
+    }
+}
+
+void GuiInputHandler::render_player_load_in_place() {
+    if (!app.render_player.active) return;
+    if (app.prompt.active) return;
+    // THE LOCK'S SILENT REFUSAL: a load in place writes the marker stores and
+    // the engine block, exactly what the read-only tab protects. The button
+    // wears no disabled face by ruling, so the refusal is the act's.
+    if (active_view_state(app).read_only) return;
+    // Running-render guard, the `'` opener's own: the load wipes tmp/, which
+    // must never race a batch publishing into it.
+    if (app.queue_running || app.pending_archival.armed) {
+        app.transient_status_message = "Render running; Esc cancels it";
+        viewport.invalidate_status_chain_area();
+        return;
+    }
+    const AppState::RenderEntry* entry = render_player.highlighted_entry();
+    if (entry == nullptr) {
+        app.transient_status_message = "Only batch renders load in place";
+        viewport.invalidate_status_chain_area();
+        return;
+    }
+    // A modal surface is opening over a possibly live transport: PAUSE it
+    // through the player's own pause (which takes the one stop body through
+    // the player's fork and keeps the resume point) — the recorded exception
+    // at stop_playback_for_modal_open.
+    if (app.render_player.transport_live) render_player.toggle_pause();
+    app.render_player.pending_load = *entry;
+    // THE CONFIRMATION (R15): the entry's id in the load editor's own
+    // spelling, OK / Cancel — Cancel the Escape sentinel LAST, so the raise's
+    // passive focus and a bare Enter answer the non-destructive way every
+    // prompt does; `o` is OK's letter. Through PromptState::present, the one
+    // raise route, so the painted gate holds.
+    app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
+                       {'o', '\x1b'},
+                       {"OK", "Cancel"},
+                       DialogTrigger::LOAD_IN_PLACE_CONFIRM);
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::confirm_render_player_load() {
+    if (!app.render_player.active || !app.render_player.pending_load) return;
+    // Copied before the act: its tail wipes tmp/, and the player's close
+    // resets the slot.
+    const AppState::RenderEntry entry = *app.render_player.pending_load;
+    app.render_player.pending_load.reset();
+    if (load_render_entry_in_place(entry)) {
+        // SUCCESS CLOSES THE PLAYER: the close's re-express rebinds the
+        // view's buffer (the load's own trigger() already dispatched the
+        // target preview where the view is target), then frees the item.
+        render_player.close();
+        return;
+    }
+    // The act's own cause is on stderr (its every refusal arm names it); the
+    // player has no field to red-flash, so the status line says the one
+    // thing it can.
+    app.transient_status_message = "Load refused";
+    viewport.invalidate_status_chain_area();
+}
+
+void GuiInputHandler::cancel_render_player_load() {
+    app.render_player.pending_load.reset();
 }
 
 // Tab-key family. See the declaration for the chord list.

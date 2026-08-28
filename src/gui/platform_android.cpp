@@ -360,7 +360,6 @@ GuiPlatform::~GuiPlatform() {
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 225;
-    cfg.audio_player  = "";
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

@@ -22,15 +22,15 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// three editable ones the per-device config carries — gui_scale, audio_player
-// and projects_repo, which left the sidecar 2026-08-27 and kept this surface
+// two editable ones the per-device config carries — gui_scale and
+// projects_repo, which left the sidecar 2026-08-27 and kept this surface
 // (the config's other two, projects_path and last_project, are the file's and
-// the program's own and have no editor). It funnels each key into the SAME
-// code its gesture uses (no parallel writers). commit() routes the typed key
-// through:
-// 1. audio_player (a launcher path with no gesture) and projects_repo (the
-//    projects-home repository name, likewise gesture-less): set directly.
-//    BOTH sets WRITE THE DEVICE CONFIG — that commit is each one's whole
+// the program's own and have no editor; `audio_player`, the third editable
+// device key, retired whole 2026-08-28 with the in-app render player). It
+// funnels each key into the SAME code its gesture uses (no parallel writers).
+// commit() routes the typed key through:
+// 1. projects_repo (the projects-home repository name, gesture-less): set
+//    directly. The set WRITES THE DEVICE CONFIG — that commit is its whole
 //    persist, Ctrl+S carrying only the sidecar keys.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / per-tab trim /

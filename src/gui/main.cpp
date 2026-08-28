@@ -38,6 +38,8 @@
 #include "renders_dir.h"
 #include "active_views.h"
 #include "ab_audition.h"
+#include "folder_overlay.h"
+#include "render_player.h"
 #include "save_ops.h"
 #include "selection.h"
 #include "settings_editor.h"
@@ -1028,12 +1030,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // THE DEVICE CONFIG'S LIVE VALUES, mirrored into this project's AppState
     // from the loop's one struct, and the struct itself seated by pointer:
-    // the three editable keys keep their AppState fields (their readers did
+    // the two editable keys keep their AppState fields (their readers did
     // not move), and every commit writes both the field and the struct, then
     // the file (the callers inventory at write_device_config, device_config.h).
     app.device_config = &device_config;
     app.gui_scale     = device_config.gui_scale;
-    app.audio_player  = device_config.audio_player;
     app.projects_repo = device_config.projects_repo;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
@@ -1162,6 +1163,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRendersDir renders_dir(app);
+    // THE RENDER PLAYER (2026-08-28): after renders_dir and target_render,
+    // both of which it holds; before the input handler, which holds it. Its
+    // tick is the on_tick fork below, its buffer dies with this AppState
+    // (after playback.shutdown at the session tail, so the engine never
+    // outlives what it is bound to).
+    GuiRenderPlayer render_player(app, audio, playback, playback_lifecycle,
+                                  viewport, target_render, renders_dir);
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
@@ -1188,6 +1196,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   warpops, phase_resets, marker_drag,
                                   flag_editor,
                                   renders_dir, active_views, ab_audition,
+                                  render_player,
                                   phase_reset_propagate,
                                   async_renderer,
                                   history_commit_worker,
@@ -1202,6 +1211,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // handle_active_audio_view_toggle / apply_gui_scale / commit_trim_mutation
     // through it, so a `:`-typed GUI key funnels into the same gesture code.
     settings_editor.input = &input_handler;
+    // The prompt's back-pointer, for the render player's load confirmation
+    // (its one reader is recorded at the member, prompt.h).
+    prompt.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in
     // target view through handle_active_audio_view_toggle, the chokepoint that
     // lives on the input handler (constructed after the propagate, which the
@@ -1686,6 +1698,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // is at clear_modal_dialog_press).
         input_handler.clear_modal_dialog_press();
         input_handler.clear_dropdown_pointer_state();
+        // THE RENDER PLAYER'S TWO ARMS go on the same edge (2026-08-28) — the
+        // overlay's row press and the scrub's marker drag, both acts that
+        // have not happened yet and both dropped uncommitted here exactly as
+        // at the button-lost edge (clear_release_time_press_arms).
+        input_handler.clear_folder_overlay_press();
+        input_handler.clear_player_scrub_drag();
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook
@@ -2125,9 +2143,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // screen, and every frame that does paint runs the owner in the
         // PRE-PAINT hook below, which is strictly earlier and strictly more
         // often than this (the caller list is at reconcile_session).
+        // THE SLOT HAS TWO TENANTS SINCE 2026-08-28 (the folder overlay
+        // replaces the keyboard in the same band while the render player
+        // stands), so the live answer is the OR of the two standing
+        // predicates against the ONE as-painted bit the slot's paint dispatch
+        // writes (AppState::keyboard_slot_painted_standing).
         {
-            const bool kb_live = onscreen_keyboard::stands(app, gui);
-            if (kb_live != app.onscreen_keyboard.painted_standing) {
+            const bool slot_live = onscreen_keyboard::stands(app, gui) ||
+                                   folder_overlay::stands(app);
+            if (slot_live != app.keyboard_slot_painted_standing) {
                 viewport.invalidate_waveform_area();
                 viewport.invalidate_rect(onscreen_keyboard::surface_rect(app));
             }
@@ -2269,6 +2293,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the modal it pumped.)
 
         if (app.loading || audio.total_frames() <= 0) return;
+
+        // THE RENDER PLAYER'S TICK (2026-08-28), forked at the head: while
+        // the mode stands the engine plays the player's item, not the
+        // project's audio — the scanner never runs, the audition sequence
+        // is cleared at the open and cannot arm — so the player's own tick
+        // takes the natural end (through the one stop body, the fence
+        // first) and the per-position damage of its clock and scrub, and
+        // nothing below this line applies.
+        if (app.render_player.active) {
+            render_player.tick();
+            return;
+        }
 
         // THE A/B AUDITION'S REST DEADLINE, sampled here and ABOVE the
         // playing-only guard below — a rest has nothing playing and no scanner
@@ -2421,6 +2457,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         onscreen_keyboard::reconcile_session(app, gui, viewport);
 
         if (app.loading || audio.total_frames() <= 0) return;
+        // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
+        // project's: the scanner sampling below would move the waveform's
+        // scanner off a buffer the waveform does not show. The player's
+        // position is read by its painter and damaged by its own tick.
+        if (app.render_player.active) return;
         if (!playback.is_playing()) return;
 
         // (The loop-wrap predictor resync that stood here is GONE with all
@@ -2630,10 +2671,9 @@ int gui_main(const char* argument) {
     // lingers as a zombie; set once here, never per-launch.
     //
     // THE WHOLE ROSTER OF FORKING SUBSYSTEMS, and every one of them is written
-    // TO this disposition rather than against it:
-    //   * THE EXTERNAL AUDIO PLAYERS the `l` ("Listen to renders") command
-    //     spawns (spawn_audio_player, input_key_dispatch.cpp) — fire and
-    //     forget, nothing waited on, nothing decided from a status.
+    // TO this disposition rather than against it (the external audio player
+    // `l` used to spawn left the roster 2026-08-28 — `l` now plays a render
+    // in-process through the render player, render_player.h):
     //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
     //     through two fenced entry points — reads for the diff and the walk,
     //     and the commit act's `add`/`commit`/`push` — and, because this
@@ -2657,11 +2697,13 @@ int gui_main(const char* argument) {
     // ignored that loop sees the short/failed write it is already written for
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own. THE SPAWNED
-    // PLAYERS DO NOT INHERIT THIS: the launcher resets SIGPIPE to default
-    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp),
-    // since an ignored disposition survives exec
-    // and would change the child's own semantics.
+    // no SIGPIPE-dependent behaviour of its own. THE CHILDREN INHERIT IT: an
+    // ignored disposition survives exec, and the roster's two spawners (git
+    // through history_diff.cpp, gio through trash_directory) run the child
+    // with the parent reading its output to the end or discarding it, so the
+    // child never meets a closed pipe. (The one spawner that reset SIGPIPE
+    // and SIGCHLD to default for its child — the external audio player's —
+    // retired 2026-08-28 with the `l` spawn.)
     std::signal(SIGPIPE, SIG_IGN);
 
     // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled

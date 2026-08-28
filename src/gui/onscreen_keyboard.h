@@ -314,20 +314,33 @@ inline int surface_height_px() {
 
 // -- Standing ----------------------------------------------------------------
 
-// DOES THE SURFACE STAND? Two terms and no third: the PLATFORM must want a
-// painted keyboard (false forever on Wayland — the ruling is at that backend's
-// wants_onscreen_keyboard), and one of the EIGHT editors must own the keyboard.
-// EVERY paint site and EVERY hit site in the product asks this and nothing
-// else, which is what makes the laptop build's behaviour identical by
-// construction rather than by care.
+// DOES THE SURFACE STAND? Three terms: the PLATFORM must want a painted
+// keyboard (false forever on Wayland — the ruling is at that backend's
+// wants_onscreen_keyboard), one of the EIGHT editors must own the keyboard,
+// and THE FOLDER OVERLAY MUST NOT STAND (2026-08-28, the render player: the
+// overlay REPLACES the keyboard in this band — architect R3 — so the two
+// never both stand). EVERY paint site and EVERY hit site in the product asks
+// this and nothing else, which is what makes the laptop build's behaviour
+// identical by construction rather than by care.
 //
 // The editor term is text_editor_session() (app_state.h) rather than
 // GuiInputHandler::keyboard_modal_editor_active because the painter has no
 // input handler to ask; the two are the same set by construction — that
 // predicate delegates to any_text_editor_active, which is exactly the eight
 // this session id is taken from.
+//
+// THE THIRD TERM IS INERT TODAY AND LOAD-BEARING FOR THE PICKER: the render
+// player raises no text editor (its load confirmation is a PROMPT), so no
+// editor can own the keyboard while the overlay stands and the term never
+// decides; the Open project picker — the overlay's designed second content —
+// stands OVER the Open prompt's editor, and there this term is what keeps the
+// keyboard from painting under the list. It reads the mode bit directly
+// rather than folder_overlay::stands because that header includes this one;
+// the two are the same expression, and the picker's bit joins both when it
+// lands.
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
-    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
+    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0 &&
+           !a.render_player.active;
 }
 
 // -- The surface's rect ------------------------------------------------------
@@ -409,14 +422,18 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
     viewport.invalidate_rect(surface_rect(a));
 }
 
-// THE WAVEFORM'S PAINTED RECT — waveform_area minus this surface's band, and
-// the ONE OWNER of the rule that THE WAVEFORM IS NOT PAINTED WHERE THIS PAINTS.
-// The surface's ground is fully opaque and every waveform pass runs BEFORE it
-// (the authoritative paint order, paint_handler.cpp), so a waveform pixel under
-// the band is work whose result is thrown away in the same frame: a narrow
-// scanner damage column crossing the band would otherwise pay the plate blit,
-// the region ink and every vertical over the band's whole height, at the
-// panel's own tick rate.
+// THE WAVEFORM'S PAINTED RECT — waveform_area minus the KEYBOARD SLOT's band
+// when EITHER tenant stands (this keyboard, or the folder overlay that
+// replaces it in the same band — folder_overlay.h, whose standing predicate
+// is read here directly rather than through that header, which includes this
+// one), and the ONE OWNER of the rule that THE WAVEFORM IS NOT PAINTED WHERE
+// THE SLOT PAINTS. Both tenants' grounds are fully opaque and every waveform
+// pass runs BEFORE them (the authoritative paint order, paint_handler.cpp),
+// so a waveform pixel under the band is work whose result is thrown away in
+// the same frame: a narrow scanner damage column crossing the band would
+// otherwise pay the plate blit, the region ink and every vertical over the
+// band's whole height, at the panel's own tick rate. ONE GATE, ONE CLIP for
+// both tenants.
 //
 // IT IS THE EXPOSURE GATE AND THE CLIP, NEVER A GEOMETRY INPUT: the column
 // mapping and every hit test keep reading waveform_area itself (the displayed
@@ -433,7 +450,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // edges, not areas).
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
     const GuiRect area = waveform_area(a);
-    if (!stands(a, gui)) return area;
+    if (!stands(a, gui) && !a.render_player.active) return area;
     const GuiRect surf = surface_rect(a);
     if (surf.w <= 0 || surf.h <= 0) return area;
     const int hidden = (area.y + area.h) - surf.y;

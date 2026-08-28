@@ -134,9 +134,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/viewport.cpp
     src/gui/selection.cpp
     src/gui/settings_io.cpp
-    # THE PER-DEVICE PREFERENCES FILE (gui_scale + audio_player, 2026-08-27).
-    # GUI-ONLY by construction: warptempo_cli never read either key, and the
-    # file describes the panel in front of the user rather than the piece.
+    # THE PER-DEVICE PREFERENCES FILE (2026-08-27: gui_scale, projects_path,
+    # projects_repo, last_project; audio_player retired 2026-08-28). GUI-ONLY
+    # by construction: warptempo_cli never read any of them, and the file
+    # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
@@ -171,6 +172,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/settings_editor.cpp
     src/gui/active_views.cpp
     src/gui/ab_audition.cpp
+    # THE RENDER PLAYER (2026-08-28): the in-app player over the project's
+    # output folders, on the one playback engine. GUI-ONLY like every
+    # painting and playback concern; it calls the audio_io WAV reader.
+    src/gui/render_player.cpp
     src/gui/target_render.cpp
     src/gui/render_cache.cpp
     src/gui/paint_handler.cpp

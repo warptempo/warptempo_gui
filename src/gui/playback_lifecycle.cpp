@@ -28,6 +28,25 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // which reads the phase before calling here and advances after). The
     // complete edge inventory is at GuiAuditionSequence (app_state.h).
     clear_audition_sequence(app);
+    // THE RENDER PLAYER'S FORK, INSIDE THE ONE STOP BODY (2026-08-28): the
+    // player's transport is a session over ITS OWN buffer with no scanner and
+    // no waveform picture, so its "a session stood" bit is `transport_live`
+    // (the scanner flag's mirror) and its teardown is that bit cleared plus
+    // the modal row damaged — the play/pause glyph, the clock and the scrub
+    // all read it. The FENCE is the same: playback.stop() proves the callback
+    // is out of the item's buffer before a rebind or a free, exactly as it
+    // proves it out of the source's. Every player stop — the pause, the
+    // natural end, the close, the rebind ahead of the next item — comes here
+    // and nowhere else, which is what keeps the keyboard stop rule and the
+    // fence-before-rebind ordering one body.
+    if (app.render_player.active) {
+        if (!playback.is_playing() && !app.render_player.transport_live)
+            return;
+        playback.stop();
+        app.render_player.transport_live = false;
+        viewport.invalidate_modal_dialog_area();
+        return;
+    }
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
     playback.stop();
     app.playhead_scanner_active = false;

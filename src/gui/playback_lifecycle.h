@@ -75,11 +75,19 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-09 — SIX sites:
-    // GuiSettingsEditor::open (settings_editor.cpp), the `'` load editor,
-    // the `m` bpm editor and the history view's COMMIT-TITLE editor
-    // (input_key_dispatch.cpp), and the TWO prompt opens
-    // (prompt.cpp: unsaved, error notice). It went seven to six on 2026-08-09,
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-28 — NINE
+    // sites: GuiSettingsEditor::open (settings_editor.cpp); in
+    // input_key_dispatch.cpp the `'` load editor (open_load_editor), the `m`
+    // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
+    // (open_history_commit_editor), the MEASURE PASTE-OFFSET editor
+    // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT prompt
+    // (open_project_editor, 2026-08-27) — the last two had joined without
+    // this list moving, which this re-grep corrects; the TWO prompt opens
+    // (prompt.cpp: unsaved, error notice); and THE RENDER PLAYER's open
+    // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
+    // 2026-08-28; the project's audition ends where the player's transport
+    // begins, and the player's own stops all take stop_playback_if_playing
+    // through the fork inside it). It had gone seven to six on 2026-08-09,
     // when the render-library advisory prompt was deleted with the whole
     // attestation surface.
     // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
@@ -94,12 +102,17 @@ struct GuiPlaybackLifecycle {
     // The count had held across the day's earlier change by coincidence: the
     // commit-title editor replaced the history commit confirmation, so one
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
-    // ONE MODAL OPEN IS NOT A CALLER, and it is a recorded exception rather than
-    // a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
+    // TWO MODAL OPENS ARE NOT CALLERS, and each is a recorded exception rather
+    // than a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
     // (PhaseResetPropagate::open_paste_confirmation) and stops through
-    // stop_playback_if_playing directly, which is mechanically this same stop —
-    // so the RULE holds for every modal surface even though this function's
-    // caller set is not literally every opener.
+    // stop_playback_if_playing directly, which is mechanically this same stop;
+    // and the render player's LOAD_IN_PLACE_CONFIRM prompt
+    // (GuiInputHandler::render_player_load_in_place) PAUSES the player's own
+    // transport through GuiRenderPlayer::toggle_pause, which takes that same
+    // body through the player's fork — a stop that must keep the resume point
+    // the ordinary modal stop would not — so the RULE holds for every modal
+    // surface even though this function's caller set is not literally every
+    // opener.
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
     // cannot restart until the surface closes.
@@ -221,12 +234,22 @@ private:
     // delegating. Since 2026-08-26 this is a thin caller of
     // launch_playback_window below, the end being the only thing it adds.
     bool launch_playback_from(int64_t launch_pos);
-    // THE ONE LAUNCH BODY (contract at the definition): validate `start`,
-    // seed the scanner, and play [start, end). Every launch in the product
-    // ends here — the view-end launch above and the bounded audition — so the
-    // gates, the scanner seed, the follow check and the launch damage are
-    // written once. It also ends the A/B audition sequence at
-    // its head (the launch-body clear, the edge inventory at
-    // GuiAuditionSequence): a launch is a fresh session, whoever asked.
+    // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
+    // definition): validate `start`, seed the scanner, and play [start, end).
+    // Every launch OF THE PROJECT'S WAVEFORM ends here — the view-end launch
+    // above and the bounded audition — so the gates, the scanner seed, the
+    // follow check and the launch damage are written once. It also ends the
+    // A/B audition sequence at its head (the launch-body clear, the edge
+    // inventory at GuiAuditionSequence): a launch is a fresh session, whoever
+    // asked.
+    // THE PRODUCT HAS A SECOND LAUNCH BODY SINCE 2026-08-28, and it is
+    // recorded here as well as at its own head: the RENDER PLAYER's
+    // (GuiRenderPlayer::play_wav / toggle_pause / seek_to, render_player.h)
+    // plays a decoded render over ITS OWN buffer and calls playback.play
+    // directly, because everything this body seeds belongs to the project's
+    // waveform, which the player does not display — the resting playhead
+    // does not move, the scanner never runs, and the item's domain is the
+    // buffer's own. The two share the ONE STOP BODY above, which carries the
+    // player's fork.
     bool launch_playback_window(int64_t start, int64_t end);
 };

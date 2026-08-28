@@ -1,6 +1,7 @@
 #include "paint_handler.h"
 
 #include "gui_font.h"
+#include "folder_overlay.h"
 #include "icons.h"
 #include "onscreen_keyboard.h"
 #include "render.h"
@@ -5179,11 +5180,14 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
     return nullptr;
 }
 
-// "A modal owns the bottom row" — the prompt or any dialog editor. The
-// top-strip FLAG editor is deliberately absent: it is positional and
-// pointer-transparent, not a dialog, and it never takes this row.
+// "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
+// owner since 2026-08-28: its transport row takes the lane whole) or any
+// dialog editor. The top-strip FLAG editor is deliberately absent: it is
+// positional and pointer-transparent, not a dialog, and it never takes this
+// row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
+    if (app.render_player.active) return true;
     std::string prefix;
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
@@ -5515,6 +5519,11 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
     app.modal_dialog_field_hovered   = false;
+    // THE PLAYER'S RING BIT is modal face state too (2026-08-28): whether the
+    // ring's -1 means the folder overlay's list. It dies on the same edges —
+    // a prompt raised over the player and answered leaves the ring off the
+    // list, as a fresh open does.
+    app.folder_overlay.list_focused  = false;
 }
 
 } // namespace
@@ -5532,6 +5541,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.session = 0;
     dlg.box     = GuiRect{0, 0, 0, 0};
     dlg.field   = GuiRect{0, 0, 0, 0};
+    dlg.scrub   = GuiRect{0, 0, 0, 0};
+    dlg.clock   = GuiRect{0, 0, 0, 0};
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -5542,10 +5553,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // reads too (dialog_editor_to_paint, above), so the row cannot stand its
     // tenants down for a dialog this body then declines to paint.
     const bool prompt_up = app.prompt.active;
+    // THE RENDER PLAYER, the third owner (2026-08-28): under the prompt like
+    // the editors, and never live beside one (its opener refuses under any
+    // editor, its key router consumes every opener).
+    const bool player_up = !prompt_up && app.render_player.active;
     std::string prefix;
     text_editor::State* ed =
-        prompt_up ? nullptr : dialog_editor_to_paint(app, prefix);
-    if (!prompt_up && ed == nullptr) {
+        (prompt_up || player_up) ? nullptr : dialog_editor_to_paint(app, prefix);
+    if (!prompt_up && !player_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -5612,10 +5627,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
     //    row's total before anything can be placed). --
+    // A BUTTON IS A WORD OR A GLYPH (2026-08-28, the render player's row):
+    // `glyph` set means the button is the roster's own icon in a
+    // kModalBtnBoxPx SQUARE — the three transport buttons wear
+    // MediaSkipBackward, MediaPlaybackStart (swapped to MediaPlaybackStop
+    // while the transport is live, the bottom row's one-button-two-faces
+    // rule) and MediaSkipForward — while a word button keeps the label box
+    // every prompt and editor button has always had. `player_act` is the
+    // player's dispatch vocabulary; the other two stay zero/false on its
+    // buttons.
     struct DialogButtonPlan {
         std::string label;
         char        response_key = 0;
         bool        editor_ok    = false;
+        AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
+        bool        glyph        = false;
+        icons::Icon icon         = icons::Icon::MediaPlaybackStart;
+        std::string tooltip;     // the player's own; empty = the composer's
         int         w            = 0;
     };
     std::vector<DialogButtonPlan> plan;
@@ -5627,23 +5655,65 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                  ? app.prompt.response_keys[i] : 0;
             plan.push_back(std::move(b));
         }
+    } else if (player_up) {
+        // THE PLAYER'S ROW: Previous · Play/Pause · Next · Load in place ·
+        // Close — Close LAST, the escape sentinel by construction as every
+        // prompt has it (architect 2026-08-28, the revised row).
+        const bool live = app.render_player.transport_live;
+        auto glyph_button = [&](AppState::PlayerButtonAct act,
+                                icons::Icon icon) {
+            DialogButtonPlan b;
+            b.player_act = act;
+            b.glyph      = true;
+            b.icon       = icon;
+            b.tooltip    = render_player_button_hint(act, live);
+            plan.push_back(std::move(b));
+        };
+        auto word_button = [&](AppState::PlayerButtonAct act,
+                               const char* word) {
+            DialogButtonPlan b;
+            b.player_act = act;
+            b.label      = word;
+            b.tooltip    = render_player_button_hint(act, live);
+            plan.push_back(std::move(b));
+        };
+        glyph_button(AppState::PlayerButtonAct::Previous,
+                     icons::Icon::MediaSkipBackward);
+        glyph_button(AppState::PlayerButtonAct::PlayPause,
+                     live ? icons::Icon::MediaPlaybackStop
+                          : icons::Icon::MediaPlaybackStart);
+        glyph_button(AppState::PlayerButtonAct::Next,
+                     icons::Icon::MediaSkipForward);
+        word_button(AppState::PlayerButtonAct::LoadInPlace, "Load in place");
+        word_button(AppState::PlayerButtonAct::Close, "Close");
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
         // claim), button-is-its-chord.
-        plan.push_back(DialogButtonPlan{"OK", 0, true, 0});
-        plan.push_back(DialogButtonPlan{"Cancel", 0, false, 0});
+        DialogButtonPlan ok;
+        ok.label     = "OK";
+        ok.editor_ok = true;
+        plan.push_back(std::move(ok));
+        DialogButtonPlan cancel;
+        cancel.label = "Cancel";
+        plan.push_back(std::move(cancel));
     }
     int buttons_w = 0;
     for (size_t i = 0; i < plan.size(); ++i) {
-        const double lw =
-            text_shape::shape_text_run(font, plan[i].label).width_px;
-        // CEIL, NOT nearbyint: a measured run width is fractional and the box
-        // it sizes must CONTAIN the ink, so it rounds UP — rounding to nearest
-        // could clip the label's last column inside its own pads. The same
-        // round-up rule the critical chip's box takes on its ascent and descent
-        // (the status chain's paint tail), applied to a width.
-        plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
+        if (plan[i].glyph) {
+            // A glyph button is the box's own square.
+            plan[i].w = btn_h;
+        } else {
+            const double lw =
+                text_shape::shape_text_run(font, plan[i].label).width_px;
+            // CEIL, NOT nearbyint: a measured run width is fractional and the
+            // box it sizes must CONTAIN the ink, so it rounds UP — rounding
+            // to nearest could clip the label's last column inside its own
+            // pads. The same round-up rule the critical chip's box takes on
+            // its ascent and descent (the status chain's paint tail), applied
+            // to a width.
+            plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
+        }
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
     }
 
@@ -5745,6 +5815,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             redesign_baseline(font, static_cast<double>(content.y),
                               static_cast<double>(content.h)));
         cairo_restore(cr);
+    } else if (player_up) {
+        // -- THE RENDER PLAYER'S ROW (2026-08-28): the buttons FIRST at the
+        //    left pad (the transport is what the hand reaches for), then the
+        //    CLOCK, then the PLAY-SCRUB across the free width to the right
+        //    pad. The buttons stay whole and the scrub gives, floored at a
+        //    width that is still a track. --
+        dlg.owner  = AppState::ModalDialogOwner::Player;
+        buttons_x0 = cx0;
+        // The clock and the scrub are laid out and painted AFTER the button
+        // loop below, which needs to run first for the cluster's right edge;
+        // the loop's own x is what places them, so the block after it owns
+        // both.
     } else {
         // -- The editor: the label at the left pad, then the inset field,
         //    then the buttons after it. The field absorbs whatever the label
@@ -6085,14 +6167,26 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           : kRedesignLine;
         redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
                           (pressed || focused) ? &fill : nullptr, &line);
-        show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
-                      redesign_baseline(font, static_cast<double>(r.y),
-                                        static_cast<double>(r.h)),
-                      plan[i].label, kRedesignLabel);
+        if (plan[i].glyph) {
+            // THE GLYPH, the icon row's own draw: the roster's 22 px icon box
+            // centred in the 32 px button, full ink (a modal button has no
+            // disabled face by ruling).
+            const int glyph_px = scaled_px(kIconGlyphPx);
+            icons::draw(cr, plan[i].icon,
+                        static_cast<double>(r.x + (r.w - glyph_px) / 2),
+                        static_cast<double>(r.y + (r.h - glyph_px) / 2),
+                        static_cast<double>(glyph_px));
+        } else {
+            show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
+                          redesign_baseline(font, static_cast<double>(r.y),
+                                            static_cast<double>(r.h)),
+                          plan[i].label, kRedesignLabel);
+        }
         AppState::ModalDialogButton out;
         out.rect         = r;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
+        out.player_act   = plan[i].player_act;
         // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
         // ruling that took the accelerators off the labels and put the key on
         // a tooltip): the composer is the one owner of the format and of the
@@ -6100,11 +6194,114 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the very fields the click and the ring's Enter dispatch on, so a
         // button cannot advertise a key it does not send. Published with the
         // rect because the WORD is the half the pointer path cannot re-derive.
-        out.tooltip = modal_dialog_button_hint(plan[i].label,
-                                               plan[i].response_key,
-                                               plan[i].editor_ok);
+        out.tooltip = plan[i].tooltip.empty()
+                          ? modal_dialog_button_hint(plan[i].label,
+                                                     plan[i].response_key,
+                                                     plan[i].editor_ok)
+                          : plan[i].tooltip;
         dlg.buttons.push_back(out);
         x += plan[i].w;
+    }
+
+    if (player_up) {
+        // -- THE CLOCK AND THE PLAY-SCRUB, after the cluster. --
+        //
+        // THE CLOCK is the bottom row's own monospace cell said twice —
+        // `<position> / <length>` in the product's clock shape, the same
+        // face, size, cell metrics and authored offsets as the transport
+        // row's clock (paint_bottom_row_buttons_and_clock), so the digits
+        // never walk and the player's clock reads exactly as the project's.
+        // Its cell is PUBLISHED (dlg.clock) for the tick's per-position
+        // damage, beside the scrub's.
+        const int clock_x0 = x + ring + pad;
+        gui_select_font_face(cr, GuiFontFamily::Mono);
+        const double csize = clock_font_size_px();
+        cairo_set_font_size(cr, csize);
+        cairo_scaled_font_t* cfont = cairo_get_scaled_font(cr);
+        const double cell_w = clock_cell_width_px(cfont, csize);
+        const double sep_w  = text_shape::shape_text_run(cfont, " / ").width_px;
+        const int clock_w   = static_cast<int>(std::ceil(2.0 * cell_w + sep_w));
+        const double cbase  =
+            redesign_baseline(cfont, static_cast<double>(content.y),
+                              static_cast<double>(content.h)) +
+            scaled_px(kClockCellOffsetYPx);
+        const int sr = audio.sample_rate();
+        const int64_t pos = render_player_position(app, playback);
+        const int64_t len = app.render_player.frames;
+        auto seconds_of = [sr](int64_t frames) {
+            return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
+                          : 0.0;
+        };
+        const std::string clock_text =
+            format_timestamp(seconds_of(pos)) + " / " +
+            format_timestamp(seconds_of(len));
+        // The cell, clipped to the lane's right pad on a narrow window — the
+        // scrub then has no room and publishes zero, the honest answer.
+        const int clock_right = std::min(clock_x0 + clock_w, cx1);
+        if (clock_right > clock_x0) {
+            cairo_save(cr);
+            cairo_rectangle(cr, clock_x0, content.y, clock_right - clock_x0,
+                            content.h);
+            cairo_clip(cr);
+            show_row_text(cr, cfont, static_cast<double>(clock_x0), cbase,
+                          clock_text, kRedesignLabel);
+            cairo_restore(cr);
+            dlg.clock = GuiRect{clock_x0 - 1, content.y,
+                                clock_right - clock_x0 + 2, content.h};
+        }
+        // The sans face back for anything after (nothing today; the restore
+        // below closes the body either way).
+        select_bottom_row_face(cr);
+
+        // THE PLAY-SCRUB: a track from the clock's right pad to the lane's
+        // right pad less the ring, the field's height and ground under the
+        // dropdown's border grey (kRedesignTabLine), the PLAYED portion in
+        // the accent, and the MARKER — a 1 px column of the ink the whole
+        // height of the track — at the item position, or at the drag's own
+        // x while the marker is being dragged (the seek commits at the
+        // release; the sound continues where it was). NOT a button: it takes
+        // no face, no focus and no tooltip. Published as dlg.scrub — the one
+        // rect the press router and the mapping (render_player_scrub_x_of /
+        // _frame_at, app_state.h) read.
+        const int scrub_x0 = clock_right + pad;
+        const int scrub_x1 = cx1 - ring;
+        const int scrub_h  = scaled_px(kModalFieldHeightPx);
+        const int scrub_y  = content.y + (content.h - scrub_h) / 2;
+        if (scrub_x1 - scrub_x0 >= scaled_px(40.0, 1) && scrub_h > 2) {
+            const GuiRect track{scrub_x0, scrub_y, scrub_x1 - scrub_x0, scrub_h};
+            dlg.scrub = track;
+            const int bord = scaled_px(kModalFieldBorderPx, 1);
+            redesign_face_box(cr, track.x, track.y, track.w, track.h, bord,
+                              rad, &kModalFieldGround, &kRedesignTabLine);
+            const AppState::RenderPlayer& rp = app.render_player;
+            if (rp.frames > 0) {
+                const int marker_x =
+                    rp.scrub.armed ? rp.scrub.marker_x
+                                   : render_player_scrub_x_of(app, pos);
+                cairo_save(cr);
+                redesign_rounded_rect_path(
+                    cr, static_cast<double>(track.x + bord),
+                    static_cast<double>(track.y + bord),
+                    static_cast<double>(track.w - 2 * bord),
+                    static_cast<double>(track.h - 2 * bord),
+                    rad - static_cast<double>(bord));
+                cairo_clip(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                     kRedesignAccent.b);
+                cairo_rectangle(cr, track.x + bord, track.y + bord,
+                                std::max(0, marker_x - (track.x + bord)),
+                                track.h - 2 * bord);
+                cairo_fill(cr);
+                cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                     kRedesignLabel.b);
+                cairo_rectangle(cr, marker_x, track.y + bord,
+                                std::max(1, scaled_px(1.0, 1)),
+                                track.h - 2 * bord);
+                cairo_fill(cr);
+                cairo_restore(cr);
+            }
+        }
     }
 
     // THE MODAL'S SURFACE IS THE LANE — border-top included, because that is
@@ -6177,31 +6374,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // is no second list of what a key looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
-    // THE AS-PAINTED BIT, AND IT DESCRIBES PIXELS — the roster publisher's own
-    // rule (publish_button_face, above), taken for its own reason. The tick
-    // comparator (main.cpp) pays this surface's show and hide off the drift
-    // between the live answer and this bit, and on_redraw runs ONCE PER DAMAGE
-    // RECT under a clip to exactly that rect, so a bit stamped from a frame
-    // whose rect never touched the band would be a claim about pixels this pass
-    // did not write. Both edges break on that:
-    //   * the SHOW — an editor opens, its own route damages the marker lane or
-    //     the bottom row and nothing else, and a bit stamped true there would
-    //     let the comparator see agreement while the band still shows waveform;
-    //   * the HIDE — the editor closes, some unrelated narrow damage paints
-    //     first, and a bit stamped false there would leave the keyboard's
-    //     pixels standing with nothing left to erase them.
-    // So it refreshes only on a rect that FULLY COVERS the band, which is the
-    // frame the comparator's own damage produces; every other frame leaves it
-    // alone and the drift survives to be repaired.
+    // (The slot's as-painted bit is written by paint_keyboard_slot, the
+    // dispatch that calls this — the keyboard shares its band with the folder
+    // overlay since 2026-08-28 and one bit describes the slot.)
     const bool    standing = onscreen_keyboard::stands(app, gui);
     const GuiRect surf     = onscreen_keyboard::surface_rect(app);
-    const bool    covers_band =
-        surf.w > 0 && surf.h > 0 &&
-        exposed.x <= surf.x && exposed.y <= surf.y &&
-        exposed.x + exposed.w >= surf.x + surf.w &&
-        exposed.y + exposed.h >= surf.y + surf.h;
-    if (covers_band) app.onscreen_keyboard.painted_standing = standing;
-
     if (!standing) return;
     if (surf.w <= 0 || surf.h <= 0) return;
     // A PARTIAL exposure still paints, and correctly — the clip bounds it. Only
@@ -6296,6 +6473,181 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
+        });
+
+    cairo_restore(cr);
+}
+
+// -- GuiPaintHandler::paint_keyboard_slot ----------------------------------
+
+void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
+    // THE AS-PAINTED BIT, AND IT DESCRIBES PIXELS — the roster publisher's own
+    // rule (publish_button_face, above), taken for its own reason. The tick
+    // comparator (main.cpp) pays the slot's show and hide off the drift
+    // between the live answer and this bit, and on_redraw runs ONCE PER DAMAGE
+    // RECT under a clip to exactly that rect, so a bit stamped from a frame
+    // whose rect never touched the band would be a claim about pixels this pass
+    // did not write. Both edges break on that:
+    //   * the SHOW — an editor or the player opens, its own route damages the
+    //     marker lane or the bottom row and nothing else, and a bit stamped
+    //     true there would let the comparator see agreement while the band
+    //     still shows waveform;
+    //   * the HIDE — the tenant closes, some unrelated narrow damage paints
+    //     first, and a bit stamped false there would leave the tenant's
+    //     pixels standing with nothing left to erase them.
+    // So it refreshes only on a rect that FULLY COVERS the band, which is the
+    // frame the comparator's own damage produces; every other frame leaves it
+    // alone and the drift survives to be repaired. (The player's open and
+    // close damage the whole window, so their first frame always covers.)
+    const bool keyboard = onscreen_keyboard::stands(app, gui);
+    const bool overlay  = folder_overlay::stands(app);
+    const GuiRect surf  = onscreen_keyboard::surface_rect(app);
+    const bool covers_band =
+        surf.w > 0 && surf.h > 0 &&
+        exposed.x <= surf.x && exposed.y <= surf.y &&
+        exposed.x + exposed.w >= surf.x + surf.w &&
+        exposed.y + exposed.h >= surf.y + surf.h;
+    if (covers_band) app.keyboard_slot_painted_standing = keyboard || overlay;
+    // AT MOST ONE TENANT: the keyboard's standing predicate carries the
+    // overlay's negation as its third term (onscreen_keyboard::stands).
+    if (overlay)       paint_folder_overlay(cr, exposed);
+    else if (keyboard) paint_onscreen_keyboard(cr, exposed);
+}
+
+// -- GuiPaintHandler::paint_folder_overlay -----------------------------------
+//
+// THE KEYBOARD-SLOT LIST PANEL (2026-08-28). Contract and gate are at the
+// declaration; the geometry, the scroll clamp and the one row walk are at
+// folder_overlay.h, which this body reads and never restates; the row table
+// and every state bit are AppState::folder_overlay.
+//
+// THE PALETTE IS EXISTING CONSTANTS AND NOTHING ELSE — the architect's ruling
+// that the panel's ground, row height and type are the KEYBOARD'S, plus the
+// two faces a list row needs that the keyboard does not:
+//   the GROUND around and
+//     between the rows    -> kRedesignContentGround (the keyboard's)
+//   a RESTING row         -> kRedesignRowGround (the keyboard's key face)
+//   the INK               -> kRedesignLabel (the keyboard's caps; the icon
+//                            glyphs carry their own Breeze inks)
+//   the HIGHLIGHT band    -> kRedesignAccent fill under kRedesignLabel ink —
+//                            kdenlive's own selection band (the reference
+//                            screenshot's blue band)
+//   HOVER                 -> the dropdown's hover fill, kRedesignAccent over
+//                            kRedesignPopupGround at kRedesignClickMix
+//   PRESSED               -> kRedesignAccent, the dropdown's pressed item
+//   the RING'S FOCUS      -> the modal's focus line as the row's OUTLINE:
+//                            kModalFocusLinePassive while the ring stands
+//                            elsewhere, the accent while it is on the list
+// Every row is drawn with redesign_face_box, the one path every button-like
+// surface in the product is filled and framed on, at the keyboard's corner
+// radius. NO LINE AT THE BAND'S TOP EDGE, the keyboard's own rule: the band's
+// ground is the bottom row's, so the two lanes read as one block.
+//
+// TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
+// list's keyboard focus — what Enter, Space, Play and Load in place act on)
+// and the TRANSPORT'S ITEM, whose wav glyph is swapped for the roster's
+// MediaPlaybackStart (the one-button-two-faces precedent) whether the item is
+// live or paused.
+//
+// STATE-AXIS: the face is decided ONCE per row from the highlight, the hover,
+// the press arm and the ring, and the glyph from the row's kind and the
+// item's path; there is no second list of what a row looks like anywhere.
+void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
+    if (!folder_overlay::stands(app)) return;
+    const GuiRect surf = folder_overlay::surface_rect(app);
+    if (surf.w <= 0 || surf.h <= 0) return;
+    if (!rects_intersect(exposed, surf)) return;
+
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    const AppState::RenderPlayer&  rp = app.render_player;
+
+    cairo_save(cr);
+    // The band's ground, one fill; then EVERYTHING ELSE UNDER THE BAND'S CLIP,
+    // because a scrolled listing's first and last rows straddle the band's
+    // edges and must not paint into the waveform above or the bottom row
+    // below.
+    cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                         kRedesignContentGround.g,
+                         kRedesignContentGround.b);
+    cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
+    cairo_fill(cr);
+    cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
+    cairo_clip(cr);
+
+    gui_select_font_face(cr, GuiFontFamily::Sans);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double radius = std::nearbyint(onscreen_keyboard::kCornerPx *
+                                         gui_scale_factor());
+    const int    glyph  = folder_overlay::row_icon_px();
+    const int    gap    = folder_overlay::row_icon_gap_px();
+    const int    pad    = folder_overlay::pad_px();
+    const GuiColor hover_fill =
+        mix_color(kRedesignAccent, kRedesignPopupGround, kRedesignClickMix);
+
+    folder_overlay::for_each_row(
+        app, [&](int index, const AppState::FolderOverlayRow& row,
+                 const GuiRect& r) {
+            // PER-ROW EXPOSURE, the keyboard's own economy: a row costs a face
+            // box, a glyph and a shaped run, so a narrow damage pays only for
+            // the rows it crosses.
+            if (!rects_intersect(exposed, r)) return;
+            if (!rects_intersect(surf, r)) return;
+
+            const bool highlighted = index == ov.highlight_row;
+            const bool hovered     = index == ov.hovered_row;
+            const bool pressed     = ov.press.armed && ov.press.row == index &&
+                                     ov.press.inside && !ov.press.scrolling;
+            // THE FACE LADDER: pressed > highlighted > hovered > rest for the
+            // fill; the ring's outline rides on top of whichever fill stands.
+            const GuiColor fill =
+                pressed     ? kRedesignAccent
+              : highlighted ? kRedesignAccent
+              : hovered     ? hover_fill
+                            : kRedesignRowGround;
+            const GuiColor* line = nullptr;
+            if (highlighted) {
+                line = ov.list_focused ? &kRedesignAccent
+                                       : &kModalFocusLinePassive;
+            }
+            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius, &fill, line);
+
+            // THE GLYPH: the folder for folder rows and the up row (it names
+            // a folder), the wav for wav rows — swapped for the transport
+            // glyph on the item's row. Left-aligned at the pad, centred in
+            // the row's height.
+            icons::Icon icon = icons::Icon::Folder;
+            if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
+                icon = (!rp.item.empty() && row.path == rp.item)
+                           ? icons::Icon::MediaPlaybackStart
+                           : icons::Icon::AudioXWav;
+            }
+            const int gx = r.x + pad;
+            const int gy = r.y + (r.h - glyph) / 2;
+            icons::draw(cr, icon, static_cast<double>(gx),
+                        static_cast<double>(gy), static_cast<double>(glyph));
+
+            // THE NAME, shaped through the one chokepoint, after the glyph,
+            // in the band's ink — black on the accent would be the marker
+            // lane's rule, not this band's: the keyboard's caps and every
+            // other row's label are kRedesignLabel, and kdenlive's own band
+            // carries white text.
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, row.name);
+            const double baseline = redesign_baseline(
+                font, static_cast<double>(r.y), static_cast<double>(r.h));
+            cairo_save(cr);
+            cairo_rectangle(cr, gx + glyph + gap, r.y,
+                            std::max(0, (r.x + r.w - pad) - (gx + glyph + gap)),
+                            r.h);
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(
+                cr, run, static_cast<double>(gx + glyph + gap), baseline);
+            cairo_restore(cr);
         });
 
     cairo_restore(cr);
@@ -6611,13 +6963,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      reasoning is at that block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
-        //  12. the ON-SCREEN KEYBOARD (paint_onscreen_keyboard, 2026-08-27 —
-        //      outside this branch), whose opaque ground covers the waveform
-        //      area's lower part and so follows every waveform pass above.
-        //      Which is why those passes do not paint there at all: they are
-        //      gated and clipped on the waveform's PAINTED rect while the
-        //      surface stands (onscreen_keyboard::waveform_paint_area, read
-        //      just above this block).
+        //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
+        //      the on-screen keyboard since 2026-08-27 or the folder overlay
+        //      since 2026-08-28, one tenant at a time), whose opaque ground
+        //      covers the waveform area's lower part and so follows every
+        //      waveform pass above. Which is why those passes do not paint
+        //      there at all: they are gated and clipped on the waveform's
+        //      PAINTED rect while either tenant stands
+        //      (onscreen_keyboard::waveform_paint_area, read just above this
+        //      block).
         //  13. the flag editor's box, then the dropdown — the floating
         //      surfaces, after every pass above and outside this branch — then
         //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
@@ -6739,22 +7093,23 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (band_cuts) cairo_restore(cr);
     }
 
-    // THE ON-SCREEN KEYBOARD (2026-08-27), between the waveform passes above
-    // and the three floating surfaces below — which is exactly where it sits in
-    // the picture. It OVERLAYS the waveform area's lower part with its own
-    // opaque ground, so it must follow every pass that paints there (the plate,
-    // the region ink, the stems, the scanner, the anchor) and precede the flag
-    // editor's box, the dropdown and the modal, none of which it overlaps
-    // anyway. It is OUTSIDE the loading / total>0 branch above for the flag
-    // editor's own reason: an editor can stand with no audio loaded, and the
-    // keyboard must stand with it.
+    // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder
+    // overlay since 2026-08-28 — one band, one tenant at a time), between the
+    // waveform passes above and the three floating surfaces below — which is
+    // exactly where it sits in the picture. It OVERLAYS the waveform area's
+    // lower part with its own opaque ground, so it must follow every pass
+    // that paints there (the plate, the region ink, the stems, the scanner,
+    // the anchor) and precede the flag editor's box, the dropdown and the
+    // modal, none of which it overlaps anyway. It is OUTSIDE the loading /
+    // total>0 branch above for the flag editor's own reason: an editor can
+    // stand with no audio loaded, and the keyboard must stand with it.
     //
-    // NOT exposure-gated: the body's own gate is the surface's standing
-    // predicate, and it must run on EVERY frame class to write the as-painted
-    // bit the tick comparator reads (the contract is at the declaration). With
-    // the surface down that is one platform query and one integer compare; with
-    // it up the outer Cairo clip makes a narrow damage cheap.
-    paint_onscreen_keyboard(cr, GuiRect{x, y, w, h});
+    // NOT exposure-gated: the dispatch's own gate is the tenants' standing
+    // predicates, and it must run on EVERY frame class to write the
+    // as-painted bit the tick comparator reads (the contract is at the
+    // declaration). With the slot down that is one platform query and two
+    // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
+    paint_keyboard_slot(cr, GuiRect{x, y, w, h});
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because both hang below the top strip and overlap whatever

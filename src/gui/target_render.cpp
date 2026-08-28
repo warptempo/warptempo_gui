@@ -625,9 +625,17 @@ void GuiTargetRender::complete_successful_buffer() {
         // the trim-mapped anchor) — stamped at production time from the trim
         // values these samples embody, so a mid-render trim drift cannot
         // mislabel the bind.
-        playback.rebind_buffer(app.target_buffer.data(),
-                               app.target_buffer_frames,
-                               dispatched_buffer_start_frame_);
+        // NOT UNDER THE RENDER PLAYER (2026-08-28): while the player stands
+        // the engine is bound to the player's own item, live or paused, and a
+        // preview completing in the background must not take it away — the
+        // player's close re-expresses the view through ensure_ready, whose
+        // clean path rebinds exactly this finished buffer. The dirty bit
+        // still clears below: the buffer IS current, only the bind waits.
+        if (!app.render_player.active) {
+            playback.rebind_buffer(app.target_buffer.data(),
+                                   app.target_buffer_frames,
+                                   dispatched_buffer_start_frame_);
+        }
         // Buffer now matches the engine input that produced it. Gate the clear
         // behind the rebind path: a render that completed while
         // active_audio_view flipped to Source must not clear the bit, since a

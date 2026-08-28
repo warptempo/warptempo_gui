@@ -169,9 +169,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (audio_player and projects_repo, the other two editable device
-    // keys, have no vocabulary at all and take their free-text arms in
-    // commit(), exactly as they did when all three were `.settings` keys.)
+    // move. (projects_repo, the other editable device key, has no vocabulary
+    // at all and takes its free-text arm in commit(), exactly as it did when
+    // both were `.settings` keys.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -457,28 +457,22 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // audio_player is the one preference with no dedicated gesture at all —
-    // a free-text launcher path, so the settings editor is its sole authoring
-    // surface. Handled here rather than through commit_gui_setting (which
-    // routes every OTHER GUI key into its gesture chokepoint). Set it directly
-    // (an empty value means no external player — the device config always emits
-    // the line as `audio_player=`, which re-loads as no-player). A launch
-    // preference: no undo history, no dirty tracking. IT IS A DEVICE
-    // PREFERENCE since 2026-08-27, not a sidecar key, so Ctrl+S does not carry
-    // it: THIS COMMIT IS ITS PERSIST — the device config is written right here,
-    // which is what makes the arm the whole act. A same-value commit
-    // no-op-deactivates like every routed GUI-kind key (the empty value
-    // included) and writes nothing.
-    // projects_repo is audio_player's twin in shape — free text, no gesture, no
-    // undo history, no dirty tracking — so it takes the same direct-set arm
-    // rather than a chokepoint route that does not exist for it, and since
-    // 2026-08-27 its twin in provenance too: ONE user has ONE repository, so
-    // the projects home is the DEVICE config's (device_config.h), Ctrl+S does
-    // not carry it, and THIS COMMIT IS ITS PERSIST — the config is written
-    // right here through the live struct, exactly as the audio_player arm
-    // below writes it. An empty value simply never matches any remote, which
-    // disables the GitHub recheck. A same-value commit no-op-deactivates and
-    // writes nothing.
+    // projects_repo is the one preference with no dedicated gesture at all —
+    // free text, no undo history, no dirty tracking — so the settings editor
+    // is its sole authoring surface and it takes a direct-set arm here rather
+    // than a chokepoint route through commit_gui_setting (which routes every
+    // OTHER GUI key into its gesture chokepoint). Since 2026-08-27 it is a
+    // DEVICE preference: ONE user has ONE repository, so the projects home is
+    // the device config's (device_config.h), Ctrl+S does not carry it, and
+    // THIS COMMIT IS ITS PERSIST — the config is written right here through
+    // THE LIVE STRUCT (AppState::device_config, the loop's one), so the other
+    // three keys travel as they stand (the ownership rule is at
+    // write_device_config); a failed write is advisory and prints its own
+    // line there, the live value standing for this session either way. An
+    // empty value simply never matches any remote, which disables the GitHub
+    // recheck. A same-value commit no-op-deactivates like every routed
+    // GUI-kind key (the empty value included) and writes nothing. (Its twin
+    // arm, `audio_player=`, retired with that key 2026-08-28.)
     if (key == "projects_repo") {
         if (value == app.projects_repo) {
             std::fprintf(stderr,
@@ -492,31 +486,6 @@ void GuiSettingsEditor::commit() {
         app.device_config->projects_repo = value;
         (void)write_device_config(*app.device_config);
         std::fprintf(stderr, "warptempo_gui: projects_repo set: '%s'\n",
-            value.c_str());
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.settings_editor);
-        return;
-    }
-
-    if (key == "audio_player") {
-        if (value == app.audio_player) {
-            std::fprintf(stderr,
-                "warptempo_gui: Setting unchanged: %s=%s\n",
-                key.c_str(), value.c_str());
-            viewport.invalidate_modal_dialog_area();
-            text_editor::deactivate(app.settings_editor);
-            return;
-        }
-        app.audio_player = value;
-        // THE PERSIST IS THE COMMIT (2026-08-27): the value's home is the
-        // device config, and nothing else writes it — no Ctrl+S, no load. A
-        // failed write is advisory and prints its own line there; the live
-        // value stands for this session either way. It writes THE LIVE STRUCT
-        // (AppState::device_config, the loop's one), so the other four keys
-        // travel as they stand (the ownership rule is at write_device_config).
-        app.device_config->audio_player = value;
-        (void)write_device_config(*app.device_config);
-        std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
             value.c_str());
         viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
@@ -685,7 +654,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
     // follow, gui_scale, waveform_magnification_level,
-    // audio_player, projects_repo — the last three the device config's —
+    // projects_repo — gui_scale and projects_repo the device config's —
     // per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
@@ -722,8 +691,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     viewport.invalidate_modal_dialog_area();
     // The literal answer, compared against the buffer this call started from:
-    // recalling an EMPTY value (a blank free-text key such as `audio_player=`)
-    // onto an already-bare `key=` writes the same bytes back and is honestly no
-    // advance, so its Tab walks.
+    // recalling an EMPTY value (a blank free-text key such as `projects_repo=`
+    // or an empty `title=`) onto an already-bare `key=` writes the same bytes
+    // back and is honestly no advance, so its Tab walks.
     return app.settings_editor.pending != pending;
 }

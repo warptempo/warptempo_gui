@@ -590,10 +590,10 @@ GuiPlatform::~GuiPlatform() {
 // ---------------------------------------------------------------------------
 
 // The laptop's device-config template (contract at the declaration): the
-// design baseline scale, audacious as the `l` command's player — the one
-// installed on the authoring machine, and the value the `.settings` first-open
-// template stamped for every project until the key moved here 2026-08-27 — and
-// THE CLONE'S OWN `projects/` as the projects path
+// design baseline scale (until 2026-08-28 also audacious as the `l` command's
+// player, the value the `.settings` first-open template had stamped until the
+// key moved here 2026-08-27; the key retired whole with the in-app render
+// player) and THE CLONE'S OWN `projects/` as the projects path
 // (`$HOME/.warptempo/warptempo_gui/projects`),
 // resolved at stamp time into an absolute literal, since the file is meant to
 // be read and edited by hand and should say where the projects are rather
@@ -604,7 +604,6 @@ GuiPlatform::~GuiPlatform() {
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale    = 100;
-    cfg.audio_player = "audacious";
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
             std::string(home) + "/.warptempo/warptempo_gui/projects";

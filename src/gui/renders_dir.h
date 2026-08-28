@@ -50,3 +50,18 @@ struct GuiRendersDir {
     std::filesystem::path settings_path(
         const AppState::RenderEntry& e);
 };
+
+// THE RENDER ENTRY'S ID — its path relative to tmp/, `<batch_dir>/<basename>
+// .wav`, always folder-qualified. One path per file, so the id is unique by
+// filesystem construction; Tab autocomplete then discriminates on the short
+// leading batch-folder name instead of deep value decimals inside
+// near-identical cell basenames, and the painted `Load: <projects_path>/
+// <name>/tmp/<id>` line is the entry's real on-disk path. TWO READERS since
+// 2026-08-28, which is why it lives here rather than as the load editor's
+// static: the `'` load editor resolves the typed identifier against these
+// strings (load_editor_commit, input_key_dispatch.cpp), and the render
+// player's load confirmation spells the entry it asks about with it
+// ("Load `3_bpm/02.wav` in place?").
+inline std::string render_entry_id(const AppState::RenderEntry& e) {
+    return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
+}

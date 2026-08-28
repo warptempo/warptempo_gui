@@ -15,8 +15,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (five keys since the project
-// model landed 2026-08-27; two before it). The scanner takes it as a
+// set the shared scanner enforces after the loop (four keys since
+// `audio_player` retired 2026-08-28; five from the project model 2026-08-27;
+// two before it). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -25,7 +26,6 @@ namespace {
 // here both halves are in this file, so one list is the honest shape).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
-    "audio_player",
     "projects_path",
     "projects_repo",
     "last_project",
@@ -64,11 +64,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         const std::string_view k(key);
         if (k == "gui_scale") {
             s += format_gui_scale_percent(cfg.gui_scale);
-        } else if (k == "audio_player") {
-            // Free text, emitted verbatim in UTF-8. An empty value writes the
-            // bare `audio_player=` line, which is the no-player opt-out and
-            // reads back as exactly that.
-            s += cfg.audio_player;
         } else if (k == "projects_path") {
             // Verbatim: the reader accepted it as an absolute path, and
             // nothing in the program rewrites it.
@@ -112,14 +107,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             // Range-checked above, so the narrowing to int is exact.
             out.gui_scale = static_cast<int>(v);
-            return {};
-        }
-        if (key == "audio_player") {
-            // Any value is accepted (no path or binary grammar — it is
-            // user-supplied), INCLUDING empty: an empty value is legal and
-            // means "no external player", which is the only spelling of that
-            // opt-out. Taken verbatim in UTF-8.
-            out.audio_player = value;
             return {};
         }
         if (key == "projects_path") {

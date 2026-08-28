@@ -1593,13 +1593,16 @@ struct TouchNavZoomState {
 // the four double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a trim-bar click
 // then a marker click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
+enum class DoubleClickSurface {
+    None, TrimBar, Marker, EditorText, EmptyLane, FolderRow
+};
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
 // records this candidate AT A MOTIONLESS RELEASE — one seed timing for all
-// four surfaces since 2026-08-15, when the marker click moved to the lift and
-// its press-time seed (the last of them) went with it; the NEXT press on the
+// five surfaces since 2026-08-15, when the marker click moved to the lift and
+// its press-time seed (the last of them) went with it (the fifth, FolderRow,
+// arrived 2026-08-28 already on that timing); the NEXT press on the
 // SAME surface,
 // if it lands within kDoubleClickMs and double_click_slack_px() of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
@@ -1667,6 +1670,17 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 release's deferred click act — a press that crossed into the
 //                 PAN seeds nothing, the TrimBar pattern (the seed rode the
 //                 press while the press placed at press time, pre-2026-08-12).
+//   FolderRow  -> the FOLDER OVERLAY's row OPEN act (2026-08-28, the render
+//                 player): a folder row enters it, the up row goes to the
+//                 parent, a wav row plays from its start (GuiRenderPlayer::
+//                 open_row). Target = the row index; both axes' slack
+//                 compared; the seed carries the PRESS coordinates with the
+//                 RELEASE stamp exactly as Marker's does, seeded at the row
+//                 press's MOTIONLESS RELEASE beside the highlight it lands
+//                 (a press that crossed into the band's scroll drag seeds
+//                 nothing). THE CONSUME ACTS AT THE PRESS with the whole
+//                 family and arms nothing — the act may rebuild the listing
+//                 under the pointer, so nothing may be left waiting on it.
 // Cleared on file load, the moment an action fires, and — the KEYBOARD and
 // WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel
 // command: any keyboard command OR wheel frame between two
@@ -1679,9 +1693,11 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x: all four surfaces seed at a motionless
-    int     press_y   = 0;      //   release, Marker with its PRESS coordinates
-    int     target    = -1;     // marker index for Marker; unused otherwise
+    int     press_x   = 0;      // seed x: all five surfaces seed at a motionless
+    int     press_y   = 0;      //   release, Marker and FolderRow with their
+                                //   PRESS coordinates
+    int     target    = -1;     // marker index for Marker, row index for
+                                // FolderRow; unused otherwise
     // WHICH SPAN THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
     // The consume forks on THE SEED and not on the second press's own position,
     // so a pair of clicks straddling the seam opens the editor the FIRST one
@@ -3426,6 +3442,14 @@ enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
     ERROR_NOTICE,
+    // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load `<id>` in
+    // place?", OK / Cancel, raised by a long press (shift-click on plastic,
+    // Shift+Enter on a focused row) on a load-capable wav row of the folder
+    // overlay. OK runs the shared load_render_entry_in_place act on the entry
+    // parked at AppState::RenderPlayer::pending_load; Cancel drops it. The
+    // raise and the answers are GuiRenderPlayer's (render_player.cpp), which
+    // the prompt reaches through its input-handler back-pointer.
+    LOAD_IN_PLACE_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -3593,6 +3617,7 @@ inline std::string modal_dialog_button_hint(std::string_view word,
     else                             key = editor_ok ? "Enter" : "Escape";
     return std::string(word) + " (" + key + ")";
 }
+
 
 // Trim store (architect-ruled hardfail model). begin and end are authored
 // NAMED ROLES — no gesture ever reassigns which bound is which — holding
@@ -4109,23 +4134,6 @@ struct AppState {
     // the engine block, and this is neither.
     int     waveform_magnification_level = 0;
 
-    // Launch preference: the external audio player the `l`
-    // ("Listen to renders") command spawns with the rendered wavs. A BLANK
-    // value is the deliberate opt-out, and `l` then reports
-    // "No audio_player set" and does nothing — which is the TABLET's standing
-    // state, nothing there being spawnable.
-    //
-    // IT IS A PER-DEVICE PREFERENCE, gui_scale's twin in provenance since
-    // 2026-08-27 (the rationale is at that field): which player binary exists
-    // is a fact about the machine. It left the `.settings` for the device
-    // config, Ctrl+S does not carry it, gui_main reads it once at startup, and
-    // its one authoring surface — the settings editor's `:audio_player=<path>`,
-    // the one preference with NO gesture at all — writes the config at the
-    // commit. The "audacious" initializer below is construction state for the
-    // window before that read; the LAPTOP backend's first-run template is where
-    // that value now means anything (platform_wayland.cpp).
-    std::string audio_player = "audacious";
-
     // The repository that is the PROJECTS HOME — where the architect's
     // committed working checkpoints live, and the corpus the GitHub recheck
     // reads history out of. Free text, host/path form by convention; the
@@ -4133,8 +4141,8 @@ struct AppState {
     // refuses a mismatch, since the clone is only the transport and a rebound
     // value must never silently read the wrong history.
     //
-    // IT IS A PER-DEVICE PREFERENCE since 2026-08-27, audio_player's twin in
-    // provenance and in shape: ONE user has ONE repository, so the key left
+    // IT IS A PER-DEVICE PREFERENCE since 2026-08-27, gui_scale's twin in
+    // provenance: ONE user has ONE repository, so the key left
     // the `.settings` for the device config (device_config.h) under that
     // day's fifth parser grant, Ctrl+S does not carry it, gui_main reads it
     // once at startup, and its one authoring surface — the settings editor's
@@ -4147,8 +4155,8 @@ struct AppState {
     std::string projects_repo = kDefaultProjectsRepo;
 
     // THE LIVE DEVICE CONFIG, the loop's one struct (main.cpp), reached by
-    // pointer: the three commits that write that file (apply_gui_scale, the
-    // `audio_player=` arm, the `projects_repo=` arm) mirror their value into
+    // pointer: the two commits that write that file (apply_gui_scale, the
+    // `projects_repo=` arm) mirror their value into
     // it and hand it to write_device_config, and the two keys with no live
     // field of their own — `projects_path`, `last_project` — are read from it
     // where they are needed (the Open prompt's candidates and prefixes, the
@@ -4577,12 +4585,13 @@ struct AppState {
     // bounds), and on file load.
     TrimDragState trim_drag;
 
-    // Double-click candidate, shared by the trim-bar, flag, empty-lane and
-    // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
-    // motionless press-release on all four since 2026-08-15 (Marker seeded at
-    // the PRESS until the marker click moved to the lift; the per-surface rule
-    // is at DoubleClickSurface); cleared on file load and when
-    // the double-click action fires.
+    // Double-click candidate, shared by the trim-bar, flag, empty-lane,
+    // editor-text and folder-row surfaces (the surface tag prevents
+    // cross-firing). Seeded by a motionless press-release on all five (the
+    // first four since 2026-08-15 — Marker seeded at the PRESS until the marker
+    // click moved to the lift; the folder row since it landed 2026-08-28; the
+    // per-surface rule is at DoubleClickSurface); cleared on file load and
+    // when the double-click action fires.
     DoubleClickCandidate double_click;
 
     // The trim-bar framing double-click's press record (see TrimBarPressSeed).
@@ -4834,11 +4843,27 @@ struct AppState {
     // scrapped for: that was about RECONCILING TWO SURFACES, two toplevels
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
-    enum class ModalDialogOwner { None, Prompt, Editor };
+    // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
+    // Previous / Play-Pause / Next / Close, the clock and the play-scrub — is
+    // the bottom row's modal while the player stands, with its own session id
+    // from the one modal counter (AppState::RenderPlayer::session). A prompt
+    // still outranks it (the load confirmation paints over the player's row
+    // exactly as the quit prompt paints over an editor); the player and an
+    // editor are never live together (its opener refuses under any editor and
+    // its key router consumes every editor opener).
+    enum class ModalDialogOwner { None, Prompt, Editor, Player };
+    // THE PLAYER'S FOUR BUTTONS, the third dispatch vocabulary beside a
+    // prompt's response key and an editor's OK bit: what a player button DOES
+    // at its lift (dispatch_modal_dialog_button reads it under the Player
+    // owner and the other two vocabularies are zero/false there).
+    enum class PlayerButtonAct {
+        None, Previous, PlayPause, Next, LoadInPlace, Close
+    };
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
         char        response_key = 0;   // prompt dialogs; 0 on editor dialogs
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
+        PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         std::string tooltip;            // "<word> (<key>)"; never empty
     };
     struct ModalDialogGeometry {
@@ -4848,6 +4873,16 @@ struct AppState {
         uint64_t                       session = 0;
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
+        // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
+        // other owner: the PLAY-SCRUB track (the press router seeks and arms
+        // the marker drag against it — published geometry may only SELECT,
+        // the seek's frame is decided against the live item length) and the
+        // CLOCK cell (the tick's per-position damage while the player's
+        // transport is live, beside the scrub's). Both follow the owner-tag
+        // doctrine above: read only through a stash that names the live
+        // player session.
+        GuiRect                        scrub{0, 0, 0, 0};
+        GuiRect                        clock{0, 0, 0, 0};
         std::vector<ModalDialogButton> buttons;
     };
     ModalDialogGeometry modal_dialog;
@@ -4886,8 +4921,14 @@ struct AppState {
     // WM close can raise the unsaved-work prompt over a standing editor), so
     // this and paint_modal_dialog cannot disagree about whose geometry the
     // stash holds.
+    // THE RENDER PLAYER IS THE THIRD RANK (2026-08-28): under the prompt,
+    // beside the editors — the two cannot stand together, so the order
+    // between them is free, and the player is asked first only because its
+    // one bit is cheaper than the six is_active tests.
     uint64_t modal_dialog_live_session() const {
-        return prompt.active ? prompt.session : dialog_editor_session();
+        if (prompt.active) return prompt.session;
+        if (render_player.active) return render_player.session;
+        return dialog_editor_session();
     }
 
     // THE LIVE TEXT EDITOR'S SESSION ID across ALL EIGHT editors, 0 when none
@@ -4931,10 +4972,10 @@ struct AppState {
     // editor under it (Enter, Esc) still owes the core that key-up, and the
     // release path — with the touch hard-end beside it — is its one clearer.
     //
-    // `painted_standing` is the as-painted bit the tick comparator reads
-    // (main.cpp), the roster faces' own mechanism: the surface appears and
-    // disappears with facts that damage no pixel of its own band, so the drift
-    // between this and the live answer is what pays for the show/hide repaint.
+    // (The as-painted STANDING bit left this struct 2026-08-28 for
+    // `keyboard_slot_painted_standing` below: the band the keyboard paints in
+    // is shared with the folder overlay since the render player, and one bit
+    // describes the SLOT rather than either tenant.)
     // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
     // that synthesizes nothing (the layer toggle, the shift arm, a blank
     // slot). It is stored rather than re-derived from `pressed_key` because
@@ -4947,9 +4988,22 @@ struct AppState {
         bool     symbol_layer     = false;
         int      pressed_key      = -1;
         GuiKey   pressed_keysym   = 0;
-        bool     painted_standing = false;
     };
     OnscreenKeyboard onscreen_keyboard;
+
+    // THE KEYBOARD SLOT'S AS-PAINTED BIT (2026-08-27 as the keyboard's own;
+    // widened 2026-08-28 to the slot): does a KEYBOARD-SLOT SURFACE — the
+    // on-screen keyboard or the folder overlay, which replaces the keyboard in
+    // its band (folder_overlay.h) — stand as of the last frame that painted
+    // the whole band? The tick comparator (main.cpp) reads it against the
+    // live OR of the two standing predicates, the roster faces' own
+    // mechanism: a surface appears and disappears with facts that damage no
+    // pixel of its own band, so the drift between this and the live answer is
+    // what pays for the show/hide repaint. ONE WRITER, the slot's paint
+    // dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps it only
+    // on a rect that fully covers the band and then paints whichever tenant
+    // stands — so neither painter can claim pixels the frame did not write.
+    bool keyboard_slot_painted_standing = false;
 
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
     // pointer-derived face state in the roster's own model (the hover walk
@@ -6471,9 +6525,9 @@ struct AppState {
     // active_markers_view, active_tab_view, waveform_magnification_level, trim,
     // read_only, projects_repo) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
-    // dirty, so quitting without saving simply drops them. The two DEVICE keys
-    // (gui_scale, audio_player) are outside this question entirely since
-    // 2026-08-27: they are not in the sidecar at all, and each commit writes the
+    // dirty, so quitting without saving simply drops them. The DEVICE key
+    // gui_scale is outside this question entirely since
+    // 2026-08-27: it is not in the sidecar at all, and its commit writes the
     // device config immediately (device_config.h). Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but
     // deliberately treated as transient view state.
@@ -6848,14 +6902,217 @@ struct AppState {
     // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
-    // Consumed by the `l` listen-to-renders launcher and the `'` load
-    // editor (load_render_entry_in_place).
+    // THREE CONSUMERS (re-greped 2026-08-28): the `'` load editor's commit
+    // (load_editor_commit, matching the typed id) and the shared act it runs
+    // (load_render_entry_in_place, input_key_dispatch.cpp), and THE RENDER
+    // PLAYER (render_player.cpp), whose batch-folder listings carry one of
+    // these on every wav row — the entry is what makes a row LOAD-IN-PLACE-
+    // CAPABLE, so the deliverable's rows carry none and the long press refuses
+    // silently there. (The `l` external-player spawn was the first consumer
+    // until 2026-08-28, when `l` became the player's opener.)
     struct RenderEntry {
         std::filesystem::path batch_folder;     // <source parent>/tmp/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
     };
+
+    // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28, the render player) --
+    //
+    // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
+    // fills it. The render player fills it with the project's output folders
+    // and their wavs; nothing else does yet (the Open project picker is the
+    // designed second content and refills this same struct). Everything the
+    // panel remembers is here and nothing else is:
+    //   `rows`        the listing, rebuilt WHOLE at every folder entry and
+    //                 never kept fresh (a render completing meanwhile shows on
+    //                 the next entry of its folder);
+    //   `scroll_px`   THE PRODUCT'S FIRST SCROLL OFFSET — a pixel offset into
+    //                 the content, clamped to [0, max(0, content_h - band_h)]
+    //                 through folder_overlay::clamp_scroll, reset to 0 on
+    //                 every listing rebuild; the wheel steps it one row per
+    //                 detent, the band's own drag carries it on glass, and the
+    //                 keyboard's row walk scrolls it to keep the focused row
+    //                 visible;
+    //   `highlight_row` THE HIGHLIGHT — the BAND (kdenlive's selection band)
+    //                 AND the list's keyboard focus, ONE field (architect
+    //                 2026-08-28, the revision after the design's first pass:
+    //                 "a single click highlights; opening is the double-click
+    //                 or Enter"). A motionless click moves it, Up/Down walk it
+    //                 (scrolling to keep it visible), every listing rebuild
+    //                 seats it on the transport's item's row if that row is
+    //                 in the new listing, else on row 0; -1 only for an empty
+    //                 listing. It is what Enter, Space, the Play button and
+    //                 the Load in place button act on;
+    //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
+    //                 nothing at all (false, the open state). It changes
+    //                 nothing visible — Up/Down walk the highlight either way
+    //                 — and only what a bare Enter means: on the list, the
+    //                 highlight's OPEN act; on a button, that button's press.
+    //                 Reset with the modal face state, being part of it;
+    //   `hovered_row` the pointer's row (-1 none), the hover face;
+    //   `press`       THE ROW PRESS ARM (the chrome shape: arm at the press,
+    //                 act at the lift): the row, the y and the scroll offset
+    //                 at the press for the scroll drag, the feint's inside
+    //                 bit, and `scrolling` — once the pointer has moved past
+    //                 the drag gate vertically the arm IS a scroll drag (the
+    //                 band's own drag, the glass scroll) and its act is gone.
+    //                 A motionless lift HIGHLIGHTS the row and seeds the
+    //                 double-click candidate; the double-click's second press
+    //                 runs the row's OPEN act at the press and arms nothing.
+    //                 Ends at the release (finish_folder_overlay_release), the
+    //                 pointer-leave hook and the button-lost edge
+    //                 (clear_folder_overlay_press). No hold and no modifier
+    //                 rides it: a shift or ctrl press on a row is a consumed
+    //                 no-op, and nothing on a row reads kHoldBeatMs.
+    struct FolderOverlayRow {
+        enum class Kind { Up, Folder, Wav };
+        Kind                       kind = Kind::Wav;
+        std::string                name;
+        std::filesystem::path      path;
+        std::optional<RenderEntry> entry;   // wav rows: load-capable iff set
+    };
+    struct FolderOverlayPress {
+        bool    armed           = false;
+        int     row             = -1;
+        int     press_x         = 0;
+        int     press_y         = 0;
+        int     scroll_at_press = 0;
+        bool    inside          = true;
+        bool    scrolling       = false;
+    };
+    struct FolderOverlay {
+        std::vector<FolderOverlayRow> rows;
+        int                scroll_px     = 0;
+        int                highlight_row = -1;
+        bool               list_focused  = false;
+        int                hovered_row   = -1;
+        FolderOverlayPress press;
+    };
+    FolderOverlay folder_overlay;
+
+    // -- THE RENDER PLAYER'S WHOLE STATE (2026-08-28) -----------------------
+    //
+    // The in-app player over the project's output folders (render_player.h
+    // owns the operations and the model; this is only what it remembers).
+    //   `active`   the mode bit — the third modal owner (ModalDialogOwner::
+    //              Player) and the folder overlay's standing predicate;
+    //   `session`  its modal session id from the one counter
+    //              (text_editor::next_session_id), minted at every open;
+    //   `folder`   WHERE THE LISTING IS, never a free path: the root (the
+    //              `render` and `tmp` folder rows), the deliverable folder,
+    //              the batch list (`tmp/`'s folders) or ONE batch, named by
+    //              `batch_dir` — the enumerated batch folder's own path,
+    //              taken from the enumeration that listed it;
+    //   `item` / `item_folder` / `item_index` THE TRANSPORT'S ITEM — the wav
+    //              decoded and bound (empty path: none yet), the WAV ROWS OF
+    //              ITS FOLDER as listed when it was played (R2: auto-advance,
+    //              Previous and Next walk this folder and never another, and
+    //              the item keeps playing while the listing is navigated
+    //              elsewhere — the displayed listing and the item's folder are
+    //              two things), and the item's index in that list. A row
+    //              whose path is the item's wears the transport glyph;
+    //   `buffer` / `frames` the decoded item bound to the one playback engine
+    //              (interleaved float32 at the device's own channel count and
+    //              rate — the decode refuses any other shape); freed at close
+    //              only AFTER the view's buffer is rebound, the engine holding
+    //              the pointer until then;
+    //   `transport_live` the player's mirror of playhead_scanner_active's
+    //              role — set at play, cleared at pause, stop and the natural
+    //              end; the play/pause glyph and the tick's damage read it;
+    //   `resume_frame` where a pause left the cursor (0 after a fresh bind);
+    //              a seek while paused moves this alone;
+    //   `painted_cursor` the item position the last tick damaged for, the
+    //              change-detection anchor of the clock/scrub damage;
+    //   `scrub`    the play-scrub MARKER DRAG's arm: armed by a press on the
+    //              marker's grab band, the marker's painted x following the
+    //              pointer while playback continues where it was, the seek
+    //              committing at the release (the product's deferred-click
+    //              shape); the hard end drops it and commits nothing;
+    //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
+    //              asks about; consumed by its OK, dropped by its Cancel.
+    struct RenderPlayer {
+        enum class Folder { Root, Deliverable, Batches, Batch };
+        bool                       active         = false;
+        uint64_t                   session        = 0;
+        Folder                     folder         = Folder::Root;
+        std::filesystem::path      batch_dir;
+        std::filesystem::path      item;
+        std::vector<FolderOverlayRow> item_folder;
+        int                        item_index     = -1;
+        std::vector<float>         buffer;
+        int64_t                    frames         = 0;
+        bool                       transport_live = false;
+        int64_t                    resume_frame   = 0;
+        int64_t                    painted_cursor = -1;
+        struct ScrubDrag {
+            bool armed    = false;
+            int  marker_x = 0;
+        };
+        ScrubDrag                  scrub;
+        std::optional<RenderEntry> pending_load;
+    };
+    RenderPlayer render_player;
 };
+
+// THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
+// the player's own act vocabulary: the word is the act's, the key is the
+// chord the player's key router binds to exactly that act
+// (route_render_player_key, input_key_dispatch.cpp), so a button cannot
+// advertise a key it does not answer. Play/Pause is the one two-faced button
+// and names the face it wears (the bottom row's transport rule).
+inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
+                                             bool transport_live) {
+    switch (act) {
+        case AppState::PlayerButtonAct::Previous:    return "Previous (Page Up)";
+        case AppState::PlayerButtonAct::PlayPause:
+            return transport_live ? "Pause (Space)" : "Play (Space)";
+        case AppState::PlayerButtonAct::Next:        return "Next (Page Down)";
+        case AppState::PlayerButtonAct::LoadInPlace: return "Load in place (')";
+        case AppState::PlayerButtonAct::Close:       return "Close (Escape)";
+        case AppState::PlayerButtonAct::None:        break;
+    }
+    return std::string();
+}
+
+// THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
+// live (the bound item's own domain, offset 0), the resume point otherwise;
+// 0 with no item. ONE READER CLASS on three surfaces: the modal row's clock
+// and scrub painter, the scrub press router, and GuiRenderPlayer's own
+// seeks — all through this one function so no second predictor exists.
+inline int64_t render_player_position(const AppState& a,
+                                      const GuiPlayback& playback) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    if (rp.item.empty() || rp.frames <= 0) return 0;
+    const int64_t pos = rp.transport_live ? playback.cursor() : rp.resume_frame;
+    return pos < 0 ? 0 : (pos > rp.frames ? rp.frames : pos);
+}
+
+// THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED track rect
+// (AppState::ModalDialogGeometry::scrub): a frame's column on the track and
+// the column's frame back. The painter's marker and the press router's seek
+// share it, so the pixel a press lands on and the pixel the marker paints at
+// answer the same frame. Banker's rounding onto the cells, like every grid
+// conversion.
+inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
+    const GuiRect track = a.modal_dialog.scrub;
+    const int64_t frames = a.render_player.frames;
+    if (track.w <= 1 || frames <= 0) return track.x;
+    const int64_t f = frame < 0 ? 0 : (frame > frames ? frames : frame);
+    const double t = static_cast<double>(f) / static_cast<double>(frames);
+    return track.x + static_cast<int>(std::nearbyint(t * (track.w - 1)));
+}
+inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
+    const GuiRect track = a.modal_dialog.scrub;
+    const int64_t frames = a.render_player.frames;
+    if (track.w <= 1 || frames <= 0) return 0;
+    const int cx = x < track.x ? track.x
+                 : (x > track.x + track.w - 1 ? track.x + track.w - 1 : x);
+    const double t = static_cast<double>(cx - track.x) /
+                     static_cast<double>(track.w - 1);
+    const int64_t f =
+        static_cast<int64_t>(std::nearbyint(t * static_cast<double>(frames)));
+    return f < 0 ? 0 : (f > frames ? frames : f);
+}
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
 // here so viewport.cpp can call them.
@@ -8038,12 +8295,17 @@ inline bool playback_launch_playable(const AppState& a,
 //     ALLOWLIST, which is what makes the derived partition call them LIVE. The
 //     mode line at the top of this body never fires for them either way, and
 //     row 3 has no disabled face at all.)
-// MODAL gates are deliberately absent: a prompt or a dialog editor
-// swallows the PRESS at the pointer path's own veil, and a modal that
-// greyed the chrome under it would be a fourth face nobody asked for (the
-// HOVER faces do go dark under the veil — the hover walk's veil term,
-// recompute_redesign_button_hover — but that is the pointer's fact, not a
-// face state this predicate answers).
+// MODAL gates are deliberately absent WITH ONE RULED EXCEPTION: a prompt or
+// a dialog editor swallows the PRESS at the pointer path's own veil, and a
+// modal that greyed the chrome under it would be a fourth face nobody asked
+// for (the HOVER faces do go dark under the veil — the hover walk's veil
+// term, recompute_redesign_button_hover — but that is the pointer's fact,
+// not a face state this predicate answers). THE RENDER PLAYER IS THE
+// EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
+// view"): while it stands EVERY roster button is dead — the arm at the head
+// of the body, ranked above the `h` partition — because the player is a MODE
+// like the `h` view rather than a question like a prompt, and the whole
+// chrome is what it takes away.
 // THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
@@ -8078,6 +8340,15 @@ inline bool playback_launch_playable(const AppState& a,
 inline bool redesign_button_enabled(const AppState& a,
                                     int64_t total_frames,
                                     RedesignButton b) {
+    // THE RENDER PLAYER GREYS THE WHOLE ROSTER (architect 2026-08-28, the
+    // ruled exception recorded above the signature): the mode's pointer rule
+    // is the veil (every press outside the overlay band and the modal row is
+    // consumed — render_player_active, input_handler.h) and this line is the
+    // face that says so. First-ranked because it outranks the `h` partition
+    // below — the player never opens inside the `h` view, so the two are
+    // never asked together, and the rank only states which mode is the
+    // whole answer while it stands.
+    if (a.render_player.active) return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -9155,13 +9426,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconWaveformReduce:
             return {"Reduce waveform (-)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
-        case RedesignButton::IconListen: return {"Listen to renders (l)", nullptr};
+        // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
+        // — `l` names the act it exists for, `'` keeps its name because in the
+        // `h` view it is still the typed load-in-place prompt and outside it
+        // the player is the load's road (a long press on a wav row; the
+        // button itself admits no modifier, so neither carries a second
+        // line). "Load in place" not "Load render in place": the act loads A
+        // STATE — a tmp/ entry's sidecar set (the render name is only the
+        // match key) or, in the history view, a commit's sidecars or a
+        // member of the session's own timeline — so naming "render"
+        // overclaims the surface.
+        case RedesignButton::IconListen: return {"Play renders (l)", nullptr};
         case RedesignButton::IconLoadInPlace:
-            // "Load in place" not "Load render in place": the act loads A
-            // STATE — a tmp/ entry's sidecar set (the render name is
-            // only the match key) or, in the history view, a commit's
-            // sidecars or a member of the session's own timeline — so naming
-            // "render" overclaims the surface.
             return {"Load in place (')", nullptr};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
         // has no shifted twin. The TEXT IS CONSTANT while the glyph and the
