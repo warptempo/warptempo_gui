@@ -9,7 +9,6 @@ active_markers_view=P
 active_tab_view=B
 follow=false
 waveform_magnification_level=1
-projects_repo=github.com/warptempo/warptempo_gui
 tab_a_trim_begin=0
 tab_a_trim_end=1700316
 tab_a_read_only=false
