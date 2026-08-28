@@ -35,8 +35,9 @@ std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
 // Batch-folder enumeration. The directory scan of
 // `<source parent>/tmp/<batch>/<basename>.wav` and the per-entry .settings
-// path helper. Both are consumed by the `l` listen-to-renders launcher and the
-// `'` load editor (load_render_entry_in_place in input_key_dispatch.cpp).
+// path helper. The scan is the RENDER PLAYER's (its `tmp/` listings and its
+// "are there any cells" question, render_player.cpp); the .settings helper is
+// the load act's (load_render_entry_in_place, input_key_dispatch.cpp).
 // Reads
 // only AppState (the source path); holds no audio, playback, or view state.
 // The TYPE keeps its name: what changed in 2026-08-27's rename is the folder
@@ -53,15 +54,15 @@ struct GuiRendersDir {
 
 // THE RENDER ENTRY'S ID — its path relative to tmp/, `<batch_dir>/<basename>
 // .wav`, always folder-qualified. One path per file, so the id is unique by
-// filesystem construction; Tab autocomplete then discriminates on the short
-// leading batch-folder name instead of deep value decimals inside
-// near-identical cell basenames, and the painted `Load: <projects_path>/
-// <name>/tmp/<id>` line is the entry's real on-disk path. TWO READERS since
-// 2026-08-28, which is why it lives here rather than as the load editor's
-// static: the `'` load editor resolves the typed identifier against these
-// strings (load_editor_commit, input_key_dispatch.cpp), and the render
-// player's load confirmation spells the entry it asks about with it
-// ("Load `3_bpm/02.wav` in place?").
+// filesystem construction, and the folder-qualified spelling is the entry's
+// real on-disk path under tmp/. ONE READER, re-greped: the RENDER PLAYER's
+// load confirmation, which spells the entry it asks about with it ("Load
+// `3_bpm/02.wav` in place?", render_player_load_in_place in
+// input_key_dispatch.cpp). It lives here rather than at that one site because
+// the id is a property of the entry, which this header owns. (The typed load
+// editor resolved a user's typed identifier against these strings, and its
+// Tab completed over them, until the player took the renders subject on
+// 2026-08-28.)
 inline std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }

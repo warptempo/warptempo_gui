@@ -77,7 +77,8 @@ struct GuiPlaybackLifecycle {
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
     // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-28 — NINE
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
-    // input_key_dispatch.cpp the `'` load editor (open_load_editor), the `m`
+    // input_key_dispatch.cpp the `'` load editor (open_history_load_editor,
+    // the `h` view's), the `m`
     // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
     // (open_history_commit_editor), the MEASURE PASTE-OFFSET editor
     // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT prompt

@@ -29,13 +29,15 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// THE STATUS TEXT IS SANS, AND MONOSPACE LIVES ON EXACTLY ONE SURFACE
+// THE STATUS TEXT IS SANS, AND MONOSPACE LIVES ON THE CLOCK ALONE
 // (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
 // to get rid of monospace altogether — the last row should be the same font as
-// the rest"): monospace is the CLOCK's alone — the unified bottom row's
+// the rest"): monospace is the CLOCK's — the unified bottom row's
 // centre cell (paint_bottom_row_buttons_and_clock, which owns the face, the
-// size and the cell). The reversal is scoped to that one surface and nothing
-// else in the product may take it.
+// size and the cell) and, since 2026-08-28, the render player's modal clock,
+// which is that same cell said twice and takes its metrics from it. The
+// reversal is scoped to the clock and nothing else in the product may take
+// the face.
 //
 // EVERY STRING THE STATUS CHAIN CARRIES — the queue/render/transient status,
 // the resolved readout, the history line and the critical chip — is the
@@ -1904,7 +1906,7 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         status = app.queue_progress_text;
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
-        // "No renders to load in place", ...). It takes its place in the
+        // "No renders to play", ...). It takes its place in the
         // chain, directly above the readout. Cleared by the next key press.
         status = app.transient_status_message;
     } else if (popup_eligible_marker(app, app.last_selected_marker)) {
@@ -2700,8 +2702,8 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // and the mode term in this row's layout all went together. The arrows paint
 // unconditionally now — nothing on this lane is conditional on a mode.)
 
-// THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE PRODUCT'S ONE MONOSPACE
-// SURFACE
+// THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE PRODUCT'S MONOSPACE
+// SURFACE (with the render player's modal clock, which derives from it)
 // (architect 2026-08-11, moving the timestamp off the status line and reversing
 // his own 2026-08-01 "monospace is gone from the product" in the same breath —
 // the reversal is scoped to this cell and the status line stays sans, which is
@@ -2980,10 +2982,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         }
     }
 
-    // THE CLOCK. Its own face on this context — the product's one monospace
-    // surface, selected through the one face owner (gui_font.h) — contained by
-    // the save/restore this body already opened; nothing else on the row draws
-    // text.
+    // THE CLOCK. Its own face on this context — the monospace face, selected
+    // through the one face owner (gui_font.h) — contained by the save/restore
+    // this body already opened; nothing else on the row draws text. ONE FACE,
+    // TWO CELLS since 2026-08-28: this one and the RENDER PLAYER's
+    // `<position> / <length>` on the modal row, which takes this cell's size,
+    // metrics and authored offsets so the digits never walk between them. The
+    // two never paint in the same frame — the player owns the row whole while
+    // it stands.
     {
         gui_select_font_face(cr, GuiFontFamily::Mono);
         const double size_px = clock_font_size_px();
@@ -5132,14 +5138,14 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // cannot yield to a dialog the modal painter would then decline to paint.
 
 // The dialog editor the modal would paint, or nullptr, with its LABEL out.
-// The editors' precedence order, with the load editor's prefix forked on the
-// history mode (in the mode its buffer is a commit spelling, so the
-// tmp/ lead-in would be a false statement) and COMPOSED outside it — the
-// project's real folder name between the two halves paint_handler.h owns, so
-// the label says which project's tmp/ the entry is under. Only one dialog
-// editor can be open at a time — every opener refuses while another owns the
-// keyboard — so the order is free. A standing PROMPT outranks every editor
-// and is the caller's own test, not this one's.
+// The editors' precedence order. Only one dialog editor can be open at a time
+// — every opener refuses while another owns the keyboard — so the order is
+// free. A standing PROMPT outranks every editor and is the caller's own test,
+// not this one's. (The load editor's prefix was FORKED here while that editor
+// also took a render entry's identifier: a composed `Load: <projects_path>/
+// <name>/tmp/` outside the `h` view, the bare act name inside it. The render
+// player took the renders subject on 2026-08-28, so the editor is the view's
+// alone and one label answers for it.)
 //
 // IT HANDS BACK A MUTABLE STATE because the field's painter WRITES one field
 // of it: the horizontal view offset (text_editor::State::view_offset_px, whose
@@ -5147,7 +5153,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // caller below wants only the null test and is unaffected.
 static text_editor::State* dialog_editor_to_paint(AppState& app,
                                                   std::string& prefix) {
-    if (app.history_mode.active && text_editor::is_active(app.load_editor)) {
+    if (text_editor::is_active(app.load_editor)) {
         prefix = kLoadEditorHistoryPrefix;
         return &app.load_editor;
     }
@@ -5162,11 +5168,6 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
     if (text_editor::is_active(app.settings_editor)) {
         prefix = kSettingsEditorPrefix;
         return &app.settings_editor;
-    }
-    if (text_editor::is_active(app.load_editor)) {
-        prefix = std::string(kLoadEditorPrefixHead) + app.project_name +
-                 kLoadEditorPrefixTail;
-        return &app.load_editor;
     }
     if (text_editor::is_active(app.open_project_editor)) {
         prefix = kOpenProjectEditorPrefix;

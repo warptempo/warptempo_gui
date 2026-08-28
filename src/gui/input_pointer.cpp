@@ -3820,9 +3820,11 @@ bool GuiInputHandler::claim_folder_overlay_press(
     const GuiRect surf = folder_overlay::surface_rect(app);
     if (!rect_contains(surf, x, y)) return false;
     // CONSUMED FROM HERE: the band is opaque to the pointer. A MODIFIED
-    // press is a consumed no-op (the revision retired the shift-click load;
-    // the strict-modifier rule's own answer), and a press on the pad or a
-    // gap between rows arms nothing.
+    // press is a consumed no-op — nothing on a row reads shift or ctrl, and
+    // nothing on a row reads kHoldBeatMs either: the load is the modal row's
+    // own button (strict modifier validation's answer, and the roster's
+    // shift-hold is elsewhere). A press on the pad or a gap between rows arms
+    // nothing.
     if (mods.ctrl || mods.shift || mods.alt) return true;
     const int hit = folder_overlay::row_at(app, x, y);
     if (hit < 0) return true;

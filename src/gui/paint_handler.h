@@ -91,25 +91,18 @@ inline int icon_row_pad_x() {
 // geometry IS the painted one rather than a re-derivation that could drift.
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
-// The load prompt (bare `'`) label — ONE WAY TO SHOW THE LEVEL (architect
-// 2026-08-27): both path prompts print the device config VARIABLE'S NAME in
-// literal angle brackets, never the long path, and the folder under it by its
-// real name — `Load: <projects_path>/550 - 1/tmp/`. The two halves around
-// the project name are these constants; the painter's fork composes the
-// label (dialog_editor_to_paint), and the typed entry identifier —
-// `<batch_dir>/<basename>` relative to tmp/ — renders directly after the
-// trailing slash, so the tail carries no trailing space.
-constexpr const char* kLoadEditorPrefixHead = "Load: <projects_path>/";
-constexpr const char* kLoadEditorPrefixTail = "/tmp/";
-// The OPEN PROJECT prompt's label (File → Open, 2026-08-27), the same ruling:
-// the variable's name, and the typed folder name renders directly after the
-// slash.
+// The OPEN PROJECT prompt's label (File → Open, 2026-08-27) — ONE WAY TO SHOW
+// THE LEVEL (architect 2026-08-27): a path prompt prints the device config
+// VARIABLE'S NAME in literal angle brackets, never the long path, and the
+// typed folder name renders directly after the slash, so the constant carries
+// no trailing space.
 constexpr const char* kOpenProjectEditorPrefix = "Open: <projects_path>/";
-// THE SAME EDITOR'S OTHER SUBJECT: in the `h` history mode it takes a COMMIT
-// SPELLING (load_history_commit_in_place), so the tmp/ path lead-in
-// would be a false statement about what is being loaded in place. One label,
-// one trailing space, and the branch that selects it is the only place the
-// two ever differ.
+// The load prompt (bare `'` in the `h` history view) label. Its buffer is a
+// COMMIT SPELLING or a member NUMBER, which name no path, so the label names
+// the ACT alone and takes one trailing space. (A `Load: <projects_path>/
+// <name>/tmp/` composition stood beside it while the editor also took a render
+// entry's identifier; that subject is the render player's since 2026-08-28 and
+// the two halves went with it.)
 constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
 // The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
 // message the checkpoint commit will carry. One trailing space, like the two

@@ -91,10 +91,11 @@ constexpr int kMaxPendingCharsBpm = 60;
 // minimal-travel rule each painter applies — so the two cannot scroll
 // differently.
 constexpr int kMaxPendingCharsSettings = 1024;
-// Load prompt (bare `'`). Holds a render entry's identifier relative
-// to tmp/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
-// bare basename. Program-written batch/entry names are short; 256 is a
-// generous ceiling for the relative path a user types or Tab-completes.
+// Load prompt (bare `'` in the `h` history view). Holds the viewed walk's
+// member in that walk's own spelling — a commit spelling (a 40-char SHA when
+// the opener seeds it) or a member number. 256 is a generous ceiling for
+// either. (It sized the render entry's relative path under tmp/ as well until
+// 2026-08-28, when the render player took that subject.)
 constexpr int kMaxPendingCharsLoadInPlace = 256;
 // The history mode's commit-title editor (Ctrl+S while the view stands).
 // Holds the checkpoint's commit message — one line, prefilled with `Update
@@ -279,8 +280,8 @@ struct State {
 // bytes.
 //
 // The ONE outside caller is the prompts' shared prefix completion
-// (GuiInputHandler::complete_editor_prefix, input_key_dispatch.cpp — the load
-// editor's and the Open prompt's Tab), which backs its byte-wise
+// (GuiInputHandler::complete_editor_prefix, input_key_dispatch.cpp — the Open
+// prompt's Tab), which backs its byte-wise
 // longest-common-prefix off to a boundary before seeding `pending`. It is exposed rather than the
 // boundary walks themselves because that is the whole of what the caller needs:
 // prev_codepoint_boundary always steps back a WHOLE codepoint, which is the

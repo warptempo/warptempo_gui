@@ -408,6 +408,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses on a locked tab inside the player (the lock's rule, at the act).
     // Bare `'` stays BLOCKED: its purpose outside the `h` view is the same
     // player, but its name is the load's and a locked tab keeps refusing it.
+    // BOTH FACES FOLLOW THEIR KEYS: the Play renders button left
+    // redesign_button_enabled's read-only arm with this admission, and the
+    // Load in place button is still on it (app_state.h).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
     // BARE `/` IS BLOCKED and is not admitted by any entry here: it opens the
@@ -464,10 +467,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     measured against and so must not leave the lane describing it;
 //   * load_history_commit_in_place and load_history_local_entry_in_place — the
 //     mode's own `'`, one act per walk;
-//   * load_render_entry_in_place — the renders-side `'`, which has ONE caller
-//     (load_editor_commit's non-mode branch) and therefore CANNOT run with the
-//     view standing: in the mode that editor's Enter routes to one of the two
-//     above. Its call is the idempotent no-op this function's early return
+//   * load_render_entry_in_place — the RENDER PLAYER's load, which has ONE
+//     caller (confirm_render_player_load) and therefore CANNOT run with the
+//     view standing: the player's opener refuses in the mode, where bare `'`
+//     is the typed prompt and its Enter routes to one of the two above. Its call is the idempotent no-op this function's early return
 //     exists for, placed at the mutator so the close travels with the act.
 // There is no pointer closer, and no closer outside this file's two acts, its
 // three loads and the prefetch arrival hook.
@@ -4048,10 +4051,6 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     return false;
 }
 
-// (render_entry_id — the entry's `<batch_dir>/<basename>.wav` spelling —
-// moved to renders_dir.h 2026-08-28 when the render player became its second
-// reader.)
-
 // -- THE RECIPE APPLY, the two sidecar load-in-places' one body -------
 //
 // The RULE this body exists to state once — a load in place writes exactly what
@@ -4602,72 +4601,56 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     return true;
 }
 
-// Open the `'` load prompt. No-op with no source loaded. An empty
-// tmp/ reports a one-line bottom-strip status and does not open. Stops
-// playback only when the modal actually opens (after every guard), so a
-// refused open leaves a listening session running.
+// Open the `'` load prompt — THE `h` HISTORY VIEW'S ROAD ONTO LOAD IN PLACE,
+// AND ITS ALONE (architect 2026-08-28, giving bare `'` outside the view to the
+// render player: "we can keep the single quote for load in place because that
+// still works in the history view"). A RENDER ENTRY is loaded from the PLAYER
+// now — its Load in place button on the highlighted batch cell — so this
+// editor has ONE subject, the viewed walk's member, and the renders-side half
+// it used to carry (the running-render guard, the empty-tmp/ refusal, the
+// entry vocabulary at the commit and at the Tab) is deleted rather than kept
+// as a road nothing reaches.
 //
-// THE `h` HISTORY MODE CHANGES WHAT THIS EDITOR IS FOR, and the whole change is
-// this one branch plus the routing at load_editor_commit: in the mode the
-// editor takes THE VIEWED WALK'S OWN VOCABULARY and opens PREFILLED with the
-// viewed member — a COMMIT SPELLING seeded with the full 40-char SHA on the
-// Remote tab (load_history_commit_in_place), a MEMBER NUMBER seeded with the
-// corner's own displayed `n` on the Local tab since 2026-08-08
-// (load_history_local_entry_in_place). Both of the renders-side guards
-// drop with the
-// renders-side subject — an empty tmp/ is no obstacle to loading a commit
-// in place,
-// and the running-render refusal exists for the wipe at the render-entry
-// load-in-place's tail, which the from-commit load-in-place does not have
-// (the reasoning is at that function).
-void GuiInputHandler::open_load_editor() {
+// No-op with no source loaded. Stops playback only when the modal actually
+// opens (after that guard), so a refused open leaves a listening session
+// running.
+//
+// THE EDITOR TAKES THE VIEWED WALK'S OWN VOCABULARY and opens PREFILLED with
+// the viewed member — a COMMIT SPELLING seeded with the full 40-char SHA on
+// the Remote tab (load_history_commit_in_place), a MEMBER NUMBER seeded with
+// the corner's own displayed `n` on the Local tab
+// (load_history_local_entry_in_place). THE MODE IS THE CALLER'S GATE rather
+// than a term of this body: the one caller is on_key's `'` arm under
+// history_mode.active, which is where the fork between this prompt and the
+// player lives.
+void GuiInputHandler::open_history_load_editor() {
     if (text_editor::is_active(app.load_editor)) return;
     if (app.source_audio_path.empty()) return;
 
+    // THE SEED IS THE VIEWED MEMBER, IN THE ACTIVE WALK'S OWN SPELLING: the
+    // corner's displayed NUMBER on the local timeline, the commit's full
+    // 40-char SHA on the committed one. The fork is here rather than in an
+    // accessor for the reason the corner's own SHA token is spelled out: the
+    // two walks name their members in different vocabularies, and the editor
+    // asks for the one the user is looking at.
+    //
+    // NEITHER ARM CAN BE COLD, and that is the ALLOWLIST's doing rather than
+    // the walk's: the mode opens on an EMPTY commit walk, so the honest gate
+    // against a walk with no viewed member is the `'` admission's own term
+    // (history_mode_key_blocked — the chord is refused and the icon row's load
+    // button greys), and this opener is reached only with a member to name.
+    // Within a bound walk every step clamps, so the index is always in range.
     std::string prefill;
-    if (app.history_mode.active) {
-        // THE SEED IS THE VIEWED MEMBER, IN THE ACTIVE WALK'S OWN SPELLING
-        // (2026-08-08, when the Local walk got the act): the corner's displayed
-        // NUMBER on the local timeline, the commit's full 40-char SHA on the
-        // committed one. The fork is here rather than in an accessor for the
-        // reason the corner's own SHA token is spelled out: the two walks name
-        // their members in different vocabularies, and the editor asks for the
-        // one the user is looking at.
-        //
-        // NEITHER ARM CAN BE COLD, and since 2026-08-09 that is the ALLOWLIST's
-        // doing rather than the walk's: the mode opens on an EMPTY commit walk
-        // now, so the honest gate against a walk with no viewed member is the
-        // `'` admission's own term (history_mode_key_blocked — the chord is
-        // refused and the icon row's load button greys), and this opener is
-        // reached only with a member to name. Within a bound walk every step
-        // clamps, so the index is always in range.
-        if (app.history_mode.source == GuiHistoryWalkSource::Local) {
-            prefill = std::to_string(app.history_mode.local_index + 1);
-        } else {
-            prefill = app.history_mode.session.sha_at(app.history_mode.index);
-        }
+    if (app.history_mode.source == GuiHistoryWalkSource::Local) {
+        prefill = std::to_string(app.history_mode.local_index + 1);
     } else {
-        // Running-render guard: the load-in-place wipes tmp/, which would race a
-        // background sweep writing into it. Refuse, don't cancel — a running
-        // batch may be irreplaceable queued work; Esc is the explicit cancel.
-        if (app.queue_running || app.pending_archival.armed) {
-            app.transient_status_message = "Render running; Esc cancels it";
-            viewport.invalidate_status_chain_area();
-            return;
-        }
-        std::vector<AppState::RenderEntry> list =
-            renders_dir.enumerate_render_entries();
-        if (list.empty()) {
-            app.transient_status_message = "No renders to load in place";
-            viewport.invalidate_status_chain_area();
-            return;
-        }
+        prefill = app.history_mode.session.sha_at(app.history_mode.index);
     }
     // Stop playback only now that the modal is definitely opening — the shared
     // modal stop (stop_playback_for_modal_open), whose refusal-gating rule this
-    // site is the sharpest instance of: each guard above (no source,
-    // running/parked render, empty tmp/) returns without touching playback,
-    // so a refused open never interrupts a listening session. Space is inside the
+    // site is the sharpest instance of: the no-source guard above returns
+    // without touching playback, so a refused open never interrupts a listening
+    // session. Space is inside the
     // modal blocked set, so once open, playback cannot restart until the editor
     // closes.
     playback_lifecycle.stop_playback_for_modal_open();
@@ -4678,9 +4661,10 @@ void GuiInputHandler::open_load_editor() {
     // OPEN-SELECTED ON A SEEDED BUFFER, the flag editor's convention (the
     // product's only other prefilling opener) and for its stated reason: the
     // first keystroke replaces the seed wholesale, so pasting another SHA over
-    // the prefilled one is one act rather than a select-all first. An EMPTY seed
-    // — every renders-side open, which is byte-identical to before — takes
-    // enter()'s own caret-at-end-of-nothing rest state and selects nothing.
+    // the prefilled one is one act rather than a select-all first. The seed is
+    // never cold here (the admission's own term, above); the emptiness test is
+    // enter()'s caret-at-end-of-nothing rest state left standing rather than a
+    // live case.
     if (!app.load_editor.pending.empty()) {
         app.load_editor.selection_anchor = 0;
         app.load_editor.cursor_pos =
@@ -4713,12 +4697,10 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // below refuses it.
 //
 // THE COMPARISON IS BY BYTE, DELIBERATELY: a candidate is a FILESYSTEM NAME —
-// a render entry's path under tmp/, a project folder's name under the
-// projects path — and a name is bytes: it is not text the UTF-8 relaxation
-// covers, and each caller's resolve matches it byte-exactly against the same
-// strings. Program-written batch folders and cell basenames are ASCII, so the
-// byte compare is the whole story for every name this product writes; a
-// project folder is the user's own name and may carry anything.
+// a project folder's name under the projects path — and a name is bytes: it is
+// not text the UTF-8 relaxation covers, and the caller's resolve matches it
+// byte-exactly against the same strings. A project folder is the user's own
+// name and may carry anything.
 //
 // WHAT THE PREFIX WRITES IS TEXT, THOUGH, and that is the one place the two
 // domains meet: the result becomes an editor `pending`, which must end on a
@@ -4769,90 +4751,30 @@ bool GuiInputHandler::complete_editor_prefix(
     return true;
 }
 
-// Tab handler: the one prefix completion above over the entry identifiers. It
-// answers false — handing the key to the ring — for an inactive editor and
-// for the `h` mode's foreign vocabulary as well as for the completion's own
-// refusals, which is what gives the `h` HISTORY MODE a working ring here: a
-// commit spelling or a member number has nothing to complete against, so
-// every Tab in there answers false and steps, a case the pre-ruling model
-// could not reach.
-bool GuiInputHandler::load_editor_autocomplete() {
-    if (!text_editor::is_active(app.load_editor)) return false;
-    // IN THE `h` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
-    // pending is a commit spelling or a member number, and the entry
-    // identifiers below name renders this route never reads. Answering false
-    // rather than completing out of the wrong vocabulary is what hands the key
-    // to the ring.
-    if (app.history_mode.active) return false;
-
-    std::vector<std::string> candidates;
-    for (const auto& e : renders_dir.enumerate_render_entries()) {
-        candidates.push_back(render_entry_id(e));
-    }
-    return complete_editor_prefix(app.load_editor, candidates);
-}
-
-// Enter handler: resolve the pending to exactly one entry and load it in place.
-// Resolution accepts exactly the entry's canonical id
-// (`<batch_dir>/<basename>.wav`); ids are unique by filesystem construction
-// (one path per file), so the first match resolves. On a resolve,
-// load_render_entry_in_place runs; a true result closes the editor, a false result
-// (bad sidecar / missing wav) red-flashes and stays open — the mutator having
-// named the cause on stderr. Zero matches red-flash and stay open SILENTLY: an
-// identifier matching nothing is a typo, not a fault, and the flash is the whole
-// answer (architect 2026-08-02).
-//
-// IN THE `h` HISTORY MODE THE SUBJECT IS A HISTORY MEMBER, not a render entry,
-// and WHICH KIND is the viewed walk's: a COMMIT SPELLING on the Remote tab
-// (load_history_commit_in_place), a MEMBER NUMBER on the Local tab since
-// 2026-08-08 (load_history_local_entry_in_place). Each owns every refusal on its
-// own route and names each one on stderr. All three routes share this function's
-// SHAPE exactly — a true result closes the editor, a false one red-flashes and
-// stays open — so a failed resolve leaves the typed text in place to be
-// corrected.
+// Enter handler: resolve the pending to one member of the viewed walk and load
+// that state in place. THE SUBJECT IS A HISTORY MEMBER and WHICH KIND is the
+// viewed walk's: a COMMIT SPELLING on the Remote tab
+// (load_history_commit_in_place), a MEMBER NUMBER on the Local tab
+// (load_history_local_entry_in_place). Each owns every refusal on its own route
+// and names each one on stderr. Both share this function's SHAPE — a true
+// result closes the editor, a false one red-flashes and stays open — so a
+// failed resolve leaves the typed text in place to be corrected. (A RENDER
+// ENTRY was the third subject until 2026-08-28, when the player took the
+// renders road whole; the resolve against the entry identifiers went with it.)
 void GuiInputHandler::load_editor_commit() {
     if (!text_editor::is_active(app.load_editor)) return;
     const std::string pending = app.load_editor.pending;
 
-    auto reject = [&]() {
-        app.load_editor.red = true;
-        viewport.invalidate_modal_dialog_area();
-    };
-
-    if (app.history_mode.active) {
-        const bool loaded =
-            app.history_mode.source == GuiHistoryWalkSource::Local
-                ? load_history_local_entry_in_place(pending)
-                : load_history_commit_in_place(pending);
-        if (loaded) {
-            viewport.invalidate_modal_dialog_area();
-            text_editor::deactivate(app.load_editor);
-        } else {
-            reject();
-        }
-        return;
-    }
-
-    std::vector<AppState::RenderEntry> list =
-        renders_dir.enumerate_render_entries();
-
-    const AppState::RenderEntry* found = nullptr;
-    for (const auto& e : list) {
-        if (render_entry_id(e) == pending) {
-            found = &e;
-            break;
-        }
-    }
-    if (!found) { reject(); return; }
-
-    // Copy the entry before the load-in-place: its tail wipes tmp/, and
-    // the copy is self-contained (paths + basename), so it stays valid.
-    const AppState::RenderEntry entry = *found;
-    if (load_render_entry_in_place(entry)) {
+    const bool loaded =
+        app.history_mode.source == GuiHistoryWalkSource::Local
+            ? load_history_local_entry_in_place(pending)
+            : load_history_commit_in_place(pending);
+    if (loaded) {
         viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.load_editor);
     } else {
-        reject();
+        app.load_editor.red = true;
+        viewport.invalidate_modal_dialog_area();
     }
 }
 
@@ -5222,15 +5144,16 @@ bool GuiInputHandler::route_modal_editor_key(
     return true;  // modal: swallow
 }
 
-// Routes a key to the active load editor through the shared modal route; bare
-// Tab in the field offers the entry-identifier completion and walks the focus
-// ring when it did not advance (the one autocomplete model is stated at
-// route_modal_editor_key).
+// Routes a key to the active load editor through the shared modal route. It
+// passes NO autocomplete hook — a commit spelling and a member number have no
+// vocabulary to complete against — so bare Tab walks the dialog's focus ring
+// from the first press, as it does in the bpm and commit-title editors. (The
+// entry-identifier completion left with the renders subject on 2026-08-28.)
 bool GuiInputHandler::handle_load_editor_key(GuiKey key,
                                                GuiInputState mods) {
     return route_modal_editor_key(
         app.load_editor, key, mods,
-        [this] { return load_editor_autocomplete(); },
+        /*autocomplete=*/nullptr,
         [this] { load_editor_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
@@ -5240,7 +5163,7 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
 // -- THE OPEN PROJECT PROMPT (the contract is at the declaration) ----------
 
 // The opener. Every guard returns without touching playback (the modal-open
-// precedent open_load_editor sets: a refused open never interrupts a
+// precedent open_history_load_editor sets: a refused open never interrupts a
 // listening session); the shared modal stop runs only once the editor is
 // definitely opening. TWO ROADS REACH IT since 2026-08-28 and both are the
 // same chord: Ctrl+O's own dispatch arm in on_key, and the File menu's Open
@@ -5942,15 +5865,16 @@ void GuiInputHandler::render_player_load_in_place() {
     // at stop_playback_for_modal_open.
     if (app.render_player.transport_live) render_player.toggle_pause();
     app.render_player.pending_load = *entry;
-    // THE CONFIRMATION: the entry's id in the load editor's own spelling,
-    // OK / Cancel — Cancel the Escape sentinel LAST like every prompt's, so
-    // Esc's own answer is derived rather than declared; `o` is OK's letter.
+    // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
+    // renders_dir.h), OK / Cancel — Cancel the Escape sentinel LAST like every
+    // prompt's, so Esc's own answer is derived rather than declared; `o` is
+    // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, this prompt alone
     // (architect 2026-08-28): a bare ENTER here answers OK, because the load
     // is not a destructive answer — it lands ONE undo entry, which the
-    // ordinary Ctrl+Z takes back — and because the product's other `'` road
-    // onto this same act, the `h` view's Load editor, commits on its Enter.
-    // The two roads answer alike instead of opposite ways. Through
+    // ordinary Ctrl+Z takes back — and because the product's other `'` load
+    // prompt, the `h` view's Load editor, commits on its Enter. The two load
+    // prompts answer alike instead of opposite ways. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
                        {'o', '\x1b'},

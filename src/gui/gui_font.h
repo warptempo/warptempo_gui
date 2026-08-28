@@ -7,7 +7,9 @@
 //
 // The two families are the product's whole face inventory: the proportional
 // sans every row shapes and paints on (12pt x gui_scale, the text_shape
-// chokepoint's subject) and the monospace the row-8 clock owns alone. Slant
+// chokepoint's subject) and the monospace the CLOCK owns — one face, two
+// cells: the row-8 clock and the render player's `<position> / <length>` on
+// the modal row, which takes the row-8 cell's size and metrics. Slant
 // and weight are not parameters: every site is normal/normal, so a face is
 // named by its family and nothing else.
 //

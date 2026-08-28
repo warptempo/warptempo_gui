@@ -125,7 +125,8 @@ struct Viewport {
     //    the settings engine-scale commit, undo/redo, and THE LOAD-IN-PLACE
     //    FAMILY, which reaches this through its ONE shared body since 2026-08-24
     //    (apply_recipe_in_place, input_key_dispatch.cpp — called by
-    //    load_render_entry_in_place for `'` over a render entry,
+    //    load_render_entry_in_place for the render player's load of a batch
+    //    cell,
     //    load_history_commit_in_place for the `h` view's commit load, and
     //    load_history_local_entry_in_place for that view's LOCAL walk, which
     //    puts a state of the session's own undo/redo timeline back), and — since
@@ -343,28 +344,33 @@ struct Viewport {
     // platform's damage list coalescing a contained rect away.
     void invalidate_status_chain_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
-    // onto the row 2026-08-13, and the row yields to it whole). Its callers
-    // are the five DIALOG EDITORS' repaint sites, which is the population the
-    // status chain's move up to the tab row left behind on this row:
+    // onto the row 2026-08-13, and the row yields to it whole). ITS CALLERS,
+    // re-greped 2026-08-28, are the SIX DIALOG EDITORS' repaint sites plus the
+    // RENDER PLAYER's two, the player being the row's third owner:
     //
     //   * TYPING and the autocompletes — route_modal_editor_key's `repaint`
-    //     argument, passed by all five editor key handlers
+    //     argument, passed by all six dialog editor key handlers
     //     (input_key_dispatch), plus the settings editor's own prefill and
-    //     value-recall writes (settings_editor) and the load editor's
-    //     completion (input_key_dispatch).
-    //   * THE CARET BLINK — main.cpp's four per-tick blink transitions, one
-    //     per dialog editor.
+    //     value-recall writes (settings_editor).
+    //   * THE CARET BLINK — main.cpp's per-tick blink transitions, one per
+    //     dialog editor (the flag editor's BPM arm among them, its other two
+    //     kinds damaging the top strip instead).
     //   * THE RED FLASH — every red-flash refusal in settings_editor,
     //     flag_editor's BPM commit, the commit-title editor's blank refusal
     //     and the load editor's reject.
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
     //     flag_editor's BPM commit and exit_bpm_mode, the commit-title
-    //     editor's two, the load editor's two and its two successful-load
-    //     tails).
+    //     editor's two, the measure offset editor's, the Open prompt's, and
+    //     the load editor's two plus its successful-load tail).
     //   * THE POINTER'S TEXT DRAG — input_pointer's four `g.dialog` sites
     //     (click-to-caret, the double-click word select, the drag's motion
     //     and its release).
+    //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
+    //     lane and damages it through the same owner: GuiRenderPlayer::
+    //     damage_row for every transport, highlight and clock/scrub change
+    //     (render_player.cpp), and the one stop body's player fork for the
+    //     play/pause face (playback_lifecycle.cpp).
     //
     // The PROMPTS are deliberately absent: every raise and every answer
     // damages the whole window (prompt.cpp), which is what a surface with no

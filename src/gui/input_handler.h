@@ -2446,45 +2446,38 @@ private:
     // that day is reverted with the ruling).
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // Load prompt (bare `'`). A dialog modal editor, structural
-    // sibling of the settings editor: it takes a render entry's identifier
-    // relative to tmp/ and, on Enter, loads that render's frozen sidecar
-    // recipe in place as the new authoring baseline through
-    // load_render_entry_in_place.
+    // Load prompt (bare `'`) — THE `h` HISTORY VIEW'S ROAD ONTO LOAD IN PLACE
+    // AND ITS ALONE since 2026-08-28, when the RENDER PLAYER took bare `'`
+    // outside the view and with it the whole renders subject (the player's
+    // Load in place button acts on the highlighted batch cell). A dialog modal
+    // editor, structural sibling of the settings editor.
     //
-    // THE `h` HISTORY MODE GIVES THE SAME EDITOR TWO MORE SUBJECTS, one per walk
-    // (2026-08-04 for the commit, 2026-08-08 for the local member): on the REMOTE
-    // tab it takes a COMMIT SPELLING, opens prefilled with the viewed commit's
-    // SHA and loads it through load_history_commit_in_place; on the LOCAL tab it
-    // takes a MEMBER NUMBER, opens prefilled with the viewed member's displayed
-    // `n`, and loads that timeline state through
-    // load_history_local_entry_in_place. The mode is the discriminator for the
-    // pair against the renders side and the walk SOURCE is the discriminator
-    // between them, both tested at the opener and at the commit (the autocomplete
-    // speaks neither vocabulary and no-ops on the mode alone); every other line
-    // of the editor — its keys, its modality, its painted cell, its Esc — is the
-    // same one behaviour for all three subjects.
+    // ITS SUBJECT IS THE VIEWED WALK'S MEMBER, one vocabulary per walk: on the
+    // REMOTE tab a COMMIT SPELLING, prefilled with the viewed commit's SHA and
+    // loaded through load_history_commit_in_place; on the LOCAL tab a MEMBER
+    // NUMBER, prefilled with the viewed member's displayed `n` and loaded
+    // through load_history_local_entry_in_place. The walk SOURCE is the
+    // discriminator, tested at the opener and at the commit; every other line
+    // of the editor — its keys, its modality, its painted cell, its Esc — is
+    // one behaviour for both. (A RENDER ENTRY'S IDENTIFIER relative to tmp/ was
+    // the third subject, with a Tab completion over the entry ids and a
+    // renders-side pair of guards, until the player replaced that road whole:
+    // the half was deleted rather than kept unreachable.)
     //
-    // open_load_editor: bare `'` opener (no-op with no source loaded; outside
-    // the mode also refuses over a running/parked render and over an empty
-    // tmp/, both guards being renders-side).
-    // load_editor_autocomplete:
-    // bare-Tab longest-common-prefix completion over the entry identifiers,
-    // returning whether it advanced the buffer (the one autocomplete model, at
-    // route_modal_editor_key); in the mode it speaks neither vocabulary, so it
-    // answers false and the Tab walks the dialog's focus ring instead.
-    // load_editor_commit: resolve the pending — to exactly one render entry,
-    // or in the mode to a commit — and load it in place.
+    // open_history_load_editor: the opener, reached from the `h` arm of
+    // on_key's bare `'` (no-op with no source loaded).
+    // load_editor_commit: resolve the pending to the viewed walk's member and
+    // load that state in place.
     // load_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_load_editor_key:
-    // the key router, through route_modal_editor_key like the settings editor.
-    void open_load_editor();
-    bool load_editor_autocomplete();
+    // the key router, through route_modal_editor_key like the settings editor,
+    // passing NO autocomplete hook — neither vocabulary has anything to
+    // complete against, so bare Tab walks the dialog's focus ring.
+    void open_history_load_editor();
     void load_editor_commit();
     void load_editor_exit_no_commit();
     bool handle_load_editor_key(GuiKey key, GuiInputState mods);
 
-    // THE ONE PREFIX COMPLETION (2026-08-27, hoisted out of the load editor's
-    // Tab when the Open prompt needed the same body): extend `ed`'s pending to
+    // THE ONE PREFIX COMPLETION: extend `ed`'s pending to
     // the longest common prefix of the `candidates` that start with it, backed
     // off to a UTF-8 codepoint boundary, and answer whether the buffer
     // ADVANCED — the one autocomplete model's whole question
@@ -2492,11 +2485,12 @@ private:
     // candidate carries the prefix, a common prefix that does not advance, a
     // back-off that leaves nothing to add. The comparison is BY BYTE, since a
     // candidate is a filesystem name; the full rationale, the second-Tab
-    // argument and the back-off's proof are at the definition. The two callers
-    // build their own candidate lists — the render-entry identifiers for the
-    // load editor, the folder names under projects_path for the Open prompt —
-    // and pass them in; nothing here knows which editor it serves beyond the
-    // State it was handed.
+    // argument and the back-off's proof are at the definition. ITS ONE CALLER
+    // TODAY is the Open prompt's Tab, which builds its own candidate list (the
+    // folder names under projects_path) and passes it in; nothing here knows
+    // which editor it serves beyond the State it was handed. (The load
+    // editor's Tab was the second caller — and the body's origin — until the
+    // render player took the renders road on 2026-08-28.)
     bool complete_editor_prefix(text_editor::State& ed,
                                 const std::vector<std::string>& candidates);
 
@@ -2721,14 +2715,16 @@ private:
     // behind its red flash; otherwise applies the recipe through
     // apply_recipe_in_place above — the marker pair and the engine block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
-    // TWO SANCTIONED ROADS ONTO THIS ONE ACT (architect design 2026-08-28,
-    // §4 — the no-second-road doctrine's stated exception: glass needs a road
-    // that is not typing, and the history view's binding to the typed prompt
-    // is not worth untangling): the `'` load editor's Enter
-    // (load_editor_commit, matching the typed id) and the RENDER PLAYER's
-    // Load in place button through its confirmation
-    // (confirm_render_player_load, the highlighted batch cell). Both callers
-    // copy the entry before calling — the tail wipes tmp/.
+    // ONE CALLER, re-greped: the RENDER PLAYER's Load in place button through
+    // its confirmation (confirm_render_player_load, the highlighted batch
+    // cell), which copies the entry before calling — the tail wipes tmp/. THE
+    // TWO-ROAD SANCTION RETIRED WITH THE TYPED ROAD (2026-08-28): the act had
+    // a second caller for part of that day, the `'` load editor's Enter
+    // matching a typed entry id, and the design (§4) sanctioned the pair as the
+    // no-second-road doctrine's stated exception because glass needs a road
+    // that is not typing. Then bare `'` outside the `h` view became the
+    // player's opener, leaving the typed road unreachable, and it was deleted
+    // — so the exception is spent and the doctrine holds here plainly again.
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its

@@ -1382,8 +1382,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the flag editor's exemption live at its declaration). THE STOP IS THE
     // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
     // refusal that day (a locked tab authors no engine settings), so the stop
-    // moved inside GuiSettingsEditor::open past that gate, the open_load_editor
-    // precedent. This key never meets that refusal anyway — `;` is off the
+    // moved inside GuiSettingsEditor::open past that gate, the load prompt's
+    // own precedent (open_history_load_editor). This key never meets that refusal anyway — `;` is off the
     // read-only allowlist and drops far above — but the two openers share one
     // owner rather than one of them keeping a private copy.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
@@ -1391,28 +1391,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare `'` opens the load prompt as a modal on the bottom row: load a chosen
-    // render in place as the new authoring baseline by NAME — or, while the `h`
-    // history mode stands, a COMMIT by its SHA, the editor's other subject
-    // (open_load_editor's own branch; the mode admits this one key through
-    // history_mode_key_blocked above). TWO PRODUCERS, ONE ROUTE: this key and
-    // the icon row's load button, which synthesizes exactly this bare chord
-    // through the redesign chord table, so both subjects reach both producers
-    // and no second opener exists. A modal DIALOG
-    // surface. open_load_editor owns the no-source / renders-side guards AND
-    // the playback stop: playback halts only when the modal actually opens, so a
-    // refused open leaves a listening session undisturbed (once open, Space is
-    // inside the modal blocked set, so playback cannot restart until the editor
-    // closes).
-    // BARE `'` OUTSIDE THE `h` VIEW OPENS THE RENDER PLAYER (architect design
-    // 2026-08-28): the player is the load-in-place road on glass — its Load
-    // in place button, bare `'` again inside the player — while the `h` view
-    // keeps the typed prompt as its own road (the design's U8: "untangling
-    // that will be complicated"). The fork is the mode bit, read here rather
-    // than inside open_load_editor so that opener stays the typed prompt's
-    // whole owner in both of its remaining subjects.
+    // BARE `'` IS LOAD IN PLACE, AND THE MODE BIT PICKS WHICH ROAD (architect
+    // design 2026-08-28). OUTSIDE the `h` view it opens the RENDER PLAYER,
+    // which is where a render entry is chosen — a highlighted batch cell and
+    // the modal row's Load in place button, `'` again inside the player. IN
+    // the view it opens the TYPED LOAD PROMPT on the viewed walk's member — a
+    // commit by its SHA, or a local member by its number
+    // (open_history_load_editor; the mode admits this one key through
+    // history_mode_key_blocked above) — which is the view's own road and stays
+    // its own ("we're just gonna leave that be in history view"; the design's
+    // U8: "untangling that will be complicated"). The fork is HERE rather than
+    // inside either opener, so each opener owns one surface whole.
+    // TWO PRODUCERS, ONE ROUTE: this key and the icon row's load button, which
+    // synthesizes exactly this bare chord through the redesign chord table, so
+    // both roads reach both producers and no second opener exists. The typed
+    // prompt is a modal DIALOG surface, and its opener owns the no-source guard
+    // AND the playback stop: playback halts only when the modal actually opens,
+    // so a refused open leaves a listening session undisturbed (once open,
+    // Space is inside the modal blocked set, so playback cannot restart until
+    // the editor closes).
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
-        if (app.history_mode.active) open_load_editor();
+        if (app.history_mode.active) open_history_load_editor();
         else                         toggle_render_player();
         return;
     }

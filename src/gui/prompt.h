@@ -52,8 +52,8 @@ struct GuiPrompt {
     // the settings editor's own shape). ONE READER: the render player's load
     // confirmation, whose OK and Cancel reach the acts that live on
     // GuiInputHandler (confirm_render_player_load, cancel_render_player_load)
-    // — the shared load_render_entry_in_place is a private act of that
-    // struct and the player is its second sanctioned road.
+    // — load_render_entry_in_place being a private act of that struct, and
+    // the player its one road.
     GuiInputHandler*      input = nullptr;
 
     GuiPrompt(AppState&             app_,

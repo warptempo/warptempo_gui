@@ -2057,9 +2057,13 @@ enum class RedesignButton {
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
-    // history"). THE FIRST TWO GREY ON A LOCKED TAB (2026-08-15): the lock
-    // blocks bare `l` and `'` alike, `'` replacing the whole authored state.
-    // The toggle does not — `o` is the escape chord.
+    // history"). ONLY THE SECOND GREYS ON A LOCKED TAB: `'` replaces the whole
+    // authored state and the lock blocks it. Neither of its neighbours is the
+    // lock's — `o` is the escape chord, and bare `l` JOINED THE READ-ONLY
+    // ALLOWLIST on 2026-08-28 with the in-app render player, which plays a
+    // rendered wav and authors nothing (its own Load in place button carries
+    // the lock's refusal instead). Both buttons stood on this arm until then,
+    // when the key and the face agreed on `l` by both being blocked.
     //
     // IT IS NO LONGER THE ROW'S LAST GROUP: the HISTORY OPENER left it on
     // 2026-08-18 to lead a separator-led group of its own again, which is what
@@ -4210,9 +4214,12 @@ struct AppState {
     // field and the Open prompt's typed folder name — have to be the same
     // string for the prompt's "already open" no-op to hold. ONE PRODUCER,
     // GuiFileLoader::load_file, which is handed the resolved project and
-    // assigns it here beside the window title; nothing else writes it. Read by
-    // the load-in-place prompt's label (`<projects_path>/<name>/tmp/`) and by
-    // that Open prompt no-op.
+    // assigns it here beside the window title; nothing else writes it. READ BY
+    // THE OPEN PROMPT'S "already open" no-op and by the external-sync job,
+    // which names the mirror's folder on the volume with it. (The load-in-place
+    // prompt's `<projects_path>/<name>/tmp/` label was the third reader until
+    // 2026-08-28, when the render player took the renders subject and that
+    // composed label went with it.)
     std::string project_name;
 
     // THE REOPEN REQUEST: the project NAME the Open prompt chose, set by its
@@ -5877,11 +5884,11 @@ struct AppState {
     // double-click went back to framing it: neither reads the delta at all
     // now.) THREE surfaces are not,
     // and each says why at its own site: the corner's SHA token (an undo entry
-    // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS since
-    // 2026-08-08 wherever the active walk carries a member and FORKS ON THE
+    // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
+    // wherever the active walk carries a member and FORKS ON THE
     // SOURCE — the editor asks for a commit spelling
     // on the Remote tab and a member NUMBER on the Local one, and the act behind
-    // it is a different function per walk (the mode's two, at the opener and at
+    // it is a different function per walk (the two, at the opener and at
     // load_editor_commit) — and SAVE-AND-COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
@@ -6941,14 +6948,14 @@ struct AppState {
     // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
-    // THREE CONSUMERS (re-greped 2026-08-28): the `'` load editor's commit
-    // (load_editor_commit, matching the typed id) and the shared act it runs
-    // (load_render_entry_in_place, input_key_dispatch.cpp), and THE RENDER
-    // PLAYER (render_player.cpp), whose batch-folder listings carry one of
-    // these on every wav row — the entry is what makes a row LOAD-IN-PLACE-
-    // CAPABLE, so the deliverable's rows carry none and the long press refuses
-    // silently there. (The `l` external-player spawn was the first consumer
-    // until 2026-08-28, when `l` became the player's opener.)
+    // TWO CONSUMERS (re-greped 2026-08-28): THE RENDER PLAYER
+    // (render_player.cpp), whose batch-folder listings carry one of these on
+    // every wav row — the entry is what makes a row LOAD-IN-PLACE-CAPABLE, so
+    // the deliverable's rows carry none and the Load in place button refuses
+    // "Only batch renders load in place" on one — and the act that button's
+    // confirmation runs (load_render_entry_in_place, input_key_dispatch.cpp).
+    // (The `l` external-player spawn and the typed load editor's own resolve
+    // were consumers until 2026-08-28, when the player replaced both.)
     struct RenderEntry {
         std::filesystem::path batch_folder;     // <source parent>/tmp/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
@@ -8255,7 +8262,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     which is the truth the keys have — the term lives in the per-button
 //     switch below rather than as a blanket line, because it is no longer a
 //     blanket fact. (It was one until this ruling, when "a locked tab greys the
-//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES EIGHT
+//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES SEVEN
 //     MORE BUTTONS since 2026-08-15 — the authoring chords it blocks that
 //     still have a face to grey, spread across the icon row and the bottom one
 //     since the 2026-08-18 relayout — and its own entry is below.
@@ -8283,9 +8290,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     reintroduce the blink the same ruling removed from the arrows. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare `m`, bare `i`, bare `l`, bare `'`,
-//     bare `/` and bare Return — TEN as of 2026-08-27, the EDIT FLAG BUTTON's
-//     chord joining with the button. IT IS HAND-LISTED RATHER THAN
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/` and bare `'` —
+//     SEVEN as of 2026-08-28, when BARE `l` LEFT with the in-app render
+//     player: the player plays a rendered wav and authors nothing, so the key
+//     joined the allowlist and its button left this arm rather than greying
+//     under a key that still works. IT IS HAND-LISTED RATHER THAN
 //     DERIVED, and
 //     the reason is that the allowlist alone is not the truth: some of its
 //     answers do not survive the walk (below), and Ctrl+P and Ctrl+Alt+P
@@ -8532,6 +8541,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // direction on any loaded piece, and the lock admits it (follow is
         // navigation, not authored content). Its lamp reports the state.
         case RedesignButton::IconFollow:
+        // PLAY RENDERS MIRRORS NOTHING (2026-08-28, when bare `l` became the
+        // RENDER PLAYER's opener): the player plays a rendered wav and authors
+        // nothing, so the lock admits the chord and this face follows the key
+        // rather than greying under it — the read-only-legal set's own rule.
+        // The opener's own refusals are the class this roster never mirrors: a
+        // project with no render at all answers "No renders to play" on the
+        // status line, and asking that per frame is a directory walk the
+        // painter has no business doing (the `h` button's own reasoning). The
+        // `h` view greys it through the derived partition above, bare `l`
+        // being consumed in there. THE LOAD is what the lock refuses, and that
+        // refusal belongs to the player's own Load in place button.
+        case RedesignButton::IconListen:
         // THE READ-ONLY TOGGLE MIRRORS NOTHING (2026-08-14): bare `o` is
         // always meaningful on a loaded piece — it locks a writable tab and
         // unlocks a locked one — so there is nothing to grey for. Its lamp,
@@ -8610,7 +8631,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // paragraphs up.
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
-        case RedesignButton::IconListen:
+        // PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
+        // render player, which plays a rendered wav and authors nothing, so
+        // the key is on the read-only allowlist and the button follows it —
+        // greying a face whose key still works is the face promising LESS than
+        // the key delivers, the read-only-legal set's own rule two paragraphs
+        // down. The player's LOAD is what the lock refuses, and that refusal
+        // is the Load in place button's, still here.
         case RedesignButton::IconLoadInPlace:
             return !active_view_state(a).read_only;
         // THE BOTTOM ROW IS ALWAYS-ON EXCEPT FOR ITS OWN TWO GREYS (architect
@@ -9487,11 +9514,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Reduce waveform (-)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
         // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
-        // — `l` names the act it exists for, `'` keeps its name because in the
-        // `h` view it is still the typed load-in-place prompt and outside it
-        // the player is the load's road (a long press on a wav row; the
-        // button itself admits no modifier, so neither carries a second
-        // line). "Load in place" not "Load render in place": the act loads A
+        // — `l` names the act it exists for, `'` keeps its name because it is
+        // the load's chord on both roads: the typed prompt in the `h` view,
+        // and outside it the player, whose own Load in place button takes bare
+        // `'` again. Neither button admits a modifier, so neither carries a
+        // second line. "Load in place" not "Load render in place": the act loads A
         // STATE — a tmp/ entry's sidecar set (the render name is only the
         // match key) or, in the history view, a commit's sidecars or a
         // member of the session's own timeline — so naming "render"
