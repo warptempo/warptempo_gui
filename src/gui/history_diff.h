@@ -443,19 +443,28 @@ struct GuiHistoryCommitSidecars {
     GuiHistorySidecarBlob settings;
 };
 
+// THE SEVEN-CHARACTER SPELLING every user-facing line uses for a commit —
+// the corner's SHA token and the history picker's rows through
+// AppState::HistoryMode::member_label, and every reason this module composes.
+// The full SHA is returned unchanged when it is shorter than seven, which no
+// git answer is.
+std::string short_sha(const std::string& sha);
+
 // READ ONE COMMIT'S SIDECARS BY SPELLING — the load-in-place-from-a-commit
 // path's input
 // (GuiInputHandler::load_history_commit_in_place), and the session walk's per-commit
 // read generalized off the walk: the cache above is INDEX-keyed and holds
-// deltas, while the load-in-place starts from a SHA the user typed, which may
-// name a
-// commit outside the walked depth or outside the list entirely.
+// deltas, while this reads any one commit by name.
 //
-// `spelling` is anything `git rev-parse --verify <spelling>^{commit}` resolves —
-// a full SHA, a short SHA, a tag or a branch name. The peel suffix is what makes
-// the resolution a COMMIT rather than any object, and it doubles as the argv
-// hardening: a spelling starting with '-' reaches git as `-foo^{commit}`, which
-// matches no option spelling and simply fails to resolve.
+// `spelling` is anything `git rev-parse --verify <spelling>^{commit}` resolves.
+// BOTH CALLERS HAND IT A FULL SHA THE STORE ALREADY HOLDS since 2026-08-28 —
+// the walk's scan its candidate, the history picker its highlighted member —
+// so the resolution is a verification rather than a lookup (the typed load
+// prompt that took "a SHA pasted from GitHub's web UI" retired with its field,
+// architect R23). The peel suffix is what makes the answer a COMMIT rather
+// than any object, and it doubles as the argv hardening: a spelling starting
+// with '-' reaches git as `-foo^{commit}`, which matches no option spelling and
+// simply fails to resolve.
 //
 // The sidecar directory is the one THIS COMMIT TOUCHED for the base name, the
 // same rule the walk uses, so a commit from before a corpus rename reads with no

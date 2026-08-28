@@ -2967,8 +2967,8 @@ struct CommandPopupItem {
 // over one separator: **Open project** first (architect 2026-08-27, the
 // project model's one pointer home on both platforms; the label is the
 // architect's own, R8: "we would call it open project instead of open file",
-// and the row raises the Open prompt with the folder-list picker standing in
-// the keyboard's band above it) and **Synchronize to external storage** under
+// and the row raises the Open project picker — the folder overlay's list of
+// projects in the keyboard's band over an OK / Cancel row) and **Synchronize to external storage** under
 // it (architect
 // 2026-08-27, the deliverable and the batch cells mirrored onto the one
 // mounted removable volume — the act is external_sync.h's and this row is its
@@ -3464,8 +3464,8 @@ enum class DialogTrigger {
     // shared load_render_entry_in_place act on the entry parked at
     // AppState::RenderPlayer::pending_load; Cancel drops it. THE ONE PROMPT
     // RAISED WITH ITS FIRST BUTTON FOCUSED, so a bare Enter answers OK the way
-    // the `h` view's Load editor's Enter commits (PromptInitialFocus owns the
-    // choice and its reason). The raise and the answers live on
+    // the `h` view's history picker's Enter loads its highlight
+    // (PromptInitialFocus owns the choice and its reason). The raise and the answers live on
     // GuiInputHandler (render_player_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
@@ -3580,17 +3580,17 @@ enum class DialogTrigger {
 //   FirstButton — the RENDER PLAYER'S LOAD CONFIRMATION alone: its OK is not a
 //                 destructive answer (the load lands one undo entry, which the
 //                 ordinary Ctrl+Z takes back), and its keyboard contract
-//                 mirrors the `h` view's Load editor — the product's other `'`
-//                 road onto the same act, whose Enter is its commit. The two
-//                 roads answer the same way rather than opposite ways.
+//                 mirrors the `h` view's history picker — the product's other
+//                 `'` road onto the same act, whose Enter opens its highlight.
+//                 The two roads answer the same way rather than opposite ways.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 struct PromptState {
     bool                     active = false;
     bool                     painted = false;   // see the block above
     // THIS QUESTION'S SESSION ID, from the one modal session counter
-    // (text_editor::next_session_id — homed there because five of the six
-    // modal surfaces are editors; the whole contract is at its declaration).
+    // (text_editor::next_session_id — homed there because the editors are
+    // the most numerous modal class; the whole contract is at its declaration).
     // A prompt REPLACING a prompt is a new raise and takes a new id, so the
     // stash comparison alone tells a stale publication from a live one and
     // needs no term about `painted` (which answers a different question: has
@@ -4216,8 +4216,8 @@ struct AppState {
     // `projects_repo=` arm) mirror their value into
     // it and hand it to write_device_config, and the two keys with no live
     // field of their own — `projects_path`, `last_project` — are read from it
-    // where they are needed (the Open prompt's candidates and prefixes, the
-    // startup and reopen choice). Seated at each AppState's construction by
+    // where they are needed (the Open project picker's rows, the startup and
+    // reopen choice). Seated at each AppState's construction by
     // gui_main and never null while the GUI runs; the ownership rationale is
     // the callers inventory at write_device_config, device_config.h.
     DeviceConfig* device_config = nullptr;
@@ -4228,20 +4228,18 @@ struct AppState {
     // resolved name VERBATIM and never a path's basename recomputed from the
     // source: a symlinked source or project folder would answer the link
     // target's basename instead, and the two roads that name a project — this
-    // field and the Open prompt's typed folder name — have to be the same
-    // string for the prompt's "already open" no-op to hold. ONE PRODUCER,
-    // GuiFileLoader::load_file, which is handed the resolved project and
-    // assigns it here beside the window title; nothing else writes it. READ BY
-    // THE OPEN PROMPT'S "already open" no-op and by the external-sync job,
-    // which names the mirror's folder on the volume with it. (The load-in-place
-    // prompt's `<projects_path>/<name>/tmp/` label was the third reader until
-    // 2026-08-28, when the render player took the renders subject and that
-    // composed label went with it.)
+    // field and the Open project picker's row names — have to be the same
+    // string for the picker's "already open" no-op and its opening highlight
+    // to hold. ONE PRODUCER, GuiFileLoader::load_file, which is handed the
+    // resolved project and assigns it here beside the window title; nothing
+    // else writes it. READ BY THE OPEN PROJECT PICKER (its "already open"
+    // no-op and the row its band opens on) and by the external-sync job,
+    // which names the mirror's folder on the volume with it.
     std::string project_name;
 
-    // THE REOPEN REQUEST: the project NAME the Open prompt chose, set by its
-    // commit once the folder has passed validity and the strict sidecar
-    // dry-run, and read by gui_main's loop after run() returns — a non-empty
+    // THE REOPEN REQUEST: the project NAME the Open project picker chose, set
+    // by its open act once the folder has passed validity and the strict
+    // sidecar dry-run, and read by gui_main's loop after run() returns — a non-empty
     // name with no exit requested is a reopen, and the loop builds the next
     // object set around that project (the loop contract, main.cpp). Empty
     // until then; it dies with this AppState, which is exactly when it has
@@ -4829,8 +4827,9 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the six dialog
-    // editors paint ON THE BOTTOM ROW since 2026-08-13 (architect, scrapping
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the four dialog
+    // editors, the render player and the picker paint ON THE BOTTOM ROW since
+    // 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
     // shadow, and faking one wouldn't work"): while one stands the row's
     // tenants stand down whole and the modal has the lane. This is the
@@ -4890,8 +4889,8 @@ struct AppState {
     // one EDITOR session from the next). What is and is not reachable, stated
     // exactly: TWO DIALOG EDITORS ARE NEVER LIVE TOGETHER — every opener
     // refuses while another editor owns the keyboard — but a CLOSE AND AN OPEN
-    // FIT IN ONE DISPATCH BATCH (Esc closes the commit-title editor, `'` opens
-    // the load editor, no paint in between), and across that edge every face
+    // FIT IN ONE DISPATCH BATCH (Esc closes the settings editor, `m` opens
+    // the bpm bracket, no paint in between), and across that edge every face
     // index, both arms and the whole published geometry still carried an
     // `Editor` tag that matched the NEW session. A held Enter released into
     // that state dispatched the old editor's OK at an unseen dialog. THE
@@ -4911,18 +4910,35 @@ struct AppState {
     // exactly as the quit prompt paints over an editor); the player and an
     // editor are never live together (its opener refuses under any editor and
     // its key router consumes every editor opener).
-    enum class ModalDialogOwner { None, Prompt, Editor, Player };
+    // THE FOURTH OWNER IS THE PICKER (2026-08-28, architect R22/R23): the
+    // FIELD-LESS modal over the folder overlay's list — the Open project
+    // picker and the `h` view's history picker, one state (AppState::Picker)
+    // and one owner tag, the overlay's own saying WHICH — whose row is OK ·
+    // Cancel and nothing else. Ranked WITH the player: a prompt outranks it
+    // (the reopen's unsaved-tab question paints over its row), and the picker
+    // and the player are NEVER LIVE TOGETHER (each opener refuses under the
+    // other, and neither is an editor), as neither is live beside an editor
+    // (both openers refuse under one, both routers consume every editor
+    // opener) — so the order among the three lower ranks is free.
+    enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
     // THE PLAYER'S FOUR BUTTONS, the third dispatch vocabulary beside a
-    // prompt's response key and an editor's OK bit: what a player button DOES
-    // at its lift (dispatch_modal_dialog_button reads it under the Player
-    // owner and the other two vocabularies are zero/false there).
+    // prompt's response key and the OK bit two-button dialogs share: what a
+    // player button DOES at its lift (dispatch_modal_dialog_button reads it
+    // under the Player owner and the other two vocabularies are zero/false
+    // there).
     enum class PlayerButtonAct {
         None, Previous, PlayPause, Next, LoadInPlace, Close
     };
+    // THE OK BIT SERVES TWO OWNERS (2026-08-28): an EDITOR dialog's OK /
+    // Cancel is the session's own Enter / Esc, and the PICKER's OK / Cancel is
+    // its open act on the highlight / its close — the same two-button row,
+    // the same keys behind the words, and dispatch_modal_dialog_button forks
+    // on the LIVE owner rather than on a fourth vocabulary: a field-less
+    // two-button dialog has nothing a second bit could say.
     struct ModalDialogButton {
         GuiRect     rect{0, 0, 0, 0};
-        char        response_key = 0;   // prompt dialogs; 0 on editor dialogs
-        bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
+        char        response_key = 0;   // prompt dialogs; 0 elsewhere
+        bool        editor_ok    = false;  // editor and picker dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         std::string tooltip;            // "<word> (<key>)"; never empty
     };
@@ -4948,29 +4964,27 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the SIX DIALOG-HOSTED editors (the
-    // settings editor, the load editor, the commit-title editor, the measure
-    // paste-offset editor since 2026-08-20, the Open project editor since
-    // 2026-08-27, and the bpm bracket editor; the top-strip flag editor is
-    // deliberately not one of them in EITHER of its non-bracket kinds —
-    // FlagPayload or MeasureText, both of which paint in the top strip). The
-    // predicate GuiInputHandler::modal_dialog_editor_active is this id being
-    // non-zero, and ITS declaration is the authoritative statement of what
-    // that predicate is FOR and who calls it; this is where the six are NAMED,
-    // so the set cannot drift between the two. At most one can be active at a
-    // time (every opener refuses while another owns the keyboard), so the
-    // order below is free.
+    // THE AUTHORITATIVE MEMBERSHIP of the FOUR DIALOG-HOSTED editors (the
+    // settings editor, the commit-title editor, the measure paste-offset
+    // editor since 2026-08-20, and the bpm bracket editor; the top-strip flag
+    // editor is deliberately not one of them in EITHER of its non-bracket
+    // kinds — FlagPayload or MeasureText, both of which paint in the top
+    // strip; the `h` view's load editor and the Open project editor were the
+    // fifth and sixth until 2026-08-28, when both became the field-less
+    // PICKER, which is a modal owner and not an editor — AppState::Picker).
+    // The predicate GuiInputHandler::modal_dialog_editor_active is this id
+    // being non-zero, and ITS declaration is the authoritative statement of
+    // what that predicate is FOR and who calls it; this is where the four are
+    // NAMED, so the set cannot drift between the two. At most one can be
+    // active at a time (every opener refuses while another owns the
+    // keyboard), so the order below is free.
     uint64_t dialog_editor_session() const {
         if (text_editor::is_active(settings_editor))
             return settings_editor.session;
-        if (text_editor::is_active(load_editor))
-            return load_editor.session;
         if (text_editor::is_active(commit_title_editor))
             return commit_title_editor.session;
         if (text_editor::is_active(measure_offset_editor))
             return measure_offset_editor.session;
-        if (text_editor::is_active(open_project_editor))
-            return open_project_editor.session;
         if (text_editor::is_active(top_flag_editor) &&
             top_flag_editor.kind == text_editor::Kind::BpmBracket)
             return top_flag_editor.session;
@@ -4981,19 +4995,20 @@ struct AppState {
     // WM close can raise the unsaved-work prompt over a standing editor), so
     // this and paint_modal_dialog cannot disagree about whose geometry the
     // stash holds.
-    // THE RENDER PLAYER IS THE THIRD RANK (2026-08-28): under the prompt,
-    // beside the editors — the two cannot stand together, so the order
-    // between them is free, and the player is asked first only because its
-    // one bit is cheaper than the six is_active tests.
+    // THE RENDER PLAYER AND THE PICKER ARE THE LOWER RANKS (2026-08-28):
+    // under the prompt, beside the editors — no two of the three can stand
+    // together, so the order among them is free, and the two mode bits are
+    // asked first only because each is cheaper than the four is_active tests.
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
         if (render_player.active) return render_player.session;
+        if (picker.active) return picker.session;
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL EIGHT editors, 0 when none
-    // stands — the accessor above widened by the two top-strip kinds it names
-    // as deliberate non-members (FlagPayload and MeasureText). It exists for
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SIX editor kinds, 0 when
+    // none stands — the accessor above widened by the two top-strip kinds it
+    // names as deliberate non-members (FlagPayload and MeasureText). It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
     // with the edit they were armed in: keying them to this id turns "reset
     // when the editor closes" into a comparison rather than a list of close
@@ -5012,9 +5027,9 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the eight
-    // editors does, on a backend that asks for one, and it holds NOTHING that
-    // is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the six
+    // editor kinds does, on a backend that asks for one, and it holds NOTHING
+    // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
     // is the text_editor_session() they were set in, and the ONE OWNER
     // onscreen_keyboard::reconcile_session clears the pair the moment the live
@@ -5753,7 +5768,7 @@ struct AppState {
     // open is a consumed no-op with one stderr line while
     // history_checkpoint_in_flight stands. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
-    // refusal for free — a prompt, any of the eight editors, an open dropdown,
+    // refusal for free — a prompt, any of the editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
@@ -5906,10 +5921,11 @@ struct AppState {
     // and each says why at its own site: the corner's SHA token (an undo entry
     // has no name), the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
     // wherever the active walk carries a member and FORKS ON THE
-    // SOURCE — the editor asks for a commit spelling
-    // on the Remote tab and a member NUMBER on the Local one, and the act behind
-    // it is a different function per walk (the two, at the opener and at
-    // load_editor_commit) — and SAVE-AND-COMMIT, whose reach
+    // SOURCE — the history picker lists the members in the walk's own
+    // spelling (member_label below: a short SHA on the Remote tab, a member
+    // NUMBER on the Local one), and the act behind its open is a different
+    // function per walk (the fork at history_picker_commit) — and
+    // SAVE-AND-COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
     // reads the painted flags' frames and then-side lines and knows nothing
@@ -5926,28 +5942,33 @@ struct AppState {
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
     // second is Ctrl+S, further down, on the same reasoning). In the
-    // mode that editor's subject CHANGES, AND IT CHANGES WITH THE WALK
+    // mode that act's subject CHANGES, AND IT CHANGES WITH THE WALK
     // (2026-08-08, when the architect gave the Local walk the act his 2026-08-07
-    // ruling had it consume). ON THE REMOTE TAB it opens prefilled with the
-    // viewed commit's full SHA, takes any spelling git can resolve in its place,
-    // and on Enter loads THAT COMMIT's RECIPE — its marker pair and engine
-    // block, the rest of its sidecar state read past (the rule at
+    // ruling had it consume). SINCE 2026-08-28 IT IS THE HISTORY PICKER
+    // (architect R23 — "it won't be terribly useful there because there's
+    // already a way to step backwards and forwards, but it's just for
+    // consistency"): the folder overlay lists THE VIEWED WALK'S MEMBERS as
+    // rows, the band opening on the viewed one, and Enter / OK / a row's
+    // double-click loads the HIGHLIGHTED member in place — no text field, no
+    // typed spelling. ON THE REMOTE TAB the rows are the commits by their
+    // short SHA and the open loads THAT COMMIT's RECIPE — its marker pair and
+    // engine block, the rest of its sidecar state read past (the rule at
     // apply_recipe_in_place, input_handler.h) — into the live session in place
     // (GuiInputHandler::load_history_commit_in_place — parse-gated by the strict
-    // whole-file loaders, so an unresolvable commit, a missing sidecar or a
-    // legacy format is a red flash and one stderr line with nothing touched).
-    // ON THE LOCAL TAB it opens prefilled with the viewed member's displayed
-    // NUMBER, takes any member number in place of it, and loads THAT STATE of
-    // this session's timeline — the two marker columns and the engine block, all
-    // an undo entry carries (GuiInputHandler::load_history_local_entry_in_place;
-    // a non-number or an out-of-range one is the same red flash and one stderr
-    // line). EITHER WAY it is ONE cross-file undo entry ON TOP of the current
-    // state rather than a rollback — so Ctrl+Z afterwards returns to the state
-    // from just before the load — and no disk write anywhere. The mode closes as
-    // part of a successful load-in-place, so the frozen now side never outlives
-    // the state it
-    // was measured against. THE EDITOR-OPEN SUB-STATE is the mode standing with
-    // that editor up: the mode's two gates stop being reached — the
+    // whole-file loaders, so a missing sidecar or a legacy format is one
+    // stderr line with nothing touched, the picker staying open — silent on
+    // the status line, whose top tier is this mode's own line).
+    // ON THE LOCAL TAB the rows are the members by their displayed NUMBER and
+    // the open loads THAT STATE of this session's timeline — the two marker
+    // columns and the engine block, all an undo entry carries
+    // (GuiInputHandler::load_history_local_entry_in_place). EITHER WAY it is
+    // ONE cross-file undo entry ON TOP of the current state rather than a
+    // rollback — so Ctrl+Z afterwards returns to the state from just before
+    // the load — and no disk write anywhere. The mode closes as part of a
+    // successful load-in-place, so the frozen now side never outlives the
+    // state it was measured against. THE PICKER-OPEN SUB-STATE is the mode
+    // standing with the picker up: the mode's two gates stop being reached
+    // — the
     // keyboard-modal editor gate sits above them in on_key, and any pointer
     // press outside the editor's own text-drag reach is the editor's to swallow
     // — so `h`, `,` and `.` TYPE into the buffer rather than stepping the walk,
@@ -6436,14 +6457,13 @@ struct AppState {
         // The three questions every walk-facing reader asks — how many members,
         // where am I, and what does the lane show — answered once for the live
         // source instead of forked at each site. What is NOT here is anything
-        // PER-VOCABULARY by intent: the corner's short-SHA token names `session`
-        // and `index` outright because an undo entry has no commit to name, and
-        // the `'` editor's PREFILL and its act fork on the source at their own
-        // two sites (the opener and load_editor_commit) because the two walks
-        // name their members differently — a SHA on one, the displayed member
-        // NUMBER on the other (`local_index + 1`, the corner's own arithmetic,
-        // named directly inside a branch that has already established the
-        // source).
+        // PER-VOCABULARY by intent: the corner's SHA token is the commit
+        // walk's alone (an undo entry has no commit to name), and the `'`
+        // history picker's ACT forks on the source at its one commit site
+        // (history_picker_commit) because a different function loads each
+        // walk's member. WHAT IS SHARED is the member's SPELLING, member_label
+        // below — the one owner of how a member is named to the user on
+        // either walk, read by the corner and by the picker's rows alike.
 
         // How many members the ACTIVE walk carries — the `n/N` denominator.
         std::size_t walk_count() const {
@@ -6457,6 +6477,21 @@ struct AppState {
         // wrong walk.
         std::size_t walk_index() const {
             return source == GuiHistoryWalkSource::Local ? local_index : index;
+        }
+
+        // A MEMBER'S USER-FACING SPELLING, the ONE OWNER for both walks
+        // (2026-08-28, hoisted for the history picker's rows): on the LOCAL
+        // walk the member's displayed NUMBER — `index + 1`, the corner's own
+        // `n/N` arithmetic, the only name a local member has; on the COMMIT
+        // walk the seven-character SHA every user-facing line spells
+        // (short_sha, history_diff.h). The corner's SHA token reads it too, so
+        // a row and the corner cannot spell one member two ways. Empty for an
+        // out-of-range commit index (sha_at's own answer), which is exactly
+        // the empty walk.
+        std::string member_label(std::size_t member) const {
+            if (source == GuiHistoryWalkSource::Local)
+                return std::to_string(member + 1);
+            return short_sha(session.sha_at(member));
         }
         void set_walk_index(std::size_t to) {
             if (source == GuiHistoryWalkSource::Local) local_index = to;
@@ -6694,20 +6729,6 @@ struct AppState {
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
-    // THE HISTORY VIEW'S LOAD PROMPT (the renders half deleted 2026-08-28,
-    // when the render player took `'` outside the view). Its ONE opener is
-    // open_history_load_editor and its ONE subject is the VIEWED WALK'S
-    // MEMBER: a commit spelling on the Remote tab, a member number on the
-    // Local one, each seeded with what the corner displays, and Enter loads
-    // that member's sidecars in place. It reaches no render entry — the
-    // player's Load in place button is that road, and this editor's
-    // entry-identifier vocabulary and its autocomplete went with the half.
-    // A dialog modal like
-    // the settings editor; separate State so the two paint regions stay
-    // independent.
-    text_editor::State load_editor;
-    bool load_editor_blink_last = false;
-
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth dialog
     // modal and the `h` history view's own: Ctrl+S while the view stands
     // opens it prefilled with the checkpoint's default message (`Update <id>`,
@@ -6746,39 +6767,38 @@ struct AppState {
     text_editor::State measure_offset_editor;
     bool measure_offset_editor_blink_last = false;
 
-    // THE OPEN PROJECT EDITOR (architect 2026-08-27), the SIXTH dialog modal
-    // and File → Open project's own: the menu item and Ctrl+O — one chord, the row
-    // dispatching it like every other command row — open it empty, its field
-    // completes
-    // over the OPENABLE PROJECT FOLDERS under the device config's projects_path
-    // (the candidates below, which are the PICKER'S OWN ROWS — one list, built
-    // when the prompt opens and never kept fresh),
-    // and Enter resolves the typed name through the project model
-    // (project_model.h), dry-runs the folder's strict sidecar load, and hands
-    // the name to gui_main's reopen loop through `reopen_project` above. It
-    // MIMICS LOAD IN PLACE on the same machinery and the same Tab contract —
-    // completion first, the ring when it did not advance — with one seed of
-    // its own: on an EMPTY field Tab fills `last_project` (the most recent
-    // project) when that name is in the list, and the first candidate when it
-    // is not or when nothing has been opened yet. It is
-    // `complete_editor_prefix`'s ONE caller since 2026-08-28, when the load
-    // editor's entry-name completion went with its renders half (the settings
-    // editor's value recall is its own body, not this completer's). A refusal at
-    // Enter red-flashes and stays open with its reason on the status line;
-    // choosing the project already open is a consumed no-op that closes it.
-    // A dialog modal like the four above, with its own State so the paint
-    // regions stay independent. It authors nothing: no undo, no dirty, legal
-    // on a read-only tab.
-    text_editor::State open_project_editor;
-    bool open_project_editor_blink_last = false;
-    // THE PICKER'S ROW NAMES — the folder names under projects_path in the
-    // model's one order (enumerate_project_names), filtered to the ones the
-    // commit would accept, built at the prompt's open by the ONE owner
-    // build_project_picker_rows (which writes this and folder_overlay.rows in
-    // the same walk) and read by the Tab completion; cleared with the editor.
-    // The completion and the band therefore offer the same set by
-    // construction.
-    std::vector<std::string> open_project_candidates;
+    // -- THE PICKER'S WHOLE STATE (architect 2026-08-28, R22/R23) ----------
+    //
+    // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
+    // allowing free-form typing there; the preview doesn't use a text field
+    // and it works fine". ONE STATE, TWO CONTENTS: the OPEN PROJECT PICKER
+    // (File → Open project, Ctrl+O; the valid project folders as rows, the
+    // open act a REOPEN through gui_main's loop) and the HISTORY PICKER (bare
+    // `'` in the `h` view; the viewed walk's members as rows, the open act a
+    // LOAD IN PLACE of the highlighted member). WHICH content stands is the
+    // overlay's own owner tag (FolderOverlay::owner — ProjectPicker or
+    // HistoryPicker); this struct says only that A picker stands and which
+    // raise it is. It is the FOURTH ModalDialogOwner (Picker), never an
+    // editor: no buffer, no caret, no keyboard-modal gate — the router
+    // GuiInputHandler::route_picker_key is its whole plastic vocabulary, and
+    // its row is OK · Cancel. Both openers refuse under a prompt, an editor,
+    // the render player, a standing picker and a load; the one close body is
+    // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+Q's road, the same-
+    // project no-op and the reopen's own tail all pass through it), which
+    // resets the overlay with it — so "the band leaves with the picker" is a
+    // fact rather than a list.
+    //   `active`   the mode bit — the fourth modal owner and, with the
+    //              overlay's tag, the picker's standing predicate;
+    //   `session`  its modal session id from the one counter
+    //              (text_editor::next_session_id), minted at every open.
+    // It authors nothing by itself: no undo, no dirty, legal on a read-only
+    // tab (the history picker's load is what the lock refuses, at the
+    // allowlist).
+    struct Picker {
+        bool     active  = false;
+        uint64_t session = 0;
+    };
+    Picker picker;
 
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two
@@ -6905,6 +6925,10 @@ struct AppState {
     // WRITER: a refusal whose cause IS the running render says nothing at all
     // (the progress line is the answer — render_player_load_in_place's), and
     // any other writer that can fire under a render must mean the late reveal.
+    // THE `h` MODE'S LINE IS THE SAME CLASS ONE TIER UP (2026-08-28): it
+    // ranks above the progress line too, so a writer that can fire INSIDE the
+    // view says nothing here either — the history picker's load refusal is
+    // that writer, and its stderr line is its whole report.
     std::string transient_status_message;
 
     // One-slot pending archival render command. An archival dispatch
@@ -7003,7 +7027,7 @@ struct AppState {
     // the deliverable's rows carry none and the Load in place button refuses
     // "Only batch renders load in place" on one — and the act that button's
     // confirmation runs (load_render_entry_in_place, input_key_dispatch.cpp).
-    // (The `l` external-player spawn and the typed load editor's own resolve
+    // (The `l` external-player spawn and the typed load prompt's own resolve
     // were consumers until 2026-08-28, when the player replaced both.)
     struct RenderEntry {
         std::filesystem::path batch_folder;     // <source parent>/tmp/<i>_<tag>
@@ -7014,23 +7038,25 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. TWO CONTENTS FILL IT: the RENDER PLAYER, with the project's
-    // output folders and their wavs, and the OPEN PROJECT PICKER, with the
-    // valid project folders under `projects_path`. Everything the panel
-    // remembers is here and nothing else is:
+    // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // output folders and their wavs; the OPEN PROJECT PICKER, with the valid
+    // project folders under `projects_path`; and the HISTORY PICKER, with the
+    // `h` view's viewed walk's members. Everything the panel remembers is
+    // here and nothing else is:
     //   `owner`       WHOSE CONTENT THE ROWS ARE, and THE PANEL'S ONE
     //                 STANDING PREDICATE: the overlay stands iff this is not
     //                 None (folder_overlay_stands, below — every paint site,
     //                 hit site, wheel context and greying arm asks that one
     //                 function). The player writes Player at its open and
-    //                 None at its close; the Open prompt writes ProjectPicker
-    //                 at its open and None at every close path (the commit's
-    //                 reopen included, all of them through
-    //                 open_project_editor_exit_no_commit). The ROW ACTS fork
-    //                 on it: under Player a lift highlights and a double
-    //                 click opens the row, under ProjectPicker a lift
-    //                 highlights AND prepopulates the prompt's field and a
-    //                 double click runs the prompt's own commit;
+    //                 None at its close; the two pickers write ProjectPicker
+    //                 / HistoryPicker at their open and None at every close
+    //                 path (the reopen's tail included, all of them through
+    //                 close_picker). The ROW ACTS fork on it: a lift
+    //                 highlights under every owner (the picker's band IS its
+    //                 whole state — there is no field to feed), and a double
+    //                 click opens the row — the player enters, goes up or
+    //                 plays; the project picker reopens the project; the
+    //                 history picker loads the member in place;
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
     //                 never kept fresh (a render completing meanwhile shows on
     //                 the next entry of its folder);
@@ -7051,15 +7077,11 @@ struct AppState {
     //                 row is in the new listing, else on row 0; -1 only for an
     //                 empty listing. Under the PLAYER it is what Enter, Space,
     //                 the Play button and the Load in place button act on;
-    //                 under the PICKER THE HIGHLIGHT AND THE FIELD ARE ONE
-    //                 THING — every road that moves the band also writes the
-    //                 row's name into the prompt's field, and a field typed
-    //                 into moves the band onto the row whose name it now
-    //                 spells (no match, no band), so what the band marks is
-    //                 always what Enter opens. The picker seats it on the
-    //                 CURRENT project's row at the open, and -1 there means
-    //                 "the field names no listed project", not only an empty
-    //                 listing;
+    //                 under a PICKER it is THE WHOLE STATE — what Enter, OK
+    //                 and the double-click open, with no field beside it.
+    //                 The project picker seats it on the CURRENT project's
+    //                 row at the open, the history picker on the VIEWED
+    //                 member's;
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
     //                 nothing at all (false, the open state). It changes
     //                 nothing visible — Up/Down walk the highlight either way
@@ -7077,8 +7099,7 @@ struct AppState {
     //                 bit, and `scrolling` — once the pointer has moved past
     //                 the drag gate vertically the arm IS a scroll drag (the
     //                 band's own drag, the glass scroll) and its act is gone.
-    //                 A motionless lift HIGHLIGHTS the row (and, under the
-    //                 picker, prepopulates the field with it) and seeds the
+    //                 A motionless lift HIGHLIGHTS the row and seeds the
     //                 double-click candidate; the double-click's second press
     //                 runs the row's OPEN act at the press and arms nothing.
     //                 Ends at the release (finish_folder_overlay_release) and
@@ -7088,8 +7109,13 @@ struct AppState {
     //                 no act. No hold and no modifier
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
+    // A ROW'S KIND decides its glyph: Up and Folder wear the folder glyph,
+    // Wav the wav glyph (the transport glyph on the item's row), and TEXT
+    // wears NONE — the history picker's rows (2026-08-28), a member's short
+    // spelling with nothing to draw a folder or a file for; the name then
+    // starts where the glyph would have, at the button's own inset.
     struct FolderOverlayRow {
-        enum class Kind { Up, Folder, Wav };
+        enum class Kind { Up, Folder, Wav, Text };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -7105,7 +7131,7 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        enum class Owner { None, Player, ProjectPicker };
+        enum class Owner { None, Player, ProjectPicker, HistoryPicker };
         Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
@@ -7185,14 +7211,17 @@ struct AppState {
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
-// Every site that asks reads this one answer — the keyboard's third term and
-// the waveform's paint gate here, and through folder_overlay::stands (the
-// panel's own name for it, forwarding to this) the slot's paint dispatch and
-// the panel's painter, the row press claim, the hover walk, the press clear's
-// damage, the touch pan zone's carve-out and the run loop's slot reconcile;
-// the wheel context, the two-finger navigation body's refusal
-// (apply_touch_nav_update — the band takes no pan and no pinch under either
-// content) and the roster's greying arm call this directly. (It
+// Every site that asks reads this one answer — the waveform's paint gate
+// here, and through folder_overlay::stands (the panel's own name for it,
+// forwarding to this) the slot's paint dispatch and the panel's painter, the
+// row press claim, the hover walk, the press clear's damage, the touch pan
+// zone's carve-out and the run loop's slot reconcile; the wheel context, the
+// two-finger navigation body's refusal (apply_touch_nav_update — the band
+// takes no pan and no pinch under any content) and the roster's greying arm
+// call this directly. (The on-screen keyboard's standing predicate carried
+// its negation as a third term until 2026-08-28, when the pickers stopped
+// being editors and the term lost its producer — the record is at
+// onscreen_keyboard::stands.) (It
 // lives here rather than beside the geometry because onscreen_keyboard.h
 // needs it and folder_overlay.h INCLUDES that header, so the panel's own
 // header cannot be the owner.)
@@ -7344,8 +7373,8 @@ GuiRect bottom_row_content_area(const AppState& a);
 // -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
 //
 // THE SLOT IS THE LANE ABOVE THE BOTTOM ROW that the on-screen keyboard and
-// the folder overlay take turns in — never both (onscreen_keyboard::stands
-// carries the overlay's negation as its third term). The two tenants agree on
+// the folder overlay take turns in — never both (structurally: the overlay's
+// owners are not editors; the record is at onscreen_keyboard::stands). The two tenants agree on
 // the band's X, ITS WIDTH AND ITS BOTTOM EDGE and differ only in HEIGHT (the
 // keyboard's four key rows; the overlay's own content, capped below), so that
 // agreement is written ONCE here rather than twice in the two headers —
@@ -8527,12 +8556,12 @@ inline bool playback_launch_playable(const AppState& a,
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
-// view"): while the band stands — under the render player OR under the Open
-// project picker — EVERY roster button is dead, the arm at the head of the
-// body, ranked above the `h` partition. The player is a MODE like the `h`
-// view rather than a question like a prompt, and the whole chrome is what it
-// takes away; the picker is a prompt whose veil already makes the chrome
-// inert, and the grey is that veil's honest face rather than a second rule.
+// view"): while the band stands — under the render player OR under either
+// picker — EVERY roster button is dead, the arm at the head of the body,
+// ranked above the `h` partition. The player and the pickers are MODES like
+// the `h` view rather than questions like a prompt, and the whole chrome is
+// what they take away; each veil already makes the chrome inert, and the
+// grey is that veil's honest face rather than a second rule.
 // THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
@@ -8570,14 +8599,13 @@ inline bool redesign_button_enabled(const AppState& a,
     // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER, whichever content owns it
     // (architect 2026-08-28, the ruled exception recorded above the
     // signature: "everything else greys as in the `h` view"). Under the
-    // PLAYER the pointer rule is the veil (every press outside the overlay
-    // band and the modal row is consumed — render_player_active,
-    // input_handler.h); under the PICKER the dialog editor's veil already
-    // makes the chrome inert, and this line is the face that says so on both.
-    // First-ranked because it outranks the `h` partition below — neither
-    // content opens inside the `h` view, so the two are never asked together,
-    // and the rank only states which surface is the whole answer while it
-    // stands.
+    // PLAYER and under either PICKER the pointer rule is the veil (every
+    // press outside the overlay band and the modal row is consumed —
+    // render_player_active and picker_active, input_handler.h), and this
+    // line is the face that says so for all three. First-ranked because it
+    // outranks the `h` partition below: the history picker is the one content
+    // that opens INSIDE the view, and while it stands the whole roster is
+    // dead whatever the partition would have lit.
     if (folder_overlay_stands(a)) return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
@@ -9676,7 +9704,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
         // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
         // — `l` names the act it exists for, `'` keeps its name because it is
-        // the load's chord on both roads: the typed prompt in the `h` view,
+        // the load's chord on both roads: the history picker in the `h` view,
         // and outside it the player, whose own Load in place button takes bare
         // `'` again. Neither button admits a modifier, so neither carries a
         // second line. "Load in place" not "Load render in place": the act loads A

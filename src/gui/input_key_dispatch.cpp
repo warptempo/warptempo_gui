@@ -5,11 +5,11 @@
 
 #include "input_handler.h"
 
-#include "file_loader.h"     // source_load_dry_run (the Open prompt's Enter)
-#include "folder_overlay.h"  // the render player's key router (the list walk)
+#include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
+#include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
 #include "project_model.h"   // resolve_project / enumerate_project_names
-#include "prompt.h"          // GuiCloseTarget (the Open prompt's reopen)
+#include "prompt.h"          // GuiCloseTarget (the Open project picker's reopen)
 #include "render_output_naming.h"  // the deliverable's path, composed as a
                                    // render composes it (the sync act)
 #include "renders_dir.h"     // project_batch_root (the sync act's batch root)
@@ -209,11 +209,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool is_o =
         (key == GuiKeys::O && !ctrl && !shift && !alt);
-    // THE OPEN PROJECT PROMPT (architect 2026-08-28), Ctrl+O — the same letter
+    // THE OPEN PROJECT PICKER (architect 2026-08-28), Ctrl+O — the same letter
     // as the escape chord above and a wholly different act, which is why each
     // gets its own term rather than one loosened test. It is admitted on the
-    // header's own standard, exactly as Ctrl+Q and Ctrl+S are: the prompt
-    // authors nothing — it asks for a name, and choosing one REOPENS the
+    // header's own standard, exactly as Ctrl+Q and Ctrl+S are: the picker
+    // authors nothing — it lists the projects, and choosing one REOPENS the
     // program around another project, discarding this session rather than
     // writing into it, so there is no marker and no engine setting for the lock
     // to protect. Ctrl-exact, through the shared predicate the dispatch arm
@@ -470,7 +470,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //   * load_render_entry_in_place — the RENDER PLAYER's load, which has ONE
 //     caller (confirm_render_player_load) and therefore CANNOT run with the
 //     view standing: the player's opener refuses in the mode, where bare `'`
-//     is the typed prompt and its Enter routes to one of the two above. Its call is the idempotent no-op this function's early return
+//     is the history picker and its open act routes to one of the two above.
+//     Its call is the idempotent no-op this function's early return
 //     exists for, placed at the mutator so the close travels with the act.
 // There is no pointer closer, and no closer outside this file's two acts, its
 // three loads and the prefetch arrival hook.
@@ -1768,11 +1769,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             chord.
 //                             IT IS ADMITTED ON BOTH WALKS since 2026-08-08
 //                             (architect, superseding the 2026-08-07 ruling that
-//                             the Local walk consumes it): the REMOTE tab takes
-//                             a COMMIT SPELLING and loads its three sidecars
-//                             (load_history_commit_in_place), the LOCAL tab takes
-//                             a member NUMBER and loads that state of the
-//                             session's own timeline as a new undo entry
+//                             the Local walk consumes it): it opens the HISTORY
+//                             PICKER over the viewed walk's members, and the
+//                             open act on the REMOTE tab loads the commit's
+//                             three sidecars (load_history_commit_in_place),
+//                             on the LOCAL tab that state of the session's own
+//                             timeline as a new undo entry
 //                             (load_history_local_entry_in_place). It is a
 //                             FOURTH session-conditional admission, on THE ACTIVE
 //                             WALK CARRYING A MEMBER — one term for both walks
@@ -2036,23 +2038,23 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
     // the 2026-08-07 "the Local walk consumes it": a local member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
-    // act does). The two differ only in what the editor asks for — a commit
-    // spelling on the Remote tab, a member NUMBER on the Local one — and the
-    // routing lives at load_editor_commit, not here.
+    // act does). The two differ only in what the history picker lists — the
+    // commits by short SHA on the Remote tab, the members by NUMBER on the
+    // Local one — and the routing lives at history_picker_commit, not here.
     //
     // THE TERM IS THE ACTIVE WALK'S, AND IT IS ONE TERM FOR BOTH SINCE
-    // 2026-08-09: the walk must have a member. The act loads THE VIEWED ONE, so
-    // a walk with none has nothing to prefill and nothing to load, and one
-    // decision refuses the key and greys the icon row's load-in-place button —
-    // the head delta's own shape.
+    // 2026-08-09: the walk must have a member. The picker lists THE WALK and
+    // opens on the viewed member, so a walk with none has nothing to list and
+    // nothing to load, and one decision refuses the key and greys the icon
+    // row's load-in-place button — the head delta's own shape.
     //
     // IT WAS THE LOCAL ARM'S ALONE until the empty COMMIT walk became a legal
     // standing state: the Local walk carries U + R + 1 members and can only be
     // empty UNBOUND, while the Remote one now opens at `0/0` whenever a piece
     // has no eligible checkpoint. So the honest gate against the blank-lane
     // walk covers both, and the source fork this predicate carried for it is
-    // gone (the vocabulary fork stays where it always was, at the opener and at
-    // load_editor_commit).
+    // gone (the vocabulary fork stays where it always was, at the rows' spelling
+    // and at history_picker_commit).
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare && mode.walk_count() > 0);
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
@@ -2196,8 +2198,8 @@ void GuiInputHandler::open_history_commit_editor() {
                        /*target=*/0,
                        history_checkpoint_title(dir),
                        text_editor::Kind::CommitTitle);
-    // OPEN-SELECTED ON THE SEED, the prefilling openers' convention (the flag
-    // editor's, and the load editor's in the mode): the first keystroke replaces
+    // OPEN-SELECTED ON THE SEED, the prefilling opener's convention (the flag
+    // editor's): the first keystroke replaces
     // the default wholesale, so writing your own title is one act rather than a
     // select-all first. The seed is never empty here — the title is built from a
     // directory name this function has already refused to proceed without.
@@ -3226,24 +3228,22 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
-    // The six are NAMED at AppState::dialog_editor_session, which hands back
+    // The four are NAMED at AppState::dialog_editor_session, which hands back
     // the live one's session id — one membership serving both questions.
     return app.dialog_editor_session() != 0;
 }
 
-// Any text editor consuming printable keys — the FIVE single-State dialog
-// editors (the settings prompt, the load prompt, the commit-title editor, the
-// measure paste-offset editor and the Open project prompt) plus the top-strip
-// flag editor in ANY of its three kinds (the FlagPayload editor takes typed
-// letters too); the eight Kinds are listed at text_editor::Kind. The platform
-// layer's kLeftClickKey probe: while this is true that key types a normal
-// letter rather than emulating the left button.
+// Any text editor consuming printable keys — the THREE single-State dialog
+// editors (the settings prompt, the commit-title editor and the measure
+// paste-offset editor) plus the top-strip flag editor in ANY of its three
+// kinds (the FlagPayload editor takes typed letters too); the six Kinds are
+// listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
+// this is true that key types a normal letter rather than emulating the left
+// button.
 bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
-           text_editor::is_active(app.load_editor) ||
            text_editor::is_active(app.commit_title_editor) ||
            text_editor::is_active(app.measure_offset_editor) ||
-           text_editor::is_active(app.open_project_editor) ||
            text_editor::is_active(app.top_flag_editor);
 }
 
@@ -3322,18 +3322,6 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((app.prompt.active || modal_dialog_editor_active()) &&
         modal_ring_tab_shape(key, mods) != ModalRingTab::None)
         return true;
-    // THE OPEN PROJECT PICKER'S LIST WALK REPEATS (2026-08-28), the ring's
-    // own reason one surface over: bare Up / Down are a continuous step that
-    // decides nothing but where the band is — and, since the band and the
-    // field are one thing here, what the buffer spells. Ranked ABOVE the
-    // focused-button refusal below because the walk is legal from a focused
-    // button too, exactly as the ring's Tab is. A prompt over the picker is
-    // the prompt's own answer, which the blanket below gives.
-    if (app.folder_overlay.owner ==
-            AppState::FolderOverlay::Owner::ProjectPicker &&
-        !app.prompt.active && !mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::Up || key == GuiKeys::Down))
-        return true;
     // AND THE WALK IS THE ONLY THING THAT REPEATS ONCE THE FOCUS IS ON A BUTTON
     // (2026-08-13): from there no key reaches the field at all
     // (route_modal_editor_key's wall), so there is nothing left that a hold
@@ -3361,6 +3349,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
                (key == GuiKeys::Left || key == GuiKeys::Right ||
                 key == GuiKeys::Up || key == GuiKeys::Down ||
                 key == GuiKeys::PageUp || key == GuiKeys::PageDown);
+    }
+    // THE PICKER (2026-08-28), the player's shape with the player's reason:
+    // the highlight walk (Up/Down) repeats — a continuous step that decides
+    // nothing but where the band is — and the ring's Tab repeats as every
+    // ring's does; Enter, Space and Esc are one-shot, the open act and the
+    // close being acts and the button press being the modal's own
+    // press-and-hold. A prompt over the picker is the prompt's own answer.
+    if (app.picker.active && !app.prompt.active) {
+        if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
+        return !mods.ctrl && !mods.shift && !mods.alt &&
+               (key == GuiKeys::Up || key == GuiKeys::Down);
     }
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
@@ -3485,7 +3484,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL SEVEN editors — the settings and load prompts,
+// dropped. It serves ALL SIX editor kinds — the settings prompt,
 // the commit-title editor (2026-08-07), the bpm bracket, the MARKER MEASURE
 // editor (2026-08-19), the MEASURE PASTE-OFFSET editor (2026-08-20) and
 // (architect 2026-07-28) the top-strip flag editor, which this ruling brought
@@ -3512,16 +3511,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
 // so the only NotConsumed keys that can reach route_modal_editor_key's command
 // tail are those last two chords.
-// THE ADMITTED SET HAS GROWN THREE TIMES since the dialog arc. Twice by the
+// THE ADMITTED SET HAS GROWN TWICE since the dialog arc, both times by the
 // TAB FAMILY: bare Tab, from "the settings and load editors only" to "any
 // dialog editor", when the focus ring landed 2026-08-13; and THE RING'S
 // REVERSE WALK the same day (architect: "also, shift+tab should cycle
 // backward"), which admits Shift+Tab and the IsoLeftTab keysym in the live
 // marker cycle's own spellings — one predicate, modal_ring_tab_shape above,
-// read here and by the ring alike. And once by the OPEN PROJECT PICKER's bare
-// Up / Down (2026-08-28), the only growth scoped to ONE editor: the picker's
-// band is a list the prompt's field has no keys for, and the pair is admitted
-// exactly while that band stands. (WHAT A TAB DOES inside the set was re-ruled
+// read here and by the ring alike. (The Open project prompt's bare Up / Down
+// were a third growth for one afternoon on 2026-08-28, scoped to that one
+// editor's picker band, and left when the prompt lost its field: the picker
+// is a modal owner with its own router now, not an editor this gate serves.)
+// (WHAT A TAB DOES inside the set was re-ruled
 // twice more that day and settled on the one autocomplete model — completion
 // first, ring if it did not advance, stated at route_modal_editor_key — without
 // moving the admission either time.) Nothing else about
@@ -3538,39 +3538,24 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
     // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
-    // (2026-08-13) — a superset of what this gate admitted before: the two
-    // editors that HAVE a completion, SETTINGS (its value recall) and OPEN
-    // PROJECT (the folder-name prefix), keep the FORWARD key as its first
-    // meaning, while the LOAD, commit-title, BPM and measure-offset editors
-    // let it walk the ring from the first press (route_modal_editor_key owns
-    // which of the two a given forward Tab is, under the one autocomplete
-    // model; the load editor joined that side on 2026-08-28, its entry-name
-    // completion deleted with its renders half), and the REVERSE shapes walk
-    // backwards for all six, completing nothing anywhere. The top-strip FLAG
+    // (2026-08-13) — a superset of what this gate admitted before: the one
+    // editor that HAS a completion, SETTINGS (its value recall), keeps the
+    // FORWARD key as its first meaning, while the commit-title, BPM and
+    // measure-offset editors let it walk the ring from the first press
+    // (route_modal_editor_key owns which of the two a given forward Tab is,
+    // under the one autocomplete model), and the REVERSE shapes walk
+    // backwards for all four, completing nothing anywhere. The top-strip FLAG
     // editor is deliberately outside it: it is not a dialog, publishes no
     // buttons, and so has no ring for Tab to walk — its whole Tab family still
     // drops here while it stands.
     const bool is_dialog_focus_tab =
         (modal_dialog_editor_active() &&
          modal_ring_tab_shape(key, mods) != ModalRingTab::None);
-    // THE OPEN PROJECT PICKER'S LIST WALK, the set's third growth and the
-    // same shape as the ring's (2026-08-28): while the picker stands over the
-    // Open prompt, BARE Up and Down are the band's walk — the one pair the
-    // editor's own keymap does not own and the prompt still needs. Scoped to
-    // the picker's owner tag, so no other editor's Up / Down changes meaning,
-    // and BARE-EXACT, so every modified spelling stays the strict rule's
-    // no-op. handle_open_project_editor_key is what acts on them.
-    const bool is_picker_walk =
-        (app.folder_overlay.owner ==
-             AppState::FolderOverlay::Owner::ProjectPicker &&
-         !ctrl && !shift && !alt &&
-         (key == GuiKeys::Up || key == GuiKeys::Down));
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    return !(is_editor_key || is_dialog_focus_tab || is_picker_walk ||
-             is_save || is_ctrl_q);
+    return !(is_editor_key || is_dialog_focus_tab || is_save || is_ctrl_q);
 }
 
 // The Esc-cancel semantics as a callable body, used by the Esc key
@@ -4371,11 +4356,13 @@ bool GuiInputHandler::load_render_entry_in_place(
 // -- Load-in-place from a COMMIT (the `'` editor in the `h` history mode) --
 //
 // WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
-// history as its source instead of a render entry. `spelling` is whatever the
-// user left in the load editor — the viewed commit's SHA the opener prefilled,
-// or any other spelling git can resolve (a short SHA pasted out of GitHub's web
-// UI is the ruled use case). ONE STATE IN, ONE STATE OUT: the three sidecars
-// THAT commit carried become the live session, in memory, and the disk is never
+// history as its source instead of a render entry. `sha` is the full SHA the
+// prefetch store holds for the history picker's highlighted row — since
+// 2026-08-28 the one caller (history_picker_commit) hands it a walk member
+// and nothing else; the typed spelling, and with it the "short SHA pasted out
+// of GitHub's web UI" use case, retired with the load prompt's field
+// (architect R23). ONE STATE IN, ONE STATE OUT: the three sidecars THAT
+// commit carried become the live session, in memory, and the disk is never
 // touched — not the corpus, not the working sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
@@ -4383,16 +4370,17 @@ bool GuiInputHandler::load_render_entry_in_place(
 // load_commit_sidecars_strict (history_diff.h), which is the resolution, the
 // missing-sidecar refusals, the scratch staging and the three STRICT
 // WHOLE-FILE LOADERS in one predicate — the same predicate that is WALK
-// MEMBERSHIP since 2026-08-04, so the prefilled spelling (a walk member's own
-// SHA) always passes and a refusal can only come from a PASTED spelling naming
-// a commit outside the walk: an unresolvable spelling, a partial checkpoint,
-// an ambiguous per-commit path resolution, or a sidecar the loaders refuse (a
-// commit from the legacy MM:SS.mmm era, a settings key this build no longer
-// knows). That strictness is the point rather than a side effect — exactly the
+// MEMBERSHIP since 2026-08-04, so a walk member's own SHA passes by
+// construction and every refusal arm (an unresolvable spelling, a partial
+// checkpoint, an ambiguous per-commit path resolution, a sidecar the loaders
+// refuse) can fire only on a change in the clone between the scan and the
+// act. That strictness is the point rather than a side effect — exactly the
 // parse-gating the architect ruled, and the reason no second, looser grammar
 // is written anywhere on this path. A refusal is one stderr line naming its
 // cause with the committed path and the SHA (first error only — the gate's own
-// contract), and the caller keeps the editor open with its red flash.
+// contract), and the caller keeps the picker open (silently on the status
+// line — the class at AppState::transient_status_message, restated at
+// history_picker_commit).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
 // stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
@@ -4428,7 +4416,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // replaces the very state the frozen now side was measured against, so leaving
 // the mode standing would leave every flag in the lane describing a session that
 // no longer exists.
-bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) {
+bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     // The mode is the route's precondition, not a courtesy: the sidecar base
     // name comes from the session (init() owns that derivation), and the close
     // below is part of the act.
@@ -4440,7 +4428,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // built from, on the same one derivation.
     const std::string repo_root = app.history_mode.session.repo_root();
 
-    // THE WHOLE VALIDATION IS THE ONE SHARED GATE, and the spelling is all it
+    // THE WHOLE VALIDATION IS THE ONE SHARED GATE, and the SHA is all it
     // takes now: the session's matched directory was a parameter here until
     // 2026-08-09, when the folder a commit is about became the folder that
     // COMMIT TOUCHED rather than a tie the session could break. So a commit
@@ -4450,13 +4438,12 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     // refuses too. Nothing is settled by a guess any more, which is the point.
     GuiHistoryCommitLoad loaded;
     std::string          reason;
-    if (!load_commit_sidecars_strict(repo_root, spelling, base_name, loaded,
+    if (!load_commit_sidecars_strict(repo_root, sha, base_name, loaded,
                                      reason)) {
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
         return false;
     }
-    const std::string sha = loaded.sidecars.sha;
     const SettingsFile& settings = loaded.settings;
     std::vector<GuiWarpMarker>       src_warp = std::move(loaded.warp_markers);
     std::vector<GuiPhaseResetMarker> src_phase_resets =
@@ -4466,9 +4453,9 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 
     // NOT a modal open, so NOT the modal-open owner's business — the standalone
     // mutator's own self-guard, exactly as the render-entry load-in-place
-    // spells it. The `'`
-    // editor's open already froze playback through that owner on the keyboard
-    // route; stopping again here keeps the mutator correct from any caller.
+    // spells it. The history picker's open already froze playback through
+    // that owner on the keyboard route; stopping again here keeps the mutator
+    // correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
 
     // THE MODE ENDS HERE, on the first line past the last refusal and before the
@@ -4488,19 +4475,21 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     std::fprintf(stderr,
         "warptempo_gui: load-in-place: Loaded the sidecar state of commit "
         "%s in place\n",
-        sha.c_str());
+        loaded.sidecars.sha.c_str());
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
 
-// -- Load-in-place from a LOCAL HISTORY MEMBER (the `'` editor on a Local tab) -
+// -- Load-in-place from a LOCAL HISTORY MEMBER (the history picker on a Local
+//    tab) --
 //
 // WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
 // superseding his own "the Local walk consumes `'`"), with A STATE OF THIS
-// SESSION'S OWN UNDO/REDO TIMELINE as its source. `text` is whatever the user
-// left in the load editor: the viewed member's displayed NUMBER, which the
-// opener prefilled, or any other member number he typed over it — the corner's
-// own `n/N` vocabulary, which is the only name a local member has.
+// SESSION'S OWN UNDO/REDO TIMELINE as its source. `number` is the highlighted
+// row's displayed NUMBER — the corner's own `n/N` vocabulary, which is the
+// only name a local member has (since 2026-08-28 the one caller,
+// history_picker_commit, hands it a listed member; the typed number retired
+// with the load prompt's field).
 //
 // IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
 // one as ONE NEW UNDO ENTRY, exactly as loading a commit is, so Ctrl+Z
@@ -4511,12 +4500,11 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // already closed with the mode a few lines above.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the family's
-// validate-before-mutate contract: the text must be ASCII DIGITS naming a member
-// in [1, N], and the walk must hand back that member's state. Anything else is
-// ONE stderr line and a false return, the caller keeping the editor open with
-// its red flash and the typed text in it to correct. There is no second grammar
-// and nothing to resolve: N is the walk's own member count, and the number is an
-// index into it.
+// validate-before-mutate contract: the number must name a member in [1, N],
+// and the walk must hand back that member's state. Anything else is ONE
+// stderr line and a false return, the caller keeping the picker open. There is no grammar and nothing to
+// resolve: N is the walk's own member count, and the number is an index into
+// it.
 //
 // WHAT IS APPLIED: an undo entry carries the two MARKER COLUMNS and the ENGINE
 // BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
@@ -4547,29 +4535,17 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
 // AND THE MODE CLOSES, at the first line past the last refusal, for the reason
 // both siblings state: this replaces the very state the frozen now side was
 // measured against.
-bool GuiInputHandler::load_history_local_entry_in_place(
-        const std::string& text) {
+bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     // The mode is the route's precondition — the walk lives on it, and the close
     // below is part of the act. The source test is the routing's own fact
-    // restated defensively: load_editor_commit sends only Local-tab pendings
-    // here.
+    // restated defensively: history_picker_commit sends only Local-tab
+    // members here.
     if (!app.history_mode.active) return false;
     if (app.history_mode.source != GuiHistoryWalkSource::Local) return false;
 
-    // THE WHOLE VALIDATION. ASCII digits only — the number is a count position,
-    // not text — parsed with the range check folded INTO the accumulation, which
-    // is what keeps a pasted forty-digit string from overflowing on its way to
-    // being refused (every further digit only grows the value, so the first one
-    // past the count settles it).
-    const std::size_t count = app.history_mode.local.entry_count();
-    std::size_t       number = 0;
-    bool              parsed = !text.empty();
-    for (const char c : text) {
-        if (c < '0' || c > '9') { parsed = false; break; }
-        number = number * 10 + static_cast<std::size_t>(c - '0');
-        if (number > count) { parsed = false; break; }
-    }
-    if (parsed && number == 0) parsed = false;
+    // THE WHOLE VALIDATION: the number is a count position in [1, N].
+    const std::size_t count  = app.history_mode.local.entry_count();
+    const bool        in_range = number >= 1 && number <= count;
 
     // THE WALK'S OWN ANSWER IS THE SECOND HALF OF THE GATE. It is empty only for
     // an UNBOUND walk or a stack shorter than its capture (the blank-lane state,
@@ -4578,11 +4554,11 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     // unreachable arm stated rather than assumed, refusing in the same shape a
     // bad number does.
     std::optional<GuiHistoryLocalWalk::MemberState> state;
-    if (parsed) state = app.history_mode.local.member_state(number - 1);
+    if (in_range) state = app.history_mode.local.member_state(number - 1);
     if (!state) {
         std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: '%s' is not a history entry "
-            "number (1..%zu)\n", text.c_str(), count);
+            "warptempo_gui: Load in place refused: %zu is not a history entry "
+            "number (1..%zu)\n", number, count);
         return false;
     }
 
@@ -4597,8 +4573,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     // Every input is in hand and valid; nothing below refuses.
 
     // NOT a modal open, so NOT the modal-open owner's business — the standalone
-    // mutator's own self-guard, exactly as both siblings spell it. The `'`
-    // editor's open already froze playback through that owner on the keyboard
+    // mutator's own self-guard, exactly as both siblings spell it. The history
+    // picker's open already froze playback through that owner on the keyboard
     // route; stopping again here keeps the mutator correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
 
@@ -4633,183 +4609,6 @@ bool GuiInputHandler::load_history_local_entry_in_place(
         number, count);
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
-}
-
-// Open the `'` load prompt — THE `h` HISTORY VIEW'S ROAD ONTO LOAD IN PLACE,
-// AND ITS ALONE (architect 2026-08-28, giving bare `'` outside the view to the
-// render player: "we can keep the single quote for load in place because that
-// still works in the history view"). A RENDER ENTRY is loaded from the PLAYER
-// now — its Load in place button on the highlighted batch cell — so this
-// editor has ONE subject, the viewed walk's member, and the renders-side half
-// it used to carry (the running-render guard, the empty-tmp/ refusal, the
-// entry vocabulary at the commit and at the Tab) is deleted rather than kept
-// as a road nothing reaches.
-//
-// No-op with no source loaded. Stops playback only when the modal actually
-// opens (after that guard), so a refused open leaves a listening session
-// running.
-//
-// THE EDITOR TAKES THE VIEWED WALK'S OWN VOCABULARY and opens PREFILLED with
-// the viewed member — a COMMIT SPELLING seeded with the full 40-char SHA on
-// the Remote tab (load_history_commit_in_place), a MEMBER NUMBER seeded with
-// the corner's own displayed `n` on the Local tab
-// (load_history_local_entry_in_place). THE MODE IS THE CALLER'S GATE rather
-// than a term of this body: the one caller is on_key's `'` arm under
-// history_mode.active, which is where the fork between this prompt and the
-// player lives.
-void GuiInputHandler::open_history_load_editor() {
-    if (text_editor::is_active(app.load_editor)) return;
-    if (app.source_audio_path.empty()) return;
-
-    // THE SEED IS THE VIEWED MEMBER, IN THE ACTIVE WALK'S OWN SPELLING: the
-    // corner's displayed NUMBER on the local timeline, the commit's full
-    // 40-char SHA on the committed one. The fork is here rather than in an
-    // accessor for the reason the corner's own SHA token is spelled out: the
-    // two walks name their members in different vocabularies, and the editor
-    // asks for the one the user is looking at.
-    //
-    // NEITHER ARM CAN BE COLD, and that is the ALLOWLIST's doing rather than
-    // the walk's: the mode opens on an EMPTY commit walk, so the honest gate
-    // against a walk with no viewed member is the `'` admission's own term
-    // (history_mode_key_blocked — the chord is refused and the icon row's load
-    // button greys), and this opener is reached only with a member to name.
-    // Within a bound walk every step clamps, so the index is always in range.
-    std::string prefill;
-    if (app.history_mode.source == GuiHistoryWalkSource::Local) {
-        prefill = std::to_string(app.history_mode.local_index + 1);
-    } else {
-        prefill = app.history_mode.session.sha_at(app.history_mode.index);
-    }
-    // Stop playback only now that the modal is definitely opening — the shared
-    // modal stop (stop_playback_for_modal_open), whose refusal-gating rule this
-    // site is the sharpest instance of: the no-source guard above returns
-    // without touching playback, so a refused open never interrupts a listening
-    // session. Space is inside the
-    // modal blocked set, so once open, playback cannot restart until the editor
-    // closes.
-    playback_lifecycle.stop_playback_for_modal_open();
-    text_editor::enter(app.load_editor,
-                       /*target=*/0,
-                       std::move(prefill),
-                       text_editor::Kind::LoadInPlace);
-    // OPEN-SELECTED ON A SEEDED BUFFER, the flag editor's convention (the
-    // product's only other prefilling opener) and for its stated reason: the
-    // first keystroke replaces the seed wholesale, so pasting another SHA over
-    // the prefilled one is one act rather than a select-all first. The seed is
-    // never cold here (the admission's own term, above); the emptiness test is
-    // enter()'s caret-at-end-of-nothing rest state left standing rather than a
-    // live case.
-    if (!app.load_editor.pending.empty()) {
-        app.load_editor.selection_anchor = 0;
-        app.load_editor.cursor_pos =
-            static_cast<int>(app.load_editor.pending.size());
-    }
-    // A modal-dialog OPEN damages the whole window (the box's rect does not
-    // exist before its first paint — the settings opener carries the rule).
-    viewport.invalidate_all();
-}
-
-void GuiInputHandler::load_editor_exit_no_commit() {
-    if (!text_editor::is_active(app.load_editor)) return;
-    viewport.invalidate_modal_dialog_area();
-    text_editor::deactivate(app.load_editor);
-}
-
-// THE ONE PREFIX COMPLETION: extend the pending to the longest common prefix
-// of the candidates that start with it. No-op when nothing matches or when the
-// common prefix does not advance past what is already typed (mirrors the
-// settings editor's no-op-on-ambiguity Tab). A unique matching candidate
-// completes fully — its whole string is the common prefix of the singleton.
-//
-// IT RETURNS WHETHER THE BUFFER ADVANCED, the one autocomplete model's whole
-// question (the rule is stated at route_modal_editor_key's Tab arm below): true
-// consumes the Tab, false lets it walk the modal's focus ring. Every early
-// return below is a false — no candidate carrying this prefix, a common prefix
-// that does not advance, and a UTF-8 back-off that leaves nothing to add. THAT
-// IS WHAT MAKES A SECOND TAB WALK with no state to remember the first: the
-// buffer is already AT the longest common prefix, so the advancement test
-// below refuses it.
-//
-// THE COMPARISON IS BY BYTE, DELIBERATELY: a candidate is a FILESYSTEM NAME —
-// a project folder's name under the projects path — and a name is bytes: it is
-// not text the UTF-8 relaxation covers, and the caller's resolve matches it
-// byte-exactly against the same strings. A project folder is the user's own
-// name and may carry anything.
-//
-// WHAT THE PREFIX WRITES IS TEXT, THOUGH, and that is the one place the two
-// domains meet: the result becomes an editor `pending`, which must end on a
-// UTF-8 codepoint boundary (the invariant is at the head of text_editor.h).
-// Two names sharing a PARTIAL multi-byte character would otherwise cut the
-// prefix mid-character, seeding a buffer the caret walks and the shaper draws
-// as .notdef. So the prefix is backed off to a boundary before it is published.
-// The back-off reads the SEED CANDIDATE rather than the prefix itself, which is
-// what makes it exact: `lcp` is a prefix of `first` throughout (every step only
-// truncates), so the cut is mid-character exactly when the byte `first` carries
-// AT the cut is a continuation byte — a question the prefix alone cannot answer,
-// since a COMPLETE trailing sequence also ends in continuation bytes. It is a
-// provable no-op for ASCII identifiers: no ASCII byte is a continuation byte, so
-// the loop never takes a step for any name the product writes.
-bool GuiInputHandler::complete_editor_prefix(
-        text_editor::State& ed, const std::vector<std::string>& candidates) {
-    const std::string pending = ed.pending;
-
-    std::string lcp;
-    std::string first;
-    bool have = false;
-    for (const std::string& c : candidates) {
-        if (c.size() < pending.size() ||
-            c.compare(0, pending.size(), pending) != 0) continue;
-        if (!have) { lcp = c; first = c; have = true; }
-        else {
-            const size_t n = std::min(lcp.size(), c.size());
-            size_t i = 0;
-            while (i < n && lcp[i] == c[i]) ++i;
-            lcp.resize(i);
-        }
-    }
-    if (!have) return false;                    // no candidate has this prefix
-    // Back the prefix off to a codepoint boundary (see the note above). Runs
-    // BEFORE the advancement test, so a prefix that reached only into the
-    // middle of a character correctly collapses to a no-op.
-    while (lcp.size() < first.size() &&
-           text_editor::is_utf8_continuation_byte(
-               static_cast<unsigned char>(first[lcp.size()])))
-        lcp.pop_back();
-    if (lcp.size() <= pending.size()) return false;  // prefix does not advance
-
-    ed.pending          = std::move(lcp);
-    ed.cursor_pos       = static_cast<int>(ed.pending.size());
-    ed.selection_anchor = -1;
-    ed.red              = false;
-    viewport.invalidate_modal_dialog_area();
-    return true;
-}
-
-// Enter handler: resolve the pending to one member of the viewed walk and load
-// that state in place. THE SUBJECT IS A HISTORY MEMBER and WHICH KIND is the
-// viewed walk's: a COMMIT SPELLING on the Remote tab
-// (load_history_commit_in_place), a MEMBER NUMBER on the Local tab
-// (load_history_local_entry_in_place). Each owns every refusal on its own route
-// and names each one on stderr. Both share this function's SHAPE — a true
-// result closes the editor, a false one red-flashes and stays open — so a
-// failed resolve leaves the typed text in place to be corrected. (A RENDER
-// ENTRY was the third subject until 2026-08-28, when the player took the
-// renders road whole; the resolve against the entry identifiers went with it.)
-void GuiInputHandler::load_editor_commit() {
-    if (!text_editor::is_active(app.load_editor)) return;
-    const std::string pending = app.load_editor.pending;
-
-    const bool loaded =
-        app.history_mode.source == GuiHistoryWalkSource::Local
-            ? load_history_local_entry_in_place(pending)
-            : load_history_commit_in_place(pending);
-    if (loaded) {
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.load_editor);
-    } else {
-        app.load_editor.red = true;
-        viewport.invalidate_modal_dialog_area();
-    }
 }
 
 // THE MODAL DIALOG'S KEYBOARD FOCUS RING (architect 2026-08-13, part D of the
@@ -4895,9 +4694,13 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // list. Landing there changes nothing visible (Up/Down walk the
     // highlight either way) and only what a bare Enter means. Left/Right are
     // NOT the ring's here: they are the seeks, the car's rewind and
-    // fast-forward, on a button or off it.
-    const bool player_up = !prompt_up && app.render_player.active;
-    const bool on_list   = player_up && app.folder_overlay.list_focused;
+    // fast-forward, on a button or off it. THE PICKER'S RING IS THE SAME
+    // SHAPE (2026-08-28): [list, OK, Cancel], opening nowhere, and Left/Right
+    // are not its either — its router consumes them, the list's walk being
+    // Up/Down — so the two list-bearing owners share one arm.
+    const bool list_up = !prompt_up &&
+                         (app.render_player.active || app.picker.active);
+    const bool on_list = list_up && app.folder_overlay.list_focused;
     const int n = static_cast<int>(dlg.buttons.size());
     const int at = (app.modal_dialog_focus >= 0 &&
                     app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
@@ -4908,11 +4711,11 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // The field is a stop only on an editor dialog, which is the one
         // place -1 is a place to come back to — and the player's list is
         // that place for the player, reached first from nowhere.
-        if (player_up && at < 0 && !on_list) { next = -1; list_next = true; }
+        if (list_up && at < 0 && !on_list) { next = -1; list_next = true; }
         else if (at < 0)       { next = 0; list_next = false; }
         else if (at + 1 < n)   next = at + 1;
         else                   { next = prompt_up ? 0 : -1;
-                                 list_next = player_up; }
+                                 list_next = list_up; }
     } else if (tab_shape == ModalRingTab::Reverse) {
         // The exact inverse of the forward arm — the same stops in the same
         // order, walked the other way, with the same wrap: on an editor
@@ -4924,13 +4727,13 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         if (at < 0)            { next = n - 1; list_next = false; }
         else if (at > 0)       next = at - 1;
         else                   { next = prompt_up ? n - 1 : -1;
-                                 list_next = player_up; }
+                                 list_next = list_up; }
     } else if (key == GuiKeys::Right) {
-        if (player_up) return false;              // the player's seek
+        if (list_up) return false;                // the list owners' own
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? 0 : (at + 1) % n;
     } else if (key == GuiKeys::Left) {
-        if (player_up) return false;              // the player's seek
+        if (list_up) return false;                // the list owners' own
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? n - 1 : (at + n - 1) % n;
     } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
@@ -4977,10 +4780,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         app.modal_dialog_focus_active = next >= 0;
         viewport.invalidate_rect(dlg.box);
     }
-    // THE PLAYER'S LIST BIT, written on the same walk: the highlight's
-    // outline says which strength the list has (the accent while the ring is
-    // on it, the passive line otherwise), so the band repaints with it.
-    if (player_up && app.folder_overlay.list_focused != list_next) {
+    // THE LIST BIT, written on the same walk: the highlight's outline says
+    // which strength the list has (the accent while the ring is on it, the
+    // passive line otherwise), so the band repaints with it.
+    if (list_up && app.folder_overlay.list_focused != list_next) {
         app.folder_overlay.list_focused = list_next;
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
     }
@@ -5015,8 +4818,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
-// load prompt, the commit-title editor, the bpm bracket editor, and the
-// top-strip flag editor.
+// commit-title editor, the measure paste-offset editor, the bpm bracket
+// editor, and the top-strip flag editor.
 // All five spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
@@ -5031,8 +4834,9 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // retired it once every dialog grew real OK and Cancel buttons, so nothing
 // outside this file restates this set and the veil swallows every roster
 // press. Ctrl+S here is unchanged. `autocomplete` is the optional
-// bare-Tab hook, PASSED BY THE SETTINGS AND LOAD EDITORS (the commit-title,
-// bpm and flag editors have no vocabulary to complete and pass an empty hook).
+// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the commit-title, measure
+// offset, bpm and flag editors have no vocabulary to complete and pass an
+// empty hook).
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement, architect
 // 2026-08-13: "how about first tab autocompletes, second tab (or tab on a
@@ -5046,8 +4850,7 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // focus ring. "Second Tab" and "Tab on a string that completes to nothing" ARE
 // THE SAME CONDITION and need no state to tell apart: after a successful
 // completion the next Tab cannot advance (the settings editor's value side is
-// no longer empty, the load editor's buffer is already at the longest common
-// prefix), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
+// no longer empty), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
 // AND NO "last key was Tab" BIT anywhere in this model, deliberately — wanting
 // one means the rule has been mis-derived.
 //
@@ -5057,7 +4860,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 //     modal_dialog_focus < 0, and -1 IS the field on an editor dialog;
 //     AppState::modal_dialog_focus owns that meaning).
 //   * Tab with the focus IN THE FIELD offers the completion, then walks.
-//   * Tab in a dialog editor with NO hook (commit-title, BPM) walks at once.
+//   * Tab in a dialog editor with NO hook (commit-title, measure offset, BPM)
+//     walks at once.
 //   * SHIFT+TAB NEVER COMPLETES — it is the ring's REVERSE WALK and nothing
 //     else (architect 2026-08-13: "also, shift+tab should cycle backward"),
 //     so the completion is not offered on it at any site: this arm tests the
@@ -5079,7 +4883,7 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // before it — so every key's behaviour with the focus in the field is
 // byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the six
+// `autocomplete` it is called unconditionally, with no emptiness test: the four
 // dialog surfaces pass invalidate_modal_dialog_area (the bottom row's lane,
 // which IS the modal's surface, viewport.cpp), the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
@@ -5190,14 +4994,16 @@ bool GuiInputHandler::route_modal_editor_key(
 // (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
 // hook on the shared modal route, and the COMPOSITOR'S CLOSE — which arrives
 // with no key at all (main.cpp's set_on_close) — reached GuiPrompt::request_close
-// without it, leaving a standing editor and, under the Open prompt, its picker
-// band alive beneath the unsaved-work question and back on screen at Cancel.
-// One road, one closer, the render player's own close's argument exactly.
+// without it, leaving a standing editor alive beneath the unsaved-work
+// question and back on screen at Cancel. One road, one closer, the render
+// player's own close's argument exactly.
 //
 // EACH EDITOR IS ABANDONED THROUGH ITS OWN EXIT BODY, never through a second
 // spelling of what abandoning means: those bodies own their damage (the flag
 // editor's red-flash waveform arm among it) and their is_active guards, so the
-// chain is a no-op when nothing stands.
+// chain is a no-op when nothing stands. THE PICKER IS NOT AN EDITOR and is
+// not here: the close road takes it down through close_picker beside the
+// player's line, one close body each.
 void GuiInputHandler::close_modal_editors_no_commit() {
     // THE BPM MODE GOES WITH ITS EDITOR, and the kind is read BEFORE the exit
     // that clears it: the bracket session IS its editor, so mode-without-editor
@@ -5208,45 +5014,28 @@ void GuiInputHandler::close_modal_editors_no_commit() {
     flag_editor.exit_top_flag_edit_no_commit();
     if (bpm_bracket) flag_editor.exit_bpm_mode();
     settings_editor.exit_no_commit();
-    load_editor_exit_no_commit();
     commit_title_editor_exit_no_commit();
     measure_offset_editor_exit_no_commit();
-    // The Open prompt's one close body, which takes the FOLDER OVERLAY down
-    // with it — the picker's band is the prompt's, so the question the close
-    // is about to ask is not painted over a list.
-    open_project_editor_exit_no_commit();
 }
 
-// Routes a key to the active load editor through the shared modal route. It
-// passes NO autocomplete hook — a commit spelling and a member number have no
-// vocabulary to complete against — so bare Tab walks the dialog's focus ring
-// from the first press, as it does in the bpm and commit-title editors. (The
-// entry-identifier completion left with the renders subject on 2026-08-28.)
-bool GuiInputHandler::handle_load_editor_key(GuiKey key,
-                                               GuiInputState mods) {
-    return route_modal_editor_key(
-        app.load_editor, key, mods,
-        /*autocomplete=*/nullptr,
-        [this] { load_editor_commit(); },
-        [this] { load_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_modal_dialog_area(); });
-}
+// -- THE PICKER (the contract is at the declaration) --------------------------
+//
+// Two openers, two list builders, two open acts, and the machinery both
+// contents share: the highlight, the close and the key router.
 
-// -- THE OPEN PROJECT PROMPT (the contract is at the declaration) ----------
-
-// The opener. Every guard returns without touching playback (the modal-open
-// precedent open_history_load_editor sets: a refused open never interrupts a
-// listening session); the shared modal stop runs only once the editor is
-// definitely opening. TWO ROADS REACH IT since 2026-08-28 and both are the
-// same chord: Ctrl+O's own dispatch arm in on_key, and the File menu's Open
-// row, whose release dispatches that chord through on_key with the popup
-// already closed. The guards below serve both — the `h` view's, which the key
-// road also meets one gate earlier at history_mode_key_blocked, and the modal
-// and loading refusals, which the key road meets earlier still.
-void GuiInputHandler::open_project_editor() {
+// The Open project picker's opener. Every guard returns without touching
+// playback (a refused open never interrupts a listening session); the shared
+// modal stop runs only once the picker is definitely opening. TWO ROADS REACH
+// IT and both are the same chord: Ctrl+O's own dispatch arm in on_key, and
+// the File menu's Open project row, whose release dispatches that chord
+// through on_key with the popup already closed. The guards below serve both —
+// the `h` view's, which the key road also meets one gate earlier at
+// history_mode_key_blocked, and the modal and loading refusals, which the key
+// road meets earlier still.
+void GuiInputHandler::open_project_picker() {
     if (app.prompt.active || keyboard_modal_editor_active()) return;
     // The `h` history view admits no dialog open but its own two (the
-    // load-in-place and the commit title): a reopen would tear the view down
+    // history picker and the commit title): a reopen would tear the view down
     // from under itself, so the opener refuses here exactly as the allowlist
     // refuses the keyboard openers.
     if (app.history_mode.active) return;
@@ -5256,44 +5045,25 @@ void GuiInputHandler::open_project_editor() {
     // already refuse earlier — Ctrl+O is consumed by the player's key router,
     // and the veil consumes a press on the File anchor so the row is
     // unreachable — and this line is the opener's own, in the shape the two
-    // guards above it are: the gate lives with the act it refuses.
-    if (render_player_active()) return;
+    // guards above it are: the gate lives with the act it refuses. A standing
+    // picker refuses the same way (its router consumes Ctrl+O, its veil the
+    // anchor).
+    if (render_player_active() || picker_active()) return;
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
-    text_editor::enter(app.open_project_editor,
-                       /*target=*/0,
-                       std::string(),
-                       text_editor::Kind::OpenProject);
-    // THE PICKER RISES WITH THE PROMPT, and it builds THE ONE LIST the session
-    // has: the rows and the completion's candidates are the same filtered set,
-    // written by the one body below. On glass the band takes the on-screen
-    // keyboard's place (onscreen_keyboard::stands carries the panel's
-    // negation), so the prompt shows THE LIST there and not a keyboard — the
-    // architect's R3, "neither use needs typing".
+    app.picker.active  = true;
+    app.picker.session = text_editor::next_session_id();
+    // THE BAND RISES WITH THE PICKER and IS its whole state: the rows and
+    // the highlight, nothing beside them. On glass the band takes the
+    // on-screen keyboard's place, so the picker shows THE LIST there and no
+    // keyboard — the architect's R3, "neither use needs typing", made
+    // literal by R22.
     build_project_picker_rows();
-    // A modal-dialog OPEN damages the whole window (the box's rect does not
-    // exist before its first paint — the settings opener carries the rule).
+    // A modal OPEN damages the whole window (the row's rect does not exist
+    // before its first paint — the settings opener carries the rule).
     viewport.invalidate_all();
 }
-
-void GuiInputHandler::open_project_editor_exit_no_commit() {
-    if (!text_editor::is_active(app.open_project_editor)) return;
-    text_editor::deactivate(app.open_project_editor);
-    app.open_project_candidates.clear();
-    // THE OVERLAY LEAVES WITH THE PROMPT, through this one body: the reset
-    // restores Owner::None, which IS the band's standing predicate answering
-    // false. The damage is the whole window, as the open's is — the band's
-    // pixels sit over the waveform and the roster's grey lifts with them.
-    app.folder_overlay = AppState::FolderOverlay{};
-    viewport.invalidate_all();
-}
-
-// -- THE OPEN PROJECT PICKER (the folder overlay's second content) ----------
-//
-// The three bodies the overlay's row acts fork into while its owner is
-// ProjectPicker; the contract, and why a second road onto this one field is
-// sanctioned, are at the declarations.
 
 void GuiInputHandler::build_project_picker_rows() {
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -5301,22 +5071,18 @@ void GuiInputHandler::build_project_picker_rows() {
     ov.owner = AppState::FolderOverlay::Owner::ProjectPicker;
     // ONE LIST, AND THIS BODY IS ITS ONE OWNER: the folder names under
     // projects_path are enumerated here (in the model's own order,
-    // project_model.h), filtered by BOTH of open_project_editor_commit's own
-    // tests in its own order — the NAME grammar (is_last_project_name,
-    // device_config.h) and then the model (resolve_project) — and the survivors
-    // become the band's ROWS and the prompt's CANDIDATES together. A row that
-    // would refuse at Enter is not a row and is not a completion either, so the
-    // band, the Tab completion and the commit AGREE BY CONSTRUCTION rather than
-    // by two walks that happen to match: Tab can no longer complete to a name
-    // the picker does not list and Enter then refuses. An invalid folder simply
-    // does not show up (architect R8). The commit's remaining arms are not
-    // filters: the same-project no-op is a legal answer and the dry run reads
-    // the disk, which this walk does not re-do per row. No `..` row and no
-    // folder inside a project: the picker's tree is one level deep. BUILT AT
-    // THE OPEN AND NEVER KEPT FRESH — a project that appears or vanishes while
-    // the prompt stands shows at the next open.
+    // project_model.h), filtered by BOTH of open_project_commit's own tests
+    // in its own order — the NAME grammar (is_last_project_name,
+    // device_config.h) and then the model (resolve_project) — and the
+    // survivors become the band's ROWS. A row that would refuse at the open
+    // is not a row, so the band and the act AGREE BY CONSTRUCTION: an invalid
+    // folder simply does not show up (architect R8). The act's remaining arms
+    // are not filters: the same-project no-op is a legal answer and the dry
+    // run reads the disk, which this walk does not re-do per row. No `..` row
+    // and no folder inside a project: the picker's tree is one level deep.
+    // BUILT AT THE OPEN AND NEVER KEPT FRESH — a project that appears or
+    // vanishes while the picker stands shows at the next open.
     const std::filesystem::path root(app.device_config->projects_path);
-    app.open_project_candidates.clear();
     for (const std::string& name :
              enumerate_project_names(app.device_config->projects_path)) {
         if (!is_last_project_name(name)) continue;
@@ -5327,151 +5093,59 @@ void GuiInputHandler::build_project_picker_rows() {
         row.name = name;
         row.path = folder;
         ov.rows.push_back(std::move(row));
-        app.open_project_candidates.push_back(name);
     }
-    // THE BAND OPENS ON THE CURRENT PROJECT, which the field does not yet
-    // spell — the prompt enters empty and its Tab seed is unchanged. From the
-    // first select or the first keystroke the two move together.
-    ov.highlight_row = -1;
+    // THE BAND OPENS ON THE CURRENT PROJECT — name to name on both sides, the
+    // model's resolved folder name here and the same string assigned verbatim
+    // by the field's one producer there (AppState::project_name). Row 0 when
+    // the open project is somehow not listed (a folder renamed under a
+    // running session), which the same-project no-op then simply never
+    // takes.
+    int current = 0;
     for (size_t i = 0; i < ov.rows.size(); ++i) {
         if (ov.rows[i].name == app.project_name) {
-            ov.highlight_row = static_cast<int>(i);
+            current = static_cast<int>(i);
             break;
         }
     }
     folder_overlay::clamp_scroll(app);
-    if (ov.highlight_row >= 0)
-        folder_overlay::scroll_row_into_view(app, ov.highlight_row);
+    folder_overlay::set_highlight(app, current);
 }
 
-void GuiInputHandler::project_picker_select(int index) {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    if (ov.owner != AppState::FolderOverlay::Owner::ProjectPicker) return;
-    if (!text_editor::is_active(app.open_project_editor)) return;
-    const int n = static_cast<int>(ov.rows.size());
-    if (n <= 0) return;
-    const bool band = folder_overlay::set_highlight(app, index);
-    // THE FIELD FOLLOWS THE BAND, through the editor's ONE incoming filter
-    // (text_editor::replace_selection) over a select-all: the buffer becomes
-    // the row's name, the caret lands at its end, the anchor is dropped by the
-    // erase and the red state clears with the accepted write. A row name is
-    // whatever the filesystem spells, so it passes the filter like any other
-    // incoming text rather than being trusted.
-    text_editor::State& ed = app.open_project_editor;
-    ed.selection_anchor    = 0;
-    ed.cursor_pos          = static_cast<int>(ed.pending.size());
-    text_editor::replace_selection(
-        ed, ov.rows[static_cast<size_t>(app.folder_overlay.highlight_row)].name);
-    ed.selection_anchor = -1;
-    ed.red              = false;
-    if (band) viewport.invalidate_rect(folder_overlay::surface_rect(app));
-    viewport.invalidate_modal_dialog_area();
-}
-
-void GuiInputHandler::project_picker_track_field() {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    if (ov.owner != AppState::FolderOverlay::Owner::ProjectPicker) return;
-    if (!text_editor::is_active(app.open_project_editor)) return;
-    // A TYPED NAME THAT SPELLS A LISTED PROJECT MOVES THE BAND ONTO IT, and a
-    // buffer that spells none leaves the list unmarked — the exact compare,
-    // never a prefix: the band promises what Enter opens, and a prefix names
-    // no one project.
-    int match = -1;
-    for (size_t i = 0; i < ov.rows.size(); ++i) {
-        if (ov.rows[i].name == app.open_project_editor.pending) {
-            match = static_cast<int>(i);
-            break;
-        }
-    }
-    bool changed = false;
-    if (match < 0) {
-        if (ov.highlight_row != -1) {
-            ov.highlight_row = -1;
-            changed          = true;
-        }
-    } else {
-        changed = folder_overlay::set_highlight(app, match);
-    }
-    if (changed) viewport.invalidate_rect(folder_overlay::surface_rect(app));
-}
-
-// Bare Tab. THE EMPTY FIELD SEEDS THE MOST RECENT PROJECT — `last_project`
-// from the device config, or the first candidate when nothing has been opened
-// yet — which is what makes "open recent" and "open any" ONE prompt: Tab,
-// Enter is the recent; type "551", Tab, Enter is any. A non-empty field takes
-// the one prefix completion, over the SAME list the picker's rows are.
-//
-// AND THE SEED IS CHECKED AGAINST THAT LIST, falling to the first candidate
-// when `last_project` is not in it: the remembered folder can be gone or no
-// longer a project, and seeding a name the band cannot mark would put the
-// field and the list out of step and refuse at Enter — a Tab whose whole job
-// is to fill in something openable. The device config is left alone; it is
-// LOAD-LENIENT about a stale `last_project` (device_config.h) and this is the
-// prompt reading it the same way.
-bool GuiInputHandler::open_project_editor_autocomplete() {
-    if (!text_editor::is_active(app.open_project_editor)) return false;
-    if (app.open_project_editor.pending.empty()) {
-        const std::string& recent = app.device_config->last_project;
-        const auto&        names  = app.open_project_candidates;
-        const bool recent_listed =
-            !recent.empty() &&
-            std::find(names.begin(), names.end(), recent) != names.end();
-        const std::string seed = recent_listed ? recent
-                               : !names.empty() ? names.front()
-                                                : std::string();
-        if (seed.empty()) return false;
-        app.open_project_editor.pending          = seed;
-        app.open_project_editor.cursor_pos       =
-            static_cast<int>(app.open_project_editor.pending.size());
-        app.open_project_editor.selection_anchor = -1;
-        app.open_project_editor.red              = false;
-        // The seed is a text change like any other, so the band follows it.
-        project_picker_track_field();
-        viewport.invalidate_modal_dialog_area();
-        return true;
-    }
-    const bool advanced = complete_editor_prefix(app.open_project_editor,
-                                                 app.open_project_candidates);
-    if (advanced) project_picker_track_field();
-    return advanced;
-}
-
-// Enter. Validity through the project model, then the strict sidecar dry-run,
-// each refusal on the status line with the prompt still open; the project
-// already open is a consumed no-op; and a project that passes reaches the
-// reopen through the one close request, REOPEN-targeted.
-void GuiInputHandler::open_project_editor_commit() {
-    if (!text_editor::is_active(app.open_project_editor)) return;
-    const std::string typed = app.open_project_editor.pending;
+// THE OPEN ACT on row `index`. Validity through the project model, then the
+// strict sidecar dry-run, each refusal on the status line with the picker
+// still open; the project already open is a consumed no-op that closes it;
+// and a project that passes reaches the reopen through the one close request,
+// REOPEN-targeted.
+void GuiInputHandler::open_project_commit(int index) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::ProjectPicker) return;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return;
+    const std::string name =
+        app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
     auto refuse = [&](const std::string& reason) {
-        app.open_project_editor.red = true;
         app.transient_status_message = reason;
         viewport.invalidate_status_chain_area();
-        viewport.invalidate_modal_dialog_area();
     };
 
-    // The name must be ONE folder name — the same grammar last_project keeps
-    // (device_config.h), for the same reason: a separator would compose a path
-    // that leaves the projects folder. An empty buffer names nothing.
-    if (typed.empty() || !is_last_project_name(typed)) {
-        refuse("Not a project folder name");
-        return;
-    }
+    // The row's name is ONE folder name by construction (the list builder's
+    // filter), so the model is the first real test.
     const std::filesystem::path folder =
-        std::filesystem::path(app.device_config->projects_path) / typed;
+        std::filesystem::path(app.device_config->projects_path) / name;
     auto project = resolve_project(folder);
     if (!project) {
         refuse(project.error());
         return;
     }
     if (project->name == app.project_name) {
-        // Choosing the project that is open: nothing to reopen, the prompt
+        // Choosing the project that is open: nothing to reopen, the picker
         // simply closes. NAME TO NAME on both sides — the model's resolved
         // folder name here, and the same string assigned verbatim by the
         // field's one producer there (AppState::project_name) — so the no-op
         // cannot be missed by a link in the way of either spelling.
-        open_project_editor_exit_no_commit();
+        close_picker();
         return;
     }
     if (auto reason = source_load_dry_run(project->source)) {
@@ -5481,16 +5155,211 @@ void GuiInputHandler::open_project_editor_commit() {
 
     // THE REOPEN. A running render is killed as any dispatch kills it (the
     // Esc pair — the request, the batch stop, both parked slots disarmed);
-    // the editor closes; the chosen name is seated for gui_main's loop; and
+    // the picker closes; the chosen name is seated for gui_main's loop; and
     // the close request runs with the REOPEN target — the unsaved-tab prompt
     // exactly as Ctrl+Q's when the tab is dirty, an immediate completion when
     // it is clean. The prompt's Cancel leaves the seated name behind
     // harmlessly: the loop reads it only after run() returns, and run()
     // returns for a reopen only through this request's own completion.
     (void)cancel_archival_session();
-    open_project_editor_exit_no_commit();
+    close_picker();
     app.reopen_project = project->name;
     prompt.request_close(GuiCloseTarget::Reopen);
+}
+
+// The history picker's opener — THE `h` HISTORY VIEW'S ROAD ONTO LOAD IN
+// PLACE, AND ITS ALONE (architect 2026-08-28: "we can keep the single quote
+// for load in place because that still works in the history view"; the
+// field-less form is R23's). A RENDER ENTRY is loaded from the PLAYER — its
+// Load in place button on the highlighted batch cell — so this picker has ONE
+// subject, the viewed walk's members.
+//
+// THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
+// caller is on_key's `'` arm under history_mode.active, which is where the
+// fork between this picker and the player lives. THE EMPTY WALK IS THE
+// ALLOWLIST'S: the mode opens on an EMPTY commit walk, and the honest gate
+// against a walk with no member is the `'` admission's own term
+// (history_mode_key_blocked — the chord is refused and the icon row's load
+// button greys from the same line), restated below as a guard so the body is
+// correct from any caller. No-op with no source loaded. Stops playback only
+// when the modal actually opens (after every guard), so a refused open leaves
+// a listening session running.
+void GuiInputHandler::open_history_picker() {
+    if (!app.history_mode.active) return;
+    if (app.prompt.active || keyboard_modal_editor_active()) return;
+    if (render_player_active() || picker_active()) return;
+    if (app.source_audio_path.empty()) return;
+    if (app.history_mode.walk_count() == 0) return;
+
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.picker.active  = true;
+    app.picker.session = text_editor::next_session_id();
+    build_history_picker_rows();
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::build_history_picker_rows() {
+    AppState::FolderOverlay& ov = app.folder_overlay;
+    ov       = AppState::FolderOverlay{};
+    ov.owner = AppState::FolderOverlay::Owner::HistoryPicker;
+    // THE VIEWED WALK'S MEMBERS, in walk order, as TEXT rows (no glyph — a
+    // member names neither a folder nor a file): the prefetch store's
+    // eligible commits on the Remote tab, the session walk's states on the
+    // Local one, each spelled by the ONE owner the corner reads too
+    // (HistoryMode::member_label — the short SHA, or the displayed number).
+    // WHAT HAS ARRIVED IS WHAT IS LISTED: a commit walk still streaming lists
+    // the members the store holds at the open, and the listing is never kept
+    // fresh — R4's built-at-entry rule, the player's own; a member arriving
+    // while the picker stands shows at the next open. The row INDEX is the
+    // walk index, which is what the open act reads back.
+    const std::size_t count = app.history_mode.walk_count();
+    for (std::size_t i = 0; i < count; ++i) {
+        AppState::FolderOverlayRow row;
+        row.kind = AppState::FolderOverlayRow::Kind::Text;
+        row.name = app.history_mode.member_label(i);
+        ov.rows.push_back(std::move(row));
+    }
+    // THE BAND OPENS ON THE VIEWED MEMBER — the corner's own position.
+    folder_overlay::clamp_scroll(app);
+    folder_overlay::set_highlight(
+        app, static_cast<int>(app.history_mode.walk_index()));
+}
+
+// THE OPEN ACT on row `index` — the fork on the walk SOURCE, and the one
+// site of it: the Remote tab loads the store's SHA at that index through
+// load_history_commit_in_place, the Local tab the member's number through
+// load_history_local_entry_in_place. Each act owns every refusal on its own
+// route and names it on stderr; both share this function's SHAPE — a true
+// result closes the picker (the act has already closed the mode), a false one
+// leaves it standing. THE REFUSAL IS SILENT ON THE STATUS LINE, by the class
+// recorded at AppState::transient_status_message: the `h` mode's own line is
+// the chain's top tier, so a transient written while the view stands is
+// invisible until the view closes and stale then — and a listed member
+// refuses only on a change in the clone between the scan and the act (a walk
+// that shrank under a standing picker is unreachable, a kick while the mode
+// stands being deferred to the exit), so the stderr line the act writes is
+// the whole report. The row index is a walk index by the list builder's
+// construction.
+void GuiInputHandler::history_picker_commit(int index) {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner !=
+        AppState::FolderOverlay::Owner::HistoryPicker) return;
+    if (!app.history_mode.active) return;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    if (index < 0 || index >= n) return;
+    const std::size_t member = static_cast<std::size_t>(index);
+
+    // The SHA is COPIED out of the store before the act: the act closes the
+    // mode, which drops the session the reference would point into.
+    const std::string sha = app.history_mode.session.sha_at(member);
+    const bool loaded =
+        app.history_mode.source == GuiHistoryWalkSource::Local
+            ? load_history_local_entry_in_place(member + 1)
+            : load_history_commit_in_place(sha);
+    if (loaded) close_picker();
+    // A refusal: the act's own cause is on stderr, the picker stays, and no
+    // transient is written (the head of this function).
+}
+
+// -- The picker's shared machinery --------------------------------------------
+
+// Enter on the list and the OK button: the open act on the highlighted row,
+// forked on the overlay's owner through the one row-act fork
+// (folder_overlay_open_row, input_pointer.cpp — the double-click's second
+// press reaches the same fork). A -1 highlight is a consumed no-op.
+void GuiInputHandler::picker_open_highlight() {
+    if (!app.picker.active) return;
+    const int highlight = app.folder_overlay.highlight_row;
+    if (highlight < 0) return;
+    folder_overlay_open_row(highlight);
+}
+
+// The widget's two highlight mechanics (folder_overlay.h owns the clamps and
+// the scroll-into-view) with the picker's damage on top — the band as it
+// stands, which is the whole of what a moved highlight touches.
+void GuiInputHandler::picker_set_highlight(int index) {
+    if (!app.picker.active) return;
+    if (folder_overlay::set_highlight(app, index))
+        viewport.invalidate_rect(folder_overlay::surface_rect(app));
+}
+
+void GuiInputHandler::picker_move_highlight(int delta) {
+    if (!app.picker.active) return;
+    if (folder_overlay::move_highlight(app, delta))
+        viewport.invalidate_rect(folder_overlay::surface_rect(app));
+}
+
+// THE ONE CLOSE BODY, both contents (the caller inventory is at the
+// declaration). THE OVERLAY LEAVES WITH THE PICKER: the reset restores
+// Owner::None, which IS the band's standing predicate answering false. The
+// damage is the whole window, as the open's is — the band's pixels sit over
+// the waveform, the modal row goes back to its tenants and the roster's grey
+// lifts with them.
+void GuiInputHandler::close_picker() {
+    if (!app.picker.active) return;
+    app.picker         = AppState::Picker{};
+    app.folder_overlay = AppState::FolderOverlay{};
+    viewport.invalidate_all();
+}
+
+// THE PICKER'S KEY ROUTER — the whole plastic vocabulary while a picker
+// stands, in route_render_player_key's shape (the contract is at the
+// declaration).
+bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    const bool bare  = !ctrl && !shift && !alt;
+
+    // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner — the
+    // contract the two typed prompts this picker replaced carried
+    // (route_modal_editor_key's Ctrl+S arm), kept because it is what the `h`
+    // view needs: the ordinary dispatch's Ctrl+S IS the Save-and-Commit act
+    // in that view, and its commit-title editor must not open over a
+    // standing picker (no two modals stand together). The save is a
+    // consumed no-op where the save owner refuses (a checkpoint in flight).
+    if (ctrl && !shift && !alt && key == GuiKeys::S) {
+        save_ops.save();
+        return true;
+    }
+    // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
+    // which takes the picker down at its head (GuiPrompt::request_close) —
+    // the same step the compositor's close takes, stated once there rather
+    // than here, so the two roads cannot drift.
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+
+    // THE RING: Tab / Shift+Tab walk [list, OK, Cancel] through the one modal
+    // ring route, whose list arm the player and the picker share. A
+    // RING-FOCUSED BUTTON takes Enter and Space as its own press
+    // (press-at-press, commit-at-release — the route above already armed it
+    // and returned true); reaching the switch below with the focus on a
+    // button means the key was not one of the ring's.
+    if (route_modal_dialog_focus_key(key, mods)) return true;
+
+    if (!bare) return true;   // every other modified chord: consumed
+
+    switch (key) {
+        case GuiKeys::Escape:
+            close_picker();
+            return true;
+        case GuiKeys::Return:
+        case GuiKeys::KpEnter:
+            // With no button focused, Enter OPENS the highlight — the OK
+            // button's own act.
+            if (mods.synthesized_repeat) return true;
+            picker_open_highlight();
+            return true;
+        case GuiKeys::Up:
+            picker_move_highlight(-1);
+            return true;
+        case GuiKeys::Down:
+            picker_move_highlight(+1);
+            return true;
+        default:
+            // Space with no button focused, Left / Right, and every other
+            // bare key: consumed. The picker has no bare act for them.
+            return true;
+    }
 }
 
 // -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
@@ -5559,41 +5428,6 @@ void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
     app.transient_status_message = std::move(outcome.message);
     viewport.invalidate_status_chain_area();
-}
-
-bool GuiInputHandler::handle_open_project_editor_key(GuiKey key,
-                                                     GuiInputState mods) {
-    // THE PICKER'S LIST WALK, ahead of the shared route because that route
-    // knows only a field and a ring: bare Up / Down move the band AND
-    // prepopulate the field, the two being one thing here, and they walk from
-    // the field or from a focused button alike — the walk decides nothing but
-    // where the band is. They reach this body at all because
-    // modal_editor_key_blocked admits them while the picker stands; every
-    // modified spelling stays the strict rule's no-op, dropped at that gate.
-    if (app.folder_overlay.owner ==
-            AppState::FolderOverlay::Owner::ProjectPicker &&
-        !mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::Up || key == GuiKeys::Down)) {
-        const int n = static_cast<int>(app.folder_overlay.rows.size());
-        if (n > 0) {
-            const int from = app.folder_overlay.highlight_row < 0
-                                 ? 0 : app.folder_overlay.highlight_row +
-                                       (key == GuiKeys::Up ? -1 : +1);
-            project_picker_select(std::clamp(from, 0, n - 1));
-        }
-        return true;
-    }
-    return route_modal_editor_key(
-        app.open_project_editor, key, mods,
-        [this] { return open_project_editor_autocomplete(); },
-        [this] { open_project_editor_commit(); },
-        [this] { open_project_editor_exit_no_commit(); },
-        [this] {
-            // A TEXT CHANGE MOVES THE BAND (or takes it off the list): the
-            // picker's other direction, on the route's own repaint edge.
-            project_picker_track_field();
-            viewport.invalidate_modal_dialog_area();
-        });
 }
 
 // P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash
@@ -6095,8 +5929,8 @@ void GuiInputHandler::render_player_load_in_place() {
     // (architect 2026-08-28): a bare ENTER here answers OK, because the load
     // is not a destructive answer — it lands ONE undo entry, which the
     // ordinary Ctrl+Z takes back — and because the product's other `'` load
-    // prompt, the `h` view's Load editor, commits on its Enter. The two load
-    // prompts answer alike instead of opposite ways. Through
+    // road, the `h` view's history picker, opens its highlight on Enter. The
+    // two load roads answer alike instead of opposite ways. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
                        {'o', '\x1b'},

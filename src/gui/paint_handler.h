@@ -92,21 +92,13 @@ inline int icon_row_pad_x() {
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
-// THE LEVEL (architect 2026-08-27): a path prompt prints the device config
-// VARIABLE'S NAME in literal angle brackets, never the long path, and the
-// typed folder name renders directly after the slash, so the constant carries
-// no trailing space.
-constexpr const char* kOpenProjectEditorPrefix = "Open: <projects_path>/";
-// The load prompt (bare `'` in the `h` history view) label. Its buffer is a
-// COMMIT SPELLING or a member NUMBER, which name no path, so the label names
-// the ACT alone and takes one trailing space. (A `Load: <projects_path>/
-// <name>/tmp/` composition stood beside it while the editor also took a render
-// entry's identifier; that subject is the render player's since 2026-08-28 and
-// the two halves went with it.)
-constexpr const char* kLoadEditorHistoryPrefix = "Load: ";
+// (The Open project prompt's `Open: <projects_path>/` label and the `h`
+// view's `Load: ` label stood here until 2026-08-28, when both prompts lost
+// their text fields and became the field-less picker over the folder overlay
+// — architect R22/R23; the picker's row is OK · Cancel and wears no label.)
 // The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
-// message the checkpoint commit will carry. One trailing space, like the two
-// prefixes above that name a subject rather than a path.
+// message the checkpoint commit will carry. One trailing space, like every
+// prefix here that names a subject rather than a path.
 constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
 // The MEASURE PROPAGATE's paste-offset editor (2026-08-20), whose buffer is the
 // signed number of measures to add to every direct measure the paste writes.

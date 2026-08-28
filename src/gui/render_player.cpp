@@ -239,11 +239,15 @@ void GuiRenderPlayer::open_row(int index) {
             play_wav(row.path, wavs, wi);
             return;
         }
+        case Row::Kind::Text:
+            // The history picker's kind; the player's listings never carry
+            // one (rebuild_rows writes the three above and nothing else).
+            return;
     }
 }
 
 // The three below are the WIDGET'S mechanics (folder_overlay.h owns where the
-// band may sit and how far the offset may run, for both contents alike); what
+// band may sit and how far the offset may run, for every content alike); what
 // this cluster adds is the player's own damage.
 void GuiRenderPlayer::move_highlight(int delta) {
     if (folder_overlay::move_highlight(app, delta)) damage_band();

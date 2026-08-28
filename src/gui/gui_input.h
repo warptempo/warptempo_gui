@@ -197,8 +197,8 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 // reader may fold them together. The same two readers as the Space pair above
 // — on_key's dispatch arm (input_handler.cpp) and the read-only allowlist
 // (read_only_key_blocked, input_key_dispatch.cpp, which admits the chord
-// because the prompt authors nothing) — and the same one-owner reason. The act
-// is GuiInputHandler::open_project_editor, whose own body carries the gates
+// because the picker authors nothing) — and the same one-owner reason. The act
+// is GuiInputHandler::open_project_picker, whose own body carries the gates
 // (the modal refusals, the `h` view, the loading state); the File menu's Open
 // row dispatches this very chord through on_key like every other command row.
 inline bool is_open_project_key(GuiKey key, GuiInputState mods) {

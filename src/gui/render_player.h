@@ -170,8 +170,8 @@ struct GuiRenderPlayer {
     // One folder up; a consumed no-op at the root.
     void up();
     // The widget's three mechanics with the player's damage on top
-    // (folder_overlay.h owns the clamps and the scroll-into-view; the picker
-    // drives the same three through its own damage): move the highlight by
+    // (folder_overlay.h owns the clamps and the scroll-into-view; the pickers
+    // drive the same mechanics through their own damage): move the highlight by
     // `delta` rows, seat it on `index` — the motionless click's act — and
     // scroll the band by `rows` rows, the wheel's detent step.
     void move_highlight(int delta);

@@ -705,11 +705,6 @@ std::string trim_trailing_ws(std::string s) {
     return s;
 }
 
-// The seven-character spelling every user-facing line uses for a commit.
-std::string short_sha(const std::string& sha) {
-    return (sha.size() >= 7) ? sha.substr(0, 7) : sha;
-}
-
 struct LineDiff {
     std::vector<std::string> added;    // on `now` only
     std::vector<std::string> removed;  // on `then` only
@@ -1584,6 +1579,12 @@ bool read_snapshot_at(const std::string& repo_root, const std::string& sha,
 }
 
 }  // namespace
+
+// The seven-character spelling every user-facing line uses for a commit —
+// the contract is at the declaration.
+std::string short_sha(const std::string& sha) {
+    return (sha.size() >= 7) ? sha.substr(0, 7) : sha;
+}
 
 bool read_commit_sidecars(const std::string&        repo_root,
                           const std::string&        spelling,

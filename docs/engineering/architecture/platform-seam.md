@@ -151,7 +151,7 @@ drag coordinates floor instead of truncating.
   (`run_project`, main.cpp: AppState, audio, playback, the caches, the workers,
   the handlers, every callback) built inside, run, torn down in today's order.
   `run()` returns for an EXIT (`request_exit`; `exit_requested()` true) or a
-  RUN STOP (`request_run_stop`, the Open prompt's reopen — the window and the
+  RUN STOP (`request_run_stop`, the Open project picker's reopen — the window and the
   input core stand; the stop bit is cleared at each `run()`'s head). The
   worker fds are re-registered per session (each setter takes -1 and, on
   Android, unwatches what it replaces); the callbacks are re-installed; the

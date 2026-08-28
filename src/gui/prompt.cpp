@@ -177,8 +177,9 @@ void GuiPrompt::cancel_paste_confirmation() {
 
 // Route a close gesture through the prompt when history is dirty;
 // otherwise proceed immediately. Centralizes the decision so Ctrl+Q, the
-// WM-close callback and the Open prompt's commit share identical behaviour;
-// what differs between them is the target, seated here for proceed.
+// WM-close callback and the Open project picker's open act share identical
+// behaviour; what differs between them is the target, seated here for
+// proceed.
 void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
     // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
@@ -190,15 +191,18 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     // must take the identical step — one road, one closer. A no-op when the
     // mode is down, which is every other close.
     render_player.close();
+    // AND SO DOES A STANDING PICKER (2026-08-28), the same shape one mode
+    // over — one close body, close_picker, which takes the overlay's band
+    // down with it; idempotent, so the road that already closed it — the
+    // Open project picker's own reopen — pays nothing.
+    if (input != nullptr) input->close_picker();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
     // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which
-    // carries no key — did not, so a WM close over the Open prompt asked the
-    // unsaved-work question through a still-standing editor and its picker
-    // band, both back on screen at Cancel. The step is the input handler's
-    // (each editor's own exit body, and at most one can stand), stated once at
-    // close_modal_editors_no_commit and idempotent, so the roads that already
-    // closed their editor — File → Open project's commit — pay nothing.
+    // carries no key — did not, so a WM close over a standing editor asked the
+    // unsaved-work question through it, back on screen at Cancel. The step is
+    // the input handler's (each editor's own exit body, and at most one can
+    // stand), stated once at close_modal_editors_no_commit and idempotent.
     if (input != nullptr) input->close_modal_editors_no_commit();
     close_target_ = target;
     if (app.dirty)

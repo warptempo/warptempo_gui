@@ -22,7 +22,7 @@ struct Selection;
 // REBUILDING the object set around its source (the reopen loop, main.cpp),
 // never by loading into a standing one, so a failed load exits rather than
 // reverting to a blank window — and since 2026-08-27 it can fail only by a
-// change on disk between the Open prompt's dry-run below and the load.
+// change on disk between the Open project picker's dry-run below and the load.
 struct GuiFileLoader {
     AppState&          app;
     GuiAudio&          audio;
@@ -65,10 +65,11 @@ struct GuiFileLoader {
 // THE DRY-RUN IS THE REAL LOAD'S FAILURE VOCABULARY MINUS THE DECODE
 // (architect 2026-08-27, with the project model) — the rule, stated here once:
 // EVERY DETERMINISTIC REFUSAL load_file CAN RAISE FROM WHAT THE PROBE AND THE
-// SIDECARS ALREADY KNOW IS RAISED HERE FIRST. The Open prompt's Enter asks
-// this BEFORE anything is torn down, so a project that would refuse in
-// load_file refuses in the prompt instead — its first error on the status line,
-// the prompt still open and the old session still standing — and the reopened
+// SIDECARS ALREADY KNOW IS RAISED HERE FIRST. The Open project picker's open
+// act asks this BEFORE anything is torn down, so a project that would refuse
+// in load_file refuses in the picker instead — its first error on the status
+// line, the picker still open and the old session still standing — and the
+// reopened
 // session's load can then fail only on a CHANGE ON DISK between this check and
 // that load, which is the adversarial class and takes load_file's own fatal
 // exit. It writes nothing and keeps nothing: every parsed value is discarded.

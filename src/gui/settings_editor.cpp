@@ -103,7 +103,7 @@ void GuiSettingsEditor::open() {
     if (active_view_state(app).read_only) return;
     if (text_editor::is_active(app.settings_editor)) return;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past every refusal above — the
-    // load prompt's precedent exactly ("playback halts only when the modal
+    // history picker's precedent exactly ("playback halts only when the modal
     // actually opens, so a refused open leaves a listening session
     // undisturbed"). It moved here from the two call sites with the gate: a
     // caller-side stop would have made the dropdown's refusal kill a live

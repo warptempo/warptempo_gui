@@ -9,8 +9,8 @@
 
 // The batch folder's path composition and its enumeration: the flat list of
 // valid render entries under <source parent>/tmp/, plus the per-entry
-// .settings path helper. The `l` launcher and the `'` load editor call the
-// latter two.
+// .settings path helper. The render player's listings and its load road call
+// the latter two.
 
 // The project folder: the source's parent, or "." for a bare filename.
 static std::filesystem::path project_folder_of(

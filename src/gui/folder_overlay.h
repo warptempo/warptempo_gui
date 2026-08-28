@@ -1,32 +1,35 @@
 #pragma once
 
 // THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, and the OPEN PROJECT PICKER's valid project folders. Which
-// one fills it is AppState::FolderOverlay::owner, and that tag IS the
-// standing predicate (folder_overlay_stands, app_state.h; stands() below
-// forwards to it). This header is the panel's ONE OWNER of everything that is
-// not pixels, a press body or a content: the geometry (the band, the row
-// pitch, the scroll clamp), the one walk over the rows, and the highlight and
-// scroll mechanics both contents drive.
+// 2026-08-28). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, the OPEN PROJECT PICKER's valid project folders, and the
+// HISTORY PICKER's walk members. Which one fills it is
+// AppState::FolderOverlay::owner, and that tag IS the standing predicate
+// (folder_overlay_stands, app_state.h; stands() below forwards to it). This
+// header is the panel's ONE OWNER of everything that is not pixels, a press
+// body or a content: the geometry (the band, the row pitch, the scroll
+// clamp), the one walk over the rows, and the highlight and scroll mechanics
+// every content drives.
 // The PAINTER lives in paint_handler.cpp beside every other painter
 // and the PRESS ROUTER in input_pointer.cpp beside every other press router;
 // both walk this file's row table through the one walker below, so paint and
 // hit cannot describe different rows. The ROW TABLE ITSELF is
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
-// WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows
-// and WAV rows — each an icon and a name, painted in THE ON-SCREEN
-// KEYBOARD'S OWN BAND: full window width, sitting directly above the bottom
-// row over the waveform area's lower part, which the waveform's passes then
-// do not paint (onscreen_keyboard::waveform_paint_area, whose gate reads
-// both tenants and whose clip reads the STANDING one's own rect). The
-// architect's ruling (R3): "the overlay sits in the on-screen keyboard's
-// place above the bottom strip, replacing the keyboard there" — on glass the
-// keyboard would occupy that space, and neither use of the panel needs
-// typing. So THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND:
-// onscreen_keyboard::stands carries `!folder_overlay::stands` as its third
-// term. Unlike the keyboard the panel holds VARIABLE-LENGTH content and
+// WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows,
+// WAV rows and TEXT rows (a glyph-less kind, the history picker's) — each an
+// icon (or none) and a name, painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
+// full window width, sitting directly above the bottom row over the waveform
+// area's lower part, which the waveform's passes then do not paint
+// (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
+// whose clip reads the STANDING one's own rect). The architect's ruling (R3):
+// "the overlay sits in the on-screen keyboard's place above the bottom strip,
+// replacing the keyboard there" — on glass the keyboard would occupy that
+// space, and no use of the panel needs typing. So THE OVERLAY AND THE
+// KEYBOARD NEVER BOTH STAND, structurally rather than by a gate term: the
+// panel's owners are modes that are not editors (the record is at
+// onscreen_keyboard::stands). Unlike the keyboard the panel holds
+// VARIABLE-LENGTH content and
 // SCROLLS when a listing outgrows the band — the wheel on plastic, the
 // band's own drag on glass, and the keyboard's row walk keeping the focused
 // row visible. No header row, no columns, no scrollbar: the offset is the
@@ -67,12 +70,14 @@
 // DOUBLE-CLICK (the marker flag's own seed shape, the second press acting at
 // the press) or Enter on the highlight. The arm's whole state is
 // AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
-// no-op, and no row reads a hold. WHAT THE TWO ACTS MEAN IS THE OWNER'S: under
-// the PLAYER a lift only highlights and an open enters a folder, goes up, or
-// plays a wav (the Play button and Space act on the highlight too); under the
-// PICKER a lift highlights AND writes the row's name into the Open prompt's
-// field, and an open runs that prompt's own commit. The fork is at the press
-// router and the key router, never here — the panel knows rows, not projects.
+// no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
+// highlights under every owner — the pickers have no field beside the band):
+// under the PLAYER an open enters a folder, goes up, or plays a wav (the Play
+// button and Space act on the highlight too); under the PROJECT PICKER it
+// reopens the row's project; under the HISTORY PICKER it loads the row's
+// member in place (OK and Enter open the highlight on both). The fork is at
+// the press router and the key routers, never here — the panel knows rows,
+// not projects or commits.
 
 // THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
 // dependency runs the other way (that header includes this one, for the
@@ -149,9 +154,10 @@ inline int content_height_px(const AppState& a) {
 // keyboard's own accessor it does not ask whether the panel stands.
 //
 // AN EMPTY LISTING ANSWERS A ZERO-HEIGHT RECT and needs no guard of its own:
-// neither content can stand empty (the player refuses "No renders to play"
-// and the picker always lists at least the project that is open), and the
-// painter and the hit test already read a zero rect as nothing.
+// no content can stand empty (the player refuses "No renders to play", the
+// project picker always lists at least the project that is open, and the
+// history picker's opener refuses an empty walk), and the painter and the
+// hit test already read a zero rect as nothing.
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(
         a, std::min(content_height_px(a), keyboard_slot_max_height_px(a)));
@@ -242,11 +248,11 @@ inline void scroll_row_into_view(AppState& a, int index) {
     clamp_scroll(a);
 }
 
-// -- The highlight and the scroll, the mechanics both contents drive ---------
+// -- The highlight and the scroll, the mechanics every content drives --------
 //
 // THE DAMAGE IS THE CALLER'S: each of the three answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
-// no include of one — the player damages through its own helper, the picker
+// no include of one — the player damages through its own helper, the pickers
 // through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.

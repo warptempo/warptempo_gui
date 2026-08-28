@@ -20,9 +20,10 @@ bool GuiSaveOps::save() {
     // is no concurrent writer of those three paths at all (a second checkpoint
     // act is already refused, single-in-flight).
     //
-    // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the eight editors' own Ctrl+S
-    // admission (route_modal_editor_key) and the close prompt's Save answer all
-    // funnel through here, so the lockout needs no second spelling.
+    // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the editors' own Ctrl+S
+    // admission (route_modal_editor_key), the picker router's Ctrl+S and the
+    // close prompt's Save answer all funnel through here, so the lockout needs
+    // no second spelling.
     //
     // THE CLOSE PROMPT'S Save answer IS REACHABLE HERE, and it answers with the arm
     // it already has: the act saves before it dispatches, so the session is

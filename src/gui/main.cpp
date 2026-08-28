@@ -1517,11 +1517,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // 2026-08-09; it raises no modal now, so these two routes are again the
         // whole list.)
         input_handler.close_dropdown();
-        // THE RENDER PLAYER AND EVERY STANDING MODAL EDITOR GO DOWN INSIDE
-        // request_close, not here: the close road owns those steps for Ctrl+Q
-        // and for this callback alike, so neither a mode nor an editor — nor
-        // the Open prompt's picker band — is left standing under the
-        // unsaved-work prompt.
+        // THE RENDER PLAYER, THE PICKER AND EVERY STANDING MODAL EDITOR GO
+        // DOWN INSIDE request_close, not here: the close road owns those
+        // steps for Ctrl+Q and for this callback alike, so neither a mode
+        // nor an editor — nor either overlay band — is left standing under
+        // the unsaved-work prompt.
         prompt.request_close(GuiCloseTarget::Exit);
         // (The cursor re-resolve this callback used to end with is gone for the
         // same reason the resize path's is — see there. The prompt this may have
@@ -1905,8 +1905,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 // A project is opened by rebuilding this whole object set
                 // around it and there is no in-session replacement surface,
                 // so every load refusal is terminal. It is also the
-                // ADVERSARIAL class by construction: the Open prompt ran the
-                // load's own failure arms before anything was torn down
+                // ADVERSARIAL class by construction: the Open project picker
+                // ran the load's own failure arms before anything was torn down
                 // (source_load_dry_run, file_loader.h), and startup resolved
                 // the folder the same way, so a refusal here means the disk
                 // changed between that check and this load. Deeper
@@ -2160,7 +2160,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
         // comparator's own mechanism applied to a whole surface rather than to
-        // a face. The keyboard appears and disappears with the EIGHT EDITORS'
+        // a face. The keyboard appears and disappears with the EDITORS'
         // open and close, and those routes damage the marker lane or the bottom
         // row — never the band this surface paints in, which is the waveform
         // area's lower part. So the live answer is compared against the
@@ -2295,16 +2295,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 invalidate_modal_dialog_area();
             }
         }
-        // Same shape for the load prompt.
-        if (text_editor::is_active(app.load_editor)) {
-            const bool now_visible =
-                dialog_field_focused &&
-                text_editor::cursor_visible_now(app.load_editor);
-            if (now_visible != app.load_editor_blink_last) {
-                app.load_editor_blink_last = now_visible;
-                invalidate_modal_dialog_area();
-            }
-        }
         // And for the history view's commit-title editor.
         if (text_editor::is_active(app.commit_title_editor)) {
             const bool now_visible =
@@ -2325,17 +2315,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 invalidate_modal_dialog_area();
             }
         }
-        // And for the Open project prompt.
-        if (text_editor::is_active(app.open_project_editor)) {
-            const bool now_visible =
-                dialog_field_focused &&
-                text_editor::cursor_visible_now(app.open_project_editor);
-            if (now_visible != app.open_project_editor_blink_last) {
-                app.open_project_editor_blink_last = now_visible;
-                invalidate_modal_dialog_area();
-            }
-        }
-
         // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until
         // 2026-08-09, when the architect replaced the acknowledge modal with the
         // bottom row's PERMANENT CRITICAL SLOT. A paint-only cell needs no poll
@@ -2669,8 +2648,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // WHY run() RETURNED, read before anything below dies: an exit (the
     // platform's own bit — Ctrl+Q, the WM close, a connection loss, a load
-    // that failed) ends the process; otherwise the Open prompt's seated name
-    // is the project to reopen (the loop contract, platform.h).
+    // that failed) ends the process; otherwise the Open project picker's
+    // seated name is the project to reopen (the loop contract, platform.h).
     GuiProjectOutcome outcome;
     if (!gui.exit_requested()) outcome.reopen = app.reopen_project;
 
@@ -2844,7 +2823,7 @@ int gui_main(const char* argument) {
     // THE PROJECT LOOP. Everything ONE PER PROCESS is above; everything ONE PER
     // PROJECT is run_project's, built around the session's source and torn
     // down before it returns. run() returns for two reasons — an exit, and
-    // the Open prompt's REOPEN — and the outcome carries which. WHAT IS
+    // the Open project picker's REOPEN — and the outcome carries which. WHAT IS
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
     // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),

@@ -74,8 +74,8 @@ std::expected<GuiProjectSource, std::string> resolve_project(
 
 // EVERY DIRECTORY DIRECTLY UNDER `projects_path`, BY NAME, in PLAIN BYTE ORDER
 // (std::string's operator<) — the ONE order the product uses for folder names,
-// so the startup fallback's "first valid project" and the Open prompt's
-// candidate walk agree on what "first" means. No validity check here: validity
+// so the startup fallback's "first valid project" and the Open project
+// picker's row walk agree on what "first" means. No validity check here: validity
 // is asked where a name is CHOSEN (resolve_project). A missing or unreadable
 // `projects_path` answers EMPTY, and the caller's "no project under
 // <projects_path>" is the whole diagnostic.

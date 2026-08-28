@@ -11,7 +11,7 @@
 // and tears the set down when run() returns. run() RETURNS FOR TWO REASONS —
 // an EXIT (request_exit, or the backend's own connection-loss and
 // activity-destroyed ends; exit_requested() reads true afterwards and the
-// loop leaves) and a RUN STOP (request_run_stop — the Open prompt's reopen;
+// loop leaves) and a RUN STOP (request_run_stop — the Open project picker's reopen;
 // the window and the input core stand, and the next iteration's run() picks
 // them up as they are). Both backends implement the pair identically:
 // should_exit_ is process-scoped and never reset, run_stop_requested_ is
@@ -32,7 +32,7 @@
 // they capture the new objects. NOTHING IS RESET FOR THE CORE'S KEY REPEAT,
 // ITS TOUCH WINDOW OR A POINTER CAPTURE, and that is by construction rather
 // than by a cancel road: a reopen happens from a key press or a button lift
-// on the Open prompt, a modal — no pointer gesture is live, no capture can
+// on the Open project picker, a modal — no pointer gesture is live, no capture can
 // stand (a capture is the nav drag's, refused under a modal), the touch
 // disambiguation window has resolved (it is what delivered the press), and
 // the key that committed is a session key the repeat probe never arms. The

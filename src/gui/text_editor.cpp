@@ -20,6 +20,13 @@ namespace {
 // half-deleted or caretted into.
 // ---------------------------------------------------------------------------
 
+// THE UTF-8 PRIMITIVE every boundary walk below is built from: a continuation
+// byte is 10xxxxxx, and every other byte STARTS a codepoint. That single test
+// needs no sequence length and degrades safely on malformed bytes. It is the
+// module's own since 2026-08-28 — its one outside caller, the Open prompt's
+// prefix completion, went with that prompt's text field.
+bool is_utf8_continuation_byte(unsigned char b) { return (b & 0xc0) == 0x80; }
+
 // The codepoint boundary strictly LEFT of `pos` (0 when there is none).
 int prev_codepoint_boundary(const std::string& s, int pos) {
     if (pos <= 0) return 0;
@@ -152,10 +159,6 @@ CharClass classify(char c) {
 
 } // namespace
 
-// The module's UTF-8 primitive, public because one site outside the editors
-// needs the same answer (the contract is at the declaration).
-bool is_utf8_continuation_byte(unsigned char b) { return (b & 0xc0) == 0x80; }
-
 // Nearest boundary, ties to the lower index — the contract is at the
 // declaration. Linear over at most kMaxPendingCharsFlagIter + 1 entries, run
 // once per click; a binary search would be the same answer with more code.
@@ -270,11 +273,9 @@ void replace_selection(State& s, const std::string& raw) {
     int cap = kMaxPendingChars;
     if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
     if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
-    if (s.kind == Kind::LoadInPlace)       cap = kMaxPendingCharsLoadInPlace;
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
     if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
     if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-    if (s.kind == Kind::OpenProject)       cap = kMaxPendingCharsOpenProject;
     if (s.kind == Kind::FlagPayload && s.iter_grammar)
         cap = kMaxPendingCharsFlagIter;
     // Atomic cap: compute the result size BEFORE mutating anything. Refuse
@@ -625,11 +626,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         int cap = kMaxPendingChars;
         if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
         if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
-        if (s.kind == Kind::LoadInPlace)       cap = kMaxPendingCharsLoadInPlace;
         if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
         if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
         if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-        if (s.kind == Kind::OpenProject)       cap = kMaxPendingCharsOpenProject;
         if (s.kind == Kind::FlagPayload && s.iter_grammar)
             cap = kMaxPendingCharsFlagIter;
         // Atomic cap: compute the result size BEFORE erasing the selection,

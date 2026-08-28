@@ -586,7 +586,7 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
 // WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
 // with dark text... let's just do that everywhere for consistency"). One
-// pairing for every run the product lets a user select in — the six dialog
+// pairing for every run the product lets a user select in — the four dialog
 // editors' shared field and the marker lane's flag editor alike:
 // kRedesignAccent #3daee9 behind the selected substring, kRedesignLabel
 // #fcfcfc for its glyphs. It is Breeze Light's own selection, which is where

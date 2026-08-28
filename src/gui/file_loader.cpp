@@ -314,8 +314,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // TAKEN FROM THE RESOLVED PROJECT, never derived from the source's parent:
     // the model already answered which folder this is, and a derivation off the
     // canonical source would answer the LINK TARGET's folder wherever a symlink
-    // is in the way — a name the user never chose, and one the Open prompt's
-    // already-open compare would then miss. This is the field's ONE producer
+    // is in the way — a name the user never chose, and one the Open project
+    // picker's already-open compare would then miss. This is the field's ONE producer
     // (the statement is at AppState::project_name).
     gui.set_project_title(project.name);
     app.project_name = project.name;

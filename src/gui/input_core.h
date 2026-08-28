@@ -586,7 +586,7 @@ public:
     //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
     //     the GUI arms its region former at the DOWN point (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
-    //     inside the body (prompt, the eight editors, open dropdown,
+    //     inside the body (prompt, the editors, the two overlay modes, open dropdown,
     //     loading/empty audio, live pointer gesture); a refused begin makes
     //     the two hooks below no-ops through the drag's own !active guard, so
     //     the refused stream is dead. NOTHING pointer-shaped starts — no

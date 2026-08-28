@@ -255,6 +255,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (2026-08-28, architect
+    // R22/R23): the field-less Open project / history picker over the folder
+    // overlay, at the player's rank (the two never stand together) and with
+    // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
+    // (route_picker_key), Ctrl+Q the one fall-through (with the picker
+    // already closed by the close road), Ctrl+S consumed by the router as the
+    // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
+    // which must not open over a picker). The gesture clause is the player's
+    // own: the overlay's row press arm is a member of
+    // any_pointer_gesture_active under either owner, and while it stands
+    // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
+    if (app.picker.active) {
+        if (any_pointer_gesture_active(app)) {
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) return;
+        } else if (route_picker_key(key, mods)) {
+            return;
+        }
+    }
+
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
     // always false in blank state (the only blank state is the transient
@@ -327,8 +346,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the three
-    // single-State dialog ones (settings, load, and the commit title since
-    // 2026-08-07), the bpm bracket (a dialog too), and the top-strip flag editor
+    // single-State dialog ones (settings, the commit title since 2026-08-07
+    // and the measure paste-offset since 2026-08-20), the bpm bracket (a
+    // dialog too), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
     // (modal_editor_key_blocked); everything else — playback, navigation, zoom,
@@ -374,16 +394,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
-    // Load prompt editor (bare `'` opener). Same modal shape as the
-    // settings editor block above; the two are mutually exclusive in practice
-    // (each opener no-ops while the other owns the keyboard). Routed before the
-    // render/batch Esc cancel so Esc closes the edit first.
-    if (text_editor::is_active(app.load_editor)) {
-        if (handle_load_editor_key(key, mods)) return;
-    }
-
     // Commit-title editor (Ctrl+S in the `h` history view). Same modal shape
-    // as the two blocks above, and mutually exclusive with them by construction:
+    // as the blocks above, and mutually exclusive with them by construction:
     // its opener is a chord the keyboard-modal gate drops while any editor is
     // open, and the view's own allowlist admits no other opener.
     if (text_editor::is_active(app.commit_title_editor)) {
@@ -391,18 +403,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Measure paste-offset editor (Ctrl+Alt+/ over one selected warp marker).
-    // The same modal shape as the three blocks above, and mutually exclusive
+    // The same modal shape as the blocks above, and mutually exclusive
     // with them by construction: its opener is a chord the keyboard-modal gate
     // drops while any editor is open.
     if (text_editor::is_active(app.measure_offset_editor)) {
         if (handle_measure_offset_editor_key(key, mods)) return;
-    }
-
-    // Open project prompt (File → Open project). The same modal shape as the four
-    // blocks above, and mutually exclusive with them by construction: its
-    // opener refuses while any editor owns the keyboard.
-    if (text_editor::is_active(app.open_project_editor)) {
-        if (handle_open_project_editor_key(key, mods)) return;
     }
 
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
@@ -601,8 +606,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is deleted, so a bare Esc with no render
     //                              running is a plain no-op
     //   - Ctrl+Q                 → close-prompt routing
-    //   - Ctrl+O                 → the Open project prompt (2026-08-28). It
-    //                              authors nothing: it asks for a name, and
+    //   - Ctrl+O                 → the Open project picker (2026-08-28). It
+    //                              authors nothing: it lists the projects, and
     //                              choosing one reopens the program around
     //                              another project rather than writing into
     //                              this one. Bare `o` above is the other act
@@ -787,20 +792,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
-    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN SIX
-    // PLACES AND NOWHERE ELSE (re-derived 2026-08-28 — the drag-modal gate above
-    // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
-    // other key while a gesture is in flight; it is NOT one of the six), each of
-    // the six earlier in this function than this point, so reaching here means
-    // the press has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
-    // modal first:
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
+    // SEVEN PLACES AND NOWHERE ELSE (re-derived 2026-08-28 — the drag-modal
+    // gate above tests only Ctrl+Q, so Esc is UNBOUND there and falls through
+    // with every other key while a gesture is in flight; it is NOT one of the
+    // seven), each of the seven earlier in this function than this point, so
+    // reaching here means the press has nothing left to do. THEY ARE LISTED IN
+    // RANK ORDER, outermost modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
-    //       since it can only fire while one of the eight editors owns the
+    //       since it can only fire while one of the editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all eight, through route_modal_editor_key: Esc closes /
-    //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
+    //   (b) THE EDITORS — all six kinds, through route_modal_editor_key: Esc
+    //       closes / cancels the edit (the editor blocks above, bit-for-bit
+    //       unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
     //       place of its own, which is the point of there being one route;
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
@@ -817,7 +823,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the six dialog editors' veil swallows the press that would open
+    //       — the dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
@@ -826,6 +832,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       gate below it). It ranks below the prompt because its load
     //       confirmation IS a prompt, and it cannot collide with (a)/(b): the
     //       player never opens under an editor and admits no editor opener;
+    //   (c4) THE PICKER (2026-08-28, the seventh — the Open project and
+    //       history pickers, one router) — Esc closes it (route_picker_key,
+    //       at the player's rank and with its argument: the reopen's
+    //       unsaved-tab question IS a prompt, and no picker opens under an
+    //       editor or admits an editor opener). The two typed prompts it
+    //       replaced were members of (b), so the count grew by one place;
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
@@ -834,9 +846,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
     // MOVE: its allowlist stopped dropping the key, which lets (d) run
     // inside the view. That rung is what the ADMISSION buys, not the only rung
-    // reachable in there (re-derived 2026-08-07): the view also opens the load
-    // editor on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a) and (b) run
-    // in it too — and (c) with them, the checkpoint's own failure notice being a
+    // reachable in there (re-derived 2026-08-28): the view also opens the
+    // history picker on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a), (b)
+    // and (c4) run in it too — and (c) with them, the checkpoint's own failure notice being a
     // prompt this view can raise — but each of those gates sits ABOVE the
     // allowlist in on_key, so the press never reaches the admission at all. It gained no
     // binding of its own, and Esc cannot close it: the view's toggle is
@@ -873,17 +885,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the read-only allowlist reads, so Ctrl+Shift+O stays the strict rule's
     // consumed no-op. IT SITS BESIDE QUIT because it is the same family — the
     // two acts on the session as a whole — and the placement is otherwise free:
-    // every state that must refuse the prompt refuses it ABOVE this line (a
-    // standing prompt, an open dropdown, loading-or-absent audio, the editor
-    // text drag, any keyboard-modal editor, the `h` view's allowlist, which
-    // admits no Ctrl+O and so drops the press as a consumed no-op exactly as
-    // the opener's own history-mode guard would) or inside the opener's own
-    // body, which is the road the File menu's row takes and carries the gates
-    // for both. Nothing is restated here. Not repeat-eligible: that gate is an
-    // allowlist of the stepping keys and this letter is not on it, so a held
-    // Ctrl+O opens the prompt once.
+    // every state that must refuse the picker refuses it ABOVE this line (a
+    // standing prompt, the player's and the picker's own routers, an open
+    // dropdown, loading-or-absent audio, the editor text drag, any
+    // keyboard-modal editor, the `h` view's allowlist, which admits no Ctrl+O
+    // and so drops the press as a consumed no-op exactly as the opener's own
+    // history-mode guard would) or inside the opener's own body, which is the
+    // road the File menu's row takes and carries the gates for both. Nothing
+    // is restated here. Not repeat-eligible: that gate is an allowlist of the
+    // stepping keys and this letter is not on it, so a held Ctrl+O opens the
+    // picker once.
     if (is_open_project_key(key, mods)) {
-        open_project_editor();
+        open_project_picker();
         return;
     }
 
@@ -1151,8 +1164,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Ctrl+Alt+R from 2026-08-04 to 2026-08-08; the act is save-first by
         // definition, so it belongs on the save chord and the Render hijack is
         // gone whole.) Inside the commit-title editor Ctrl+S is the PLAIN save
-        // again, through the five-editor modal contract, which sits above this
-        // arm and never reaches it.
+        // again, through the editors' modal contract, which sits above this
+        // arm and never reaches it — and so is it inside the history picker,
+        // whose router consumes the chord as that same plain save above this
+        // arm (route_picker_key), the commit-title editor never opening over
+        // a standing picker.
         if (ctrl && !shift && !alt) {
             if (app.history_mode.active) {
                 open_history_commit_editor();
@@ -1386,8 +1402,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the flag editor's exemption live at its declaration). THE STOP IS THE
     // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
     // refusal that day (a locked tab authors no engine settings), so the stop
-    // moved inside GuiSettingsEditor::open past that gate, the load prompt's
-    // own precedent (open_history_load_editor). This key never meets that refusal anyway — `;` is off the
+    // moved inside GuiSettingsEditor::open past that gate, the history
+    // picker's own precedent (open_history_picker). This key never meets that
+    // refusal anyway — `;` is off the
     // read-only allowlist and drops far above — but the two openers share one
     // owner rather than one of them keeping a private copy.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
@@ -1399,23 +1416,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // design 2026-08-28). OUTSIDE the `h` view it opens the RENDER PLAYER,
     // which is where a render entry is chosen — a highlighted batch cell and
     // the modal row's Load in place button, `'` again inside the player. IN
-    // the view it opens the TYPED LOAD PROMPT on the viewed walk's member — a
-    // commit by its SHA, or a local member by its number
-    // (open_history_load_editor; the mode admits this one key through
-    // history_mode_key_blocked above) — which is the view's own road and stays
-    // its own ("we're just gonna leave that be in history view"; the design's
-    // U8: "untangling that will be complicated"). The fork is HERE rather than
-    // inside either opener, so each opener owns one surface whole.
-    // TWO PRODUCERS, ONE ROUTE: this key and the icon row's load button, which
-    // synthesizes exactly this bare chord through the redesign chord table, so
-    // both roads reach both producers and no second opener exists. The typed
-    // prompt is a modal DIALOG surface, and its opener owns the no-source guard
-    // AND the playback stop: playback halts only when the modal actually opens,
-    // so a refused open leaves a listening session undisturbed (once open,
-    // Space is inside the modal blocked set, so playback cannot restart until
-    // the editor closes).
+    // the view it opens the HISTORY PICKER over the viewed walk's members — a
+    // commit by its short SHA, or a local member by its number
+    // (open_history_picker; the mode admits this one key through
+    // history_mode_key_blocked above) — the view's own road, field-less since
+    // R23 ("it's just for consistency; otherwise it looks odd"). The fork is
+    // HERE rather than inside either opener, so each opener owns one surface
+    // whole. TWO PRODUCERS, ONE ROUTE: this key and the icon row's load
+    // button, which synthesizes exactly this bare chord through the redesign
+    // chord table, so both roads reach both producers and no second opener
+    // exists. The picker is a modal surface, and its opener owns the
+    // no-source guard AND the playback stop: playback halts only when the
+    // modal actually opens, so a refused open leaves a listening session
+    // undisturbed (once open, Space is the picker router's consumed nothing,
+    // so playback cannot restart until the picker closes).
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
-        if (app.history_mode.active) open_history_load_editor();
+        if (app.history_mode.active) open_history_picker();
         else                         toggle_render_player();
         return;
     }
@@ -2178,11 +2194,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (any_pointer_gesture_active(app)) return -1;
     // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
     // context 4, the list's one-row-per-detent scroll — and swallowed
-    // everywhere else, the veil's own answer for the wheel. It is RANKED
-    // ABOVE the dialog editors' swallow below for the PICKER's sake, exactly
-    // as the press claim is ranked above their veil: the band belongs to the
-    // Open prompt while the picker stands, so the one surface the wheel may
-    // still reach under that editor is the list it feeds. The band is the
+    // everywhere else, the veil's own answer for the wheel under the player
+    // and the pickers alike (neither is an editor, so the swallow below never
+    // sees them — this line is their whole wheel answer). The band is the
     // keyboard slot's rect; the standing predicate is the owner tag.
     if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;

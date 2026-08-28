@@ -88,13 +88,14 @@ struct GuiPlaybackLifecycle {
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
     // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-28 — NINE
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
-    // input_key_dispatch.cpp the `'` load editor (open_history_load_editor,
+    // input_key_dispatch.cpp the `'` HISTORY PICKER (open_history_picker,
     // the `h` view's), the `m`
     // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
     // (open_history_commit_editor), the MEASURE PASTE-OFFSET editor
-    // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT prompt
-    // (open_project_editor, 2026-08-27) — the last two had joined without
-    // this list moving, which this re-grep corrects; the TWO prompt opens
+    // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT PICKER
+    // (open_project_picker, 2026-08-27 as a prompt, field-less since
+    // 2026-08-28) — the last two had joined without this list moving, which
+    // this re-grep corrects; the TWO prompt opens
     // (prompt.cpp: unsaved, error notice); and THE RENDER PLAYER's open
     // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
     // 2026-08-28; the project's audition ends where the player's transport
@@ -130,8 +131,9 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * DIALOG modal surfaces — the five editors and the prompts, all
-    //     painted as the bottom row's modal since 2026-08-13 — STOP.
+    //   * DIALOG modal surfaces — the four dialog editors, the prompts and
+    //     the two pickers, all painted as the bottom row's modal since
+    //     2026-08-13 — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
     //     wheel-transparent), and editing flag text while listening to the

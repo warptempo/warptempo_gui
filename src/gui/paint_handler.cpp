@@ -1870,13 +1870,15 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         status += '/';
         status += std::to_string(count);
         if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
-            // Empty for an out-of-range index, which is exactly the empty walk,
-            // so the count needs no test of its own here.
-            const std::string& sha =
-                app.history_mode.session.sha_at(app.history_mode.index);
-            if (!sha.empty()) {
+            // THE ONE SPELLING OWNER (member_label, app_state.h): the short
+            // SHA the history picker's rows spell too. Empty for an
+            // out-of-range index, which is exactly the empty walk, so the
+            // count needs no test of its own here.
+            const std::string label =
+                app.history_mode.member_label(app.history_mode.index);
+            if (!label.empty()) {
                 status += ' ';
-                status += sha.substr(0, 7);
+                status += label;
             }
         }
         const GuiHistoryCommitDelta* d =
@@ -5138,11 +5140,10 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // The editors' precedence order. Only one dialog editor can be open at a time
 // — every opener refuses while another owns the keyboard — so the order is
 // free. A standing PROMPT outranks every editor and is the caller's own test,
-// not this one's. (The load editor's prefix was FORKED here while that editor
-// also took a render entry's identifier: a composed `Load: <projects_path>/
-// <name>/tmp/` outside the `h` view, the bare act name inside it. The render
-// player took the renders subject on 2026-08-28, so the editor is the view's
-// alone and one label answers for it.)
+// not this one's. (The `h` view's load editor and the Open project editor
+// had arms here until 2026-08-28, when both became the field-less PICKER —
+// a modal owner of its own, painted by the picker branch below, never an
+// editor.)
 //
 // IT HANDS BACK A MUTABLE STATE because the field's painter WRITES one field
 // of it: the horizontal view offset (text_editor::State::view_offset_px, whose
@@ -5150,10 +5151,6 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // caller below wants only the null test and is unaffected.
 static text_editor::State* dialog_editor_to_paint(AppState& app,
                                                   std::string& prefix) {
-    if (text_editor::is_active(app.load_editor)) {
-        prefix = kLoadEditorHistoryPrefix;
-        return &app.load_editor;
-    }
     if (text_editor::is_active(app.commit_title_editor)) {
         prefix = kCommitTitleEditorPrefix;
         return &app.commit_title_editor;
@@ -5166,10 +5163,6 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
         prefix = kSettingsEditorPrefix;
         return &app.settings_editor;
     }
-    if (text_editor::is_active(app.open_project_editor)) {
-        prefix = kOpenProjectEditorPrefix;
-        return &app.open_project_editor;
-    }
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         prefix = kBpmEditorPrefix;
@@ -5179,13 +5172,14 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 }
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
-// owner since 2026-08-28: its transport row takes the lane whole) or any
-// dialog editor. The top-strip FLAG editor is deliberately absent: it is
-// positional and pointer-transparent, not a dialog, and it never takes this
-// row.
+// owner since 2026-08-28: its transport row takes the lane whole), the PICKER
+// (the fourth, the same day: its OK / Cancel row) or any dialog editor. The
+// top-strip FLAG editor is deliberately absent: it is positional and
+// pointer-transparent, not a dialog, and it never takes this row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
+    if (app.picker.active) return true;
     std::string prefix;
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
@@ -5519,10 +5513,10 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
     app.modal_dialog_field_hovered   = false;
-    // THE PLAYER'S RING BIT is modal face state too (2026-08-28): whether the
-    // ring's -1 means the folder overlay's list. It dies on the same edges —
-    // a prompt raised over the player and answered leaves the ring off the
-    // list, as a fresh open does.
+    // THE LIST BIT is modal face state too (2026-08-28): whether the ring's
+    // -1 means the folder overlay's list, under the player and the pickers
+    // alike. It dies on the same edges — a prompt raised over the player and
+    // answered leaves the ring off the list, as a fresh open does.
     app.folder_overlay.list_focused  = false;
 }
 
@@ -5557,10 +5551,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // the editors, and never live beside one (its opener refuses under any
     // editor, its key router consumes every opener).
     const bool player_up = !prompt_up && app.render_player.active;
+    // THE PICKER, the fourth owner (2026-08-28): the same rank as the player,
+    // the two never live together (each opener refuses under the other) and
+    // neither live beside an editor.
+    const bool picker_up = !prompt_up && !player_up && app.picker.active;
     std::string prefix;
     text_editor::State* ed =
-        (prompt_up || player_up) ? nullptr : dialog_editor_to_paint(app, prefix);
-    if (!prompt_up && !player_up && ed == nullptr) {
+        (prompt_up || player_up || picker_up)
+            ? nullptr : dialog_editor_to_paint(app, prefix);
+    if (!prompt_up && !player_up && !picker_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -5689,7 +5688,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
-        // claim), button-is-its-chord.
+        // claim), button-is-its-chord. THE PICKER TAKES THE SAME TWO WORDS ON
+        // THE SAME OK BIT (2026-08-28): OK is its open act on the highlight,
+        // Cancel its close, and the hint composer's Enter / Escape are that
+        // router's own keys for the two (route_picker_key).
         DialogButtonPlan ok;
         ok.label     = "OK";
         ok.editor_ok = true;
@@ -5725,8 +5727,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // question since 2026-08-28): the last on every prompt but the render
     // player's load confirmation, which asks for its FIRST — its OK is one
     // undo entry away from being undone rather than destructive, and its Enter
-    // then means what the `h` view's Load editor's Enter means on the same
-    // act. This is the ONE assignment site: it rides the same reset the
+    // then means what the `h` view's history picker's Enter means on the
+    // same act. This is the ONE assignment site: it rides the same reset the
     // focus's other three edges ride, so a fresh prompt and a prompt replacing
     // a prompt are one case, and it runs HERE rather than at the reset because
     // the plan's ends are not known until the plan exists. An EDITOR dialog is
@@ -5835,6 +5837,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // loop below, which needs to run first for the cluster's right edge;
         // the loop's own x is what places them, so the block after it owns
         // both.
+    } else if (picker_up) {
+        // -- THE PICKER'S ROW (2026-08-28, architect R22): OK · Cancel at the
+        //    left pad and NOTHING ELSE — no label, no field. The list in the
+        //    band above is the whole question, and the prompt's
+        //    `<projects_path>/` prefix went with the field it labelled. The
+        //    player's own shape one owner up: the buttons first, where the
+        //    hand reaches. --
+        dlg.owner  = AppState::ModalDialogOwner::Picker;
+        buttons_x0 = cx0;
     } else {
         // -- The editor: the label at the left pad, then the inset field,
         //    then the buttons after it. The field absorbs whatever the label
@@ -5974,7 +5985,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // a caret resting mid-string) and must die with the edit. enter() and
         // deactivate() already zero it, so it RESETS when a dialog opens and
         // when it closes, with no reset site of its own to keep in step — and
-        // since each of the six dialog editors owns its own State, a change
+        // since each of the four dialog editors owns its own State, a change
         // of the stash's owner is structurally a change of offset too. A
         // prompt has no field and writes none.
         //
@@ -6517,24 +6528,25 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
         exposed.x + exposed.w >= surf.x + surf.w &&
         exposed.y + exposed.h >= surf.y + surf.h;
     if (covers_band) app.keyboard_slot_painted_standing = keyboard || overlay;
-    // AT MOST ONE TENANT: the keyboard's standing predicate carries the
-    // overlay's negation as its third term (onscreen_keyboard::stands).
+    // AT MOST ONE TENANT, structurally (the record is at
+    // onscreen_keyboard::stands); the order below is free.
     if (overlay)       paint_folder_overlay(cr, exposed);
     else if (keyboard) paint_onscreen_keyboard(cr, exposed);
 }
 
 // -- GuiPaintHandler::paint_folder_overlay -----------------------------------
 //
-// THE KEYBOARD-SLOT LIST PANEL (2026-08-28), ONE PAINTER FOR BOTH CONTENTS —
-// the render player's folders and wavs, and the Open project picker's project
-// folders. Contract and gate are at the declaration; the geometry, the scroll
+// THE KEYBOARD-SLOT LIST PANEL (2026-08-28), ONE PAINTER FOR EVERY CONTENT —
+// the render player's folders and wavs, the Open project picker's project
+// folders and the history picker's walk members. Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. Nothing here asks WHOSE rows these are: the
-// picker's are all Folder rows, so they take the folder glyph and the resting
-// face by the same ladder the player's do, and the transport mark below is
-// structurally absent there (the player holds no item while the picker
-// stands).
+// project picker's are all Folder rows and the history picker's all TEXT
+// rows, each taking its glyph (or none) from the row's KIND and its face
+// from the same ladder the player's rows do, and the transport mark below is
+// structurally absent under either picker (the player holds no item while a
+// picker stands).
 //
 // THE ROWS ARE BUTTONS AND THE PALETTE IS THE FILE MANAGER'S (architect
 // 2026-08-28, R31/R32, superseding the keyboard's palette this band opened
@@ -6645,26 +6657,36 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 
             // THE GLYPH: the folder for folder rows and the up row (it names
             // a folder), the wav for wav rows — swapped for the transport
-            // glyph on the item's row. At the BUTTON'S OWN INSET from the
-            // row's left edge and centred in its height, which are the same
-            // number: a row is a wide button and this is how a button seats
-            // its glyph.
-            icons::Icon icon = icons::Icon::Folder;
-            if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
-                icon = (!rp.item.empty() && row.path == rp.item)
-                           ? icons::Icon::MediaPlaybackStart
-                           : icons::Icon::AudioXWav;
-            }
+            // glyph on the item's row — and NONE for a TEXT row (the history
+            // picker's members, which name neither a folder nor a file). At
+            // the BUTTON'S OWN INSET from the row's left edge and centred in
+            // its height, which are the same number: a row is a wide button
+            // and this is how a button seats its glyph.
             const int gx = r.x + inset;
-            const int gy = r.y + (r.h - glyph) / 2;
-            icons::draw(cr, icon, static_cast<double>(gx),
-                        static_cast<double>(gy), static_cast<double>(glyph));
+            int text_x = gx;
+            if (row.kind != AppState::FolderOverlayRow::Kind::Text) {
+                icons::Icon icon = icons::Icon::Folder;
+                if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
+                    icon = (!rp.item.empty() && row.path == rp.item)
+                               ? icons::Icon::MediaPlaybackStart
+                               : icons::Icon::AudioXWav;
+                }
+                const int gy = r.y + (r.h - glyph) / 2;
+                icons::draw(cr, icon, static_cast<double>(gx),
+                            static_cast<double>(gy),
+                            static_cast<double>(glyph));
+                text_x = gx + glyph + gap;
+            }
 
-            // THE NAME, shaped through the one chokepoint, after the glyph,
-            // in the band's ONE ink — black on the accent would be the marker
-            // lane's rule, not this band's: R32 gives the selected row white
-            // text, kdenlive's own band carries it, and a row that changes
-            // ink with its face would be a second thing to read.
+            // THE NAME, shaped through the one chokepoint, after the glyph —
+            // or, on a TEXT row, WHERE THE GLYPH WOULD HAVE STARTED: the
+            // button's own inset is the row's left pad, so a glyph-less row
+            // reads as the same button family with its word seated where a
+            // word button seats its ink — in the band's ONE ink (black on the
+            // accent would be the marker lane's rule, not this band's: R32
+            // gives the selected row white text, kdenlive's own band carries
+            // it, and a row that changes ink with its face would be a second
+            // thing to read).
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             const double baseline = redesign_baseline(
@@ -6674,14 +6696,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // clip to the ROW's own right edge is what "off the edge" means
             // here: the glyphs stop at the row, not at the window.
             cairo_save(cr);
-            cairo_rectangle(cr, gx + glyph + gap, r.y,
-                            std::max(0, (r.x + r.w) - (gx + glyph + gap)),
-                            r.h);
+            cairo_rectangle(cr, text_x, r.y,
+                            std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             text_shape::show_shaped_run(
-                cr, run, static_cast<double>(gx + glyph + gap), baseline);
+                cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);
         });
 

@@ -91,17 +91,12 @@ constexpr int kMaxPendingCharsBpm = 60;
 // minimal-travel rule each painter applies — so the two cannot scroll
 // differently.
 constexpr int kMaxPendingCharsSettings = 1024;
-// Load prompt (bare `'` in the `h` history view). Holds the viewed walk's
-// member in that walk's own spelling — a commit spelling (a 40-char SHA when
-// the opener seeds it) or a member number. 256 is a generous ceiling for
-// either. (It sized the render entry's relative path under tmp/ as well until
-// 2026-08-28, when the render player took that subject.)
-constexpr int kMaxPendingCharsLoadInPlace = 256;
 // The history mode's commit-title editor (Ctrl+S while the view stands).
 // Holds the checkpoint's commit message — one line, prefilled with `Update
-// <id>` and free UTF-8 text the user may rewrite. 256 is the same generous
-// ceiling the load prompt takes, and it is well past the ~50-character summary
-// line a commit title is written to be.
+// <id>` and free UTF-8 text the user may rewrite. 256 is a generous ceiling,
+// well past the ~50-character summary line a commit title is written to be.
+// (The `h` view's load prompt took the same ceiling until 2026-08-28, when
+// the field-less history picker replaced it.)
 constexpr int kMaxPendingCharsCommitTitle = 256;
 // The marker MEASURE editor (bare `/`, its bottom-row button, the double-click
 // on the blue box). The cap IS the load bound, taken from its one owner rather
@@ -119,11 +114,6 @@ constexpr int kMaxPendingCharsMeasure =
 // in-bracket source and there is nothing longer to type. A tight bound rather
 // than a policy cap, the measure field's own arrangement.
 constexpr int kMaxPendingCharsMeasureOffset = 6;
-// The OPEN PROJECT prompt (File → Open project). Holds a project folder's NAME under
-// the device config's projects_path — "550 - 1" — typed or Tab-completed over
-// the folder names there. 256 is the load prompt's own generous ceiling for a
-// program-named path component, and a folder name is one such component.
-constexpr int kMaxPendingCharsOpenProject = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -131,52 +121,50 @@ constexpr int kMaxPendingCharsOpenProject = 256;
 // commit-time validator). The flag editor uses FlagPayload (payload text,
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
-// history view's load prompt uses LoadInPlace (the viewed walk's member — a
-// commit spelling on the Remote tab, a member number on the Local one,
-// resolved against the walk at commit; the render-entry identifier it held
-// until 2026-08-28 went with the renders half, the player owning that road);
-// the history
-// mode's commit-title editor uses CommitTitle (free one-line text, the message
-// the checkpoint commit carries); the MARKER MEASURE editor uses MeasureText
-// (the ` //<measure>` suffix a marker line may carry — an ASCII GRAMMAR since
-// the field's 2026-08-20 rebrand, judged at the commit by marker_measure.h and
-// not at all on the keyboard); and the MEASURE PROPAGATE's paste-offset editor
-// uses MeasureOffset (one signed decimal integer, likewise judged at its commit
-// and not on the keyboard); and the OPEN PROJECT prompt (File → Open project) uses
-// OpenProject (a project folder's name under the projects path, resolved
-// against the project model at commit). THERE ARE EIGHT KINDS AND SIX OF THEM
-// ARE DIALOG EDITORS — the sixth Kind was architect-blessed 2026-08-19, the
-// seventh arrived with the measure propagate on 2026-08-20 and the eighth with
-// the project model on 2026-08-27; THIS ENUM IS THE AUTHORITATIVE LIST of the
-// editors, and the roster that matters for modality is
-// AppState::dialog_editor_session, which NAMES the six.
+// history mode's commit-title editor uses CommitTitle (free one-line text,
+// the message the checkpoint commit carries); the MARKER MEASURE editor uses
+// MeasureText (the ` //<measure>` suffix a marker line may carry — an ASCII
+// GRAMMAR since the field's 2026-08-20 rebrand, judged at the commit by
+// marker_measure.h and not at all on the keyboard); and the MEASURE
+// PROPAGATE's paste-offset editor uses MeasureOffset (one signed decimal
+// integer, likewise judged at its commit and not on the keyboard). THERE ARE
+// SIX KINDS AND FOUR OF THEM ARE DIALOG EDITORS — the MeasureText kind was
+// architect-blessed 2026-08-19 and MeasureOffset arrived with the measure
+// propagate on 2026-08-20; TWO KINDS RETIRED WHOLE on 2026-08-28 (architect,
+// R22/R23: "we're not allowing free-form typing there") — LoadInPlace, the
+// `h` view's typed load prompt, and OpenProject, the Open project prompt's
+// field, both replaced by the FIELD-LESS PICKER over the folder overlay
+// (AppState::Picker, app_state.h), which is a modal owner and not an editor.
+// THIS ENUM IS THE AUTHORITATIVE LIST of the editors, and the roster that
+// matters for modality is AppState::dialog_editor_session, which NAMES the
+// four.
 enum class Kind {
     FlagPayload,
     BpmBracket,
     SettingsAssignment,
-    LoadInPlace,
     CommitTitle,
     MeasureText,
     MeasureOffset,
-    OpenProject,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
 // handing out an id that names exactly ONE raise of exactly ONE modal surface
 // for the life of the process (it starts at 1, so 0 is reliably "no session").
 //
-// IT IS HOMED HERE because six of the product's seven modal surfaces are text
-// editors and `enter` below is their one activation route, which is what makes
-// the stamping STRUCTURAL rather than disciplinary: no opener can forget to
-// take an id, and each new dialog editor has inherited the identity for free —
-// the fourth in 2026-08-07, the fifth, the measure paste-offset editor, in
-// 2026-08-20, and the sixth, the Open project prompt, in 2026-08-27, none of
-// them touching this counter. The PROMPT — the SEVENTH surface, and not an
-// editor — takes its id from this same counter at its own one raise route
-// (PromptState::present, app_state.h), so the ids never collide across the two
-// classes and one integer compare answers "is this published geometry the
-// surface that owns input right now" (the doctrine and the comparison's one
-// owner are at AppState::ModalDialogGeometry and
+// IT IS HOMED HERE because the text editors are the most numerous of the
+// product's modal surfaces and `enter` below is their one activation route,
+// which is what makes the stamping STRUCTURAL rather than disciplinary: no
+// opener can forget to take an id, and each new dialog editor has inherited
+// the identity for free — the commit-title editor in 2026-08-07 and the
+// measure paste-offset editor in 2026-08-20, neither touching this counter.
+// THE THREE SURFACES THAT ARE NOT EDITORS take their ids from this same
+// counter at their own one raise route each — the PROMPT (PromptState::present,
+// app_state.h), the RENDER PLAYER (GuiRenderPlayer::open) and the PICKER
+// (GuiInputHandler::open_project_picker / open_history_picker, both through
+// AppState::Picker) — so the ids never collide across the classes and one
+// integer compare answers "is this published geometry the surface that owns
+// input right now" (the doctrine and the comparison's one owner are at
+// AppState::ModalDialogGeometry and
 // GuiInputHandler::modal_dialog_stash_current).
 //
 // THE COUNTER IS THE PROCESS'S, NOT A PROJECT'S: it is a function-local static
@@ -197,7 +185,7 @@ struct State {
     // it alone — `target` is what says "not editing", and a dead session's id
     // must not be reusable). The TOP-STRIP FLAG editor takes one too and
     // nothing ever reads it: it publishes no dialog, so it has no geometry to
-    // validate. What the six DIALOG editors' ids are for is at
+    // validate. What the four DIALOG editors' ids are for is at
     // AppState::ModalDialogGeometry.
     uint64_t session = 0;
 
@@ -275,21 +263,6 @@ struct State {
     std::chrono::steady_clock::time_point blink_epoch =
         std::chrono::steady_clock::now();
 };
-
-// THE UTF-8 PRIMITIVE, public because one site outside the editors needs the
-// same answer: a continuation byte is 10xxxxxx, and every other byte STARTS a
-// codepoint. That single test is what every boundary walk in this module is
-// built from — it needs no sequence length and degrades safely on malformed
-// bytes.
-//
-// The ONE outside caller is the prompts' shared prefix completion
-// (GuiInputHandler::complete_editor_prefix, input_key_dispatch.cpp — the Open
-// prompt's Tab), which backs its byte-wise
-// longest-common-prefix off to a boundary before seeding `pending`. It is exposed rather than the
-// boundary walks themselves because that is the whole of what the caller needs:
-// prev_codepoint_boundary always steps back a WHOLE codepoint, which is the
-// wrong answer for a prefix that already ends on a complete one.
-bool is_utf8_continuation_byte(unsigned char b);
 
 inline bool is_active(const State& s) { return s.target >= 0; }
 

@@ -55,9 +55,10 @@ struct GuiPrompt {
     // confirmation, whose OK and Cancel reach the acts that live on
     // GuiInputHandler (confirm_render_player_load, cancel_render_player_load)
     // — load_render_entry_in_place being a private act of that struct, and
-    // the player its one road — and request_close's own editor step
-    // (close_modal_editors_no_commit), each editor's exit body living there
-    // beside the editors themselves.
+    // the player its one road — and request_close's own two closing steps
+    // (close_picker and close_modal_editors_no_commit), the picker's close
+    // and each editor's exit body living there beside the surfaces
+    // themselves.
     GuiInputHandler*      input = nullptr;
 
     GuiPrompt(AppState&             app_,
@@ -80,12 +81,15 @@ struct GuiPrompt {
     // Ctrl+Q, the WM-close callback and the Open prompt's commit share
     // identical behaviour, each naming what its close completes — AND WHAT
     // CLOSES BEFORE THE QUIT QUESTION IS STATED HERE, ONCE, for every road:
-    // a standing render player comes down at this road's head, and with it
-    // every standing modal editor, abandoned uncommitted through the input
-    // handler's one body (close_modal_editors_no_commit). No caller restates
-    // either step, which is what keeps the compositor's close — arriving with
-    // no key, so it can run no keyboard arm of its own — from raising the
-    // unsaved-work prompt over a mode or an editor that is still up.
+    // a standing render player comes down at this road's head, a standing
+    // picker with it (close_picker), and with them every standing modal
+    // editor, abandoned uncommitted through the input handler's one body
+    // (close_modal_editors_no_commit). No caller restates any step, which is
+    // what keeps the compositor's close — arriving with no key, so it can run
+    // no keyboard arm of its own — from raising the unsaved-work prompt over
+    // a mode or an editor that is still up. Ctrl+Q, the WM-close callback
+    // and the Open project picker's open act share the road; what differs
+    // is the target.
     void request_close(GuiCloseTarget target);
     void activate_response(char k);
 

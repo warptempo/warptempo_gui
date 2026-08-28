@@ -14,7 +14,7 @@
 // Mobile's, Breeze Dark), full window width, sitting DIRECTLY ABOVE THE BOTTOM
 // ROW and painting over the waveform area's lower part — which the waveform's
 // own passes then do not paint at all (waveform_paint_area, below). It stands while ANY OF
-// THE EIGHT TEXT EDITORS stands, on a backend that asks for one, and it
+// THE TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a dialog
 // editor keeps painting in the bottom row with its own buttons, and this sits
 // between them. THERE IS NO SECOND TEXT BUFFER — the live editor's own
@@ -25,7 +25,7 @@
 // backend's synthesize_key and the ORDINARY key path runs unchanged from there
 // — GuiInputHandler::on_key, the keyboard-modal gate, route_modal_editor_key,
 // each editor's own vocabulary, the undo coalescing, and the core's repeat
-// synthesis for a held key. So the eight editors' grammars, their red-flash
+// synthesis for a held key. So the editors' grammars, their red-flash
 // refusals, their commit and cancel bodies and their byte caps are inherited
 // whole rather than mirrored, and a new editor gets a working keyboard by
 // existing.
@@ -141,12 +141,12 @@ inline constexpr KeyDef kLetterRow2[] = {
 // a Tab became worth reaching on glass — Tab is what the product's prompts
 // COMPLETE on (the one autocomplete model, route_modal_editor_key) and what
 // walks a dialog's focus ring. It is a BARE Tab, no modifier, on the same
-// synthesize_key road as every other key here. IT IS NO LONGER THE OPEN
-// PROMPT'S GLASS ROAD (2026-08-28): the project picker stands in this band
-// over that prompt, so the keyboard does not paint there at all and the
-// gesture is File → Open project, tap the project's row, tap OK. What the key
-// serves now is every OTHER prompt a finger can raise — the settings editor's
-// value recall and the ring walk on the dialogs that publish buttons. Its SPACE key and its comma are
+// synthesize_key road as every other key here. IT IS NOT THE OPEN PROJECT
+// PICKER'S GLASS ROAD (2026-08-28): that picker is field-less and stands in
+// this band, so the keyboard does not paint there at all and the gesture is
+// File → Open project, tap the project's row, tap OK. What the key serves is
+// every prompt a finger can raise — the settings editor's value recall and
+// the ring walk on the dialogs that publish buttons. Its SPACE key and its comma are
 // deliberate DUPLICATES of row 3's, which is layer-blind — a hand already in
 // the symbol layer for the `/` of `12 7/8` should not have to look for the
 // space bar, and a physical keyboard's own numpad settles that a second
@@ -332,30 +332,38 @@ inline int surface_height_px() {
 
 // -- Standing ----------------------------------------------------------------
 
-// DOES THE SURFACE STAND? Three terms: the PLATFORM must want a painted
+// DOES THE SURFACE STAND? Two terms: the PLATFORM must want a painted
 // keyboard (false forever on Wayland — the ruling is at that backend's
-// wants_onscreen_keyboard), one of the EIGHT editors must own the keyboard,
-// and THE FOLDER OVERLAY MUST NOT STAND (2026-08-28: the overlay REPLACES the
-// keyboard in this band — architect R3 — so the two never both stand). EVERY paint site and EVERY hit site in the product asks
-// this and nothing else, which is what makes the laptop build's behaviour
-// identical by construction rather than by care.
+// wants_onscreen_keyboard), and one of the editors must own the keyboard.
+// EVERY paint site and EVERY hit site in the product asks this and nothing
+// else, which is what makes the laptop build's behaviour identical by
+// construction rather than by care.
 //
 // The editor term is text_editor_session() (app_state.h) rather than
 // GuiInputHandler::keyboard_modal_editor_active because the painter has no
 // input handler to ask; the two are the same set by construction — that
-// predicate delegates to any_text_editor_active, which is exactly the eight
+// predicate delegates to any_text_editor_active, which is exactly the editors
 // this session id is taken from.
 //
-// THE THIRD TERM'S PRODUCER IS THE OPEN PROJECT PICKER, which is what it was
-// written for: the picker stands OVER the Open prompt's editor, so on glass
-// that prompt shows THE LIST AND NOT THE KEYBOARD — the architect's R3,
-// "neither use needs typing", the field being prepopulated by a tap on a row.
-// Under the RENDER PLAYER the term never decides, that mode raising no text
-// editor at all (its load confirmation is a PROMPT), so the second term has
-// already answered false.
+// THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, AND NO THIRD TERM SAYS SO
+// (2026-08-28): the folder overlay REPLACES the keyboard in this band
+// (architect R3, "neither use needs typing"), and for one afternoon that day
+// this predicate carried `!folder_overlay::stands(a)` as a third term — its
+// producer being the Open project prompt, whose text editor stood UNDER the
+// picker's band. The prompt lost its field (R22) and the pickers became a
+// modal owner that is NOT an editor, so the term lost its producer and was
+// deleted (a gate term exists iff a producer exists — validation_topology.md's
+// rule applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
+// stands only under the render player or a picker, neither of which is a
+// text editor; each opener refuses under every editor and each router
+// consumes every editor opener; each veil consumes every pointer press that
+// could raise one (the flag editor's double-click, the measure button — the
+// roster is dead under both); and the touch region begin refuses under both.
+// So the second term is false whenever the overlay stands, and this
+// predicate cannot answer true over the band without a producer this record
+// would have to name.
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
-    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0 &&
-           !folder_overlay::stands(a);
+    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
 }
 
 // -- The surface's rect ------------------------------------------------------
