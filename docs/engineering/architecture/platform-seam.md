@@ -213,10 +213,13 @@ and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
 ends with one), and **Space**, **Cancel** and **Enter** are on both by
 construction — row 3 is one array shared by the two. **Shift** is the LETTER
 layer's alone: the symbol layer's row 2 opens with **Tab** in its place
-(2026-08-27, with File → Open — the one key the letter layer has no room for,
-and what the product's prompts COMPLETE on, so the glass gesture for the
-recent project is File → Open, &123, Tab, Enter; a bare `GuiKeys::Tab` through
-the same `synthesize_key` road; the blank role is deleted with its last slot).
+(2026-08-27, with File → Open project — the one key the letter layer has no
+room for, and what the product's prompts COMPLETE on; a bare `GuiKeys::Tab`
+through the same `synthesize_key` road; the blank role is deleted with its last
+slot). IT IS NO LONGER THE OPEN PROMPT'S GLASS ROAD: that prompt's PICKER
+landed 2026-08-28 and takes this keyboard's own band, so the glass gesture is
+File → Open project, tap the row, tap OK, and typing a name is the laptop's.
+The key stays for every OTHER prompt's completion and ring walk.
 The symbol layer's SECOND SPACE is not that row's leading slot either but a
 deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
 symbol layer for the `/` of `12 7/8` need not go looking for the bar. The function keys wore unmodified Breeze glyphs for their first day

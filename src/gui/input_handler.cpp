@@ -124,7 +124,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // THE PAINTED GATE (2026-08-13): a prompt the user has not SEEN
         // answers nothing. One dispatch batch arrives whole before the loop
         // paints, so a key queued behind the raise itself (Ctrl+Q tearing an
-        // editor down and raising the unsaved-work prompt, Delete right behind
+        // editor down on the close road and raising the unsaved-work prompt,
+        // Delete right behind
         // it) was answering a question that had never been on screen. EVERY
         // key is consumed while the bit is false — the response letters, Esc,
         // Delete, and the Ctrl+Q hatch below with them: a consumed no-answer is
@@ -283,8 +284,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // escape hatch, finalize the selection first (reading the still-live
     // editor geometry) and then fall through with no return, so the
     // editor and global handlers below run Esc (cancel the edit) or
-    // Ctrl+Q (tear the edit down, then open the close prompt) exactly as
-    // they would with no drag in flight. A text drag is not a navigation
+    // Ctrl+Q (hand on the close routing, which is what tears the edit down)
+    // exactly as they would with no drag in flight. A text drag is not a navigation
     // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
     // modifier-exact: a modified Escape has no binding anywhere, so it is
     // swallowed here like any other key rather than ending the drag.
@@ -320,8 +321,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // pointer-transparent, so its own modality never forced the Arrow — the
         // live text drag alone did, through the same gesture refusal.)
         // fall through: the editor handler below runs Esc (cancel the
-        // edit) or Ctrl+Q (tear the edit down, then the close prompt
-        // opens) exactly as with no drag in flight.
+        // edit) or Ctrl+Q (hand on the close routing, which tears the edit
+        // down and then opens the close prompt) exactly as with no drag in
+        // flight.
     }
 
     // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the three
@@ -354,8 +356,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // keys, Ctrl+S, and Ctrl+Q — so this block cannot see a command. Routes
     // BEFORE the render/batch Esc cancel so bare Esc closes the edit
     // first; Esc with no active edit falls through to the rest. Returning false
-    // (Ctrl+Q only) leaves the edit already torn down and lets on_key run the
-    // close routing.
+    // (Ctrl+Q only) lets on_key run the close routing, WHICH IS WHAT CLOSES THE
+    // EDIT — the road's own step (GuiPrompt::request_close), so the editor is
+    // still standing through the gates between here and the Ctrl+Q arm and none
+    // of them reads one.
     if (text_editor::is_active(app.top_flag_editor)) {
         if (handle_top_flag_editor_key(key, mods)) return;
     }

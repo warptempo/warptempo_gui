@@ -1514,9 +1514,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // 2026-08-09; it raises no modal now, so these two routes are again the
         // whole list.)
         input_handler.close_dropdown();
-        // THE RENDER PLAYER GOES DOWN INSIDE request_close, not here: the
-        // close road owns that step for Ctrl+Q and for this callback alike,
-        // so the mode is never left standing under the unsaved-work prompt.
+        // THE RENDER PLAYER AND EVERY STANDING MODAL EDITOR GO DOWN INSIDE
+        // request_close, not here: the close road owns those steps for Ctrl+Q
+        // and for this callback alike, so neither a mode nor an editor — nor
+        // the Open prompt's picker band — is left standing under the
+        // unsaved-work prompt.
         prompt.request_close(GuiCloseTarget::Exit);
         // (The cursor re-resolve this callback used to end with is gone for the
         // same reason the resize path's is — see there. The prompt this may have

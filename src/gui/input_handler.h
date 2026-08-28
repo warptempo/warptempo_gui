@@ -1692,6 +1692,18 @@ struct GuiInputHandler {
     void confirm_render_player_load();
     void cancel_render_player_load();
 
+    // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half (2026-08-28):
+    // every standing keyboard-modal editor abandoned without committing, each
+    // through its own exit-no-commit body. ONE CALLER, GuiPrompt::request_close
+    // — the one close road, which the keyboard's Ctrl+Q, the compositor's WM
+    // close and File → Open project's commit all reach — so no road restates
+    // the step and none can forget it. At most one editor can stand at a time
+    // (each opener refuses under the others), so the chain runs exactly one
+    // body; every one of them is is_active-guarded, which makes the whole call
+    // a no-op on the ordinary close and idempotent after a road that already
+    // closed its own editor (the reopen commit's).
+    void close_modal_editors_no_commit();
+
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
     // before the mechanism: the touch upgrade's ABNORMAL END (round 19) ends
@@ -2415,20 +2427,23 @@ private:
     // stated in full at the definition). The commit-title, bpm and flag editors
     // have nothing to complete and pass an empty hook; for the flag editor bare
     // Tab never arrives at all, the on_key gate swallowing it before this route
-    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
-    // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
+    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
+    // cancel are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the six dialog surfaces
     // pass the modal's own owner (the bottom row's lane,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
     // caller that forgets it is a program bug, not a runtime condition to guard).
+    // CTRL+Q PASSES A HOOK NO LONGER: the route simply hands the close routing
+    // on, and the CLOSE ROAD tears the editor down (GuiPrompt::request_close,
+    // through close_modal_editors_no_commit) — one statement of what closes
+    // before the quit question, shared with the compositor's own close.
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
                                 const std::function<bool()>& autocomplete,
                                 const std::function<void()>& commit,
                                 const std::function<void()>& cancel,
-                                const std::function<void()>& ctrl_q_teardown,
                                 const std::function<void()>& repaint);
 
     // Routes a key to the active top-flag editor. Returns true if the editor
@@ -2471,7 +2486,9 @@ private:
     // on_key's bare `'` (no-op with no source loaded).
     // load_editor_commit: resolve the pending to the viewed walk's member and
     // load that state in place.
-    // load_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_load_editor_key:
+    // load_editor_exit_no_commit: the abandon body — Esc's cancel, and Ctrl+Q's
+    // through the close road's own step (close_modal_editors_no_commit).
+    // handle_load_editor_key:
     // the key router, through route_modal_editor_key like the settings editor,
     // passing NO autocomplete hook — neither vocabulary has anything to
     // complete against, so bare Tab walks the dialog's focus ring.
@@ -2521,14 +2538,17 @@ private:
     // router consumes Ctrl+O and its veil consumes a press on the File
     // anchor), and during
     // a load; stops playback through the shared modal stop only once the
-    // editor is definitely opening, then enters it EMPTY with the candidate
-    // list captured.
+    // editor is definitely opening, then enters it EMPTY and builds the
+    // session's ONE list through build_project_picker_rows.
     // open_project_editor_autocomplete: bare Tab. On an EMPTY field it seeds
     // `last_project` — the most recent project, exactly as load's empty-field
-    // Tab fills the most recent entry — or the first candidate when nothing
-    // has been opened yet; otherwise the one prefix completion above over the
-    // captured names. Returns whether the buffer advanced (the one autocomplete
-    // model: a false lets the Tab walk the ring).
+    // Tab fills the most recent entry — falling to the FIRST CANDIDATE when
+    // that name is not in the list (gone, or no longer a project) and when
+    // nothing has been opened yet; otherwise the one prefix completion above.
+    // BOTH ARMS READ THE PICKER'S OWN LIST, so a Tab cannot fill in a name the
+    // band cannot mark and Enter would refuse. Returns whether the buffer
+    // advanced (the one autocomplete model: a false lets the Tab walk the
+    // ring).
     // open_project_editor_commit: Enter. Resolves `<projects_path>/<typed>`
     // through the project model; an invalid name or folder refuses WITH ITS
     // REASON on the status line and red-flashes, the prompt staying open with
@@ -2541,7 +2561,9 @@ private:
     // app.reopen_project and the close request runs with the REOPEN target —
     // the unsaved-tab prompt EXACTLY as Ctrl+Q's, its answer completing a
     // reopen instead of an exit (GuiCloseTarget, prompt.h).
-    // open_project_editor_exit_no_commit: Esc / Ctrl+Q teardown; the candidate
+    // open_project_editor_exit_no_commit: the abandon body — Esc's cancel, and
+    // Ctrl+Q's and the WM close's through the close road's own step
+    // (close_modal_editors_no_commit); the candidate
     // list and THE PICKER'S BAND die with the session. It is the prompt's ONE
     // close body — Esc, Cancel, Ctrl+Q, the same-project no-op and the
     // reopen's own tail all pass through it — which is what makes "the
@@ -2561,14 +2583,15 @@ private:
     // incoming filter, and Enter, OK and a row's double-click all reach
     // open_project_editor_commit. The three picker bodies below are what the
     // overlay's row acts fork into when its owner is ProjectPicker:
-    //   build_project_picker_rows: the band's rows AT THE OPEN — the captured
-    //     candidate names filtered by BOTH of the commit's tests, the name
-    //     grammar (is_last_project_name) and the model (resolve_project), so
-    //     THE ROWS ARE EXACTLY THE SET THE COMMIT WOULD ACCEPT and the list,
-    //     the completion and Enter cannot disagree about what a project is;
-    //     an invalid folder simply does not show. Never kept fresh (a project
-    //     that appears or vanishes while the prompt stands shows at the next
-    //     open),
+    //   build_project_picker_rows: THE SESSION'S ONE LIST, built AT THE OPEN —
+    //     it enumerates the folder names itself and filters them by BOTH of
+    //     the commit's tests, the name grammar (is_last_project_name) and the
+    //     model (resolve_project), then writes the survivors as the band's ROWS
+    //     and as app.open_project_candidates, WHICH ARE THE SAME SET: the rows,
+    //     the Tab completion and Enter agree by construction rather than by two
+    //     walks, so no Tab can complete to a name the picker does not list. An
+    //     invalid folder simply does not show. Never kept fresh (a project that
+    //     appears or vanishes while the prompt stands shows at the next open),
     //     no `..` row and no folder inside a project: a project is a leaf
     //     here. The band opens on the CURRENT project's row.
     //   project_picker_select: THE HIGHLIGHT AND THE FIELD ARE ONE THING —
@@ -2647,7 +2670,8 @@ private:
     // commit_title_editor_commit: Enter — validate non-blank, close the editor,
     // run the act (run_history_commit, which owns the save, the close and the
     // dispatch).
-    // commit_title_editor_exit_no_commit: Esc / Ctrl+Q teardown.
+    // commit_title_editor_exit_no_commit: the abandon body — Esc's cancel, and
+    // Ctrl+Q's through the close road's own step (close_modal_editors_no_commit).
     // handle_commit_title_editor_key: the key router, through
     // route_modal_editor_key like the three editors before it. It passes NO
     // autocomplete hook — there is no vocabulary here to complete against, a
@@ -2683,7 +2707,9 @@ private:
     // signed integer, run the paste, close on success; red-flash and STAY OPEN
     // on either refusal (a malformed offset, or an offset that would carry a
     // pasted measure out of the [1, 99999] bracket).
-    // measure_offset_editor_exit_no_commit: Esc / Ctrl+Q teardown; the anchor
+    // measure_offset_editor_exit_no_commit: the abandon body — Esc's cancel, and
+    // Ctrl+Q's through the close road's own step (close_modal_editors_no_commit);
+    // the anchor
     // dies with the session.
     // handle_measure_offset_editor_key: the key router, through
     // route_modal_editor_key like the four editors before it. NO autocomplete

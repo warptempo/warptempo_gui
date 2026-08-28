@@ -2260,7 +2260,6 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
         /*autocomplete=*/nullptr,
         [this] { commit_title_editor_commit(); },
         [this] { commit_title_editor_exit_no_commit(); },
-        [this] { commit_title_editor_exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });
 }
 
@@ -2420,7 +2419,6 @@ bool GuiInputHandler::handle_measure_offset_editor_key(GuiKey        key,
         app.measure_offset_editor, key, mods,
         /*autocomplete=*/nullptr,
         [this] { measure_offset_editor_commit(); },
-        [this] { measure_offset_editor_exit_no_commit(); },
         [this] { measure_offset_editor_exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });
 }
@@ -5022,9 +5020,11 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // All five spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
-// the editor left open (save is not an exit); Ctrl+Q runs the caller's
-// teardown and returns false so on_key runs the close routing; anything
-// else is swallowed as a backstop. THE COMMAND ADMISSION IS KEYBOARD-ONLY
+// the editor left open (save is not an exit); Ctrl+Q returns false so on_key
+// runs the close routing, WHICH IS WHAT CLOSES THE EDITOR (the close road's
+// own step, close_modal_editors_no_commit — reached identically by the
+// compositor's keyless WM close, which is why this route no longer carries a
+// teardown hook of its own); anything else is swallowed as a backstop. THE COMMAND ADMISSION IS KEYBOARD-ONLY
 // AGAIN (2026-08-13): it had a pointer-side mirror from 2026-08-11 — the
 // modal-trap reach-through, which let a roster button whose chord is admitted
 // here dispatch from a press while a dialog editor stood — and the architect
@@ -5088,7 +5088,6 @@ bool GuiInputHandler::route_modal_editor_key(
         const std::function<bool()>& autocomplete,
         const std::function<void()>& commit,
         const std::function<void()>& cancel,
-        const std::function<void()>& ctrl_q_teardown,
         const std::function<void()>& repaint) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -5125,7 +5124,7 @@ bool GuiInputHandler::route_modal_editor_key(
     // the modal contract's own three commands, which work from anywhere in the
     // dialog and keep working from a button exactly as they do from the field:
     // bare Esc abandons the edit, Ctrl+S saves with the editor open, Ctrl+Q
-    // runs the teardown and hands the close routing on. They are spelled here
+    // hands the close routing on. They are spelled here
     // as the tail below spells them, because this wall stands ABOVE the
     // editor's own keymap and the tail is unreachable from a focused button.
     // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
@@ -5145,7 +5144,6 @@ bool GuiInputHandler::route_modal_editor_key(
             return true;
         }
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            ctrl_q_teardown();
             return false;  // let on_key run the close routing
         }
         return true;       // modal: swallow, and the field never sees it
@@ -5173,11 +5171,50 @@ bool GuiInputHandler::route_modal_editor_key(
         save_ops.save();
         return true;
     }
+    // CTRL+Q: HAND THE CLOSE ROUTING ON, TEARING NOTHING DOWN HERE. The
+    // editor is closed by the CLOSE ROAD itself (GuiPrompt::request_close,
+    // through close_modal_editors_no_commit) — the road the compositor's own
+    // WM close takes too, which is why the step cannot live on the keyboard's
+    // side of it. The edit is abandoned uncommitted either way, exactly as Esc
+    // abandons it.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        ctrl_q_teardown();
         return false;  // let on_key run the close routing
     }
     return true;  // modal: swallow
+}
+
+// WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half — the contract and
+// the one caller are at the declaration (input_handler.h).
+//
+// THE STEP LIVES ON THE CLOSE ROAD AND NOT ON THE KEYBOARD'S SIDE OF IT
+// (2026-08-28): Ctrl+Q used to tear its own editor down through a per-editor
+// hook on the shared modal route, and the COMPOSITOR'S CLOSE — which arrives
+// with no key at all (main.cpp's set_on_close) — reached GuiPrompt::request_close
+// without it, leaving a standing editor and, under the Open prompt, its picker
+// band alive beneath the unsaved-work question and back on screen at Cancel.
+// One road, one closer, the render player's own close's argument exactly.
+//
+// EACH EDITOR IS ABANDONED THROUGH ITS OWN EXIT BODY, never through a second
+// spelling of what abandoning means: those bodies own their damage (the flag
+// editor's red-flash waveform arm among it) and their is_active guards, so the
+// chain is a no-op when nothing stands.
+void GuiInputHandler::close_modal_editors_no_commit() {
+    // THE BPM MODE GOES WITH ITS EDITOR, and the kind is read BEFORE the exit
+    // that clears it: the bracket session IS its editor, so mode-without-editor
+    // stays unreachable (the mode's one off-chokepoint is exit_bpm_mode).
+    const bool bpm_bracket =
+        text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::BpmBracket;
+    flag_editor.exit_top_flag_edit_no_commit();
+    if (bpm_bracket) flag_editor.exit_bpm_mode();
+    settings_editor.exit_no_commit();
+    load_editor_exit_no_commit();
+    commit_title_editor_exit_no_commit();
+    measure_offset_editor_exit_no_commit();
+    // The Open prompt's one close body, which takes the FOLDER OVERLAY down
+    // with it — the picker's band is the prompt's, so the question the close
+    // is about to ask is not painted over a list.
+    open_project_editor_exit_no_commit();
 }
 
 // Routes a key to the active load editor through the shared modal route. It
@@ -5191,7 +5228,6 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
         app.load_editor, key, mods,
         /*autocomplete=*/nullptr,
         [this] { load_editor_commit(); },
-        [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });
 }
@@ -5225,21 +5261,16 @@ void GuiInputHandler::open_project_editor() {
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
-    // THE CANDIDATES ARE BUILT NOW AND NEVER KEPT FRESH: a dozen folder
-    // names under the device config's projects_path, in the model's one
-    // order (project_model.h). Validity is asked at Enter, of the one name
-    // chosen, never of the list.
-    app.open_project_candidates =
-        enumerate_project_names(app.device_config->projects_path);
     text_editor::enter(app.open_project_editor,
                        /*target=*/0,
                        std::string(),
                        text_editor::Kind::OpenProject);
-    // THE PICKER RISES WITH THE PROMPT: the same captured names, filtered by
-    // the model's own validity, as the folder overlay's rows. On glass it
-    // takes the on-screen keyboard's band (onscreen_keyboard::stands carries
-    // the panel's negation), so the prompt shows THE LIST there and not a
-    // keyboard — the architect's R3, "neither use needs typing".
+    // THE PICKER RISES WITH THE PROMPT, and it builds THE ONE LIST the session
+    // has: the rows and the completion's candidates are the same filtered set,
+    // written by the one body below. On glass the band takes the on-screen
+    // keyboard's place (onscreen_keyboard::stands carries the panel's
+    // negation), so the prompt shows THE LIST there and not a keyboard — the
+    // architect's R3, "neither use needs typing".
     build_project_picker_rows();
     // A modal-dialog OPEN damages the whole window (the box's rect does not
     // exist before its first paint — the settings opener carries the rule).
@@ -5268,19 +5299,26 @@ void GuiInputHandler::build_project_picker_rows() {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::ProjectPicker;
-    // ONE LIST, FILTERED: the prompt's candidates are the folder names under
-    // projects_path and THE ROWS ARE EXACTLY THE SET THE COMMIT WOULD ACCEPT
-    // — both of open_project_editor_commit's tests, in its own order: the
-    // NAME grammar (is_last_project_name, device_config.h) and then the model
-    // (resolve_project). A row that would refuse at Enter is not a row, so
-    // the band, the completion and the commit can never disagree about what a
-    // project is, and an invalid folder just does not show up (architect R8).
-    // The commit's remaining arms are not filters: the same-project no-op is
-    // a legal answer and the dry run reads the disk, which this walk does not
-    // re-do per row. No `..` row and no folder inside a project: the picker's
-    // tree is one level deep.
+    // ONE LIST, AND THIS BODY IS ITS ONE OWNER: the folder names under
+    // projects_path are enumerated here (in the model's own order,
+    // project_model.h), filtered by BOTH of open_project_editor_commit's own
+    // tests in its own order — the NAME grammar (is_last_project_name,
+    // device_config.h) and then the model (resolve_project) — and the survivors
+    // become the band's ROWS and the prompt's CANDIDATES together. A row that
+    // would refuse at Enter is not a row and is not a completion either, so the
+    // band, the Tab completion and the commit AGREE BY CONSTRUCTION rather than
+    // by two walks that happen to match: Tab can no longer complete to a name
+    // the picker does not list and Enter then refuses. An invalid folder simply
+    // does not show up (architect R8). The commit's remaining arms are not
+    // filters: the same-project no-op is a legal answer and the dry run reads
+    // the disk, which this walk does not re-do per row. No `..` row and no
+    // folder inside a project: the picker's tree is one level deep. BUILT AT
+    // THE OPEN AND NEVER KEPT FRESH — a project that appears or vanishes while
+    // the prompt stands shows at the next open.
     const std::filesystem::path root(app.device_config->projects_path);
-    for (const std::string& name : app.open_project_candidates) {
+    app.open_project_candidates.clear();
+    for (const std::string& name :
+             enumerate_project_names(app.device_config->projects_path)) {
         if (!is_last_project_name(name)) continue;
         const std::filesystem::path folder = root / name;
         if (!resolve_project(folder)) continue;
@@ -5289,6 +5327,7 @@ void GuiInputHandler::build_project_picker_rows() {
         row.name = name;
         row.path = folder;
         ov.rows.push_back(std::move(row));
+        app.open_project_candidates.push_back(name);
     }
     // THE BAND OPENS ON THE CURRENT PROJECT, which the field does not yet
     // spell — the prompt enters empty and its Tab seed is unchanged. From the
@@ -5360,17 +5399,26 @@ void GuiInputHandler::project_picker_track_field() {
 // from the device config, or the first candidate when nothing has been opened
 // yet — which is what makes "open recent" and "open any" ONE prompt: Tab,
 // Enter is the recent; type "551", Tab, Enter is any. A non-empty field takes
-// the one prefix completion. The seed is not checked against the candidates:
-// a remembered folder that is gone refuses at Enter with its reason, which is
-// the honest answer and the same one a typed name gets.
+// the one prefix completion, over the SAME list the picker's rows are.
+//
+// AND THE SEED IS CHECKED AGAINST THAT LIST, falling to the first candidate
+// when `last_project` is not in it: the remembered folder can be gone or no
+// longer a project, and seeding a name the band cannot mark would put the
+// field and the list out of step and refuse at Enter — a Tab whose whole job
+// is to fill in something openable. The device config is left alone; it is
+// LOAD-LENIENT about a stale `last_project` (device_config.h) and this is the
+// prompt reading it the same way.
 bool GuiInputHandler::open_project_editor_autocomplete() {
     if (!text_editor::is_active(app.open_project_editor)) return false;
     if (app.open_project_editor.pending.empty()) {
         const std::string& recent = app.device_config->last_project;
-        const std::string seed =
-            !recent.empty()                       ? recent
-            : !app.open_project_candidates.empty() ? app.open_project_candidates.front()
-                                                   : std::string();
+        const auto&        names  = app.open_project_candidates;
+        const bool recent_listed =
+            !recent.empty() &&
+            std::find(names.begin(), names.end(), recent) != names.end();
+        const std::string seed = recent_listed ? recent
+                               : !names.empty() ? names.front()
+                                                : std::string();
         if (seed.empty()) return false;
         app.open_project_editor.pending          = seed;
         app.open_project_editor.cursor_pos       =
@@ -5539,7 +5587,6 @@ bool GuiInputHandler::handle_open_project_editor_key(GuiKey key,
         app.open_project_editor, key, mods,
         [this] { return open_project_editor_autocomplete(); },
         [this] { open_project_editor_commit(); },
-        [this] { open_project_editor_exit_no_commit(); },
         [this] { open_project_editor_exit_no_commit(); },
         [this] {
             // A TEXT CHANGE MOVES THE BAND (or takes it off the list): the
@@ -6296,12 +6343,6 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 flag_editor.exit_bpm_mode();
                 viewport.invalidate_modal_dialog_area();
             },
-            [this] {
-                // Ctrl+Q tears the editor and the mode down together
-                // (mode-without-editor stays unreachable).
-                flag_editor.exit_top_flag_edit_no_commit();
-                flag_editor.exit_bpm_mode();
-            },
             [this] { viewport.invalidate_modal_dialog_area(); });
     }
     if (app.top_flag_editor.kind == text_editor::Kind::MeasureText) {
@@ -6318,10 +6359,6 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             /*autocomplete=*/nullptr,
             [this] { flag_editor.commit_measure_edit(); },
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
-            [this] {
-                // Ctrl+Q discards the edit, then on_key runs the close routing.
-                flag_editor.exit_top_flag_edit_no_commit();
-            },
             [this] { viewport.invalidate_top_strip(); });
     }
     // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
@@ -6347,11 +6384,6 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             flag_editor.commit_top_flag_edit();
         },
         [this] { flag_editor.exit_top_flag_edit_no_commit(); },
-        [this] {
-            // Ctrl+Q discards the edit, then on_key runs the close routing —
-            // the same abandon Esc performs, since the edit is uncommitted.
-            flag_editor.exit_top_flag_edit_no_commit();
-        },
         [this] { viewport.invalidate_top_strip(); });
     if (app.top_flag_editor.red != was_red) viewport.invalidate_waveform_area();
     return consumed;
@@ -6373,7 +6405,6 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         app.settings_editor, key, mods,
         [this] { return settings_editor.autocomplete_value(); },
         [this] { settings_editor.commit(); },
-        [this] { settings_editor.exit_no_commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });
 }

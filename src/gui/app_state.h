@@ -6727,15 +6727,17 @@ struct AppState {
     // and File → Open project's own: the menu item and Ctrl+O — one chord, the row
     // dispatching it like every other command row — open it empty, its field
     // completes
-    // over the FOLDER NAMES under the device config's projects_path (the
-    // candidates below, built when the prompt opens and never kept fresh),
+    // over the OPENABLE PROJECT FOLDERS under the device config's projects_path
+    // (the candidates below, which are the PICKER'S OWN ROWS — one list, built
+    // when the prompt opens and never kept fresh),
     // and Enter resolves the typed name through the project model
     // (project_model.h), dry-runs the folder's strict sidecar load, and hands
     // the name to gui_main's reopen loop through `reopen_project` above. It
     // MIMICS LOAD IN PLACE on the same machinery and the same Tab contract —
     // completion first, the ring when it did not advance — with one seed of
     // its own: on an EMPTY field Tab fills `last_project` (the most recent
-    // project), or the first candidate when nothing has been opened yet. It is
+    // project) when that name is in the list, and the first candidate when it
+    // is not or when nothing has been opened yet. It is
     // `complete_editor_prefix`'s ONE caller since 2026-08-28, when the load
     // editor's entry-name completion went with its renders half (the settings
     // editor's value recall is its own body, not this completer's). A refusal at
@@ -6746,9 +6748,13 @@ struct AppState {
     // on a read-only tab.
     text_editor::State open_project_editor;
     bool open_project_editor_blink_last = false;
-    // The folder names under projects_path in the model's one order
-    // (enumerate_project_names), captured at the prompt's open and read by its
-    // Tab completion; cleared with the editor.
+    // THE PICKER'S ROW NAMES — the folder names under projects_path in the
+    // model's one order (enumerate_project_names), filtered to the ones the
+    // commit would accept, built at the prompt's open by the ONE owner
+    // build_project_picker_rows (which writes this and folder_overlay.rows in
+    // the same walk) and read by the Tab completion; cleared with the editor.
+    // The completion and the band therefore offer the same set by
+    // construction.
     std::vector<std::string> open_project_candidates;
 
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
@@ -7145,7 +7151,9 @@ struct AppState {
 // panel's own name for it, forwarding to this) the slot's paint dispatch and
 // the panel's painter, the row press claim, the hover walk, the press clear's
 // damage, the touch pan zone's carve-out and the run loop's slot reconcile;
-// the wheel context and the roster's greying arm call this directly. (It
+// the wheel context, the two-finger navigation body's refusal
+// (apply_touch_nav_update — the band takes no pan and no pinch under either
+// content) and the roster's greying arm call this directly. (It
 // lives here rather than beside the geometry because onscreen_keyboard.h
 // needs it and folder_overlay.h INCLUDES that header, so the panel's own
 // header cannot be the owner.)

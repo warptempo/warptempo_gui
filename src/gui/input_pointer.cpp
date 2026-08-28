@@ -2593,12 +2593,17 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // navigates exactly the wheel's two surfaces. A refused frame navigates
     // nothing AND SEATS NOTHING.
     if (wheel_context(f.x, f.y) <= 0) return;
-    // AND THE RENDER PLAYER TAKES NONE EITHER (2026-08-28): the wheel's
-    // context answers 4 over the folder overlay's band there — the LIST's
+    // AND THE FOLDER OVERLAY TAKES NONE EITHER (2026-08-28): the wheel's
+    // context answers 4 over the band under EITHER content — the LIST's
     // scroll, a wheel act with no two-finger meaning — and every other
     // position -1, so this one line is what keeps a pinch over the band from
-    // reaching the waveform behind the veil.
-    if (app.render_player.active) return;
+    // reaching the waveform behind the veil. IT ASKS THE STANDING PREDICATE
+    // AND NOT THE PLAYER'S BIT: the question is whether the BAND is there, and
+    // the picker raises the same band over a dialog editor whose veil this
+    // gesture never passes through (it skips the press road entirely, so no
+    // editor gate refuses it) — asking the player alone let two fingers on the
+    // picker's list pan and zoom the waveform behind it.
+    if (folder_overlay_stands(app)) return;
     // AND THE THIN LANES TAKE NO NAV GESTURE AT ALL — the OVERVIEW STRIP and
     // the TRIM BAR (architect 2026-08-15, from the rig: "get rid of all
     // two-finger gestures on the overview strip and on the trim bar; once one

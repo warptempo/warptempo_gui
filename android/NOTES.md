@@ -533,9 +533,13 @@ internal files dir, readable with `adb shell run-as com.warptempo.gui cat
 files/warptempo_gui/config`), or, when that name is empty or its folder is
 gone or invalid, the first valid project folder under `<externalDataPath>/
 projects` in name order. Opening a DIFFERENT project is done from inside the
-running app — File → Open, the on-screen keyboard's symbol page carrying the
-`Tab` key the prompt's autocomplete needs (docs/HELP.md's Opening another
-project). The layout under `<externalDataPath>` =
+running app, and on glass THERE IS NOTHING TO TYPE: File → `Open project`, tap
+the project's row, tap `OK`. The prompt's PICKER — one row per openable
+project — takes the on-screen keyboard's own band while it stands, so the list
+replaces the keyboard rather than sitting beside it, and the menu row is the
+only road in here (the on-screen keyboard has no `Ctrl`, so `Ctrl+O` is the
+laptop's). Typing a name and completing it with `Tab` is the laptop's road
+(docs/HELP.md's Opening another project). The layout under `<externalDataPath>` =
 `/sdcard/Android/data/com.warptempo.gui/files` is the laptop's `projects/`
 mirrored:
 
@@ -554,8 +558,10 @@ whether or not `last_project` named it — `startup_source` tries the remembered
 name first, drops a failed resolve without a word, and walks on to the first
 valid project in name order, exiting with `No project under <projects path>`
 only when the walk finds none. A folder's own refusal reason reaches the
-status line through File → Open alone, where the typed name is the one
-candidate and there is nothing to fall through to. Either way a filesystem
+status line through File → `Open project` alone — and only from a name the
+prompt's field carries that the picker's list does not, the list holding
+exactly the folders that WILL open, so an invalid folder is simply absent from
+it rather than refused at the tap. Either way a filesystem
 refusal — including the mode-770 one below — carries the system's own words.
 
 The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`

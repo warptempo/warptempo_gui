@@ -190,6 +190,16 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     // must take the identical step — one road, one closer. A no-op when the
     // mode is down, which is every other close.
     render_player.close();
+    // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
+    // identical reason and on the identical road: the keyboard's Ctrl+Q used
+    // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which
+    // carries no key — did not, so a WM close over the Open prompt asked the
+    // unsaved-work question through a still-standing editor and its picker
+    // band, both back on screen at Cancel. The step is the input handler's
+    // (each editor's own exit body, and at most one can stand), stated once at
+    // close_modal_editors_no_commit and idempotent, so the roads that already
+    // closed their editor — File → Open project's commit — pay nothing.
+    if (input != nullptr) input->close_modal_editors_no_commit();
     close_target_ = target;
     if (app.dirty)
         open_unsaved(DialogTrigger::CLOSE_WINDOW);

@@ -1404,15 +1404,20 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  * ONE PASS of the loop body, and the ONE place the dispatch order lives.
  *
  * The order is the Wayland loop's, member for member, because the arbitration
- * it encodes is the product's and not the protocol's:
+ * it encodes is the product's and not the protocol's — with ONE MEMBER OF ITS
+ * OWN, the car's media commands, this backend being the only one with a head
+ * unit behind it:
  *
  *   1. the window-system sources, drained to empty (drain_looper);
  *   2. the TICK: on_tick_ then input_.tick(), in that order — the core's own
  *      fixed order (key repeat, then the touch window) is inside tick();
  *   3. the five worker completions, in registration order;
- *   4. the loop-settled hook, at the tail, so it observes the pass's FULLY
+ *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
+ *      after the workers and before the settled hook, so a car button acts and
+ *      its frame paints in this same pass (the reasoning is at the block);
+ *   5. the loop-settled hook, at the tail, so it observes the pass's FULLY
  *      settled state;
- *   5. paint-if-dirty.
+ *   6. paint-if-dirty.
  *
  * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
  * set. The pass is the last one of this run — the objects the consumer reads

@@ -15,7 +15,8 @@
 // input-handler back-pointer below). Two entry points are exposed:
 // request_close (called by Ctrl+Q, the WM-close callback and the Open
 // prompt's commit — the ONE close road, which is why the render player's
-// close lives inside it) and activate_response (called by the keyboard
+// close and the modal editors' abandon both live inside it) and
+// activate_response (called by the keyboard
 // handler when a prompt is active). The other two former lambdas (open_unsaved,
 // proceed) are private helpers; they have no callers outside this cluster.
 //
@@ -43,17 +44,20 @@ struct GuiPrompt {
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
     // THE RENDER PLAYER, held for one line of request_close: a close gesture
-    // takes the mode down before it asks anything. Constructed ahead of this
+    // takes the mode down before it asks anything (the editors' half of that
+    // same step goes through the back-pointer below). Constructed ahead of this
     // struct in main.cpp, like every other reference here.
     GuiRenderPlayer&      render_player;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this prompt by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
-    // the settings editor's own shape). ONE READER: the render player's load
+    // the settings editor's own shape). TWO READERS: the render player's load
     // confirmation, whose OK and Cancel reach the acts that live on
     // GuiInputHandler (confirm_render_player_load, cancel_render_player_load)
     // — load_render_entry_in_place being a private act of that struct, and
-    // the player its one road.
+    // the player its one road — and request_close's own editor step
+    // (close_modal_editors_no_commit), each editor's exit body living there
+    // beside the editors themselves.
     GuiInputHandler*      input = nullptr;
 
     GuiPrompt(AppState&             app_,
@@ -74,10 +78,14 @@ struct GuiPrompt {
     // Route a close through the unsaved-work prompt when history is dirty;
     // otherwise complete `target` immediately. Centralizes the decision so
     // Ctrl+Q, the WM-close callback and the Open prompt's commit share
-    // identical behaviour, each naming what its close completes — AND THE
-    // RENDER PLAYER'S CLOSE WITH IT: a standing player comes down here, at
-    // the road's head, so no caller restates it and the compositor's close
-    // cannot raise the unsaved-work prompt over a mode that is still up.
+    // identical behaviour, each naming what its close completes — AND WHAT
+    // CLOSES BEFORE THE QUIT QUESTION IS STATED HERE, ONCE, for every road:
+    // a standing render player comes down at this road's head, and with it
+    // every standing modal editor, abandoned uncommitted through the input
+    // handler's one body (close_modal_editors_no_commit). No caller restates
+    // either step, which is what keeps the compositor's close — arriving with
+    // no key, so it can run no keyboard arm of its own — from raising the
+    // unsaved-work prompt over a mode or an editor that is still up.
     void request_close(GuiCloseTarget target);
     void activate_response(char k);
 
