@@ -59,19 +59,44 @@
 //      included, which therefore can never report success. A directory that
 //      cannot be opened, an iterator that stops half way and a stat that is
 //      refused would each make good files on the volume look unwanted, and
-//      that is the one mistake a mirror must not make.
+//      that is the one mistake a mirror must not make. SO THE DELETION IS TWO
+//      PASSES AND CLASSIFIES THE WHOLE DESTINATION BEFORE ITS FIRST REMOVAL:
+//      the first pass reads the top level and then each kept batch folder and
+//      sorts every entry into kept, unkept link and unkept subtree, answering
+//      every listing, status and identity error as above; only once that
+//      classification is complete does the second pass remove, in list order.
+//      A read fault can therefore never arrive after a deletion has already
+//      run, and no directory_iterator is ever live while its own directory is
+//      being changed.
 //   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
 //      claim above true by construction rather than lexically. Before anything
-//      is created or written, the project's folder on the volume, every kept
-//      batch folder and every kept destination file are read with
-//      symlink_status: a name that exists and is not the real directory or
+//      is created or written, THE VOLUME ITSELF, the project's folder on the
+//      volume, every kept batch folder and every kept destination file are read
+//      with symlink_status: a name that exists and is not the real directory or
 //      real file it is about to be written into REFUSES — "'<path>' is a
 //      symbolic link", "'<path>' is not a directory", "'<path>' is not a
-//      regular file". A refusal AND NOT A DELETION, deliberately: what a
-//      foreign link at one of our own names means is the user's to decide, not
-//      this act's. `create_directories` runs only after those checks pass, and
-//      an unkept link is removed AS A LINK and never traversed, so no composed
-//      path is written, walked or deleted through one.
+//      regular file". THE VOLUME IS THE FIRST NAME ASKED, because every path in
+//      the act is composed under it and a link there would aim the whole mirror
+//      — its creates, its copies and its removals — at whatever it points to.
+//      It is asked on the DISCOVERY side too, where the same link means the
+//      same thing: udisks makes real mount points under `/run/media/<user>/`,
+//      so an entry there that is a link is a hand's work and REFUSES with the
+//      link sentence rather than being counted as a volume or quietly passed
+//      over (platform_wayland.cpp), while the tablet's candidates are the
+//      process's own mount table's mount points and are real directories by
+//      construction (platform_android.cpp). A refusal AND NOT A DELETION,
+//      deliberately: what a foreign link at one of our own names means is the
+//      user's to decide, not this act's. `create_directories` runs only after
+//      those checks pass, and an unkept link is removed AS A LINK and never
+//      traversed, so no composed path is written, walked or deleted through
+//      one.
+//
+//      THE CHECKS RUN AT THE ACT'S START AND NOT AGAIN AT EACH USE, AND THAT
+//      COST IS ACCEPTED: a name swapped for a link in the seconds between its
+//      check and the create, copy or removal that follows would be followed,
+//      std::filesystem being path-based and this act having no fd-relative
+//      rewrite of it to offer. That swap is a hand on a mounted volume while
+//      the act is running — the adversarial class this product never backstops.
 //   3. EVERY COPY IS STAGED, the render's own publish shape (the staging
 //      spelling is render_staging_path's, render_output_naming.h — the
 //      product has one): the bytes land on `<destination>.tmp` and only a
@@ -95,10 +120,25 @@
 // this one physical stick is carried between the laptop and the tablet, and
 // two clocks a few seconds apart would make a skip rule silently keep a stale
 // render. Correctness first — the act is on a worker and costs the user no
-// waiting. THE FIRST FAILURE OF ANY KIND ENDS THE ACT, naming the path it was
-// reading or writing and then the system's own words, AND NOTHING IS DELETED
-// ON ANY ERROR: the deletions are the last thing the act does and they run
-// only when everything before them succeeded.
+// waiting.
+//
+// THE FIRST FAILURE OF ANY KIND ENDS THE ACT, naming the path it was reading
+// or writing and then the system's own words, and WHAT THAT FAILURE LEAVES IS
+// EXACTLY THIS AND NOTHING STRONGER:
+//
+//   (a) NO DELETION RUNS AT ALL unless every copy succeeded AND the
+//       destination's classification finished — the removals are the act's
+//       last phase and both of those come before it.
+//   (b) A FAILURE IN THE COPY PHASE leaves every replacement completed before
+//       it standing, each having been its own rename, and leaves the file it
+//       failed on holding its previous contents whole (rule 3).
+//   (c) A FAILURE IN THE DELETION PHASE leaves the removals made before it
+//       done and the rest undone, each removal being its own act; an unkept
+//       subtree's own remove_all may stop part-way as well, so that subtree
+//       can be left partly gone.
+//
+// The act is not transactional and rolls nothing back: running it again is the
+// whole recovery, and a second act mirrors from wherever the first stopped.
 //
 // THE ACT AUTHORS NOTHING and touches no AppState: the job below is captured
 // whole by value on the GUI thread, and the worker reads only these four
@@ -140,9 +180,13 @@ struct GuiExternalSyncJob {
 };
 
 // The act's verdict, composed on the worker and painted verbatim by the GUI
-// thread's status line. `ok` false means the act stopped where it stood —
-// copies made before that point stand, nothing was deleted — and `message`
-// names the path that stopped it.
+// thread's status line. `ok` false means the act stopped where it stood and
+// `message` names the path that stopped it; WHAT IT LEFT BEHIND is the head's
+// (a)(b)(c) — no deletion at all unless every copy and the whole destination
+// classification succeeded, a copy-phase failure leaving the replacements
+// completed before it standing and the failed file's previous contents whole,
+// a deletion-phase failure leaving the removals before it done and the rest
+// undone.
 struct GuiExternalSyncOutcome {
     bool        ok = false;
     std::string message;

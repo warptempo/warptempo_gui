@@ -438,6 +438,12 @@ std::string unescape_mount_field(const std::string& field) {
 // own words, for the reason the laptop's unreadable root does: not knowing is
 // not the same as knowing there is nothing.
 //
+// A CANDIDATE IS A REAL DIRECTORY BY CONSTRUCTION HERE, which is why this side
+// carries no symlink test of its own (rule 2, external_sync.h): every candidate
+// is a MOUNT POINT the kernel is reporting as mounted in this process's own
+// namespace, and a mount point is a directory. The laptop's road reads
+// directory entries and so has to ask.
+//
 // THE UUID IS NEVER CONSULTED: the architect's stick is `067C-8690` here and
 // `SANDISK` on the laptop, one physical stick with two names the product reads
 // neither of. The `<name>` below is matched for its SHAPE — one path component

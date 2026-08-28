@@ -82,7 +82,11 @@ public:
     // THE WHOLE VOLUME RULE ON THIS BACKEND: the DIRECTORY entries under
     // `/run/media/<user>/`, the udisks mount point the desktop session uses,
     // with `<user>` taken from getpwuid(geteuid()) and `$USER` as the fallback
-    // spelling; a missing root is the one error that means zero here. THE
+    // spelling; a missing root is the one error that means zero here, and an
+    // entry that is a SYMBOLIC LINK refuses with the mirror's own link sentence
+    // rather than becoming a candidate (rule 2 asked on the discovery side —
+    // udisks mounts a real directory for every volume; the reasoning is at the
+    // definition). THE
     // LABEL IS NEVER CONSULTED — the architect's stick mounts as
     // `/run/media/b/SANDISK` here and as `/storage/067C-8690` on the tablet,
     // and it is the same physical stick: "the one removable volume" is the

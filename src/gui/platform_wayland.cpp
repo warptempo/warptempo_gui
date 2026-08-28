@@ -633,6 +633,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 // ENOENT says nothing is mounted, which is exactly the counting rule's own
 // answer for an empty listing.
 //
+// A CANDIDATE IS A REAL DIRECTORY AND NEVER A LINK: every entry is read with
+// symlink_status, and one that is a symbolic link ends the answer with the
+// mirror's own sentence, "'<path>' is a symbolic link" (rule 2, external_sync.h
+// — the act refuses the volume itself on the same terms). udisks puts a real
+// mount point here for every volume it mounts, so a link at this root is a
+// hand's work, and the two quiet answers — counting it, or passing over it —
+// would either aim the mirror through it or say nothing about it at all.
+//
 // THE LABEL IS NEVER CONSULTED. The architect's stick is `SANDISK` here and
 // `067C-8690` on the tablet — one physical stick, two names, and the product
 // reads neither: it is simply the one removable volume.
@@ -662,10 +670,26 @@ std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume(
         // directory_iterator throws on it; a walk that stops part-way is a
         // fault like the open's and refuses the same way, since the entries
         // seen so far are not the answer to "which volumes are mounted".
+        //
+        // The link refusal above is asked here, entry by entry. An entry that
+        // is simply gone by the time it is read — the stick unmounted
+        // mid-listing — is no volume and no fault; any other status error
+        // refuses like the listing's own.
         const std::filesystem::directory_iterator end;
         while (it != end) {
             std::error_code de_ec;
-            if (it->is_directory(de_ec)) candidates.push_back(it->path());
+            const std::filesystem::file_status st = it->symlink_status(de_ec);
+            if (st.type() != std::filesystem::file_type::not_found) {
+                if (de_ec)
+                    return std::unexpected("Cannot read '" +
+                                           it->path().string() + "': " +
+                                           de_ec.message());
+                if (std::filesystem::is_symlink(st))
+                    return std::unexpected("'" + it->path().string() +
+                                           "' is a symbolic link");
+                if (std::filesystem::is_directory(st))
+                    candidates.push_back(it->path());
+            }
             it.increment(ec);
             if (ec) return unreadable(ec);
         }

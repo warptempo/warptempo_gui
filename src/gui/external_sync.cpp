@@ -52,16 +52,10 @@ std::string remove_failure(const std::filesystem::path& p,
 // range-for over a directory_iterator does not (its increment throws), so the
 // increment is spelled out here once.
 //
-// IT ANSWERS RULE 1: the walk either runs to the end of the listing or reports
-// the refusal line, and the callback reports its own the same way (any
-// non-empty answer stops the walk at once). `optional_root` true is the rule's
-// ONE carve-out — an ENOENT on `dir` ITSELF is an empty listing rather than a
-// fault, which is what makes an unrendered deliverable, a project with no
-// `tmp/` and a batch folder that is simply gone say "nothing to copy" instead
-// of stopping the act. Nothing else is ever excused: an entry that vanishes
-// mid-walk, a directory that cannot be opened, an iterator that stops half way
-// are all faults, because a partial listing would make good files on the
-// volume look unwanted.
+// It serves rule 1: the walk runs to the end of the listing or reports the
+// refusal line, the callback reports its own the same way (any non-empty answer
+// stops the walk at once), and `optional_root` true is the rule's ENOENT
+// carve-out on `dir` itself.
 using WalkFn =
     std::function<std::optional<std::string>(const std::filesystem::directory_entry&)>;
 
@@ -130,6 +124,37 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         std::fprintf(stderr, "warptempo_gui: %s\n", out.message.c_str());
         return out;
     };
+
+    // -- WHAT THE ACT MAY TOUCH, ASKED BEFORE IT TOUCHES ANYTHING -----------
+    //
+    // Rule 2. The claim below is every destination name's, and THE VOLUME is
+    // the one asked here at the act's head, before the set is even built: every
+    // path in the act is composed under it.
+    enum class DestKind { Volume, Directory, RegularFile };
+    auto claim_destination = [](const std::filesystem::path& p,
+                                DestKind kind) -> std::optional<std::string> {
+        std::error_code st_ec;
+        const std::filesystem::file_status st =
+            std::filesystem::symlink_status(p, st_ec);
+        if (st.type() == std::filesystem::file_type::not_found) {
+            // Nothing there is the ordinary case for a name the act creates
+            // below — and it is not one for the volume, which the platform has
+            // just answered is mounted.
+            if (kind != DestKind::Volume) return std::nullopt;
+            return "'" + p.string() + "' is not a directory";
+        }
+        if (st_ec) return read_failure(p, st_ec);
+        if (std::filesystem::is_symlink(st))
+            return "'" + p.string() + "' is a symbolic link";
+        if (kind != DestKind::RegularFile && !std::filesystem::is_directory(st))
+            return "'" + p.string() + "' is not a directory";
+        if (kind == DestKind::RegularFile &&
+            !std::filesystem::is_regular_file(st))
+            return "'" + p.string() + "' is not a regular file";
+        return std::nullopt;
+    };
+    if (auto bad = claim_destination(job.volume, DestKind::Volume))
+        return refuse(*bad);
 
     // -- THE SET ------------------------------------------------------------
     //
@@ -219,34 +244,10 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // cannot then disagree.
     for (const Copy& c : copies) kept_files.push_back(c.to);
 
-    // -- WHAT THE ACT MAY TOUCH, ASKED BEFORE IT TOUCHES ANYTHING -----------
+    // -- THE REST OF WHAT THE ACT MAY TOUCH ---------------------------------
     //
-    // Rule 2, and it runs to completion before the first create_directories:
-    // the project's folder on the volume, every kept batch folder and every
-    // kept destination file must be the real directory or the real file it is
-    // about to be written into, or nothing at all. A name that is anything
-    // else — a symbolic link above all — is a REFUSAL AND NOT A DELETION: what
-    // a foreign link at one of our names means is the user's to decide, not
-    // this act's.
-    enum class DestKind { Directory, RegularFile };
-    auto claim_destination = [](const std::filesystem::path& p,
-                                DestKind kind) -> std::optional<std::string> {
-        std::error_code st_ec;
-        const std::filesystem::file_status st =
-            std::filesystem::symlink_status(p, st_ec);
-        // Nothing there is the ordinary case: the act creates it below.
-        if (st.type() == std::filesystem::file_type::not_found)
-            return std::nullopt;
-        if (st_ec) return read_failure(p, st_ec);
-        if (std::filesystem::is_symlink(st))
-            return "'" + p.string() + "' is a symbolic link";
-        if (kind == DestKind::Directory && !std::filesystem::is_directory(st))
-            return "'" + p.string() + "' is not a directory";
-        if (kind == DestKind::RegularFile &&
-            !std::filesystem::is_regular_file(st))
-            return "'" + p.string() + "' is not a regular file";
-        return std::nullopt;
-    };
+    // Rule 2, the volume's own claim above having been the first of these: the
+    // rest run to completion before the first create_directories.
     if (auto bad = claim_destination(dest, DestKind::Directory))
         return refuse(*bad);
     for (const std::filesystem::path& d : kept_dirs) {
@@ -273,18 +274,13 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         if (ec) return refuse(copy_failure(batch_dest, ec));
     }
     for (const Copy& c : copies) {
-        // Rule 3: the bytes land on the staging sibling and only a COMPLETE
-        // copy is renamed onto the final name, so the file this act fails to
-        // replace is the file the user still has. A stale staging file from an
-        // interrupted act is OURS BY NAME and goes first — with remove rather
-        // than a truncating open, so a link left at that name is removed as a
-        // link and never written through (rule 2). overwrite_existing is on
-        // the staging name and on no other.
-        //
-        // vfat, the deployed filesystem: rename over an existing name replaces
-        // it in one directory operation, which is the atomicity this act
-        // assumes and all it needs — the previous file is either wholly there
-        // or wholly replaced.
+        // Rule 3: the bytes land on the staging sibling and only a complete
+        // copy is renamed onto the final name. A stale staging file goes first
+        // through remove rather than a truncating open, so a link left at that
+        // name goes as a link and is never written through (rule 2), and
+        // overwrite_existing is on the staging name and on no other. On vfat, a
+        // rename over an existing name replaces it in one directory operation,
+        // which is the atomicity this act assumes and all it needs.
         const std::filesystem::path staging(render_staging_path(c.to.string()));
         std::filesystem::remove(staging, ec);
         if (ec) return refuse(remove_failure(staging, ec));
@@ -302,27 +298,31 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // copies above write: a name at the top is either the deliverable or a
     // batch folder, and a name inside a kept batch folder is either one of its
     // wavs or not ours. Anything else — a stray file at the top, a folder that
-    // is no longer a batch, a `peaks/` or a sidecar left inside a cell, a
-    // whole subtree, a staging file left by an interrupted act at a name this
-    // set no longer carries — goes with remove_all, which is bounded to the
-    // entry it was handed. THE VOLUME ROOT AND EVERY OTHER PROJECT'S FOLDER
-    // ARE UNTOUCHED BY CONSTRUCTION, and by rule 2 that is now literally true:
-    // no path here is composed above `dest`, every entry is classified by its
-    // symlink_status so a link is never traversed, and remove_all itself
-    // deletes the contents of the entry it was handed and then the entry as if
-    // by POSIX remove() — its recursion does not follow directory symlinks
-    // (follow_directory_symlink is not set), so a link goes as a link.
+    // is no longer a batch, a `peaks/` or a sidecar left inside a cell, a whole
+    // subtree, a staging file left by an interrupted act at a name this set no
+    // longer carries — goes. No path here is composed above `dest` (rule 2,
+    // which also carries the links: an unkept link is removed as a link, and
+    // remove_all's own recursion does not follow one, follow_directory_symlink
+    // being unset).
     //
-    // WHAT IS KEPT IS KEPT BY IDENTITY (rule 4): each entry is compared with
-    // std::filesystem::equivalent against the paths the copies just wrote,
-    // never against their spellings, so the case-insensitive volume keeps the
-    // file it just received under whatever spelling its directory entry
-    // carries. The comparison is a plain O(n·m) over the set — a dozen or so
-    // names against a dozen or so entries, on a walk that is already doing a
-    // stat per entry — and equivalent's own error (an entry that vanished
-    // between the listing and the compare) is a refusal, rule 1. THE STAGING
-    // NAMES ARE UNKEPT BY CONSTRUCTION: the kept set holds final names only,
-    // and `<name>.wav.tmp` is a different file from `<name>.wav`.
+    // Rule 1: IT IS TWO PASSES. Everything down to `doomed` below only
+    // classifies — the top level first and then each kept batch folder, one
+    // listing live at a time — and the removals run after that classification
+    // has finished, in list order.
+    struct Doomed {
+        std::filesystem::path path;
+        bool                  is_link = false;   // remove(); else remove_all()
+    };
+    std::vector<Doomed>                doomed;
+    std::vector<std::filesystem::path> kept_dirs_present;
+
+    // Rule 4: an entry is kept when it IS one of the paths the copies just
+    // wrote (std::filesystem::equivalent) and never when it merely spells like
+    // one. The comparison is a plain O(n·m) over the set — a dozen or so names
+    // against a dozen or so entries, on a walk already doing a stat per entry —
+    // and equivalent's own error is a refusal (rule 1). THE STAGING NAMES ARE
+    // UNKEPT BY CONSTRUCTION: the kept set holds final names only, and
+    // `<name>.wav.tmp` is a different file from `<name>.wav`.
     auto kept_by_identity =
         [](const std::filesystem::path&              entry,
            const std::vector<std::filesystem::path>& kept,
@@ -338,24 +338,6 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         }
         return std::nullopt;
     };
-    auto remove_subtree =
-        [](const std::filesystem::path& p) -> std::optional<std::string> {
-        std::error_code rm_ec;
-        std::filesystem::remove_all(p, rm_ec);
-        if (rm_ec) return remove_failure(p, rm_ec);
-        return std::nullopt;
-    };
-    // A LINK GOES AS A LINK, its target untouched: nothing outside `dest` is
-    // reached even to be looked at. A link at a KEPT name never arrives here —
-    // the checks above refused the act over one — so every link this pass sees
-    // is one the set does not carry.
-    auto remove_link =
-        [](const std::filesystem::path& p) -> std::optional<std::string> {
-        std::error_code rm_ec;
-        std::filesystem::remove(p, rm_ec);
-        if (rm_ec) return remove_failure(p, rm_ec);
-        return std::nullopt;
-    };
 
     if (auto fault = walk_directory(
             dest, false,
@@ -364,37 +346,63 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
                 std::error_code st_ec;
                 const std::filesystem::file_status st = de.symlink_status(st_ec);
                 if (st_ec) return read_failure(de.path(), st_ec);
-                if (std::filesystem::is_symlink(st)) return remove_link(de.path());
+                if (std::filesystem::is_symlink(st)) {
+                    doomed.push_back({de.path(), true});
+                    return std::nullopt;
+                }
                 if (std::filesystem::is_directory(st)) {
                     bool kept = false;
                     if (auto bad = kept_by_identity(de.path(), kept_dirs, kept))
                         return bad;
-                    if (!kept) return remove_subtree(de.path());
-                    return walk_directory(
-                        de.path(), false,
-                        [&](const std::filesystem::directory_entry& fe)
-                                -> std::optional<std::string> {
-                            std::error_code fe_ec;
-                            const std::filesystem::file_status fst =
-                                fe.symlink_status(fe_ec);
-                            if (fe_ec) return read_failure(fe.path(), fe_ec);
-                            if (std::filesystem::is_symlink(fst))
-                                return remove_link(fe.path());
-                            bool file_kept = false;
-                            if (auto bad = kept_by_identity(fe.path(), kept_files,
-                                                            file_kept))
-                                return bad;
-                            if (!file_kept) return remove_subtree(fe.path());
-                            return std::nullopt;
-                        });
+                    if (kept) kept_dirs_present.push_back(de.path());
+                    else      doomed.push_back({de.path(), false});
+                    return std::nullopt;
                 }
                 bool kept = false;
                 if (auto bad = kept_by_identity(de.path(), kept_files, kept))
                     return bad;
-                if (!kept) return remove_subtree(de.path());
+                if (!kept) doomed.push_back({de.path(), false});
                 return std::nullopt;
             })) {
         return refuse(*fault);
+    }
+    // The kept batch folders' own entries, listed after the top level rather
+    // than from inside its callback: the classification holds one listing at a
+    // time, and each of these folders is one the top level just proved kept.
+    for (const std::filesystem::path& batch_dest : kept_dirs_present) {
+        if (auto fault = walk_directory(
+                batch_dest, false,
+                [&](const std::filesystem::directory_entry& fe)
+                        -> std::optional<std::string> {
+                    std::error_code fe_ec;
+                    const std::filesystem::file_status fst =
+                        fe.symlink_status(fe_ec);
+                    if (fe_ec) return read_failure(fe.path(), fe_ec);
+                    if (std::filesystem::is_symlink(fst)) {
+                        doomed.push_back({fe.path(), true});
+                        return std::nullopt;
+                    }
+                    bool file_kept = false;
+                    if (auto bad =
+                            kept_by_identity(fe.path(), kept_files, file_kept))
+                        return bad;
+                    if (!file_kept) doomed.push_back({fe.path(), false});
+                    return std::nullopt;
+                })) {
+            return refuse(*fault);
+        }
+    }
+
+    // THE SECOND PASS, and the act's first removal is here. A LINK GOES AS A
+    // LINK, its target untouched, so nothing outside `dest` is reached even to
+    // be looked at; a link at a kept name never reaches this list, the claims
+    // above having refused the act over one. A failure here leaves the removals
+    // before it done and the rest undone — the head's (c).
+    for (const Doomed& d : doomed) {
+        std::error_code rm_ec;
+        if (d.is_link) std::filesystem::remove(d.path, rm_ec);
+        else           std::filesystem::remove_all(d.path, rm_ec);
+        if (rm_ec) return refuse(remove_failure(d.path, rm_ec));
     }
 
     out.ok = true;

@@ -253,12 +253,29 @@ THE FOUR STRICTNESS RULES are `external_sync.h`'s head, stated there once and
 nowhere else: the mirror deletes only against a listing it finished (any
 enumeration or status error other than an absent optional root ends the act
 before a single deletion, a destination-side one included, which therefore
-cannot report success); no destination symlink is ever followed, which makes
-the scope claim above true by construction (a link at one of the act's own
-names is a REFUSAL and not a deletion, and an unkept link is removed as a
-link); every copy is staged; and what is kept is kept by filesystem identity
-(`std::filesystem::equivalent`) rather than by spelling, the volume being
-case-insensitive vfat.
+cannot report success — SO THE DELETION IS TWO PASSES, classifying the whole
+destination into kept, unkept link and unkept subtree, top level and then each
+kept batch folder, before its first removal, which is also why no
+`directory_iterator` is ever live while its own directory is being changed); no
+destination symlink is ever followed, which makes the scope claim above true by
+construction (THE VOLUME ITSELF IS THE FIRST NAME CHECKED, every path in the act
+being composed under it, and a link at one of the act's own names is a REFUSAL
+and not a deletion, an unkept link being removed as a link) — the checks run at
+the act's start and not again at each use, that check-then-use window being an
+ACCEPTED COST, a hand on a mounted volume mid-act and so the adversarial class
+this product never backstops; every copy is staged; and what is kept is kept by
+filesystem identity (`std::filesystem::equivalent`) rather than by spelling, the
+volume being case-insensitive vfat.
+
+WHAT A FAILURE LEAVES is `external_sync.h`'s (a)(b)(c) and nothing stronger:
+(a) no deletion runs at all unless every copy succeeded and the destination
+classification finished; (b) a copy-phase failure leaves every replacement
+completed before it standing, each having been its own rename, and the file it
+failed on holding its previous contents whole; (c) a deletion-phase failure
+leaves the removals before it done and the rest undone, each removal being its
+own act and an unkept subtree's `remove_all` able to stop part-way itself. The
+act is not transactional and rolls nothing back: pressing the row again is the
+whole recovery.
 
 THE WORKER, `GuiExternalSyncWorker` (`external_sync.{h,cpp}`), is shaped
 exactly like `GuiHistoryCommitWorker`: its own thread, a condition variable,
@@ -287,8 +304,13 @@ per-backend:
   volumes mounted: a, b` naming them (sorted and de-duplicated once, so two
   mount-table lines naming one mount point are one volume, not several).
   LAPTOP: the directory entries under `/run/media/<user>/`, the udisks mount
-  root (`<user>` from `getpwuid(geteuid())`, `$USER` the fallback spelling);
-  ENOENT on that root is the ONE error that honestly means zero — udisks
+  root (`<user>` from `getpwuid(geteuid())`, `$USER` the fallback spelling),
+  each read with `symlink_status` so a LINK THERE REFUSES with the mirror's own
+  `'<path>' is a symbolic link` — udisks mounts a real directory for every
+  volume, so a link at that root is a hand's work, and neither counting it nor
+  passing over it in silence would be honest (rule 2 asked on the discovery
+  side; an entry simply gone by the time it is read is no volume and no fault);
+  ENOENT on the root itself is the ONE error that honestly means zero — udisks
   creates the directory at the first mount and removes it with the last —
   and any other read failure refuses out loud with the system's own words
   rather than counting as empty. ANDROID: the `/storage/<name>` mount points
@@ -301,7 +323,9 @@ per-backend:
   EACCES, a permission the app was denied and not an empty device, measured
   on the tablet 2026-08-28 with the stick mounted (the listing road answered
   `No removable volume mounted` where the mount-table road answers
-  correctly). A `/mnt/media_rw/<name>` line is NEVER A CANDIDATE: that is
+  correctly). Those candidates are mount points and so real directories by
+  construction, which is why that side carries no symlink test of its own. A
+  `/mnt/media_rw/<name>` line is NEVER A CANDIDATE: that is
   vold's own mount and the app's uid cannot open it — All-files access
   reaches the volume through the `/storage/<uuid>` view alone — so a device
   where only that line appears has nothing this app can write and stays `No
