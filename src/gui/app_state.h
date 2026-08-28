@@ -3855,10 +3855,18 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 // nothing about what plays or how: each play is an ordinary GuiPlayback
 // session over the same buffer at the same level, launched through one body
 // (GuiPlaybackLifecycle::launch_bounded_audition), and NO RESTING PLAYHEAD
-// EVER MOVES — playback drives the scanner, a stop moves no cursor, and the
-// two tab switches restore each tab's own band, so after the whole act both
-// playheads are exactly where they were. There is no undo (nothing authored)
-// and no damage of its own (the tab switch and the scanner already own theirs).
+// MOVES BY THE ACT'S OWN DOING — playback drives the scanner, a stop moves no
+// cursor, and the two tab switches restore each tab's own band, so after the
+// whole act both playheads are exactly where they were. EACH HALF OPENS WITH
+// THE `c` COMMAND on the tab that half plays (architect 2026-08-28) — at the
+// press, on the switch, and again on the switch back, each inside the switch's
+// own frame so there is no flicker — which is the one thing here that can
+// write a cursor at all, and only as `c` writes one (a land onto that tab's
+// focus, which the cursor already rests on in practice); the rule, the
+// same-frame claim and the ordering it owes this state are at
+// GuiAbAudition::apply_working_zoom (ab_audition.h). There is no undo (nothing
+// authored) and the only damage is `c`'s own, beside the tab switch's and the
+// scanner's.
 //
 // THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
 // WHILE THE ACT STANDS — from the first successful launch to whatever ends it.
@@ -3904,10 +3912,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     reads the phase, takes the one stop body, and hands what it read to
 //     GuiAbAudition::advance_after_natural_end. That call no longer launches:
 //     it switches the tab where the phase asks — synchronously, inside this
-//     same tick, so the flip is seen at once — and then arms the REST that
-//     precedes the next play (kAuditionPairGapMs inside a pair,
-//     kAuditionSwitchGapMs across the switch), AFTER the switch, because the
-//     switch's own stop body clears the sequence.
+//     same tick, so the flip is seen at once — runs the `c` command on the tab
+//     it just entered, and then arms the REST that precedes the next play
+//     (kAuditionPairGapMs inside a pair, kAuditionSwitchGapMs across the
+//     switch), AFTER both, because the switch's own stop body clears the
+//     sequence and `c` can clear it through the movement owner below.
 //   * FIRED at ONE site: GuiAbAudition::fire_if_due, called from the run
 //     loop's deadline tick (main.cpp's on_tick, above its playing-only guard,
 //     beside the key-repeat and touch-window deadline samplers). It ends the
@@ -3975,6 +3984,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         answers it — for a click that lands during a REST as well as one that
 //         lands during a play, which the reseek arm never could (it fires on
 //         `was_playing`).
+//         THE ACT'S OWN `c` PASSES THROUGH THIS OWNER whenever a marker is
+//         focused (run_center_command lands on it), which is why all three of
+//         its calls are placed in windows where the sequence is already Idle —
+//         before the first launch, and after a switch but ahead of the arm.
+//         The ordering is stated at GuiAbAudition::apply_working_zoom.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
 // The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.

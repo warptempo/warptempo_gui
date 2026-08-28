@@ -1223,6 +1223,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // it synthesizes a key (its one reader is recorded at the member,
     // render_player.h).
     render_player.input = &input_handler;
+    // And the A/B audition's, for the `c` command each half opens with (its
+    // one reader is apply_working_zoom; the rule is at ab_audition.h).
+    ab_audition.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in
     // target view through handle_active_audio_view_toggle, the chokepoint that
     // lives on the input handler (constructed after the propagate, which the

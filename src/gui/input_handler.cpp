@@ -1610,11 +1610,15 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
 void GuiInputHandler::run_center_command(double target_zoom_level) {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. THREE CALLERS: the live `c` key arm (handle_plain_bare_keys),
+    // FORK LIVES. FOUR CALLERS: the live `c` key arm (handle_plain_bare_keys),
     // the history mode's own `c` arm (handle_history_mode_key, which must claim
-    // the key to keep it off the mode's allowlist) and, since 2026-08-05,
+    // the key to keep it off the mode's allowlist), since 2026-08-05
     // run_overview_command's SECOND ARM — `0` pressed with the zoom already at
-    // full out runs exactly what `c` runs.
+    // full out runs exactly what `c` runs — and, since 2026-08-28, the A/B
+    // audition's GuiAbAudition::apply_working_zoom, which opens each half of
+    // the act with this command on the tab that half plays, inside the tab
+    // switch's own frame (the rule and the ordering it owes the audition's
+    // sequence are at ab_audition.h).
     //
     // THE LEVEL IS THE CALLER'S, defaulting to kWorkingZoomLevel (the header
     // carries the default; the two key arms pass nothing and so mean `c`

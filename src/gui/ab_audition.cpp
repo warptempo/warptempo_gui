@@ -1,5 +1,7 @@
 #include "ab_audition.h"
 
+#include "input_handler.h"   // run_center_command, the `c` command's one owner
+
 #include <cmath>
 #include <cstdint>
 
@@ -46,11 +48,28 @@ void GuiAbAudition::start() {
     // half-run must not move the user off his tab and then fall silent.
     if (!tab_launch_ready(app.playhead_cursor_sample)) return;
     if (!tab_launch_ready(other_playhead)) return;
+    // Step 0: THE `c` COMMAND ON THIS TAB, before the switch carries the band
+    // away — refresh_active_tab_view_from_app pushes the live zoom into the
+    // leaving tab's slot, so the level set here is the level this tab is
+    // restored at when the act switches back (and re-run there, the ruling
+    // asking for it on every arrival). It runs AFTER the two gates above, so a
+    // refused act moves no camera, and BEFORE the sequence exists, so its land
+    // clears nothing that stands (the header's ordering rule). The gates above
+    // therefore judged the cursor as it RESTED: `c` can only move it onto this
+    // tab's own focus, which the cursor already sits on after every route that
+    // sets one, and a play that refused after such a move would simply end the
+    // act — the interrupt rule's own answer.
+    apply_working_zoom();
     // Step 1: the ordinary tab switch (the stop of any live audition, the
     // selection clear, the band swap, the coincidence auto-select and the
     // synchronous rebuild are all its own). Not Ctrl+Tab's trigger() tail —
     // the header says why.
     active_views.switch_active_tab_view_to(other);
+    // And `c` on the tab just entered, IN THE SWITCH'S OWN FRAME: no paint has
+    // happened between the two lines, so the flip and the working zoom land
+    // together. Still ahead of the launch, so the play below starts from the
+    // cursor `c` left (a no-op land after a switch — the header says why).
+    apply_working_zoom();
     // Step 2's first play, launched STRAIGHT AWAY — no rest precedes it. The
     // architect's rest is between SOUNDS and nothing sounded before this one
     // (the constants' own note, app_state.h). A refusal here is unreachable in
@@ -81,6 +100,11 @@ void GuiAbAudition::advance_after_natural_end(
             // one stop body, which clears the sequence, so a rest armed ahead
             // of it would be wiped.
             active_views.switch_active_tab_view_to(ended.home_tab);
+            // `c` on the tab just re-entered, in that same switch's frame —
+            // and BEFORE the arm below, which is the second half of this
+            // arm's ordering rule: the command can clear the sequence, so it
+            // must not run after a rest has been written (the header).
+            apply_working_zoom();
             arm_rest(Phase::HomeFirst, ended.home_tab, kAuditionSwitchGapMs);
             return;
         case Phase::HomeFirst:
@@ -104,6 +128,18 @@ void GuiAbAudition::arm_rest(GuiAuditionSequence::Phase phase, char home_tab,
     app.audition_sequence.home_tab      = home_tab;
     app.audition_sequence.waiting       = true;
     app.audition_sequence.launch_due_ms = monotonic_ms() + gap_ms;
+}
+
+void GuiAbAudition::apply_working_zoom() {
+    // THE `c` COMMAND, WHOLE, through its one owner — the working zoom, the
+    // centering and the focused re-land all decided there, so this cluster
+    // holds no zoom knowledge of its own and a retune of `c` reaches the
+    // audition for free. THE CAMERA IS NEVER A MOVEMENT: `c` with nothing
+    // focused writes no playhead, so it hides no trim overlay and clears
+    // nothing; with a focus it lands, and that land is the one write this
+    // whole act can make to a resting cursor (the header's two paragraphs
+    // carry the case and the ordering the three call sites obey).
+    if (input != nullptr) input->run_center_command();
 }
 
 void GuiAbAudition::fire_if_due() {

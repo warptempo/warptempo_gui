@@ -2066,6 +2066,32 @@ struct GuiInputHandler {
     // bool compare per tick at rest.
     void tick_render_cancel_face();
 
+    // THE BARE `c` COMMAND, and the ONE owner of both its recipes: the working
+    // zoom centered on the playhead, with a focused stop re-landed under it
+    // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
+    // (repair_last_selected + jump_playhead_to_focused_marker), the history
+    // mode's re-expression walks its own diff-flag list and its own focus — so
+    // the four callers (the live `c` arm, the mode's `c` claim,
+    // run_overview_command's already-full-out arm and the A/B audition's
+    // GuiAbAudition::apply_working_zoom) share one decision instead of
+    // spelling it each. Rationale at the definition.
+    // PUBLIC because that fourth caller is another cluster: the audition opens
+    // each of its halves with this command on the tab that half plays, run
+    // inside the switch's own frame (ab_audition.h carries the rule and the
+    // ordering it owes the sequence).
+    // THE ZOOM IS A PARAMETER since 2026-08-18 and defaults to kWorkingZoomLevel,
+    // which is what `c` itself means — the two key arms pass nothing. `0`'s
+    // already-full-out arm passes the level IT stamped on the way out
+    // (ViewState::zoom_recall_level) when one stands, so the return trip is this
+    // one command with ONE substitution rather than a second recipe: same mode
+    // fork, same land, same centering, and the same clamp (apply_zoom_change
+    // pre-clamps every request, so no caller can drive the level outside the
+    // per-file window). That pre-clamp is a bound, not a rescue: a stamp read
+    // back under a fallen ceiling would clamp onto the level the key is already
+    // standing on, so THAT arm resolves the stamp itself and passes the working
+    // zoom instead when it cannot move — its own comment carries the case.
+    void run_center_command(double target_zoom_level = kWorkingZoomLevel);
+
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
     // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and
@@ -2304,27 +2330,6 @@ private:
     // viewport move). Both leave the playhead coincident with the focus, and a later
     // nudge/drag re-lands it on the focused marker as that marker moves.
     bool jump_playhead_to_focused_marker();
-
-    // THE BARE `c` COMMAND, and the ONE owner of both its recipes: the working
-    // zoom centered on the playhead, with a focused stop re-landed under it
-    // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
-    // (repair_last_selected + jump_playhead_to_focused_marker), the history
-    // mode's re-expression walks its own diff-flag list and its own focus — so
-    // the three callers (the live `c` arm, the mode's `c` claim, and
-    // run_overview_command's already-full-out arm) share one decision instead of
-    // spelling it each. Rationale at the definition.
-    // THE ZOOM IS A PARAMETER since 2026-08-18 and defaults to kWorkingZoomLevel,
-    // which is what `c` itself means — the two key arms pass nothing. `0`'s
-    // already-full-out arm passes the level IT stamped on the way out
-    // (ViewState::zoom_recall_level) when one stands, so the return trip is this
-    // one command with ONE substitution rather than a second recipe: same mode
-    // fork, same land, same centering, and the same clamp (apply_zoom_change
-    // pre-clamps every request, so no caller can drive the level outside the
-    // per-file window). That pre-clamp is a bound, not a rescue: a stamp read
-    // back under a fallen ceiling would clamp onto the level the key is already
-    // standing on, so THAT arm resolves the stamp itself and passes the working
-    // zoom instead when it cannot move — its own comment carries the case.
-    void run_center_command(double target_zoom_level = kWorkingZoomLevel);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
     // (architect 2026-08-05, replacing the working-zoom toggle; the second arm

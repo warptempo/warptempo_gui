@@ -9,6 +9,12 @@
 
 #include <cstdint>
 
+// The `c` command lives on GuiInputHandler and is reached through the
+// back-pointer below: input_handler.h includes this header, so the include
+// cannot run both ways (the same shape GuiPrompt::input and
+// GuiRenderPlayer::input take).
+struct GuiInputHandler;
+
 // THE A/B AUDITION (architect 2026-08-26) — the operations cluster for the one
 // transport act that spans several plays. The model, the phases and the
 // complete edge inventory of its state are at GuiAuditionSequence
@@ -26,17 +32,47 @@
 // an ordinary session over the buffer the view already plays, at the level it
 // already plays it; no new audio path, no render.
 //
-// WHAT THE ACT DOES, in order: (1) switch to the OTHER tab; (2) play
-// kAuditionMs from that tab's resting playhead, twice, resting
-// kAuditionPairGapMs between the two; (3) switch back to the tab it started
-// on and rest kAuditionSwitchGapMs; (4) play the same span from THAT tab's
-// resting playhead, twice, resting the pair gap between them. Then it is over
+// WHAT THE ACT DOES, in order: (0) run the `c` command on the tab the press
+// found; (1) switch to the OTHER tab and run `c` there; (2) play kAuditionMs
+// from that tab's resting playhead, twice, resting kAuditionPairGapMs between
+// the two; (3) switch back to the tab it started on, run `c` there again, and
+// rest kAuditionSwitchGapMs; (4) play the same span from THAT tab's resting
+// playhead, twice, resting the pair gap between them. Then it is over
 // and the user adjusts on the
-// tab he started from. THE RESTING PLAYHEAD NEVER MOVES: a play drives the
-// scanner and a stop moves no cursor (the lifecycle's doctrine), the tick's
-// natural-end branch parks nothing, and each switch restores the entering
-// tab's own band — so after the whole act both tabs' playheads are exactly
-// where they were, and each pair of plays is identical by construction.
+// tab he started from. THE RESTING PLAYHEAD NEVER MOVES BY THE ACT'S OWN
+// DOING: a play drives the scanner and a stop moves no cursor (the
+// lifecycle's doctrine), the tick's natural-end branch parks nothing, and each
+// switch restores the entering tab's own band — so after the whole act both
+// tabs' playheads are exactly where they were, and each pair of plays is
+// identical by construction. The `c` each half opens with is the one thing
+// that can write a cursor here, and only as `c` itself writes one: it lands
+// the playhead on the tab's FOCUSED marker. After a switch that land is a
+// provable no-op (the switch clears the selection and the coincidence
+// auto-select re-acquires only a marker already under the cursor), and at the
+// press the cursor already rests on the focus — every focus-changing route
+// lands it — so in practice both pairs still start where the user left them.
+//
+// THE WORKING ZOOM OPENS EACH HALF (architect 2026-08-28, from his plastic
+// pass): apply_working_zoom runs the `c` command — the whole command through
+// its one owner, GuiInputHandler::run_center_command, never a second zoom
+// recipe — at the press on the tab the press found, on the other tab the
+// moment the act switches to it, and on the starting tab the moment it
+// switches back. IT RUNS IN THE SWITCH'S OWN FRAME, immediately after the
+// switch body and before the caller returns, so the tab flip and the zoom
+// reach the compositor as one paint and the user sees no flicker: both are
+// GUI-thread writes inside one run-loop iteration, and each of `c`'s viewport
+// writes takes its own synchronous rebuild through kick_waveform_sync, the
+// last one deciding the plate that frame. Each half is therefore read at the
+// working zoom, centered, whatever level the tab was left at.
+//
+// ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
+// CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at
+// GuiAuditionSequence), so every one of the three calls sits in a window where
+// the sequence is already Idle — the press-time pair before the first launch
+// (the refusal guard has returned by then), and the switch-back call after the
+// switch and BEFORE arm_rest, which is the same reason the switch itself must
+// precede the arm. A call placed after an arm would wipe the rest it just
+// armed and silently end the act.
 //
 // SEQUENCING IS PACED AND TAKES NO TIMER OF ITS OWN: the audio thread ends a
 // play, the tick observes it (the same natural-end branch every audition ends
@@ -107,6 +143,11 @@ struct GuiAbAudition {
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiActiveViews&       active_views;
     GuiTargetRender&      target_render;
+    // Back-pointer to the input handler, wired in main.cpp after both are
+    // built (the handler holds this cluster by reference, so it cannot be a
+    // constructor argument) — the prompt's own shape (GuiPrompt::input). Its
+    // one reader is apply_working_zoom.
+    GuiInputHandler*      input = nullptr;
 
     GuiAbAudition(AppState&             app_,
                   const GuiAudio&       audio_,
@@ -122,9 +163,9 @@ struct GuiAbAudition {
           target_render(target_render_) {}
 
     // THE PRESS-TIME ACT (the refusals at the head comment): gate both tabs,
-    // switch to the other one, launch the first play. ONE CALLER: on_key's
-    // Shift+Space arm (input_handler.cpp), which the play button's shift-click
-    // and long press also reach.
+    // run `c` on this tab, switch to the other one, run `c` there, launch the
+    // first play. ONE CALLER: on_key's Shift+Space arm (input_handler.cpp),
+    // which the play button's shift-click and long press also reach.
     void start();
 
     // THE ADVANCE: `ended` is the sequence state the tick's natural-end branch
@@ -134,8 +175,10 @@ struct GuiAbAudition {
     // to the starting tab ahead of the switch rest; HomeSecond ending is the
     // act's own end. THE SWITCH RUNS FIRST AND THE ARM AFTER IT, because the
     // switch takes the one stop body and that body clears the sequence — the
-    // same ordering the launch used to need. ONE CALLER: that branch
-    // (main.cpp), the sequence's one advance site.
+    // same ordering the launch used to need, and the same ordering the
+    // apply_working_zoom that follows the switch needs for its own reason (the
+    // head comment). ONE CALLER: that branch (main.cpp), the sequence's one
+    // advance site.
     void advance_after_natural_end(const GuiAuditionSequence& ended);
 
     // THE REST'S DEADLINE SAMPLER: launch the phase the advance armed once its
@@ -170,4 +213,10 @@ private:
     // that transition owes — that switch's stop body would clear what this
     // wrote.
     void arm_rest(GuiAuditionSequence::Phase phase, char home_tab, int gap_ms);
+    // THE `c` COMMAND ON THE ACTIVE TAB (architect 2026-08-28; the rule, the
+    // same-frame claim and the ordering it owes the sequence are at the head
+    // comment). It routes through the command's one owner and adds nothing of
+    // its own — no zoom arithmetic, no camera write — so the three call sites
+    // land exactly what the key lands. Silent if the back-pointer is unwired.
+    void apply_working_zoom();
 };
