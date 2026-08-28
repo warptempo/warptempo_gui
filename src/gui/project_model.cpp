@@ -37,9 +37,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     // than the increment expression so the code it sets is read before the end
     // test can hide it.
     std::vector<std::string> wav_stems;
-    std::string              sidecar_stem;
-    bool                     sidecar_stem_conflict = false;
-    std::string              sidecar_stem_other;
+    std::vector<std::string> sidecar_stems;
 
     std::filesystem::directory_iterator it(folder, ec);
     if (ec) {
@@ -63,12 +61,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
             if (ext == ".wav") {
                 wav_stems.push_back(stem);
             } else if (is_sidecar_extension(ext)) {
-                if (sidecar_stem.empty()) {
-                    sidecar_stem = stem;
-                } else if (stem != sidecar_stem && !sidecar_stem_conflict) {
-                    sidecar_stem_conflict = true;
-                    sidecar_stem_other    = stem;
-                }
+                sidecar_stems.push_back(stem);
             }
         }
         it.increment(ec);
@@ -77,9 +70,18 @@ std::expected<GuiProjectSource, std::string> resolve_project(
                                    "': " + ec.message());
         }
     }
-    // The walk's order is unspecified, so the names are sorted before any
-    // message names one: the same folder always refuses with the same words.
+    // The walk's order is unspecified, so both name sets are sorted before any
+    // message names one — and the sidecar stems are sorted WHOLE and deduped
+    // rather than winnowed to a pair while walking, because a pair chosen by
+    // the walk's order and sorted afterwards would still be the walk's pair:
+    // the same folder always refuses with the same words, at any number of
+    // stems. (A folder holds three sidecar names per piece, so both vectors are
+    // a handful of strings and the sort is free.)
     std::sort(wav_stems.begin(), wav_stems.end());
+    std::sort(sidecar_stems.begin(), sidecar_stems.end());
+    sidecar_stems.erase(
+        std::unique(sidecar_stems.begin(), sidecar_stems.end()),
+        sidecar_stems.end());
 
     const std::string name = folder.filename().string();
     auto make = [&](const std::string& stem) {
@@ -90,15 +92,21 @@ std::expected<GuiProjectSource, std::string> resolve_project(
         return out;
     };
 
-    if (sidecar_stem_conflict) {
-        // Two sidecar stems: two pieces claim one folder, and there is no
-        // honest way to choose between them.
-        const std::string a = std::min(sidecar_stem, sidecar_stem_other);
-        const std::string b = std::max(sidecar_stem, sidecar_stem_other);
-        return std::unexpected("Two sidecar stems in '" + name + "': '" + a +
-                               "' and '" + b + "'");
+    if (sidecar_stems.size() > 1) {
+        // Several sidecar stems: more than one piece claims one folder, and
+        // there is no honest way to choose between them. The whole sorted set
+        // is named — one spelling at every count above one, so the refusal
+        // reads the same on any filesystem.
+        std::string list;
+        for (size_t i = 0; i < sidecar_stems.size(); ++i) {
+            if (i) list += ", ";
+            list += "'" + sidecar_stems[i] + "'";
+        }
+        return std::unexpected("Several sidecar stems in '" + name + "': " +
+                               list);
     }
-    if (!sidecar_stem.empty()) {
+    if (!sidecar_stems.empty()) {
+        const std::string& sidecar_stem = sidecar_stems.front();
         // THE SIDECAR NAMES THE SOURCE. The wav must exist, and every OTHER
         // wav in the root is the legacy layout: an output that has not moved
         // into render/ yet.
@@ -169,29 +177,44 @@ std::expected<GuiProjectSource, std::string> startup_source(
     }
 
     // WITH AN ARGUMENT: the argument's folder must sit directly under the
-    // projects path, and the argument must be that folder's resolved source.
-    // The argument is taken weakly canonical so a symlinked or relative
-    // spelling still passes, and "directly under" is asked of the filesystem
-    // (std::filesystem::equivalent on the folder's parent and the projects
-    // path), so a trailing slash or a symlink in the config's spelling cannot
-    // fail a folder that really is there.
+    // projects path, and the argument must BE that folder's resolved source.
+    //
+    // BOTH QUESTIONS ARE ASKED OF THE SPELLING THE USER GAVE, and the second
+    // is asked BY FILESYSTEM IDENTITY. The folder is the ARGUMENT'S OWN
+    // parent — made absolute against the working directory and lexically
+    // normalized, which is spelling work only and follows no link — so
+    // "directly under the projects path" is a fact about where the user says
+    // the file is, not about where a symlink at that name happens to point.
+    // Then the source compare is std::filesystem::equivalent rather than a
+    // path compare, because the walk that resolved the folder followed links
+    // too (is_regular_file, above): a project's source may legitimately BE a
+    // symlink, and a canonicalized argument would then name the link's target,
+    // sit outside the projects path, and be refused as not a project source —
+    // the same file the picker opens without complaint. equivalent asks the
+    // one question that matters, whether the two spellings name the same file,
+    // and it refuses on its own when the argument names nothing at all.
+    // "Directly under" stays equivalent for its own reason: a trailing slash
+    // or a symlink in the CONFIG's spelling must not fail a folder that really
+    // is there.
     std::error_code ec;
-    const std::filesystem::path given(argument);
-    const std::filesystem::path given_canon =
-        std::filesystem::weakly_canonical(given, ec);
+    const std::filesystem::path spelled =
+        std::filesystem::absolute(std::filesystem::path(argument), ec)
+            .lexically_normal();
     auto refuse = [&]() {
         return std::unexpected(std::string(argument) +
                                " is not a project source under " +
                                projects_path.string());
     };
     if (ec) return refuse();
-    const std::filesystem::path folder = given_canon.parent_path();
+    const std::filesystem::path folder = spelled.parent_path();
     if (!std::filesystem::equivalent(folder.parent_path(), projects_path, ec) ||
         ec) {
         return refuse();
     }
     auto resolved = resolve_project(folder);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
-    if (resolved->source != given_canon) return refuse();
+    if (!std::filesystem::equivalent(spelled, resolved->source, ec) || ec) {
+        return refuse();
+    }
     return resolved;
 }

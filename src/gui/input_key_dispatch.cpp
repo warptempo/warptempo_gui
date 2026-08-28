@@ -5323,7 +5323,10 @@ void GuiInputHandler::open_project_editor_commit() {
     }
     if (project->name == app.project_name) {
         // Choosing the project that is open: nothing to reopen, the prompt
-        // simply closes.
+        // simply closes. NAME TO NAME on both sides — the model's resolved
+        // folder name here, and the same string assigned verbatim by the
+        // field's one producer there (AppState::project_name) — so the no-op
+        // cannot be missed by a link in the way of either spelling.
         open_project_editor_exit_no_commit();
         return;
     }

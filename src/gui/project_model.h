@@ -24,10 +24,11 @@
 // stem, and `<stem>.wav` must exist. A folder with NO sidecar at all is a NEW
 // project iff it holds EXACTLY ONE `.wav`: that wav is the source, and the
 // first open writes the template sidecars beside it as it always has. Every
-// other state is INVALID and says why, one sentence each: two sidecar stems;
-// no wav for the sidecar's stem; several wavs and no sidecar; no wav at all.
-// The settings `title=` is never consulted — a title names the RENDER, and the
-// sidecar stem is what names the piece.
+// other state is INVALID and says why, one sentence each: more than one sidecar
+// stem, the whole sorted set named so the words do not depend on the walk's
+// order; no wav for the sidecar's stem; several wavs and no sidecar; no wav at
+// all. The settings `title=` is never consulted — a title names the RENDER, and
+// the sidecar stem is what names the piece.
 //
 // A WAV IN THE ROOT THAT IS NOT THE SOURCE IS THE LEGACY LAYOUT. Outputs live
 // outside the project root (the deliverable in `render/`, the batch cells in
@@ -91,13 +92,22 @@ std::vector<std::string> enumerate_project_names(
 //     LOAD-LENIENT class and falls through SILENTLY: the program wrote the
 //     name, and the user removing or breaking the folder afterwards is a state
 //     ordinary use produces, not a hand edit of a program-written file.
-//   * WITH AN ARGUMENT (the laptop's `warptempo_gui <wav>`): the argument's
-//     parent must be a directory DIRECTLY under `projects_path` — compared on
-//     weakly canonical paths on both sides, so a symlinked or relative
-//     spelling still passes — and the argument must be that folder's RESOLVED
-//     source. Anything else refuses with the reason ("<path> is not a project
-//     source under <projects_path>", or the folder's own invalidity), exit 1.
-//     The launcher's "is this a source?" test lives here now, not in a shell
+//   * WITH AN ARGUMENT (the laptop's `warptempo_gui <wav>`): BOTH QUESTIONS
+//     ARE ASKED OF THE SPELLING GIVEN. The argument's OWN parent — made
+//     absolute and lexically normalized, spelling work that follows no link —
+//     must be a directory DIRECTLY under `projects_path`, which is asked of the
+//     filesystem (`std::filesystem::equivalent`) so a relative spelling, a
+//     trailing slash or a symlink in the config's own spelling still passes.
+//     And the argument must BE that folder's RESOLVED source BY FILESYSTEM
+//     IDENTITY (`equivalent` again, never a path compare): the walk above
+//     follows links when it asks `is_regular_file`, so a project's source may
+//     legitimately be a symlink, and identity is the only compare that accepts
+//     the same file the picker opens. A source symlinked from somewhere else
+//     is therefore a project; a spelling that reaches it from OUTSIDE the
+//     projects path is not that project's source road. Anything else refuses
+//     with the reason ("<path> is not a project source under
+//     <projects_path>", or the folder's own invalidity), exit 1. The
+//     launcher's "is this a source?" test lives here now, not in a shell
 //     script.
 //
 // The app always has a project open: there is no empty state and no picker

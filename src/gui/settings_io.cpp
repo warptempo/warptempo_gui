@@ -220,10 +220,29 @@ bool atomic_write_string_to_path(const std::string& path,
     return true;
 }
 
+std::expected<bool, std::string> sidecar_present(
+        const std::filesystem::path& p) {
+    std::error_code ec;
+    const bool here = std::filesystem::exists(p, ec);
+    if (ec) {
+        return std::unexpected("Cannot read '" + p.string() + "': " +
+                               ec.message());
+    }
+    return here;
+}
+
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
-    std::error_code ec;
-    if (std::filesystem::exists(p, ec)) return true;
+    auto here = sidecar_present(p);
+    if (!here) {
+        // The stat itself failed, so this road knows neither that the file is
+        // there nor that it is not; writing a template over an unreadable name
+        // is the one thing that could destroy something. Say so and write
+        // nothing — the strict reader that follows fails on the same name.
+        std::fprintf(stderr, "warptempo_gui: %s\n", here.error().c_str());
+        return false;
+    }
+    if (*here) return true;
     // First-open templates are written atomically so a crash cannot leave a
     // torn file that blocks future strict loads.
     if (!atomic_write_string_to_path(p.string(), contents)) {

@@ -1983,12 +1983,12 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
     // True when ANY text editor is consuming printable keys — the settings
-    // editor, the load editor, the commit-title editor, or the top-strip flag
+    // editor, the load editor, the commit-title editor, the measure
+    // paste-offset editor, the Open project prompt, or the top-strip flag
     // editor in ANY of its three kinds (unlike modal_dialog_editor_active,
-    // which names the five DIALOG-hosted surfaces — those first three plus the
-    // measure paste-offset editor and the flag editor's BpmBracket kind — and
-    // omits the FlagPayload and MeasureText kinds, both of which paint in the
-    // marker lane). The platform's
+    // which names the six DIALOG-hosted surfaces — those first five plus the
+    // flag editor's BpmBracket kind — and omits the FlagPayload and MeasureText
+    // kinds, both of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -3107,7 +3107,7 @@ private:
     //   a scrub still acts under an open one and the cursor must not lie about
     //   that. Its own BOX is the exception and not a refusal: that rect takes
     //   the caret press, so it answers Text (above) while everything around it
-    //   answers whatever the surface under the editor would. The five DIALOG
+    //   answers whatever the surface under the editor would. The six DIALOG
     //   modal editors DO refuse, because their veil really
     //   does swallow the press (modal_dialog_editor_active) — with the FIELD
     //   the one rect inside that veil which takes an act, and so the one thing

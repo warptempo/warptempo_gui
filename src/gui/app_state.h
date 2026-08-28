@@ -4129,11 +4129,18 @@ struct AppState {
     // the callers inventory at write_device_config, device_config.h.
     DeviceConfig* device_config = nullptr;
 
-    // THE OPEN PROJECT'S NAME — the source's parent folder's basename, the
-    // project model's own name for it (project_model.h), set by the load
-    // beside the window title. Read by the load-in-place prompt's label
-    // (`<projects_path>/<name>/tmp/`) and by the Open prompt's "already
-    // open" no-op.
+    // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the
+    // projects path that holds this source, which is what the project model
+    // calls the project (`GuiProjectSource::name`, project_model.h). It is that
+    // resolved name VERBATIM and never a path's basename recomputed from the
+    // source: a symlinked source or project folder would answer the link
+    // target's basename instead, and the two roads that name a project — this
+    // field and the Open prompt's typed folder name — have to be the same
+    // string for the prompt's "already open" no-op to hold. ONE PRODUCER,
+    // GuiFileLoader::load_file, which is handed the resolved project and
+    // assigns it here beside the window title; nothing else writes it. Read by
+    // the load-in-place prompt's label (`<projects_path>/<name>/tmp/`) and by
+    // that Open prompt no-op.
     std::string project_name;
 
     // THE REOPEN REQUEST: the project NAME the Open prompt chose, set by its

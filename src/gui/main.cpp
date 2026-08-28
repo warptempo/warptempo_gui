@@ -1319,8 +1319,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
-    std::string pending_initial_load = project.source.string();
-    bool        initial_load_done    = false;
+    bool initial_load_done = false;
 
     // -- Redraw -------------------------------------------------------------
 
@@ -1814,12 +1813,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // paints first (the compositor's initial configure / first frame only
         // land once run() is pumping). Gated on has_initial_configure() so the
         // load — and its loading notice — run against a mapped, painted surface.
-        if (!initial_load_done && !pending_initial_load.empty() &&
-            gui.has_initial_configure()) {
+        if (!initial_load_done && gui.has_initial_configure()) {
             initial_load_done = true;
-            const std::string p = std::move(pending_initial_load);
-            pending_initial_load.clear();
-            if (!file_loader.load_file(p)) {
+            // THE WHOLE RESOLVED PROJECT, not just its source path: the load
+            // takes the project's NAME from here rather than deriving one from
+            // the source's parent folder (the rule is at
+            // GuiFileLoader::load_file).
+            if (!file_loader.load_file(project)) {
                 // A project is opened by rebuilding this whole object set
                 // around it and there is no in-session replacement surface,
                 // so every load refusal is terminal. It is also the

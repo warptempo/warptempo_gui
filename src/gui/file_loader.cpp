@@ -11,13 +11,13 @@
 #include "marker_store_validate.h"   // first_past_eof_wall_defect
 
 #include "audio_probe.h"
+#include "wav_io.h"     // checked_audio_sample_count (the dry-run's allocation arm)
 
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <string>
-#include <system_error>
 #include <utility>
 
 void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
@@ -90,6 +90,18 @@ std::optional<std::string> source_load_dry_run(
         return std::to_string(info->channels) +
                " channels (stereo sources only)";
     }
+    // THE DECODER'S ALLOCATION ARM, ASKED OF THE PROBED SHAPE. The decode
+    // itself is deliberately not run here, but the predicate it would refuse
+    // on is a PURE SHAPE CHECK — frames times channels against the decoded
+    // float32 ceiling — and both numbers are already in hand, so the refusal
+    // that would otherwise arrive after the old session was torn down arrives
+    // at Enter instead. The same owner the read path calls (wav_io.h), so the
+    // words are the load's own.
+    if (auto samples = checked_audio_sample_count(info->frames,
+                                                  info->channels);
+        !samples) {
+        return "Source open failed for '" + path + "': " + samples.error();
+    }
 
     std::filesystem::path parent = source.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
@@ -97,31 +109,37 @@ std::optional<std::string> source_load_dry_run(
     const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
     const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
     const std::filesystem::path set_path = parent / (stem + ".settings");
-    std::error_code ec;
-    auto present = [&](const std::filesystem::path& p) {
-        return std::filesystem::is_regular_file(p, ec);
-    };
 
-    // The three strict readers, each on a file that exists — a missing one is
-    // what load_file will create from its template. Fresh stores and a fresh
-    // SettingsFile, discarded at the return.
+    // The three strict readers, each on a companion that is PRESENT by the one
+    // presence predicate the real load asks (sidecar_present, settings_io.h) —
+    // so a non-regular object wearing a sidecar's name is parsed and refused
+    // here exactly as the load would refuse it, and only a genuine absence is
+    // read as "the load will write the template" (a new project passes
+    // trivially). A stat that fails is its own refusal, in the system's words.
+    // Fresh stores and a fresh SettingsFile, discarded at the return.
     GuiWarpMarkers       warp;
     GuiPhaseResetMarkers phase_resets;
     SettingsTrim tab_a_trim;
     SettingsTrim tab_b_trim;
-    if (present(wm_path)) {
+    auto wm_here = sidecar_present(wm_path);
+    if (!wm_here) return wm_here.error();
+    if (*wm_here) {
         if (auto r = warp.load(wm_path.string()); !r) {
             return "Invalid warp markers in '" + wm_path.string() + "': " +
                    r.error();
         }
     }
-    if (present(tm_path)) {
+    auto tm_here = sidecar_present(tm_path);
+    if (!tm_here) return tm_here.error();
+    if (*tm_here) {
         if (auto r = phase_resets.load(tm_path.string()); !r) {
             return "Invalid phase reset markers in '" + tm_path.string() +
                    "': " + r.error();
         }
     }
-    if (present(set_path)) {
+    auto set_here = sidecar_present(set_path);
+    if (!set_here) return set_here.error();
+    if (*set_here) {
         auto sf = read_settings_file(set_path.string());
         if (!sf) {
             return "Invalid settings in '" + set_path.string() + "': " +
@@ -150,7 +168,8 @@ std::optional<std::string> source_load_dry_run(
     return std::nullopt;
 }
 
-bool GuiFileLoader::load_file(const std::string& path) {
+bool GuiFileLoader::load_file(const GuiProjectSource& project) {
+    const std::string path = project.source.string();
     // Opening the private peaks cache is a careless wrong-file slip, so it
     // refuses loudly at this earliest surface — a dismiss-only notice, no
     // load. It is never silently redirected to a guessed owner path:
@@ -283,43 +302,22 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
     // THE WINDOW TITLE IS THE PROJECT NAME (architect 2026-08-01, replacing the
-    // full source path + " - warptempo_gui"): the SOURCE'S PARENT FOLDER
-    // BASENAME — /path/to/K551/take3.wav shows "K551". The folder is what the
-    // architect calls the project, and it reads and versions better than either
-    // the audio filename or the output `title=` settings key (a different
-    // thing entirely: that one names the render). The " - warptempo_gui" tail and
-    // the dirty asterisk are composed by the title's owner,
-    // GuiPlatform::apply_window_title.
+    // full source path + " - warptempo_gui"): the name of the project's folder
+    // under the projects path — `<projects_path>/K551/take3.wav` shows "K551".
+    // The folder is what the architect calls the project, and it reads and
+    // versions better than either the audio filename or the output `title=`
+    // settings key (a different thing entirely: that one names the render). The
+    // " - warptempo_gui" tail and the dirty asterisk are composed by the
+    // title's owner, GuiPlatform::apply_window_title.
     //
-    // Derived off the CANONICAL path so a relative spelling ("take3.wav") or a
-    // symlink still resolves to the real containing folder. canonical() cannot
-    // fail here in practice (the file was just opened); on error the spelled
-    // path is the fallback, exactly as it was for the old path title.
-    //
-    // THE ADVERSARIAL ARM: a source with no meaningful parent folder — the
-    // filesystem root ("/song.wav", whose parent basename is empty) or a bare
-    // relative spelling that canonical() could not resolve (parent empty, or
-    // "." for "./song.wav") — has no project name to show, so it falls back to
-    // the source filename WITHOUT its extension. Nothing else can appear: a
-    // parent_path always yields either a real directory component here or one
-    // of those three degenerate spellings.
-    std::error_code title_ec;
-    const std::filesystem::path title_path =
-        std::filesystem::canonical(apath, title_ec);
-    const std::filesystem::path title_src =
-        title_ec ? std::filesystem::path(path) : title_path;
-    std::string project_name = title_src.parent_path().filename().string();
-    if (project_name.empty() || project_name == "/" || project_name == ".") {
-        project_name = title_src.stem().string();
-    }
-    gui.set_project_title(project_name);
-    // The same name, kept on AppState for the two prompts (the load-in-place
-    // label's `<projects_path>/<name>/tmp/` and the Open prompt's
-    // already-open no-op). Under the project model it IS the project folder's
-    // name — startup and the reopen both hand load_file a source directly
-    // under a project folder, so the adversarial arm above is unreachable
-    // there and kept only for the shape.
-    app.project_name = project_name;
+    // TAKEN FROM THE RESOLVED PROJECT, never derived from the source's parent:
+    // the model already answered which folder this is, and a derivation off the
+    // canonical source would answer the LINK TARGET's folder wherever a symlink
+    // is in the way — a name the user never chose, and one the Open prompt's
+    // already-open compare would then miss. This is the field's ONE producer
+    // (the statement is at AppState::project_name).
+    gui.set_project_title(project.name);
+    app.project_name = project.name;
 
     create_if_missing(wm_path, "0|1.00\n");
     // The empty file is the canonical blank phase reset sidecar: resets have

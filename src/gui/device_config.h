@@ -127,9 +127,12 @@ inline bool is_projects_path(const std::string& v) {
 }
 
 // THE last_project GRAMMAR — the ONE owner: EMPTY, or exactly ONE path
-// component — no `/`, not `.`, not `..`, no leading or trailing whitespace.
-// The name is otherwise verbatim, since a project folder may legitimately end
-// in any character. A separator or a dot-name is the ADVERSARIAL class and
+// component — no `/`, not `.`, not `..`, no leading or trailing ASCII
+// WHITESPACE (all six of it: space, tab, newline, carriage return, vertical
+// tab, form feed — spelled as a byte set here rather than asked of the locale,
+// which the rest of the grammar surface never consults either). The name is
+// otherwise verbatim, since a project folder may legitimately end in any other
+// character. A separator or a dot-name is the ADVERSARIAL class and
 // refuses at load like every other schema violation: the program writes this
 // key with one folder NAME, so a `/` or a `..` is a state its one producer
 // cannot make — and a name carrying a separator would compose a path that
@@ -143,7 +146,8 @@ inline bool is_last_project_name(const std::string& v) {
     if (v == "." || v == "..") return false;
     if (v.find('/') != std::string::npos) return false;
     auto is_ws = [](char c) {
-        return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+        return c == ' ' || c == '\t' || c == '\n' ||
+               c == '\v' || c == '\f' || c == '\r';
     };
     if (is_ws(v.front()) || is_ws(v.back())) return false;
     return true;

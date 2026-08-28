@@ -5,6 +5,7 @@
 #include "device_config.h"   // format_gui_scale_percent (the recall)
 
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -24,9 +25,23 @@ struct AppState;
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data);
 
+// SIDECAR PRESENCE IS ONE PREDICATE (the ONE owner). "Present" is EXISTS —
+// not "is a regular file": the load skips its template creation for anything
+// standing at a sidecar's name and then hands that name to the strict reader,
+// so a directory or a socket wearing `<stem>.settings` is a PARSE FAILURE and
+// not an absence, and the answer has to be the same on both roads that ask
+// (the real load's create_if_missing below, and source_load_dry_run's
+// pre-flight, file_loader.h) or the dry-run would approve a reopen the load
+// then refuses. A stat that FAILS is neither present nor absent: it answers
+// with the system's own words, never a silent "absent".
+std::expected<bool, std::string> sidecar_present(
+    const std::filesystem::path& p);
+
 // Ensure `p` exists with `contents`. If the file already exists, leave it
 // alone. Returns true on success or if file already exists. Failures are
-// non-fatal — the audio load still proceeds.
+// non-fatal — the audio load still proceeds: a stat that fails is reported and
+// nothing is written, and the strict reader that follows fails on the same
+// name with its own words.
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents);
 

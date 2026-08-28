@@ -831,10 +831,10 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the five DIALOG editors (settings / load / commit-title /
-    // measure paste-offset / BPM, painting in the centered modal dialog since
-    // 2026-08-12 — the field was `bottom_strip` while they lived on the status
-    // lane); false = the top-strip flag editor. Selects the claim region and
+    // true = one of the six DIALOG editors (settings / load / commit-title /
+    // measure paste-offset / Open project / BPM, painting in the centered modal
+    // dialog since 2026-08-12 — the field was `bottom_strip` while they lived on
+    // the status lane); false = the top-strip flag editor. Selects the claim region and
     // the repaint owner.
     bool                dialog       = false;
 };

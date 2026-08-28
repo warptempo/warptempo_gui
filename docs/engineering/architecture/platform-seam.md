@@ -158,7 +158,7 @@ drag coordinates floor instead of truncating.
 ## The on-screen keyboard
 
 The glass has no hardware keys, so the product paints its own (2026-08-27): a
-four-row Maliit-shaped surface standing while ANY OF THE SEVEN TEXT EDITORS
+four-row Maliit-shaped surface standing while ANY OF THE EIGHT TEXT EDITORS
 stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
 directly above the bottom row over the waveform area's lower part, whose every
 key press goes through `synthesize_key` into the ORDINARY key path — so the

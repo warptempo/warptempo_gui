@@ -153,6 +153,28 @@ void route_stdio_to_logcat() {
 // it before the second gui_main runs.
 android_app* g_android_app = nullptr;
 
+// FINISHING THE ACTIVITY IS ONE ACT, ASKED AT MOST ONCE PER ACTIVITY. Two
+// roads end this process and both must tear the activity down, or the glue is
+// left pumping a live activity with no loop behind it: the GUI's own quit
+// (GuiPlatform::request_exit) and a FATAL STARTUP REFUSAL that returns out of
+// gui_main before any GuiPlatform exists — a malformed device config, or no
+// project under the projects path (device_config.h, project_model.h). The
+// second road has no platform object to ask, so the ask lives here at file
+// scope beside the glue pointer, and android_main's tail takes it.
+// ANativeActivity_finish is not documented as idempotent, so the FLAG rather
+// than a second call is what makes the two roads safe to share: the first
+// asker wins and every later one is a no-op. Reset by android_main at entry —
+// the glue runs it again when an activity is destroyed and remade, and the new
+// activity has not been asked anything.
+bool g_activity_finish_asked = false;
+
+void finish_activity_once(android_app* app) {
+    if (g_activity_finish_asked) return;
+    if (!app || !app->activity) return;
+    g_activity_finish_asked = true;
+    ANativeActivity_finish(app->activity);
+}
+
 // ---------------------------------------------------------------------------
 // Damage coalescing — the Wayland backend's rule, spelled the same way
 // ---------------------------------------------------------------------------
@@ -684,8 +706,9 @@ void GuiPlatform::request_exit() {
     // ALSO ASK THE ACTIVITY TO GO. run() returning is only half of a quit
     // here: android_main returns into the glue, which would sit with a live
     // activity and no loop. finish() makes the system tear the activity down,
-    // which is what the user asked for when they pressed Quit.
-    if (app_ && app_->activity) ANativeActivity_finish(app_->activity);
+    // which is what the user asked for when they pressed Quit. Through the one
+    // asker (finish_activity_once above), which android_main's tail shares.
+    finish_activity_once(app_);
 }
 
 // ---------------------------------------------------------------------------
@@ -1611,6 +1634,10 @@ void android_main(android_app* app) {
     }
 
     g_android_app = app;
+    // A REMADE ACTIVITY HAS BEEN ASKED NOTHING: the glue runs this entry again
+    // when the system destroys and recreates the activity, so the previous
+    // one's ask is cleared here rather than carried into this one.
+    g_activity_finish_asked = false;
 
     install_fonts_or_die(app);
 
@@ -1636,8 +1663,21 @@ void android_main(android_app* app) {
 
     // NO ARGUMENT: the tablet has no command line, and what to open is the
     // project model's question, answered inside gui_main from the device
-    // config (startup_source, project_model.h).
+    // config (startup_source, project_model.h). It answers with a terminal
+    // line and a nonzero status when there is nothing to open, or when the
+    // device config is malformed — both before any GuiPlatform exists, so
+    // neither can have asked the activity to go, and the tail below is the
+    // only asker for them. On this platform the status itself carries nowhere:
+    // the line is already in logcat (the stdio routing is per process), and
+    // the activity going is the whole of what the user sees.
     gui_main(nullptr);
+
+    // WHATEVER ENDED THE GUI, THE ACTIVITY GOES WITH IT. A quit has already
+    // asked through GuiPlatform::request_exit and this call is the no-op the
+    // one asker makes it; a fatal startup refusal returned before there was a
+    // platform to ask, and this is its ask. Either way the glue is never left
+    // with a live activity and no loop behind it.
+    finish_activity_once(app);
 
     // The GUI is gone; unhook whatever it left and let the glue finish.
     app->onAppCmd     = nullptr;
