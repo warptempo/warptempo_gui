@@ -18,6 +18,7 @@
 
 #include "app_state.h"
 #include "async_renderer.h"
+#include "external_sync.h"
 #include "history_commit_worker.h"
 #include "history_prefetch.h"
 #include "audio.h"
@@ -1104,6 +1105,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             "exiting\n");
         return {1, {}};
     }
+    // THE SYNCHRONIZATION WORKER (2026-08-27): the File menu's Synchronize to
+    // external storage act mirrors the project's renders onto the mounted
+    // removable volume here instead of on the GUI thread, which a USB write
+    // would freeze for seconds. Single act in flight, completion delivered
+    // through its own eventfd below, and shutdown() JOINS an act in progress at
+    // the session's tail (the copies are already the user's intent). Fatal on a
+    // failed init like its four siblings.
+    GuiExternalSyncWorker external_sync_worker;
+    if (!external_sync_worker.init()) {
+        std::fprintf(stderr,
+            "warptempo_gui: Failed to start the synchronization worker; "
+            "exiting\n");
+        return {1, {}};
+    }
     // THE RENDER CACHE IS THE CALLER'S — the one per-process instance gui_main
     // constructs, inits and shuts down around the whole project loop (its
     // reasoning is there): target-view reuse, the archival reuse/publish
@@ -1164,6 +1179,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&history_commit_worker]() {
             history_commit_worker.on_completion_event();
         });
+    gui.set_sync_worker_completion_fd(external_sync_worker.completion_fd(),
+        [&external_sync_worker]() {
+            external_sync_worker.on_completion_event();
+        });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
                                   warpops, phase_resets, marker_drag,
@@ -1173,6 +1192,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   async_renderer,
                                   history_commit_worker,
                                   history_prefetch,
+                                  external_sync_worker,
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
@@ -2562,7 +2582,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     GuiProjectOutcome outcome;
     if (!gui.exit_requested()) outcome.reopen = app.reopen_project;
 
-    // THE TEARDOWN, in this order. The platform forgets the four worker fds
+    // THE TEARDOWN, in this order. The platform forgets the five worker fds
     // first — the workers close them below, and the next session registers
     // its own — then the audio device goes down before the sample buffer
     // goes out of scope.
@@ -2570,6 +2590,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.set_waveform_worker_completion_fd(-1, {});
     gui.set_history_worker_completion_fd(-1, {});
     gui.set_history_prefetch_completion_fd(-1, {});
+    gui.set_sync_worker_completion_fd(-1, {});
     // ON ANDROID THIS IS ONE STREAM STOP AND ONE START PER REOPEN: the AAudio
     // stream stays started between plays for the transient's sake, and a
     // reopen is the one moment it is torn down and brought back (the next
@@ -2588,6 +2609,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.
     history_prefetch.shutdown();
+    // Blocks on an in-flight synchronization rather than leaving a truncated
+    // wav on the volume; the copies are already the user's intent, so the wait
+    // costs a moment and never any work.
+    external_sync_worker.shutdown();
     // Everything else — the caches, the handlers, the callbacks' captured
     // objects — dies with this frame, in reverse construction order; the
     // window keeps the callbacks' std::function shells until the next session

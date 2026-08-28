@@ -6890,14 +6890,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // Nothing greys now: that menu and its predicate are deleted.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
-        // THE ONE ROW WITH NO CHORD (GuiPopupAct::OpenProject, the File
-        // menu's Open): no key binds it, so the release calls the opener
-        // directly, and the opener carries the gates a chord would have met
-        // in its own body — the modal refusals, the `h` view, the loading
-        // state (open_project_editor's declaration). Still CLOSE FIRST, THEN
-        // ACT, for the reason above.
+        // THE TWO ROWS WITH NO CHORD (the File menu's Open and Synchronize to
+        // external storage): no key binds either, so the release calls the act
+        // directly, and each act carries the gates a chord would have met in
+        // its own body — the modal refusals, the `h` view, the loading state
+        // (open_project_editor's and synchronize_to_external_storage's
+        // declarations). Still CLOSE FIRST, THEN ACT, for the reason above.
         if (it.act == GuiPopupAct::OpenProject) {
             open_project_editor();
+            return true;
+        }
+        if (it.act == GuiPopupAct::SyncExternal) {
+            synchronize_to_external_storage();
             return true;
         }
         GuiInputState chord{};

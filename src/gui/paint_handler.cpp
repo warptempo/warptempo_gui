@@ -3342,11 +3342,14 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // rules per menu — which is exactly what let the FILE menu land in 2026-08-13
     // with an accelerator column and no edit in this body at all.
     //
-    // The authored minimum applies to both — it is the item box's floor,
-    // the reason a menu of short labels still reads as a menu, and it is what
-    // gives the one-row FILE menu its width. (The deleted NAVIGATION menu's
-    // long labels simply never reached it, which is how the floor and the
-    // derived column were shown to compose.)
+    // The authored minimum applies to both — it is the item box's floor and the
+    // reason a menu of short labels still reads as a menu. It gave the FILE
+    // menu its whole width while its rows were short, and stopped doing so on
+    // 2026-08-27, when "Synchronize to external storage" made that menu the
+    // widest in the product; the expression is unchanged either way, the floor
+    // and the shaped run simply trading which one wins. (The deleted NAVIGATION
+    // menu's long labels never reached the floor either, which is how the two
+    // were shown to compose.)
     const int pad_l    = scaled_px(kPopupLabelIndentPx);
     const int gap      = scaled_px(kPopupHotkeyGapPx);
     const int pad_r    = scaled_px(kPopupPadRightPx);

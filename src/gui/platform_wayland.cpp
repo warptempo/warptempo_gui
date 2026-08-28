@@ -1,6 +1,7 @@
 #include "platform_wayland.h"
 
-#include "render.h"   // kMinWindowWidthPx / kMinWindowHeightPx
+#include "external_sync.h"   // sole_removable_volume, the volume rule's shared half
+#include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
 #include <wayland-cursor.h>
@@ -11,6 +12,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include <linux/input-event-codes.h>
+#include <pwd.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
 #include <fcntl.h>
@@ -33,7 +35,7 @@
 // Run-loop architecture
 //
 // The run loop is built on a single poll() that waits indefinitely on the
-// wl_display fd, the idle/playback timerfd, and the two optional renderer
+// wl_display fd, the idle/playback timerfd, and the five optional worker
 // completion eventfds. The timer interval tracks the bound single output's
 // current refresh half-period (2x vblank oversample), falling back to 60 Hz
 // while no output mode is known. The poll wakes on whichever fd becomes
@@ -609,6 +611,32 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     return cfg;
+}
+
+// THE LAPTOP'S REMOVABLE VOLUME (the contract is at the declaration). The
+// desktop session's udisks mounts every stick under `/run/media/<user>/`, one
+// directory per volume, so the whole rule is "the one directory there" — no
+// /proc/mounts parse, no filesystem-type test, no label. `<user>` is the
+// effective user's own name (getpwuid, the answer the mount point was built
+// from) with `$USER` as the fallback spelling; a machine that can name neither
+// has no `/run/media/<user>` to look in, which is the same nothing as an empty
+// one and gets the same sentence.
+//
+// THE LABEL IS NEVER CONSULTED. The architect's stick is `SANDISK` here and
+// `067C-8690` on the tablet — one physical stick, two names, and the product
+// reads neither: it is simply the one removable volume.
+std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume() {
+    std::string user;
+    if (const struct passwd* pw = ::getpwuid(::geteuid());
+        pw && pw->pw_name && pw->pw_name[0]) {
+        user = pw->pw_name;
+    } else if (const char* env = std::getenv("USER"); env && env[0]) {
+        user = env;
+    }
+    if (user.empty())
+        return std::unexpected(std::string("No removable volume mounted"));
+    return sole_removable_volume(std::filesystem::path("/run/media") / user,
+                                 /*excluded=*/{});
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {
@@ -1461,10 +1489,11 @@ void GuiPlatform::run() {
 
         // pfds[2] is the async-render completion eventfd; pfds[3] is the
         // waveform-worker completion eventfd; pfds[4] is the checkpoint
-        // worker's; pfds[5] is the history prefetch's ready signal. When no fd
-        // is registered (fd == -1), events=0 so poll() ignores the slot —
-        // same trick used for "watch only when we care."
-        struct pollfd pfds[6];
+        // worker's; pfds[5] is the history prefetch's ready signal; pfds[6] is
+        // the synchronization worker's. When no fd is registered (fd == -1),
+        // events=0 so poll() ignores the slot — same trick used for "watch only
+        // when we care."
+        struct pollfd pfds[7];
         pfds[0].fd     = wl_display_get_fd(wl_display_);
         pfds[0].events = POLLIN;
         pfds[0].revents = 0;
@@ -1483,8 +1512,11 @@ void GuiPlatform::run() {
         pfds[5].fd     = history_prefetch_completion_fd_;
         pfds[5].events = (history_prefetch_completion_fd_ >= 0) ? POLLIN : 0;
         pfds[5].revents = 0;
+        pfds[6].fd     = sync_worker_completion_fd_;
+        pfds[6].events = (sync_worker_completion_fd_ >= 0) ? POLLIN : 0;
+        pfds[6].revents = 0;
 
-        int n = poll(pfds, 6, -1);
+        int n = poll(pfds, 7, -1);
 
         if (n < 0) {
             if (errno == EINTR) {
@@ -1566,8 +1598,17 @@ void GuiPlatform::run() {
             }
         }
 
+        if (sync_worker_completion_fd_ >= 0 &&
+            (pfds[6].revents & POLLIN)) {
+            uint64_t cnt = 0;
+            (void)read(sync_worker_completion_fd_, &cnt, sizeof(cnt));
+            if (on_sync_worker_completion_) {
+                on_sync_worker_completion_();
+            }
+        }
+
         // THE ITERATION HAS SETTLED. Everything this pass dispatched is above:
-        // the display's events, the tick, and all four worker events. A loop
+        // the display's events, the tick, and all five worker events. A loop
         // boundary is by definition after every write any of them made, which is
         // what lets a consumer here derive an answer without knowing who wrote
         // what — the reason this hook exists at all is stated at its setter.
@@ -2757,6 +2798,10 @@ void GuiPlatform::set_history_worker_completion_fd(int fd, std::function<void()>
 void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void()> on_event) {
     history_prefetch_completion_fd_ = fd;
     on_history_prefetch_ready_      = std::move(on_event);
+}
+void GuiPlatform::set_sync_worker_completion_fd(int fd, std::function<void()> on_event) {
+    sync_worker_completion_fd_ = fd;
+    on_sync_worker_completion_ = std::move(on_event);
 }
 
 // ---------------------------------------------------------------------------

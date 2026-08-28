@@ -1,8 +1,9 @@
 #include "platform_android.h"
 
+#include "external_sync.h"   // sole_removable_volume, the volume rule's shared half
 #include "gui_font.h"
 #include "gui_main.h"
-#include "render.h"   // kRedesignContentGround, the band fill
+#include "render.h"          // kRedesignContentGround, the band fill
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -286,12 +287,13 @@ constexpr int kStatusBarAirPx = 14;
 // ---------------------------------------------------------------------------
 
 // LOOPER_ID_MAIN (1) and LOOPER_ID_INPUT (2) are the glue's; everything from
-// LOOPER_ID_USER (3) up is ours. The four worker slots are contiguous so the
+// LOOPER_ID_USER (3) up is ours. The five worker slots are contiguous so the
 // dispatch can index them, and the ORDER they are dispatched in is the Wayland
-// loop's order (async renderer, waveform, checkpoint, prefetch).
+// loop's order (async renderer, waveform, checkpoint, prefetch,
+// synchronization).
 constexpr int kIdentTimer   = LOOPER_ID_USER;       // 3
-constexpr int kIdentWorker0 = LOOPER_ID_USER + 1;   // 4..7
-constexpr int kWorkerCount  = 4;
+constexpr int kIdentWorker0 = LOOPER_ID_USER + 1;   // 4..8
+constexpr int kWorkerCount  = 5;
 
 } // namespace
 
@@ -371,6 +373,22 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     return cfg;
+}
+
+// THE TABLET'S REMOVABLE VOLUME (the contract is at the declaration). Android
+// mounts every external volume under `/storage/`, one directory each, beside
+// exactly two entries that are not volumes: `emulated`, the app-visible view
+// of the device's own internal storage, and `self`, the per-process mount
+// namespace's own link. Excluding those two, what is left IS the removable
+// volumes, and the rule is "the one directory there" — no vold query, no JNI
+// call into StorageManager, no filesystem-type test.
+//
+// THE UUID IS NEVER CONSULTED: the architect's stick is `067C-8690` here and
+// `SANDISK` on the laptop, one physical stick with two names the product reads
+// neither of.
+std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume() {
+    return sole_removable_volume(std::filesystem::path("/storage"),
+                                 /*excluded=*/{"emulated", "self"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {
@@ -675,10 +693,12 @@ void GuiPlatform::shutdown() {
     unwatch_fd(waveform_worker_completion_fd_);
     unwatch_fd(history_worker_completion_fd_);
     unwatch_fd(history_prefetch_completion_fd_);
+    unwatch_fd(sync_worker_completion_fd_);
     worker_completion_fd_           = -1;
     waveform_worker_completion_fd_  = -1;
     history_worker_completion_fd_   = -1;
     history_prefetch_completion_fd_ = -1;
+    sync_worker_completion_fd_      = -1;
     destroy_backbuffer();
     window_ = nullptr;
     app_    = nullptr;
@@ -1015,7 +1035,8 @@ void GuiPlatform::drain_looper(int timeout_ms) {
             const int fds[kWorkerCount] = {worker_completion_fd_,
                                            waveform_worker_completion_fd_,
                                            history_worker_completion_fd_,
-                                           history_prefetch_completion_fd_};
+                                           history_prefetch_completion_fd_,
+                                           sync_worker_completion_fd_};
             if (fds[slot] >= 0) {
                 uint64_t cnt = 0;
                 (void)read(fds[slot], &cnt, sizeof(cnt));
@@ -1043,7 +1064,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *   1. the window-system sources, drained to empty (drain_looper);
  *   2. the TICK: on_tick_ then input_.tick(), in that order — the core's own
  *      fixed order (key repeat, then the touch window) is inside tick();
- *   3. the four worker completions, in registration order;
+ *   3. the five worker completions, in registration order;
  *   4. the loop-settled hook, at the tail, so it observes the pass's FULLY
  *      settled state;
  *   5. paint-if-dirty.
@@ -1083,7 +1104,8 @@ void GuiPlatform::pump() {
             case 0: if (on_worker_completion_)          on_worker_completion_();          break;
             case 1: if (on_waveform_worker_completion_) on_waveform_worker_completion_(); break;
             case 2: if (on_history_worker_completion_)  on_history_worker_completion_();  break;
-            default: if (on_history_prefetch_ready_)    on_history_prefetch_ready_();     break;
+            case 3: if (on_history_prefetch_ready_)     on_history_prefetch_ready_();     break;
+            default: if (on_sync_worker_completion_)    on_sync_worker_completion_();     break;
         }
     }
 
@@ -1466,6 +1488,12 @@ void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void(
     history_prefetch_completion_fd_ = fd;
     on_history_prefetch_ready_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 3);
+}
+void GuiPlatform::set_sync_worker_completion_fd(int fd, std::function<void()> on_event) {
+    unwatch_fd(sync_worker_completion_fd_);
+    sync_worker_completion_fd_ = fd;
+    on_sync_worker_completion_ = std::move(on_event);
+    watch_fd(fd, kIdentWorker0 + 4);
 }
 
 // -- The input doors: every one of them is the core's, forwarded --

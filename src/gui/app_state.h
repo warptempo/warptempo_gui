@@ -2906,12 +2906,15 @@ inline constexpr int kSettingsPopupItemCount =
 // WHAT A COMMAND ROW DISPATCHES. `Chord` is the standing model — THE ITEM IS
 // ITS KEY, dispatched through on_key so every keyboard gate applies (the rule
 // is stated at kFilePopupItems and at the release body,
-// finish_dropdown_release). `OpenProject` is the one row with NO chord: File →
-// Open has no keyboard binding (architect 2026-08-27, a chord left for later),
-// so its release calls the opener directly, and the opener carries the gates a
-// chord would have met — the modal refusals, the `h` view's allowlist, the
-// loading state — in its own body.
-enum class GuiPopupAct : uint8_t { Chord, OpenProject };
+// finish_dropdown_release). THE OTHER TWO ARE THE ROWS WITH NO CHORD, both the
+// File menu's: `OpenProject` (File → Open) and `SyncExternal` (File →
+// Synchronize to external storage) have no keyboard binding at all — Open's
+// was left for later and the sync act's was refused outright (architect
+// 2026-08-27: Ctrl+Alt+Shift+R keeps its current meaning, and the act gets a
+// menu row instead of a chord) — so each one's release calls its own act
+// directly, and each act carries the gates a chord would have met — the modal
+// refusals, the `h` view's allowlist, the loading state — in its own body.
+enum class GuiPopupAct : uint8_t { Chord, OpenProject, SyncExternal };
 
 struct CommandPopupItem {
     const char* label;
@@ -2924,17 +2927,26 @@ struct CommandPopupItem {
     GuiPopupAct act = GuiPopupAct::Chord;
 };
 
-// THE FILE DROPDOWN'S ITEMS — TWO ROWS since 2026-08-27, in two categories
+// THE FILE DROPDOWN'S ITEMS — THREE ROWS since 2026-08-27, in two categories
 // over one separator: **Open** first (architect 2026-08-27, the project
 // model's one pointer home on both platforms — the picker is this prompt and
-// nothing else), then **Quit** (architect 2026-08-13, the standard home for it
-// and where kdenlive keeps it). Save and Render stay the icon row's, and the
-// menu is deliberately minimal. The separator parts the two categories, an
-// open from an exit, exactly as kdenlive's own File menu does.
+// nothing else) and **Synchronize to external storage** under it (architect
+// 2026-08-27, the deliverable and the batch cells mirrored onto the one
+// mounted removable volume — the act is external_sync.h's and this row is its
+// ONLY road, on either platform), then **Quit** (architect 2026-08-13, the
+// standard home for it and where kdenlive keeps it). Save and Render stay the
+// icon row's, and the menu is deliberately minimal. The separator parts the
+// two categories, the two acts on the project from an exit, exactly as
+// kdenlive's own File menu does.
 //
-// OPEN HAS NO CHORD and no accelerator text: it is the one GuiPopupAct::
-// OpenProject row, its release calling GuiInputHandler::open_project_editor
-// directly (a keyboard binding is deferred, not refused). QUIT IS ITS CHORD:
+// NEITHER OF THE FIRST TWO HAS A CHORD or an accelerator text: they are the two
+// non-`Chord` GuiPopupAct rows, their releases calling
+// GuiInputHandler::open_project_editor and
+// GuiInputHandler::synchronize_to_external_storage directly. Open's keyboard
+// binding is DEFERRED; the sync act's is REFUSED — the architect kept
+// Ctrl+Alt+Shift+R's current meaning and gave the act a menu row instead, so
+// there is no chord to add later without taking one from the render family.
+// QUIT IS ITS CHORD:
 // Ctrl+Q dispatched through on_key, so the drag-modal hatch, the dirty prompt
 // and the WM-close ordering are the keyboard route's own with no second body.
 // Ctrl+Q is on the history view's own allowlist, so that row works inside the
@@ -2951,9 +2963,9 @@ struct CommandPopupItem {
 // spelling convention is "modifiers spelled out with `+`", which "Ctrl+Q" is;
 // the convention's OTHER half — a bare letter written UPPERCASE — has no
 // instance left in the product and is recorded at RedesignTooltipText, where it
-// used to be contrasted with the tooltips' lowercase rule. The Open row
-// carries no hotkey text, which the painter reads per row (a null hotkey
-// paints no accelerator on that row alone).
+// used to be contrasted with the tooltips' lowercase rule. The Open and
+// Synchronize rows carry no hotkey text, which the painter reads per row (a
+// null hotkey paints no accelerator on that row alone).
 //
 // AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE, with NO EXCEPTION since
 // 2026-08-15: a command that cannot act right now still dispatches and its own
@@ -2977,6 +2989,8 @@ struct CommandPopupItem {
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open", nullptr,  0,          false, false, false, false,
      GuiPopupAct::OpenProject},
+    {"Synchronize to external storage", nullptr, 0, false, false, false, false,
+     GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
 inline constexpr int kFilePopupItemCount =

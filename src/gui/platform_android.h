@@ -4,6 +4,8 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <expected>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -13,7 +15,7 @@
 // presentation — THE ANDROID BACKEND, the glass half of the seam whose other
 // implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
-// and the four worker eventfds to it, paints cairo into a persistent ARGB32
+// and the five worker eventfds to it, paints cairo into a persistent ARGB32
 // backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer
 // AT THE CONTENT RECT'S ORIGIN (the window the GUI sees is the band inside the
 // system bars; the rule and its two translation points are at origin_x_).
@@ -32,7 +34,12 @@
 // per-device preferences file (device_config.h) needs a first-run template only
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
-// is the one portable body driving either (the loop contract, platform.h). The
+// is the one portable body driving either (the loop contract, platform.h). It
+// grew twice more the same day, both on both sides: removable_volume(), the
+// Synchronize to external storage act's destination — a platform fact like the
+// config template, since where a machine mounts a stick is an answer only the
+// backend has — and set_sync_worker_completion_fd, that act's worker taking
+// the loop's fifth watched eventfd beside the other four. The
 // seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
 // input_handler) include platform.h and compile against either backend
@@ -99,6 +106,27 @@ public:
     // private internal directory by android_main before gui_main runs, beside
     // the cache home it has always set.
     static DeviceConfig device_config_defaults();
+
+    // THE ONE MOUNTED REMOVABLE VOLUME, the seam's own member (contract at
+    // platform_wayland.h, which owns it): the Synchronize to external storage
+    // act's destination, FOUND AND NEVER CONFIGURED.
+    //
+    // THE WHOLE VOLUME RULE ON THIS BACKEND: the one DIRECTORY under
+    // `/storage/` that is not `emulated` (the app-visible view of the device's
+    // own internal storage) and not `self` (the per-process mount namespace's
+    // own link). What is left is exactly the mounted removable volumes, one
+    // directory each — today `/storage/067C-8690`. ZERO entries and SEVERAL
+    // entries both refuse with their own sentence, the shared half's
+    // (sole_removable_volume, external_sync.h).
+    //
+    // THE UUID IS NEVER CONSULTED, as the laptop's label is not: the same
+    // physical stick is `067C-8690` here and `SANDISK` there, and "the one
+    // removable volume" is the whole identity the product has of it. Reading
+    // its contents needs the All-files permission (MANAGE_EXTERNAL_STORAGE);
+    // this listing does not, and a volume the app may see but not write
+    // reports the refusal at the first copy, with the path and the system's
+    // own words.
+    static std::expected<std::filesystem::path, std::string> removable_volume();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-locked with no titlebar, so both setters store nothing and
@@ -284,6 +312,9 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
+    // And the SEVENTH, the Synchronize to external storage act's worker.
+    void set_sync_worker_completion_fd(int fd, std::function<void()> on_event);
+
     // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS -------------------------
     //
     // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Android answers YES,
@@ -428,7 +459,7 @@ private:
     // completion that arrive mid-drain are recorded here and dispatched at the
     // pass's tail, after the window-system sources are empty.
     bool timer_fired_ = false;
-    bool worker_fired_[4] = {false, false, false, false};
+    bool worker_fired_[5] = {false, false, false, false, false};
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
@@ -453,6 +484,10 @@ private:
     // History-prefetch ready fd. Same lifetime story again.
     int  history_prefetch_completion_fd_ = -1;
     std::function<void()> on_history_prefetch_ready_;
+
+    // Synchronization-worker completion fd. Same lifetime story again.
+    int  sync_worker_completion_fd_ = -1;
+    std::function<void()> on_sync_worker_completion_;
 
     // -- The clipboard's one payload (see clipboard_set_text) --
     std::string clipboard_text_;

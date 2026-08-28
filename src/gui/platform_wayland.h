@@ -4,6 +4,8 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <expected>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
@@ -60,6 +62,24 @@ public:
     // the GUI proper free of the `#ifdef` the alternative would need. STATIC because it is asked before any window
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
+
+    // THE ONE MOUNTED REMOVABLE VOLUME (architect 2026-08-27) — the
+    // Synchronize to external storage act's destination, FOUND AND NEVER
+    // CONFIGURED. It is a PLATFORM FACT and lives on the seam for
+    // device_config_defaults()'s own reason: where a machine mounts a stick is
+    // an answer only the backend has. STATIC for symmetry with that one; it
+    // needs no window either.
+    //
+    // THE WHOLE VOLUME RULE ON THIS BACKEND: the one DIRECTORY entry under
+    // `/run/media/<user>/`, the udisks mount point the desktop session uses,
+    // with `<user>` taken from getpwuid(geteuid()) and `$USER` as the fallback
+    // spelling. ZERO entries and SEVERAL entries both refuse, each with its own
+    // sentence; nothing is ranked, remembered or preferred. THE LABEL IS NEVER
+    // CONSULTED — the architect's stick mounts as `/run/media/b/SANDISK` here
+    // and as `/storage/067C-8690` on the tablet, and it is the same physical
+    // stick: "the one removable volume" is the whole identity the product has
+    // of it, so neither the label nor the UUID is a fact this program reads.
+    static std::expected<std::filesystem::path, std::string> removable_volume();
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui" clean, "K551 * - warptempo_gui" with unsaved work.
@@ -414,6 +434,12 @@ public:
     void set_history_prefetch_completion_fd(int fd,
                                             std::function<void()> on_event);
 
+    // And the SEVENTH, the Synchronize to external storage act's worker
+    // (2026-08-27). The poll set grows a seventh pollfd; on POLLIN the loop
+    // reads the counter and invokes this callback (routes to
+    // GuiExternalSyncWorker::on_completion_event).
+    void set_sync_worker_completion_fd(int fd, std::function<void()> on_event);
+
     // -- THE ON-SCREEN KEYBOARD'S TWO SEAM MEMBERS (2026-08-27) ------------
     //
     // DOES THIS PLATFORM WANT THE GUI TO PAINT A KEYBOARD? Wayland answers
@@ -574,6 +600,11 @@ private:
     // worker is registered.
     int  history_prefetch_completion_fd_ = -1;
     std::function<void()> on_history_prefetch_ready_;
+
+    // Synchronization-worker completion fd. Same lifetime story again; -1 when
+    // no synchronization worker is registered.
+    int  sync_worker_completion_fd_ = -1;
+    std::function<void()> on_sync_worker_completion_;
 
     // -- The system clipboard (the CLIPBOARD selection) --
     // The device is created against the seat, so it is recreated when a seat

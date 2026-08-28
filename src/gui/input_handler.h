@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
+#include "external_sync.h"
 #include "flag_editor.h"
 #include "history_commit_worker.h"
 #include "history_prefetch.h"
@@ -774,6 +775,11 @@ struct GuiInputHandler {
     // owns the three kick sites' one funnel — kick_history_prefetch, which is
     // also what defers a kick that would land while the view stands.
     GuiHistoryPrefetch&      history_prefetch;
+    // The Synchronize to external storage act's background worker
+    // (2026-08-27). ONE user: synchronize_to_external_storage, which
+    // dispatches the captured job onto it; the completion comes back through
+    // main.cpp's eventfd wiring into on_external_sync_complete.
+    GuiExternalSyncWorker&   external_sync_worker;
     GuiPlaybackLifecycle&    playback_lifecycle;
     GuiSaveOps&              save_ops;
     GuiPrompt&               prompt;
@@ -895,6 +901,7 @@ struct GuiInputHandler {
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
                     GuiHistoryPrefetch&      history_prefetch_,
+                    GuiExternalSyncWorker&   external_sync_worker_,
                     GuiPlaybackLifecycle&    playback_lifecycle_,
                     GuiSaveOps&              save_ops_,
                     GuiPrompt&               prompt_,
@@ -919,6 +926,7 @@ struct GuiInputHandler {
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
           history_prefetch(history_prefetch_),
+          external_sync_worker(external_sync_worker_),
           playback_lifecycle(playback_lifecycle_),
           save_ops(save_ops_),
           prompt(prompt_),
@@ -2480,8 +2488,8 @@ private:
     // (project_model.h), built when the prompt opens and never kept fresh.
     //
     // open_project_editor: the opener, reached from ONE place — the File
-    // menu's Open row (finish_dropdown_release, the one GuiPopupAct::
-    // OpenProject item; no keyboard chord binds it). Refuses silently, without
+    // menu's Open row (finish_dropdown_release, the GuiPopupAct::OpenProject
+    // item; no keyboard chord binds it). Refuses silently, without
     // touching playback, while a prompt or any editor stands, in the `h`
     // history view (the allowlist's own answer for a dialog open), and during
     // a load; stops playback through the shared modal stop only once the
@@ -2517,6 +2525,39 @@ private:
     void open_project_editor_commit();
     void open_project_editor_exit_no_commit();
     bool handle_open_project_editor_key(GuiKey key, GuiInputState mods);
+
+    // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — the File menu's
+    // other chordless act, reached from ONE place, the menu's own row
+    // (finish_dropdown_release, the GuiPopupAct::SyncExternal item; NO KEYBOARD
+    // CHORD BINDS IT and none is deferred — Ctrl+Alt+Shift+R keeps its current
+    // meaning). WHAT it mirrors onto the volume, and the mirror's own scope and
+    // order, are stated whole at external_sync.h; WHERE the volume is, is the
+    // seam's (GuiPlatform::removable_volume). What is here is the act's GUI
+    // half.
+    //
+    // synchronize_to_external_storage: the opener. It refuses silently, without
+    // touching playback, while a prompt or any editor stands, in the `h`
+    // history view and during a load — the Open row's own three gates, mirrored
+    // because a menu row's refusals are the menu's, not the act's — and it
+    // refuses with no source loaded, having nothing to mirror. It is LEGAL ON A
+    // READ-ONLY TAB (it authors nothing: it reads two output folders and writes
+    // outside the project entirely) and STOPS NO PLAYBACK (the act is silent
+    // and changes no audio; nothing about the sound is different while it
+    // runs). A SECOND ACT WHILE ONE RUNS is a consumed no-op that says so on
+    // the status line — the checkpoint act's single-in-flight shape, answered
+    // in words rather than with a grey, since a menu item never greys. Then the
+    // volume: its refusal is that same status line and the act ends there.
+    // Otherwise the job is captured whole by value — the volume, the project
+    // name, the deliverable's composed path and the batch root — the status
+    // line says the act has started, and the worker takes it.
+    // on_external_sync_complete: the verdict, back on the main thread through
+    // main.cpp's eventfd wiring. It writes the worker's own sentence to the
+    // status line and nothing else. A FAILURE IS A STATUS LINE ONLY and never
+    // the permanent critical chip: that chip is the checkpoint act's, whose
+    // failure leaves the repository in a state only the terminal can fix, while
+    // a failed synchronization is retried by pressing the row again.
+    void synchronize_to_external_storage();
+    void on_external_sync_complete(GuiExternalSyncOutcome outcome);
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the load editor's exact
     // pattern for the history view's OTHER act. Ctrl+S while the view

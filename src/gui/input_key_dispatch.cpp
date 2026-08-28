@@ -9,6 +9,9 @@
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
 #include "project_model.h"   // resolve_project / enumerate_project_names
 #include "prompt.h"          // GuiCloseTarget (the Open prompt's reopen)
+#include "render_output_naming.h"  // the deliverable's path, composed as a
+                                   // render composes it (the sync act)
+#include "renders_dir.h"     // project_batch_root (the sync act's batch root)
 #include "history_diff.h"
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
@@ -5347,6 +5350,74 @@ void GuiInputHandler::open_project_editor_commit() {
     open_project_editor_exit_no_commit();
     app.reopen_project = project->name;
     prompt.request_close(GuiCloseTarget::Reopen);
+}
+
+// -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
+
+// The act's GUI half: the gates, the volume, the capture, the dispatch. It is
+// reached from the File menu's Synchronize row alone, whose release has
+// already closed the popup.
+void GuiInputHandler::synchronize_to_external_storage() {
+    // The Open row's own three gates, mirrored: a menu row's refusals belong
+    // to the menu, not to the act. Each returns without touching playback —
+    // and neither does the act itself, which is silent and changes no audio.
+    if (app.prompt.active || keyboard_modal_editor_active()) return;
+    if (app.history_mode.active) return;
+    if (app.loading) return;
+    // Nothing loaded is nothing to mirror.
+    if (app.source_audio_path.empty() || app.project_name.empty()) return;
+
+    auto report = [&](std::string line) {
+        app.transient_status_message = std::move(line);
+        viewport.invalidate_status_chain_area();
+    };
+
+    // SINGLE ACT IN FLIGHT, answered in words: the menu item never greys (the
+    // standing rule at kFilePopupItems), so a second row press while one act
+    // runs is a consumed no-op that says which one it was.
+    if (external_sync_worker.is_busy()) {
+        report("Synchronization already running");
+        return;
+    }
+
+    // THE VOLUME IS THE SEAM'S ANSWER and its refusal is the act's whole
+    // ending: zero mounted and several mounted each say so and nothing is
+    // written (GuiPlatform::removable_volume).
+    const std::expected<std::filesystem::path, std::string> volume =
+        GuiPlatform::removable_volume();
+    if (!volume) {
+        report(volume.error());
+        return;
+    }
+
+    // THE JOB, captured whole by value on this thread. The deliverable's path
+    // is composed exactly as a render composes it (the parser's one owner), so
+    // the file the act looks for is the file Ctrl+Alt+R writes; an absent one
+    // is simply not in the set. The batch root is the GUI's own owner's.
+    GuiExternalSyncJob job;
+    job.volume       = *volume;
+    job.project_name = app.project_name;
+    job.deliverable  = compose_render_output_path(
+        render_output_directory(app.source_audio_path),
+        render_output_stem(app.engine_settings));
+    job.batch_root   = project_batch_root(app.source_audio_path);
+
+    report("Synchronizing to " + volume->string() + "...");
+    external_sync_worker.dispatch(
+        std::move(job),
+        [this](GuiExternalSyncOutcome outcome) {
+            on_external_sync_complete(std::move(outcome));
+        });
+}
+
+// The verdict, back on the main thread (the platform's completion eventfd,
+// main.cpp's wiring). The worker composed the sentence; this writes it to the
+// status line and does nothing else — a failure is a status line only, never
+// the permanent critical chip, the reason being at the declaration.
+void GuiInputHandler::on_external_sync_complete(
+        GuiExternalSyncOutcome outcome) {
+    app.transient_status_message = std::move(outcome.message);
+    viewport.invalidate_status_chain_area();
 }
 
 bool GuiInputHandler::handle_open_project_editor_key(GuiKey key,

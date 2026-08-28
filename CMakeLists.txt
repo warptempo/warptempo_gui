@@ -150,6 +150,12 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/flag_editor.cpp
     src/gui/renders_dir.cpp
     src/gui/save_ops.cpp
+    # GUI-ONLY: Synchronize to external storage — the mirror onto the one
+    # mounted removable volume and the thread that writes it. warptempo_cli
+    # renders and never publishes, so like the history unit above it is
+    # deliberately in none of the four shared per-directory source lists. It
+    # needs nothing beyond the C++ standard library and POSIX.
+    src/gui/external_sync.cpp
     # GUI-ONLY: the GitHub recheck's history model reads the repo's own
     # projects/ corpus through git subprocesses AND owns the product's one
     # mutating git route (the commit act's add/commit/push, behind a separate
