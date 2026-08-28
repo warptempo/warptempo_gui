@@ -212,6 +212,11 @@ public:
     // the flag into AppState and damage the top strip, the same shape the
     // pointer-leave hook takes for the same reason (a protocol edge with no
     // other event to carry its repaint). Null-safe.
+    // THE HOOK IS THE EDGE AND NOTHING ELSE, so main.cpp SEEDS its mirror from
+    // window_activated() at the install: a reopened project's fresh AppState
+    // would otherwise start unfocused under an already-activated window that
+    // has no edge left to fire (the reason is at that site and at
+    // AppState::window_activated).
     void set_activation_changed_hook(std::function<void()> cb);
 
     // Contract at GuiInputCore::set_keyboard_intent_cancel_hook, input_core.h.

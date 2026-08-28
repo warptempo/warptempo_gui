@@ -22,7 +22,12 @@
 // `gui_scale`, `audio_player` and `projects_repo` to the GUI's own per-device
 // config (src/gui/device_config.h), `playback_speed` to retirement — and the
 // record of all four, with the consequence for a file still carrying one, is
-// at kCanonicalSettingsKeys in settings_file.cpp.
+// at kCanonicalSettingsKeys in settings_file.cpp. `audio_player` DID NOT
+// SURVIVE THE MOVE: it retired whole on 2026-08-28 when the GUI grew its own
+// render player, so the device config is FOUR keys — `gui_scale`,
+// `projects_path`, `projects_repo`, `last_project` — and a config still
+// carrying an `audio_player=` line is unknown-key fatal there exactly as a
+// sidecar carrying one is here (architect approval 2026-08-28, comment-only).
 //
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
@@ -210,9 +215,13 @@ struct SettingsFile {
     // `audio_player`, `projects_repo` and `playback_speed` went 2026-08-27,
     // architect approval 2026-08-27 — the first three to the GUI's per-device
     // config (src/gui/device_config.h, which owns their types, their grammars
-    // and their semantics now), the fourth to retirement. Nothing in either
+    // and their semantics now), the fourth to retirement. `audio_player` then
+    // RETIRED THERE TOO on 2026-08-28, with the in-app render player that
+    // replaced the spawn, leaving that config four keys (architect approval
+    // 2026-08-28, comment-only). Nothing in either
     // product sizes text from a setting, nothing in either product plays at a
-    // speed other than the source's own, and the repository that is the
+    // speed other than the source's own, nothing in either product spawns a
+    // player, and the repository that is the
     // projects home is the one user's one device's fact, not each piece's.)
     // THE WAVEFORM'S VISUAL MAGNIFICATION — the DOUBLING COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping

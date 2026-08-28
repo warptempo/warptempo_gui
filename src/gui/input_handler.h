@@ -3599,9 +3599,10 @@ private:
 
     // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
     // Load in place button's act and bare `'`'s inside the player — refuses
-    // "Render running; Esc cancels it" over a running or parked render, the
-    // lock's silent refusal on a read-only tab, "Only batch renders load in
-    // place" on any highlight that is not a load-capable wav, and otherwise
+    // SILENTLY over a running or parked render (the standing progress line is
+    // that refusal's explanation) and SILENTLY on a read-only tab (the lock's
+    // own), says "Only batch renders load in place" on any highlight that is
+    // not a load-capable wav, and otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry — the one prompt raised with its FIRST button
     // focused, so a bare Enter answers OK (the reason is at the raise). The

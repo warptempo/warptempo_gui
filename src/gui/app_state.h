@@ -6517,16 +6517,22 @@ struct AppState {
                                   : GuiHistoryCompare::Iterative;
     }
 
-    // WINDOW ACTIVATION (keyboard focus), mirrored from the platform's
-    // xdg_toplevel state on each activation EDGE (main.cpp's hook, beside the
-    // pointer-leave one). The redesigned rows 1 and 2 paint their ground from
+    // WINDOW ACTIVATION (keyboard focus), SEEDED from the platform when the
+    // session's hooks are installed and kept by the platform's activation EDGE
+    // after that (main.cpp's one site, beside the pointer-leave hook). The
+    // seed is the REOPEN's, and the edge alone is not enough for it: each
+    // project's session builds a fresh AppState whose bit is born false while
+    // the platform's is already true and fires no edge for a focus that never
+    // changed. The redesigned rows 1 and 2 paint their ground from
     // it — focused #292c30, unfocused #202326 — so the app's header tracks the
     // labwc titlebar above it, which darkens the same way. Nothing else reads
     // it and nothing else in the rows changes: separators, borders, the accent,
     // labels and icons all keep their colors, and there is NO fade — a hard
     // swap on the edge. Row 3's ground is already the unfocused value and does
-    // not move. False until the first configure, which is the honest cold answer
-    // (the platform's accessor states why that is never visible).
+    // not move. False until the first configure IN THE FIRST SESSION, which is
+    // the honest cold answer (the platform's accessor states why that is never
+    // visible); every later session starts from the platform's live reading
+    // instead.
     bool window_activated = false;
 
     // THE REMEMBERED POINTER POSITION, from the last on_motion event, and the
@@ -6884,6 +6890,18 @@ struct AppState {
     // state-paste divergence); cleared on the next keyboard press in
     // on_key. Empty = nothing to show. General-purpose: not specific to
     // any one command, so future commands can reuse it.
+    //
+    // A TRANSIENT WRITTEN UNDER A STANDING queue_progress_text IS HIDDEN BY IT
+    // AND REVEALED WHEN IT CLEARS (the class, recorded 2026-08-28 after a
+    // refusal written during a render appeared on screen once the render had
+    // finished and stayed there): the paint chain ranks the progress line
+    // ABOVE this one, and this one is cleared ONLY by the next key press — not
+    // by a pointer act, and not by the progress line ending — so a write made
+    // while a render's line stands surfaces late and stale. NO WRITER MAY
+    // STAMP A TRANSIENT WHILE A PROGRESS LINE STANDS. The check belongs to the
+    // WRITER: a refusal whose cause IS the running render says nothing at all
+    // (the progress line is the answer — render_player_load_in_place's), and
+    // any other writer that can fire under a render must mean the late reveal.
     std::string transient_status_message;
 
     // One-slot pending archival render command. An archival dispatch

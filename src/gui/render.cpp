@@ -2248,64 +2248,72 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                     view_w, static_cast<double>(lane.h));
     cairo_clip(cr);
 
-    // 2. The selection highlight, then 3. the text — WHITE FIELD, BLACK TEXT,
-    //    which is what a word processor's selection looks like and is the whole
-    //    of the convention now.
+    // 2. The selection highlight, then 3. the text — THE ACCENT UNDER THE LABEL
+    //    WHITE, the product's one selection pairing since 2026-08-28 (the
+    //    palette block at kMarkerFlagLabel's neighbour carries the ruling and
+    //    its recorded cost). The dialog editors' field paints the same two
+    //    colours; this surface differs only in that its UNSELECTED run is the
+    //    lane's black rather than that same white, which is why the selected
+    //    substring here needs a second show and the field's does not.
     //
-    //    THE BAND HAS ITS OWN COLOUR SINCE 2026-08-20 and no longer rides the
-    //    ink. It filled in `face.label` for as long as that ink was #fcfcfc,
-    //    where the two happened to coincide; when the lane's ink went black the
-    //    band inverted with it — a black field under purple glyphs — and the
-    //    architect ruled it back to white on kdenlive's own text-input
-    //    precedent. kMarkerEditorSelectionBand holds exactly the value
-    //    `face.label` used to resolve to, so the look is the one that stood
-    //    before the flip; only the SOURCE moved.
+    //    IT REPLACES THE WHITE FIELD / BLACK TEXT BAND of 2026-08-20, and
+    //    kMarkerEditorSelectionBand went with it. That band was kdenlive's
+    //    text-input precedent; the ruling took Breeze Light's selection
+    //    instead, for every editor at once.
     //
-    //    THE TEXT DOES NOT CHANGE COLOUR UNDER THE BAND (architect the same
-    //    day, "I'm certain about that"). A fourth pass used to re-show the
-    //    SELECTED SUBSTRING in `face.fill`, the old two-tone convention the
-    //    retired monospace box carried, so a selected run read as purple or
-    //    blue glyphs on white. It is DELETED, and the reason is a defect he
-    //    could see in his own screenshots: those glyphs were ANTIALIASED
-    //    AGAINST THE WHITE BAND, and blending a saturated fill into white
-    //    leaves a pale off-white fringe on every edge — the text looked washed
-    //    rather than coloured. Black on white has no such fringe to produce,
-    //    and it is what every ordinary text field does. Do not reinstate the
-    //    re-show to "restore" the two-tone look; the look was the bug.
+    //    THE SELECTED SUBSTRING IS THE WHOLE RUN RE-SHOWN UNDER A CLIP, never
+    //    a run shaped from the substring alone: shaping the selected bytes on
+    //    their own could kern the first glyph differently and shift the ink
+    //    sideways under a band whose edges came from byte_x. THE CLIP TAKES THE
+    //    BAND'S OWN ROUNDED COLUMNS, not the fractional byte_x pair the band
+    //    rounded FROM, so the white ink starts and stops exactly where the blue
+    //    does and no half-pixel of a selected glyph is left black on the band.
     //
-    //    SO A SELECTED SPAN NOW RESOLVES FROM TWO PLACES, not three: the FIELD
-    //    from that constant and the INK from `face.label` — which is also the
-    //    CARET's source, a caret being ink rather than field.
+    //    (The deleted pass this is NOT: the old two-tone re-show painted the
+    //    selected glyphs in `face.fill` — saturated ink ANTIALIASED AGAINST A
+    //    WHITE band, which fringed every edge pale and read as washed out.
+    //    Near-white on the accent has no such blend to make.)
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.
     const bool has_sel = text_editor::has_selection(ed);
+    const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
+    const size_t s1 = static_cast<size_t>(text_editor::selection_end(ed));
+    const int ix0 =
+        static_cast<int>(std::nearbyint(text_origin_x + byte_x[s0]));
+    const int ix1 =
+        static_cast<int>(std::nearbyint(text_origin_x + byte_x[s1]));
     if (has_sel) {
-        const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
-        const size_t s1 = static_cast<size_t>(text_editor::selection_end(ed));
-        const double hx0 = text_origin_x + byte_x[s0];
-        const double hx1 = text_origin_x + byte_x[s1];
-        const int ix0 = static_cast<int>(std::nearbyint(hx0));
-        const int ix1 = static_cast<int>(std::nearbyint(hx1));
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kMarkerEditorSelectionBand.r,
-                             kMarkerEditorSelectionBand.g,
-                             kMarkerEditorSelectionBand.b);
+        cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                             kRedesignAccent.b);
         cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
     }
 
-    // ONE SHOW FOR THE WHOLE RUN, selected and unselected alike — the band is
-    // painted under it and the ink is the same black on both sides of the
-    // selection edge, so there is nothing to clip and nothing to repaint.
+    // ONE SHOW FOR THE WHOLE RUN in the lane's black, the band painted under
+    // it, and then the selected substring alone re-shown in the label white.
     cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
     text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+    if (has_sel) {
+        cairo_save(cr);
+        cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
+        cairo_clip(cr);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+        cairo_restore(cr);
+    }
 
     // 4. The caret: a blink-gated filled integer column at the cursor's own
     //    byte boundary, AA off — the same crisp-column convention the
     //    retired monospace box used, on a shaped position instead of a grid one.
+    //    IT IS INK, NOT FIELD, so it stays `face.label` black wherever it
+    //    lands, over the accent band included — black reads on #3daee9, and a
+    //    caret that changed colour on crossing a selection edge would be
+    //    stating something about the selection rather than about the cursor.
     if (text_editor::cursor_visible_now(ed)) {
         const int cx =
             static_cast<int>(std::nearbyint(text_origin_x + caret_off));

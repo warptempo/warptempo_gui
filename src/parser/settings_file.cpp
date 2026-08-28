@@ -78,7 +78,13 @@ using warptempo_parse::prefix_line_error;
 // `$XDG_CONFIG_HOME/warptempo_gui/config`), which the CLI has no business
 // reading — the first two because the panel and the spawnable player are the
 // machine's, the third because ONE user has ONE repository and the recheck
-// reads it from the device now. A `.settings` still carrying any of the four
+// reads it from the device now. ONE OF THE THREE DID NOT SURVIVE THE MOVE:
+// `audio_player` RETIRED WHOLE from the device config on 2026-08-28, the GUI
+// having grown a render player of its own, so that config is now the four keys
+// `gui_scale`, `projects_path`, `projects_repo` and `last_project`, and a
+// config still carrying an `audio_player=` line refuses there exactly as a
+// sidecar carrying one refuses here (architect approval 2026-08-28,
+// comment-only). A `.settings` still carrying any of the four
 // is load-fatal in both products by the ordinary unknown-key refusal below —
 // hand-editing the lines out is the whole recovery, NO migration and no reader
 // leniency, exactly as for `font_size` and the four attestation keys before
@@ -297,10 +303,17 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     //
     // `audio_player` (architect approval 2026-08-27): MOVED beside gui_scale
     // and for the same reason — which player binary exists is a fact about the
-    // DEVICE. The laptop launches audacious on `l`; the tablet has nothing
-    // spawnable and carries the blank no-player opt-out, which is exactly the
+    // DEVICE. The laptop launched audacious on `l`; the tablet had nothing
+    // spawnable and carried the blank no-player opt-out, which is exactly the
     // semantics this schema used to load. The device config took the
-    // free-UTF-8-verbatim rule with it.
+    // free-UTF-8-verbatim rule with it — AND THEN RETIRED THE KEY WHOLE ON
+    // 2026-08-28 (architect approval 2026-08-28, comment-only): bare `l` opens
+    // an in-app render player that decodes a wav and plays it through the
+    // product's own engine on both devices, so there is no player binary to
+    // name anywhere. The key, its blank opt-out, the settings editor's arm and
+    // the spawn itself are deleted, and the device config is four keys —
+    // `gui_scale`, `projects_path`, `projects_repo`, `last_project`. It was
+    // never the CLI's key in either home.
     //
     // `projects_repo` (architect approval 2026-08-27, the fifth grant on this
     // file): MOVED beside the two above and for the model's reason — ONE user,

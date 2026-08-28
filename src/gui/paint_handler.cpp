@@ -6039,13 +6039,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const bool   has_sel = text_editor::has_selection(*ed);
         const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
         const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
+        // THE SELECTION BAND IS THE ACCENT (architect 2026-08-28, the palette
+        // block beside kMarkerFlagLabel): kRedesignAccent behind the selected
+        // substring, kRedesignLabel for its glyphs — the product's one
+        // selection pairing, which the flag editor's marker-lane box paints
+        // too. Here it costs a pass rather than adding one: the run ALREADY
+        // shows in kRedesignLabel, so the selected glyphs are the right white
+        // with no second show, and the KNOCKOUT that used to re-show them in
+        // the resolved field ground (a near-white band wanted dark letters) is
+        // DELETED with the band it served. The red-flash ground therefore no
+        // longer reaches the selected glyphs at all — a selection standing
+        // through an invalid flash reads accent-on-red, which is the same
+        // selection it read before the flash.
         if (has_sel) {
             const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                 kRedesignAccent.b);
             cairo_rectangle(cr, hx0, band_y,
                             (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
             cairo_fill(cr);
@@ -6054,25 +6066,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
         text_shape::show_shaped_run(cr, run, tx, baseline);
-        if (has_sel) {
-            // The selected substring knocked out in the FIELD ground — the
-            // whole run re-shown under a clip (shaping the substring alone
-            // could kern its first glyph differently and shift the ink). It
-            // reads the RESOLVED ground, not the resting constant, so a
-            // selection standing through an invalid flash knocks out in the
-            // red the field is actually wearing rather than in the dark it is
-            // not (the flash keeps its selection: only a keystroke that
-            // mutates the buffer clears the red).
-            cairo_save(cr);
-            cairo_rectangle(cr, tx + bx_off[s0], static_cast<double>(band_y),
-                            bx_off[s1] - bx_off[s0],
-                            static_cast<double>(band_h));
-            cairo_clip(cr);
-            cairo_set_source_rgb(cr, field_ground.r, field_ground.g,
-                                 field_ground.b);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-        }
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
         // IT (architect 2026-08-13, at his live test: "the blinking caret, the
         // I-beam, continues to blink in the text field even though it has lost

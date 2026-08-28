@@ -553,8 +553,10 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 // under tmp/screenshots/kdenlive/redesign). It covers the whole lane: the warp
 // and phase-reset flag LABELS on all three live classes, the MEASURE BOX's
 // text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
-// they share its ink), and the flag editor's unrolled text, its caret and its
-// selection band, all of which resolve through the same face.
+// they share its ink), and the flag editor's unrolled text and its caret,
+// which resolve through the same face. THE ONE EXCEPTION IS THE FLAG EDITOR'S
+// SELECTED SUBSTRING (architect 2026-08-28): a selected span is the accent
+// under kRedesignLabel on every text surface in the product, the block below.
 //
 // IT IS ITS OWN CONSTANT AND NOT A RETUNE OF kRedesignLabel, which stays
 // #fcfcfc: that value is the whole redesign's label ink — the menu row, the
@@ -581,35 +583,39 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 // glass check rather than pre-corrected here.
 inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 
-// THE FLAG EDITOR'S SELECTION BAND IS WHITE, AND IT IS NOT THE INK (architect
-// 2026-08-20, hours after the ruling above). The band had never been a colour
-// of its own: it filled in `face.label` and the selected glyphs repainted in
-// the box fill, which read as the intended near-white field under dark glyphs
-// for as long as the ink was #fcfcfc — and INVERTED the moment the ink went
-// black, giving a black band under purple glyphs. The ruling restores the old
-// look and names the reason: kdenlive's own text inputs are a WHITE FIELD WITH
-// BLACK TEXT, which is the same pairing this editor wants and the same pairing
-// the flag itself now has.
+// THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
+// WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
+// with dark text... let's just do that everywhere for consistency"). One
+// pairing for every run the product lets a user select in — the six dialog
+// editors' shared field and the marker lane's flag editor alike:
+// kRedesignAccent #3daee9 behind the selected substring, kRedesignLabel
+// #fcfcfc for its glyphs. It is Breeze Light's own selection, which is where
+// that accent value came from to begin with.
 //
-// THE VALUE IS THE OLD ONE EXACTLY — #fcfcfc, what `face.label` resolved to on
-// every live class before the flip — so the band moves no pixel from the look
-// it had; only its SOURCE moved, off the ink and onto its own constant. It is
-// spelled here rather than borrowed from kRedesignLabel for the reason that
-// constant's own neighbours are: this is a marker-lane fact that happens to
-// coincide with the redesign's label white, not a reference to it.
+// IT NEEDS NO CONSTANT OF ITS OWN, and the one it had is RETIRED:
+// kMarkerEditorSelectionBand (#fcfcfc) named the WHITE FIELD / BLACK TEXT band
+// that stood from 2026-08-20 on kdenlive's text-input precedent, and this
+// ruling replaces that precedent whole. A selection ground with no derivation
+// is the accent itself, so both painters read kRedesignAccent directly and
+// there is no third constant to keep in step with it.
 //
-// THE CARET IS DELIBERATELY NOT ON THIS CONSTANT and stays `face.label`: the
-// blinking caret is INK, not field, so it is black with the text it sits in.
-// A selected span therefore resolves from exactly TWO places — the FIELD from
-// here and the INK (glyphs and caret alike) from `face.label`.
+// THE UNSELECTED INK IS UNTOUCHED on both surfaces: the flag editor's run
+// stays kMarkerFlagLabel black (the lane's ink, above) and the dialog field's
+// stays kRedesignLabel. Only the SELECTED substring changes colour — which is
+// what makes that span the one place the marker lane paints text that is not
+// black, and what let the dialog field DROP its knockout pass (its run already
+// paints in kRedesignLabel, so the selected glyphs need no second show).
 //
-// THE TEXT DOES NOT CHANGE COLOUR UNDER THIS BAND, and the pass that made it
-// do so is deleted rather than merely unused: a re-show of the selected
-// substring in `face.fill` painted saturated glyphs ANTIALIASED AGAINST WHITE,
-// which fringes every edge pale and read as washed-out. Black on white is what
-// an ordinary text field does and what the flag itself already does. The whole
-// mechanism is at the paint site (render_flag_editor_box).
-inline constexpr GuiColor kMarkerEditorSelectionBand = hex(0xFCFCFC);
+// THE CARETS ARE UNTOUCHED TOO. A caret is INK, not field, so each keeps its
+// own surface's: black in the flag editor, kRedesignLabel in the dialog field.
+// Both read against the accent, so neither needed a rule of its own.
+//
+// THE RECORDED COST: #fcfcfc on #3daee9 is a 2.41 contrast ratio, the same
+// pairing the marker lane's ink ruling above rejected for the measure box.
+// It stands here because a SELECTION is transient and is marked by its GROUND
+// as much as by its ink, and because one convention across every editor was
+// the ruling's stated point. The paint sites are render_flag_editor_box
+// (render.cpp) and the modal field painter (paint_handler.cpp).
 
 // THE HISTORY VIEW'S TWO DIFF CLASSES, measured off
 // row_5_lane_3_marker_green_{unselected,selected}.png and

@@ -1742,6 +1742,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // carries no other event to repaint it.
     // TOP-STRIP damage is the exact rect — rows 1 and 2 are the only surfaces
     // that read the flag, and both live there.
+    // THE MIRROR IS SEEDED HERE AND KEPT BY THE HOOK, and the seed is what a
+    // REOPEN needs (2026-08-28): the loop builds a FRESH AppState per project
+    // (gui_main's contract, platform.h) whose window_activated is born false,
+    // while the platform's own bit is already true and fires NO edge for a
+    // focus that never changed — so without this line the reopened session
+    // painted rows 1 and 2 unfocused until the next real focus flip. It is one
+    // site for both backends, beside the hook rather than inside it, and it
+    // needs no damage of its own: the whole window is invalidated below,
+    // before run(). In the FIRST session it reads the cold false and changes
+    // nothing. The GEOMETRY takes the same shape one hook further down, where
+    // redeliver_geometry() re-fires on_resize for a size that did not change.
+    app.window_activated = gui.window_activated();
     gui.set_activation_changed_hook([&] {
         app.window_activated = gui.window_activated();
         viewport.invalidate_top_strip();

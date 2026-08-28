@@ -4202,9 +4202,9 @@ bool GuiInputHandler::load_render_entry_in_place(
     // Self-guard on the standalone mutator: a successful load-in-place wipes
     // tmp/,
     // which must never race a batch publishing into it. The player's load act
-    // already refuses on this same condition with its own words ("Render
-    // running; Esc cancels it") before it raises the confirmation, so the one
-    // caller never reaches here; this backstop protects any other caller.
+    // already refuses SILENTLY on this same condition before it raises the
+    // confirmation, so the one caller never reaches here; this backstop
+    // protects any other caller.
     if (app.queue_running || app.pending_archival.armed) {
         std::fprintf(stderr,
             "warptempo_gui: Load in place refused: a render batch is running or an "
@@ -6067,13 +6067,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // the engine block, exactly what the read-only tab protects. The button
     // wears no disabled face by ruling, so the refusal is the act's.
     if (active_view_state(app).read_only) return;
-    // Running-render guard, the `'` opener's own: the load wipes tmp/, which
-    // must never race a batch publishing into it.
-    if (app.queue_running || app.pending_archival.armed) {
-        app.transient_status_message = "Render running; Esc cancels it";
-        viewport.invalidate_status_chain_area();
-        return;
-    }
+    // THE RUNNING-RENDER REFUSAL IS SILENT (architect 2026-08-28): the load
+    // wipes tmp/, which must never race a batch publishing into it, so the
+    // refusal itself stays — but it says nothing, because the progress line
+    // standing on the status chain ("Rendering...", the batch's "Rendering N
+    // of M (...)...") is already its explanation, and a transient written
+    // under that line is invisible until the line clears and then stale (the
+    // class is recorded at AppState::transient_status_message).
+    if (app.queue_running || app.pending_archival.armed) return;
     const AppState::RenderEntry* entry = render_player.highlighted_entry();
     if (entry == nullptr) {
         app.transient_status_message = "Only batch renders load in place";
