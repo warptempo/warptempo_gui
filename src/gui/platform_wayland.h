@@ -70,15 +70,24 @@ public:
     // an answer only the backend has. STATIC for symmetry with that one; it
     // needs no window either.
     //
-    // THE WHOLE VOLUME RULE ON THIS BACKEND: the one DIRECTORY entry under
+    // EACH BACKEND OWNS ITS DISCOVERY, the COUNTING is shared: the backend
+    // hands sole_removable_volume (external_sync.h) the candidate volume roots
+    // it found, and that half answers zero and several with their own two
+    // sentences. Nothing is ranked, remembered or preferred, and A ROOT THE
+    // BACKEND CANNOT READ REFUSES OUT LOUD with the system's own words instead
+    // of counting as zero — where a machine keeps its mount points and what a
+    // failure to read them means there is the backend's knowledge, stated at
+    // each definition.
+    //
+    // THE WHOLE VOLUME RULE ON THIS BACKEND: the DIRECTORY entries under
     // `/run/media/<user>/`, the udisks mount point the desktop session uses,
     // with `<user>` taken from getpwuid(geteuid()) and `$USER` as the fallback
-    // spelling. ZERO entries and SEVERAL entries both refuse, each with its own
-    // sentence; nothing is ranked, remembered or preferred. THE LABEL IS NEVER
-    // CONSULTED — the architect's stick mounts as `/run/media/b/SANDISK` here
-    // and as `/storage/067C-8690` on the tablet, and it is the same physical
-    // stick: "the one removable volume" is the whole identity the product has
-    // of it, so neither the label nor the UUID is a fact this program reads.
+    // spelling; a missing root is the one error that means zero here. THE
+    // LABEL IS NEVER CONSULTED — the architect's stick mounts as
+    // `/run/media/b/SANDISK` here and as `/storage/067C-8690` on the tablet,
+    // and it is the same physical stick: "the one removable volume" is the
+    // whole identity the product has of it, so neither the label nor the UUID
+    // is a fact this program reads.
     static std::expected<std::filesystem::path, std::string> removable_volume();
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):

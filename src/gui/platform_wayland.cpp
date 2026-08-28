@@ -29,7 +29,9 @@
 #include <cstring>
 #include <iterator>
 #include <string>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Run-loop architecture
@@ -612,14 +614,24 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     return cfg;
 }
 
-// THE LAPTOP'S REMOVABLE VOLUME (the contract is at the declaration). The
-// desktop session's udisks mounts every stick under `/run/media/<user>/`, one
-// directory per volume, so the whole rule is "the one directory there" — no
-// /proc/mounts parse, no filesystem-type test, no label. `<user>` is the
+// THE LAPTOP'S REMOVABLE VOLUME — THIS BACKEND'S DISCOVERY HALF (the counting
+// half and its two sentences are sole_removable_volume's, external_sync.h).
+// The desktop session's udisks mounts every stick under `/run/media/<user>/`,
+// one directory per volume, so the candidates are simply the directories there
+// — no /proc/mounts parse, no filesystem-type test, no label. `<user>` is the
 // effective user's own name (getpwuid, the answer the mount point was built
 // from) with `$USER` as the fallback spelling; a machine that can name neither
 // has no `/run/media/<user>` to look in, which is the same nothing as an empty
 // one and gets the same sentence.
+//
+// A ROOT THAT CANNOT BE READ REFUSES OUT LOUD, with its path and the system's
+// own words: not knowing is not the same as knowing there is nothing, and a
+// permission or an I/O fault reported as "No removable volume mounted" would
+// send the user hunting for a stick that is plainly mounted. THE ONE ERROR
+// THAT HONESTLY MEANS ZERO is a missing root: udisks creates
+// `/run/media/<user>` at the first mount and removes it with the last, so
+// ENOENT says nothing is mounted, which is exactly the counting rule's own
+// answer for an empty listing.
 //
 // THE LABEL IS NEVER CONSULTED. The architect's stick is `SANDISK` here and
 // `067C-8690` on the tablet — one physical stick, two names, and the product
@@ -634,8 +646,31 @@ std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume(
     }
     if (user.empty())
         return std::unexpected(std::string("No removable volume mounted"));
-    return sole_removable_volume(std::filesystem::path("/run/media") / user,
-                                 /*excluded=*/{});
+
+    const std::filesystem::path root = std::filesystem::path("/run/media") / user;
+    const auto unreadable = [&root](const std::error_code& ec) {
+        return std::unexpected("Cannot read '" + root.string() + "': " +
+                               ec.message());
+    };
+
+    std::vector<std::filesystem::path> candidates;
+    std::error_code ec;
+    std::filesystem::directory_iterator it(root, ec);
+    if (ec && ec != std::errc::no_such_file_or_directory) return unreadable(ec);
+    if (!ec) {
+        // The increment is spelled out because a range-for over a
+        // directory_iterator throws on it; a walk that stops part-way is a
+        // fault like the open's and refuses the same way, since the entries
+        // seen so far are not the answer to "which volumes are mounted".
+        const std::filesystem::directory_iterator end;
+        while (it != end) {
+            std::error_code de_ec;
+            if (it->is_directory(de_ec)) candidates.push_back(it->path());
+            it.increment(ec);
+            if (ec) return unreadable(ec);
+        }
+    }
+    return sole_removable_volume(std::move(candidates));
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

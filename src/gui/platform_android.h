@@ -111,19 +111,23 @@ public:
     // platform_wayland.h, which owns it): the Synchronize to external storage
     // act's destination, FOUND AND NEVER CONFIGURED.
     //
-    // THE WHOLE VOLUME RULE ON THIS BACKEND: the one DIRECTORY under
-    // `/storage/` that is not `emulated` (the app-visible view of the device's
-    // own internal storage) and not `self` (the per-process mount namespace's
-    // own link). What is left is exactly the mounted removable volumes, one
-    // directory each — today `/storage/067C-8690`. ZERO entries and SEVERAL
-    // entries both refuse with their own sentence, the shared half's
-    // (sole_removable_volume, external_sync.h).
+    // THE WHOLE VOLUME RULE ON THIS BACKEND: the `/storage/<name>` MOUNT
+    // POINTS in the process's own mount table (`/proc/self/mounts`) whose
+    // `<name>` is one path component and is not `emulated` (the app-visible
+    // view of the device's own internal storage) or `self` (the per-process
+    // mount namespace's own link). What is left is exactly the mounted
+    // removable volumes — today `/storage/067C-8690`. THE MOUNT TABLE AND NOT
+    // A DIRECTORY LISTING, because `/storage` is traversable but not listable
+    // by this app's uid; the measurement and the `/mnt/media_rw` exclusion are
+    // stated at the definition. An unreadable mount table refuses with the
+    // system's own words, and zero and several take the shared half's own two
+    // sentences (sole_removable_volume, external_sync.h).
     //
     // THE UUID IS NEVER CONSULTED, as the laptop's label is not: the same
     // physical stick is `067C-8690` here and `SANDISK` there, and "the one
     // removable volume" is the whole identity the product has of it. Reading
     // its contents needs the All-files permission (MANAGE_EXTERNAL_STORAGE);
-    // this listing does not, and a volume the app may see but not write
+    // this discovery does not, and a volume the app may see but not write
     // reports the refusal at the first copy, with the path and the system's
     // own words.
     static std::expected<std::filesystem::path, std::string> removable_volume();

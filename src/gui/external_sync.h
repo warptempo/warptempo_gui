@@ -60,20 +60,26 @@
 // whole by value on the GUI thread, and the worker reads only these four
 // fields and the filesystem.
 
-// THE VOLUME RULE'S SHARED HALF, called by both backends' own
-// GuiPlatform::removable_volume() (platform_wayland.h / platform_android.h,
-// which state what `root` and `excluded` are on that machine and why): the ONE
-// directory entry directly under `root` whose name is not in `excluded`.
-// Exactly one is the volume; ZERO answers "No removable volume mounted" and
-// SEVERAL answers "Several removable volumes mounted: a, b" — the names in
-// plain byte order, comma-separated, so the user reads which ones to unmount.
-// A `root` that does not exist or cannot be walked is zero entries and gets
-// the same first sentence: there is nothing mounted there either way. The
-// counting rule and its two sentences live HERE, once, so the two backends
-// differ only in the facts they hand in.
+// THE VOLUME RULE'S SHARED HALF — THE COUNTING RULE AND NOTHING ELSE, called
+// by both backends' own GuiPlatform::removable_volume() with the candidate
+// volume roots that backend's discovery found. Exactly one candidate IS the
+// volume; ZERO answers "No removable volume mounted" and SEVERAL answers
+// "Several removable volumes mounted: a, b" — the candidates' own names
+// (each path's filename) in plain byte order, comma-separated, so the user
+// reads which ones to unmount. The list is sorted and de-duplicated HERE,
+// once, so neither backend does it: two mount-table lines naming one mount
+// point are one volume, not several.
+//
+// HOW A BACKEND DISCOVERS ITS CANDIDATES IS THE BACKEND'S OWN and is stated at
+// each definition (platform_wayland.cpp: the directory entries under the
+// udisks mount root; platform_android.cpp: the `/storage/<name>` mount points
+// in the process's own mount table). SO IS EVERY REFUSAL THAT IS NOT ABOUT
+// COUNTING: a root that cannot be read is a permission fault and NOT zero
+// volumes, and the backend refuses it out loud with the system's own words
+// before it ever reaches here — this half touches no filesystem and so can
+// never mistake a listing it was denied for an empty one.
 std::expected<std::filesystem::path, std::string> sole_removable_volume(
-    const std::filesystem::path&    root,
-    const std::vector<std::string>& excluded);
+    std::vector<std::filesystem::path> candidates);
 
 // One act's whole input, by value.
 struct GuiExternalSyncJob {

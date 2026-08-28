@@ -18,7 +18,7 @@
 
 namespace {
 
-// ONE NON-THROWING DIRECTORY WALK, used by both halves below. Every
+// ONE NON-THROWING DIRECTORY WALK, used by both halves of the act below. Every
 // std::filesystem call in this file takes its error_code overload, and a
 // range-for over a directory_iterator does not (its increment throws), so the
 // increment is spelled out here once. A directory that cannot be opened or
@@ -52,32 +52,33 @@ std::string copy_failure(const std::filesystem::path& to,
 
 } // namespace
 
-// The volume rule's shared half (the contract is at the declaration).
+// The volume rule's shared half (the contract is at the declaration). IT
+// TOUCHES NO FILESYSTEM: the candidates are already the backend's answer, and
+// the counting below can only be wrong if the discovery that produced them
+// was.
 std::expected<std::filesystem::path, std::string> sole_removable_volume(
-        const std::filesystem::path&    root,
-        const std::vector<std::string>& excluded) {
-    std::vector<std::string> names;
-    walk_directory(root, [&](const std::filesystem::directory_entry& de) {
-        std::error_code de_ec;
-        if (!de.is_directory(de_ec)) return;
-        const std::string name = de.path().filename().string();
-        if (std::find(excluded.begin(), excluded.end(), name) != excluded.end())
-            return;
-        names.push_back(name);
-    });
-    std::sort(names.begin(), names.end());
+        std::vector<std::filesystem::path> candidates) {
+    std::sort(candidates.begin(), candidates.end(),
+              [](const std::filesystem::path& a, const std::filesystem::path& b) {
+                  return a.filename().string() < b.filename().string();
+              });
+    // ONE MOUNT POINT IS ONE VOLUME however many times it was named: a mount
+    // table can carry the same path twice (a remount, an overmount), and
+    // counting those as several would refuse a stick that is plainly there.
+    candidates.erase(std::unique(candidates.begin(), candidates.end()),
+                     candidates.end());
 
-    if (names.empty())
+    if (candidates.empty())
         return std::unexpected(std::string("No removable volume mounted"));
-    if (names.size() > 1) {
+    if (candidates.size() > 1) {
         std::string list;
-        for (size_t i = 0; i < names.size(); ++i) {
+        for (size_t i = 0; i < candidates.size(); ++i) {
             if (i != 0) list += ", ";
-            list += names[i];
+            list += candidates[i].filename().string();
         }
         return std::unexpected("Several removable volumes mounted: " + list);
     }
-    return root / names.front();
+    return candidates.front();
 }
 
 GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
