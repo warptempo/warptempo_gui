@@ -5253,6 +5253,14 @@ void GuiInputHandler::open_project_editor() {
     // from under itself, so the opener refuses here exactly as the allowlist
     // refuses the keyboard openers.
     if (app.history_mode.active) return;
+    // The render player is a modal MODE, not one of the editors the predicate
+    // above answers for, so it refuses on its own term: a reopen would tear
+    // the player's item and its bound buffer down from under it. Both roads
+    // already refuse earlier — Ctrl+O is consumed by the player's key router,
+    // and the veil consumes a press on the File anchor so the row is
+    // unreachable — and this line is the opener's own, in the shape the two
+    // guards above it are: the gate lives with the act it refuses.
+    if (render_player_active()) return;
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
@@ -5837,13 +5845,12 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     const bool bare  = !ctrl && !shift && !alt;
 
     // THE TWO FALL-THROUGHS: Ctrl+S saves with the player standing (no
-    // transport is touched); Ctrl+Q closes the player FIRST and lets the
-    // ordinary quit road run on the ordinary state.
+    // transport is touched); Ctrl+Q falls through to the ordinary quit road,
+    // which takes the player down at its head (GuiPrompt::request_close) — the
+    // same step the compositor's close takes, stated once there rather than
+    // here, so the two roads cannot drift.
     if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        render_player.close();
-        return false;
-    }
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, buttons…] through the one modal
     // ring route, whose player arm owns the list's membership.

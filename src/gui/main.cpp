@@ -1175,7 +1175,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views);
     GuiPrompt prompt(app, gui, viewport,
-                     phase_reset_propagate, save_ops, playback_lifecycle);
+                     phase_reset_propagate, save_ops, playback_lifecycle,
+                     render_player);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,
                                       active_views, undo,
                                       target_render, playback_lifecycle);
@@ -1494,6 +1495,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // 2026-08-09; it raises no modal now, so these two routes are again the
         // whole list.)
         input_handler.close_dropdown();
+        // THE RENDER PLAYER GOES DOWN INSIDE request_close, not here: the
+        // close road owns that step for Ctrl+Q and for this callback alike,
+        // so the mode is never left standing under the unsaved-work prompt.
         prompt.request_close(GuiCloseTarget::Exit);
         // (The cursor re-resolve this callback used to end with is gone for the
         // same reason the resize path's is — see there. The prompt this may have

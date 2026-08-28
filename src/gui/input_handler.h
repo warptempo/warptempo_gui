@@ -2519,7 +2519,10 @@ private:
     // touching playback, while a prompt or any editor stands, in the `h`
     // history view (the allowlist's own answer for a dialog open — the key
     // road never even arrives, history_mode_key_blocked admitting no Ctrl+O),
-    // and during
+    // while the RENDER PLAYER stands (a mode, not an editor, so it is the
+    // opener's own term — and neither road arrives either: the player's key
+    // router consumes Ctrl+O and its veil consumes a press on the File
+    // anchor), and during
     // a load; stops playback through the shared modal stop only once the
     // editor is definitely opening, then enters it EMPTY with the candidate
     // list captured.
@@ -3470,7 +3473,9 @@ private:
     // (a consumed no-op at the root); Page Up / Page Down previous / next in
     // the item's folder; `'` the Load in place button's chord; `l` and Esc
     // close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
-    // closes the player and falls through to the quit road. EVERY OTHER
+    // falls through to the quit road, which takes the player down at its
+    // head (GuiPrompt::request_close, the compositor's close road too, so
+    // neither gesture restates the step). EVERY OTHER
     // CHORD IS CONSUMED (strict modifier validation's no-op). Returns true
     // when the key is consumed here, false for the two fall-throughs.
     bool route_render_player_key(GuiKey key, GuiInputState mods);

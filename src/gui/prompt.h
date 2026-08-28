@@ -4,6 +4,7 @@
 #include "phase_reset_propagate.h"
 #include "platform.h"
 #include "playback_lifecycle.h"
+#include "render_player.h"
 #include "save_ops.h"
 #include "viewport.h"
 
@@ -13,8 +14,9 @@
 // GuiInputHandler::render_player_load_in_place and answered back through the
 // input-handler back-pointer below). Two entry points are exposed:
 // request_close (called by Ctrl+Q, the WM-close callback and the Open
-// prompt's commit) and activate_response (called by the keyboard handler
-// when a prompt is active). The other two former lambdas (open_unsaved,
+// prompt's commit — the ONE close road, which is why the render player's
+// close lives inside it) and activate_response (called by the keyboard
+// handler when a prompt is active). The other two former lambdas (open_unsaved,
 // proceed) are private helpers; they have no callers outside this cluster.
 //
 // save_markers is reached through save_ops. viewport, phase_reset_propagate,
@@ -40,6 +42,10 @@ struct GuiPrompt {
     PhaseResetPropagate&  phase_reset_propagate;
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
+    // THE RENDER PLAYER, held for one line of request_close: a close gesture
+    // takes the mode down before it asks anything. Constructed ahead of this
+    // struct in main.cpp, like every other reference here.
+    GuiRenderPlayer&      render_player;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this prompt by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
@@ -55,18 +61,23 @@ struct GuiPrompt {
               Viewport&             viewport_,
               PhaseResetPropagate&  phase_reset_propagate_,
               GuiSaveOps&           save_ops_,
-              GuiPlaybackLifecycle& playback_lifecycle_)
+              GuiPlaybackLifecycle& playback_lifecycle_,
+              GuiRenderPlayer&      render_player_)
         : app(app_),
           gui(gui_),
           viewport(viewport_),
           phase_reset_propagate(phase_reset_propagate_),
           save_ops(save_ops_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          render_player(render_player_) {}
 
     // Route a close through the unsaved-work prompt when history is dirty;
     // otherwise complete `target` immediately. Centralizes the decision so
     // Ctrl+Q, the WM-close callback and the Open prompt's commit share
-    // identical behaviour, each naming what its close completes.
+    // identical behaviour, each naming what its close completes — AND THE
+    // RENDER PLAYER'S CLOSE WITH IT: a standing player comes down here, at
+    // the road's head, so no caller restates it and the compositor's close
+    // cannot raise the unsaved-work prompt over a mode that is still up.
     void request_close(GuiCloseTarget target);
     void activate_response(char k);
 

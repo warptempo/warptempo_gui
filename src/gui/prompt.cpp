@@ -178,6 +178,15 @@ void GuiPrompt::cancel_paste_confirmation() {
 // what differs between them is the target, seated here for proceed.
 void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
+    // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
+    // mode's transport is stopped, the view's buffer rebound and the overlay
+    // cleared before the question is asked, so a Cancel leaves the ordinary
+    // window rather than a player the user cannot see the prompt through. It
+    // lives here rather than in the keyboard's own Ctrl+Q arm because the
+    // compositor's close (main.cpp's set_on_close) arrives without a key and
+    // must take the identical step — one road, one closer. A no-op when the
+    // mode is down, which is every other close.
+    render_player.close();
     close_target_ = target;
     if (app.dirty)
         open_unsaved(DialogTrigger::CLOSE_WINDOW);

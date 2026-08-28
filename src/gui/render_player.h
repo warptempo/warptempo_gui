@@ -74,8 +74,7 @@
 // nor `tmp/` a cell; its callers refuse the modal states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
-// listing and a whole-window damage. close() — Close, Esc, `l`, Ctrl+Q ahead
-// of the quit road, and the load road's success — takes the stop body, clears
+// listing and a whole-window damage. close() takes the stop body, clears
 // the mode, rebinds THE VIEW'S buffer through the S/T flip's own tail fork
 // verbatim (ensure_ready in target view, rebind_to_source in source view),
 // and only THEN frees the item's buffer: the engine may hold the pointer
@@ -113,6 +112,15 @@ struct GuiRenderPlayer {
     // refusal has already written its status line or has nothing to say.
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
+    //
+    // ITS CAUSES, FIVE CALL SITES (re-grepped 2026-08-28): the modal row's
+    // Close button; bare Esc and bare `l` in the mode's key router; the `l`
+    // toggle the icon row's Play renders button shares with it; the load
+    // road's success; and THE CLOSE ROAD — GuiPrompt::request_close, which
+    // takes the mode down at its head, so Ctrl+Q AND the compositor's
+    // title-bar X (main.cpp's set_on_close, the same road with no key behind
+    // it) both leave the ordinary window standing before the unsaved-work
+    // question is asked, and a Cancel answers over no player.
     void close();
 
     // -- The listing --------------------------------------------------------
