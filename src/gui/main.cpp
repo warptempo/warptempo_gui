@@ -1219,6 +1219,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prompt's back-pointer, for the render player's load confirmation
     // (its one reader is recorded at the member, prompt.h).
     prompt.input = &input_handler;
+    // And the render player's, for the ring clear a car command owes before
+    // it synthesizes a key (its one reader is recorded at the member,
+    // render_player.h).
+    render_player.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in
     // target view through handle_active_audio_view_toggle, the chokepoint that
     // lives on the input handler (constructed after the propagate, which the

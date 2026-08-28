@@ -555,12 +555,15 @@ nothing (no `<service>`, no `FOREGROUND_SERVICE*` / `POST_NOTIFICATIONS`, no
 `res/`). Backgrounding (`APP_CMD_LOST_FOCUS`) does not deactivate the session;
 the player standing is the one condition.
 
-A DEAD STREAM PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback`
-gained `device_lost()` on both backends — the AAudio disconnect latch plus a
-refused reopen; `false` on JACK, which records nothing for a vanished server —
-and the render player's tick forks on it BEFORE its natural-end test, pausing
-in place with "Audio device lost" on the status line and a "paused" push,
-where before a Bluetooth drop read as a natural end and auto-advanced.
+NO DEVICE PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback` gained
+`device_unavailable()` on both backends — true whenever the engine cannot
+sound: the AAudio disconnect latch and its refused reopen AND, on both, the
+device that never came up (an init that failed; JACK still records nothing for
+a server that vanishes mid-play) — and the render player's tick forks on it
+BEFORE its natural-end test, pausing in place with "No audio device" on the
+status line and a "paused" push, where before a Bluetooth drop read as a
+natural end and auto-advanced, and a laptop without pipewire-jack raced
+through the folder a wav per tick.
 
 ## Build and freeze posture
 

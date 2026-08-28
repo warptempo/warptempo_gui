@@ -136,20 +136,23 @@ public class MainActivity extends NativeActivity {
     // THE COMMAND TABLE, SHARED WITH THE NATIVE SIDE BY NUMBER: these are
     // GuiMediaCommand::Kind's enumerator values (src/gui/gui_media.h), in that
     // order, 0-based, and MEDIA_KIND_COUNT is its kGuiMediaCommandKindCount. A
-    // new kind is added at the END on both sides.
+    // new kind is added at the END on both sides. THERE IS NO PLAY_PAUSE ROW:
+    // the default onMediaButtonEvent splits the toggle key into onPlay /
+    // onPause by the published state (the class comment), so nothing here
+    // could ever send one -- ACTION_PLAY_PAUSE stays DECLARED below because
+    // that split only happens for a declared action.
     private static final int MEDIA_PLAY                 = 0;
     private static final int MEDIA_PAUSE                = 1;
-    private static final int MEDIA_PLAY_PAUSE           = 2;   // no producer here (see the class comment)
-    private static final int MEDIA_STOP                 = 3;
-    private static final int MEDIA_NEXT                 = 4;
-    private static final int MEDIA_PREVIOUS             = 5;
-    private static final int MEDIA_FAST_FORWARD         = 6;
-    private static final int MEDIA_REWIND               = 7;
-    private static final int MEDIA_SEEK_TO              = 8;
-    private static final int MEDIA_FOCUS_LOST           = 9;
-    private static final int MEDIA_FOCUS_LOST_TRANSIENT = 10;
-    private static final int MEDIA_FOCUS_GAINED         = 11;
-    private static final int MEDIA_KIND_COUNT           = 12;
+    private static final int MEDIA_STOP                 = 2;
+    private static final int MEDIA_NEXT                 = 3;
+    private static final int MEDIA_PREVIOUS             = 4;
+    private static final int MEDIA_FAST_FORWARD         = 5;
+    private static final int MEDIA_REWIND               = 6;
+    private static final int MEDIA_SEEK_TO              = 7;
+    private static final int MEDIA_FOCUS_LOST           = 8;
+    private static final int MEDIA_FOCUS_LOST_TRANSIENT = 9;
+    private static final int MEDIA_FOCUS_GAINED         = 10;
+    private static final int MEDIA_KIND_COUNT           = 11;
 
     // THE ONE ROAD DOWN (Java_com_warptempo_gui_MainActivity_nativeMediaCommand,
     // src/gui/platform_android.cpp): lock, push, wake. Called on the UI thread

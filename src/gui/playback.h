@@ -136,19 +136,26 @@ public:
     bool    is_playing() const;
     int64_t cursor()     const;
 
-    // THE DEVICE HAS GONE AWAY (2026-08-28, the render player's dead-stream
-    // rule): true when the backend knows its output device is finished and
-    // only a reopen can produce sound again — the AAudio disconnect latch
-    // (the error callback's `stream_dead`, and a reopen that was refused), a
-    // headphone pulled or a Bluetooth route dropped. IT IS NOT A NATURAL END:
-    // the same disconnect lowers `playing`, and a consumer reading is_playing()
-    // alone would take the cursor for having reached the end of its window.
-    // The render player's tick forks on this BEFORE its natural-end test and
-    // PAUSES instead of advancing (GuiRenderPlayer::tick). The JACK backend
-    // records nothing for a vanished server and answers false, with the reason
-    // at its definition. Main thread only, like is_playing(); the next play()
-    // reopens the device by the backend's own rule and clears the answer.
-    bool    device_lost() const;
+    // THERE IS NO DEVICE TO PLAY ON (2026-08-28, the render player's rule):
+    // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
+    // — the device that went away under a live stream (the AAudio disconnect
+    // latch, a headphone pulled or a Bluetooth route dropped, and the reopen
+    // that was refused after it) AND the device that never came up at all (an
+    // init that failed — no JACK server, no AAudio stream — after which
+    // play() is the documented silent no-op). The two are ONE ANSWER because
+    // they are one fact to every consumer: nothing will sound.
+    // IT IS NOT A NATURAL END, and that is what it exists to separate: a
+    // silent engine leaves `playing` false exactly as a window that reached
+    // its end does, and a consumer reading is_playing() alone would take the
+    // one for the other — the render player's tick forks on this BEFORE its
+    // natural-end test and PAUSES instead of advancing (GuiRenderPlayer::tick),
+    // where otherwise it would walk a folder at tick rate with nothing to play
+    // it on. The JACK backend answers the never-came-up half alone; it records
+    // nothing for a server that vanishes mid-play, with the reason at its
+    // definition. Main thread only, like is_playing(); on Android the next
+    // play() reopens the device by the backend's own rule and clears the
+    // answer.
+    bool    device_unavailable() const;
 
     // Continuous (sub-frame) counterpart of cursor(): the pre-truncation
     // extrapolated position as a double, in the SAME domain cursor() reports

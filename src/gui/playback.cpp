@@ -257,16 +257,25 @@ bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
 }
 
-// NEVER ON THIS BACKEND, and honestly so: nothing here records a vanished
-// server. No jack_on_shutdown callback is registered, and the stop() fence
-// above answers a server that has stopped running callbacks by hanging —
-// "a broken environment", the architect's 2026-08-08 ruling — rather than by
-// latching a state this could read. A device that stops mid-play on this
-// platform is the class of rare, loud fault the product does not backstop
-// (the wind-down rule); the AAudio twin has a real latch because a headphone
-// pull and a Bluetooth drop are ordinary events in the car.
-bool GuiPlayback::device_lost() const {
-    return false;
+// THE CLIENT THAT NEVER CAME UP, and on this backend that is the whole
+// answer. `client_active` is init()'s own success bit — false when
+// jack_client_open, either callback registration, a port or jack_activate
+// failed (each logging "playback disabled; verify pipewire-jack is running"),
+// and false again after shutdown() — and it is exactly the bit play() and
+// stop() gate on, so it is the honest reading of "nothing will sound".
+// A LAPTOP WITH NO pipewire-jack IS THE ORDINARY CASE HERE, which is why this
+// half is not optional: without it the render player's tick reads its silent
+// engine as a natural end every tick and walks the folder.
+// THE MID-PLAY LOSS IS NOT RECORDED, deliberately: no jack_on_shutdown
+// callback is registered, and the stop() fence above answers a server that has
+// stopped running callbacks by hanging — "a broken environment", the
+// architect's 2026-08-08 ruling — rather than by latching a state this could
+// read. A device that stops mid-play on this platform is the class of rare,
+// loud fault the product does not backstop (the wind-down rule); the AAudio
+// twin has a real latch because a headphone pull and a Bluetooth drop are
+// ordinary events in the car.
+bool GuiPlayback::device_unavailable() const {
+    return !impl_ || !impl_->client_active;
 }
 
 int64_t GuiPlayback::cursor() const {

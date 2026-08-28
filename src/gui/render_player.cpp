@@ -1,6 +1,8 @@
 #include "render_player.h"
 
 #include "folder_overlay.h"
+#include "input_handler.h"          // the ring clear's one owner
+                                    // (clear_modal_dialog_key_press)
 #include "render_output_naming.h"   // render_output_directory (the deliverable)
 #include "text_editor.h"            // next_session_id (the one modal counter)
 #include "wav_io.h"                 // wav_probe, checked_audio_sample_count,
@@ -520,21 +522,25 @@ void GuiRenderPlayer::on_natural_end() {
 void GuiRenderPlayer::tick() {
     AppState::RenderPlayer& rp = app.render_player;
     if (!rp.transport_live) return;
-    if (playback.device_lost()) {
-        // A DEAD STREAM PAUSES, IT DOES NOT ADVANCE (the rule at
-        // on_natural_end's declaration): the disconnect lowered `playing`
-        // too, so this arm stands ABOVE the natural-end test. It is the
-        // pause arm of toggle_pause with one line added — the resume point
-        // is the engine's held cursor (the suspended device holds it rather
-        // than extrapolating), read before the stop body, whose fence
-        // returns at once on a dead stream (the terminal-state escape,
-        // playback_aaudio.cpp) and whose player fork clears the transport
-        // bit and publishes the head unit's "paused". The next Space
-        // reopens the device by the backend's own rule; nothing here
-        // retries.
+    if (playback.device_unavailable()) {
+        // NO DEVICE PAUSES, IT DOES NOT ADVANCE (the rule at on_natural_end's
+        // declaration): an engine that cannot sound leaves `playing` false
+        // exactly as a finished window does, so this arm stands ABOVE the
+        // natural-end test — and it covers BOTH shapes, the device that went
+        // away mid-play (the AAudio latch) and the device that never came up
+        // (an init that failed, the laptop without pipewire-jack), which
+        // otherwise raced through the folder a wav per tick. It is the pause
+        // arm of toggle_pause with one line added — the resume point is the
+        // engine's held cursor (a suspended device holds it rather than
+        // extrapolating), read before the stop body, whose fence returns at
+        // once on a dead or absent device and whose player fork clears the
+        // transport bit and publishes the head unit's "paused". ONE LINE FOR
+        // BOTH SHAPES: what the user needs to know is that nothing will
+        // sound, not which way it will not. Nothing here retries; on Android
+        // the next Space reopens the device by the backend's own rule.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
-        status("Audio device lost");
+        status("No audio device");
         return;
     }
     if (!playback.is_playing()) {
@@ -650,7 +656,21 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     // contract at the declaration). The stable code is the key's own value
     // off the car base, the codepoint 0: none of these keys produces a
     // character.
+    //
+    // THE RING CLEAR RIDES THIS LAMBDA, which is what gives it the membership
+    // the rule asks for — every kind that synthesizes a key, and no other: a
+    // car button is not a keyboard walking the modal row's ring, and a bare
+    // Space or Enter on a ring-focused button is that button's press. The
+    // three writes are dispatch_modal_dialog_editor_act's, the same focus
+    // move made for the same reason (the full rule is at the declaration).
     const auto press = [&](GuiKey key) {
+        if (app.modal_dialog_focus >= 0) {
+            if (input != nullptr) input->clear_modal_dialog_key_press();
+            app.modal_dialog_focus        = -1;
+            app.modal_dialog_focus_active = false;
+            if (app.modal_dialog.valid)
+                viewport.invalidate_rect(app.modal_dialog.box);
+        }
         const uint32_t code = kCarStableCodeBase + key;
         gui.synthesize_key(key, code, /*pressed=*/true,  /*codepoint=*/0);
         gui.synthesize_key(key, code, /*pressed=*/false, /*codepoint=*/0);
@@ -658,9 +678,6 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
 
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
-        case Kind::PlayPause:
-            press(GuiKeys::Space);
-            return;
         case Kind::Play:
             // The state gate (the declaration): a "play" said to a live
             // transport is already true and must not toggle it off.

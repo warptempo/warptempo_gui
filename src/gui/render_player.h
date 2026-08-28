@@ -25,6 +25,12 @@
 // keys differ and no car key can meet a painted one.
 inline constexpr uint32_t kCarStableCodeBase = 1000;
 
+// The input handler is reached through a back-pointer below (the ring clear
+// on_media_command owes), and it holds this cluster by reference, so the
+// include cannot run both ways: input_handler.h includes this header and
+// render_player.cpp includes that one.
+struct GuiInputHandler;
+
 // THE RENDER PLAYER (architect design 2026-08-28, the in-app player for the
 // car) — the operations cluster for the MODE that plays the project's own
 // renders through the one playback engine: the folder overlay above the
@@ -116,6 +122,14 @@ struct GuiRenderPlayer {
     GuiTargetRender&      target_render;
     GuiRendersDir&        renders_dir;
 
+    // Back-pointer to the input handler, wired in main.cpp after both are
+    // constructed (the handler takes this cluster by reference, so it cannot
+    // be a constructor argument) — the prompt's own shape (GuiPrompt::input).
+    // ITS ONE READER is on_media_command's ring clear, which needs the one
+    // owner of the modal keyboard arm (clear_modal_dialog_key_press). Null
+    // until main.cpp wires it, and the reader tolerates null.
+    GuiInputHandler*      input = nullptr;
+
     GuiRenderPlayer(AppState&             app_,
                     const GuiAudio&       audio_,
                     GuiPlatform&          gui_,
@@ -200,10 +214,11 @@ struct GuiRenderPlayer {
     int64_t scrub_frame_at(int x) const;
 
     // THE TICK (main.cpp's on_tick, forked at its head onto this while the
-    // mode stands): a live transport whose DEVICE has gone away PAUSES (the
-    // dead-device arm below, asked first); one the audio thread has ended
-    // takes the natural-end branch; a still-live one damages the clock cell
-    // and the scrub track once per position change.
+    // mode stands): a live transport with NO DEVICE TO PLAY ON pauses (the
+    // no-device arm below, asked first — gone away or never there, one
+    // answer); one the audio thread has ended takes the natural-end branch; a
+    // still-live one damages the clock cell and the scrub track once per
+    // position change.
     void tick();
 
     // -- The car ------------------------------------------------------------
@@ -217,7 +232,26 @@ struct GuiRenderPlayer {
     // the player's keys, not a question's answer, and a Space that landed on
     // the prompt's focused OK would load a recipe from the wheel.
     //
-    // THE TABLE (design §3, R6): PlayPause -> Space; Play -> Space ONLY WITH
+    // A CAR BUTTON IS NOT A KEYBOARD WALKING A RING, and that is the second
+    // pre-filter here beside the state gate below. The player's modal row
+    // carries the focus ring, and a bare Space or Enter with a button focused
+    // is THAT BUTTON'S press (route_modal_dialog_focus_key claims it before
+    // the player's own vocabulary sees it), so a "play" from the wheel would
+    // press whatever the ring stood on — Close, and the player would come
+    // down. The focus can stand on a button with nobody having walked to it:
+    // THE FEINT assigns it passively, a finger pressed on a button and slid
+    // off (update_modal_dialog_hover). So the ring is CLEARED before any key
+    // is synthesized, in the synthesis road itself, which is what makes the
+    // membership exactly "every command kind that synthesizes a key" — SeekTo
+    // does not take it, being the direct act below, and a kind that presses
+    // nothing (FocusGained, a state-gated no-op) damages nothing. The clear
+    // is dispatch_modal_dialog_editor_act's own three writes: the one owner
+    // GuiInputHandler::clear_modal_dialog_key_press for an armed key press (a
+    // focus that moves cancels the arm — the rule at
+    // AppState::modal_dialog_key_pressed), then modal_dialog_focus = -1 and
+    // modal_dialog_focus_active = false, damaging the modal box.
+    //
+    // THE TABLE (design §3, R6): Play -> Space ONLY WITH
     // THE TRANSPORT DOWN; Pause, Stop, FocusLost and FocusLostTransient ->
     // Space ONLY WITH THE TRANSPORT LIVE (stop is a pause by ruling; a focus
     // loss pauses, Android's one imposed interrupt); Next / Previous ->
@@ -275,11 +309,13 @@ private:
                   int index);
     // The natural end: the fence through the one stop body, then the next
     // wav of the item's folder or the rest at the item's start. A NATURAL
-    // END IS THE CURSOR REACHING THE END, NOT THE DEVICE GOING AWAY
-    // (2026-08-28): a Bluetooth drop or a headphone pull lowers the same
-    // `playing` flag, and the tick asks GuiPlayback::device_lost FIRST so
-    // that case pauses in place instead of arriving here and advancing to
-    // a wav nothing can play.
+    // END IS THE CURSOR REACHING THE END, NOT THE ABSENCE OF A DEVICE
+    // (2026-08-28): a Bluetooth drop, a headphone pull and an audio device
+    // that never came up all leave the same `playing` flag false, and the
+    // tick asks GuiPlayback::device_unavailable FIRST so every one of them
+    // pauses in place instead of arriving here and advancing to a wav
+    // nothing can play — a whole folder at tick rate, in the never-came-up
+    // case.
     void on_natural_end();
     // The wav rows of the live listing, in listing order.
     std::vector<AppState::FolderOverlayRow> listing_wavs() const;
