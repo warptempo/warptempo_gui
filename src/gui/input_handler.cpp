@@ -230,10 +230,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+S and Ctrl+Q fall through to the ordinary dispatch — Ctrl+S to the
     // save, which touches no transport, and Ctrl+Q with the player already
     // closed, so the quit road runs on the ordinary state. No editor and no
-    // pointer gesture can stand under it (its opener refuses under every
-    // editor; the veil arms none), so the gates below never contend with it.
+    // gesture of any OTHER surface can stand under it (its opener refuses
+    // under every editor; the veil arms none), so the gates below never
+    // contend with it — its own two arms are this block's business, below.
+    //
+    // NOTHING POPS MID-GESTURE, and because this block outranks the drag-modal
+    // gate below it asks that gate's question itself
+    // (any_pointer_gesture_active — the player's two arms are members of it,
+    // and the reason is stated there). While the overlay's row press or the
+    // scrub's marker drag is armed the keyboard belongs to the gesture exactly
+    // as it does under a marker or trim drag: every key is swallowed — Esc
+    // included, so the mode cannot close under a held press, and Enter and
+    // Space cannot open a row or start a sound under one either. THE ONE HATCH
+    // is the drag-modal gate's own, modifier-exact Ctrl+Q, which falls through
+    // to the ordinary close road; that road closes the player first
+    // (GuiPrompt::request_close), and the close drops both arms with the
+    // overlay and the scrub state — the force-end every other gesture takes.
     if (app.render_player.active) {
-        if (route_render_player_key(key, mods)) return;
+        if (any_pointer_gesture_active(app)) {
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) return;
+        } else if (route_render_player_key(key, mods)) {
+            return;
+        }
     }
 
     // Blank / loading state: only the quit / close-gesture bindings run;
@@ -2144,6 +2162,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // the sub-detent accumulator from growing remainder under a popup.
     if (app.dropdown.open()) return -1;
     if (modal_dialog_editor_active()) return -1;
+    // THE LIVE-GESTURE REFUSAL IS RANKED ABOVE THE PLAYER (2026-08-28), not
+    // below it as it was when the player's context landed: the overlay's row
+    // press and the scrub's marker drag are members of the predicate now, and
+    // the player's own context is the one wheel arm a live gesture could
+    // otherwise have moved — a detent under a held row press would scroll the
+    // list out from under the arm the lift re-hits. Its rank against the
+    // loading test below is free (both refuse).
+    if (any_pointer_gesture_active(app)) return -1;
     // THE RENDER PLAYER'S WHEEL (2026-08-28): live over the FOLDER OVERLAY'S
     // band alone — context 4, the list's one-row-per-detent scroll — and
     // swallowed everywhere else, the veil's own answer for the wheel. The
@@ -2153,7 +2179,6 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
     if (app.loading || audio.total_frames() <= 0) return -1;
-    if (any_pointer_gesture_active(app)) return -1;
 
     // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
     // for the whole family, recorded here where the routing lives, and every

@@ -1681,6 +1681,12 @@ enum class DoubleClickSurface {
 //                 nothing). THE CONSUME ACTS AT THE PRESS with the whole
 //                 family and arms nothing — the act may rebuild the listing
 //                 under the pointer, so nothing may be left waiting on it.
+//                 AND A LISTING REBUILD CLEARS THE CANDIDATE (the clear is in
+//                 GuiRenderPlayer::rebuild_rows, the listing's one owner):
+//                 alone among the five this target names a position in a
+//                 table the app itself rewrites, so a seed can only pair
+//                 within ONE listing — index 0 of the folder just entered is
+//                 not the row the seed was taken on.
 // Cleared on file load, the moment an action fires, and — the KEYBOARD and
 // WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel
 // command: any keyboard command OR wheel frame between two
@@ -1689,7 +1695,10 @@ enum class DoubleClickSurface {
 // included) or a wheel pan that moved content under the pointer. The
 // pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
 // and the force-end finalizer's clear (a force-end is not a clean click
-// sequence). Session-only.
+// sequence). ONE CLEAR IS A MUTATOR'S rather than a chokepoint's: the folder
+// overlay's listing rebuild, because FolderRow's target names a row of a table
+// the app rewrites (the rule is at that surface above); the file load's clear
+// is the same class for the whole candidate. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
@@ -7331,20 +7340,30 @@ inline int64_t snap_authored_frame(double frame) {
 // need the world held still), THE ONE DEFERRED PENDING CLICK ACT
 // (PendingClickAct — the trim bar's two bound sets, the one surviving lift act
 // of 2026-08-17; it holds a whole unrun click, which is why it must be in
-// flight here), or the pending trim drag
-// (button held, watching for the threshold). (The scrub still
+// flight here), the pending trim drag
+// (button held, watching for the threshold), or THE RENDER PLAYER'S TWO ARMS
+// (2026-08-28): the folder overlay's ROW PRESS — chrome's arm-then-act shape,
+// which becomes the band's scroll drag once the vertical gate is crossed and
+// which owes a double-click seed at its motionless lift — and the modal row's
+// PLAY-SCRUB MARKER DRAG, whose seek commits at the release. The player is a
+// modal surface, so nothing under it could pop a dialog; what its membership
+// buys is the rest of the rule — the keyboard swallowed and the wheel
+// suppressed for the gesture's life, so the mode cannot close, the listing
+// cannot be re-entered and the list cannot scroll out from under a held
+// press. (The scrub still
 // has no entry of its own — it is a one-shot ACT, not a gesture — but since
 // 2026-08-13 its press arms the navigation surface's PENDING CLICK like every
 // other press on that surface, so a held lower-half press IS in flight here
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// SIX CONSUMERS, re-derived by grep 2026-08-12 (the follow chase joined; the
+// SEVEN CONSUMERS, re-derived by grep 2026-08-28 (the render player's key gate
+// joined with the player's two arms above; the follow chase joined 2026-08-12; the
 // eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the
 // bare right-press scrub's gate — and the timer-free touch model had deleted
 // begin_touch_trim_move the same day). EACH STATES THE SAME
 // "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
-// two kinds: the four INPUT-ROUTE consumers refuse events, and the run loop's
+// two kinds: the five INPUT-ROUTE consumers refuse events, and the run loop's
 // TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
 // world's autonomous movers for the gesture's life:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
@@ -7354,6 +7373,15 @@ inline int64_t snap_authored_frame(double frame) {
 //     before its drag begins either);
 //   * repeat_eligible (input_key_dispatch.cpp) — a key held through a gesture
 //     must not arm a repeat that fires once the gesture ends;
+//   * THE RENDER PLAYER'S KEY GATE (input_handler.cpp's on_key, 2026-08-28) —
+//     the player's router is ranked ABOVE the drag-modal gate (it is the whole
+//     keyboard vocabulary while the mode stands), so it asks this question
+//     itself rather than inheriting the answer by ordering, and swallows every
+//     key under a live gesture with the drag-modal gate's own single Ctrl+Q
+//     hatch. THE DRAG-MODAL GATE IS NOT A CONSUMER: it spells its own member
+//     list inline (the two arms above are deliberately absent from it — the
+//     player's gate above it already owns them, and nothing else it guards is
+//     reachable under the player);
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
@@ -7392,7 +7420,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.editor_text_drag.active ||
            app.pending_marker_press.active ||
            app.pending_click.active() ||
-           app.pending_trim_drag.active;
+           app.pending_trim_drag.active ||
+           app.folder_overlay.press.armed ||
+           app.render_player.scrub.armed;
 }
 
 // architect ruling 2026-07-22: each marker column authors in its HOME view

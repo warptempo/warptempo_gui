@@ -105,12 +105,16 @@ drag coordinates floor instead of truncating.
   holds on both.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. `gui_scale` and `audio_player` are per-DEVICE
-  preferences (settings.md owns the file and its schema), and the values a
+  both-sides member. The FOUR keys it stamps are per-DEVICE preferences
+  (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
-  the laptop answers 100 % / `audacious`, Android 225 % / blank (no
-  spawnable player exists there, so `l` reports "No audio_player set"
-  through the ordinary opt-out road). `gui_main` asks it before
+  the laptop answers 100 % and the clone's own `projects/`, Android 225 %
+  and `<externalDataPath>/projects`; both stamp `kDefaultProjectsRepo` and a
+  blank `last_project`. (A FIFTH key, `audio_player`, stood here until
+  2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
+  spawnable player existing there — and retired whole with the in-app render
+  player, which plays a render through the product's own engine on both
+  devices; render-player.md.) `gui_main` asks it before
   `GuiPlatform::init` and stamps the file if none exists, which is what
   keeps the GUI proper free of the `#ifdef` the alternative would need.
 - **Fonts**: `gui_font.h` is the ONE face owner (`GuiFontFamily::Sans/Mono`);
@@ -177,6 +181,15 @@ painter in `paint_handler.cpp` and the press router in `input_pointer.cpp`
 beside every other painter and router. The standing predicate is false forever
 on Wayland, which is what makes the laptop build's behaviour identical by
 construction rather than by care.
+
+THE BAND HAS A SECOND TENANT SINCE 2026-08-28 and the keyboard yields it: the
+RENDER PLAYER'S FOLDER OVERLAY paints in this exact rect, so
+`onscreen_keyboard::stands` gained a third term (`!render_player.active`) and
+`waveform_paint_area` gates on EITHER tenant, against one as-painted bit that
+describes the SLOT rather than either surface
+(`AppState::keyboard_slot_painted_standing`). The overlay takes no platform
+term, unlike this surface's — it serves the pointer and the finger alike and
+stands on both backends. render-player.md owns it.
 
 THE BAND CARRIES NO CHROME OF ITS OWN (architect 2026-08-27, on his first glass
 drive of the surface): no line at its top edge. Its ground IS the bottom row's

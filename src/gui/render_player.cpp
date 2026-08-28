@@ -154,6 +154,16 @@ void GuiRenderPlayer::rebuild_rows() {
     ov.scroll_px     = 0;
     ov.hovered_row   = -1;
     ov.press         = AppState::FolderOverlayPress{};
+    // A REBUILT LISTING RENAMES EVERY ROW, so no double-click candidate may
+    // cross one: the FolderRow seed's target is a row INDEX, and index 0 of
+    // the listing this call installs is not the row the seed was taken on.
+    // The clear is the MUTATOR'S (the file load's own shape — the candidate
+    // is one field, so the whole of it goes), and it is the rule stated at
+    // DoubleClickSurface::FolderRow. Every OTHER road into a rebuild happens
+    // to pass a chokepoint that clears — on_key's, on_wheel's, or
+    // on_button_press's top-of-frame clear — but that is the callers'
+    // accident and not a contract the listing may rest on.
+    app.double_click = DoubleClickCandidate{};
     ov.highlight_row = ov.rows.empty() ? -1 : 0;
     if (!rp.item.empty()) {
         for (size_t i = 0; i < ov.rows.size(); ++i) {
@@ -289,8 +299,27 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 
     // THE DECODE VOCABULARY: probe, the rate/channel equality against the
     // DEVICE (the engine was init()ed with the source's; nothing resamples),
-    // the allocation owner on the probed shape, then the read. Every refusal
-    // is its own words and the item does not change.
+    // the allocation owner on the probed shape, then the read — and THE SAME
+    // EQUALITY AGAIN ON THE DECODED BUFFER'S OWN SHAPE, which is the one that
+    // binds. Every refusal is its own words and the item does not change.
+    //
+    // THE PROBE'S ANSWER IS STALE BY CONSTRUCTION: wav_read_full REOPENS the
+    // path, so the file object it decoded need not be the one probed here — a
+    // wav republished between the two opens (every writer in this tree
+    // publishes by rename: the render's own staging, the Synchronize act,
+    // wts) is a different file at the same name. The probe is kept as the
+    // CHEAP EARLY REFUSAL — it is what lets the allocation policy
+    // (checked_audio_sample_count) answer on a header before any payload is
+    // read — and the post-decode check below is what the bind rests on,
+    // because a mono or other-rate buffer under the engine's stride would be
+    // read past its end (the engine reads by ITS channel count, playback
+    // engine's mixer) or played at the wrong speed.
+    //
+    // IT IS A SHAPE CHECK, NOT AN IDENTITY ONE, unlike the render cache's
+    // post-decode re-stat (RenderCache::read_file): that road holds a
+    // fingerprint's own stat capture and must prove the bytes are THAT
+    // artifact's; this one holds no identity — any wav at the path is a
+    // legitimate item — and needs only that what it binds fits the device.
     auto info = wav_probe(path.string());
     if (!info) {
         status(info.error());
@@ -310,6 +339,18 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     auto samples = wav_read_full(path.string(), &read_info);
     if (!samples) {
         status(samples.error());
+        return false;
+    }
+    // THE DECODED BUFFER'S OWN SHAPE, in the probe's words: read_info is the
+    // layout the returned samples were decoded under (wav_read_range fills it
+    // from the very open it read), so this is the buffer describing itself.
+    // Its LENGTH needs no arm of its own — that read allocates
+    // frames * channels through the same allocation owner and returns exactly
+    // it, so the buffer is a whole number of frames at this channel count by
+    // construction, which is what the frame count below divides by.
+    if (read_info.channels != audio.channels() ||
+        read_info.sample_rate != audio.sample_rate()) {
+        status("Not the source's rate and channel count");
         return false;
     }
     const int64_t frames =
