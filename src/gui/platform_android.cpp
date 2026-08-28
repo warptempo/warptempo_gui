@@ -16,9 +16,11 @@
 #include <android_native_app_glue.h>
 
 #include <arm_neon.h>
+#include <jni.h>
 
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/eventfd.h>
 #include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
@@ -32,9 +34,11 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 // THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
@@ -292,10 +296,69 @@ constexpr int kStatusBarAirPx = 14;
 // LOOPER_ID_USER (3) up is ours. The five worker slots are contiguous so the
 // dispatch can index them, and the ORDER they are dispatched in is the Wayland
 // loop's order (async renderer, waveform, checkpoint, prefetch,
-// synchronization).
+// synchronization). THE MEDIA COMMAND SOURCE IS NOT A SIXTH WORKER SLOT: the
+// worker fds are per project (re-registered each session, forgotten at its
+// tail), while the car's eventfd is this backend's own and lives with the
+// process like the timer, so it takes the ident after the worker range and
+// is watched once in init() and unwatched in shutdown().
 constexpr int kIdentTimer   = LOOPER_ID_USER;       // 3
 constexpr int kIdentWorker0 = LOOPER_ID_USER + 1;   // 4..8
 constexpr int kWorkerCount  = 5;
+constexpr int kIdentMedia   = LOOPER_ID_USER + 1 + kWorkerCount;   // 9
+
+// THE MEDIA COMMAND SINK, reached from the JNI entry below on the UI thread.
+// ONE MUTEX GUARDS BOTH THE POINTER AND THE QUEUE BEHIND IT: init() parks
+// `this` here and shutdown() clears it under the lock, the JNI entry reads
+// the pointer and pushes under the same lock, and pump()'s drain swaps the
+// queue out under it too — so a command can never reach an object that is
+// being dismantled, and neither side needs a second lock. A command that
+// arrives before init() or after shutdown() finds the pointer null and is
+// DROPPED (the first drop rule). A file-scope pointer rather than
+// g_android_app->userData because that pair is written by the glue thread
+// with no lock the UI thread could take.
+std::mutex   g_media_mutex;
+GuiPlatform* g_media_sink = nullptr;
+
+// UTF-8 TO UTF-16 for the strings that cross into Java. NewStringUTF wants
+// MODIFIED UTF-8 — no four-byte sequences, and CheckJNI (live in this
+// debuggable build) aborts the process on one — so the conversion is done
+// here and NewString takes UTF-16 code units, supplementary planes as
+// surrogate pairs. A title is a file name off the disk, and the project's
+// `title=` is free UTF-8; a malformed byte becomes U+FFFD rather than an
+// abort, since a bad name on the head unit's display is a name and a dead
+// app is not.
+void append_utf16(std::vector<jchar>& out, std::string_view s) {
+    size_t i = 0;
+    while (i < s.size()) {
+        const unsigned char c = static_cast<unsigned char>(s[i]);
+        uint32_t cp   = 0xFFFD;
+        size_t   len  = 1;
+        if (c < 0x80) {
+            cp = c;
+        } else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; len = 2; }
+        else if ((c & 0xF0) == 0xE0)   { cp = c & 0x0F; len = 3; }
+        else if ((c & 0xF8) == 0xF0)   { cp = c & 0x07; len = 4; }
+        if (len > 1) {
+            if (i + len > s.size()) { len = 1; cp = 0xFFFD; }
+            else {
+                for (size_t k = 1; k < len; ++k) {
+                    const unsigned char cc = static_cast<unsigned char>(s[i + k]);
+                    if ((cc & 0xC0) != 0x80) { cp = 0xFFFD; len = 1; break; }
+                    cp = (cp << 6) | (cc & 0x3F);
+                }
+            }
+            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) cp = 0xFFFD;
+        }
+        if (cp >= 0x10000) {
+            const uint32_t v = cp - 0x10000;
+            out.push_back(static_cast<jchar>(0xD800 + (v >> 10)));
+            out.push_back(static_cast<jchar>(0xDC00 + (v & 0x3FF)));
+        } else {
+            out.push_back(static_cast<jchar>(cp));
+        }
+        i += len;
+    }
+}
 
 } // namespace
 
@@ -312,7 +375,48 @@ struct AndroidCallbacks {
         auto* self = static_cast<GuiPlatform*>(app->userData);
         return self ? self->on_input_event(event) : 0;
     }
+    // THE MEDIA COMMAND'S ONE ROAD IN, on the UI THREAD (the JNI entry below
+    // is its only caller). ITS WHOLE BODY IS: lock, push, unlock, write the
+    // eventfd. IT TOUCHES NOTHING ELSE — not the core, not the hook, not the
+    // damage list, none of which is synchronized — exactly as the AAudio error
+    // callback confines itself to three atomics and a log line
+    // (playback_aaudio.cpp). The 8-byte write is the wake; EAGAIN on a
+    // saturated counter is ignored, the counter being nonzero is still one
+    // wake, and the drain reads it back to zero.
+    static void media_command(GuiMediaCommand cmd) {
+        int fd = -1;
+        {
+            std::lock_guard<std::mutex> lock(g_media_mutex);
+            if (!g_media_sink) return;   // before init() or after shutdown()
+            g_media_sink->media_queue_.push_back(cmd);
+            fd = g_media_sink->media_command_fd_;
+        }
+        if (fd < 0) return;
+        const uint64_t one = 1;
+        (void)write(fd, &one, sizeof(one));
+    }
 };
+
+// THE JNI ENTRY (name-based resolution, no JNI_OnLoad): MainActivity's
+// `private static native void nativeMediaCommand(int kind, long positionMs)`,
+// registered for lookup by the class's `System.loadLibrary("warptempo_gui")`
+// initialiser — NativeActivity's own dlopen of the library does not register
+// it. `kind` is the shared table's integer (gui_media.h and the MEDIA_*
+// constants in MainActivity.java, one table by number); an integer outside
+// the table is DROPPED here rather than cast (the second drop rule). The
+// third drop rule is the loop's: a command with no hook installed (between
+// two projects) reaches nothing (pump).
+extern "C" JNIEXPORT void JNICALL
+Java_com_warptempo_gui_MainActivity_nativeMediaCommand(JNIEnv* /*env*/,
+                                                        jclass /*clazz*/,
+                                                        jint kind,
+                                                        jlong position_ms) {
+    if (kind < 0 || kind >= kGuiMediaCommandKindCount) return;
+    GuiMediaCommand cmd;
+    cmd.kind        = static_cast<GuiMediaCommand::Kind>(kind);
+    cmd.position_ms = static_cast<int64_t>(position_ms);
+    AndroidCallbacks::media_command(cmd);
+}
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -562,6 +666,62 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // resize CALLBACK is owed rather than made (initial_resize_owed_).
     if (app_->window) adopt_window(/*fire_resize=*/false);
 
+    // THE CAR'S BRIDGE, BOTH DIRECTIONS, ONCE PER PROCESS (the members'
+    // comment, platform_android.h). DOWN: the eventfd the JNI entry wakes the
+    // loop with, watched under its own ident for the process's life, and the
+    // sink pointer parked under the one mutex — from here on a button press
+    // on the UI thread reaches this object. A failed eventfd is logged and
+    // leaves the car's buttons dead (the sink stays null); nothing else
+    // depends on it.
+    media_command_fd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (media_command_fd_ < 0) {
+        std::fprintf(stderr,
+                     "warptempo_gui: eventfd for media commands failed: %s; "
+                     "the head unit's buttons will reach nothing\n",
+                     std::strerror(errno));
+    } else {
+        watch_fd(media_command_fd_, kIdentMedia);
+        std::lock_guard<std::mutex> lock(g_media_mutex);
+        g_media_sink = this;
+    }
+
+    // UP: this thread — the glue's, which runs the whole GUI loop and is NOT
+    // attached to the VM by the glue — is attached ONCE here (an
+    // already-attached thread gets the same env back, so the call is safe
+    // either way), and MainActivity's instance method is looked up ONCE
+    // through the activity object (`clazz` is the ACTIVITY INSTANCE, a global
+    // ref the glue holds for the activity's life, despite its name). The
+    // activity's own `env` is the UI thread's and is never used from here. A
+    // failed attach or lookup logs and leaves the pair null, and every push
+    // then drops with this line already written.
+    if (app_->activity && app_->activity->vm) {
+        JNIEnv* env = nullptr;
+        if (app_->activity->vm->AttachCurrentThread(&env, nullptr) == JNI_OK &&
+            env) {
+            jni_env_      = env;
+            jni_attached_ = true;
+            jclass cls = env->GetObjectClass(app_->activity->clazz);
+            media_state_method_ = env->GetMethodID(
+                cls, "mediaState",
+                "(ZZLjava/lang/String;Ljava/lang/String;JJ)V");
+            if (!media_state_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: MainActivity.mediaState not "
+                             "found; the head unit's display will show "
+                             "nothing\n");
+            }
+            env->DeleteLocalRef(cls);
+        } else {
+            std::fprintf(stderr,
+                         "warptempo_gui: AttachCurrentThread failed; the "
+                         "head unit's display will show nothing\n");
+        }
+    }
+
     return true;
 }
 
@@ -797,6 +957,30 @@ void GuiPlatform::shutdown() {
         app_->onInputEvent = nullptr;
         app_->userData     = nullptr;
     }
+    // THE CAR'S BRIDGE COMES DOWN FIRST: the sink is cleared under the one
+    // mutex, so a button press on the UI thread from here on finds nothing
+    // (the first drop rule), and only then is the eventfd unwatched and
+    // closed and whatever was still queued discarded. The glue thread
+    // detaches from the VM if init() attached it — a thread that exits
+    // attached is a VM abort — and the pair goes null so a push after this
+    // drops.
+    {
+        std::lock_guard<std::mutex> lock(g_media_mutex);
+        if (g_media_sink == this) g_media_sink = nullptr;
+        media_queue_.clear();
+    }
+    if (media_command_fd_ >= 0) {
+        unwatch_fd(media_command_fd_);
+        close(media_command_fd_);
+        media_command_fd_ = -1;
+    }
+    media_fired_ = false;
+    if (jni_attached_ && app_ && app_->activity && app_->activity->vm) {
+        app_->activity->vm->DetachCurrentThread();
+    }
+    jni_attached_       = false;
+    jni_env_            = nullptr;
+    media_state_method_ = nullptr;
     if (timerfd_ >= 0) {
         unwatch_fd(timerfd_);
         close(timerfd_);
@@ -1142,6 +1326,14 @@ void GuiPlatform::drain_looper(int timeout_ms) {
             uint64_t expirations = 0;
             (void)read(timerfd_, &expirations, sizeof(expirations));
             timer_fired_ = true;
+        } else if (ident == kIdentMedia) {
+            // The car's wake: the counter is read back to zero and the drain
+            // itself waits for pump()'s fixed order, like the workers'.
+            if (media_command_fd_ >= 0) {
+                uint64_t cnt = 0;
+                (void)read(media_command_fd_, &cnt, sizeof(cnt));
+                media_fired_ = true;
+            }
         } else if (ident >= kIdentWorker0 &&
                    ident < kIdentWorker0 + kWorkerCount) {
             const int slot = ident - kIdentWorker0;
@@ -1219,6 +1411,25 @@ void GuiPlatform::pump() {
             case 2: if (on_history_worker_completion_)  on_history_worker_completion_();  break;
             case 3: if (on_history_prefetch_ready_)     on_history_prefetch_ready_();     break;
             default: if (on_sync_worker_completion_)    on_sync_worker_completion_();     break;
+        }
+    }
+
+    // THE CAR'S COMMANDS, after the workers and before the settled hook and
+    // the paint, so a button acts and its frame paints in this same pass
+    // (the hook's contract, platform_wayland.h). The queue is swapped out
+    // under the one mutex and the hook fired per command OUTSIDE it — a
+    // command synthesizes keys, and that road is long. With no hook installed
+    // (between two projects) the commands are discarded: the third drop
+    // rule.
+    if (media_fired_) {
+        media_fired_ = false;
+        std::vector<GuiMediaCommand> commands;
+        {
+            std::lock_guard<std::mutex> lock(g_media_mutex);
+            commands.swap(media_queue_);
+        }
+        if (on_media_command_) {
+            for (const GuiMediaCommand& cmd : commands) on_media_command_(cmd);
         }
     }
 
@@ -1519,6 +1730,55 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     // character against the live lamp.
     if (pressed) key_codepoints_[stable_code] = codepoint;
     input_.key_event(key, stable_code, pressed, codepoint);
+}
+
+// ---------------------------------------------------------------------------
+// The car's two seam members (contracts at platform_wayland.h)
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) {
+    on_media_command_ = std::move(cb);
+}
+
+// THE PUSH UP, on the glue thread attached at init(): the six fields go into
+// MainActivity.mediaState, which builds the session's metadata and playback
+// state, sets it active or inactive and owns the audio-focus machine
+// (MainActivity.java). MediaSession's setters are binder calls, callable from
+// any attached thread; the session itself was created on the UI thread so its
+// CALLBACKS land there, which is what the queue above is for. A local frame
+// bounds the references this creates — the attached thread's frame would
+// otherwise hold every string until detach. A Java exception out of the call
+// is described, cleared and logged, never propagated: the head unit's display
+// is not worth the process.
+void GuiPlatform::publish_media_state(const GuiMediaState& state) {
+    if (!app_ || !app_->activity || !jni_env_ || !media_state_method_) return;
+    JNIEnv* env = jni_env_;
+    if (env->PushLocalFrame(8) != 0) {
+        env->ExceptionClear();
+        return;
+    }
+    std::vector<jchar> u16;
+    append_utf16(u16, state.title);
+    jstring title = env->NewString(u16.data(), static_cast<jsize>(u16.size()));
+    u16.clear();
+    append_utf16(u16, state.artist);
+    jstring artist = env->NewString(u16.data(), static_cast<jsize>(u16.size()));
+    if (title && artist) {
+        env->CallVoidMethod(app_->activity->clazz, media_state_method_,
+                            static_cast<jboolean>(state.session_active),
+                            static_cast<jboolean>(state.playing),
+                            title, artist,
+                            static_cast<jlong>(state.duration_ms),
+                            static_cast<jlong>(state.position_ms));
+    }
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        std::fprintf(stderr,
+                     "warptempo_gui: MainActivity.mediaState threw; the head "
+                     "unit's display was not updated\n");
+    }
+    env->PopLocalFrame(nullptr);
 }
 
 // ---------------------------------------------------------------------------

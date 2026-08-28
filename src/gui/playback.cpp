@@ -257,6 +257,18 @@ bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
 }
 
+// NEVER ON THIS BACKEND, and honestly so: nothing here records a vanished
+// server. No jack_on_shutdown callback is registered, and the stop() fence
+// above answers a server that has stopped running callbacks by hanging —
+// "a broken environment", the architect's 2026-08-08 ruling — rather than by
+// latching a state this could read. A device that stops mid-play on this
+// platform is the class of rare, loud fault the product does not backstop
+// (the wind-down rule); the AAudio twin has a real latch because a headphone
+// pull and a Bluetooth drop are ordinary events in the car.
+bool GuiPlayback::device_lost() const {
+    return false;
+}
+
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);

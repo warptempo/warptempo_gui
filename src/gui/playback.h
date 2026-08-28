@@ -136,6 +136,20 @@ public:
     bool    is_playing() const;
     int64_t cursor()     const;
 
+    // THE DEVICE HAS GONE AWAY (2026-08-28, the render player's dead-stream
+    // rule): true when the backend knows its output device is finished and
+    // only a reopen can produce sound again — the AAudio disconnect latch
+    // (the error callback's `stream_dead`, and a reopen that was refused), a
+    // headphone pulled or a Bluetooth route dropped. IT IS NOT A NATURAL END:
+    // the same disconnect lowers `playing`, and a consumer reading is_playing()
+    // alone would take the cursor for having reached the end of its window.
+    // The render player's tick forks on this BEFORE its natural-end test and
+    // PAUSES instead of advancing (GuiRenderPlayer::tick). The JACK backend
+    // records nothing for a vanished server and answers false, with the reason
+    // at its definition. Main thread only, like is_playing(); the next play()
+    // reopens the device by the backend's own rule and clears the answer.
+    bool    device_lost() const;
+
     // Continuous (sub-frame) counterpart of cursor(): the pre-truncation
     // extrapolated position as a double, in the SAME domain cursor() reports
     // (the bound buffer's domain offset added once, no translation). cursor()

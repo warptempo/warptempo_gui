@@ -1168,8 +1168,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // tick is the on_tick fork below, its buffer dies with this AppState
     // (after playback.shutdown at the session tail, so the engine never
     // outlives what it is bound to).
-    GuiRenderPlayer render_player(app, audio, playback, playback_lifecycle,
+    GuiRenderPlayer render_player(app, audio, gui, playback, playback_lifecycle,
                                   viewport, target_render, renders_dir);
+    // The stop body's back-pointer onto the player (the field's own comment,
+    // playback_lifecycle.h): the one stop body publishes the head unit's
+    // "paused" from its player fork, and the player is built after it.
+    playback_lifecycle.render_player = &render_player;
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
@@ -1446,6 +1450,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // resolves nothing.
     gui.set_on_key_release([&](GuiKey key) {
         input_handler.on_key_release(key);
+    });
+
+    // THE CAR'S BUTTONS (design §3): each command the platform drained is the
+    // render player's to translate into its own keys (the contract at
+    // GuiRenderPlayer::on_media_command). Installed per project like every
+    // other handler, and — unlike them — CLEARED at the session tail, so a
+    // button pressed between two projects is dropped by the platform's null
+    // test rather than delivered against a dead set (the hook captures this
+    // session's player).
+    gui.set_on_media_command([&](GuiMediaCommand cmd) {
+        render_player.on_media_command(cmd);
     });
 
     gui.set_on_close([&]() {
@@ -2636,6 +2651,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.set_history_worker_completion_fd(-1, {});
     gui.set_history_prefetch_completion_fd(-1, {});
     gui.set_sync_worker_completion_fd(-1, {});
+    // The car's hook goes with them (its install above says why it alone of
+    // the handlers is cleared): its producer is another thread that keeps
+    // producing between sessions.
+    gui.set_on_media_command({});
     // ON ANDROID THIS IS ONE STREAM STOP AND ONE START PER REOPEN: the AAudio
     // stream stays started between plays for the transient's sake, and a
     // reopen is the one moment it is torn down and brought back (the next

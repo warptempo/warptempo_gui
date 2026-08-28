@@ -2189,6 +2189,18 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     input_.key_event(key, stable_code, pressed, codepoint);
 }
 
+// THE CAR'S TWO SEAM MEMBERS (contracts at the declarations, which this
+// backend owns). This platform has no media session and no head unit: the hook
+// is stored and never fired — the set_on_close shape, a producer this platform
+// does not have — and the push has nowhere to go, so its body is empty. Both
+// exist so the render player compiles against either backend unchanged; on the
+// laptop the car keys are simply the keyboard.
+void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) {
+    on_media_command_ = std::move(cb);
+}
+
+void GuiPlatform::publish_media_state(const GuiMediaState& /*state*/) {}
+
 void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
                                         uint32_t depressed,
                                         uint32_t latched,

@@ -1,6 +1,7 @@
 #pragma once
 #include "device_config.h"
 #include "gui_input.h"
+#include "gui_media.h"
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
@@ -485,6 +486,48 @@ public:
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
                         uint32_t codepoint);
 
+    // -- THE CAR'S TWO SEAM MEMBERS (architect design 2026-08-28 §3) --------
+    //
+    // A head unit's buttons reach the product over Bluetooth as media-button
+    // events delivered to whichever app holds an ACTIVE media session, and
+    // the head unit's display reads that session's metadata and playback
+    // state back. Both are a PLATFORM SERVICE and not a GUI surface — the
+    // session object, its callbacks, the audio focus and the thread they all
+    // run on are the backend's — so the seam carries exactly two doors: a hook
+    // the loop fires for each button the platform received, and a push the
+    // GUI makes when what the display should show has changed. The
+    // vocabulary is gui_media.h's; the consumer is the render player alone
+    // (GuiRenderPlayer::on_media_command / publish_media_state), which holds
+    // the platform for exactly these two calls.
+    //
+    // THE HOOK IS FIRED ON THE LOOP'S OWN THREAD, one call per command, in
+    // arrival order, from the same pass that dispatches the worker
+    // completions and before that pass's settled hook and paint — so a button
+    // acts and its frame paints in one pass, and nothing the GUI holds needs a
+    // lock. The platform receiving the button on another thread (Android's UI
+    // thread) queues it and wakes the loop; that mechanism is the backend's,
+    // stated at its definition. A command that arrives with no hook installed
+    // is DROPPED by the platform's null test: main.cpp installs the hook per
+    // project and clears it at the session tail, so a button pressed between
+    // two projects reaches nothing.
+    //
+    // ON THIS BACKEND THE HOOK IS STORED AND NEVER FIRED — the set_on_close
+    // shape: the laptop has no media session and no head unit, and its car
+    // keys are simply the keyboard. The setter stays because the seam's
+    // promise is that a consumer compiles against either backend unchanged.
+    void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
+
+    // THE STATE PUSH: what the head unit should show now. Called from the loop
+    // thread only, at the edges its one owner inventories; never per tick
+    // (the consuming side advances a playing position on its own clock from
+    // the last push). ON THIS BACKEND IT IS A NO-OP BODY, which would be wrong
+    // for a producer on this platform and is exactly right for the one it
+    // has, which is none. Android's body is the JNI call up into the Java
+    // sliver, which builds the session's metadata and playback state from it,
+    // sets the session active or inactive, and requests / abandons audio
+    // focus (MainActivity.mediaState).
+    void publish_media_state(const GuiMediaState& state);
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -738,6 +781,8 @@ private:
     RedrawCallback       on_redraw_;
     ResizeCallback       on_resize_;
     CloseCallback        on_close_;
+    // Stored and never fired on this backend (see set_on_media_command).
+    std::function<void(GuiMediaCommand)> on_media_command_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;
     // Fired at the TAIL of every run() iteration that is not leaving the loop

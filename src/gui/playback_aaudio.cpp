@@ -472,6 +472,21 @@ bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
 }
 
+// THE DISCONNECT LATCH, READ BACK (contract at the declaration): the error
+// callback's `stream_dead` — a device that went away under a running stream
+// — and the state a REFUSED REOPEN leaves behind it: play() closes a dead
+// stream (which clears the latch) and, when no stream can be opened, returns
+// with `device_ready` still true and no stream standing. That is the same
+// lost device one step later, and answering false there would let the render
+// player's tick read the silence as a natural end and walk the folder with
+// nothing to play it on. An init() that never opened a device is NOT this
+// (`device_ready` false; play() is its documented silent no-op).
+bool GuiPlayback::device_lost() const {
+    if (!impl_ || !impl_->device_ready) return false;
+    return impl_->stream_dead.load(std::memory_order_acquire) ||
+           impl_->stream == nullptr;
+}
+
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);

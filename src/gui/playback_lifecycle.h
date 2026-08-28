@@ -16,11 +16,22 @@
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
 // was restore_playhead_to_lsp's top-strip invalidate, deleted with that function
 // 2026-07-30; every damage this cluster emits now goes through Viewport.)
+struct GuiRenderPlayer;
+
 struct GuiPlaybackLifecycle {
     AppState&         app;
     const GuiAudio&   audio;
     GuiPlayback&      playback;
     Viewport&         viewport;
+    // THE RENDER PLAYER'S BACK-POINTER (2026-08-28, the car's state push),
+    // wired in main.cpp once both exist — the settings editor's and the
+    // prompt's own shape, since the player holds this cluster and is built
+    // after it. ONE READER: the stop body's player fork, which is the one
+    // place every player stop passes and so the one place the head unit's
+    // "paused" is published from (the inventory is at
+    // GuiRenderPlayer::publish_media_state). Null until wired; the fork tests
+    // it.
+    GuiRenderPlayer*  render_player = nullptr;
 
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,

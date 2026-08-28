@@ -1,5 +1,7 @@
 #include "playback_lifecycle.h"
 
+#include "render_player.h"   // the stop body's fork publishes the head unit's state
+
 #include <algorithm>
 #include <cstdint>
 
@@ -45,6 +47,18 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         playback.stop();
         app.render_player.transport_live = false;
         viewport.invalidate_modal_dialog_area();
+        // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE
+        // (2026-08-28): this fork is the one place every player stop passes
+        // — the pause, the natural end, the dead device, the close, the
+        // rebind ahead of the next item — so the push lives inside it and no
+        // caller can forget it. The callers that go on to a "playing" or an
+        // "inactive" push (play_wav's tail, the close) supersede this one a
+        // moment later, two binder calls where one would do; accepted, the
+        // alternative being one push per caller that the next caller
+        // forgets. The resume point the push reads is the caller's to have
+        // written BEFORE calling here (toggle_pause and the tick's dead-device
+        // arm do; the natural end writes its 0 first for the same reason).
+        if (render_player) render_player->publish_media_state();
         return;
     }
     if (!playback.is_playing() && !app.playhead_scanner_active) return;

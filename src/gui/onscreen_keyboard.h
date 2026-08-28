@@ -195,7 +195,11 @@ inline const Row& row_of(bool symbol_layer, int row) {
 // release and be taken for the end of a hold it never started. The Wayland
 // backend never met this because an xkb keycode is 8 or more by construction;
 // this table's codes are its own small integers, so the base is stated here
-// rather than left to luck.
+// rather than left to luck. THE OTHER SYNTHESIZER'S BASE IS RECORDED BESIDE
+// THIS ONE: the render player's car keys (GuiRenderPlayer::on_media_command)
+// take kCarStableCodeBase = 1000 (render_player.h), above this table's
+// ceiling of 97, so a car button and a painted key can never share a stable
+// code and cancel each other's repeat arm.
 inline constexpr uint32_t kStableCodeBase = 1;
 
 // A KEY'S STABLE PER-KEY IDENTITY, which is what the core's repeat cancel and

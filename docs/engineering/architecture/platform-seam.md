@@ -14,7 +14,7 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (74 declarations as of 2026-08-28 — 13 `using` aliases and 61
+  public API (76 declarations as of 2026-08-28 — 13 `using` aliases and 63
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
@@ -22,8 +22,11 @@ contract. The port split them:
   there is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
-  exception, `device_config_defaults` is a third of the same kind, and
-  `removable_volume` (Synchronize to external storage, below) is a fourth):
+  exception, `device_config_defaults` is a third of the same kind,
+  `removable_volume` (Synchronize to external storage, below) is a fourth,
+  and the car's two (`set_on_media_command`, stored and never fired on
+  Wayland in `set_on_close`'s shape, and `publish_media_state`, a no-op body
+  there — The car, below) are the fifth and sixth):
   `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
@@ -56,7 +59,11 @@ contract. The port split them:
   array is 7 slots; `pfds[6]` is the fifth worker eventfd,
   `set_sync_worker_completion_fd` — the Synchronize to external storage
   act's, below); Android puts the same fds on the glue's ALooper
-  (`kWorkerCount` = 5). `drain_events` is paint-only on
+  (`kWorkerCount` = 5) and, since the car's arc, ONE MORE SOURCE OF ITS OWN
+  — the media command eventfd under `kIdentMedia` (`LOOPER_ID_USER + 1 +
+  kWorkerCount`), per PROCESS like the timer rather than per project like
+  the workers, drained in `pump()` after the worker completions and before
+  the settled hook (The car, below). `drain_events` is paint-only on
   Android because Wayland's `wl_display_dispatch_pending` reads no socket —
   a blocking load observes no new input on either platform (Android's ANR
   watchdog at ~5 s against ~0.5 s loads is the recorded accepted cost).
@@ -463,9 +470,97 @@ and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
 `res/values` style and an `aapt2 compile` step this APK has never had. Every
-later Java need (the SAF picker's `onActivityResult`, the clipboard, the
-key-repeat cadence) joins this class as a method. Launch component:
-`com.warptempo.gui/.MainActivity`.
+later Java need (the SAF picker's `onActivityResult`, the clipboard) joins
+this class as a method, and the first one did on 2026-08-28: THE CAR'S
+MediaSession (the section below), which brought the class its `static {
+System.loadLibrary("warptempo_gui"); }` initialiser (NativeActivity's own
+dlopen does not register the library for name-based JNI resolution), its
+one `native` method `nativeMediaCommand(int, long)`, the instance method
+`mediaState(...)` the native side calls up, an inner
+`MediaSession.Callback` (an inner class, not a second top-level one) and
+the first lifecycle override beside `onCreate` — `onDestroy`, which
+releases the session after `super.onDestroy()` has joined the native
+thread. Launch component: `com.warptempo.gui/.MainActivity`.
+
+## The car: the MediaSession and the command road
+
+Architect design 2026-08-28 §3 (`tmp/player_design.md`), landed the same day
+as the render player's second phase. In the car the head unit's buttons reach
+an app over Bluetooth AVRCP as media-button events delivered to whichever app
+holds an ACTIVE `MediaSession`, and the head unit's display reads that
+session's metadata and playback state. The session is Android's alone; the
+seam carries exactly two doors, contracts at `platform_wayland.h`
+(`gui_media.h` is the vocabulary — `GuiMediaCommand`, `GuiMediaState`, and the
+kind table shared with the Java sliver BY NUMBER, `kGuiMediaCommandKindCount`
+under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
+
+- **`set_on_media_command`** — the hook the loop fires ON ITS OWN THREAD, one
+  call per command in arrival order, from the pass that dispatches the worker
+  completions and before that pass's settled hook and paint. Wayland stores
+  it and never fires it (the `set_on_close` shape). Android's road DOWN:
+  `MainActivity`'s `MediaSession.Callback` (`onPlay`, `onPause`, `onStop`,
+  `onSkipToNext`, `onSkipToPrevious`, `onFastForward`, `onRewind`,
+  `onSeekTo`; `onMediaButtonEvent` is NOT overridden — the framework's default
+  maps `KEYCODE_MEDIA_*` onto those itself, splitting the play/pause key by
+  the session's PUBLISHED state) and its focus listener each call the one
+  `native` method, whose JNI entry
+  (`Java_com_warptempo_gui_MainActivity_nativeMediaCommand`,
+  `platform_android.cpp`, name-based resolution, no `JNI_OnLoad`) does exactly
+  this on the UI thread: lock, push onto the backend's queue, unlock, write
+  the backend's own eventfd — and touches NOTHING else, the AAudio error
+  callback's three-atomics discipline. ONE MUTEX GUARDS BOTH THE SINK POINTER
+  AND THE QUEUE (`g_media_mutex` / `g_media_sink`, parked in `init()` and
+  cleared in `shutdown()`), so a command can never reach an object being
+  dismantled. THE THREE DROP RULES: before `init()` / after `shutdown()` the
+  sink is null; an integer outside the kind table is refused at the entry;
+  and with no hook installed (between two projects — main.cpp installs it per
+  project and CLEARS it at the session tail, the one handler it clears) the
+  drained commands go nowhere. The consumer is
+  `GuiRenderPlayer::on_media_command` (render-player.md's territory): each
+  command becomes THE PLAYER'S OWN KEYS through `synthesize_key`, press and
+  release, under `kCarStableCodeBase` = 1000 (recorded beside the keyboard's
+  `kStableCodeBase`), so the ordinary `on_key` dispatch runs — no second road;
+  `SeekTo` is the one direct act, no keysym carrying an absolute position.
+- **`publish_media_state`** — the push UP, from the ONE owner
+  `GuiRenderPlayer::publish_media_state` at every edge where the display
+  should change (its inventory is at that declaration) and never per tick.
+  Wayland's body is empty. Android's runs on the glue thread, ATTACHED TO THE
+  VM ONCE in `init()` (`AttachCurrentThread`, the env cached; detached in
+  `shutdown()`, a thread exiting attached being a VM abort), and calls
+  `MainActivity.mediaState(boolean active, boolean playing, String title,
+  String artist, long durationMs, long positionMs)` through the activity
+  instance (`activity->clazz`, a global ref despite its name) with a
+  `GetMethodID` looked up once; the strings cross as UTF-16 through
+  `NewString` (not `NewStringUTF`, whose modified UTF-8 CheckJNI aborts on a
+  four-byte sequence), inside a local frame. That method builds the
+  `MediaMetadata` (TITLE = the wav's spelling with its folder, ARTIST and ALBUM
+  = the project's name, DURATION) and the `PlaybackState` (PLAYING / PAUSED /
+  STOPPED with the position at speed 1.0 and every action declared), calls
+  `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER
+  STANDS (R7), created in `onCreate` on the UI thread so its callbacks land
+  there and released in `onDestroy` — and owns the AUDIO FOCUS machine:
+  `AudioFocusRequest` GAIN with the AAudio stream's own attributes
+  (USAGE_MEDIA / CONTENT_TYPE_MUSIC), requested when a push says playing and
+  none is held, abandoned when a push says inactive, a refused request logged
+  and playback proceeding (the stream is already running). A LOSS is forwarded
+  down as `FocusLost` / `FocusLostTransient` and pauses the player through the
+  same key road ("Android's one imposed interrupt"); GAIN is forwarded and
+  does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
+  default, so a navigation prompt ducks rather than pauses.
+
+THIS PHASE IS A MediaSession ALONE, by ruling: no notification, no foreground
+service, no background playback, no lock-screen transport — the tablet is a
+kiosk on a stand with the app in the foreground — so the manifest gains
+nothing (no `<service>`, no `FOREGROUND_SERVICE*` / `POST_NOTIFICATIONS`, no
+`res/`). Backgrounding (`APP_CMD_LOST_FOCUS`) does not deactivate the session;
+the player standing is the one condition.
+
+A DEAD STREAM PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback`
+gained `device_lost()` on both backends — the AAudio disconnect latch plus a
+refused reopen; `false` on JACK, which records nothing for a vanished server —
+and the render player's tick forks on it BEFORE its natural-end test, pausing
+in place with "Audio device lost" on the status line and a "paused" push,
+where before a Bluetooth drop read as a natural end and auto-advanced.
 
 ## Build and freeze posture
 

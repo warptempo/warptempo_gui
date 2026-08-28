@@ -1,16 +1,27 @@
 package com.warptempo.gui;
 
 import android.app.NativeActivity;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
 /**
- * The product's ONE Java class: a NativeActivity subclass. Its whole body is
+ * The product's ONE Java class: a NativeActivity subclass. Its body is
  * setDecorFitsSystemWindows(true), which ASKS for the window's content to be
- * laid out inside the system bars' insets rather than under them, and the
- * window calls that give the STATUS BAR the product's own title-bar colour and
- * the band under the TASKBAR the product's content ground.
+ * laid out inside the system bars' insets rather than under them, the window
+ * calls that give the STATUS BAR the product's own title-bar colour and the
+ * band under the TASKBAR the product's content ground, and -- since the car's
+ * arc -- the MediaSession that hands the head unit's buttons down to the
+ * render player and its state back up (the block at the end of this comment).
  *
  * <p>IT DOES NOT SHRINK THE NATIVE SURFACE, and nothing here can. An app
  * window's frame is the whole display by construction on modern Android
@@ -71,17 +82,104 @@ import android.view.WindowManager;
  * sit on.
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
- * class. Three are already known: the SAF picker's onActivityResult (which is
- * exactly why a subclass is required at all, NativeActivity never forwarding
- * it), the system clipboard (ClipboardManager is a Java object with no NDK
- * surface, so copy and paste stop at the process edge until it lands) and the
- * key-repeat cadence (hard-coded from labwc's numbers in platform_android.cpp
- * because nothing native reports it). The first one that declares a `native`
- * method must also add the `static { System.loadLibrary("warptempo_gui"); }`
- * initialiser -- NativeActivity's own dlopen of the library does NOT register
- * it for name-based JNI resolution -- and nothing here needs it yet.
+ * top-level class (the MediaSession.Callback below is an INNER class of this
+ * one and is not a second class in that sense: it is the session's own
+ * listener shape and can be nothing else). Two more are known: the SAF
+ * picker's onActivityResult (which is exactly why a subclass is required at
+ * all, NativeActivity never forwarding it) and the system clipboard
+ * (ClipboardManager is a Java object with no NDK surface, so copy and paste
+ * stop at the process edge until it lands). The key-repeat cadence stays
+ * hard-coded from labwc's numbers in platform_android.cpp because nothing
+ * native reports it.
+ *
+ * <p>THE CAR (architect design 2026-08-28, section 3): the head unit's buttons
+ * reach an app over Bluetooth AVRCP as media-button events delivered to
+ * whichever app holds an ACTIVE MediaSession, and the head unit's display
+ * reads that session's metadata and playback state. This class creates ONE
+ * session in onCreate (on the UI thread, so its callbacks land there) and
+ * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
+ * which the native side says through mediaState(...). EACH CALLBACK IS ONE
+ * INTEGER DOWN through nativeMediaCommand -- the native side queues it and
+ * wakes its own loop, then turns it into the player's OWN KEYS (Space, Page
+ * Up / Page Down, Left / Right), so every car button is a chord the player
+ * already binds and there is no second dispatch road. onMediaButtonEvent is
+ * deliberately NOT overridden: the framework's default maps KEYCODE_MEDIA_*
+ * onto onPlay / onPause / onSkipToNext / ... itself, splitting the toggle key
+ * by the PUBLISHED playback state, which is why every push keeps that state
+ * honest. Audio focus is REQUESTED when a push says playing and none is held
+ * and ABANDONED when a push says inactive; a loss pauses the player through
+ * the same command road ("Android's one imposed interrupt"), a refused
+ * request is logged and playback proceeds (the AAudio stream is already
+ * running; focus decides who else ducks, not whether we sound).
+ *
+ * <p>THIS PHASE IS A MediaSession ALONE, BY RULING: no notification, no
+ * foreground service, no background playback, no lock-screen transport. The
+ * tablet is a kiosk on a stand -- the native side keeps the screen on -- with
+ * the app in the foreground and the head unit reading the session over AVRCP,
+ * and none of the machinery those would need (a res/, a service, the
+ * FOREGROUND_SERVICE and POST_NOTIFICATIONS permissions) is added to the
+ * manifest or the build.
  */
 public class MainActivity extends NativeActivity {
+
+    private static final String TAG = "warptempo";
+
+    // THE LIBRARY MUST BE REGISTERED FOR NAME-BASED JNI RESOLUTION: the
+    // NativeActivity dlopens libwarptempo_gui.so for android_main, but that
+    // load does not make its Java_* exports findable for a `native` method
+    // declared here. This initialiser is what does, and this class's one
+    // native method below is why it exists.
+    static {
+        System.loadLibrary("warptempo_gui");
+    }
+
+    // THE COMMAND TABLE, SHARED WITH THE NATIVE SIDE BY NUMBER: these are
+    // GuiMediaCommand::Kind's enumerator values (src/gui/gui_media.h), in that
+    // order, 0-based, and MEDIA_KIND_COUNT is its kGuiMediaCommandKindCount. A
+    // new kind is added at the END on both sides.
+    private static final int MEDIA_PLAY                 = 0;
+    private static final int MEDIA_PAUSE                = 1;
+    private static final int MEDIA_PLAY_PAUSE           = 2;   // no producer here (see the class comment)
+    private static final int MEDIA_STOP                 = 3;
+    private static final int MEDIA_NEXT                 = 4;
+    private static final int MEDIA_PREVIOUS             = 5;
+    private static final int MEDIA_FAST_FORWARD         = 6;
+    private static final int MEDIA_REWIND               = 7;
+    private static final int MEDIA_SEEK_TO              = 8;
+    private static final int MEDIA_FOCUS_LOST           = 9;
+    private static final int MEDIA_FOCUS_LOST_TRANSIENT = 10;
+    private static final int MEDIA_FOCUS_GAINED         = 11;
+    private static final int MEDIA_KIND_COUNT           = 12;
+
+    // THE ONE ROAD DOWN (Java_com_warptempo_gui_MainActivity_nativeMediaCommand,
+    // src/gui/platform_android.cpp): lock, push, wake. Called on the UI thread
+    // by the session's callbacks and the focus listener; safe before the
+    // native loop's init and after its shutdown, where the native side drops
+    // the command.
+    private static native void nativeMediaCommand(int kind, long positionMs);
+
+    // The actions the session declares, always all of them: the framework's
+    // default media-button routing dispatches a key only when its action is
+    // declared, and the native side decides what each one means.
+    private static final long SESSION_ACTIONS =
+            PlaybackState.ACTION_PLAY
+            | PlaybackState.ACTION_PAUSE
+            | PlaybackState.ACTION_PLAY_PAUSE
+            | PlaybackState.ACTION_STOP
+            | PlaybackState.ACTION_SKIP_TO_NEXT
+            | PlaybackState.ACTION_SKIP_TO_PREVIOUS
+            | PlaybackState.ACTION_FAST_FORWARD
+            | PlaybackState.ACTION_REWIND
+            | PlaybackState.ACTION_SEEK_TO;
+
+    // The session and the focus machine. `this` is the one lock: mediaState
+    // runs on the native loop's thread while the callbacks, the focus listener
+    // and onDestroy run on the UI thread.
+    private MediaSession      session;
+    private AudioManager      audioManager;
+    private AudioFocusRequest focusRequest;
+    private boolean           focusHeld;
+    private boolean           released;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -149,6 +247,169 @@ public class MainActivity extends NativeActivity {
         if (bars != null) {
             bars.setSystemBarsAppearance(
                     0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+        }
+
+        // THE MEDIA SESSION, PER PROCESS-LIFE OF THIS ACTIVITY: created here
+        // on the UI thread so its callbacks are delivered on this thread's
+        // Looper (the session takes the creating thread's), released in
+        // onDestroy. INACTIVE until the render player stands -- the native
+        // side's first push activates it -- so the head unit's buttons reach
+        // nothing while the waveform is being edited. The state is seeded
+        // STOPPED with the full action set so the framework's default
+        // media-button routing has actions to dispatch against from the first
+        // activation.
+        session = new MediaSession(this, TAG);
+        session.setCallback(new TransportCallback());
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(SESSION_ACTIONS)
+                .setState(PlaybackState.STATE_STOPPED, 0L, 1.0f)
+                .build());
+        session.setActive(false);
+
+        // AUDIO FOCUS: the request carries the attributes the AAudio stream
+        // opens with (USAGE_MEDIA / CONTENT_TYPE_MUSIC, playback_aaudio.cpp),
+        // so the system ranks this app's sound the way the stream declares
+        // it, and the listener is pinned to the MAIN LOOPER explicitly rather
+        // than left to the requesting thread's, since the request is made from
+        // the native loop's thread (mediaState) and that thread has no Looper.
+        // Ducking is left to the framework's default (the system lowers the
+        // volume itself for AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK and the listener
+        // is not called for it), so a navigation prompt ducks the music rather
+        // than pausing it.
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                .setOnAudioFocusChangeListener(
+                        new FocusListener(), new Handler(Looper.getMainLooper()))
+                .build();
+    }
+
+    // THE FIRST LIFECYCLE OVERRIDE BESIDE onCreate, and it exists for the
+    // session: a MediaSession is a system-side object that outlives a
+    // released-without-release() activity and keeps its media-button claim,
+    // so it is released here. super.onDestroy() FIRST: NativeActivity's own
+    // onDestroy posts APP_CMD_DESTROY and JOINS the native loop's thread, so
+    // by the time it returns no mediaState call can still be in flight and
+    // the session may be taken down under the one lock with nothing racing
+    // it. Focus is abandoned with it -- the native side abandons it on the
+    // player's close, but a process ending with the player standing (the
+    // system destroying the activity) never reached that push.
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        synchronized (this) {
+            released = true;
+            if (focusHeld && audioManager != null && focusRequest != null) {
+                audioManager.abandonAudioFocusRequest(focusRequest);
+                focusHeld = false;
+            }
+            if (session != null) {
+                session.setActive(false);
+                session.release();
+                session = null;
+            }
+        }
+    }
+
+    // THE ROAD UP (GuiPlatform::publish_media_state, src/gui/platform_android.cpp),
+    // called on the native loop's thread at every edge where what the head
+    // unit shows changes -- never per tick: a PLAYING state advances on the
+    // head unit's own clock from `positionMs` at speed 1.0, which is what the
+    // (state, position, speed) triple means. Metadata: TITLE is the wav's
+    // spelling with its folder, ARTIST and ALBUM are the project's name,
+    // DURATION the item's length. State: PLAYING / PAUSED with an item,
+    // STOPPED with none (an empty title). setActive follows the player's
+    // open and close. Every setter here is a binder call and is callable from
+    // any attached thread; the lock is against onDestroy's release on the UI
+    // thread. Focus: requested when a push says playing and none is held;
+    // abandoned when a push says inactive.
+    public synchronized void mediaState(boolean active, boolean playing,
+                                        String title, String artist,
+                                        long durationMs, long positionMs) {
+        if (released || session == null) return;
+
+        final MediaMetadata.Builder meta = new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, artist)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
+        session.setMetadata(meta.build());
+
+        final int state;
+        if (!active || title.isEmpty()) {
+            state = PlaybackState.STATE_STOPPED;
+        } else if (playing) {
+            state = PlaybackState.STATE_PLAYING;
+        } else {
+            state = PlaybackState.STATE_PAUSED;
+        }
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(SESSION_ACTIONS)
+                .setState(state, positionMs, 1.0f)
+                .build());
+        session.setActive(active);
+
+        if (active && playing && !focusHeld) {
+            // A REFUSED REQUEST IS LOGGED AND PLAYBACK PROCEEDS: the AAudio
+            // stream is already running and focus decides who else ducks,
+            // not whether this app sounds. DELAYED is not asked for (the
+            // builder's default), so the answer is GRANTED or FAILED.
+            final int result = audioManager.requestAudioFocus(focusRequest);
+            if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                focusHeld = true;
+            } else {
+                Log.w(TAG, "audio focus request refused (" + result
+                        + "); playing without it");
+            }
+        } else if (!active && focusHeld) {
+            audioManager.abandonAudioFocusRequest(focusRequest);
+            focusHeld = false;
+        }
+    }
+
+    // THE HEAD UNIT'S BUTTONS, one integer each. onMediaButtonEvent is NOT
+    // overridden: its default maps KEYCODE_MEDIA_* onto these, splitting the
+    // play/pause key by the published state (the class comment). Every
+    // callback runs on the UI thread (the session's creating Looper).
+    private final class TransportCallback extends MediaSession.Callback {
+        @Override public void onPlay()           { nativeMediaCommand(MEDIA_PLAY, 0L); }
+        @Override public void onPause()          { nativeMediaCommand(MEDIA_PAUSE, 0L); }
+        @Override public void onStop()           { nativeMediaCommand(MEDIA_STOP, 0L); }
+        @Override public void onSkipToNext()     { nativeMediaCommand(MEDIA_NEXT, 0L); }
+        @Override public void onSkipToPrevious() { nativeMediaCommand(MEDIA_PREVIOUS, 0L); }
+        @Override public void onFastForward()    { nativeMediaCommand(MEDIA_FAST_FORWARD, 0L); }
+        @Override public void onRewind()         { nativeMediaCommand(MEDIA_REWIND, 0L); }
+        @Override public void onSeekTo(long pos) { nativeMediaCommand(MEDIA_SEEK_TO, pos); }
+    }
+
+    // THE FOCUS MACHINE'S OTHER HALF: a permanent LOSS releases the hold (the
+    // system took it; the next playing push requests again), a transient loss
+    // keeps it (GAIN returns it), and each is forwarded so the native side
+    // pauses; GAIN is forwarded and the native side does nothing with it --
+    // NOTHING RECOVERS BY ITSELF, the user presses play.
+    private final class FocusListener
+            implements AudioManager.OnAudioFocusChangeListener {
+        @Override
+        public void onAudioFocusChange(int change) {
+            switch (change) {
+                case AudioManager.AUDIOFOCUS_LOSS:
+                    synchronized (MainActivity.this) { focusHeld = false; }
+                    nativeMediaCommand(MEDIA_FOCUS_LOST, 0L);
+                    break;
+                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                    nativeMediaCommand(MEDIA_FOCUS_LOST_TRANSIENT, 0L);
+                    break;
+                case AudioManager.AUDIOFOCUS_GAIN:
+                    synchronized (MainActivity.this) { focusHeld = true; }
+                    nativeMediaCommand(MEDIA_FOCUS_GAINED, 0L);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

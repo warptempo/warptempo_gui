@@ -384,6 +384,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     rp.transport_live = true;
     damage_band();
     damage_row();
+    // The head unit: a new item, playing (the inventory at the declaration).
+    publish_media_state();
     return true;
 }
 
@@ -428,6 +430,8 @@ void GuiRenderPlayer::toggle_pause() {
     playback.play(from, rp.frames);
     rp.transport_live = true;
     damage_row();
+    // The head unit: playing again (the inventory at the declaration).
+    publish_media_state();
 }
 
 void GuiRenderPlayer::previous() {
@@ -473,11 +477,15 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         rp.painted_cursor = -1;
         playback.play(live_target, rp.frames);
         damage_row();
+        // The head unit's clock, re-anchored on the seek (the inventory at
+        // the declaration).
+        publish_media_state();
         return;
     }
     if (rp.resume_frame != target) {
         rp.resume_frame = target;
         damage_row();
+        publish_media_state();
     }
 }
 
@@ -487,6 +495,11 @@ void GuiRenderPlayer::home() {
 
 void GuiRenderPlayer::on_natural_end() {
     AppState::RenderPlayer& rp = app.render_player;
+    // THE REST IS AT THE ITEM'S START, written BEFORE the stop body so the
+    // "paused" the body's fork publishes reads position 0 rather than a
+    // resume point left over from an earlier pause (the resume point is dead
+    // state while the transport is live, so nothing else reads this write).
+    rp.resume_frame = 0;
     // THE FENCE FIRST, through the one stop body: `playing` is already false
     // (the audio thread published it) but stop() is the quiescence proof the
     // next rebind requires, and the body's player fork clears the transport
@@ -501,13 +514,29 @@ void GuiRenderPlayer::on_natural_end() {
         const int i = rp.item_index + 1;
         if (play_wav(folder[static_cast<size_t>(i)].path, folder, i)) return;
     }
-    rp.resume_frame = 0;
     damage_row();
 }
 
 void GuiRenderPlayer::tick() {
     AppState::RenderPlayer& rp = app.render_player;
     if (!rp.transport_live) return;
+    if (playback.device_lost()) {
+        // A DEAD STREAM PAUSES, IT DOES NOT ADVANCE (the rule at
+        // on_natural_end's declaration): the disconnect lowered `playing`
+        // too, so this arm stands ABOVE the natural-end test. It is the
+        // pause arm of toggle_pause with one line added — the resume point
+        // is the engine's held cursor (the suspended device holds it rather
+        // than extrapolating), read before the stop body, whose fence
+        // returns at once on a dead stream (the terminal-state escape,
+        // playback_aaudio.cpp) and whose player fork clears the transport
+        // bit and publishes the head unit's "paused". The next Space
+        // reopens the device by the backend's own rule; nothing here
+        // retries.
+        rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
+        playback_lifecycle.stop_playback_if_playing();
+        status("Audio device lost");
+        return;
+    }
     if (!playback.is_playing()) {
         on_natural_end();
         return;
@@ -561,6 +590,9 @@ bool GuiRenderPlayer::open() {
     // appears over the waveform, and the modal row has no rect before its
     // first paint.
     viewport.invalidate_all();
+    // The head unit: the session goes ACTIVE with the mode (R7) — no item,
+    // stopped (the inventory at the declaration).
+    publish_media_state();
     return true;
 }
 
@@ -601,4 +633,96 @@ void GuiRenderPlayer::close() {
     rp.item_index = -1;
     app.folder_overlay = AppState::FolderOverlay{};
     viewport.invalidate_all();
+    // The head unit: the session goes INACTIVE with the mode, and the audio
+    // focus is abandoned on the consuming side (the inventory at the
+    // declaration).
+    publish_media_state();
+}
+
+// -- The car ---------------------------------------------------------------------
+
+void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
+    const AppState::RenderPlayer& rp = app.render_player;
+    if (!rp.active) return;       // the session is inactive; belt and braces
+    if (app.prompt.active) return; // a question on the screen is answered there
+
+    // ONE KEY, PRESS AND RELEASE, through the seam's synthesis road (the
+    // contract at the declaration). The stable code is the key's own value
+    // off the car base, the codepoint 0: none of these keys produces a
+    // character.
+    const auto press = [&](GuiKey key) {
+        const uint32_t code = kCarStableCodeBase + key;
+        gui.synthesize_key(key, code, /*pressed=*/true,  /*codepoint=*/0);
+        gui.synthesize_key(key, code, /*pressed=*/false, /*codepoint=*/0);
+    };
+
+    using Kind = GuiMediaCommand::Kind;
+    switch (cmd.kind) {
+        case Kind::PlayPause:
+            press(GuiKeys::Space);
+            return;
+        case Kind::Play:
+            // The state gate (the declaration): a "play" said to a live
+            // transport is already true and must not toggle it off.
+            if (!rp.transport_live) press(GuiKeys::Space);
+            return;
+        case Kind::Pause:
+        case Kind::Stop:
+        case Kind::FocusLost:
+        case Kind::FocusLostTransient:
+            // Stop is a pause by ruling; a focus loss pauses. A "pause" said
+            // to a resting transport must not start it.
+            if (rp.transport_live) press(GuiKeys::Space);
+            return;
+        case Kind::Next:
+            press(GuiKeys::PageDown);
+            return;
+        case Kind::Previous:
+            press(GuiKeys::PageUp);
+            return;
+        case Kind::FastForward:
+            press(GuiKeys::Right);
+            return;
+        case Kind::Rewind:
+            press(GuiKeys::Left);
+            return;
+        case Kind::SeekTo: {
+            // THE ROAD'S ONE DIRECT ACT (the declaration): no keysym carries
+            // an absolute position. Milliseconds to frames at the device's
+            // rate; seek_to clamps into the item and refuses with no item.
+            const int64_t rate = audio.sample_rate();
+            const int64_t ms   = cmd.position_ms < 0 ? 0 : cmd.position_ms;
+            seek_to(ms * rate / 1000);
+            return;
+        }
+        case Kind::FocusGained:
+            // NOTHING RECOVERS BY ITSELF: no auto-resume.
+            return;
+    }
+}
+
+void GuiRenderPlayer::publish_media_state() {
+    const AppState::RenderPlayer& rp = app.render_player;
+    GuiMediaState st;
+    st.session_active = rp.active;
+    st.playing        = rp.active && rp.transport_live;
+    st.artist         = app.project_name;
+    if (rp.active && !rp.item.empty() && rp.frames > 0) {
+        // THE ITEM'S SPELLING WITH ITS FOLDER, relative to the project
+        // folder (the source's own parent): `tmp/<batch>/NN.wav` for a cell,
+        // `render/<title>.wav` for the deliverable — lexically, no
+        // filesystem call, and in generic form so the separator is `/` by
+        // construction.
+        st.title = rp.item
+                       .lexically_relative(
+                           std::filesystem::path(app.source_audio_path)
+                               .parent_path())
+                       .generic_string();
+        const int64_t rate = audio.sample_rate();
+        if (rate > 0) {
+            st.duration_ms = rp.frames * 1000 / rate;
+            st.position_ms = render_player_position(app, playback) * 1000 / rate;
+        }
+    }
+    gui.publish_media_state(st);
 }

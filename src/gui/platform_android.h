@@ -1,6 +1,7 @@
 #pragma once
 #include "device_config.h"
 #include "gui_input.h"
+#include "gui_media.h"
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
@@ -356,6 +357,20 @@ public:
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
                         uint32_t codepoint);
 
+    // -- THE CAR'S TWO SEAM MEMBERS (contracts at platform_wayland.h, which
+    // owns them; gui_media.h is the vocabulary). THIS IS THE BACKEND THAT HAS
+    // A PRODUCER: the Java sliver's MediaSession (MainActivity.java) receives
+    // the head unit's buttons on the UI thread and hands each down through
+    // JNI as one command, which the JNI entry queues and signals over this
+    // backend's own per-process eventfd (media_command_fd_ below); pump()
+    // drains the queue on the glue thread and fires the hook once per
+    // command. The push goes the other way up the same bridge, into
+    // MainActivity.mediaState, from the glue thread attached to the VM once at
+    // init(). The whole mechanism — the queue, the wake, the attach, the
+    // method lookup and the three drop rules — is stated at the definitions.
+    void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
+    void publish_media_state(const GuiMediaState& state);
+
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,
     // so dispatch lives in file-static functions that cast `app->userData` to
@@ -465,6 +480,30 @@ private:
     // pass's tail, after the window-system sources are empty.
     bool timer_fired_ = false;
     bool worker_fired_[5] = {false, false, false, false, false};
+    // The media command source's own readiness flag, the same shape: recorded
+    // by the drain, consumed by pump() after the worker completions.
+    bool media_fired_ = false;
+
+    // -- THE CAR'S BRIDGE (set_on_media_command / publish_media_state) --
+    // DOWN: the JNI entry (Java_com_warptempo_gui_MainActivity_nativeMediaCommand,
+    // platform_android.cpp) pushes onto media_queue_ under the file-scope
+    // mutex that also guards the sink pointer it reaches this object through,
+    // then writes media_command_fd_ — an eventfd this object CREATES in init()
+    // and closes in shutdown(), watched on the looper under its own ident for
+    // the process's life (unlike the five worker fds, which are per project).
+    // pump() swaps the queue out under the same mutex and fires the hook per
+    // command on the glue thread, outside the lock.
+    int                          media_command_fd_ = -1;
+    std::vector<GuiMediaCommand> media_queue_;
+    std::function<void(GuiMediaCommand)> on_media_command_;
+    // UP: the glue thread's JNIEnv (attached once in init(), detached in
+    // shutdown() — a thread that exits attached is a VM abort) and the one
+    // method id, looked up once. Null when the attach or the lookup failed,
+    // and every push then drops with the line already logged. Spelled as
+    // `struct` pointers so no JNI header reaches this file.
+    struct _JNIEnv*   jni_env_            = nullptr;
+    bool              jni_attached_       = false;
+    struct _jmethodID* media_state_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
