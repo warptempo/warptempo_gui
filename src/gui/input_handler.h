@@ -1684,6 +1684,11 @@ struct GuiInputHandler {
     // gesture-free state) — the contracts are with their press routers, in
     // the player's block below.
     void clear_folder_overlay_press();
+    // THE BAND'S HOVER FACE, dropped on the pointer-leave edge alone (the
+    // roster's own clear_redesign_button_hover beside it): every other end of
+    // a hover is a MOTION, which the hover walk answers by itself. A leave
+    // delivers none, so the lit row would stay lit with the pointer gone.
+    void clear_folder_overlay_hover();
     void clear_player_scrub_drag();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
     // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers

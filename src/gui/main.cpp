@@ -1731,6 +1731,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // have not happened yet and both dropped uncommitted here exactly as
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
+        // AND THE BAND'S HOVER FACE, on the hover half of this hook's own
+        // question: a pointer that has left is on no row, and no motion will
+        // ever arrive to say so.
+        input_handler.clear_folder_overlay_hover();
         input_handler.clear_player_scrub_drag();
     });
 
@@ -2193,7 +2197,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                    folder_overlay::stands(app);
             if (slot_live != app.keyboard_slot_painted_standing) {
                 viewport.invalidate_waveform_area();
-                viewport.invalidate_rect(onscreen_keyboard::surface_rect(app));
+                // THE SLOT'S BAND AT ITS TALLEST, not either tenant's own:
+                // on the HIDE the rect has to erase a surface that no longer
+                // stands (so there is nothing to ask its height of), and the
+                // overlay's band is as tall as its listing while the
+                // keyboard's is its four key rows — one rect that contains
+                // both (onscreen_keyboard::slot_damage_rect).
+                viewport.invalidate_rect(
+                    onscreen_keyboard::slot_damage_rect(app));
             }
         }
 

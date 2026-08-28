@@ -1044,6 +1044,52 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
+// THE FOLDER OVERLAY'S ROW FACES (architect 2026-08-28, R32) — the list panel
+// that stands in the keyboard's band (folder_overlay.h), whose ROWS ARE
+// BUTTONS (R31) painted on a FILE MANAGER'S palette rather than the
+// keyboard's. THE REFERENCE IS TWO PROGRAMS THAT AGREE: kdenlive's project
+// bin and pcmanfm-qt's compact view, both read off the architect's own screen
+// (his 2026-08-28 17:46..18:04 shots). NO ALTERNATING ROWS — the band's
+// GROUND is kModalFieldGround #141618, the modal field's own, and a resting
+// row paints NO FILL AT ALL, so the ground is what shows between and behind
+// the rows. The three faces a row adds to it:
+//   HOVER            -> kFolderRowHover under a 1px kFolderRowHoverOutline
+//                       frame (the button's own outline width and inset);
+//   SELECTED         -> kRedesignAccent #3daee9 (the highlight band, which is
+//                       also the list's keyboard focus) under kRedesignLabel
+//                       ink, the ink every row wears in every face;
+//   HOVERED+SELECTED -> kFolderRowHoverSelected, the band lifted under the
+//                       pointer exactly as the hover face lifts the ground.
+//
+// kFolderRowHover IS A DERIVATION, NOT A SAMPLE, and it is the row-2 click
+// face's own arrangement (kRedesignClickMix above) applied to this band's
+// ground: the accent at 30% over kModalFieldGround. The architect's reading of
+// the reference is #204357; the mix computes
+//   r: 0.3*61  + 0.7*20 = 32.3  -> 32  (0x20)
+//   g: 0.3*174 + 0.7*22 = 67.6  -> 68  (0x44)
+//   b: 0.3*233 + 0.7*24 = 86.7  -> 87  (0x57)
+// so it reproduces the sampled value on two channels and lands ONE 8-bit step
+// brighter on the green. The RELATIONSHIP ships rather than the literal — the
+// same judgment kRedesignClickMix's own block records — because what the
+// reference pins down is "the accent's click wash over this ground", and a
+// frozen literal would drift from that the moment either end is retuned.
+// THE OTHER TWO SHIP AS SAMPLES, and only one of them had to. #44bfff is
+// genuinely independent: it is not the accent over this ground at any single
+// fraction (the three channels solve to 1.17 / 1.11 / 1.11) and not the accent
+// lightened toward the label at one either (0.04 / 0.22 / 0.11), so there is
+// nothing to derive it from. #3694c5 IS a wash of the same accent over the
+// same ground — 20 + 41*0.83 = 54.03, 22 + 152*0.83 = 148.16,
+// 24 + 209*0.83 = 197.47, reproducing all three channels exactly, which is
+// the reference telling us its hover FRAME is the same colour as its hover
+// FILL taken further — but 0.83 is a fraction this product has nowhere else,
+// and a new mix constant that exactly one caller reads is a knob rather than a
+// relationship. The literal ships and the arithmetic is recorded here, which
+// is what a retune of the accent would need.
+inline constexpr GuiColor kFolderRowHover =
+    mix_color(kRedesignAccent, kModalFieldGround, kRedesignClickMix);
+inline constexpr GuiColor kFolderRowHoverOutline   = hex(0x3694C5);
+inline constexpr GuiColor kFolderRowHoverSelected  = hex(0x44BFFF);
+
 // THE KEYBOARD-FOCUS FACE — the modal's ONE face with no icon-row counterpart,
 // so it is the one that needed sampling (architect 2026-08-13; the focus ring
 // itself is the ruling's part D).
@@ -1330,6 +1376,41 @@ inline int icon_row_content_h_px() {
 inline int icon_row_h_px() {
     return icon_row_content_h_px() + icon_row_border_h_px();
 }
+
+// THE ICON BUTTON'S OWN BOX, measured at 100% off the same five 32x32 state
+// crops as the lane above (row_4_button_{rest,hover,click,selected,
+// selectedhover}.png). These three lived as file-local constants in
+// paint_handler.cpp beside the row's walk until 2026-08-28, when THE FOLDER
+// OVERLAY'S ROWS BECAME BUTTONS (architect R24/R31: "we've gone for the button
+// analogy", "the buttons are good enough size for my finger") and a second
+// file needed them — so the numbers moved up here beside the lane metrics they
+// were always measured with, ONE DEFINITION EACH, and both painters and
+// folder_overlay.h read them from here. The row's OTHER metrics — the
+// separator's width, height and side gaps, and the 1px outline stroke — are
+// the ROW's chrome rather than the BUTTON's box and stay where the row's walk
+// is.
+//
+// THE GLYPH IS CENTRED IN THE BOX, which is the whole of the button's inner
+// geometry: (32 - 22) / 2 = 5 authored px on every side. The overlay's rows
+// take that same derivation for the LEFT pad of their icon (a row is a wide
+// button, so the pad is the box's own inset), never a second number — the
+// modal WORD buttons' 9px text pad is a different surface's.
+inline constexpr double kIconBtnPx    = 32.0;   // the button box, both axes
+inline constexpr double kIconBtnGapPx = 2.0;    // between adjacent buttons
+inline constexpr double kIconGlyphPx  = 22.0;   // the icon box inside the button
+
+// THE CORNER RADIUS IS 5 — MEASURED, and it lands in rows 1-3's family after
+// all. Fitting rendered corners against BOTH the hover crop (stroke only) and
+// the selected crop (fill under stroke) over radii 3.0..5.0 minimises squared
+// per-channel error at a PATH radius of 4.5 in each — hover 2382 against
+// r=4.0's 25347 and r=5.0's 8099, selected 227 against 2685 and 684 — and 4.5
+// is what the authored 5 becomes once the painter's half-stroke inset is
+// applied. (An earlier read of "4" came from fitting the PATH radius directly
+// and forgetting that inset; the authored constant is the thing to state.)
+// IT IS A DOUBLE-DOMAIN LENGTH like every other radius in the tree: the
+// painters scale it by gui_scale_factor() and round to a double on purpose,
+// so it does not come through scaled_px.
+inline constexpr double kIconCornerRadiusPx = 5.0;
 
 // ROW 5's THREE LANES, measured off row_5_full.png (the composite is the
 // authority): trim y0..8, ruler y9..36, marker y37..56, and the waveform starts

@@ -5061,8 +5061,11 @@ struct AppState {
     // pixel of its own band, so the drift between this and the live answer is
     // what pays for the show/hide repaint. ONE WRITER, the slot's paint
     // dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps it only
-    // on a rect that fully covers the band and then paints whichever tenant
-    // stands — so neither painter can claim pixels the frame did not write.
+    // on a rect that fully covers THE STANDING TENANT'S BAND — the two are
+    // different rects since the overlay's height became its listing's, and
+    // with neither standing the band to cover is the slot's tallest, which
+    // is what the hide's own damage draws — and then paints whichever tenant
+    // stands, so neither painter can claim pixels the frame did not write.
     bool keyboard_slot_painted_standing = false;
 
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
@@ -7063,7 +7066,11 @@ struct AppState {
     //                 — and only what a bare Enter means: on the list, the
     //                 highlight's OPEN act; on a button, that button's press.
     //                 Reset with the modal face state, being part of it;
-    //   `hovered_row` the pointer's row (-1 none), the hover face;
+    //   `hovered_row` the pointer's row (-1 none), the hover face — written
+    //                 by the motion's own walk, cleared at every listing
+    //                 rebuild and at the pointer-leave edge
+    //                 (clear_folder_overlay_hover), the one end a motion
+    //                 cannot answer for itself;
     //   `press`       THE ROW PRESS ARM (the chrome shape: arm at the press,
     //                 act at the lift): the row, the y and the scroll offset
     //                 at the press for the scroll drag, the feint's inside
@@ -7333,6 +7340,55 @@ GuiRect top_marker_row_area(const AppState& a);
 // lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+
+// -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
+//
+// THE SLOT IS THE LANE ABOVE THE BOTTOM ROW that the on-screen keyboard and
+// the folder overlay take turns in — never both (onscreen_keyboard::stands
+// carries the overlay's negation as its third term). The two tenants agree on
+// the band's X, ITS WIDTH AND ITS BOTTOM EDGE and differ only in HEIGHT (the
+// keyboard's four key rows; the overlay's own content, capped below), so that
+// agreement is written ONCE here rather than twice in the two headers —
+// which is also the only place both of them can read it, folder_overlay.h
+// being the lower of the two since the overlay's rows stopped borrowing the
+// keyboard's row pitch. (folder_overlay_stands, above, lives here for the
+// same reason.)
+
+// THE BAND: the BOTTOM ROW'S OWN lane, lifted by `height` — x and w taken
+// from that lane rather than from a.width so the two rects are the same band
+// by construction (the lane accessors run on the CLAMPED window dimensions
+// and a raw a.width would disagree with them on a sub-minimum window). It
+// does not ask whether anything stands: a rect is a fact about geometry and
+// standing is a decision each caller makes for itself. The one zero rect is
+// the degenerate one — a bottom row with no width, or a height that scales to
+// nothing.
+inline GuiRect keyboard_slot_band(const AppState& a, int height) {
+    const GuiRect bottom = bottom_row_area(a);
+    if (bottom.w <= 0 || height <= 0) return GuiRect{0, 0, 0, 0};
+    return GuiRect{bottom.x, bottom.y - height, bottom.w, height};
+}
+
+// THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top edge a
+// tenant may reach — TO THE MIDDLE OF THE WAVEFORM and no further (architect
+// 2026-08-28, R33: "from the bottom strip up to the middle of the waveform",
+// the four-row band his dummy folders showed to be too short). THE WAVEFORM'S
+// OWN MIDPOINT is what is read, through the vertical stack's one geometry
+// owner (waveform_area, main.cpp) — the window's vertical midpoint is the
+// same pixel wherever the centering is feasible, and where it is not (a short
+// window, both flexible gaps floored at 0) the waveform's own middle is the
+// honest half of the ruling. Zero on a degenerate stack, which every consumer
+// already reads as "no room".
+//
+// ONLY THE OVERLAY IS CAPPED BY IT: the keyboard's height is its four key
+// rows, authored, and it is deliberately not clamped here — a band that
+// scaled past this ceiling would be a keyboard with a row missing.
+inline int keyboard_slot_max_height_px(const AppState& a) {
+    const GuiRect wave    = waveform_area(a);
+    const int     ceiling = wave.y + wave.h / 2;
+    const int     floor_y = bottom_row_area(a).y;
+    return floor_y > ceiling ? floor_y - ceiling : 0;
+}
+
 // THE OVERVIEW STRIP'S COLUMN MAPPING — one owner for the lane's
 // frames-per-column, shared by the painter (the bars' basis, the box and the
 // tick), the press claim (the drag anchor) and the tick's per-frame damage

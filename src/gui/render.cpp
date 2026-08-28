@@ -2267,7 +2267,26 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    sideways under a band whose edges came from byte_x. THE CLIP TAKES THE
     //    BAND'S OWN ROUNDED COLUMNS, not the fractional byte_x pair the band
     //    rounded FROM, so the white ink starts and stops exactly where the blue
-    //    does and no half-pixel of a selected glyph is left black on the band.
+    //    does.
+    //
+    //    ONE INK PER PIXEL, AND THAT IS WHY THE BLACK RUN IS CLIPPED TOO
+    //    (2026-08-28, off the architect's own screenshot of a selected word
+    //    wearing a dingy grey halo). The black pass used to run UNCLIPPED
+    //    under the white one, so every pixel of a selected glyph's
+    //    ANTIALIASED EDGE was painted twice: black at partial coverage first,
+    //    darkening the blue underneath it, then white at that same partial
+    //    coverage over the already-darkened blue — a grey rim no ink in the
+    //    palette names. A file manager paints each pixel once, and so does
+    //    this now: with a selection standing, THE BLACK RUN IS CLIPPED TO THE
+    //    COMPLEMENT OF THE BAND inside the text viewport and the white run to
+    //    the band, two disjoint regions whose union is the whole viewport, so
+    //    no pixel is painted by both inks and every edge pixel antialiases
+    //    against exactly the ground it sits on. THE COMPLEMENT IS THREE
+    //    RECTANGLES, not two, because THE BAND IS NOT THE LANE: it starts
+    //    under the box's 1px top edge (band_y), so besides the columns left
+    //    and right of it there is the strip ABOVE it, where a tall glyph's
+    //    ascender keeps the black it has always had. With no selection the
+    //    black run paints unclipped, exactly as before.
     //
     //    (The deleted pass this is NOT: the old two-tone re-show painted the
     //    selected glyphs in `face.fill` — saturated ink ANTIALIASED AGAINST A
@@ -2283,23 +2302,57 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         static_cast<int>(std::nearbyint(text_origin_x + byte_x[s0]));
     const int ix1 =
         static_cast<int>(std::nearbyint(text_origin_x + byte_x[s1]));
+    // THE BAND'S WIDTH IN COLUMNS, resolved once: the fill below, the white
+    // run's clip and the black run's complement all read this one expression,
+    // so the three cannot disagree by a pixel. A selection whose glyphs carry
+    // no advance still marks one column.
+    const int band_w = (ix1 > ix0) ? (ix1 - ix0) : 1;
     if (has_sel) {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
                              kRedesignAccent.b);
-        cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
+        cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
     }
 
-    // ONE SHOW FOR THE WHOLE RUN in the lane's black, the band painted under
-    // it, and then the selected substring alone re-shown in the label white.
+    // THE RUN, SHOWN ONCE PER REGION (the ruling in the block above): the
+    // whole run in the lane's black off the band, the whole run again in the
+    // label white on it, neither reaching a pixel the other painted.
     cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
-    text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
-    if (has_sel) {
+    if (!has_sel) {
+        text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+    } else {
         cairo_save(cr);
-        cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
+        // The band's complement inside the viewport, as ONE clip path: the
+        // columns left of the band, the columns right of it, and the top-edge
+        // strip above it. A part with nothing in it is left out rather than
+        // added empty — an empty rectangle is a no-op in a fill but not
+        // obviously so in a clip path, and a selection that fills the viewport
+        // is meant to leave the black run nothing at all.
+        const double band_x0 = static_cast<double>(ix0);
+        const double band_x1 = static_cast<double>(ix0 + band_w);
+        if (band_x0 > view_x0) {
+            cairo_rectangle(cr, view_x0, static_cast<double>(lane.y),
+                            band_x0 - view_x0, static_cast<double>(lane.h));
+        }
+        if (view_x0 + view_w > band_x1) {
+            cairo_rectangle(cr, band_x1, static_cast<double>(lane.y),
+                            (view_x0 + view_w) - band_x1,
+                            static_cast<double>(lane.h));
+        }
+        if (band_y > lane.y) {
+            cairo_rectangle(cr, band_x0, static_cast<double>(lane.y),
+                            static_cast<double>(band_w),
+                            static_cast<double>(band_y - lane.y));
+        }
+        cairo_clip(cr);
+        text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+        cairo_restore(cr);
+
+        cairo_save(cr);
+        cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_clip(cr);
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);

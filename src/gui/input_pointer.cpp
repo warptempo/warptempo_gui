@@ -3975,6 +3975,14 @@ void GuiInputHandler::update_folder_overlay_hover(int x, int y) {
     if (hit >= 0) viewport.invalidate_rect(folder_overlay::row_rect(app, hit));
 }
 
+void GuiInputHandler::clear_folder_overlay_hover() {
+    const int old = app.folder_overlay.hovered_row;
+    if (old < 0) return;
+    app.folder_overlay.hovered_row = -1;
+    if (folder_overlay::stands(app))
+        viewport.invalidate_rect(folder_overlay::row_rect(app, old));
+}
+
 void GuiInputHandler::clear_folder_overlay_press() {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;

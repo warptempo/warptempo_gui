@@ -331,7 +331,16 @@ private:
     // The deliverable folder's regular `*.wav` files, byte order.
     std::vector<std::filesystem::path> deliverable_wavs() const;
     // Damage helpers: the band, the modal row.
+    //
+    // TWO BAND DAMAGES, and the difference is whether the LISTING moved. The
+    // panel is as tall as its content up to the ceiling and grows upward from
+    // a fixed bottom edge (folder_overlay.h), so a rebuild that SHORTENS the
+    // listing leaves the departed rows' pixels above the new band:
+    // damage_band_full covers the band at its ceiling and is the rebuild's,
+    // while damage_band covers the band as it stands and is every damage
+    // INSIDE a standing one — the highlight, the scroll, the item's glyph.
     void damage_band();
+    void damage_band_full();
     void damage_row();
     void status(const std::string& line);
 };

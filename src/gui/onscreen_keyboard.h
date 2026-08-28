@@ -46,11 +46,18 @@
 // retyping cover a one-line field.
 
 #include "app_state.h"
+// THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder
+// overlay's own rect in waveform_paint_area, the one gate and clip both
+// tenants share, so the include runs THIS way — the panel borrows nothing
+// from the keyboard since its rows became buttons, and what the two share
+// (the band, the ceiling) is app_state.h's.
+#include "folder_overlay.h"
 #include "gui_input.h"
 #include "platform.h"
 #include "render.h"
 #include "viewport.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
@@ -302,7 +309,10 @@ inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
 inline constexpr double kKeyHeightPx = 40.0;   // one row's key box
 inline constexpr double kKeyGapPx    = 4.0;    // between adjacent keys, both axes
 inline constexpr double kPadPx       = 4.0;    // the surface's own outer margin
-inline constexpr double kCornerPx    = 5.0;    // the roster's radius (kIconCornerRadiusPx)
+// The roster's own radius, READ rather than restated (render.h's icon-button
+// block, where it is measured): a key is a button-shaped face like every
+// other in the product.
+inline constexpr double kCornerPx    = kIconCornerRadiusPx;
 
 inline int key_height_px()  { return scaled_px(kKeyHeightPx, 1); }
 inline int key_gap_px()     { return scaled_px(kKeyGapPx, 1); }
@@ -342,12 +352,10 @@ inline int surface_height_px() {
 // "neither use needs typing", the field being prepopulated by a tap on a row.
 // Under the RENDER PLAYER the term never decides, that mode raising no text
 // editor at all (its load confirmation is a PROMPT), so the second term has
-// already answered false. It calls folder_overlay_stands (app_state.h) rather
-// than folder_overlay::stands because that header includes this one; the two
-// are the same one predicate.
+// already answered false.
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
     return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0 &&
-           !folder_overlay_stands(a);
+           !folder_overlay::stands(a);
 }
 
 // -- The surface's rect ------------------------------------------------------
@@ -364,15 +372,25 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // zero rect it answers is the degenerate one: a bottom row with no width, or a
 // surface height that scales to nothing.
 inline GuiRect surface_rect(const AppState& a) {
-    // THE BOTTOM ROW'S OWN BAND, lifted by this surface's height: x and w are
-    // taken from that lane rather than from a.width so the two rects are the
-    // same band by construction — the lane accessors run on the CLAMPED window
-    // dimensions (clamp_dims, main.cpp) and a raw a.width would disagree with
-    // them on a sub-minimum window.
-    const GuiRect bottom = bottom_row_area(a);
-    const int h = surface_height_px();
-    if (bottom.w <= 0 || h <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{bottom.x, bottom.y - h, bottom.w, h};
+    // THE SLOT'S BAND, lifted by THIS surface's height: the band itself — its
+    // x, its width and its bottom edge — is the two tenants' shared owner
+    // (keyboard_slot_band, app_state.h), and the height is this keyboard's
+    // four key rows. The overlay's rect is the same call with its own height.
+    return keyboard_slot_band(a, surface_height_px());
+}
+
+// THE SLOT'S DAMAGE RECT, the band AT ITS TALLEST — the taller of this
+// keyboard's fixed height and the overlay's ceiling (the band grows upward
+// from a fixed bottom edge, so the taller of the two contains the other).
+// THE SHOW/HIDE COMPARATOR TAKES IT (main.cpp): those two edges damage a band
+// whose tenant is arriving or has already gone, so the rect cannot be either
+// tenant's own — on the hide the departed surface's pixels are exactly what
+// has to be erased, and on the show the arriving one's whole band has to be
+// covered. A damage INSIDE a standing band takes that tenant's own rect
+// instead.
+inline GuiRect slot_damage_rect(const AppState& a) {
+    return keyboard_slot_band(
+        a, std::max(surface_height_px(), keyboard_slot_max_height_px(a)));
 }
 
 // -- The session-change owner, and the waveform's painted rect --------------
@@ -431,11 +449,16 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 
 // THE WAVEFORM'S PAINTED RECT — waveform_area minus the KEYBOARD SLOT's band
 // when EITHER tenant stands (this keyboard, or the folder overlay that
-// replaces it in the same band — folder_overlay.h, whose standing predicate
-// is asked through folder_overlay_stands, app_state.h, rather than through
-// that header, which includes this one), and the ONE OWNER of the rule that THE WAVEFORM IS NOT PAINTED WHERE
-// THE SLOT PAINTS. Both tenants' grounds are fully opaque and every waveform
-// pass runs BEFORE them (the authoritative paint order, paint_handler.cpp),
+// replaces it in the same band — folder_overlay.h), and the ONE OWNER of the
+// rule that THE WAVEFORM IS NOT PAINTED WHERE
+// THE SLOT PAINTS. IT SUBTRACTS THE STANDING TENANT'S OWN RECT, which since
+// 2026-08-28 is a real fork rather than a formality: the overlay's band is as
+// tall as its listing and the keyboard's is its four key rows, so a rect
+// borrowed from the other tenant would either hide waveform nothing paints
+// over or leave the panel painting where the waveform still runs.
+//
+// Both tenants' grounds are fully opaque and every waveform pass runs BEFORE
+// them (the authoritative paint order, paint_handler.cpp),
 // so a waveform pixel under the band is work whose result is thrown away in
 // the same frame: a narrow scanner damage column crossing the band would
 // otherwise pay the plate blit, the region ink and every vertical over the
@@ -456,9 +479,11 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // can still answer true for an empty rect an exposure straddles — it compares
 // edges, not areas).
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
-    const GuiRect area = waveform_area(a);
-    if (!stands(a, gui) && !folder_overlay_stands(a)) return area;
-    const GuiRect surf = surface_rect(a);
+    const GuiRect area    = waveform_area(a);
+    const bool    overlay = folder_overlay::stands(a);
+    if (!stands(a, gui) && !overlay) return area;
+    const GuiRect surf = overlay ? folder_overlay::surface_rect(a)
+                                 : surface_rect(a);
     if (surf.w <= 0 || surf.h <= 0) return area;
     const int hidden = (area.y + area.h) - surf.y;
     if (hidden <= 0) return area;

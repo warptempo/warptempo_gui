@@ -627,7 +627,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // (row_4_button_{rest,hover,click,selected,selectedhover}.png),
 // row_4_separator.png (1x34) and row_4_bottom_border.png. The lane metrics
 // (46 content + 1 border, so a 47px lane at 100%) live in render.h with
-// rows 1-3's.
+// rows 1-3's, and so does the BUTTON's own box since 2026-08-28 (the block
+// below says why).
 //
 // THE VERTICAL STORY IS PURE CENTERING (and it is what resolves the architect's
 // 48-vs-6+34+6 discrepancy, recorded at kIconRowHeightPx): the 32px buttons
@@ -640,22 +641,18 @@ AppState::RedesignButtonFace& publish_button_face(
 // SEPARATOR (row 2 used 5). The row opens with 8px of padding — icon_row_pad_x
 // (paint_handler.h), which lives in the header because the BOTTOM ROW reads it
 // too since 2026-08-14.
-constexpr double kIconBtnPx           = 32.0;   // the button box, both axes
-constexpr double kIconBtnGapPx        = 2.0;    // between adjacent buttons
+//
+// THE BUTTON'S OWN BOX — kIconBtnPx, kIconBtnGapPx, kIconGlyphPx and
+// kIconCornerRadiusPx — LEFT THIS FILE 2026-08-28 for render.h's icon-row
+// block, where their measurements are recorded beside the lane metrics they
+// were taken with: the folder overlay's rows are buttons since that day
+// (folder_overlay.h) and a second file reads them, so each number has one
+// definition and this row spells none of them. What stays here is the ROW's
+// own chrome, which nothing outside this file paints.
 constexpr double kIconSepGapPx        = 4.0;    // each side of a separator
 constexpr double kIconSepWidthPx      = 1.0;
 constexpr double kIconSepHeightPx     = 34.0;
-constexpr double kIconGlyphPx         = 22.0;   // the icon box inside the button
 constexpr double kIconOutlineStrokePx = 1.0;
-// THE CORNER RADIUS IS 5 — MEASURED, and it lands in rows 1-3's family after
-// all. Fitting rendered corners against BOTH the hover crop (stroke only) and
-// the selected crop (fill under stroke) over radii 3.0..5.0 minimises squared
-// per-channel error at a PATH radius of 4.5 in each — hover 2382 against
-// r=4.0's 25347 and r=5.0's 8099, selected 227 against 2685 and 684 — and 4.5
-// is what the authored 5 becomes once the half-stroke inset below is applied.
-// (An earlier read of "4" came from fitting the PATH radius directly and
-// forgetting that inset; the authored constant is the thing to state.)
-constexpr double kIconCornerRadiusPx  = 5.0;
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
 // a 22px breeze ICON. The press claim's chord table (input_pointer.cpp) is the
@@ -6503,9 +6500,17 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // frame the comparator's own damage produces; every other frame leaves it
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
+    // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is as
+    // tall as its listing and the keyboard's is its four key rows, so "the
+    // band" is a question with two answers and the bit describes the pixels
+    // THIS frame may have written. With NEITHER standing the band to cover is
+    // the slot's tallest — the hide's own damage, which is what has to erase
+    // the departed tenant.
     const bool keyboard = onscreen_keyboard::stands(app, gui);
     const bool overlay  = folder_overlay::stands(app);
-    const GuiRect surf  = onscreen_keyboard::surface_rect(app);
+    const GuiRect surf  = overlay  ? folder_overlay::surface_rect(app)
+                        : keyboard ? onscreen_keyboard::surface_rect(app)
+                                   : onscreen_keyboard::slot_damage_rect(app);
     const bool covers_band =
         surf.w > 0 && surf.h > 0 &&
         exposed.x <= surf.x && exposed.y <= surf.y &&
@@ -6531,25 +6536,34 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // structurally absent there (the player holds no item while the picker
 // stands).
 //
-// THE PALETTE IS EXISTING CONSTANTS AND NOTHING ELSE — the architect's ruling
-// that the panel's ground, row height and type are the KEYBOARD'S, plus the
-// two faces a list row needs that the keyboard does not:
-//   the GROUND around and
-//     between the rows    -> kRedesignContentGround (the keyboard's)
-//   a RESTING row         -> kRedesignRowGround (the keyboard's key face)
-//   the INK               -> kRedesignLabel (the keyboard's caps; the icon
-//                            glyphs carry their own Breeze inks)
-//   the HIGHLIGHT band    -> kRedesignAccent fill under kRedesignLabel ink —
-//                            kdenlive's own selection band (the reference
-//                            screenshot's blue band)
-//   HOVER                 -> the dropdown's hover fill, kRedesignAccent over
-//                            kRedesignPopupGround at kRedesignClickMix
-//   PRESSED               -> kRedesignAccent, the dropdown's pressed item
-//   the RING'S FOCUS      -> the modal's focus line as the row's OUTLINE:
-//                            kModalFocusLinePassive while the ring stands
-//                            elsewhere, the accent while it is on the list
+// THE ROWS ARE BUTTONS AND THE PALETTE IS THE FILE MANAGER'S (architect
+// 2026-08-28, R31/R32, superseding the keyboard's palette this band opened
+// with): each row is the ICON ROW'S BUTTON — its box, its gap, its corner
+// radius, its glyph inset (folder_overlay.h reads all four from render.h) —
+// and its faces come off kdenlive's project bin and pcmanfm-qt's compact
+// view, which agree.
+//   the GROUND, around and
+//     between the rows    -> kModalFieldGround, ONE fill across the band and
+//                            NO ALTERNATING ROWS
+//   a RESTING row         -> NO FILL AT ALL: the ground shows through, which
+//                            is what makes a lit row the only thing the eye
+//                            lands on
+//   the INK               -> kRedesignLabel in EVERY face (the icon glyphs
+//                            carry their own Breeze inks)
+//   HOVER                 -> kFolderRowHover under a 1px kFolderRowHoverOutline
+//                            frame, the button's own outline width and inset
+//   the HIGHLIGHT band    -> kRedesignAccent, kdenlive's own selection band
+//   HOVERED + HIGHLIGHTED -> kFolderRowHoverSelected, the band lifted under
+//                            the pointer as the hover face lifts the ground
+//   PRESSED               -> the highlight's own fill: a row press is an arm
+//                            whose act is the lift, and the accent is what it
+//                            promises
+//   the RING'S FOCUS      -> the modal's focus line as the highlighted row's
+//                            OUTLINE: kModalFocusLinePassive while the ring
+//                            stands elsewhere, the accent while it is on the
+//                            list
 // Every row is drawn with redesign_face_box, the one path every button-like
-// surface in the product is filled and framed on, at the keyboard's corner
+// surface in the product is filled and framed on, at the button's corner
 // radius. NO LINE AT THE BAND'S TOP EDGE, the keyboard's own rule: the band's
 // ground is the bottom row's, so the two lanes read as one block.
 //
@@ -6576,9 +6590,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // because a scrolled listing's first and last rows straddle the band's
     // edges and must not paint into the waveform above or the bottom row
     // below.
-    cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                         kRedesignContentGround.g,
-                         kRedesignContentGround.b);
+    cairo_set_source_rgb(cr, kModalFieldGround.r, kModalFieldGround.g,
+                         kModalFieldGround.b);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
@@ -6589,13 +6602,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
-    const double radius = std::nearbyint(onscreen_keyboard::kCornerPx *
+    const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
     const int    glyph  = folder_overlay::row_icon_px();
     const int    gap    = folder_overlay::row_icon_gap_px();
-    const int    pad    = folder_overlay::pad_px();
-    const GuiColor hover_fill =
-        mix_color(kRedesignAccent, kRedesignPopupGround, kRedesignClickMix);
+    const int    inset  = folder_overlay::row_icon_inset_px();
 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
@@ -6610,47 +6621,61 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const bool hovered     = index == ov.hovered_row;
             const bool pressed     = ov.press.armed && ov.press.row == index &&
                                      ov.press.inside && !ov.press.scrolling;
-            // THE FACE LADDER: pressed > highlighted > hovered > rest for the
-            // fill; the ring's outline rides on top of whichever fill stands.
+            // THE FACE IS TWO AXES, NOT A LADDER (R32's own table): LIT — the
+            // highlight, or a live press arm promising it — and HOVERED. A
+            // row that is neither takes NO FILL and the band's ground shows
+            // through it.
+            const bool lit = pressed || highlighted;
             const GuiColor fill =
-                pressed     ? kRedesignAccent
-              : highlighted ? kRedesignAccent
-              : hovered     ? hover_fill
-                            : kRedesignRowGround;
+                lit     ? (hovered ? kFolderRowHoverSelected : kRedesignAccent)
+                        : kFolderRowHover;
+            // THE OUTLINE: the ring's focus strength on the highlighted row
+            // (the modal's own two lines), the hover frame on a hovered row
+            // that is not lit — the reference's own frame, which the lit
+            // faces do not wear.
             const GuiColor* line = nullptr;
             if (highlighted) {
                 line = ov.list_focused ? &kRedesignAccent
                                        : &kModalFocusLinePassive;
+            } else if (hovered) {
+                line = &kFolderRowHoverOutline;
             }
-            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius, &fill, line);
+            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius,
+                              (lit || hovered) ? &fill : nullptr, line);
 
             // THE GLYPH: the folder for folder rows and the up row (it names
             // a folder), the wav for wav rows — swapped for the transport
-            // glyph on the item's row. Left-aligned at the pad, centred in
-            // the row's height.
+            // glyph on the item's row. At the BUTTON'S OWN INSET from the
+            // row's left edge and centred in its height, which are the same
+            // number: a row is a wide button and this is how a button seats
+            // its glyph.
             icons::Icon icon = icons::Icon::Folder;
             if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                 icon = (!rp.item.empty() && row.path == rp.item)
                            ? icons::Icon::MediaPlaybackStart
                            : icons::Icon::AudioXWav;
             }
-            const int gx = r.x + pad;
+            const int gx = r.x + inset;
             const int gy = r.y + (r.h - glyph) / 2;
             icons::draw(cr, icon, static_cast<double>(gx),
                         static_cast<double>(gy), static_cast<double>(glyph));
 
             // THE NAME, shaped through the one chokepoint, after the glyph,
-            // in the band's ink — black on the accent would be the marker
-            // lane's rule, not this band's: the keyboard's caps and every
-            // other row's label are kRedesignLabel, and kdenlive's own band
-            // carries white text.
+            // in the band's ONE ink — black on the accent would be the marker
+            // lane's rule, not this band's: R32 gives the selected row white
+            // text, kdenlive's own band carries it, and a row that changes
+            // ink with its face would be a second thing to read.
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
+            // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,
+            // no ellipsis — "project and file names will be short"), and the
+            // clip to the ROW's own right edge is what "off the edge" means
+            // here: the glyphs stop at the row, not at the window.
             cairo_save(cr);
             cairo_rectangle(cr, gx + glyph + gap, r.y,
-                            std::max(0, (r.x + r.w - pad) - (gx + glyph + gap)),
+                            std::max(0, (r.x + r.w) - (gx + glyph + gap)),
                             r.h);
             cairo_clip(cr);
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,

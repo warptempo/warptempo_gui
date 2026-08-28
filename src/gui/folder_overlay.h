@@ -20,10 +20,11 @@
 // KEYBOARD'S OWN BAND: full window width, sitting directly above the bottom
 // row over the waveform area's lower part, which the waveform's passes then
 // do not paint (onscreen_keyboard::waveform_paint_area, whose gate reads
-// both tenants). The architect's ruling (R3): "the overlay sits in the
-// on-screen keyboard's place above the bottom strip, replacing the keyboard
-// there" — on glass the keyboard would occupy that space, and neither use of
-// the panel needs typing. So THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND:
+// both tenants and whose clip reads the STANDING one's own rect). The
+// architect's ruling (R3): "the overlay sits in the on-screen keyboard's
+// place above the bottom strip, replacing the keyboard there" — on glass the
+// keyboard would occupy that space, and neither use of the panel needs
+// typing. So THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND:
 // onscreen_keyboard::stands carries `!folder_overlay::stands` as its third
 // term. Unlike the keyboard the panel holds VARIABLE-LENGTH content and
 // SCROLLS when a listing outgrows the band — the wheel on plastic, the
@@ -31,14 +32,33 @@
 // row visible. No header row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls.
 //
-// THE GEOMETRY IS THE KEYBOARD'S, READ THROUGH ITS ACCESSORS AND NEVER
-// RESTATED: the band is onscreen_keyboard::surface_rect exactly (one owner,
-// no second geometry), the row height is the key height, the gap between
-// rows the key gap, the inset the keyboard's pad — so about four rows show
-// at once and the panel's ground, row height and type are the keyboard's
-// (Breeze; the key height is the finger-row precedent). The palette is the
-// keyboard's three constants plus the dropdown's hover fill and the modal's
-// focus line, every one an existing constant (the ladder is at the painter).
+// THE BAND IS THE SLOT'S AND THE ROW IS THE BUTTON'S (architect 2026-08-28,
+// R31/R33; before that day both were the keyboard's). Two owners, neither
+// restated here:
+//   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
+//     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
+//     keyboard's surface_rect reads too). Its HEIGHT IS ITS CONTENT'S, up to
+//     THE CEILING: the panel grows a row at a time until it reaches the
+//     MIDDLE OF THE WAVEFORM (keyboard_slot_max_height_px, the same header),
+//     and past that it stops growing and scrolls. R33 in one line — "it grows
+//     with its content up to that cap, then scrolls" — after the fixed
+//     four-row band read too short in use.
+//   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
+//     2px gap between boxes, the same corner radius, the same 22px glyph
+//     centred at the box's own (32-22)/2 inset, every number read from
+//     render.h's icon-button block where it is measured ("we've gone for the
+//     button analogy"; "the buttons are good enough size for my finger"). A
+//     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
+//     ("project and file names will be short"), the painter clipping it to
+//     the row.
+// The panel's ONE authored number of its own is the outer inset below.
+//
+// THE PALETTE IS THE FILE MANAGER'S, NOT THE KEYBOARD'S (R32, the ladder at
+// the painter and the constants in render.h's palette block): the band's
+// ground is kModalFieldGround, a resting row paints no fill at all, and the
+// hover, selected and hovered+selected faces are the three kFolderRow*
+// values — kdenlive's project bin and pcmanfm-qt's compact view, which agree.
+// NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (conventions.md's third clause): a row press ARMS —
 // the same press may become the band's scroll drag — and a motionless lift
@@ -54,8 +74,12 @@
 // field, and an open runs that prompt's own commit. The fork is at the press
 // router and the key router, never here — the panel knows rows, not projects.
 
+// THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
+// dependency runs the other way (that header includes this one, for the
+// standing tenant's rect in waveform_paint_area): since the rows became
+// buttons the panel borrows nothing from the keyboard, and the band the two
+// share is app_state.h's.
 #include "app_state.h"
-#include "onscreen_keyboard.h"
 #include "render.h"
 
 #include <algorithm>
@@ -63,29 +87,45 @@
 
 namespace folder_overlay {
 
-// THE ROW GLYPH'S SIZE — the roster's 22 px icon box (the icon row's
-// kIconGlyphPx, paint_handler.cpp), restated here as the same authored number
-// because that constant is the painter file's own. A folder row wears
-// icons::Icon::Folder, a wav row icons::Icon::AudioXWav, the up row the folder
-// glyph too (it names a folder).
-inline constexpr double kRowIconPx = 22.0;
-// The gap between a row's icon and its name, authored.
+// -- The geometry ------------------------------------------------------------
+//
+// THE ROW IS THE ICON ROW'S BUTTON (the ruling above): every number below is
+// that button's own, read from render.h where it is measured, so a retune of
+// the roster carries down here by construction and this file spells no
+// literal of its own but the two it owns.
+
+// THE PANEL'S OUTER INSET, its ONE authored number — the margin between the
+// band's edge and the rows, at the top, the bottom and both sides.
+// pcmanfm-qt's compact view keeps 1 px between an item and the frame and the
+// architect's ruling lets it "grow proportionally with the taller rows"; 2
+// authored px is that margin at this row height, and it scales like every
+// other authored length.
+inline constexpr double kPanelPadPx = 2.0;
+// The gap between a row's icon and its name, authored, the row's own.
 inline constexpr double kRowIconGapPx = 8.0;
 
-inline int row_icon_px()     { return scaled_px(kRowIconPx, 1); }
+// THE ROW BOX: the button's box, the button's between-boxes gap, the button's
+// glyph. A folder row wears icons::Icon::Folder, a wav row
+// icons::Icon::AudioXWav, the up row the folder glyph too (it names a folder).
+inline int row_height_px()   { return scaled_px(kIconBtnPx, 1); }
+inline int row_gap_px()      { return scaled_px(kIconBtnGapPx, 1); }
+inline int pad_px()          { return scaled_px(kPanelPadPx); }
+inline int row_icon_px()     { return scaled_px(kIconGlyphPx, 1); }
 inline int row_icon_gap_px() { return scaled_px(kRowIconGapPx); }
-
-// The keyboard's three numbers, read through its accessors (the ruling above).
-inline int row_height_px() { return onscreen_keyboard::key_height_px(); }
-inline int row_gap_px()    { return onscreen_keyboard::key_gap_px(); }
-inline int pad_px()        { return onscreen_keyboard::pad_px(); }
+// THE GLYPH'S INSET INSIDE THE ROW, on every side: the button's own centring
+// of its glyph in its box, (32 - 22) / 2 at 100%, taken from the two scaled
+// numbers so it cannot disagree with either. It is the LEFT PAD of the icon in
+// the row as well — a row is a wide button — and not the modal word buttons'
+// text pad, which belongs to a different surface.
+inline int row_icon_inset_px() { return (row_height_px() - row_icon_px()) / 2; }
 
 // -- Standing ----------------------------------------------------------------
 
 // DOES THE PANEL STAND? THE OWNER TAG DECIDES and this is the panel's own
 // name for that one question (the predicate itself is folder_overlay_stands,
-// app_state.h — it has to live there because onscreen_keyboard.h reads it too
-// and this header includes that one). It takes no platform term, unlike the
+// app_state.h — it has to live there because that header's own predicates
+// read it: the slot's two tenants are named from both ends). It takes no
+// platform term, unlike the
 // keyboard's: the panel serves the pointer and the finger alike, so it stands
 // on both backends. EVERY paint site and EVERY hit site asks this and nothing
 // else.
@@ -95,21 +135,41 @@ inline bool stands(const AppState& a) {
 
 // -- The surface's rect ------------------------------------------------------
 
-// THE BAND: the keyboard's surface rect, verbatim — one owner. Like that
-// accessor it does not ask whether the panel stands.
-inline GuiRect surface_rect(const AppState& a) {
-    return onscreen_keyboard::surface_rect(a);
-}
-
-// -- The scroll state --------------------------------------------------------
-
 // The content's whole height: the pad at both ends, every row and the gaps
-// between them. Zero for an empty listing.
+// between them. Zero for an empty listing. (Declared ahead of the band, which
+// is sized by it.)
 inline int content_height_px(const AppState& a) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return 0;
     return 2 * pad_px() + n * row_height_px() + (n - 1) * row_gap_px();
 }
+
+// THE BAND: the slot's band (its x, its width and its bottom edge — one
+// owner, app_state.h), AS TALL AS ITS CONTENT UP TO THE CEILING. Like the
+// keyboard's own accessor it does not ask whether the panel stands.
+//
+// AN EMPTY LISTING ANSWERS A ZERO-HEIGHT RECT and needs no guard of its own:
+// neither content can stand empty (the player refuses "No renders to play"
+// and the picker always lists at least the project that is open), and the
+// painter and the hit test already read a zero rect as nothing.
+inline GuiRect surface_rect(const AppState& a) {
+    return keyboard_slot_band(
+        a, std::min(content_height_px(a), keyboard_slot_max_height_px(a)));
+}
+
+// THE BAND'S DAMAGE RECT — the band AT THE CEILING, whatever the listing is:
+// the panel grows and shrinks UPWARD from a fixed bottom edge, so an act that
+// SHORTENS it (a rebuild into a smaller folder) leaves the departed rows'
+// pixels standing above the new band, and a rect sized to the new content
+// would not erase them. Every damage that can change the listing takes this
+// rect; the damages that only move something INSIDE a standing band — the
+// scroll, the highlight, one row's face — take surface_rect or the row's own,
+// which is the whole of what they touched.
+inline GuiRect band_damage_rect(const AppState& a) {
+    return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
+}
+
+// -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {

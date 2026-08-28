@@ -23,6 +23,10 @@ void GuiRenderPlayer::damage_band() {
     viewport.invalidate_rect(folder_overlay::surface_rect(app));
 }
 
+void GuiRenderPlayer::damage_band_full() {
+    viewport.invalidate_rect(folder_overlay::band_damage_rect(app));
+}
+
 void GuiRenderPlayer::damage_row() {
     viewport.invalidate_modal_dialog_area();
 }
@@ -179,7 +183,11 @@ void GuiRenderPlayer::rebuild_rows() {
     folder_overlay::clamp_scroll(app);
     if (ov.highlight_row >= 0)
         folder_overlay::scroll_row_into_view(app, ov.highlight_row);
-    damage_band();
+    // THE BAND'S OWN HEIGHT MOVED WITH THE LISTING, so the damage is the band
+    // at its ceiling rather than as it now stands (the reason is at the two
+    // helpers' declaration): a folder with fewer rows than the last one
+    // leaves its predecessor's rows painted above the shorter band.
+    damage_band_full();
 }
 
 void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
