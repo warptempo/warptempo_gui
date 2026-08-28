@@ -587,13 +587,12 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
-// The laptop's device-config template (contract at the declaration): the design
-// baseline scale, and audacious as the `l` command's player — the one installed
-// on the authoring machine, and the value the `.settings` first-open template
-// stamped for every project until the key moved here 2026-08-27.
 // The laptop's device-config template (contract at the declaration): the
-// design baseline scale, the player the laptop has, and THE CLONE'S OWN
-// `projects/` as the projects path — `$HOME/.warptempo/warptempo_gui/projects`,
+// design baseline scale, audacious as the `l` command's player — the one
+// installed on the authoring machine, and the value the `.settings` first-open
+// template stamped for every project until the key moved here 2026-08-27 — and
+// THE CLONE'S OWN `projects/` as the projects path
+// (`$HOME/.warptempo/warptempo_gui/projects`),
 // resolved at stamp time into an absolute literal, since the file is meant to
 // be read and edited by hand and should say where the projects are rather
 // than how to find out. With no HOME the stamp is deliberately left EMPTY:

@@ -286,26 +286,6 @@ int main(int argc, char** argv) {
         derive_phase_reset_frame_map(*phase_reset_source_frames_r,
                                      full_warp_frame_map);
 
-    // --- The deliverable's folder is created here when it is missing, in the
-    // GUI dispatch's own place in the order (do_render, render_pipeline.cpp:
-    // after every refusal that can still end the run without a render, and
-    // ahead of the framemap pair and synthesis below), so a run that refuses
-    // leaves no empty folder behind. A creation failure ends the run with its
-    // own line rather than letting the staging write fail with a stranger
-    // diagnostic. (architect approval 2026-08-28) ---
-    {
-        const std::filesystem::path out_dir =
-            std::filesystem::path(out_path).parent_path();
-        std::error_code mkec;
-        std::filesystem::create_directories(out_dir, mkec);
-        if (mkec) {
-            std::fprintf(stderr,
-                "warptempo_cli: Could not create '%s': %s\n",
-                out_dir.string().c_str(), mkec.message().c_str());
-            return 1;
-        }
-    }
-
     // --- Cache-dir framemap pair (future-proofing; 1:1 with the GUI's
     // archival disk-route write in do_render — this CLI is disk-only). Drop
     // the FULL untrimmed warp frame map and its phase-reset column, through
@@ -440,6 +420,30 @@ int main(int argc, char** argv) {
             /*encode_to_disk=*/true); !v) {
         std::fprintf(stderr, "warptempo_cli: %s\n", v.error().c_str());
         return 1;
+    }
+
+    // --- The deliverable's folder is created here when it is missing, in the
+    // GUI dispatch's own place in the order (do_render, render_pipeline.cpp):
+    // BELOW every refusal that can still end the run without a render — the
+    // map builds, the source load and the projection refusal just above — and
+    // above synthesis and the staging open, which is the first write under the
+    // folder. So a run that refuses leaves no empty folder behind, while an
+    // unwritable folder is still reported before the synthesis cost rather
+    // than after it. (The cache framemap pair above writes into the cache
+    // dir, not here.) A creation failure ends the run with its own line rather
+    // than letting the staging write fail with a stranger diagnostic.
+    // (architect approval 2026-08-28) ---
+    {
+        const std::filesystem::path out_dir =
+            std::filesystem::path(out_path).parent_path();
+        std::error_code mkec;
+        std::filesystem::create_directories(out_dir, mkec);
+        if (mkec) {
+            std::fprintf(stderr,
+                "warptempo_cli: Could not create '%s': %s\n",
+                out_dir.string().c_str(), mkec.message().c_str());
+            return 1;
+        }
     }
 
     // --- render into the buffer, then run the shared post-engine chain

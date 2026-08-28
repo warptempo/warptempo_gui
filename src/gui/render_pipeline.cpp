@@ -196,23 +196,6 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
-    // The deliverable's folder is created here when it is missing, the batch
-    // folders' own precedent (their dispatchers create_directories before
-    // handing the queue over). The buffer route writes no file and asks for
-    // nothing; a creation failure fails the render with its own line rather
-    // than letting the staging write fail with a stranger diagnostic.
-    if (!batch_render && !req.output_buffer) {
-        std::error_code mkec;
-        std::filesystem::create_directories(output_path.parent_path(), mkec);
-        if (mkec) {
-            std::fprintf(stderr,
-                "warptempo_gui: Render error: could not create '%s': %s\n",
-                output_path.parent_path().string().c_str(),
-                mkec.message().c_str());
-            return RenderOutcome::Failed;
-        }
-    }
-
     // --- Cache-dir framemap pair (future-proofing; GUI archival disk route
     // only). Drop the FULL warp frame map and its phase-reset column into the
     // RenderCache per-process dir, named by the final wav's basename stem —
@@ -526,6 +509,51 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
+    // Projection refusal, orchestrator-side before the engine allocates
+    // (refuse-before-cost): the engine's buffered emission is llrint of its
+    // map's last anchor target; the encoded length is the crop. It sits HERE,
+    // as high as its inputs allow (the trim plan is the last of them), because
+    // it is the last refusal that can end this dispatch without a render and
+    // the deliverable folder is created directly below it — a refused render
+    // must leave no empty folder behind. The reuse rungs below are downstream
+    // of it by that placement: a candidate artifact whose fingerprint matches
+    // this recipe could only have been produced by a run that passed this same
+    // deterministic check on the same inputs, so nothing reusable is lost.
+    const int64_t engine_output_frames = static_cast<int64_t>(
+        std::llrint((trim_plan ? trim_plan->pre.warp_frame_map
+                               : full_warp_frame_map).back().tgt_frame));
+    const int64_t encoded_frames =
+        trim_plan ? trim_plan->post.samples : engine_output_frames;
+    if (auto v = validate_render_projection(
+            engine_output_frames, encoded_frames, source_channels_probe,
+            /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
+        std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
+                     v.error().c_str());
+        cleanup_all();
+        return RenderOutcome::Failed;
+    }
+
+    // The deliverable's folder is created here when it is missing, the batch
+    // folders' own precedent (their dispatchers create_directories before
+    // handing the queue over). It sits BELOW every refusal that can still end
+    // this dispatch without a render (the projection refusal just above is the
+    // last of them), so a refused render leaves no empty folder behind, and
+    // ABOVE the reuse rungs, which stage a byte copy into the folder before
+    // renaming it to the final name. The buffer route writes no file and asks
+    // for nothing; a creation failure fails the render with its own line
+    // rather than letting the staging write fail with a stranger diagnostic.
+    if (!batch_render && !req.output_buffer) {
+        std::error_code mkec;
+        std::filesystem::create_directories(output_path.parent_path(), mkec);
+        if (mkec) {
+            std::fprintf(stderr,
+                "warptempo_gui: Render error: could not create '%s': %s\n",
+                output_path.parent_path().string().c_str(),
+                mkec.message().c_str());
+            return RenderOutcome::Failed;
+        }
+    }
+
     // The fingerprint's source identity is built directly from the request's
     // load-time-captured identity (req.source_load_size/mtime): the loaded
     // source is immutable for the process lifetime, so no on-disk re-stat is
@@ -785,22 +813,6 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.source_frame_schedule = trim_plan
             ? &trim_plan->pre.source_frame_schedule
             : nullptr;
-
-        // Projection refusal, orchestrator-side before the engine allocates
-        // (refuse-before-cost): the engine's buffered emission is llrint of
-        // its map's last anchor target; the encoded length is the crop.
-        const int64_t engine_output_frames = static_cast<int64_t>(
-            std::llrint(ep.warp_frame_map.back().tgt_frame));
-        const int64_t encoded_frames =
-            trim_plan ? trim_plan->post.samples : engine_output_frames;
-        if (auto v = validate_render_projection(
-                engine_output_frames, encoded_frames, src_ch,
-                /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
-            std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
-                         v.error().c_str());
-            cleanup_all();
-            return RenderOutcome::Failed;
-        }
 
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;

@@ -303,14 +303,18 @@ A checklist for bringing a folder from before the project model — a bare `.war
 1. Make a folder for the project directly under `projects_path`, named for what you want the project called.
 2. Copy the source wav into it.
 3. Copy the `.warpmarkers` and `.phaseresetmarkers` files in beside it.
-4. If those sidecars are still timestamps rather than frames, convert them with `tools/migrate_sidecar_to_frames` — the warp file first, then the phase-reset file, since the phase-reset conversion needs the completed warp map to land its positions correctly:
+4. If those sidecars are still timestamps rather than frames, build the conversion tool. It is not part of the product build and no executable ships in `tools/` — that folder is its source. From the project root:
    ```bash
-   tools/migrate_sidecar_to_frames <sample_rate> <stem>.warpmarkers
-   tools/migrate_sidecar_to_frames <sample_rate> <stem>.phaseresetmarkers <stem>.wav
+   cmake -B build-tools -S tools && cmake --build build-tools
+   ```
+5. Convert the sidecars with the tool you just built — the warp file first, then the phase-reset file, since the phase-reset conversion needs the completed warp map to land its positions correctly:
+   ```bash
+   build-tools/migrate_sidecar_to_frames <sample_rate> <stem>.warpmarkers
+   build-tools/migrate_sidecar_to_frames <sample_rate> <stem>.phaseresetmarkers <stem>.wav
    ```
    `<sample_rate>` is the source's own rate (`44100`, for instance); the tool rewrites each file in place at its original path and keeps the untouched original beside it as `<path>.bak`.
-5. Delete the old `.settings` rather than bringing it across — it is all but certain to carry a key the current schema refuses (see below), and the first open of the new folder writes a fresh template in its place. Re-enter `title`, `notes`, `url`, and `cover` by hand from the old file's lines.
-6. Rename any `renders/` folder to `tmp/` (`mv renders tmp`).
-7. Move any `<title>.wav` and its `.fingerprint` sitting in the project root into `render/`.
+6. Delete the old `.settings` rather than bringing it across — it is all but certain to carry a key the current schema refuses (see below), and the first open of the new folder writes a fresh template in its place. Re-enter `title`, `notes`, `url`, and `cover` by hand from the old file's lines.
+7. Rename any `renders/` folder to `tmp/` (`mv renders tmp`).
+8. Move any `<title>.wav` and its `.fingerprint` sitting in the project root into `render/`.
 
 A `.settings` that still carries `gui_scale`, `audio_player`, `projects_repo`, or `playback_speed` refuses to load outright — those became per-device settings (or, `playback_speed`, were retired outright), and a sidecar naming any of them is an unknown key. The fix is deleting those lines by hand, not migration.

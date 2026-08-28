@@ -549,18 +549,22 @@ projects/<name>/         the source .wav, its three sidecars sharing that
 sidecar stem, or, for a folder with no sidecar at all, the one `.wav` it
 holds — the whole rule is in `src/gui/project_model.h`'s head comment, shared
 verbatim with the laptop. There is no longer a `current`-shaped grammar to
-refuse on this device: an invalid folder shape refuses with its own reason
-(read on the status line if it was `last_project`, or skipped silently by the
-startup fallback if it was some other folder in the walk), and a filesystem
+refuse on this device: at STARTUP an invalid folder is discarded silently
+whether or not `last_project` named it — `startup_source` tries the remembered
+name first, drops a failed resolve without a word, and walks on to the first
+valid project in name order, exiting with `No project under <projects path>`
+only when the walk finds none. A folder's own refusal reason reaches the
+status line through File → Open alone, where the typed name is the one
+candidate and there is nothing to fall through to. Either way a filesystem
 refusal — including the mode-770 one below — carries the system's own words.
 
 The producer is `~/.pc/bash/wts` (personal tooling, outside the repo): `wts tp`
 from a project folder pushes it, `wts fp` brings the sidecars and renders home
 and commits them. **`wts` still writes a `current` file on every push, and
-nothing in the app reads it any more** — the script is personal tooling and is
-updated separately from this arc; the file sits harmlessly in
-`<externalDataPath>` until it is. Placing one by hand is the same four pushes
-plus the folder name:
+nothing in the app reads it any more** — as of 2026-08-28 the script still
+emits it; it is personal tooling outside the repo and is updated on its own
+schedule, and the file sits harmlessly in `<externalDataPath>` until then.
+Placing one by hand is the same four pushes plus the folder name:
 
 ```bash
 FAR=/sdcard/Android/data/com.warptempo.gui/files
@@ -575,12 +579,13 @@ adb shell "find '$FAR/projects' -type d -exec chmod 777 {} +"
 straight into it is readable — which is why the old flat convention never met
 this. But a DIRECTORY that `adb push` creates below it belongs to `shell` with
 mode 770, and the app's uid is neither its owner nor in its group: `opendir()`
-answers EACCES, and before this arc that made the app die at launch saying
-`current` names no folder (measured on the device 2026-08-27) — the same
-permission failure now surfaces as `resolve_project`'s own "Permission denied"
-on whichever folder it hit. `chmod` does take on this device's external
-storage, so one pass over the directories is the whole fix; the files under
-them are already world-readable. `wts tp` runs it after every push.
+answers EACCES. Before 2026-08-28 the app read the `current` file and that
+EACCES made it die at launch saying `current` names no folder (measured on the
+device 2026-08-27); since the project model landed the same permission failure
+surfaces as `resolve_project`'s own "Permission denied" on whichever folder
+it hit. `chmod` does take on this device's external storage, so one pass over
+the directories is the whole fix; the files under them are already
+world-readable. `wts tp` runs it after every push.
 
 **THE SIDECAR TRAVELS VERBATIM since 2026-08-27.** `gui_scale` left the
 `.settings` for the per-device config that day (`$XDG_CONFIG_HOME/warptempo_gui/
