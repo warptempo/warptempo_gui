@@ -4132,7 +4132,7 @@ struct AppState {
     // THE OPEN PROJECT'S NAME — the source's parent folder's basename, the
     // project model's own name for it (project_model.h), set by the load
     // beside the window title. Read by the load-in-place prompt's label
-    // (`<projects_path>/<name>/renders/`) and by the Open prompt's "already
+    // (`<projects_path>/<name>/tmp/`) and by the Open prompt's "already
     // open" no-op.
     std::string project_name;
 
@@ -6534,7 +6534,7 @@ struct AppState {
     bool settings_editor_blink_last = false;
 
     // Load prompt editor. Opens on bare `'` from an authoring view,
-    // takes a render entry's identifier relative to renders/
+    // takes a render entry's identifier relative to tmp/
     // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
     // Enter loads that render's frozen sidecar recipe in place as the new
     // authoring baseline (GuiInputHandler::load_render_entry_in_place). A
@@ -6744,7 +6744,7 @@ struct AppState {
         // A parked Ctrl+Alt+Shift+R command late-binds its output folder/cell
         // at the worker-idle pump, not at command time: a command-time scan can
         // be invalidated by the very render this command kills (that render
-        // may still publish into renders/ during its cancellation drain,
+        // may still publish into tmp/ during its cancellation drain,
         // after the scan but before the cancel flag lands, stealing the
         // scanned cell name). Set only by the Ctrl+Alt+Shift+R park site; the
         // pump allocates the folder/cell here. Because Esc disarming the slot
@@ -6807,14 +6807,14 @@ struct AppState {
     bool bpm_mode_enabled = false;
 
     // One entry in the flat list of valid renders under
-    // <source_parent>/renders/, produced by
+    // <source parent>/tmp/, produced by
     // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
     // Consumed by the `l` listen-to-renders launcher and the `'` load
     // editor (load_render_entry_in_place).
     struct RenderEntry {
-        std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
+        std::filesystem::path batch_folder;     // <source parent>/tmp/<i>_<tag>
         std::string           basename;         // e.g. "01" (no extension)
         std::filesystem::path wav_path;         // batch_folder / (basename + ".wav")
     };
@@ -8884,8 +8884,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders beside the
-// source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell), Show trim
+// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders the
+// deliverable into `render/`, Ctrl+Alt+Shift+R a numbered cell inside a
+// `_miscellaneous` batch folder under `tmp/`), Show trim
 // region (Shift+[ the MAXIMIZER — reset the trim to the whole song), THE
 // WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
@@ -9120,7 +9121,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconListen: return {"Listen to renders (l)", nullptr};
         case RedesignButton::IconLoadInPlace:
             // "Load in place" not "Load render in place": the act loads A
-            // STATE — a renders/ entry's sidecar set (the render name is
+            // STATE — a tmp/ entry's sidecar set (the render name is
             // only the match key) or, in the history view, a commit's
             // sidecars or a member of the session's own timeline — so naming
             // "render" overclaims the surface.

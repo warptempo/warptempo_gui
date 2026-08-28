@@ -2070,7 +2070,7 @@ private:
     std::atomic<bool> synthesis_started_{false};
     bool              status_promoted_ = false;
 
-    // Result of one walk over the renders/ batch root: the highest
+    // Result of one walk over the tmp/ batch root: the highest
     // leading-index `<digits>_...` folder, and that folder's filename.
     struct RendersBatchScan {
         int         max_index = 0;             // 0 when none / dir missing
@@ -2127,7 +2127,7 @@ private:
     void maybe_reestablish_target_buffer();
 
     // Dispatch a single archival render (the Ctrl+Alt+R shape) on an idle
-    // worker: source-directory naming (empty batch_folder/basename inside
+    // worker: deliverable naming (empty batch_folder/basename inside
     // do_render), session bookkeeping, and an on_done that finalizes the
     // run and re-arms target view. Caller must have verified the worker is
     // idle.
@@ -2148,7 +2148,7 @@ private:
     // switch_active_tab_view_to.
     AuthoringSnapshot snapshot_current_authoring_state() const;
 
-    // Allocate the Ctrl+Alt+Shift+R miscellaneous output cell: derive renders/
+    // Allocate the Ctrl+Alt+Shift+R miscellaneous output cell: derive tmp/
     // from the (process-immutable) source path, decide append-into-the-most-
     // recent `_miscellaneous` folder vs. a new `<max+1>_miscellaneous`,
     // create the folder, and scan it for the next `<N>.wav` cell. Writes the
@@ -2157,15 +2157,15 @@ private:
     // failure. MUST only run when the render worker is idle: idle means
     // GuiAsyncRenderer::is_busy() is false, which spans the whole
     // CompletionPending interval, so the prior worker has finished do_render
-    // and ALL publication into renders/ before the scan runs; every OTHER
-    // renders/ mutation (sweep batch-folder creation, the load-in-place
+    // and ALL publication into tmp/ before the scan runs; every OTHER
+    // tmp/ mutation (sweep batch-folder creation, the load-in-place
     // wipe) runs on
     // this same GUI event thread, so none can interleave with the scan
     // either; the only other writer thread, the master-floats cache writer,
-    // writes solely under the cache tree, never renders/ — so an
+    // writes solely under the cache tree, never tmp/ — so an
     // idle-moment scan cannot race a publication. The
     // command-time scan it replaces could, because a cancelled render may
-    // still publish into renders/ during its cancellation drain, after the
+    // still publish into tmp/ during its cancellation drain, after the
     // scan but before the cancel flag lands, stealing the scanned cell name.
     bool allocate_miscellaneous_cell(std::string& out_folder,
                                      std::string& out_basename);
@@ -2180,7 +2180,7 @@ private:
 
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
-    // cell into `<source_parent>/renders/<N>_bpm/`. The
+    // cell into `<source parent>/tmp/<N>_bpm/`. The
     // body is the former Ctrl+Alt+M block verbatim, minus the keystroke
     // gate; it is now fired by Enter in the BPM editor (after
     // a successful commit). Returns true if the batch was accepted —
@@ -2419,7 +2419,7 @@ private:
 
     // Load prompt (bare `'`). A dialog modal editor, structural
     // sibling of the settings editor: it takes a render entry's identifier
-    // relative to renders/ and, on Enter, loads that render's frozen sidecar
+    // relative to tmp/ and, on Enter, loads that render's frozen sidecar
     // recipe in place as the new authoring baseline through
     // load_render_entry_in_place.
     //
@@ -2438,7 +2438,7 @@ private:
     //
     // open_load_editor: bare `'` opener (no-op with no source loaded; outside
     // the mode also refuses over a running/parked render and over an empty
-    // renders/, both guards being renders-side).
+    // tmp/, both guards being renders-side).
     // load_editor_autocomplete:
     // bare-Tab longest-common-prefix completion over the entry identifiers,
     // returning whether it advanced the buffer (the one autocomplete model, at
@@ -2607,7 +2607,7 @@ private:
     // dispatch-moment camera, three things the user never asked for.)
     //
     // THE WHOLE LOAD-IN-PLACE FAMILY SHARES THIS ONE BODY — THREE CALLERS,
-    // re-greped: load_render_entry_in_place (a renders/ entry),
+    // re-greped: load_render_entry_in_place (a tmp/ entry),
     // load_history_commit_in_place (a commit's sidecars) and
     // load_history_local_entry_in_place (a state of this session's own
     // undo/redo timeline, which joined on 2026-08-24, having hand-rolled the
@@ -2626,7 +2626,7 @@ private:
     // bits), assign the engine block, take the store-change basis reset, clamp
     // the live playhead and viewport into the possibly-changed domain, and run
     // the coincidence auto-select and the sync/invalidate/trigger tail. Each
-    // caller keeps its own tail after it (the renders/ trash-then-wipe, the
+    // caller keeps its own tail after it (the tmp/ trash-then-wipe, the
     // stderr line, the full-window invalidate).
     void apply_recipe_in_place(std::vector<GuiWarpMarker> warp,
                                std::vector<GuiPhaseResetMarker> phase_resets,
@@ -2641,7 +2641,7 @@ private:
     // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
     // behind its red flash; otherwise applies the recipe through
     // apply_recipe_in_place above — the marker pair and the engine block, the
-    // file's view keys and tab bands ignored — wipes renders/, and returns true.
+    // file's view keys and tab bands ignored — wipes tmp/, and returns true.
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
@@ -2653,7 +2653,7 @@ private:
     // run before any store is written, each failure returning false with one
     // stderr line naming the cause, the committed path and the SHA. No wav is
     // compared (the corpus stores no audio — the loaded source is the source),
-    // no renders/ wipe and so no running-render guard, and the mode itself
+    // no tmp/ wipe and so no running-render guard, and the mode itself
     // closes as part of the act. Gated on the mode standing: the sidecar base
     // name is the session's. Full behaviour paragraph at the definition.
     bool load_history_commit_in_place(const std::string& spelling);

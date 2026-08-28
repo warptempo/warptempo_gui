@@ -131,12 +131,10 @@ void GuiInputHandler::attach_shared_render_resources(RenderRequest& req) {
 
 bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
                                                   std::string& out_basename) {
-    // The source path is process-immutable, so deriving renders/ here equals
-    // deriving it at command time.
-    std::filesystem::path src(app.source_audio_path);
-    std::filesystem::path src_parent = src.parent_path();
-    if (src_parent.empty()) src_parent = std::filesystem::path(".");
-    const std::filesystem::path queue_root = src_parent / "renders";
+    // The source path is process-immutable, so deriving the batch root here
+    // equals deriving it at command time.
+    const std::filesystem::path queue_root =
+        project_batch_root(app.source_audio_path);
 
     // Append into the most-recent misc folder, else start a new one at the
     // shared first-index convention (max_index + 1 == 1 when empty).
@@ -550,7 +548,7 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 
 // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range, computing
 // (base_tempo, scale) per cell and rendering one `.wav` per cell into
-// `<source_parent>/renders/<N>_bpm/`. The per-cell engine
+// `<source parent>/tmp/<N>_bpm/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
 // by do_render); the `'` load-in-place (load_render_entry_in_place) applies
 // them when loading a BPM cell in place. The
@@ -641,10 +639,8 @@ bool GuiInputHandler::render_bpm_sweep() {
     }
     if (bpm_values.empty()) return false;
 
-    std::filesystem::path src(app.source_audio_path);
-    std::filesystem::path src_parent = src.parent_path();
-    if (src_parent.empty()) src_parent = std::filesystem::path(".");
-    const std::filesystem::path queue_root = src_parent / "renders";
+    const std::filesystem::path queue_root =
+        project_batch_root(app.source_audio_path);
 
     std::error_code ec;
     const int next_index = max_renders_batch_index(queue_root).max_index + 1;

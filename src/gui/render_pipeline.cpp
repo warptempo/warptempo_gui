@@ -8,6 +8,7 @@
 #include "map_output.h"
 #include "phase_reset_frame_map_build.h"
 #include "render_output_naming.h"
+#include "renders_dir.h"
 #include "settings_io.h"
 #include "warp_frame_map_view.h"
 #include "trimmer.h"
@@ -147,19 +148,26 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // --- Compose the wav output path. ---
     // Batch renders name into the batch folder with the batch basename;
-    // source-sibling renders name into the source's parent with
+    // the DELIVERABLE names into the project's `render/` folder with
     // render_output_stem (the title). Wav is the only product, so a render
     // composes exactly one path.
+    //   THE DELIVERABLE'S FOLDER (architect 2026-08-27): the outputs left the
+    // project root, so the title-named wav and its .fingerprint live in
+    // `render/` beside the batch cells' `tmp/` (project_batch_root /
+    // project_deliverable_root, renders_dir.h). RECORDED ASYMMETRY: the
+    // parser's render_output_directory — the composition warptempo_cli shares
+    // — still names the source's own parent, so the CLI's insurance render
+    // publishes into the project root until that owner moves too.
     const bool batch_render = !req.batch_folder.empty();
-    auto compose_source_sibling_path = [&]() {
+    auto compose_deliverable_path = [&]() {
         return compose_render_output_path(
-            render_output_directory(req.source_audio_path),
+            project_deliverable_root(req.source_audio_path),
             render_output_stem(req.engine_settings));
     };
     const std::filesystem::path output_path =
         batch_render
             ? compose_render_output_path(req.batch_folder, req.batch_basename)
-            : compose_source_sibling_path();
+            : compose_deliverable_path();
     const std::string final_output_path = output_path.string();
     // Hard refusal: never overwrite the source audio itself. Overwriting a
     // previous render with the same title is intended behavior; the source
@@ -190,6 +198,23 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     }
 
+    // The deliverable's folder is created here when it is missing, the batch
+    // folders' own precedent (their dispatchers create_directories before
+    // handing the queue over). The buffer route writes no file and asks for
+    // nothing; a creation failure fails the render with its own line rather
+    // than letting the staging write fail with a stranger diagnostic.
+    if (!batch_render && !req.output_buffer) {
+        std::error_code mkec;
+        std::filesystem::create_directories(output_path.parent_path(), mkec);
+        if (mkec) {
+            std::fprintf(stderr,
+                "warptempo_gui: Render error: could not create '%s': %s\n",
+                output_path.parent_path().string().c_str(),
+                mkec.message().c_str());
+            return RenderOutcome::Failed;
+        }
+    }
+
     // --- Cache-dir framemap pair (future-proofing; GUI archival disk route
     // only). Drop the FULL warp frame map and its phase-reset column into the
     // RenderCache per-process dir, named by the final wav's basename stem —
@@ -208,10 +233,10 @@ RenderOutcome do_render(const RenderRequest& req,
     //   Collision namespace: batch cells in DIFFERENT numbered batch folders
     // legitimately reuse basenames (e.g. 1_+0.00.wav), so a flat <pid>/<stem>.*
     // would let a re-run sweep clobber an earlier batch's pair while both wavs
-    // stay addressable under renders/. A batch cell therefore mirrors its batch
+    // stay addressable under tmp/. A batch cell therefore mirrors its batch
     // folder name as a subdir — retrieval walks <pid>/<batch-folder-name>/
     // <stem>.* — created here (creation failure just makes the write fail into
-    // the existing non-fatal skip). A source-dir single (empty batch_folder)
+    // the existing non-fatal skip). The DELIVERABLE (empty batch_folder)
     // stays flat <pid>/<stem>.* — one source per process, no collision. ---
     if (!req.output_buffer) {
         const std::string pid_dir = req.render_cache->process_dir();
@@ -597,20 +622,20 @@ RenderOutcome do_render(const RenderRequest& req,
     if (cancel_requested()) return cancelled_outcome();
     if (!req.output_buffer) {
         // Rung: project artifact candidate. The ONE candidate is the
-        // current-title source-dir sibling (the Ctrl+Alt+R deliverable); when
+        // current-title deliverable in `render/` (the Ctrl+Alt+R output); when
         // its .fingerprint attests this exact recipe it is published by byte
         // copy — the highest-integrity reuse there is. This rung serves a
         // batch/misc cell adopting an existing identical deliverable.
         // final_output_path is skipped (the != guard): the up-to-date rung
-        // above owns it, and for a Ctrl+Alt+R one-off the sibling IS
+        // above owns it, and for a Ctrl+Alt+R one-off the deliverable IS
         // final_output_path. There is no directory scan and no retitle reuse:
         // every engine field is in the key, so a provenance edit changes the
         // fingerprint and simply re-renders (architect 2026-07-17 — provenance
-        // changes about once per movement); renders/ cells are never reuse
+        // changes about once per movement); tmp/ cells are never reuse
         // sources, by construction (only exact composed paths are auditioned).
         ArtifactStatIdentity candidate_identity{};
         const std::string artifact_candidate =
-            compose_source_sibling_path().string();
+            compose_deliverable_path().string();
         if (artifact_candidate != final_output_path &&
             fingerprint_sidecar_matches(artifact_candidate, fingerprint,
                                         &candidate_identity)) {

@@ -92,7 +92,7 @@ constexpr int kMaxPendingCharsBpm = 60;
 // differently.
 constexpr int kMaxPendingCharsSettings = 1024;
 // Load prompt (bare `'`). Holds a render entry's identifier relative
-// to renders/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
+// to tmp/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
 // bare basename. Program-written batch/entry names are short; 256 is a
 // generous ceiling for the relative path a user types or Tab-completes.
 constexpr int kMaxPendingCharsLoadInPlace = 256;
@@ -131,7 +131,7 @@ constexpr int kMaxPendingCharsOpenProject = 256;
 // iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
 // load prompt uses LoadInPlace (a render entry's relative-path
-// identifier, resolved against the renders/ listing at commit); the history
+// identifier, resolved against the tmp/ listing at commit); the history
 // mode's commit-title editor uses CommitTitle (free one-line text, the message
 // the checkpoint commit carries); the MARKER MEASURE editor uses MeasureText
 // (the ` //<measure>` suffix a marker line may carry — an ASCII GRAMMAR since

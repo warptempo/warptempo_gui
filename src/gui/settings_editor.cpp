@@ -555,12 +555,14 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // Source-clobber guard. The single-render wav output lands beside the
-    // source, named by title (render_output_stem); an edit that makes the
-    // output path resolve to the source file itself would overwrite the
-    // source on the next Ctrl+Alt+R. The shared predicate composes and checks
-    // that path. Refuse it here so the colliding value never reaches
-    // app.engine_settings.
+    // Source-clobber guard. An edit that makes the title-named render output
+    // resolve to the source file itself would overwrite the source on the next
+    // render, and the shared predicate composes and checks that path. Since
+    // 2026-08-27 the GUI's own deliverable lands one folder down, in the
+    // project's `render/`, where a title cannot name the source; the predicate
+    // still composes into the source's own directory, which is where
+    // warptempo_cli publishes, so the check stays and the colliding value
+    // never reaches app.engine_settings.
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();

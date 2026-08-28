@@ -186,7 +186,7 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // ACCEPTED COST: every pre-bump cache entry and .fingerprint sidecar goes
 // unreachable, full-window ones included — a one-time cold cache, aged out by
 // the LRU budget on the cache side, warning-only on the sidecar side (single
-// user, renders/ transient).
+// user, tmp/ transient).
 //
 // THE LIBRARY-ENVIRONMENT QUARTET'S RETIREMENT BUMPED IT 19 -> 20 (2026-08-09).
 // The key used to open with the stat-identity digests of the four libraries

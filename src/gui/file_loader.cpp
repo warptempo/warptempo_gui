@@ -314,7 +314,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     }
     gui.set_project_title(project_name);
     // The same name, kept on AppState for the two prompts (the load-in-place
-    // label's `<projects_path>/<name>/renders/` and the Open prompt's
+    // label's `<projects_path>/<name>/tmp/` and the Open prompt's
     // already-open no-op). Under the project model it IS the project folder's
     // name — startup and the reopen both hand load_file a source directly
     // under a project folder, so the adversarial arm above is unreachable
@@ -484,8 +484,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // The GUI editor refuses this at commit, so the state is
         // GUI-uncommittable; refuse the hand-edited file here at load, the
         // earliest boundary, in the same abort-and-exit shape as the other
-        // adversarial settings refusals. The shared predicate matches the
-        // editor's composition exactly (single-render source-sibling paths).
+        // adversarial settings refusals. The shared predicate is the settings
+        // editor's own, and its rationale is stated at that commit refusal.
         if (auto collision =
                 render_output_source_collision(sf.engine,
                                                app.source_audio_path)) {

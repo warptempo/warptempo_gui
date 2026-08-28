@@ -1107,7 +1107,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE RENDER CACHE IS THE CALLER'S — the one per-process instance gui_main
     // constructs, inits and shuts down around the whole project loop (its
     // reasoning is there): target-view reuse, the archival reuse/publish
-    // rungs and the loaded-in-place render's survival after the renders
+    // rungs and the loaded-in-place render's survival after the batch
     // folder is wiped all read it through target_render, which holds it by
     // reference and is constructed just below. A failed init() there leaves
     // the cache disabled (every lookup misses), so target_render needs no

@@ -33,7 +33,8 @@ projects/*/*.fingerprint
 projects/*/*.peaks
 projects/*/*.wav
 projects/*/peaks/
-projects/*/renders/
+projects/*/render/
 projects/*/score/
+projects/*/tmp/
 projects/*/wt*
 projects/*test

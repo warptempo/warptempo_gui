@@ -94,7 +94,7 @@ bool spawn_audio_player(const std::string& player,
 // disk afterwards.
 //
 // THIS IS THE PRODUCT'S ONLY TRASHED DELETION (architect 2026-08-07), and the
-// scope line is deliberate: the one caller is the `'` load-in-place's renders/
+// scope line is deliberate: the one caller is the `'` load-in-place's tmp/
 // wipe far below, which takes every archival render in the folder with it —
 // user-visible artifacts a sweep may have spent an evening producing, so a
 // wiped batch stays restorable. EVERY OTHER deletion in the product stays a
@@ -393,7 +393,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // reaches disk; (2) the wipe MUTATES NO MARKER PERMANENTLY, clearing
     // session-only fields and leaving every authored position, tempo and label
     // exactly as it found them; and (3) the sweep LEAVES ITS OWN TRACE in the
-    // renders/ folder — the act is self-documenting output, not silent
+    // tmp/ folder — the act is self-documenting output, not silent
     // authoring, which is the property that makes it unlike everything the gate
     // blocks. A locked tab that renders a sweep ends it in the same bracketless
     // state a writable one does. `i` itself is NOT admitted, so the mode cannot
@@ -3613,7 +3613,7 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 
 // THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
 // authored in iteration mode. Output lands in
-// `<source_parent>/renders/<N>_iterations/`, one cell per product point with
+// `<source parent>/tmp/<N>_iterations/`, one cell per product point with
 // basename `<seq>_<delta_csv>`; each cell renders one `.wav`. The CSV holds the
 // swept markers' deltas in timeline order, formatted `%+0.2f`; markers with no
 // iter range authored are excluded from the CSV and contribute one fixed value
@@ -3725,13 +3725,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
         return;
     }
 
-    std::filesystem::path src(app.source_audio_path);
-    std::filesystem::path src_parent = src.parent_path();
-    if (src_parent.empty()) src_parent = std::filesystem::path(".");
-    const std::filesystem::path queue_root = src_parent / "renders";
+    const std::filesystem::path queue_root =
+        project_batch_root(app.source_audio_path);
 
     // Resolve the next batch index: max+1 over `<digits>_<anything>`
-    // entries (the shared renders/ batch scan).
+    // entries (the shared batch-folder scan).
     std::error_code ec;
     const int next_index =
         max_renders_batch_index(queue_root).max_index + 1;
@@ -3894,10 +3892,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // Ctrl+Alt+R: single render into the source directory using `title`
-    // from settings. Empty batch_folder/batch_basename selects the
-    // source-directory naming convention inside do_render. A successful
-    // sibling wav publish emits
+    // Ctrl+Alt+R: single render into the project's `render/` folder using
+    // `title` from settings. Empty batch_folder/batch_basename selects the
+    // deliverable naming convention inside do_render, which creates that
+    // folder if it is missing. A successful deliverable publish emits
     // the .fingerprint sidecar, but not batch-only sidecars
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
@@ -3912,7 +3910,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     //
     // ITERATION MODE RE-AIMS IT (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
-    // under renders/, the same refusals — and there is no second chord for it.
+    // under tmp/, the same refusals — and there is no second chord for it.
     // The single render below is the mode-off meaning, unchanged. THE
     // SWEEP DISPATCHES FROM EITHER AUDIO VIEW since 2026-08-07 (the mode is
     // TARGET-LEGAL): the bit alone selects the command, and target view needs
@@ -3937,7 +3935,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // cannot rest, an ambiguous trim falls back to untrimmed inside
         // do_render, maps ignore trim), with its stderr as the backstop.
 
-        // Empty batch_folder/basename selects the source-dir naming
+        // Empty batch_folder/basename selects the deliverable naming
         // convention inside do_render.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
@@ -3966,14 +3964,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // Ctrl+Alt+Shift+R (miscellaneous render): render the current authoring
     // state — the SAME recipe Ctrl+Alt+R captures (live stores + the active
     // tab's trim) — into a numbered cell inside a `_miscellaneous` batch folder
-    // under renders/. This moved off its former `e`-based chord because `e` is
+    // under tmp/. This moved off its former `e`-based chord because `e` is
     // now the click key (kLeftClickKey), so an e-chord is swallowed at the
     // platform boundary and can never reach dispatch as a command.
     // This is Ctrl+Alt+R with an extra mkdir and a different output
     // location: no queue, no batch runner, one request through the same
     // single-dispatch path. Folder logic (in allocate_miscellaneous_cell):
-    // look at the most-recent folder BY INDEX in renders/; if it is a
-    // `_miscellaneous` folder, append into it; otherwise (or renders/
+    // look at the most-recent folder BY INDEX in tmp/; if it is a
+    // `_miscellaneous` folder, append into it; otherwise (or tmp/
     // empty/missing) create `<max+1>_miscellaneous`. The cell is the next
     // `<N>.wav` inside that folder. Because the target is a batch folder,
     // do_render writes the FULL entry sidecar set (.warpmarkers /
@@ -3987,14 +3985,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // frozen here at command time; only the OUTPUT naming (batch_folder /
     // batch_basename) is late-bound, at dispatch-to-worker time, on BOTH
     // routes. Late binding is load-bearing on the busy route: the running
-    // render this command kills can still publish into renders/ during its
+    // render this command kills can still publish into tmp/ during its
     // cancellation drain (after any command-time scan but before the cancel
     // flag lands, through do_render's reuse-rung renames), so a cell name
     // scanned at command time could be stolen and then overwritten — two
     // successful publications collapsing to one pathname. Allocating only
     // once the worker is confirmed idle makes the scan exact: idle drains the
     // whole CompletionPending interval, so worker publication is fully done
-    // before the scan, and every other renders/ mutation (batch-folder
+    // before the scan, and every other tmp/ mutation (batch-folder
     // creation, the load-in-place wipe) runs on this same GUI thread, so none can
     // interleave with it. The idle route allocates here inline for the same
     // one implementation.
@@ -4058,12 +4056,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     return false;
 }
 
-// Identify a render entry by its path relative to renders/ —
+// Identify a render entry by its path relative to tmp/ —
 // `<batch_dir>/<basename>.wav` — always folder-qualified. One path per file,
 // so the id is unique by filesystem construction; Tab autocomplete then
 // discriminates on the short leading batch-folder name instead of deep value
 // decimals inside near-identical cell basenames, and the painted
-// `Load: ./renders/<id>` line is the entry's real on-disk path. The `'`
+// `Load: <projects_path>/<name>/tmp/<id>` line is the entry's real on-disk path. The `'`
 // load editor resolves the typed identifier against these strings.
 static std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
@@ -4181,11 +4179,11 @@ void GuiInputHandler::apply_recipe_in_place(
 // from a flash; first-error-only holds by construction (each arm returns). The
 // caller's own unknown-id refusal — a typed identifier matching no entry — stays
 // SILENT: a typo is not a fault, and the flash is the whole answer. Returns true
-// after the recipe is applied and renders/ wiped.
+// after the recipe is applied and tmp/ wiped.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
     // Self-guard on the standalone mutator: a successful load-in-place wipes
-    // renders/,
+    // tmp/,
     // which must never race a batch publishing into it. The `'` opener
     // already refuses on this same condition, so the keyboard route never
     // reaches here; this backstop protects any other caller.
@@ -4281,12 +4279,10 @@ bool GuiInputHandler::load_render_entry_in_place(
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
                           settings->engine);
 
-    const std::filesystem::path src(app.source_audio_path);
-    std::filesystem::path src_parent = src.parent_path();
-    if (src_parent.empty()) src_parent = std::filesystem::path(".");
-    const std::filesystem::path renders_root = src_parent / "renders";
+    const std::filesystem::path batch_root =
+        project_batch_root(app.source_audio_path);
 
-    // Wipe renders/ AFTER the successful load-in-place. The loaded render survives
+    // Wipe tmp/ AFTER the successful load-in-place. The loaded render survives
     // through the render cache, not as a folder artifact.
     //
     // TO THE DESKTOP TRASH FIRST (architect 2026-08-07): this is the product's one
@@ -4307,46 +4303,46 @@ bool GuiInputHandler::load_render_entry_in_place(
     // still be there, nothing was trashed or deleted, and it gets its own line.
     //
     // THE TAIL LINE THEN NAMES THE DISPOSAL THAT ACTUALLY HAPPENED (architect
-    // 2026-08-08), three wordings off one verdict: TRASHED says "moved renders/
+    // 2026-08-08), three wordings off one verdict: TRASHED says "moved tmp/
     // to the trash", because that batch is RESTORABLE and "wiped" would overstate
-    // it — the whole point of the trash-first rule; WIPED says "wiped renders/"
+    // it — the whole point of the trash-first rule; WIPED says "wiped tmp/"
     // for the native fallback's own delete, which is not restorable; and NONE
     // drops the clause entirely on the two failing shapes (the failed query and
     // the fallback delete's error), since the load succeeded either way but the
     // disposal did not happen and each shape has already printed its own line.
     // THE ABSENT DIRECTORY KEEPS THE "WIPED" WORDING, unchanged from before the
     // split: the clause is a claim about the END STATE the act guarantees — there
-    // is no renders/ on disk and nothing of it left to restore — which is exactly
+    // is no tmp/ on disk and nothing of it left to restore — which is exactly
     // true with nothing there, and the split is about restorability, the one axis
     // an absence has no side of.
     enum class WipeVerdict { Trashed, Wiped, None };
     WipeVerdict verdict = WipeVerdict::Wiped;  // The absent case; see above.
-    if (std::filesystem::is_directory(renders_root, ec)) {
-        if (trash_directory(renders_root)) {
+    if (std::filesystem::is_directory(batch_root, ec)) {
+        if (trash_directory(batch_root)) {
             verdict = WipeVerdict::Trashed;
         } else {
             std::fprintf(stderr,
                 "warptempo_gui: load-in-place: Trash unavailable for '%s'; "
                 "deleting it instead\n",
-                renders_root.string().c_str());
-            std::filesystem::remove_all(renders_root, ec);
+                batch_root.string().c_str());
+            std::filesystem::remove_all(batch_root, ec);
             if (ec) {
                 std::fprintf(stderr,
                     "warptempo_gui: load-in-place: Wipe failed for '%s': %s\n",
-                    renders_root.string().c_str(), ec.message().c_str());
+                    batch_root.string().c_str(), ec.message().c_str());
                 verdict = WipeVerdict::None;
             }
         }
     } else if (ec) {
         std::fprintf(stderr,
             "warptempo_gui: load-in-place: Could not check '%s': %s\n",
-            renders_root.string().c_str(), ec.message().c_str());
+            batch_root.string().c_str(), ec.message().c_str());
         verdict = WipeVerdict::None;
     }
 
     const char* disposal =
-        (verdict == WipeVerdict::Trashed) ? " and moved renders/ to the trash"
-      : (verdict == WipeVerdict::Wiped)   ? " and wiped renders/"
+        (verdict == WipeVerdict::Trashed) ? " and moved tmp/ to the trash"
+      : (verdict == WipeVerdict::Wiped)   ? " and wiped tmp/"
                                           : "";
     std::fprintf(stderr,
         "warptempo_gui: load-in-place: Loaded render in place%s\n", disposal);
@@ -4362,7 +4358,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // or any other spelling git can resolve (a short SHA pasted out of GitHub's web
 // UI is the ruled use case). ONE STATE IN, ONE STATE OUT: the three sidecars
 // THAT commit carried become the live session, in memory, and the disk is never
-// touched — not the corpus, not the working sidecars, not renders/.
+// touched — not the corpus, not the working sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
 // contract load_render_entry_in_place states and this path mirrors: ONE call,
@@ -4388,11 +4384,11 @@ bool GuiInputHandler::load_render_entry_in_place(
 // load-in-place's wav-existence check has no counterpart here.
 //
 // NO RUNNING-RENDER GUARD, deliberately. load_render_entry_in_place's self-guard
-// protects ITS TAIL — the renders/ wipe, which must never race a batch
+// protects ITS TAIL — the tmp/ wipe, which must never race a batch
 // publishing into that directory — and this path has no tail to protect: it
 // wipes nothing and reads no render entry. A render dispatched BEFORE the mode
 // opened (the mode blocks the launchers, not a render already in flight) renders
-// from the request snapshot it was built with, publishes into renders/ and the
+// from the request snapshot it was built with, publishes into tmp/ and the
 // render cache, and is untouched by and untouching of this act; its entries then
 // describe the state from before the load-in-place exactly as they do after
 // any other authoring
@@ -4467,9 +4463,9 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& spelling) 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
                           settings.engine);
 
-    // NO renders/ WIPE. That step is the render-entry load-in-place's cleanup
+    // NO tmp/ WIPE. That step is the render-entry load-in-place's cleanup
     // of the folder it
-    // consumed an entry from; this path consumed a commit and renders/ is none of
+    // consumed an entry from; this path consumed a commit and tmp/ is none of
     // its business.
     std::fprintf(stderr,
         "warptempo_gui: load-in-place: Loaded the sidecar state of commit "
@@ -4611,7 +4607,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
                           src_engine);
 
-    // NO renders/ WIPE and NO DISK WRITE of any kind: this act moved state that
+    // NO tmp/ WIPE and NO DISK WRITE of any kind: this act moved state that
     // was already in memory from one place in memory to another.
     std::fprintf(stderr,
         "warptempo_gui: load-in-place: Loaded local history entry %zu of %zu "
@@ -4622,7 +4618,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(
 }
 
 // Open the `'` load prompt. No-op with no source loaded. An empty
-// renders/ reports a one-line bottom-strip status and does not open. Stops
+// tmp/ reports a one-line bottom-strip status and does not open. Stops
 // playback only when the modal actually opens (after every guard), so a
 // refused open leaves a listening session running.
 //
@@ -4634,7 +4630,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(
 // corner's own displayed `n` on the Local tab since 2026-08-08
 // (load_history_local_entry_in_place). Both of the renders-side guards
 // drop with the
-// renders-side subject — an empty renders/ is no obstacle to loading a commit
+// renders-side subject — an empty tmp/ is no obstacle to loading a commit
 // in place,
 // and the running-render refusal exists for the wipe at the render-entry
 // load-in-place's tail, which the from-commit load-in-place does not have
@@ -4666,7 +4662,7 @@ void GuiInputHandler::open_load_editor() {
             prefill = app.history_mode.session.sha_at(app.history_mode.index);
         }
     } else {
-        // Running-render guard: the load-in-place wipes renders/, which would race a
+        // Running-render guard: the load-in-place wipes tmp/, which would race a
         // background sweep writing into it. Refuse, don't cancel — a running
         // batch may be irreplaceable queued work; Esc is the explicit cancel.
         if (app.queue_running || app.pending_archival.armed) {
@@ -4685,7 +4681,7 @@ void GuiInputHandler::open_load_editor() {
     // Stop playback only now that the modal is definitely opening — the shared
     // modal stop (stop_playback_for_modal_open), whose refusal-gating rule this
     // site is the sharpest instance of: each guard above (no source,
-    // running/parked render, empty renders/) returns without touching playback,
+    // running/parked render, empty tmp/) returns without touching playback,
     // so a refused open never interrupts a listening session. Space is inside the
     // modal blocked set, so once open, playback cannot restart until the editor
     // closes.
@@ -4732,7 +4728,7 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // below refuses it.
 //
 // THE COMPARISON IS BY BYTE, DELIBERATELY: a candidate is a FILESYSTEM NAME —
-// a render entry's path under renders/, a project folder's name under the
+// a render entry's path under tmp/, a project folder's name under the
 // projects path — and a name is bytes: it is not text the UTF-8 relaxation
 // covers, and each caller's resolve matches it byte-exactly against the same
 // strings. Program-written batch folders and cell basenames are ASCII, so the
@@ -4864,7 +4860,7 @@ void GuiInputHandler::load_editor_commit() {
     }
     if (!found) { reject(); return; }
 
-    // Copy the entry before the load-in-place: its tail wipes renders/, and
+    // Copy the entry before the load-in-place: its tail wipes tmp/, and
     // the copy is self-contained (paths + basename), so it stays valid.
     const AppState::RenderEntry entry = *found;
     if (load_render_entry_in_place(entry)) {
@@ -5720,8 +5716,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // `l` (no modifiers): "Listen to renders" — launch the external audio
     // player (the audio_player setting, default "audacious") with every
-    // rendered wav under <source_parent>/renders/, in the numeric order
-    // enumerate_render_entries returns them. Fire-and-forget; the GUI's own
+    // rendered wav under <source parent>/tmp/, in the numeric order
+    // enumerate_render_entries returns them. THE BATCH CELLS ALONE: the
+    // deliverable in `render/` is auditioned by the target view, so this walk
+    // has never reached it and does not now. Fire-and-forget; the GUI's own
     // playback is unaffected. The modal / editor / read-only gates in on_key
     // run before this handler, so `l` is inert while any of them owns the
     // keyboard (like p/i/m). An explicitly-blank player (the deliberate

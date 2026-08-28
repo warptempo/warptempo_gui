@@ -5130,9 +5130,9 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // The dialog editor the modal would paint, or nullptr, with its LABEL out.
 // The editors' precedence order, with the load editor's prefix forked on the
 // history mode (in the mode its buffer is a commit spelling, so the
-// renders/ lead-in would be a false statement) and COMPOSED outside it — the
+// tmp/ lead-in would be a false statement) and COMPOSED outside it — the
 // project's real folder name between the two halves paint_handler.h owns, so
-// the label says which project's renders/ the entry is under. Only one dialog
+// the label says which project's tmp/ the entry is under. Only one dialog
 // editor can be open at a time — every opener refuses while another owns the
 // keyboard — so the order is free. A standing PROMPT outranks every editor
 // and is the caller's own test, not this one's.

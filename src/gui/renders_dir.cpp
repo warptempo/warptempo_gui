@@ -7,23 +7,42 @@
 #include <utility>
 #include <vector>
 
-// Renders-folder enumeration: the flat list of valid render entries under
-// <source_parent>/renders/, plus the per-entry .settings path helper. The `l`
-// launcher and the `'` load editor call them.
+// The two output folders' path composition and the batch folder's enumeration:
+// the flat list of valid render entries under <source parent>/tmp/, plus the
+// per-entry .settings path helper. The `l` launcher and the `'` load editor
+// call the latter two.
 
-// Enumerate the flat render-entry list under <source_parent>/renders/.
-// Returns an empty vector if no source path is set or if the renders root
+// The project folder: the source's parent, or "." for a bare filename — the
+// one spelling both roots below are composed from.
+static std::filesystem::path project_folder_of(
+        const std::string& source_audio_path) {
+    std::filesystem::path parent =
+        std::filesystem::path(source_audio_path).parent_path();
+    if (parent.empty()) parent = std::filesystem::path(".");
+    return parent;
+}
+
+std::filesystem::path project_batch_root(
+        const std::string& source_audio_path) {
+    return project_folder_of(source_audio_path) / kBatchFolderName;
+}
+
+std::filesystem::path project_deliverable_root(
+        const std::string& source_audio_path) {
+    return project_folder_of(source_audio_path) / kDeliverableFolderName;
+}
+
+// Enumerate the flat render-entry list under <source parent>/tmp/.
+// Returns an empty vector if no source path is set or if the batch root
 // contains no valid entries.
 std::vector<AppState::RenderEntry>
 GuiRendersDir::enumerate_render_entries() {
     std::vector<AppState::RenderEntry> out;
     if (app.source_audio_path.empty()) return out;
-    std::filesystem::path src(app.source_audio_path);
-    std::filesystem::path src_parent = src.parent_path();
-    if (src_parent.empty()) src_parent = std::filesystem::path(".");
-    const std::filesystem::path renders_root = src_parent / "renders";
+    const std::filesystem::path batch_root =
+        project_batch_root(app.source_audio_path);
     std::error_code ec;
-    if (!std::filesystem::is_directory(renders_root, ec)) return out;
+    if (!std::filesystem::is_directory(batch_root, ec)) return out;
 
     auto leading_int = [](const std::string& s, size_t& end_out) -> int {
         int v = 0;
@@ -39,7 +58,7 @@ GuiRendersDir::enumerate_render_entries() {
     struct BatchSlot { int idx; std::filesystem::path path; };
     std::vector<BatchSlot> batches;
     for (const auto& de :
-         std::filesystem::directory_iterator(renders_root, ec)) {
+         std::filesystem::directory_iterator(batch_root, ec)) {
         if (!de.is_directory()) continue;
         const std::string name = de.path().filename().string();
         size_t end = 0;

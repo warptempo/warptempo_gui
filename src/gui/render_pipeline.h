@@ -139,11 +139,11 @@ struct RenderRequest {
     // load-in-place-critical to success; `.fingerprint` is an optional cache
     // artifact.
     // The folder must already exist; do_render does not create it. When
-    // `batch_folder` is empty, do_render uses the
-    // source-directory title naming used by the
-    // immediate Ctrl+Alt+R path. Sibling wav publishes still emit the
-    // `.fingerprint` sidecar; batch-only sidecars are not written on the
-    // sibling path.
+    // `batch_folder` is empty, do_render composes THE DELIVERABLE — the
+    // title-named wav in the project's `render/` folder, the immediate
+    // Ctrl+Alt+R path — and creates that folder if it is missing. A
+    // deliverable publish still emits the `.fingerprint` sidecar; batch-only
+    // sidecars are not written on that path.
     std::string batch_folder;
     std::string batch_basename;
 
