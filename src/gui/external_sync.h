@@ -45,16 +45,60 @@
 // deletions after, so an act interrupted part-way (a pulled stick, a killed
 // process) leaves the volume with at most EXTRA files and never fewer.
 //
+// A MIRROR THAT IS UNSURE DELETES NOTHING. Four rules say what that means and
+// they are stated here once, for the whole act; the body below names the rule
+// each site is serving and states none of its own.
+//
+//   1. THE MIRROR DELETES ONLY AGAINST A LISTING IT FINISHED. Every walk and
+//      every status in the act carries its error_code and answers it. An
+//      OPTIONAL root that is simply absent — a deliverable not rendered yet, a
+//      project with no `tmp/`, a batch folder gone since the listing that
+//      named it — is ENOENT and is an empty set. ANY OTHER answer, on either
+//      side, ends the act with "Cannot read '<path>': <the system's own
+//      words>" BEFORE a single deletion, a destination-enumeration error
+//      included, which therefore can never report success. A directory that
+//      cannot be opened, an iterator that stops half way and a stat that is
+//      refused would each make good files on the volume look unwanted, and
+//      that is the one mistake a mirror must not make.
+//   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
+//      claim above true by construction rather than lexically. Before anything
+//      is created or written, the project's folder on the volume, every kept
+//      batch folder and every kept destination file are read with
+//      symlink_status: a name that exists and is not the real directory or
+//      real file it is about to be written into REFUSES — "'<path>' is a
+//      symbolic link", "'<path>' is not a directory", "'<path>' is not a
+//      regular file". A refusal AND NOT A DELETION, deliberately: what a
+//      foreign link at one of our own names means is the user's to decide, not
+//      this act's. `create_directories` runs only after those checks pass, and
+//      an unkept link is removed AS A LINK and never traversed, so no composed
+//      path is written, walked or deleted through one.
+//   3. EVERY COPY IS STAGED, the render's own publish shape (the staging
+//      spelling is render_staging_path's, render_output_naming.h — the
+//      product has one): the bytes land on `<destination>.tmp` and only a
+//      COMPLETE copy is renamed onto the final name. A copy that fails, is
+//      refused or is interrupted therefore leaves the previous file on the
+//      volume whole — the file the act could not replace is the file the user
+//      still has. A stale staging file from an interrupted act is ours by name
+//      and is removed at the start of that file's copy; the staging names are
+//      never in the kept set, so any other one goes with the deletions.
+//   4. WHAT IS KEPT IS KEPT BY FILESYSTEM IDENTITY, NOT BY SPELLING. The
+//      deletion pass keeps an entry when it IS one of the files the copies
+//      just wrote (std::filesystem::equivalent), because the stick is vfat and
+//      case-insensitive: a title changed from `My Title` to `my title` writes
+//      through the existing `My Title.wav` entry, whose spelling on the volume
+//      need not change, and a spelling comparison would then delete the very
+//      file this act had just copied.
+//
 // NOTHING IS SKIPPED AND NOTHING IS RETRIED. Every file in the set is copied
-// with overwrite_existing on every act, and the size-and-mtime skip that
-// suggests itself is deliberately not taken: the destination's mtime is the
-// COPYING host's clock, this one physical stick is carried between the laptop
-// and the tablet, and two clocks a few seconds apart would make a skip rule
-// silently keep a stale render. Correctness first — the act is on a worker and
-// costs the user no waiting. The FIRST failure ends the act with the
-// destination path and the system's own words, and the deletions do not run
-// after a failed copy (a half-copied mirror must not lose the file it failed
-// to replace).
+// on every act, and the size-and-mtime skip that suggests itself is
+// deliberately not taken: the destination's mtime is the COPYING host's clock,
+// this one physical stick is carried between the laptop and the tablet, and
+// two clocks a few seconds apart would make a skip rule silently keep a stale
+// render. Correctness first — the act is on a worker and costs the user no
+// waiting. THE FIRST FAILURE OF ANY KIND ENDS THE ACT, naming the path it was
+// reading or writing and then the system's own words, AND NOTHING IS DELETED
+// ON ANY ERROR: the deletions are the last thing the act does and they run
+// only when everything before them succeeded.
 //
 // THE ACT AUTHORS NOTHING and touches no AppState: the job below is captured
 // whole by value on the GUI thread, and the worker reads only these four
@@ -96,8 +140,9 @@ struct GuiExternalSyncJob {
 };
 
 // The act's verdict, composed on the worker and painted verbatim by the GUI
-// thread's status line. `ok` false means nothing was mirrored and `message`
-// names the file that stopped it.
+// thread's status line. `ok` false means the act stopped where it stood —
+// copies made before that point stand, nothing was deleted — and `message`
+// names the path that stopped it.
 struct GuiExternalSyncOutcome {
     bool        ok = false;
     std::string message;

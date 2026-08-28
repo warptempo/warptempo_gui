@@ -245,7 +245,20 @@ with at most EXTRA files, never fewer. The scope is that destination folder
 alone, never the volume root or another project's folder on it, which is
 what lets one stick carry several projects side by side. Nothing is skipped
 or retried on an mtime guess: the stick is carried between two clocks, so
-every file is copied with `overwrite_existing` on every act.
+every file is copied on every act — each onto a staging sibling that is
+renamed onto the final name only once the copy is complete, so a failed or
+interrupted copy leaves the previous file on the volume whole.
+
+THE FOUR STRICTNESS RULES are `external_sync.h`'s head, stated there once and
+nowhere else: the mirror deletes only against a listing it finished (any
+enumeration or status error other than an absent optional root ends the act
+before a single deletion, a destination-side one included, which therefore
+cannot report success); no destination symlink is ever followed, which makes
+the scope claim above true by construction (a link at one of the act's own
+names is a REFUSAL and not a deletion, and an unkept link is removed as a
+link); every copy is staged; and what is kept is kept by filesystem identity
+(`std::filesystem::equivalent`) rather than by spelling, the volume being
+case-insensitive vfat.
 
 THE WORKER, `GuiExternalSyncWorker` (`external_sync.{h,cpp}`), is shaped
 exactly like `GuiHistoryCommitWorker`: its own thread, a condition variable,
@@ -255,9 +268,11 @@ interrupting it, a copy left half-written being worse than a mirror caught
 between its copies and its deletions. The worker's own verdict lands back on
 the main thread through `on_external_sync_complete`, which writes it to the
 status line and nothing else: `Synchronized <N> file(s) to <path>` on
-success, or, on the first failure, the destination path and the system's own
-words (`Could not copy '<path>': <...>` / `Could not remove '<path>':
-<...>`). A FAILURE IS A STATUS LINE ONLY, never the permanent critical chip —
+success, or, on the first failure of any kind, the path it was reading or
+writing and the system's own words (`Cannot read '<path>': <...>` / `Could
+not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or one of the
+symlink rule's own three lines (`'<path>' is a symbolic link` / `'<path>' is
+not a directory` / `'<path>' is not a regular file`). A FAILURE IS A STATUS LINE ONLY, never the permanent critical chip —
 that chip is the checkpoint act's, whose failure needs the terminal; a failed
 synchronization is retried by pressing the row again.
 
