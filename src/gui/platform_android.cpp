@@ -237,16 +237,18 @@ void fill_band(uint32_t* dst, int n, uint32_t word) {
     for (int x = 0; x < n; ++x) dst[x] = word;
 }
 
-// THE AIR UNDER THE STATUS BAR (architect 2026-08-27, on glass): "the clock and
-// everything else looks too close to the bottom — the distance between the top
-// of the screen and the battery icon is much greater than between the battery's
-// bottom and our first row; we have plenty of waveform, give some to the top."
-// The framework's content rect begins immediately under the status bar (53 px
-// on the Tab S10 FE, whose clock glyphs end about 8 px above where our menu row
-// began), so this many pixels come off the TOP of that rect and are left to the
-// band. DEVICE pixels, deliberately: the air pairs with the status bar's own
-// density-scaled geometry, not with anything gui_scale sizes. THE RETUNE KNOB
-// IS THIS NUMBER and nothing else.
+// THE AIR UNDER THE STATUS BAR (architect 2026-08-27, on glass, measured on a
+// screencap at his Screen zoom = override density 320): One UI does NOT
+// centre the status bar's content in the inset it reports (inset 60 device
+// px; the tallest element, the clock, occupies rows 23-52 — 23 above it, 7
+// below). It sets the distance from the screen's top edge to the TOPMOST
+// element (the G icon, row 21) and MIRRORS that distance below: the gap from
+// the BOTTOMMOST element's last row (52) to our window's first row equals it
+// too, so `inset + air - 53 = 21` -> air 14 (the 53 being the content rect's
+// own top, before the air is added). The number is density-dependent — a
+// different Screen zoom re-measures it; THE RETUNE KNOB IS THIS NUMBER and
+// nothing else. DEVICE pixels, deliberately: the air pairs with the status
+// bar's own density-scaled geometry, not with anything gui_scale sizes.
 //
 // IT PAINTS kTopBandWord, not the content ground. The status bar above it is
 // kRedesignRowGround (the Java sliver sets it, from the labwc title bar the
@@ -255,7 +257,7 @@ void fill_band(uint32_t* dst, int n, uint32_t word) {
 // would read as a darker stripe — a defect, not air. Filled with the row
 // ground, the status bar, the air and the menu row read as ONE title strip: the
 // clock at its top, the menus beneath it, which is kdenlive's own arrangement.
-constexpr int kStatusBarAirPx = 16;
+constexpr int kStatusBarAirPx = 14;
 
 // ---------------------------------------------------------------------------
 // The looper identifiers this backend adds

@@ -236,8 +236,8 @@ which paints `kRedesignRowGround` — the status bar's own colour and the menu
 row's — so bar, air and menu row read as one title strip. Origin, size, damage
 and every touch coordinate follow from that one function. THE FRAMEWORK'S RECT ALREADY EXCLUDES BOTH BARS, measured on an AWAKE Tab S10
 FE under the architect's own Screen zoom (override density 320):
-`window 2304x1268 at (0,76) of surface 2304x1440` — a 60 px status bar plus the
-16 px of air we add above, and a 96 px taskbar below. So the backend subtracts
+`window 2304x1270 at (0,74) of surface 2304x1440` — a 60 px status bar plus the
+14 px of air we add above, and a 96 px taskbar below. So the backend subtracts
 no bar and needs none of its own arithmetic; the air is still the only thing it
 takes off. (History, one line: an earlier reading of 2304x1387 at (0,53) showed
 the status bar alone, because the taskbar reported no inset while the panel

@@ -718,7 +718,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Fact | Value |
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
-| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, which on an AWAKE panel EXCLUDES BOTH BARS — 60 px status bar, 96 px taskbar — LESS the 16 px of air added under the bar that evening, so **2304x1268 at (0,76)** under the architect's Screen zoom (override density 320); §12's note and §12.6) |
+| Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; since 2026-08-27 the WINDOW is the content rect the framework reports, which on an AWAKE panel EXCLUDES BOTH BARS — 60 px status bar, 96 px taskbar — LESS the 14 px of air added under the bar that evening, so **2304x1270 at (0,74)** under the architect's Screen zoom (override density 320); §12's note and §12.6) |
 | Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
