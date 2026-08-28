@@ -288,24 +288,13 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // The topmost published flag rect under the point, or nullptr — the ONE walk
 // both public answers below take, so "which box" and "which half of it" cannot
 // disagree.
-//
-// AND THE TOUCH HALO'S ONE OWNER (2026-08-27, the ruling at
-// kMarkerFlagTouchHaloPx): `finger` inflates the VERTICAL compare by the halo
-// on both sides and leaves the horizontal one exact. Applied here rather than
-// at either public answer so the two cannot inflate differently, and applied to
-// the compare rather than to the stash so the published rects stay the painted
-// pixels for every other reader. At `finger == false` — every mouse press, and
-// the cursor zone map at any time — `halo` is 0 and this is the compare it has
-// always been, bit for bit.
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
-                                            int mouse_x, int mouse_y,
-                                            bool finger) {
-    const int halo = finger ? marker_flag_touch_halo_px() : 0;
+                                            int mouse_x, int mouse_y) {
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
         const FlagHitRect& r = *it;
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
-            mouse_y >= r.y - halo && mouse_y < r.y + r.h + halo) {
+            mouse_y >= r.y && mouse_y < r.y + r.h) {
             return &r;
         }
     }
@@ -313,9 +302,9 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
 }
 
 MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
-                                   int mouse_x, int mouse_y, bool finger) {
+                                   int mouse_x, int mouse_y) {
     (void)audio;
-    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y, finger);
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     // THE PAINTER'S OWN BOUNDARY, never a re-derivation: it is the flag box's
     // right edge, and it equals the rect's right edge whenever no measure box
     // painted — so a measureless flag answers Flag everywhere by construction.
@@ -325,7 +314,7 @@ MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
-                  int mouse_x, int mouse_y, bool finger) {
+                  int mouse_x, int mouse_y) {
     (void)audio;
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (row 5, 2026-08-01). A marker box
     // is as wide as its SHAPED label, so there is no formula to re-derive it
@@ -354,13 +343,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // box needs no rule of its own here either: it is part of the same rect, so
     // a later flag covering an earlier measure's tail resolves to the later
     // marker exactly as the pixels say.
-    //
-    // AND THE TOUCH HALO NEEDS NO RULE HERE EITHER (2026-08-27): every flag box
-    // spans the marker lane's full height, so the inflated bands are all the
-    // same band and a halo cannot make a point ambiguous between two flags that
-    // the exact test did not already have to arbitrate — the backward walk
-    // settles those the same way it always did, on x.
-    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y, finger);
+    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;
 }
 

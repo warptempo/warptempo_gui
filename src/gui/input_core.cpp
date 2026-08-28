@@ -227,12 +227,8 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
             synth_left_keycode_ = stable_code;
             if (!was_held && on_button_press_) {
                 flush_deferred_motion();
-                // finger=false: bare `e` IS the mouse at this boundary, so it
-                // carries the mouse's provenance like every other gate it
-                // inherits (ButtonPressCallback, input_core.h).
                 on_button_press_(GuiMouseButton::Left,
-                                 pointer_x_, pointer_y_, current_mods(),
-                                 /*finger=*/false);
+                                 pointer_x_, pointer_y_, current_mods());
             }
         }
         return;
@@ -809,7 +805,7 @@ void GuiInputCore::pointer_button(GuiMouseButton button, bool pressed) {
             if (on_button_press_) {
                 flush_deferred_motion();
                 on_button_press_(button, pointer_x_, pointer_y_,
-                                 current_mods(), /*finger=*/false);
+                                 current_mods());
             }
         } else {
             // 1->0 edge: flush FIRST (button still reads held), then clear the
@@ -828,8 +824,7 @@ void GuiInputCore::pointer_button(GuiMouseButton button, bool pressed) {
     if (pressed) {
         if (on_button_press_) {
             flush_deferred_motion();
-            on_button_press_(button, pointer_x_, pointer_y_, current_mods(),
-                             /*finger=*/false);
+            on_button_press_(button, pointer_x_, pointer_y_, current_mods());
         }
     } else {
         if (on_button_release_) {
@@ -1097,15 +1092,9 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // only on the 0->1 edge, with the bit already raised above so the press —
     // and the entry motion before it — reads held (the pointer_button
     // ordering, widened to the whole burst).
-    // THE ONE PRESS IN THE PRODUCT THAT CARRIES finger=true — this class's own
-    // synthesis out of a touch translation, and the whole producer of the bit
-    // (ButtonPressCallback, input_core.h). A tap reaches here too: its burst is
-    // this press plus the release end_touch_left_hold delivers, and the release
-    // carries no bit because nothing on that edge reads one.
     if (!was_held && on_button_press_) {
         flush_deferred_motion();
-        on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods(),
-                         /*finger=*/true);
+        on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods());
     }
     // The queued motion: sub-slop drift for the expiry and tap resolutions,
     // the slop-crossing position itself for the motion one — either way the
@@ -2288,7 +2277,7 @@ void GuiInputCore::relative_motion(double dx, double dy) {
 
 void GuiInputCore::set_on_key(KeyCallback cb)                    { on_key_ = std::move(cb); }
 void GuiInputCore::set_on_key_release(KeyReleaseCallback cb)     { on_key_release_ = std::move(cb); }
-void GuiInputCore::set_on_button_press(ButtonPressCallback cb)   { on_button_press_ = std::move(cb); }
+void GuiInputCore::set_on_button_press(ButtonCallback cb)        { on_button_press_ = std::move(cb); }
 void GuiInputCore::set_on_button_release(ButtonCallback cb)      { on_button_release_ = std::move(cb); }
 void GuiInputCore::set_on_wheel(WheelCallback cb)                { on_wheel_ = std::move(cb); }
 void GuiInputCore::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }

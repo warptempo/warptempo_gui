@@ -179,27 +179,6 @@ public:
     // on_button_release's unused `mods` parameter says of the pointer.
     using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
-    // THE PRESS CARRIES ITS PROVENANCE (2026-08-27). A press is delivered with
-    // one extra bit the release does not have: `finger`, TRUE only for the
-    // press this class SYNTHESIZES out of a touch translation
-    // (resolve_touch_window_to_pointer, the one producer of a true) and FALSE
-    // for every press that came from a pointer device on either backend — the
-    // physical button (pointer_button) and the bare-`e` emulation (deliver_key),
-    // both of which mean "the mouse" downstream. It is the DELIVERY's own fact,
-    // fixed when the press is made, so a reader cannot get a different answer by
-    // asking later or by asking a different question: touch_contact_active() is
-    // CONTACT PRESENCE, true for any non-Idle phase, and on a host carrying both
-    // a touchscreen and a mouse a mouse press made while a finger rested on the
-    // glass would read true there and false here. The GUI's one reader is the
-    // press router's `finger` (GuiInputHandler::on_button_press), which threads
-    // it into the marker flag's touch-only vertical hit halo
-    // (kMarkerFlagTouchHaloPx, app_state.h).
-    // THE RELEASE DOES NOT CARRY IT, deliberately: no release path re-runs a
-    // flag hit test (the motionless lift owes only the double-click seed, which
-    // carries the PRESS's own target and span — pointer-hit-testing.md), so
-    // there is nothing on that edge to read the bit, and ButtonCallback stays
-    // the release's type.
-    using ButtonPressCallback  = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods, bool finger)>;
     // A scroll wheel notification carrying the NET number of detents crossed
     // in one pointer frame (always >= 1). pointer_frame() coalesces a
     // frame's worth of value120 / legacy-axis deltas into a single emission
@@ -410,7 +389,7 @@ public:
     // the GUI running its own command, not a Super chord, and is not this
     // program's to referee. Null-safe.
     void set_on_key_release(KeyReleaseCallback cb);
-    void set_on_button_press(ButtonPressCallback cb);
+    void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
@@ -689,16 +668,9 @@ public:
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
-    // the touch state block below, beside the phases it reads. ONE consumer,
-    // re-grepped 2026-08-27:
-    //   * main.cpp's pre-paint follow chase, which must not page the song out
-    //     from under a finger that is aiming or gesturing.
-    // THIS IS CONTACT PRESENCE, NOT PRESS PROVENANCE, and the distinction is
-    // load-bearing: on a host carrying both a touchscreen and a mouse it reads
-    // true for a MOUSE press made while a finger rests on the glass. The press
-    // router's "is this delivery a finger" question is therefore answered by
-    // the bit the press itself carries (ButtonPressCallback's `finger`, above),
-    // which this query briefly stood in for and no longer does.
+    // the touch state block below, beside the phases it reads; the ONE
+    // consumer is main.cpp's pre-paint follow chase, which must not page the
+    // song out from under a finger that is aiming or gesturing.
     bool touch_contact_active() const {
         return touch_phase_ != TouchPhase::Idle;
     }
@@ -1589,7 +1561,7 @@ private:
     // -- Callbacks --
     KeyCallback          on_key_;
     KeyReleaseCallback   on_key_release_;
-    ButtonPressCallback  on_button_press_;
+    ButtonCallback       on_button_press_;
     ButtonCallback       on_button_release_;
     WheelCallback        on_wheel_;
     MotionCallback       on_motion_;

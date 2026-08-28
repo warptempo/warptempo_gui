@@ -1724,8 +1724,9 @@ struct TrimBarPressSeed {
 // TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
-// FOUR COMPANIONS close them since 2026-08-18), then the bottom row's SIXTEEN — the transport
-// three, the FOUR SINGLE-MARKER VERBS with the MARKER MEASURE (2026-08-19) and
+// FOUR COMPANIONS close them since 2026-08-18), then the bottom row's SEVENTEEN — the transport
+// three, the FOUR SINGLE-MARKER VERBS with the EDIT FLAG BUTTON (2026-08-27),
+// the MARKER MEASURE (2026-08-19) and
 // ADD TO SELECTION (2026-08-18) behind them, the MARKER-WALK three
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
@@ -2130,7 +2131,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SIXTEEN buttons in four groups, in painted order (the enum
+    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2138,8 +2139,10 @@ enum class RedesignButton {
     // CLOCK behind its separator, then — FLUSH AT THE RIGHT MARGIN, three
     // groups divided by two more separators — THE FOUR SINGLE-MARKER VERBS
     // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
-    // = Ctrl+N) WITH ADD TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
-    // — later the same day), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
+    // = Ctrl+N) WITH THE EDIT FLAG BUTTON (2026-08-27, bare Enter — the flag
+    // editor's third road), THE MARKER MEASURE (2026-08-19, bare `/`) AND ADD
+    // TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
+    // — 2026-08-18, later the same day as the verbs), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
     // next = Tab, walk both tabs = Ctrl+Shift+Tab), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
@@ -2264,8 +2267,49 @@ enum class RedesignButton {
     // 2026-08-15). They keep their Icon* names: a roster id names the button,
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
-    // THE MARKER MEASURE — the verb group's fifth member since 2026-08-19,
-    // seated after Toggle inherit and ahead of Add to Selection. Bare `/`,
+    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
+    // fifth member, seated between Toggle inherit and the Measure and
+    // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
+    // an editor open and its neighbour's is a destruction, and a fingertip
+    // reaching for one must not be one box from the other.
+    //
+    // ITS CHORD IS BARE Enter and its act is that key's exactly — open the
+    // FLAG EDITOR on the focused marker (the arm is in on_key,
+    // input_handler.cpp; the button dispatches the chord at the LIFT through
+    // kToolbarChords like every other chrome button, while the KEY acts at the
+    // press like every other hotkey). ONE ROAD, no second body: every refusal
+    // the key has is the button's by construction.
+    //
+    // WHY IT EXISTS. The flag editor had TWO doors, the double-click and the
+    // Enter key, and on glass the first is unreliable — the architect drove a
+    // taller flag hit rect for one evening trying to rescue the double tap and
+    // retired it the same night: "get rid of double tapping as the ONLY way to
+    // enter the editor". A keyboardless panel now has a door that cannot miss.
+    // (Both older roads are untouched; this is a THIRD, not a replacement.)
+    //
+    // ITS ENABLED ARM HAS NO FOCUS TERM AND NO VIEW TERM, exactly like the
+    // MEASURE beside it: the act refuses INTERNALLY with nothing focused and in
+    // the P view (phase resets have no per-flag editor), both consumed no-ops,
+    // and a face that tracked either would blink at interaction cadence — the
+    // 2026-08-15 no-blink ruling, which is why not one of this group's own
+    // refusals is mirrored. What DOES grey it is what greys the Measure: the
+    // READ-ONLY LOCK (bare Return is on no read_only_key_blocked allowlist
+    // entry — the editor writes serialized content) and the `h` VIEW through
+    // the DERIVED partition (Return is neither history_mode_owns_key's
+    // vocabulary nor on history_mode_key_blocked's allowlist). A standing MODAL
+    // needs no arm at all: the veil consumes the press, the roster's own rule.
+    //
+    // IT IS NOT HOME-VIEW GATED, and that is the flag editor's own ruling
+    // rather than this button's: the payload editor is the FIFTH ruled
+    // exception to the home-view binding (the inventory is at
+    // active_column_authoring_allowed), so it opens in W+target as well as
+    // W+source. NO LAMP: an act, not a mode. IT ADMITS NEITHER SHIFT NOR CTRL,
+    // so a modified press is refused at the band gate and the long press —
+    // glass's held shift — reaches nothing.
+    IconMarkerEditFlag,
+    // THE MARKER MEASURE — the verb group's SIXTH member since 2026-08-27
+    // (its fifth from 2026-08-19 until the Edit flag button took that slot),
+    // seated after the Edit flag button and ahead of Add to Selection. Bare `/`,
     // minuet-scales (notes climbing a staff — the speech balloon it wore for
     // the field's one free-text day was swapped with the grammar on
     // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
@@ -2299,7 +2343,9 @@ enum class RedesignButton {
     // tab and in redesign_button_shift_admits; the jump left the product whole
     // and the button returned to the lock's set with it.)
     IconMarkerMeasure,
-    // ADD TO SELECTION — the verb group's SIXTH member, seated by the
+    // ADD TO SELECTION — the verb group's SEVENTH member since 2026-08-27 (its
+    // sixth from 2026-08-18, the Edit flag button having landed ahead of it),
+    // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
     // edit-select glyph, and a MODE rather than an act: while it is lit a
@@ -2364,12 +2410,19 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SEVEN in row 1, two
-// in row 3, TWENTY-SIX in row 4 and SIXTEEN in the bottom row — 51. Of those,
-// FORTY-SEVEN carry a chord in kToolbarChords and FOUR are the dropdown
+// in row 3, TWENTY-SIX in row 4 and SEVENTEEN in the bottom row — 52. Of those,
+// FORTY-EIGHT carry a chord in kToolbarChords and FOUR are the dropdown
 // anchors (File, Edit, Series and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 52 SINCE 2026-08-27'S EDIT FLAG BUTTON: one pure chord addition inside an
+// existing group, the bottom row's verb group gaining a fifth box on bare
+// Enter — 51 + 1, split 47 + 4 to 48 + 4, no separator and no group boundary
+// moved. It is the MEASURE'S OWN SHAPE eight days on (a verb-group addition
+// carrying a chord the keyboard already had), and the roster's answer to the
+// retired touch halo: the double tap stops being the only pointer road into
+// the flag editor.
 // 51 SINCE 2026-08-27'S SERIES RELOCATION, and the arithmetic is a NET LOSS OF
 // ONE over one addition and two deletions — the EDIT relocation's shape
 // exactly, seven days on: the SERIES ANCHOR joined row 1 (a non-chord entry)
@@ -2441,7 +2494,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 51;
+inline constexpr int kRedesignButtonCount = 52;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2535,6 +2588,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -2549,9 +2603,10 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SIXTEEN since 2026-08-19: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-08-27: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18 with the MARKER MEASURE and ADD TO SELECTION landing
+// row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION and (2026-08-27)
+// the EDIT FLAG BUTTON landing
 // behind them, the MARKER-WALK GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -2559,8 +2614,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these sixteen. THE CONSUMERS, re-greped
-// rather than inherited: the hover clear and the hover recompute
+// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
+// 2026-08-27 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
 // per-tick staleness comparator (main.cpp) and the tooltip, which also
@@ -2583,6 +2638,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -4553,13 +4609,7 @@ struct AppState {
     // can see rather than the one the live viewport would put there.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
-    // it BACKWARDS: last painted = topmost = what a click grabs. THE PUBLISHED
-    // RECT IS THE PAINTED EXTENT AND NOTHING ELSE — the touch halo of
-    // 2026-08-27 (kMarkerFlagTouchHaloPx, far below) is applied INSIDE the hit
-    // test on the finger's own presses and is deliberately not baked in here,
-    // because this stash's whole doctrine is that the rect IS the pixels: a
-    // fattened publish would make the pointer's reach disagree with the paint
-    // and would hand every other reader a lie. `marker_stems`
+    // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
     // carries one entry per DRAWN stem, which on the two LIVE columns means one
     // per ENABLED marker — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
@@ -7802,8 +7852,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     reintroduce the blink the same ruling removed from the arrows. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare `m`, bare `i`, bare `l`, bare `'`
-//     and bare `/` — NINE as of 2026-08-21. IT IS HAND-LISTED RATHER THAN
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare `m`, bare `i`, bare `l`, bare `'`,
+//     bare `/` and bare Return — TEN as of 2026-08-27, the EDIT FLAG BUTTON's
+//     chord joining with the button. IT IS HAND-LISTED RATHER THAN
 //     DERIVED, and
 //     the reason is that the allowlist alone is not the truth: some of its
 //     answers do not survive the walk (below), and Ctrl+P and Ctrl+Alt+P
@@ -8105,6 +8156,14 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
+        // it is the MEASURE'S CLASS EXACTLY: bare Return opens an editor over
+        // SERIALIZED CONTENT — the marker's canonical line — and sits on no
+        // read_only_key_blocked allowlist entry, so the lock eats the chord and
+        // the face says so. Its OTHER refusals (nothing focused, the P view)
+        // stay consumed no-ops with a live face, the arm's own rule two
+        // paragraphs up.
+        case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
@@ -8139,16 +8198,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
         // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS, THE MARKER MEASURE and ADD TO SELECTION
-        // (bare `k` and bare `/` are consumed in there like the verbs' four
-        // chords) — ELEVEN of the sixteen. The two
+        // FOUR SINGLE-MARKER VERBS, THE EDIT FLAG BUTTON, THE MARKER MEASURE
+        // and ADD TO SELECTION
+        // (bare Return, bare `k` and bare `/` are consumed in there like the
+        // verbs' four
+        // chords) — TWELVE of the seventeen. The two
         // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, being the mode's
         // own absolute jumps, its diff-flag cycle and (since 2026-08-18) the
         // march that composes that cycle with the A/B switch.
-        // OUTSIDE THE VIEW: the four VERBS and THE MARKER MEASURE on a locked
+        // OUTSIDE THE VIEW: the four VERBS, THE EDIT FLAG BUTTON and THE
+        // MARKER MEASURE on a locked
         // tab, their own gate, carried down from the icon row and stated at
         // their arm above (the measure rejoined them at the 2026-08-21 sunset,
-        // its jump half gone) — while ADD TO SELECTION, seated in their group,
+        // its jump half gone; the edit flag button landed in that arm
+        // 2026-08-27) — while ADD TO SELECTION, seated in their group,
         // is not with them there, its chord being navigation.
         // Nothing else on the row has a resting grey, which is what this ruling
         // is about — the set that breaks out below.
@@ -8604,7 +8667,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         // THE MARKER MEASURE IS MOMENTARY TOO: it opens an editor and the
-        // editor's own session is the state; there is no bit for a lamp.
+        // editor's own session is the state; there is no bit for a lamp. THE
+        // EDIT FLAG BUTTON beside it answers for the same reason and on the
+        // same editor machinery (2026-08-27).
+        case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
@@ -9094,6 +9160,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
+        // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
+        // like its neighbours: the act named, no shift line, the button
+        // admitting neither shift nor ctrl. THE ACCELERATOR IS "Enter" and not
+        // "Return", because Enter is what the key says on the plastic and on
+        // the painted keyboard alike (the keypad's own Enter opens the editor
+        // too — one arm, two keysyms). It greys in the `h` view and on a locked
+        // tab — the verbs' own two resting greys — and still explains itself in
+        // both, the tooltips-on-disabled ruling above.
+        case RedesignButton::IconMarkerEditFlag:
+            return {"Edit flag (Enter)", nullptr};
         // THE MARKER MEASURE (2026-08-19), the verb group's fifth, ONE LINE
         // like its neighbours: the act named, no shift line, the button
         // admitting no shift press. (Its second line advertised the
@@ -9422,45 +9498,6 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // inverse entry. Body in app_state.cpp.
 SettingsSnapshot capture_current_settings(const AppState& app);
 
-// THE MARKER FLAG'S TOUCH-ONLY VERTICAL HIT HALO (architect 2026-08-27, on
-// glass) — THE ONE DELIBERATE EXCEPTION to the no-global-halo ruling
-// (pointer-hit-testing.md, "Mouse Reach: No Global Halo, One Grab Constant Per
-// Surface"), and it is an exception only because it is not the MOUSE'S reach: a
-// pointer never sees it, so the desk keeps paint-equals-hit exactly.
-//
-// THE PROBLEM IS THE FLAG'S HEIGHT, NOT THE TIMING. With the scaled press
-// thresholds and the 575 ms double-click window landed, a double tap on a flag
-// still occasionally fell through to the waveform (the playhead moved) while a
-// tap on the waveform itself was exactly precise: the lane is 20 authored px =
-// 45 device px = 4.6 mm at the tablet's 225 %, and a fingertip's contact patch
-// is 7-9 mm. Growing the LANE was tried and reverted — it is too large on the
-// laptop, where the same pixels are a mouse target. So the reach grows for a
-// FINGER alone and nothing painted changes anywhere.
-//
-// VERTICAL ONLY, and that asymmetry is the ruling's: horizontal precision is
-// what carries marker IDENTITY (neighbouring flags must stay separable, and a
-// flag box is already as wide as its label), while the lane's height is the
-// axis a fingertip cannot resolve. Added ABOVE and BELOW the published rect
-// inside the hit test; the published rect is untouched.
-//
-// 4 IS THE ARCHITECT'S OWN NUMBER FROM GLASS AND IS THE RETUNE KNOB, the only
-// one: 9 device px per side at 225 %, so a 45 px flag becomes a 63 px target —
-// ~6.4 mm, near enough a fingertip's own size while leaving the neighbouring
-// surfaces most of their band. It is an AUTHORED 100 % length like every other
-// in the tree (the 2026-08-27 press-road ruling), resolved through the one
-// scaled_px conversion. It cannot reach
-// the TRIM BAR: the ruler lane above the marker lane is 28 authored px, wider
-// than this at every scale, so the band above stops inside the ruler; below,
-// the waveform is the whole rest of the window. And it never overlaps ANOTHER
-// FLAG, the flags all sharing one lane — so the halo adds no flag-vs-flag
-// ambiguity and the topmost-wins walk is unchanged.
-// Floor 0, the two other grab tolerances' floor: a tolerance may legitimately
-// vanish at a small scale, unlike a structural dimension.
-constexpr int kMarkerFlagTouchHaloPx = 4;
-inline int marker_flag_touch_halo_px() {
-    return scaled_px(kMarkerFlagTouchHaloPx, 0);
-}
-
 // Promoted from lambdas in main(). Mode-aware hit-tests against
 // the visible marker / flag / popup geometry. Bodies live in app_state.cpp
 // and pull in cairo + paint_handler.h for the popup-rect math; the
@@ -9484,20 +9521,8 @@ inline int marker_flag_touch_halo_px() {
 // SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
 // edge (the flag continued in blue), and it is part of the same rect: one
 // marker, one clickable surface for press, drag and select.
-// `finger` IS THE TOUCH HALO'S ONE GATE (2026-08-27): true inflates the test by
-// marker_flag_touch_halo_px() above and below — and by nothing horizontally —
-// so a fingertip gets a taller target than the pixels. FALSE IS THE MOUSE'S
-// ANSWER AND IT IS THE OLD ONE EXACTLY, which is what keeps paint-equals-hit
-// standing for the pointer. It is a PARAMETER rather than a query inside this
-// body because the answer belongs to the EVENT being routed, not to the
-// geometry: the press router receives the bit WITH the press it is routing
-// (ButtonPressCallback's `finger`, input_core.h — the touch translation's
-// synthesized press is its one producer of a true) and passes it down, so the
-// answer is the delivery's own rather than a query about the glass's current
-// state, nothing is cached across a gesture, and a pointer-only consumer (the
-// cursor zone map) can pass a literal false.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
-                  int mouse_x, int mouse_y, bool finger);
+                  int mouse_x, int mouse_y);
 
 // WHICH HALF of that box the point landed on — the topmost rect's published
 // boundary compared against mouse_x, nothing more. Its ONE consumer is the
@@ -9507,13 +9532,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // harmless answer: a caller with no hit has nothing to fork. Same backward
 // walk, same topmost-wins arbitration as hit_test_flag — literally the same
 // walk, so the two can never disagree about which box was hit.
-// `finger` IS THE SAME GATE and must carry the SAME VALUE its caller gave
-// hit_test_flag: the two answers describe one press, so a span asked without
-// the halo over a rect the hit found WITH it would name a box neither walk
-// chose. THE FORK ITSELF IS UNTOUCHED BY THE HALO — it compares mouse_x against
-// the painter's published boundary, and the halo is vertical only.
 MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
-                                   int mouse_x, int mouse_y, bool finger);
+                                   int mouse_x, int mouse_y);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box

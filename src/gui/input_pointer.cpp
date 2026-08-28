@@ -385,7 +385,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day; the MARKER MEASURE
     // joined the verb group 2026-08-19).
-    // SIXTEEN
+    // SEVENTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -463,7 +463,49 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
-    // THE MARKER MEASURE (architect 2026-08-19), the verb group's fifth: BARE
+    // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
+    // FIFTH and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
+    // has opened the editor with all along. It exists because the other two
+    // roads are a double-click and a key, and glass has neither reliably — the
+    // architect drove a taller flag hit rect for one evening chasing the missed
+    // double tap and retired it the same night for this button: "get rid of
+    // double tapping as the ONLY way to enter the editor... its tooltip hotkey
+    // says Enter, because that is what triggers the editor".
+    //
+    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches bare Return
+    // through on_key at the LIFT like every other chrome button, while the KEY
+    // acts at the press like every other hotkey. The ACT is on_key's own Return
+    // arm (input_handler.cpp) and there is no second body — so the editor's
+    // gates, the P-view refusal, the nothing-focused no-op, the read-only drop
+    // and the modal consume are all inherited whole. THE KEYPAD'S Enter is the
+    // same arm's second keysym and is NOT a second row here: a row spells the
+    // chord the dispatch synthesizes, and Return is the spelling every reader
+    // accepts (the marker walk's IsoLeftTab precedent).
+    //
+    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), it does NOT
+    // repeat (an editor opener, and openers never repeat — the Measure's own
+    // line), and it admits NEITHER shift NOR ctrl, so a modified press is
+    // refused at the band gate and the long press reaches nothing.
+    //
+    // A PRESS WHILE THE FLAG EDITOR ALREADY STANDS IS CLOSE-THEN-REOPEN, and
+    // it needs no arm of its own: the editor is pointer-TRANSPARENT (it raises
+    // no veil), so the press arms like any roster press, the outside-press
+    // owner closes the editor without committing ahead of every band claim,
+    // and the lift's dispatched Return then opens it afresh on the focused
+    // marker. That is the flag DOUBLE-CLICK's own documented shape on the
+    // marker under an open editor, reached here by the same two owners and
+    // nothing new.
+    //
+    // ITS GATES ARE THE MEASURE'S but one exception narrower: the `h` view
+    // consumes bare Return and greys it with the verbs, and so does the
+    // READ-ONLY lock (the canonical line is serialized content). Where it
+    // differs from the Measure is the P VIEW — phase resets have no per-flag
+    // editor, so the act refuses there — and that refusal is a consumed no-op
+    // with a live face, never a grey, the no-blink ruling's own class.
+    {RedesignButton::IconMarkerEditFlag,
+     GuiKeys::Return, false, false, false, false, true},                            // bare Enter
+    // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
+    // 2026-08-27 and its fifth before that: BARE
     // `/`, which was free. It opens the measure editor on the focused marker,
     // and button-is-its-chord holds literally — the press dispatches bare `/`
     // through on_key at the LIFT like every other chrome button, while the KEY
@@ -538,8 +580,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FOUR menu anchors carries a chord here — 47
-// rows against the roster's 51 since 2026-08-27's SERIES RELOCATION, which
+// every RedesignButton but the FOUR menu anchors carries a chord here — 48
+// rows against the roster's 52 since 2026-08-27'S EDIT FLAG BUTTON, one pure
+// addition inside an existing group (a chord, so the pair moved together): the
+// bottom row's verb group gained a fifth box on bare Enter, the flag editor's
+// third road, and no separator or group boundary moved. It was 47
+// against 51 earlier that day, at the SERIES RELOCATION, which
 // moved BOTH numbers in one act: the two mass-marker rows (bare `m`, bare `i`)
 // were deleted with their buttons and the SERIES ANCHOR joined row 1 carrying
 // no chord, so the table lost two and the roster lost one. Its two commands
@@ -735,29 +781,15 @@ bool point_in_nav_lanes(const AppState& app, int x, int y) {
 // The plain press's own arm
 // is the band walk in on_button_press rather than this predicate, because it
 // also has to pick the lane double-click and the release act.
-//
-// `finger` IS THE FLAG CARVE-OUT'S TOUCH HALO (2026-08-27, the ruling at
-// kMarkerFlagTouchHaloPx) AND THE ONLY REASON THIS OWNER TAKES A PARAMETER: for
-// a finger the carve-out reaches a band above and below the marker lane, and
-// BOTH of those bands are this surface's own — the ruler above, the waveform
-// below — so the flag question must be asked FIRST rather than after the
-// waveform band has already answered true. Every caller passes the same bit it
-// passes the press router's own hit test, so surface and claim cannot disagree.
 bool point_on_nav_surface(const AppState& app, const GuiAudio& audio,
-                          int x, int y, bool finger) {
-    // THE FLAG CARVE-OUT LEADS, and for the POINTER that is the same answer the
-    // lane-ordered form gave: a published flag rect lies wholly inside the
-    // marker lane, which is a member of point_in_nav_lanes, so an exact hit
-    // reached the `hit_test_flag(...) < 0` term below and returned false there.
-    // With the halo the rect's band spills out of the lane, which is exactly
-    // what this order exists to honour.
-    if (hit_test_flag(app, audio, x, y, finger) >= 0) return false;
+                          int x, int y) {
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     if (x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h)
         return true;
-    return point_in_nav_lanes(app, x, y);
+    if (!point_in_nav_lanes(app, x, y)) return false;
+    return hit_test_flag(app, audio, x, y) < 0;
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -1724,13 +1756,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // and the ctrl drag's ZOOM surface, and both cues cover it whole. A FLAG
     // BOX is lane vocabulary (select / range / toggle), which carries no cue —
     // Arrow, through the owner's own carve-out.
-    // NO TOUCH HALO HERE, and the literal false is the statement of it: this
-    // map answers for the MOUSE CURSOR and nothing else — there is no cursor
-    // under a fingertip to promise anything to, and no press is being routed
-    // here whose provenance could say otherwise. (The halo is at
-    // kMarkerFlagTouchHaloPx, app_state.h.)
-    const bool on_nav_surface =
-        point_on_nav_surface(app, audio, x, y, /*finger=*/false);
+    const bool on_nav_surface = point_on_nav_surface(app, audio, x, y);
 
     // (ALT IS UNNAMED: its pointer vocabulary is EMPTY since 2026-08-12 — the
     // grab-pan it carried moved onto the plain drag and the alt press claims
@@ -1907,9 +1933,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // modifier arms by their own rank (a ctrl or shift press on a flag is a
         // selection act, which carries no cue) and AHEAD of the strip's Arrow,
         // which is what used to answer here.
-        // POINTER-EXACT, the nav-surface term above having said why: the touch
-        // halo is a finger's reach, and this map dresses the mouse.
-        if (hit_test_flag(app, audio, x, y, /*finger=*/false) >= 0)
+        if (hit_test_flag(app, audio, x, y) >= 0)
             return GuiCursorKind::TrimResize;
         // The rest of the strip: the button rows (claimed far above the
         // waveform in the press path, no cue of their own) and GAP 1's blank
@@ -2841,17 +2865,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     if (onscreen_keyboard::stands(app, gui) &&
         rect_contains(onscreen_keyboard::surface_rect(app), x, y))
         return false;
-    // THE FINGER BIT IS A LITERAL TRUE HERE, not the platform query: this body
-    // IS the touch query — its one caller is the core's down-point pan-zone
-    // hook — so the subject is a finger by construction and needs no state to
-    // say so. That matters for the flag carve-out's TOUCH HALO (2026-08-27):
-    // the halo band under a flag is not the pan zone, exactly as the flag box
-    // itself is not, so a finger landing there takes the 60 ms window and
-    // resolves to the pointer — which is what delivers the press the halo
-    // exists to catch — instead of becoming the phone-model pan or, at the
-    // beat, the region hold. The zone and the press claim therefore read ONE
-    // geometry, which is this owner's whole reason for existing.
-    return point_on_nav_surface(app, audio, x, y, /*finger=*/true);
+    return point_on_nav_surface(app, audio, x, y);
 }
 
 // The thin-lane query's body (contract at the declaration): the two member
@@ -3305,18 +3319,13 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // PendingMarkerPress, app_state.h). ONE owner with TWO call sites, both in
 // on_button_press's marker claims: the ctrl-exact toggle branch and the
 // plain / shift branch. BOTH ARE FLAG HITS AND NOTHING ELSE (re-grepped
-// 2026-08-27): each sits behind a resolved `mh_index >= 0`, and that hit's own
-// gate is the TWO BANDS A FLAG CAN CLAIM IN rather than the top strip alone —
-// the marker lane for a pointer press, the lane PLUS the vertical halo band
-// that spills into the ruler above and the waveform below for a finger's
-// (kMarkerFlagTouchHaloPx, app_state.h; the gate is at the hit's resolution).
-// So the empty marker lane — its plain click, its double-click create — never
-// reaches this body, a mouse press over the waveform still resolves -1 exactly
-// as it did when the waveform was not asked at all, and the `h` view's diff
-// flags are a different press router with its own mode-local multi-selection.
-// THE TOGGLE ARM HAS TWO PRODUCERS since 2026-08-18: a real ctrl press, and a
-// plain press while the ADD TO SELECTION mode stands (the fold, and the shift
-// rule that goes with it, are at the `toggle` term below).
+// 2026-08-27): each sits behind a resolved `mh_index >= 0` inside the top
+// strip, so the empty marker lane — its plain click, its double-click create —
+// never reaches this body, and the `h` view's diff flags are a different press
+// router with its own mode-local multi-selection. THE TOGGLE ARM HAS TWO
+// PRODUCERS since 2026-08-18: a real ctrl press, and a plain press while the
+// ADD TO SELECTION mode stands (the fold, and the shift rule that goes with
+// it, are at the `toggle` term below).
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -3337,8 +3346,7 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
                                            bool ctrl,
                                            const DoubleClickCandidate&
-                                               dc_at_press,
-                                           bool finger) {
+                                               dc_at_press) {
     if (hit < 0) return;
     // The stop leads on every shape: selecting or editing under a live
     // audition is the case the top-strip stop exists for, and no arm below
@@ -3503,12 +3511,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // painter's published boundary and carried to the seed at the motionless
     // release. Only the double-click reads it; the drag this may become is the
     // same gesture from either half.
-    // THE PRESS'S OWN `finger` GOES IN, so this walk is the router's walk: a
-    // halo press resolves the SAME rect the hit did and then forks on that
-    // rect's published boundary. The fork itself is horizontal, so the halo
-    // moves nothing about which half answers.
-    app.pending_marker_press.span =
-        hit_test_flag_span(app, audio, x, y, finger);
+    app.pending_marker_press.span = hit_test_flag_span(app, audio, x, y);
 }
 
 // ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (BEGIN) /
@@ -3741,7 +3744,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
-                                      GuiInputState mods, bool finger) {
+                                      GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
     // say, and a hint left floating over the thing the user just clicked is
     // noise. It also resets the dwell, so a fresh hover starts a fresh wait.
@@ -4312,20 +4315,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top = rect_contains(top, x, y);
-    // IS THIS PRESS A FINGER? — the parameter, and nothing else. The bit is the
-    // DELIVERY's own (ButtonPressCallback, input_core.h): true only for the
-    // press the touch translation synthesizes, false for every pointer press on
-    // either backend, fixed when the press was made and so incapable of
-    // changing under a gesture or of answering for a different device. It is
-    // threaded into every flag question this router asks (the marker hit, the
-    // span stamp, the navigation surface's carve-out); its ONE effect is the
-    // marker flag's vertical hit halo (kMarkerFlagTouchHaloPx, app_state.h). On
-    // a host with no touch device — the laptop — no producer of a true exists
-    // and every compare below is the one it has always been.
-    // It replaced a live read of GuiPlatform::touch_contact_active() here
-    // (2026-08-27): that query is CONTACT PRESENCE, so on a host carrying both
-    // a touchscreen and a mouse it would have put the halo under a MOUSE press
-    // made while a finger rested on the glass.
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -4473,7 +4462,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // act of its own (the trim bar's framing) and this function's own field was
     // cleared at the top of the press; nothing else about the call is special.
     if (app.history_mode.active &&
-        handle_history_mode_press(button, x, y, mods, dc_at_press, finger)) {
+        handle_history_mode_press(button, x, y, mods, dc_at_press)) {
         return;
     }
 
@@ -4542,7 +4531,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // (hit_test_flag against the painter's stash — the rendered lane run
         // that used to be its second half died with the marker-text lane, and
         // with it the MarkerHit pair and its shared resolver marker_hit_at).
-        // The FLAG hit feeds the plain/Shift/Ctrl marker-press branches,
+        // The TOP-STRIP hit feeds the plain/Shift/Ctrl marker-press branches,
         // all three of which run the CLICK ACT AT THE PRESS (2026-08-17 —
         // content acts the moment its identity is certain; the acts are at
         // run_marker_click_act: plain = single-select + land + the double-click
@@ -4588,21 +4577,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // consumes it: the ctrl-exact arm, the plain / Shift arm, and the
         // empty-top-strip fallthrough (mh_index < 0 is what makes a spot EMPTY)
         // all read this one hit.
-        // THE GATE IS THE TWO BANDS A FLAG CAN CLAIM IN, not the top strip
-        // alone (2026-08-27, with the finger's vertical hit halo — the ruling
-        // at kMarkerFlagTouchHaloPx, app_state.h): a fingertip's band reaches
-        // out of the marker lane into the RULER above and the WAVEFORM below,
-        // and the waveform is outside `inside_top`. WIDENING IT COSTS THE MOUSE
-        // NOTHING AND CHANGES NO MOUSE ANSWER: with `finger` false the test is
-        // exact, and every published flag rect lies wholly inside the marker
-        // lane — disjoint from the waveform, whose top edge is that lane's
-        // bottom — so a waveform press still resolves -1 exactly as it did when
-        // it was not asked at all. That is why there is no device branch here:
-        // the gate names the geometry a flag can reach, and the halo decides
-        // how far that is.
         int mh_index = -1;
-        if (inside_top || inside_waveform)
-            mh_index = hit_test_flag(app, audio, x, y, finger);
+        if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
 
         // A top-strip gesture stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
@@ -4706,27 +4682,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // 2026-07-30). Read-only allowed
             // (selection + playhead are navigation).
             //
-            // THE FLAG IS THE WHOLE SURFACE HERE — the hit and nothing else:
-            // the ctrl-exact WAVEFORM press is the strip drag, and a stem
-            // stands ON the waveform, so ctrl over a stem belongs to the drag
-            // (as it always did — modified presses never resolved a stem, and
-            // since 2026-08-12 no press does). A markerless
+            // THE FLAG IS THE WHOLE SURFACE HERE — `inside_top` alone: the
+            // ctrl-exact WAVEFORM press is the strip drag, and a stem stands
+            // ON the waveform, so ctrl over a stem belongs to the drag (as it
+            // always did — modified presses never resolved a stem, and since
+            // 2026-08-12 no press does). A markerless
             // top-strip ctrl press claims only the trim bar (BEGIN bound set,
             // next block) and is a strict no-op on every other lane — no-op in
             // the playback sense too, since only a CLAIM stops playback.
-            // THE `inside_top` TERM LEFT THIS TEST 2026-08-27 with the touch
-            // halo: a finger's flag reaches a band below the lane, and there a
-            // ctrl-exact press is still the flag's toggle. It was never a
-            // second gate for the mouse — an exact hit is inside the marker
-            // lane by construction — so the mouse's answer is unchanged.
-            if (mh_index >= 0) {
+            if (inside_top && mh_index >= 0) {
                 // THE PRESS ACTS (2026-08-17): the toggle, its stop, its land
                 // and its region hide are the CLICK, run here through the one
                 // act owner (run_marker_click_act). A ctrl click has no
                 // gesture to become and no double-click meaning, so nothing is
                 // armed — the act's own modified-shape return.
                 run_marker_click_act(mh_index, x, y, /*shift=*/false,
-                                     /*ctrl=*/true, dc_at_press, finger);
+                                     /*ctrl=*/true, dc_at_press);
                 return;
             }
             // Markerless top-strip ctrl-exact press: the TRIM BAR sets the BEGIN
@@ -4789,7 +4760,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // no-op below. (The `h` view's ctrl press falls through to this
             // same claim; the click act is not armed on this entry, so the
             // mode needs no arm of its own here.)
-            if (point_on_nav_surface(app, audio, x, y, finger))
+            if (point_on_nav_surface(app, audio, x, y))
                 arm_nav_zoom_press(x, y);
             return;
         }
@@ -4888,48 +4859,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // motionless shift click lands the playhead and writes no trim. The
         // `h` view never reaches this claim (its gate consumed or forked far
         // above); its own shift former is handle_history_mode_press's.
-        // (`inside_top` left the flag term 2026-08-27 with the touch halo, for
-        // the ctrl claim's reason exactly: an exact hit is inside the marker
-        // lane by construction, so dropping it changes no mouse answer, while a
-        // finger's halo press below the lane must reach the flag's range click
-        // rather than sweep a trim window under it.)
-        if (shift && mh_index < 0) {
-            if (point_on_nav_surface(app, audio, x, y, finger)) {
+        if (shift && !(inside_top && mh_index >= 0)) {
+            if (point_on_nav_surface(app, audio, x, y)) {
                 place_playhead_and_arm_region(x - area.x, x, y,
                                               was_playing, playhead_at_entry);
             }
-            return;
-        }
-
-        // THE FLAG CLAIM LEADS THE PLAIN BAND WALK (2026-08-27, with the touch
-        // halo): a finger's flag reaches a band into the RULER above and the
-        // WAVEFORM below, and both of those are claimed further down — the
-        // ruler by the nav press inside the `inside_top` block, the waveform by
-        // the surface's floor past it — so the flag must be asked before either
-        // of them or the band would never resolve a marker. FOR THE MOUSE THE
-        // HOIST IS A NO-OP: row 5's three lanes are disjoint y-bands and the
-        // waveform is below all of them, so an exact hit could only ever have
-        // survived the ruler and trim-bar tests to reach the claim where it
-        // used to sit. Shift arrives here too (the former above passed it
-        // through on a hit), which is the range click; ctrl was claimed and
-        // returned far above.
-        if (mh_index >= 0) {
-            // THE MARKER CLICK ACTS AT THE PRESS (architect 2026-08-17:
-            // CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN — a flag
-            // press can only mean one thing, so the one-day lift deferral
-            // of 2026-08-15 is inverted; the double-click open in
-            // particular was "a tad slow compared to the Enter key", and
-            // the deferral's only defense there — a double-click's second
-            // press becoming a drag — is a nonexistent use case). ONE act
-            // owner, run_marker_click_act: the stop, the three-way fork,
-            // the land, the region hide and the plain consume-open, which
-            // then arms the pending that becomes the reposition drag past
-            // the threshold. The two AUTHORING gates (read-only, home
-            // view) guard the DRAG and live at the crossing, never here: a
-            // locked tab and an off-home column still select and still
-            // land. The contract is at PendingMarkerPress (app_state.h).
-            run_marker_click_act(mh_index, x, y, shift, /*ctrl=*/false,
-                                 dc_at_press, finger);
             return;
         }
 
@@ -5088,11 +5022,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 route_trim_bar_press(x, y);
                 return;
             }
-            {
+            if (mh_index >= 0) {
+                // THE MARKER CLICK ACTS AT THE PRESS (architect 2026-08-17:
+                // CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN — a flag
+                // press can only mean one thing, so the one-day lift deferral
+                // of 2026-08-15 is inverted; the double-click open in
+                // particular was "a tad slow compared to the Enter key", and
+                // the deferral's only defense there — a double-click's second
+                // press becoming a drag — is a nonexistent use case). ONE act
+                // owner, run_marker_click_act: the stop, the three-way fork,
+                // the land, the region hide and the plain consume-open, which
+                // then arms the pending that becomes the reposition drag past
+                // the threshold. The two AUTHORING gates (read-only, home
+                // view) guard the DRAG and live at the crossing, never here: a
+                // locked tab and an off-home column still select and still
+                // land. The contract is at PendingMarkerPress (app_state.h).
+                run_marker_click_act(mh_index, x, y, shift, /*ctrl=*/false,
+                                     dc_at_press);
+            } else {
                 // Empty top-strip spot — no marker flag under the point (the
-                // FLAG CLAIM returned above the whole band walk since
-                // 2026-08-27, so mh_index < 0 everywhere in this block; the
-                // trim bar returned above too).
+                // trim bar already returned above; mh_index < 0 here).
                 // ONE lane to test: the flag and triangle lanes became the
                 // single marker lane in row 5.
                 const GuiRect marker_lane = top_marker_row_area(app);
@@ -5164,15 +5113,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Waveform-area press: marker-blind for the MOUSE — the waveform
-        // resolves NO marker on a pointer press (the stems are pointer-inert
-        // since 2026-08-12, and an exact flag hit cannot reach below the marker
-        // lane), so a press over a stem column is the ordinary press for its
-        // half. A FINGER IS THE ONE EXCEPTION AND IT NEVER GETS HERE: the touch
-        // halo lets a flag claim a thin band at the waveform's very top, and
-        // the flag claim above this block already returned on it (2026-08-27 —
-        // the halo's own priority rule, and the reason the claim was hoisted).
-        // PLAIN ONLY here by
+        // Waveform-area press: marker-blind — the waveform resolves NO marker
+        // on any press (the stems are pointer-inert since 2026-08-12, and
+        // hit_test_flag runs only for top-strip presses), so a press over a
+        // stem column is the ordinary press for its half. PLAIN ONLY here by
         // construction: the SHIFT former claimed BOTH halves far above, and
         // ctrl/alt claimed or discarded earlier.
         //
@@ -6045,7 +5989,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's four menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// sixteen: 51, the enum's
+// seventeen since 2026-08-27: 52, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -7085,7 +7029,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 // combination that is not one of the claims above.
 bool GuiInputHandler::handle_history_mode_press(
         GuiMouseButton button, int x, int y, GuiInputState mods,
-        const DoubleClickCandidate& dc_at_press, bool finger) {
+        const DoubleClickCandidate& dc_at_press) {
     // A non-left press is a consumed nothing: the right button is unbound
     // product-wide, and no press in this view may start audio anyway.
     if (button != GuiMouseButton::Left) return true;
@@ -7109,20 +7053,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // case and there is nothing left for a mode term to say. The flag claims
     // below run before any arm that reads this, so the owner's own carve-out
     // simply agrees with them.
-    const bool on_nav_surface = point_on_nav_surface(app, audio, x, y, finger);
-
-    // THE MODE'S DIFF-FLAG HIT, RESOLVED ONCE, the live router's own shape:
-    // three claims read it (the two modified clicks and the plain focus click)
-    // and a fourth term derives from it (the surface above, whose carve-out is
-    // the same test). It carries the FINGER'S VERTICAL HALO exactly as the live
-    // lanes' hit does (kMarkerFlagTouchHaloPx, app_state.h): the mode paints
-    // its flags in the same marker lane, in the same box shape, for the same
-    // fingertip — the symmetry is the ruling, and an asymmetry here would be
-    // the thing that needed recording. The LANE Y-GATE the two modified claims
-    // used to spell for themselves is gone with this hoist: it was a
-    // pre-filter, never a rule — a published rect lies inside that lane — and
-    // spelling it a second time is exactly what the halo would have made lie.
-    const int mh_index = hit_test_flag(app, audio, x, y, finger);
+    const bool on_nav_surface = point_on_nav_surface(app, audio, x, y);
 
     // THE MULTI-SELECTION'S TWO MODIFIED CLICKS (architect 2026-08-05), asked
     // FIRST because they are the only modified presses in this mode that hit
@@ -7135,16 +7066,22 @@ bool GuiInputHandler::handle_history_mode_press(
     // modifier names — shift the former, ctrl the zoom — exactly as the live
     // lanes answer since they became the extension (2026-08-12; the
     // consumed-nothing it used to be predated the lanes carrying gestures).
-    if ((shift != ctrl) && !alt && mh_index >= 0) {
-        // THE PRESS ACTS (2026-08-17: a diff-flag press has no drag to
-        // become — nothing in this mode drags a marker and the flag
-        // box claims the press whole — so its identity is certain and
-        // the one-day lift deferral of 2026-08-15 is inverted): the
-        // range / toggle, the focus move, the land and the region
-        // clear run HERE, on the live hit, with the press's own
-        // modifier shape (shift != ctrl by this branch's gate).
-        select_history_diff_flags_modified(mh_index, shift);
-        return true;
+    if ((shift != ctrl) && !alt) {
+        const GuiRect lane = top_marker_row_area(app);
+        if (y >= lane.y && y < lane.y + lane.h) {
+            const int hit = hit_test_flag(app, audio, x, y);
+            if (hit >= 0) {
+                // THE PRESS ACTS (2026-08-17: a diff-flag press has no drag to
+                // become — nothing in this mode drags a marker and the flag
+                // box claims the press whole — so its identity is certain and
+                // the one-day lift deferral of 2026-08-15 is inverted): the
+                // range / toggle, the focus move, the land and the region
+                // clear run HERE, on the live hit, with the press's own
+                // modifier shape (shift != ctrl by this branch's gate).
+                select_history_diff_flags_modified(hit, shift);
+                return true;
+            }
+        }
     }
 
     // CTRL-exact on the navigation surface leaves for the live router's ctrl
@@ -7173,28 +7110,10 @@ bool GuiInputHandler::handle_history_mode_press(
     // the surface — is a consumed nothing.
     if (ctrl || shift || alt) return true;
 
-    // PLAIN FROM HERE. The band walk mirrors the live press router's: the FLAG
-    // CLAIM LEADS IT (2026-08-27, with the touch halo — a finger's flag reaches
-    // a band into the ruler above and the waveform below, both of which this
-    // walk claims further down, so the flag must be asked before either or the
-    // band would never resolve one), then the ruler as the navigation surface's
-    // lane member, the trim bar with its framing double-click, the marker
-    // lane's empty stretches, and the waveform as the surface's floor. FOR THE
-    // MOUSE THE HOIST IS A NO-OP, the live router's reason exactly: the lanes
-    // are disjoint y-bands and an exact hit lies in the marker lane.
-    if (mh_index >= 0) {
-        // THE PRESS ACTS (2026-08-17): the focus move, the land and the
-        // region hide are the CLICK, run here on the live hit.
-        // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
-        // painter's stash holds the diff flags' rects, published by the same
-        // pass that built app.history_mode.flags, so the index it returns is an
-        // index into that list — a double-width changed pair claiming as the one
-        // rect it is painted as. A cold stash answers -1, which is the
-        // empty-stretch answer and is correct: nothing is clickable that is not
-        // drawn.
-        focus_history_diff_flag(mh_index);
-        return true;
-    }
+    // PLAIN FROM HERE. The band walk mirrors the live press router's: the
+    // ruler is the navigation surface's lane member, the trim bar keeps its
+    // framing double-click, the marker lane splits flag-vs-stretch, and the
+    // waveform is the surface's floor.
     {
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) {
@@ -7255,15 +7174,29 @@ bool GuiInputHandler::handle_history_mode_press(
     }
     const GuiRect lane = top_marker_row_area(app);
     if (y >= lane.y && y < lane.y + lane.h) {
-        // THE MARKER LANE'S EMPTY STRETCHES — a flag returned above the walk
-        // (mh_index < 0 by the time this is reached). The stretch is
+        // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
+        // painter's stash holds the diff flags' rects, published by the same
+        // pass that built app.history_mode.flags, so the index it returns is an
+        // index into that list — a double-width changed pair claiming as the one
+        // rect it is painted as. A cold stash answers -1, which is the
+        // empty-stretch answer and is correct: nothing is clickable that is not
+        // drawn. A FLAG runs the focus click AT THE PRESS (2026-08-17, like
+        // the two modified clicks above — no drag to become, so nothing needs
+        // the lift); an EMPTY STRETCH is
         // the navigation surface — the pending click / pan, whose motionless
         // release lands the playhead at the column through the mode's land
         // (the extension rule: this used to clear the focus and land nothing,
         // and now places like every other click on the surface). No EmptyLane
         // seed — the marker create is authoring, consumed in here.
-        arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
-                      /*scrub_release=*/false);
+        const int hit = hit_test_flag(app, audio, x, y);
+        if (hit >= 0) {
+            // THE PRESS ACTS (2026-08-17): the focus move, the land and the
+            // region hide are the CLICK, run here on the live hit.
+            focus_history_diff_flag(hit);
+        } else {
+            arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
+                          /*scrub_release=*/false);
+        }
         return true;
     }
 

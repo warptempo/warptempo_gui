@@ -14,7 +14,7 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (70 declarations as of 2026-08-27 — 14 `using` aliases and 56
+  public API (67 declarations as of 2026-08-27 — 13 `using` aliases and 54
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
@@ -36,14 +36,7 @@ contract. The port split them:
   notional-x / capture bookkeeping, the pointer-frame and deferred-motion
   scratch, and every consumer hook those bodies fire. A backend hands it
   PLAIN VALUES — window-pixel doubles, bools, ids, X11 keysyms — and installs
-  ONE downward probe (the codepoint re-fill per synthesized repeat). IT ALSO
-  HANDS UP ONE FACT ONLY IT KNOWS: a press is delivered with its PROVENANCE
-  (`ButtonPressCallback`'s `finger`, true only for the press the touch
-  translation synthesizes), because whether a delivery came from a fingertip or
-  a pointer device is the translation's own knowledge and not a question the
-  GUI can ask afterwards — `touch_contact_active()` answers CONTACT PRESENCE,
-  which is a different question. The release keeps `ButtonCallback`: no release
-  path reads the bit. Every
+  ONE downward probe (the codepoint re-fill per synthesized repeat). Every
   moved body is line-for-line the pre-move Wayland body (verified by
   diffing the extracted ranges); the backend forwards its public API to the
   core. Comments in the core speak the core's event names

@@ -672,6 +672,32 @@ constexpr IconPath kMinuetScalesPaths[] = {
      "0.9472-0.711z"},
 };
 
+// THE EDIT FLAG ACT'S GLYPH (2026-08-27): text-field, Breeze's own TEXT
+// CURSOR — a serif I-beam standing on a field's underline rule, which is what
+// the button does (put a caret in the focused marker's flag text and type).
+// The pick and its three rejected neighbours are recorded at the enumerator
+// (icons.h).
+//
+// PROVENANCE, per the theme-provenance rule: breeze-dark's
+// actions/22/text-field.svg, a REAL FILE and not a symlink. The committed
+// assets/icons/breeze/text-field.svg is that install's bytes verbatim — the
+// edit-select and minuet-scales precedent — so a diff between this table and
+// that asset is a transcription bug and nothing else. Breeze LIGHT carries the
+// identical `d` under #232629 ink; the dark one is the source because #fcfcfc
+// is what this roster's kIconText already is.
+//
+// Command coverage: absolute `M` / `L` with implicit repetition and a closing
+// `z` on each of the TWO SUBPATHS in one `d` — the I-beam and the underline —
+// which is minuet-scales' multi-subpath shape in the absolute spelling
+// edit-select already uses. Nothing new for the interpreter, and the two
+// subpaths are disjoint, so the fill rule never has to arbitrate between them.
+constexpr IconPath kTextFieldPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 4 L 5 4 L 5 18 L 3 18 L 3 19 L 8 19 L 8 18 L 6 18 L 6 4 L 8 4 "
+     "L 8 3 L 3 3 z M 8 15 L 8 17 L 9 17 L 18 17 L 19 17 L 19 16 L 19 15 L 18 "
+     "15 L 18 16 L 9 16 L 9 15 L 8 15 z "},
+};
+
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
 //
 // Same rules as every entry above: `d` verbatim from the committed file, the
@@ -1024,6 +1050,7 @@ constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
 constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
+constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1072,6 +1099,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
         case Icon::MinuetScales:        return kMinuetScales;
+        case Icon::TextField:           return kTextField;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;

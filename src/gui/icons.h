@@ -336,11 +336,36 @@ enum class Icon {
     // symlink, so the committed asset is the installed breeze-dark bytes
     // verbatim — the table entry carries that record.
     MinuetScales,        // Measure (bare `/`)
+    // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
+    // between Toggle inherit and the Measure: text-field, Breeze's own
+    // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
+    //
+    // WHY THIS ONE OF THE FAMILY'S FOUR. The architect asked for "an
+    // I-beam-ish button", and Breeze offers four near neighbours: `insert-text`
+    // is the same I-beam with a PLUS, which reads as ADD and would have
+    // collided with the drop verb's list-add two boxes to its left;
+    // `edit-select-text` is an `A` inside brackets, which names SELECTING text
+    // rather than opening an editor over it; `edittext` is a pencil, a verb
+    // this roster spells nowhere else. text-field says the one thing the act
+    // is: put a caret in a field and type. Its silhouette is shared with
+    // nothing on the row — the media triangles, the +/− pair, the crossed eye,
+    // the chain, the staff, the marquee arrow, the tab arrows and the four
+    // chevrons are all closed or diagonal shapes, and this is the row's only
+    // upright bar.
+    //
+    // THE ENUMERATOR KEEPS THE BREEZE FILE NAME while the product act it faces
+    // is EDIT FLAG: icon ids name their PROVENANCE, not the product verb (the
+    // theme-provenance rule), so this is TextField and not IconEditFlag —
+    // MinuetScales' own precedent, one entry above.
+    TextField,           // Edit flag (Enter)
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 47 SINCE 2026-08-27, THE EDIT FLAG BUTTON: 46 + text-field, one fresh
+// transcription with no departure beside it — the bottom row's new verb needed
+// a glyph and no existing one said "open the editor over this text".
 // 46 SINCE 2026-08-27, THE KEYBOARD'S CAPS BECOMING WORDS: 51 − the on-screen
 // keyboard's five (keyboard-caps-disabled / keyboard-caps-enabled /
 // keyboard-enter / keyboard-spacebar / edit-clear-locationbar-rtl). The
@@ -400,7 +425,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 46;
+inline constexpr int kIconCount = 47;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'
