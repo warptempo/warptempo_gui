@@ -2,6 +2,7 @@
 
 #include "engine_settings.h"
 #include "settings_file.h"
+#include "device_config.h"   // format_gui_scale_percent (the recall)
 
 #include <cstdint>
 #include <filesystem>
@@ -45,10 +46,10 @@ std::string format_default_settings_template(const std::string& stem,
 // The complete non-engine (GUI-kind) value set the settings writer
 // serializes, gathered into one snapshot. Constructed at each call site and
 // consumed within the call: the reference members borrow the caller's
-// storage (the two tab bands and the projects_repo string), the scalars are
-// copied. One struct so the writer and the autocomplete recall
-// (format_nonengine_value in settings_io.cpp) take the identical value set
-// without a positional parameter list.
+// storage (the two tab bands), the scalars are copied. One struct so the
+// writer and the autocomplete recall (format_nonengine_value in
+// settings_io.cpp) take the identical value set without a positional parameter
+// list.
 struct NonEngineSettingsSnapshot {
     const ViewState&   tab_a;
     const ViewState&   tab_b;
@@ -62,10 +63,9 @@ struct NonEngineSettingsSnapshot {
     // is a fact about the material, which is why it stayed in the sidecar when
     // gui_scale left it 2026-08-27. It scales no audio anywhere.
     int                waveform_magnification_level;
-    // The repository that is the projects home (the GitHub recheck's corpus).
-    // A reference member: the caller's storage, borrowed for the call.
-    // (architect approval 2026-08-03.)
-    const std::string& projects_repo;
+    // (`projects_repo` LEFT THIS SNAPSHOT 2026-08-27 with its key — the
+    // repository is the device config's, device_config.h; the sidecar carries
+    // exactly what is about the piece.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared
@@ -101,14 +101,17 @@ std::string format_settings_text(
 // keys; a trim bound recalls as its actual frame, exactly as the writer emits
 // it. Used by the settings prompt's Tab autocomplete.
 //
-// THE DEVICE CONFIG'S TWO KEYS RECALL HERE TOO, off the same live AppState,
-// even though they left the `.settings` schema 2026-08-27: the settings editor
-// is still their authoring surface — the Settings dropdown's "GUI scale" item
-// prefills through this very call — so a recall that answered nothing for them
-// would have broken the menu item and the Tab completion together. What they
-// recall is byte-identical to what the device config file carries, through that
-// file's own serializer (format_gui_scale_percent, device_config.h): the same
-// "recall and the file can never diverge" rule the `.settings` keys keep, only
-// against a different file.
+// THE DEVICE CONFIG'S THREE EDITABLE KEYS RECALL HERE TOO, off the same live
+// AppState, even though they left the `.settings` schema 2026-08-27: the
+// settings editor is still their authoring surface — the Settings dropdown's
+// "GUI scale" item prefills through this very call — so a recall that answered
+// nothing for them would have broken the menu item and the Tab completion
+// together. What they recall is byte-identical to what the device config file
+// carries, through that file's own serializer (format_gui_scale_percent,
+// device_config.h) or verbatim for the two free-text keys: the same "recall and
+// the file can never diverge" rule the `.settings` keys keep, only against a
+// different file. (`projects_path` and `last_project` are not editable here
+// and recall nothing: the first is hand-edited in the file, the second is the
+// program's own.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

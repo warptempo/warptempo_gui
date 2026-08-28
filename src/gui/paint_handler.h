@@ -91,10 +91,20 @@ inline int icon_row_pad_x() {
 // geometry IS the painted one rather than a re-derivation that could drift.
 constexpr const char* kSettingsEditorPrefix = "Setting: ";
 constexpr const char* kBpmEditorPrefix      = "BPM: ";
-// The load prompt (bare `'`) label. The typed entry identifier —
+// The load prompt (bare `'`) label — ONE WAY TO SHOW THE LEVEL (architect
+// 2026-08-27): both path prompts print the device config VARIABLE'S NAME in
+// literal angle brackets, never the long path, and the folder under it by its
+// real name — `Load: <projects_path>/550 - 1/renders/`. The two halves around
+// the project name are these constants; the painter's fork composes the
+// label (dialog_editor_to_paint), and the typed entry identifier —
 // `<batch_dir>/<basename>` relative to renders/ — renders directly after the
-// trailing slash, so the prefix carries no trailing space.
-constexpr const char* kLoadEditorPrefix   = "Load: ./renders/";
+// trailing slash, so the tail carries no trailing space.
+constexpr const char* kLoadEditorPrefixHead = "Load: <projects_path>/";
+constexpr const char* kLoadEditorPrefixTail = "/renders/";
+// The OPEN PROJECT prompt's label (File → Open, 2026-08-27), the same ruling:
+// the variable's name, and the typed folder name renders directly after the
+// slash.
+constexpr const char* kOpenProjectEditorPrefix = "Open: <projects_path>/";
 // THE SAME EDITOR'S OTHER SUBJECT: in the `h` history mode it takes a COMMIT
 // SPELLING (load_history_commit_in_place), so the renders/ path lead-in
 // would be a false statement about what is being loaded in place. One label,

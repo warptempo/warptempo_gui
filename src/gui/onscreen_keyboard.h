@@ -14,7 +14,7 @@
 // Mobile's, Breeze Dark), full window width, sitting DIRECTLY ABOVE THE BOTTOM
 // ROW and painting over the waveform area's lower part — which the waveform's
 // own passes then do not paint at all (waveform_paint_area, below). It stands while ANY OF
-// THE SEVEN TEXT EDITORS stands, on a backend that asks for one, and it
+// THE EIGHT TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a dialog
 // editor keeps painting in the bottom row with its own buttons, and this sits
 // between them. THERE IS NO SECOND TEXT BUFFER — the live editor's own
@@ -25,7 +25,7 @@
 // backend's synthesize_key and the ORDINARY key path runs unchanged from there
 // — GuiInputHandler::on_key, the keyboard-modal gate, route_modal_editor_key,
 // each editor's own vocabulary, the undo coalescing, and the core's repeat
-// synthesis for a held key. So the seven editors' grammars, their red-flash
+// synthesis for a held key. So the eight editors' grammars, their red-flash
 // refusals, their commit and cancel bodies and their byte caps are inherited
 // whole rather than mirrored, and a new editor gets a working keyboard by
 // existing.
@@ -69,8 +69,8 @@ enum class Role : uint8_t {
     Backspace,     // GuiKeys::BackSpace
     Enter,         // GuiKeys::Return
     Escape,        // GuiKeys::Escape
+    Tab,           // GuiKeys::Tab, bare — the prompts' completion key
     LayerToggle,   // the `&123` / `abc` key: flips the symbol layer
-    Blank,         // a slot with no key in it — paints nothing, consumes a press
 };
 
 // THE ROW IS FORTY QUARTER-UNITS WIDE. Every key's width is authored in
@@ -88,7 +88,7 @@ inline constexpr int kRowCount    = 4;
 inline constexpr int kMaxRowKeys  = 12;
 
 struct KeyDef {
-    Role    role   = Role::Blank;
+    Role    role   = Role::Character;
     char    ch     = '\0';   // Character keys only; the LOWERCASE / base form
     uint8_t span_q = 4;      // width in quarter-units
 };
@@ -128,12 +128,20 @@ inline constexpr KeyDef kLetterRow2[] = {
 // measure, `_` `:` `=` `;` `'` `|` `*` cover the settings keys, the commit
 // titles and the render-entry paths.
 //
-// ROW 2'S LEADING SLOT IS BLANK and that is the whole answer to "what does
-// shift do on the symbol page": nothing, so there is no key there. Its SPACE
-// key and its comma are deliberate DUPLICATES of row 3's, which is layer-blind
-// — a hand already in the symbol layer for the `/` of `12 7/8` should not have
-// to look for the space bar, and a physical keyboard's own numpad settles that
-// a second painted key onto the same synthesize_key road is not a second road.
+// ROW 2'S LEADING SLOT IS TAB (architect 2026-08-27, with the project model):
+// the letter layer's Shift position, and the one key the letter layer has no
+// room for. Shift does nothing on a symbol page, so the slot stood BLANK until
+// the Open prompt made a Tab worth reaching on glass — Tab is what the
+// product's prompts COMPLETE on (the one autocomplete model,
+// route_modal_editor_key), so the whole glass gesture for the recent project
+// is File → Open, &123, Tab, Enter. It is a BARE Tab, no modifier, on the same
+// synthesize_key road as every other key here. Its SPACE key and its comma are
+// deliberate DUPLICATES of row 3's, which is layer-blind — a hand already in
+// the symbol layer for the `/` of `12 7/8` should not have to look for the
+// space bar, and a physical keyboard's own numpad settles that a second
+// painted key onto the same synthesize_key road is not a second road. (There
+// is no blank slot on either layer any more, so the table has no role for
+// one.)
 inline constexpr KeyDef kSymbolRow0[] = {
     {Role::Character, '1'}, {Role::Character, '2'}, {Role::Character, '3'},
     {Role::Character, '4'}, {Role::Character, '5'}, {Role::Character, '6'},
@@ -146,7 +154,7 @@ inline constexpr KeyDef kSymbolRow1[] = {
     {Role::Character, '#'}, {Role::Character, '|'}, {Role::Character, '\''},
 };
 inline constexpr KeyDef kSymbolRow2[] = {
-    {Role::Blank, '\0', 6},
+    {Role::Tab, '\0', 6},
     {Role::Character, ','}, {Role::Character, ';'}, {Role::Character, '='},
     {Role::Character, '['}, {Role::Character, ']'}, {Role::Character, '_'},
     {Role::Character, ' '},
@@ -250,13 +258,14 @@ inline constexpr GuiKey keysym_of(char base) {
 // row, so they say what they do instead.
 //
 // This function is the ONE OWNER of the words. It answers the cap for every key
-// that has one that is not simply its own character: the four function keys,
-// SPACE (which has no glyph of its own to wear), and the LAYER TOGGLE, whose
-// cap names the layer it goes TO — the reference's own convention and the only
-// one that reads right on a key you press to leave where you are. A Character
-// key other than space answers nullptr and the painter spells it out of the
-// table's own `ch` through the one case derivation above; so does a Blank slot,
-// which paints nothing at all.
+// that has one that is not simply its own character: the five function keys
+// (Tab among them since 2026-08-27, a word exactly as Shift, Backspace and
+// Enter are), SPACE (which has no glyph of its own to wear), and the LAYER
+// TOGGLE, whose cap names the layer it goes TO — the reference's own
+// convention and the only one that reads right on a key you press to leave
+// where you are. A Character key other than space answers nullptr and the
+// painter spells it out of the table's own `ch` through the one case
+// derivation above.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
@@ -269,9 +278,9 @@ inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
         case Role::Backspace:   return "Backspace";
         case Role::Enter:       return "Enter";
         case Role::Escape:      return "Cancel";
+        case Role::Tab:         return "Tab";
         case Role::LayerToggle: return symbol_layer ? "abc" : "&123";
         case Role::Character:   return k.ch == ' ' ? "Space" : nullptr;
-        case Role::Blank:       break;
     }
     return nullptr;
 }
@@ -307,7 +316,7 @@ inline int surface_height_px() {
 
 // DOES THE SURFACE STAND? Two terms and no third: the PLATFORM must want a
 // painted keyboard (false forever on Wayland — the ruling is at that backend's
-// wants_onscreen_keyboard), and one of the SEVEN editors must own the keyboard.
+// wants_onscreen_keyboard), and one of the EIGHT editors must own the keyboard.
 // EVERY paint site and EVERY hit site in the product asks this and nothing
 // else, which is what makes the laptop build's behaviour identical by
 // construction rather than by care.
@@ -315,7 +324,7 @@ inline int surface_height_px() {
 // The editor term is text_editor_session() (app_state.h) rather than
 // GuiInputHandler::keyboard_modal_editor_active because the painter has no
 // input handler to ask; the two are the same set by construction — that
-// predicate delegates to any_text_editor_active, which is exactly the seven
+// predicate delegates to any_text_editor_active, which is exactly the eight
 // this session id is taken from.
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
     return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
@@ -484,9 +493,9 @@ inline void for_each_key(const AppState& a, bool symbol_layer, Fn&& fn) {
 }
 
 // THE KEY UNDER A POINT, or -1. A press inside the surface but off every key —
-// the gaps, the margins, a Blank slot's box — answers -1 and is still CONSUMED
-// by the surface's own claim (the press router owns that rule); this function
-// answers only "which key", never "whose press".
+// the gaps, the margins — answers -1 and is still CONSUMED by the surface's own
+// claim (the press router owns that rule); this function answers only "which
+// key", never "whose press".
 //
 // It writes the found key's def through `out_def` so the caller needs no second
 // lookup, and it walks the same for_each_key the painter does.

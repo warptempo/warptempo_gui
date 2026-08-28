@@ -39,7 +39,7 @@
 // ONE CLICK-TO-BYTE MAPPING (row 7, 2026-08-01). Every editor in the product is
 // PROPORTIONAL now, so there is no advance to divide by anywhere: each takes an
 // origin plus the shaped run's per-byte boundaries from ITS OWN painter's
-// publication — the flag editor's FlagEditorBox, the five dialog
+// publication — the flag editor's FlagEditorBox, the six dialog
 // editors' DialogEditorText — and click-to-byte is the same nearest-boundary
 // search over both. The monospace arm (a char-0 origin times one cell advance)
 // died with the face; ActiveEditorText carries the one pair.
@@ -842,7 +842,7 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // THE FIVE DIALOG EDITORS share ONE publication — only one of them is
+    // THE SIX DIALOG EDITORS share ONE publication — only one of them is
     // ever open, and paint_modal_dialog fills it from whichever editor it
     // actually painted. An invalid publication (nothing painted yet, or an
     // editor the dialog's precedence hides — a prompt is up) leaves this
@@ -854,6 +854,7 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         text_editor::is_active(app.load_editor) ||
         text_editor::is_active(app.commit_title_editor) ||
         text_editor::is_active(app.measure_offset_editor) ||
+        text_editor::is_active(app.open_project_editor) ||
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
     if (dialog_open) {
@@ -866,6 +867,8 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
                    ? &app.commit_title_editor
              : text_editor::is_active(app.measure_offset_editor)
                    ? &app.measure_offset_editor
+             : text_editor::is_active(app.open_project_editor)
+                   ? &app.open_project_editor
                    : &app.top_flag_editor;
         g.text_left    = be.text_origin_x;
         g.byte_x       = &be.byte_x;
@@ -3298,6 +3301,8 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
         handle_commit_title_editor_key(key, mods);
     } else if (text_editor::is_active(app.measure_offset_editor)) {
         handle_measure_offset_editor_key(key, mods);
+    } else if (text_editor::is_active(app.open_project_editor)) {
+        handle_open_project_editor_key(key, mods);
     }
 }
 
@@ -3618,7 +3623,6 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     if (hit < 0) return true;   // a gap, the margin: consumed, no key
 
     using Role = onscreen_keyboard::Role;
-    if (def.role == Role::Blank) return true;
 
     // THE TWO LAMP KEYS ACT ON THE SURFACE AND SYNTHESIZE NOTHING. They still
     // take the held index (so the finger sees the click face) with a keysym of
@@ -3672,9 +3676,12 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
         case Role::Backspace: keysym = GuiKeys::BackSpace; break;
         case Role::Enter:     keysym = GuiKeys::Return;    break;
         case Role::Escape:    keysym = GuiKeys::Escape;    break;
+        // A bare Tab, no modifier: the product's prompts complete on it (the
+        // one autocomplete model, route_modal_editor_key) and the ring walks
+        // on it where there is nothing to complete.
+        case Role::Tab:       keysym = GuiKeys::Tab;       break;
         case Role::Shift:
-        case Role::LayerToggle:
-        case Role::Blank:     return true;   // handled above; unreachable
+        case Role::LayerToggle: return true;   // handled above; unreachable
     }
 
     app.onscreen_keyboard.pressed_key    = hit;
@@ -3893,7 +3900,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's text region places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
-    // per-editor modal swallows below so the gesture reaches the five dialog
+    // per-editor modal swallows below so the gesture reaches the six dialog
     // editors too. A press outside the active editor's
     // region falls through: the dialog editors stay modal — the VEIL — and
     // swallow it, while the top flag editor closes guard-free below and the
@@ -3968,6 +3975,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (text_editor::is_active(app.load_editor)) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
     if (text_editor::is_active(app.measure_offset_editor)) return;
+    if (text_editor::is_active(app.open_project_editor)) return;
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         // The BPM editor is a dialog modal owner (like the settings
@@ -5653,6 +5661,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (text_editor::is_active(app.load_editor)) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
     if (text_editor::is_active(app.measure_offset_editor)) return;
+    if (text_editor::is_active(app.open_project_editor)) return;
     // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
     // finishes something a LEFT press armed, and no other button arms anything —
     // the RIGHT button is fully unbound (2026-08-12, the eighth glass ruling;
@@ -6881,6 +6890,16 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // Nothing greys now: that menu and its predicate are deleted.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
+        // THE ONE ROW WITH NO CHORD (GuiPopupAct::OpenProject, the File
+        // menu's Open): no key binds it, so the release calls the opener
+        // directly, and the opener carries the gates a chord would have met
+        // in its own body — the modal refusals, the `h` view, the loading
+        // state (open_project_editor's declaration). Still CLOSE FIRST, THEN
+        // ACT, for the reason above.
+        if (it.act == GuiPopupAct::OpenProject) {
+            open_project_editor();
+            return true;
+        }
         GuiInputState chord{};
         chord.ctrl  = it.ctrl;
         chord.shift = it.shift;
@@ -8171,7 +8190,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // F2.1: editor-text drag motion. Handled before the dialog-editor branch
-    // (which returns) so the gesture reaches the five dialog editors' fields,
+    // (which returns) so the gesture reaches the six dialog editors' fields,
     // and before the trim / playhead branches. A lost button finalizes like
     // release, mirroring those handlers.
     if (app.editor_text_drag.active) {
@@ -8198,7 +8217,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (modal_dialog_editor_active()) {
-        // THE EDITOR DIALOG'S MOTION — the five dialog editors in one branch
+        // THE EDITOR DIALOG'S MOTION — the six dialog editors in one branch
         // (the BPM bracket included since the dialog arc; it used to fall
         // through to the gesture branches, harmlessly, its presses all
         // swallowed): the dialog buttons' hover face, then the roster

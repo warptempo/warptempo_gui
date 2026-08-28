@@ -417,8 +417,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
                     req.authoring.active_tab,
-                    req.authoring.waveform_magnification_level,
-                    req.authoring.projects_repo};
+                    req.authoring.waveform_magnification_level};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
                     note_failure(st_path);

@@ -5130,17 +5130,19 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // The dialog editor the modal would paint, or nullptr, with its LABEL out.
 // The editors' precedence order, with the load editor's prefix forked on the
 // history mode (in the mode its buffer is a commit spelling, so the
-// ./renders/ lead-in would be a false statement). Only one dialog editor can
-// be open at a time — every opener refuses while another owns the keyboard —
-// so the order is free. A standing PROMPT outranks every editor and is the
-// caller's own test, not this one's.
+// renders/ lead-in would be a false statement) and COMPOSED outside it — the
+// project's real folder name between the two halves paint_handler.h owns, so
+// the label says which project's renders/ the entry is under. Only one dialog
+// editor can be open at a time — every opener refuses while another owns the
+// keyboard — so the order is free. A standing PROMPT outranks every editor
+// and is the caller's own test, not this one's.
 //
 // IT HANDS BACK A MUTABLE STATE because the field's painter WRITES one field
 // of it: the horizontal view offset (text_editor::State::view_offset_px, whose
 // minimal-travel rule the painter owns for the flag editor too). The boolean
 // caller below wants only the null test and is unaffected.
 static text_editor::State* dialog_editor_to_paint(AppState& app,
-                                                  const char*& prefix) {
+                                                  std::string& prefix) {
     if (app.history_mode.active && text_editor::is_active(app.load_editor)) {
         prefix = kLoadEditorHistoryPrefix;
         return &app.load_editor;
@@ -5158,8 +5160,13 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
         return &app.settings_editor;
     }
     if (text_editor::is_active(app.load_editor)) {
-        prefix = kLoadEditorPrefix;
+        prefix = std::string(kLoadEditorPrefixHead) + app.project_name +
+                 kLoadEditorPrefixTail;
         return &app.load_editor;
+    }
+    if (text_editor::is_active(app.open_project_editor)) {
+        prefix = kOpenProjectEditorPrefix;
+        return &app.open_project_editor;
     }
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
@@ -5174,7 +5181,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // pointer-transparent, not a dialog, and it never takes this row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
-    const char* prefix = nullptr;
+    std::string prefix;
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
 
@@ -5532,7 +5539,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // reads too (dialog_editor_to_paint, above), so the row cannot stand its
     // tenants down for a dialog this body then declines to paint.
     const bool prompt_up = app.prompt.active;
-    const char* prefix = nullptr;
+    std::string prefix;
     text_editor::State* ed =
         prompt_up ? nullptr : dialog_editor_to_paint(app, prefix);
     if (!prompt_up && ed == nullptr) {
@@ -5746,7 +5753,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // measured width places the field after it, so it rounds UP and the
         // field can never start inside the label's last column.
         const int label_w = static_cast<int>(
-            std::ceil(text_shape::shape_text_run(font, prefix).width_px));
+            std::ceil(text_shape::shape_text_run(font, prefix.c_str()).width_px));
         const int fbord = scaled_px(kModalFieldBorderPx, 1);
         const int fx    = cx0 + label_w + scaled_px(kModalLabelGapPx);
         // The room a field may take before the buttons would have to give:
@@ -5776,7 +5783,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         show_row_text(cr, font, static_cast<double>(cx0),
                       baseline + scaled_px(kModalLabelOffsetYPx),
-                      prefix, kRedesignLabel);
+                      prefix.c_str(), kRedesignLabel);
 
         // THE FIELD CHROME — THE BUTTONS' OWN BOX (architect 2026-08-13, at
         // his live test: "give the text editor the same rounded corner as the
@@ -5874,7 +5881,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // a caret resting mid-string) and must die with the edit. enter() and
         // deactivate() already zero it, so it RESETS when a dialog opens and
         // when it closes, with no reset site of its own to keep in step — and
-        // since each of the five dialog editors owns its own State, a change
+        // since each of the six dialog editors owns its own State, a change
         // of the stash's owner is structurally a change of offset too. A
         // prompt has no field and writes none.
         //
@@ -6250,9 +6257,6 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // the scanner's own damage is a column a few pixels wide, and
             // without this test every one of them walked forty-odd keys.
             if (!rects_intersect(exposed, r)) return;
-            // A blank slot is ground and nothing else — the symbol layer's
-            // answer to "what does shift do here" (the table states it).
-            if (k.role == Role::Blank) return;
 
             const bool pressed = (static_cast<int>(index) == held);
             const bool armed   =

@@ -17,11 +17,12 @@
 // A sidecar set is loadable in the GUI and the CLI, or in neither.
 //
 // IT IS THE PIECE'S FILE AND NOTHING ELSE (architect 2026-08-27, the grant this
-// paragraph lands under): the three keys that were about the DEVICE or about
-// nothing left it that day — `gui_scale` and `audio_player` to the GUI's own
-// per-device config (src/gui/device_config.h), `playback_speed` to retirement —
-// and the record of all three, with the consequence for a file still carrying
-// one, is at kCanonicalSettingsKeys in settings_file.cpp.
+// paragraph lands under, extended the same day by a fifth grant): the four
+// keys that were about the DEVICE or about nothing left it that day —
+// `gui_scale`, `audio_player` and `projects_repo` to the GUI's own per-device
+// config (src/gui/device_config.h), `playback_speed` to retirement — and the
+// record of all four, with the consequence for a file still carrying one, is
+// at kCanonicalSettingsKeys in settings_file.cpp.
 //
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
@@ -38,9 +39,8 @@
 // without exception, and the one exception it ever had is retired: from
 // 2026-08-03 `projects_repo` was recognized but not demanded, and on 2026-08-04
 // the architect made it required like every other key (approval recorded at
-// kCanonicalSettingsKeys, settings_file.cpp, with the consequence — a sidecar
-// written before that date and missing the line is load-fatal in both products,
-// hand-edit recovery, no migration). Recognition (validate_gui_setting) and
+// kCanonicalSettingsKeys, settings_file.cpp; the key itself left the schema
+// for the device config 2026-08-27). Recognition (validate_gui_setting) and
 // requirement (kCanonicalSettingsKeys) remain SEPARATE LISTS, so the schema can
 // still express a known-but-not-demanded key; nothing in it is one today, and a
 // new key belongs on both.
@@ -175,15 +175,10 @@ inline constexpr bool is_waveform_magnification_level(int64_t v) {
     return v >= 0 && v <= kWaveformMagnificationLevelMax;
 }
 
-// The repository a project is STAMPED WITH when it has never named one — the
-// first-open template's `projects_repo=` value, and the pre-load state of the
-// two structs that carry the setting. ONE definition, read by all three: the
-// kSettingsOrder descriptor (settings_io.cpp), SettingsFile's member below, and
-// AppState's own field. It is NOT a load fallback — the key is required since
-// 2026-08-04, so a file either names a repository or refuses (architect
-// approval 2026-08-03 for the constant, 2026-08-04 for the requirement).
-inline constexpr const char* kDefaultProjectsRepo =
-    "github.com/warptempo/warptempo_gui";
+// (kDefaultProjectsRepo LEFT THIS HEADER 2026-08-27 with the `projects_repo`
+// key, architect approval 2026-08-27: the repository is a fact about the one
+// user's one device config now, and the constant lives beside that file's
+// template stamp, src/gui/device_config.h. Nothing in the parser reads it.)
 
 // One tab's view-state band: viewport / zoom / playhead scratch, the
 // read-only flag, and the trim pair.
@@ -209,15 +204,16 @@ struct SettingsFile {
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
-    // (THREE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
+    // (FIVE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
     // row 7's monospace deletion, architect approval 2026-08-01; `gui_scale`,
-    // `audio_player` and `playback_speed` went 2026-08-27, architect approval
-    // 2026-08-27 — the first two to the GUI's per-device config
-    // (src/gui/device_config.h, which owns their types, their range and their
-    // semantics now), the third to retirement. Nothing in either product sizes
-    // text from a setting, and nothing in either product plays at a speed other
-    // than the source's own.)
+    // `audio_player`, `projects_repo` and `playback_speed` went 2026-08-27,
+    // architect approval 2026-08-27 — the first three to the GUI's per-device
+    // config (src/gui/device_config.h, which owns their types, their grammars
+    // and their semantics now), the fourth to retirement. Nothing in either
+    // product sizes text from a setting, nothing in either product plays at a
+    // speed other than the source's own, and the repository that is the
+    // projects home is the one user's one device's fact, not each piece's.)
     // THE WAVEFORM'S VISUAL MAGNIFICATION — the DOUBLING COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping
     // of every waveform picture (the plate and the overview strip alike),
@@ -231,23 +227,6 @@ struct SettingsFile {
     // landed under, extended the same day to the first retune of it, and again
     // 2026-08-27 to the second.)
     int    waveform_magnification_level = 0; // [0, kWaveformMagnificationLevelMax]
-    // GUI-kind name of the repository that is the PROJECTS HOME — where the
-    // architect's committed working checkpoints of a piece live, and the
-    // corpus the GitHub recheck reads history out of. Free text, UTF-8
-    // verbatim, host/path form by convention (the recheck
-    // normalizes both sides before comparing, so a scheme, an scp-style
-    // `git@host:path`, or a trailing `.git` all compare equal).
-    // (architect approval 2026-08-03 — the frozen-parser grant this key landed
-    // under; REQUIRED since 2026-08-04 under a second grant, recorded at
-    // kCanonicalSettingsKeys.)
-    //
-    // The key is required, so the reader always assigns this field on a
-    // successful load, like every other key here. The initializer is
-    // CONSTRUCTION STATE, not a fallback for a missing line: there is no such
-    // line to fall back for any more. It reads kDefaultProjectsRepo rather than
-    // repeating the text so that a default-constructed SettingsFile names the
-    // same repository the first-open template stamps.
-    std::string projects_repo = kDefaultProjectsRepo;
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable
@@ -311,19 +290,18 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // The typed result of a GUI-kind (key, value) grammar check. The consumers
 // (the whole-file reader and the settings editor) route by key name / tab
 // suffix, so only the parsed-value members below are read; each member's
-// comment names the key(s) that fill it. (`text`'s list gained `projects_repo`
-// 2026-08-04 — comment-only, the owner list catching up with the key that
-// landed under the 2026-08-03 grant and became required under the 2026-08-04
-// one — and lost the four render-environment `*_hash` keys 2026-08-09 when they
-// left the schema, comment-only again under that day's grant. THE `float f`
-// MEMBER WENT WITH `playback_speed` 2026-08-27, architect approval 2026-08-27:
-// it was that key's alone, and no key in the schema carries a float now.)
+// comment names the key(s) that fill it. (THE `float f` MEMBER WENT WITH
+// `playback_speed` 2026-08-27, architect approval 2026-08-27: it was that key's
+// alone, and no key in the schema carries a float now. THE `std::string text`
+// MEMBER WENT WITH `projects_repo` the same day under the same day's fifth
+// grant: it carried that key and, until 2026-08-09, the four render-environment
+// `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
+// free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, waveform_magnification_level
     double      d    = 0.0;     // tab_X_zoom
-    std::string text;           // projects_repo
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the

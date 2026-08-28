@@ -23,14 +23,16 @@
 // platform_wayland.h keeps for the same reason.
 //
 // THE PUBLIC API IS THE SEAM AND IS IDENTICAL TO platform_wayland.h's, member
-// for member and signature for signature. It last grew on 2026-08-27, twice and
-// both times on BOTH sides: the on-screen keyboard's two members
+// for member and signature for signature. It last grew on 2026-08-27, three
+// times and each time on BOTH sides: the on-screen keyboard's two members
 // (synthesize_key, which had stood here alone as the seam's one addition, and
 // the new wants_onscreen_keyboard) grew Wayland twins, because the keyboard's
 // press router is an ordinary consumer and both had to be callable against
-// either backend; and device_config_defaults() landed on both because the
+// either backend; device_config_defaults() landed on both because the
 // per-device preferences file (device_config.h) needs a first-run template only
-// the platform can answer. The
+// the platform can answer; and the reopen loop's three (request_run_stop,
+// exit_requested, redeliver_geometry) landed on both because gui_main's loop
+// is the one portable body driving either (the loop contract, platform.h). The
 // seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
 // input_handler) include platform.h and compile against either backend
@@ -81,16 +83,21 @@ public:
     bool init(int width, int height, const char* title);
 
     // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
-    // platform_wayland.h, which owns it): this backend answers 225 % and NO
-    // PLAYER. 225 is the architect's own answer on the glass — the scale that
-    // reproduces the retired rig's 1024 logical pixels on this panel, with the
-    // whole icon row fitting (rationale at the definition, platform_android.cpp)
-    // — and the blank player is not a placeholder but the real answer: nothing
-    // on the tablet can be spawned to play a render, so `l` reports "No
-    // audio_player set" through the existing opt-out road. The XDG_CONFIG_HOME
-    // the config resolves under is pointed at the app's private internal
-    // directory by android_main before gui_main runs, beside the cache home it
-    // has always set.
+    // platform_wayland.h, which owns it): this backend answers 225 %, NO
+    // PLAYER, and `<externalDataPath>/projects` as the projects path. 225 is
+    // the architect's own answer on the glass — the scale that reproduces the
+    // retired rig's 1024 logical pixels on this panel, with the whole icon row
+    // fitting (rationale at the definition, platform_android.cpp) — and the
+    // blank player is not a placeholder but the real answer: nothing on the
+    // tablet can be spawned to play a render, so `l` reports "No audio_player
+    // set" through the existing opt-out road. The projects path is the
+    // activity's own absolute path stamped literally — exactly the folder the
+    // sync convention pushes into — and it is read off the backend's one
+    // file-scope pointer (g_android_app), which android_main parks before
+    // gui_main asks; the choice is stated at the definition. The
+    // XDG_CONFIG_HOME the config resolves under is pointed at the app's
+    // private internal directory by android_main before gui_main runs, beside
+    // the cache home it has always set.
     static DeviceConfig device_config_defaults();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
@@ -104,6 +111,13 @@ public:
     void shutdown();
     void run();
     void request_exit();
+    // The reopen's pair and the geometry redelivery — the seam's own members
+    // (contracts at platform_wayland.h and the loop contract at platform.h);
+    // this backend answers them the same way, the stop bit ending pump()'s
+    // loop with the window standing.
+    void request_run_stop();
+    bool exit_requested() const { return should_exit_; }
+    void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
     void paint_now();
@@ -391,6 +405,8 @@ private:
     int  width_  = 0;
     int  height_ = 0;
     bool should_exit_ = false;
+    // The run-stop request, cleared at the head of every run() (platform.h).
+    bool run_stop_requested_ = false;
     bool has_initial_configure_ = false;
     // Latest focus reading; see window_activated().
     bool window_activated_ = false;

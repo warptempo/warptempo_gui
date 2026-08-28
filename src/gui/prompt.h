@@ -9,13 +9,25 @@
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
 // unsaved-work dialog and the paste-confirm dialog. Two entry points are
-// exposed: request_close (called by Ctrl+Q and the WM-close
-// callback) and activate_response (called by the keyboard handler when a
-// prompt is active). The other two former lambdas (open_unsaved, proceed) are
-// private helpers; they have no callers outside this cluster.
+// exposed: request_close (called by Ctrl+Q, the WM-close callback and the
+// Open prompt's commit) and activate_response (called by the keyboard handler
+// when a prompt is active). The other two former lambdas (open_unsaved,
+// proceed) are private helpers; they have no callers outside this cluster.
 //
 // save_markers is reached through save_ops. viewport, phase_reset_propagate,
 // and gui are reached directly.
+
+// WHAT A CLOSE COMPLETES — the one prompt body, two completions (architect
+// 2026-08-27, with the reopen loop). EXIT is Ctrl+Q's and the WM close's:
+// the run loop stops and the process ends. REOPEN is File → Open's: the run
+// loop stops and gui_main's loop builds the next object set around the
+// project the prompt chose (AppState::reopen_project, already seated by the
+// commit). The unsaved-work question, its three answers, its Save-failed
+// rung and its painted-before-answering rule are IDENTICAL for both — only
+// the act the answer completes differs, which is why the target is an enum on
+// the request and not a second prompt.
+enum class GuiCloseTarget { Exit, Reopen };
+
 struct GuiPrompt {
     AppState&             app;
     GuiPlatform&          gui;
@@ -37,7 +49,11 @@ struct GuiPrompt {
           save_ops(save_ops_),
           playback_lifecycle(playback_lifecycle_) {}
 
-    void request_close();
+    // Route a close through the unsaved-work prompt when history is dirty;
+    // otherwise complete `target` immediately. Centralizes the decision so
+    // Ctrl+Q, the WM-close callback and the Open prompt's commit share
+    // identical behaviour, each naming what its close completes.
+    void request_close(GuiCloseTarget target);
     void activate_response(char k);
 
     // (NO COMMIT CONFIRMATION HERE ANY MORE. The `h` history view's
@@ -96,4 +112,10 @@ struct GuiPrompt {
 private:
     void open_unsaved(DialogTrigger t);
     void proceed(DialogTrigger t);
+
+    // The completion the standing CLOSE_WINDOW prompt will run — seated at
+    // request_close and read at proceed. A prompt cannot be raised over a
+    // prompt (request_close refuses re-entry), so the standing question and
+    // this target always belong to the same request.
+    GuiCloseTarget close_target_ = GuiCloseTarget::Exit;
 };

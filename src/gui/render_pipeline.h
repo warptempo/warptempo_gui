@@ -47,13 +47,10 @@ struct AuthoringSnapshot {
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.
     int         waveform_magnification_level = 0;  // the schema's [0, 4]
-    // (THREE FIELDS LEFT THIS BLOCK 2026-08-27 with their keys — playback_speed
-    // retired, gui_scale and audio_player moved to the per-device config. An
-    // entry's `.settings` carries exactly what a source's does, so this block
-    // tracks that schema and nothing else.)
-    // The projects-home repository name, carried into the entry's .settings
-    // like every other always-emitted key. (architect approval 2026-08-03.)
-    std::string projects_repo;
+    // (FOUR FIELDS LEFT THIS BLOCK 2026-08-27 with their keys — playback_speed
+    // retired; gui_scale, audio_player and projects_repo moved to the
+    // per-device config. An entry's `.settings` carries exactly what a source's
+    // does, so this block tracks that schema and nothing else.)
 
     // Dispatch-time browse position, captured on the TARGET axis: the
     // entry's .settings persists active_audio_view=T, so the browse keys

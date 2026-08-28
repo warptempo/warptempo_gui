@@ -1,5 +1,6 @@
 #pragma once
 
+#include "device_config.h"
 #include "engine_settings.h"
 #include "gui_input.h"
 #include "history_diff.h"
@@ -2902,6 +2903,16 @@ inline constexpr int kSettingsPopupItemCount =
 // composed the chord from all three bits, so nothing here needed changing —
 // but no item had ever set it before, which is worth knowing if an alt row ever
 // misbehaves).
+// WHAT A COMMAND ROW DISPATCHES. `Chord` is the standing model — THE ITEM IS
+// ITS KEY, dispatched through on_key so every keyboard gate applies (the rule
+// is stated at kFilePopupItems and at the release body,
+// finish_dropdown_release). `OpenProject` is the one row with NO chord: File →
+// Open has no keyboard binding (architect 2026-08-27, a chord left for later),
+// so its release calls the opener directly, and the opener carries the gates a
+// chord would have met — the modal refusals, the `h` view's allowlist, the
+// loading state — in its own body.
+enum class GuiPopupAct : uint8_t { Chord, OpenProject };
+
 struct CommandPopupItem {
     const char* label;
     const char* hotkey;   // the accelerator column's text, right-aligned
@@ -2910,18 +2921,25 @@ struct CommandPopupItem {
     bool        shift;
     bool        alt;
     bool        separator_before;
+    GuiPopupAct act = GuiPopupAct::Chord;
 };
 
-// THE FILE DROPDOWN'S ITEMS (architect 2026-08-13) — ONE ROW, "Quit", the
-// standard home for it and where kdenlive keeps it. It is the whole menu by
-// ruling ("File contains Quit and nothing else"): Save and Render stay the icon
-// row's, and the menu is deliberately minimal. NO SEPARATOR — one category, and
-// chrome around a single item would be chrome around nothing.
+// THE FILE DROPDOWN'S ITEMS — TWO ROWS since 2026-08-27, in two categories
+// over one separator: **Open** first (architect 2026-08-27, the project
+// model's one pointer home on both platforms — the picker is this prompt and
+// nothing else), then **Quit** (architect 2026-08-13, the standard home for it
+// and where kdenlive keeps it). Save and Render stay the icon row's, and the
+// menu is deliberately minimal. The separator parts the two categories, an
+// open from an exit, exactly as kdenlive's own File menu does.
 //
-// THE ITEM IS ITS CHORD: Ctrl+Q dispatched through on_key, so the drag-modal
-// hatch, the dirty prompt and the WM-close ordering are the keyboard route's own
-// with no second body. Ctrl+Q is on the history view's own allowlist, so this
-// menu works inside the `h` view exactly as it does outside it.
+// OPEN HAS NO CHORD and no accelerator text: it is the one GuiPopupAct::
+// OpenProject row, its release calling GuiInputHandler::open_project_editor
+// directly (a keyboard binding is deferred, not refused). QUIT IS ITS CHORD:
+// Ctrl+Q dispatched through on_key, so the drag-modal hatch, the dirty prompt
+// and the WM-close ordering are the keyboard route's own with no second body.
+// Ctrl+Q is on the history view's own allowlist, so that row works inside the
+// `h` view exactly as it does outside it; Open's opener refuses in the view
+// itself, the allowlist's own answer for a dialog open.
 //
 // IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
 // no-gesture-hints-in-UI preference is about hint PROSE inside labels, and the
@@ -2933,7 +2951,9 @@ struct CommandPopupItem {
 // spelling convention is "modifiers spelled out with `+`", which "Ctrl+Q" is;
 // the convention's OTHER half — a bare letter written UPPERCASE — has no
 // instance left in the product and is recorded at RedesignTooltipText, where it
-// used to be contrasted with the tooltips' lowercase rule.
+// used to be contrasted with the tooltips' lowercase rule. The Open row
+// carries no hotkey text, which the painter reads per row (a null hotkey
+// paints no accelerator on that row alone).
 //
 // AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE, with NO EXCEPTION since
 // 2026-08-15: a command that cannot act right now still dispatches and its own
@@ -2955,7 +2975,9 @@ struct CommandPopupItem {
 // clause, and a future item whose LABEL would lie in some mode needs the
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Quit", "Ctrl+Q", GuiKeys::Q, true, false, false, false},
+    {"Open", nullptr,  0,          false, false, false, false,
+     GuiPopupAct::OpenProject},
+    {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
 inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
@@ -4076,23 +4098,52 @@ struct AppState {
     // that value now means anything (platform_wayland.cpp).
     std::string audio_player = "audacious";
 
-    // GUI-kind preference: the repository that is the PROJECTS HOME — where
-    // the architect's committed working checkpoints live, and the corpus the
-    // GitHub recheck reads history out of. Free text, host/path form by
-    // convention; the recheck normalizes it against the local clone's own
-    // `origin` remote and refuses a mismatch, since the clone is only the
-    // transport and a rebound setting must never silently read the wrong
-    // history. The key is REQUIRED in every `.settings` (architect approval
-    // 2026-08-04, retiring the one-day optional-key exception it landed under),
-    // so a load always assigns this field from the file and the initializer here
-    // is pre-load state exactly like audio_player's. That value lives in ONE
-    // place, kDefaultProjectsRepo (settings_file.h), read by this initializer,
-    // the SettingsFile member and the first-open template — unlike audio_player,
-    // whose default is spelled twice, because the stamp a fresh project gets and
-    // the value a session starts with are worth pinning to one constant.
-    // Persisted on Ctrl+S. No gesture: the settings editor
-    // (`:projects_repo=<host/path>`) is its sole authoring surface.
+    // The repository that is the PROJECTS HOME — where the architect's
+    // committed working checkpoints live, and the corpus the GitHub recheck
+    // reads history out of. Free text, host/path form by convention; the
+    // recheck normalizes it against the local clone's own `origin` remote and
+    // refuses a mismatch, since the clone is only the transport and a rebound
+    // value must never silently read the wrong history.
+    //
+    // IT IS A PER-DEVICE PREFERENCE since 2026-08-27, audio_player's twin in
+    // provenance and in shape: ONE user has ONE repository, so the key left
+    // the `.settings` for the device config (device_config.h) under that
+    // day's fifth parser grant, Ctrl+S does not carry it, gui_main reads it
+    // once at startup, and its one authoring surface — the settings editor's
+    // `:projects_repo=<host/path>` — writes the config at the commit. The
+    // initializer reads kDefaultProjectsRepo (device_config.h, the template
+    // stamp) so a session that has not read the config yet names the same
+    // repository a first run stamps; every reader (the prefetch kick, the
+    // render dispatch, the commit job) reads THIS field, whose source moved
+    // and whose readers did not.
     std::string projects_repo = kDefaultProjectsRepo;
+
+    // THE LIVE DEVICE CONFIG, the loop's one struct (main.cpp), reached by
+    // pointer: the three commits that write that file (apply_gui_scale, the
+    // `audio_player=` arm, the `projects_repo=` arm) mirror their value into
+    // it and hand it to write_device_config, and the two keys with no live
+    // field of their own — `projects_path`, `last_project` — are read from it
+    // where they are needed (the Open prompt's candidates and prefixes, the
+    // startup and reopen choice). Seated at each AppState's construction by
+    // gui_main and never null while the GUI runs; the ownership rationale is
+    // the callers inventory at write_device_config, device_config.h.
+    DeviceConfig* device_config = nullptr;
+
+    // THE OPEN PROJECT'S NAME — the source's parent folder's basename, the
+    // project model's own name for it (project_model.h), set by the load
+    // beside the window title. Read by the load-in-place prompt's label
+    // (`<projects_path>/<name>/renders/`) and by the Open prompt's "already
+    // open" no-op.
+    std::string project_name;
+
+    // THE REOPEN REQUEST: the project NAME the Open prompt chose, set by its
+    // commit once the folder has passed validity and the strict sidecar
+    // dry-run, and read by gui_main's loop after run() returns — a non-empty
+    // name with no exit requested is a reopen, and the loop builds the next
+    // object set around that project (the loop contract, main.cpp). Empty
+    // until then; it dies with this AppState, which is exactly when it has
+    // been read.
+    std::string reopen_project;
 
     // Companion files discovered alongside the loaded audio.
     std::string warpmarkers_path;
@@ -4674,7 +4725,7 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the five dialog
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts and the six dialog
     // editors paint ON THE BOTTOM ROW since 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
     // shadow, and faking one wouldn't work"): while one stands the row's
@@ -4767,16 +4818,16 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the FIVE DIALOG-HOSTED editors (the
+    // THE AUTHORITATIVE MEMBERSHIP of the SIX DIALOG-HOSTED editors (the
     // settings editor, the load editor, the commit-title editor, the measure
-    // paste-offset editor since 2026-08-20, and the bpm bracket editor; the
-    // top-strip flag editor is deliberately not one of them in EITHER of its
-    // non-bracket kinds — FlagPayload or MeasureText, both of which paint in
-    // the top strip). The predicate
-    // GuiInputHandler::modal_dialog_editor_active is this id being non-zero,
-    // and ITS declaration is the authoritative statement of what that
-    // predicate is FOR and who calls it; this is where the five are NAMED, so
-    // the set cannot drift between the two. At most one can be active at a
+    // paste-offset editor since 2026-08-20, the Open project editor since
+    // 2026-08-27, and the bpm bracket editor; the top-strip flag editor is
+    // deliberately not one of them in EITHER of its non-bracket kinds —
+    // FlagPayload or MeasureText, both of which paint in the top strip). The
+    // predicate GuiInputHandler::modal_dialog_editor_active is this id being
+    // non-zero, and ITS declaration is the authoritative statement of what
+    // that predicate is FOR and who calls it; this is where the six are NAMED,
+    // so the set cannot drift between the two. At most one can be active at a
     // time (every opener refuses while another owns the keyboard), so the
     // order below is free.
     uint64_t dialog_editor_session() const {
@@ -4788,6 +4839,8 @@ struct AppState {
             return commit_title_editor.session;
         if (text_editor::is_active(measure_offset_editor))
             return measure_offset_editor.session;
+        if (text_editor::is_active(open_project_editor))
+            return open_project_editor.session;
         if (text_editor::is_active(top_flag_editor) &&
             top_flag_editor.kind == text_editor::Kind::BpmBracket)
             return top_flag_editor.session;
@@ -4802,7 +4855,7 @@ struct AppState {
         return prompt.active ? prompt.session : dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editors, 0 when none
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL EIGHT editors, 0 when none
     // stands — the accessor above widened by the two top-strip kinds it names
     // as deliberate non-members (FlagPayload and MeasureText). It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
@@ -4823,7 +4876,7 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the seven
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the eight
     // editors does, on a backend that asks for one, and it holds NOTHING that
     // is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
@@ -5545,7 +5598,7 @@ struct AppState {
     // open is a consumed no-op with one stderr line while
     // history_checkpoint_in_flight stands. The key reaches the toggle only
     // from on_key's main body, so every gate above that point is an entry
-    // refusal for free — a prompt, any of the seven editors, an open dropdown,
+    // refusal for free — a prompt, any of the eight editors, an open dropdown,
     // loading or absent audio, and any live pointer gesture (the authoritative
     // ordering is at the gate itself, handle_history_mode_key in
     // input_key_dispatch.cpp). An UNAVAILABLE session refuses too: init() states
@@ -6528,6 +6581,30 @@ struct AppState {
     // regions stay independent.
     text_editor::State measure_offset_editor;
     bool measure_offset_editor_blink_last = false;
+
+    // THE OPEN PROJECT EDITOR (architect 2026-08-27), the SIXTH dialog modal
+    // and File → Open's own: the menu item opens it empty, its field completes
+    // over the FOLDER NAMES under the device config's projects_path (the
+    // candidates below, built when the prompt opens and never kept fresh),
+    // and Enter resolves the typed name through the project model
+    // (project_model.h), dry-runs the folder's strict sidecar load, and hands
+    // the name to gui_main's reopen loop through `reopen_project` above. It
+    // MIMICS LOAD IN PLACE on the same machinery and the same Tab contract —
+    // completion first, the ring when it did not advance — with one seed of
+    // its own: on an EMPTY field Tab fills `last_project` (the most recent
+    // project, exactly as load's empty-field Tab fills the most recent entry),
+    // or the first candidate when nothing has been opened yet. A refusal at
+    // Enter red-flashes and stays open with its reason on the status line;
+    // choosing the project already open is a consumed no-op that closes it.
+    // A dialog modal like the four above, with its own State so the paint
+    // regions stay independent. It authors nothing: no undo, no dirty, legal
+    // on a read-only tab.
+    text_editor::State open_project_editor;
+    bool open_project_editor_blink_last = false;
+    // The folder names under projects_path in the model's one order
+    // (enumerate_project_names), captured at the prompt's open and read by its
+    // Tab completion; cleared with the editor.
+    std::vector<std::string> open_project_candidates;
 
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two

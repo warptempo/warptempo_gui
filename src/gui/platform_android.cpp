@@ -316,10 +316,38 @@ GuiPlatform::~GuiPlatform() {
 // evening) the double-tap holds together at 225 anyway. The BLANK player
 // beside it is the real answer for a device with nothing spawnable on it rather
 // than a placeholder.
+//
+// THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
+// — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
+// with no permission granted and the app reads and writes without
+// MANAGE_EXTERNAL_STORAGE, which is exactly what the sync convention mirrors
+// the laptop's `projects/<name>/` into. It is stamped as a LITERAL absolute
+// path: the config is a file the user may read and edit, and a file that names
+// where the projects are is worth more than one that says "ask the activity".
+// A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any
+// GuiPlatform exists (gui_main resolves the config ahead of init()), and the
+// glue's android_app* reaches it only through g_android_app, parked by
+// android_main before gui_main runs — the same road init() takes to adopt the
+// window. No externalDataPath is FATAL rather than a fallback: the whole sync
+// convention lives there and nothing else puts a project on this device, so a
+// template pointing anywhere else could never be right.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale    = 225;
-    cfg.audio_player = "";
+    cfg.gui_scale     = 225;
+    cfg.audio_player  = "";
+    const char* dir = (g_android_app && g_android_app->activity)
+                          ? g_android_app->activity->externalDataPath
+                          : nullptr;
+    if (!dir || !*dir) {
+        __android_log_write(ANDROID_LOG_FATAL, kLogTag,
+                            "no externalDataPath: the whole sync convention "
+                            "lives there and nothing else puts a project on "
+                            "this device");
+        abort();
+    }
+    cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
+    cfg.projects_repo = kDefaultProjectsRepo;
+    cfg.last_project  = "";
     return cfg;
 }
 
@@ -632,6 +660,23 @@ void GuiPlatform::shutdown() {
     destroy_backbuffer();
     window_ = nullptr;
     app_    = nullptr;
+}
+
+void GuiPlatform::request_run_stop() {
+    // The reopen's stop (platform.h): pump()'s loop ends, the activity and
+    // the window stay exactly as they are, and the next run() carries on
+    // with them. Deliberately NOT ANativeActivity_finish — that is an exit.
+    run_stop_requested_ = true;
+}
+
+void GuiPlatform::redeliver_geometry() {
+    // The reopened set's owed geometry, fired directly: the window is the
+    // same window, so no INIT_WINDOW will come to fire it. The first run's
+    // owed fire (initial_resize_owed_) is consumed here too when both stand,
+    // so a set never receives its cold size twice.
+    if (!window_ || width_ <= 0 || height_ <= 0) return;
+    initial_resize_owed_ = false;
+    if (on_resize_) on_resize_(width_, height_);
 }
 
 void GuiPlatform::request_exit() {
@@ -980,9 +1025,10 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *      settled state;
  *   5. paint-if-dirty.
  *
- * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ is set. The pass is
- * the last one — the objects the consumer reads are still alive, main.cpp's
- * outlive run() — but the frame it would compute for is never presented. The
+ * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
+ * set. The pass is the last one of this run — the objects the consumer reads
+ * are still alive, main.cpp's outlive run() — but the frame it would compute
+ * for is never presented, or is the next object set's to present. The
  * Wayland twin additionally skips it on its EINTR and connection-loss paths;
  * neither exists here (ALooper surfaces no EINTR and there is no connection to
  * lose), so the exit test is the whole condition.
@@ -1018,7 +1064,8 @@ void GuiPlatform::pump() {
         }
     }
 
-    if (!should_exit_) loop_settled_hook_(input_.current_mods());
+    if (!should_exit_ && !run_stop_requested_)
+        loop_settled_hook_(input_.current_mods());
 
     paint_one_frame();
 }
@@ -1026,8 +1073,11 @@ void GuiPlatform::pump() {
 void GuiPlatform::run() {
     // THE LOOP'S ONE WAKEUP is the periodic timerfd, so the blocking poll
     // never waits longer than one tick period and damage declared with no
-    // event under it still paints within that period.
-    while (!should_exit_) pump();
+    // event under it still paints within that period. The stop bit is this
+    // run's alone (platform.h): cleared here, set by the reopen, never by an
+    // exit — which sets should_exit_ and is never cleared.
+    run_stop_requested_ = false;
+    while (!should_exit_ && !run_stop_requested_) pump();
 }
 
 void GuiPlatform::drain_events() {
@@ -1365,22 +1415,31 @@ void GuiPlatform::set_loop_settled_hook(std::function<void(GuiInputState)> cb) {
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 
+// EACH SETTER UNWATCHES THE FD IT REPLACES: the workers are per project and
+// their eventfds die with them, so a reopen's teardown hands -1 in (forgetting
+// the slot) before the old fd is closed, and the next set's own fd is watched
+// afresh — a number the kernel reuses can never be found still registered
+// under the previous project's identity (the loop contract, platform.h).
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {
+    unwatch_fd(worker_completion_fd_);
     worker_completion_fd_ = fd;
     on_worker_completion_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 0);
 }
 void GuiPlatform::set_waveform_worker_completion_fd(int fd, std::function<void()> on_event) {
+    unwatch_fd(waveform_worker_completion_fd_);
     waveform_worker_completion_fd_ = fd;
     on_waveform_worker_completion_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 1);
 }
 void GuiPlatform::set_history_worker_completion_fd(int fd, std::function<void()> on_event) {
+    unwatch_fd(history_worker_completion_fd_);
     history_worker_completion_fd_ = fd;
     on_history_worker_completion_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 2);
 }
 void GuiPlatform::set_history_prefetch_completion_fd(int fd, std::function<void()> on_event) {
+    unwatch_fd(history_prefetch_completion_fd_);
     history_prefetch_completion_fd_ = fd;
     on_history_prefetch_ready_ = std::move(on_event);
     watch_fd(fd, kIdentWorker0 + 3);
@@ -1428,175 +1487,14 @@ double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_
 
 namespace {
 
-// THE SOURCE PATH — THE APP OPENS THE CURRENT PROJECT AND NOTHING ELSE. The GUI
-// takes exactly one audio file and derives its three sidecars from the stem, so
-// a path is all this owes; what has to be decided here is WHICH path, and there
-// is no file picker on this platform to ask.
-//
-// THE CONVENTION lives under <externalDataPath> = /sdcard/Android/data/<pkg>/
-// files — THE APP'S EXTERNAL FILES DIR, which adb can push into with no
-// permission granted and the app reads and writes without
-// MANAGE_EXTERNAL_STORAGE:
-//
-//     current              a one-line file holding a project folder's name
-//     projects/<name>/     the laptop's own projects/<name>/ mirrored: the
-//                          source .wav, the three sidecars sharing its stem,
-//                          and renders/ beside them
-//
-// THE SOURCE IS THE ONE .wav IN THAT FOLDER WHOSE STEM HAS A .warpmarkers
-// SIBLING. That is the sync script's own rule for "the source", spelled here the
-// same way so the two ends cannot disagree about which file a project is about;
-// a finished render sitting beside it carries the published title and no
-// sidecars of its own, so it never matches and needs no exclusion.
-//
-// EVERY FAILURE HERE IS FATAL, deliberately. The sync script is the ONE producer
-// of this tree, it writes the project folder and then `current` on every run, and
-// a laptop is what puts a project on the device at all — so a fallback arm would
-// have no producer: nothing could ever place files where it looked. Each failure
-// therefore names itself in logcat at FATAL and aborts, rather than opening the
-// wrong piece or a path that does not exist — and the directory refusal carries
-// the system's own words, because one of them is "Permission denied" and means
-// something specific: a directory `adb push` creates below `files/` belongs to
-// `shell` with mode 770, which this app's uid cannot walk into. The sync script
-// chmods what it pushes for exactly that reason (android/NOTES.md §10.1).
-[[noreturn]] void source_fatal(const std::string& why) {
-    __android_log_write(ANDROID_LOG_FATAL, kLogTag, why.c_str());
-    abort();
-}
-
-std::string resolve_source_path(ANativeActivity* activity) {
-    const char* dir = activity ? activity->externalDataPath : nullptr;
-    if (!dir || !*dir) {
-        source_fatal("no externalDataPath: the whole sync convention lives "
-                     "there and nothing else puts a project on this device");
-    }
-    const std::filesystem::path files(dir);
-
-    // `current`. std::getline takes the line without its terminator; the \r trim
-    // beside it costs nothing and the name is otherwise taken VERBATIM, since a
-    // project folder may legitimately end in any character but a newline.
-    //
-    // ITS PAYLOAD IS ONE RELATIVE PATH COMPONENT AND NOTHING ELSE, and the four
-    // refusals below are the ADVERSARIAL-LOAD CLASS, not a fallback: the sync
-    // script writes this file with one folder NAME on one line, so a `/`, a `.`
-    // or `..`, an absolute path, or a second line of payload are states its ONE
-    // producer cannot make. A name carrying a separator would compose a path
-    // that leaves the folder it claims to name — `../other` resolves outside
-    // `files/projects` entirely — and the app would then open and EDIT a piece
-    // the laptop never put here. So the composition happens only after the name
-    // is known to be a single component, and anything else names itself and
-    // aborts, exactly as every other failure in this function does.
-    std::string name;
-    bool        extra_payload = false;
-    {
-        std::ifstream in(files / "current", std::ios::binary);
-        if (!in) {
-            source_fatal("no `current` file in " + files.string() +
-                         ": run `wts tp` from the laptop");
-        }
-        std::getline(in, name);
-        // Trailing blank lines are what a text editor's final newline leaves
-        // behind and say nothing; any other second line is payload.
-        std::string rest;
-        while (std::getline(in, rest)) {
-            while (!rest.empty() && (rest.back() == '\r' || rest.back() == '\n')) {
-                rest.pop_back();
-            }
-            if (!rest.empty()) {
-                extra_payload = true;
-                break;
-            }
-        }
-    }
-    while (!name.empty() && (name.back() == '\r' || name.back() == '\n')) {
-        name.pop_back();
-    }
-    if (name.empty()) {
-        source_fatal("`current` names no project folder");
-    }
-    if (extra_payload) {
-        source_fatal("`current` holds more than one line: it must name one "
-                     "folder under projects/ and nothing else");
-    }
-    if (name.find('/') != std::string::npos || name == "." || name == "..") {
-        source_fatal("`current` names '" + name + "': it must name one folder "
-                     "under projects/, not a path");
-    }
-
-    std::error_code             ec;
-    const std::filesystem::path project = files / "projects" / name;
-    if (!std::filesystem::is_directory(project, ec)) {
-        // The parenthetical is the SYSTEM'S own words and only appears when the
-        // system had some: a plainly absent folder sets no error code, and
-        // "(Success)" after a refusal message would read as a contradiction.
-        source_fatal("`current` names '" + name + "', which is not a folder "
-                     "under " + (files / "projects").string() +
-                     (ec ? " (" + ec.message() + ")" : ""));
-    }
-
-    // THE WALK REFUSES OUT LOUD AND CANNOT THROW. Every step takes the
-    // non-throwing overload and every error code is read, because a directory
-    // that passes is_directory can still refuse to be enumerated (an ACL or a
-    // mode this uid cannot read) — and that refusal is a DIFFERENT fact from
-    // "no source in there", which is what an empty walk would otherwise report.
-    // The system's own words are the whole diagnosis in those cases, exactly as
-    // the directory refusal above carries them.
-    std::filesystem::path source;
-    std::filesystem::directory_iterator it(project, ec);
-    if (ec) {
-        source_fatal("cannot read '" + name + "': " + ec.message());
-    }
-    // The step is the loop's TAIL rather than its increment expression so the
-    // code it sets is read before the end test can hide it: an increment that
-    // fails is free to land on the end iterator, and a for-loop's condition
-    // would then leave the walk quietly short.
-    const std::filesystem::directory_iterator walk_end;
-    while (it != walk_end) {
-        // NESTED RATHER THAN `continue`d: the step below is the loop's one
-        // advance, so every not-the-source answer has to fall through to it.
-        const std::filesystem::path entry = it->path();
-        std::error_code             entry_ec;
-        const bool                  regular = it->is_regular_file(entry_ec);
-        if (entry_ec) {
-            source_fatal("cannot read '" + entry.filename().string() +
-                         "' in '" + name + "': " + entry_ec.message());
-        }
-        if (regular && entry.extension() == ".wav") {
-            std::filesystem::path markers = entry;
-            markers.replace_extension(".warpmarkers");
-            // An ABSENT sibling is not an error and clears the code (that is
-            // what makes this the ordinary "not the source" path); a real
-            // refusal sets one and is fatal like every other.
-            const bool has_markers =
-                std::filesystem::is_regular_file(markers, entry_ec);
-            if (entry_ec) {
-                source_fatal("cannot read '" + markers.filename().string() +
-                             "' in '" + name + "': " + entry_ec.message());
-            }
-            if (has_markers) {
-                if (!source.empty()) {
-                    // TWO SOURCES IN ONE FOLDER is not a state the sync script
-                    // can produce, and directory_iterator's order is
-                    // unspecified, so there is no honest way to choose between
-                    // them. It says which two.
-                    source_fatal("two sources in '" + name + "': " +
-                                 source.filename().string() + " and " +
-                                 entry.filename().string());
-                }
-                source = entry;
-            }
-        }
-        it.increment(ec);
-        if (ec) {
-            source_fatal("cannot read '" + name + "': " + ec.message());
-        }
-    }
-    if (source.empty()) {
-        source_fatal("no source in '" + name +
-                     "': no .wav there has a .warpmarkers sibling");
-    }
-    return source.string();
-}
+// (THE SOURCE IS NO LONGER RESOLVED HERE. Until 2026-08-27 this backend read
+// a one-line `current` file under <externalDataPath> naming a project folder
+// and walked that folder for the one .wav with a .warpmarkers sibling; the
+// project model retired both halves — the app opens the device config's
+// `last_project`, or the first valid project in name order, through the one
+// portable owner (startup_source, project_model.h), and File → Open is the
+// picker. What this backend still owns of the convention is WHERE the projects
+// are: the template's projects_path, device_config_defaults above.)
 
 // LOAD THE TWO BUNDLED FACES OUT OF THE APK, or die. A missing or unreadable
 // asset is a BUILD defect — the packaging step puts both files in and there is
@@ -1671,7 +1569,8 @@ void install_fonts_or_die(android_app* app) {
 void android_main(android_app* app) {
     // android_main RUNS AGAIN if the activity is destroyed and remade. Nothing
     // survives between entries: gui_main builds and tears down the whole GUI
-    // inside this frame, and the one file-scope pointer is re-parked below.
+    // inside this frame — every project it opens in turn, through its own
+    // reopen loop — and the one file-scope pointer is re-parked below.
     route_stdio_to_logcat();
 
     // THE ENVIRONMENT, BEFORE ANYTHING READS IT. The render cache is
@@ -1735,10 +1634,10 @@ void android_main(android_app* app) {
         return;
     }
 
-    const std::string source = resolve_source_path(app->activity);
-    std::fprintf(stderr, "warptempo_gui: source %s\n", source.c_str());
-
-    gui_main(source.c_str());
+    // NO ARGUMENT: the tablet has no command line, and what to open is the
+    // project model's question, answered inside gui_main from the device
+    // config (startup_source, project_model.h).
+    gui_main(nullptr);
 
     // The GUI is gone; unhook whatever it left and let the glue finish.
     app->onAppCmd     = nullptr;

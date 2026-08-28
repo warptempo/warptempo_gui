@@ -589,10 +589,25 @@ GuiPlatform::~GuiPlatform() {
 // baseline scale, and audacious as the `l` command's player — the one installed
 // on the authoring machine, and the value the `.settings` first-open template
 // stamped for every project until the key moved here 2026-08-27.
+// The laptop's device-config template (contract at the declaration): the
+// design baseline scale, the player the laptop has, and THE CLONE'S OWN
+// `projects/` as the projects path — `$HOME/.warptempo/warptempo_gui/projects`,
+// resolved at stamp time into an absolute literal, since the file is meant to
+// be read and edited by hand and should say where the projects are rather
+// than how to find out. With no HOME the stamp is deliberately left EMPTY:
+// the reader's own grammar (an absolute path, device_config.h) then refuses
+// the file it just wrote, fatally and out loud, which is the honest answer for
+// a machine with no home directory — no guessed path is right there.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale    = 100;
     cfg.audio_player = "audacious";
+    if (const char* home = std::getenv("HOME"); home && home[0]) {
+        cfg.projects_path =
+            std::string(home) + "/.warptempo/warptempo_gui/projects";
+    }
+    cfg.projects_repo = kDefaultProjectsRepo;
+    cfg.last_project  = "";
     return cfg;
 }
 
@@ -856,6 +871,20 @@ void GuiPlatform::set_title_dirty(bool dirty) {
 
 void GuiPlatform::shutdown() {
     destroy_wayland_state();
+}
+
+void GuiPlatform::request_run_stop() {
+    run_stop_requested_ = true;
+}
+
+void GuiPlatform::redeliver_geometry() {
+    // BEFORE THE FIRST CONFIGURE THE CONFIGURE DELIVERS: width_/height_ hold
+    // init()'s requested size until then, and firing it here would hand the
+    // first object set a size the compositor has not yet granted, only for
+    // the configure to fire again. After it, the geometry is the window's
+    // real one and a reopened set is owed exactly this fire.
+    if (!has_initial_configure_) return;
+    if (on_resize_) on_resize_(width_, height_);
 }
 
 void GuiPlatform::request_exit() {
@@ -1409,7 +1438,11 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
 // ---------------------------------------------------------------------------
 
 void GuiPlatform::run() {
-    while (!should_exit_) {
+    // THE STOP BIT IS THIS RUN'S ALONE (platform.h): a reopen's stop must not
+    // end the next run before it starts, while an exit is the process's and
+    // is never cleared.
+    run_stop_requested_ = false;
+    while (!should_exit_ && !run_stop_requested_) {
         // Canonical libwayland-client poll-loop dance: prepare_read /
         // read_events / cancel_read. Replacing this with wl_display_dispatch
         // produces hangs under concurrent event traffic.
@@ -1549,10 +1582,13 @@ void GuiPlatform::run() {
         // dispatched nothing, so nothing settled; the two connection-loss breaks
         // leave a display that can no longer be talked to; and the should_exit_
         // test below covers the clean quit, where the loop is about to end and
-        // the answer would be computed for a frame that is never presented. The
-        // test is here rather than inside the consumer so the platform keeps the
-        // one fact ("are we leaving?") that the consumer has no way to see.
-        if (!should_exit_) loop_settled_hook_(input_.current_mods());
+        // the answer would be computed for a frame that is never presented —
+        // as does the run stop, whose consumers are about to be torn down for
+        // the next project's. The test is here rather than inside the consumer
+        // so the platform keeps the one fact ("are we leaving?") that the
+        // consumer has no way to see.
+        if (!should_exit_ && !run_stop_requested_)
+            loop_settled_hook_(input_.current_mods());
     }
 
     wl_display_dispatch_pending(wl_display_);

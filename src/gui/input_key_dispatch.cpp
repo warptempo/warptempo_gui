@@ -5,7 +5,10 @@
 
 #include "input_handler.h"
 
+#include "file_loader.h"     // source_load_dry_run (the Open prompt's Enter)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
+#include "project_model.h"   // resolve_project / enumerate_project_names
+#include "prompt.h"          // GuiCloseTarget (the Open prompt's reopen)
 #include "history_diff.h"
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
@@ -3245,15 +3248,16 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
-    // The five are NAMED at AppState::dialog_editor_session, which hands back
+    // The six are NAMED at AppState::dialog_editor_session, which hands back
     // the live one's session id — one membership serving both questions.
     return app.dialog_editor_session() != 0;
 }
 
-// Any text editor consuming printable keys — the FOUR single-State dialog
-// editors (the settings prompt, the load prompt, the commit-title editor and
-// the measure paste-offset editor) plus the top-strip flag editor in ANY of its
-// three kinds (the FlagPayload editor takes typed letters too). The platform
+// Any text editor consuming printable keys — the FIVE single-State dialog
+// editors (the settings prompt, the load prompt, the commit-title editor, the
+// measure paste-offset editor and the Open project prompt) plus the top-strip
+// flag editor in ANY of its three kinds (the FlagPayload editor takes typed
+// letters too); the eight Kinds are listed at text_editor::Kind. The platform
 // layer's kLeftClickKey probe: while this is true that key types a normal
 // letter rather than emulating the left button.
 bool GuiInputHandler::any_text_editor_active() const {
@@ -3261,6 +3265,7 @@ bool GuiInputHandler::any_text_editor_active() const {
            text_editor::is_active(app.load_editor) ||
            text_editor::is_active(app.commit_title_editor) ||
            text_editor::is_active(app.measure_offset_editor) ||
+           text_editor::is_active(app.open_project_editor) ||
            text_editor::is_active(app.top_flag_editor);
 }
 
@@ -4711,8 +4716,8 @@ void GuiInputHandler::load_editor_exit_no_commit() {
     text_editor::deactivate(app.load_editor);
 }
 
-// Tab handler: extend the pending to the longest common prefix of the entry
-// identifiers that start with it. No-op when nothing matches or when the
+// THE ONE PREFIX COMPLETION: extend the pending to the longest common prefix
+// of the candidates that start with it. No-op when nothing matches or when the
 // common prefix does not advance past what is already typed (mirrors the
 // settings editor's no-op-on-ambiguity Tab). A unique matching candidate
 // completes fully — its whole string is the common prefix of the singleton.
@@ -4720,28 +4725,26 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // IT RETURNS WHETHER THE BUFFER ADVANCED, the one autocomplete model's whole
 // question (the rule is stated at route_modal_editor_key's Tab arm below): true
 // consumes the Tab, false lets it walk the modal's focus ring. Every early
-// return below is a false — an inactive editor, the `h` mode's foreign
-// vocabulary, no candidate carrying this prefix, a common prefix that does not
-// advance, and a UTF-8 back-off that leaves nothing to add. THAT IS WHAT MAKES
-// A SECOND TAB WALK with no state to remember the first: the buffer is already
-// AT the longest common prefix, so the advancement test below refuses it. And
-// it is what gives the `h` HISTORY MODE a working ring here — a commit spelling
-// or a member number has nothing to complete against, so every Tab in there
-// answers false and steps, a case the pre-ruling model could not reach.
+// return below is a false — no candidate carrying this prefix, a common prefix
+// that does not advance, and a UTF-8 back-off that leaves nothing to add. THAT
+// IS WHAT MAKES A SECOND TAB WALK with no state to remember the first: the
+// buffer is already AT the longest common prefix, so the advancement test
+// below refuses it.
 //
-// THE COMPARISON IS BY BYTE, DELIBERATELY: an entry identifier is a FILESYSTEM
-// PATH, and a path is bytes — it is not text the UTF-8 relaxation covers, and
-// the resolve below matches it byte-exactly against the same strings. Program-
-// written batch folders and cell basenames are ASCII, so the byte compare is
-// the whole story for every name this product writes.
+// THE COMPARISON IS BY BYTE, DELIBERATELY: a candidate is a FILESYSTEM NAME —
+// a render entry's path under renders/, a project folder's name under the
+// projects path — and a name is bytes: it is not text the UTF-8 relaxation
+// covers, and each caller's resolve matches it byte-exactly against the same
+// strings. Program-written batch folders and cell basenames are ASCII, so the
+// byte compare is the whole story for every name this product writes; a
+// project folder is the user's own name and may carry anything.
 //
 // WHAT THE PREFIX WRITES IS TEXT, THOUGH, and that is the one place the two
 // domains meet: the result becomes an editor `pending`, which must end on a
 // UTF-8 codepoint boundary (the invariant is at the head of text_editor.h).
-// Two hand-placed files in renders/ whose stems pass the numeric-prefix filter
-// and share a PARTIAL multi-byte character would otherwise cut the prefix
-// mid-character, seeding a buffer the caret walks and the shaper draws as
-// .notdef. So the prefix is backed off to a boundary before it is published.
+// Two names sharing a PARTIAL multi-byte character would otherwise cut the
+// prefix mid-character, seeding a buffer the caret walks and the shaper draws
+// as .notdef. So the prefix is backed off to a boundary before it is published.
 // The back-off reads the SEED CANDIDATE rather than the prefix itself, which is
 // what makes it exact: `lcp` is a prefix of `first` throughout (every step only
 // truncates), so the cut is mid-character exactly when the byte `first` carries
@@ -4749,24 +4752,14 @@ void GuiInputHandler::load_editor_exit_no_commit() {
 // since a COMPLETE trailing sequence also ends in continuation bytes. It is a
 // provable no-op for ASCII identifiers: no ASCII byte is a continuation byte, so
 // the loop never takes a step for any name the product writes.
-bool GuiInputHandler::load_editor_autocomplete() {
-    if (!text_editor::is_active(app.load_editor)) return false;
-    // IN THE `h` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
-    // pending is a commit spelling or a member number, and the entry
-    // identifiers below name renders this route never reads. Answering false
-    // rather than completing out of the wrong vocabulary is what hands the key
-    // to the ring.
-    if (app.history_mode.active) return false;
-    const std::string pending = app.load_editor.pending;
-
-    std::vector<AppState::RenderEntry> list =
-        renders_dir.enumerate_render_entries();
+bool GuiInputHandler::complete_editor_prefix(
+        text_editor::State& ed, const std::vector<std::string>& candidates) {
+    const std::string pending = ed.pending;
 
     std::string lcp;
     std::string first;
     bool have = false;
-    for (const auto& e : list) {
-        const std::string c = render_entry_id(e);
+    for (const std::string& c : candidates) {
         if (c.size() < pending.size() ||
             c.compare(0, pending.size(), pending) != 0) continue;
         if (!have) { lcp = c; first = c; have = true; }
@@ -4787,13 +4780,35 @@ bool GuiInputHandler::load_editor_autocomplete() {
         lcp.pop_back();
     if (lcp.size() <= pending.size()) return false;  // prefix does not advance
 
-    app.load_editor.pending          = std::move(lcp);
-    app.load_editor.cursor_pos       =
-        static_cast<int>(app.load_editor.pending.size());
-    app.load_editor.selection_anchor = -1;
-    app.load_editor.red              = false;
+    ed.pending          = std::move(lcp);
+    ed.cursor_pos       = static_cast<int>(ed.pending.size());
+    ed.selection_anchor = -1;
+    ed.red              = false;
     viewport.invalidate_modal_dialog_area();
     return true;
+}
+
+// Tab handler: the one prefix completion above over the entry identifiers. It
+// answers false — handing the key to the ring — for an inactive editor and
+// for the `h` mode's foreign vocabulary as well as for the completion's own
+// refusals, which is what gives the `h` HISTORY MODE a working ring here: a
+// commit spelling or a member number has nothing to complete against, so
+// every Tab in there answers false and steps, a case the pre-ruling model
+// could not reach.
+bool GuiInputHandler::load_editor_autocomplete() {
+    if (!text_editor::is_active(app.load_editor)) return false;
+    // IN THE `h` HISTORY MODE THERE IS NOTHING HERE TO COMPLETE AGAINST: the
+    // pending is a commit spelling or a member number, and the entry
+    // identifiers below name renders this route never reads. Answering false
+    // rather than completing out of the wrong vocabulary is what hands the key
+    // to the ring.
+    if (app.history_mode.active) return false;
+
+    std::vector<std::string> candidates;
+    for (const auto& e : renders_dir.enumerate_render_entries()) {
+        candidates.push_back(render_entry_id(e));
+    }
+    return complete_editor_prefix(app.load_editor, candidates);
 }
 
 // Enter handler: resolve the pending to exactly one entry and load it in place.
@@ -5098,7 +5113,7 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // before it — so every key's behaviour with the focus in the field is
 // byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the four
+// `autocomplete` it is called unconditionally, with no emptiness test: the six
 // dialog surfaces pass invalidate_modal_dialog_area (the bottom row's lane,
 // which IS the modal's surface, viewport.cpp), the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
@@ -5211,6 +5226,138 @@ bool GuiInputHandler::handle_load_editor_key(GuiKey key,
         [this] { load_editor_commit(); },
         [this] { load_editor_exit_no_commit(); },
         [this] { load_editor_exit_no_commit(); },
+        [this] { viewport.invalidate_modal_dialog_area(); });
+}
+
+// -- THE OPEN PROJECT PROMPT (the contract is at the declaration) ----------
+
+// The opener. Every guard returns without touching playback (the modal-open
+// precedent open_load_editor sets: a refused open never interrupts a
+// listening session); the shared modal stop runs only once the editor is
+// definitely opening. It is reached from the File menu's Open row alone,
+// whose release has already closed the popup.
+void GuiInputHandler::open_project_editor() {
+    if (app.prompt.active || keyboard_modal_editor_active()) return;
+    // The `h` history view admits no dialog open but its own two (the
+    // load-in-place and the commit title): a reopen would tear the view down
+    // from under itself, so the opener refuses here exactly as the allowlist
+    // refuses the keyboard openers.
+    if (app.history_mode.active) return;
+    if (app.loading) return;
+
+    playback_lifecycle.stop_playback_for_modal_open();
+    // THE CANDIDATES ARE BUILT NOW AND NEVER KEPT FRESH: a dozen folder
+    // names under the device config's projects_path, in the model's one
+    // order (project_model.h). Validity is asked at Enter, of the one name
+    // chosen, never of the list.
+    app.open_project_candidates =
+        enumerate_project_names(app.device_config->projects_path);
+    text_editor::enter(app.open_project_editor,
+                       /*target=*/0,
+                       std::string(),
+                       text_editor::Kind::OpenProject);
+    // A modal-dialog OPEN damages the whole window (the box's rect does not
+    // exist before its first paint — the settings opener carries the rule).
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::open_project_editor_exit_no_commit() {
+    if (!text_editor::is_active(app.open_project_editor)) return;
+    viewport.invalidate_modal_dialog_area();
+    text_editor::deactivate(app.open_project_editor);
+    app.open_project_candidates.clear();
+}
+
+// Bare Tab. THE EMPTY FIELD SEEDS THE MOST RECENT PROJECT — `last_project`
+// from the device config, or the first candidate when nothing has been opened
+// yet — which is what makes "open recent" and "open any" ONE prompt: Tab,
+// Enter is the recent; type "551", Tab, Enter is any. A non-empty field takes
+// the one prefix completion. The seed is not checked against the candidates:
+// a remembered folder that is gone refuses at Enter with its reason, which is
+// the honest answer and the same one a typed name gets.
+bool GuiInputHandler::open_project_editor_autocomplete() {
+    if (!text_editor::is_active(app.open_project_editor)) return false;
+    if (app.open_project_editor.pending.empty()) {
+        const std::string& recent = app.device_config->last_project;
+        const std::string seed =
+            !recent.empty()                       ? recent
+            : !app.open_project_candidates.empty() ? app.open_project_candidates.front()
+                                                   : std::string();
+        if (seed.empty()) return false;
+        app.open_project_editor.pending          = seed;
+        app.open_project_editor.cursor_pos       =
+            static_cast<int>(app.open_project_editor.pending.size());
+        app.open_project_editor.selection_anchor = -1;
+        app.open_project_editor.red              = false;
+        viewport.invalidate_modal_dialog_area();
+        return true;
+    }
+    return complete_editor_prefix(app.open_project_editor,
+                                  app.open_project_candidates);
+}
+
+// Enter. Validity through the project model, then the strict sidecar dry-run,
+// each refusal on the status line with the prompt still open; the project
+// already open is a consumed no-op; and a project that passes reaches the
+// reopen through the one close request, REOPEN-targeted.
+void GuiInputHandler::open_project_editor_commit() {
+    if (!text_editor::is_active(app.open_project_editor)) return;
+    const std::string typed = app.open_project_editor.pending;
+
+    auto refuse = [&](const std::string& reason) {
+        app.open_project_editor.red = true;
+        app.transient_status_message = reason;
+        viewport.invalidate_status_chain_area();
+        viewport.invalidate_modal_dialog_area();
+    };
+
+    // The name must be ONE folder name — the same grammar last_project keeps
+    // (device_config.h), for the same reason: a separator would compose a path
+    // that leaves the projects folder. An empty buffer names nothing.
+    if (typed.empty() || !is_last_project_name(typed)) {
+        refuse("Not a project folder name");
+        return;
+    }
+    const std::filesystem::path folder =
+        std::filesystem::path(app.device_config->projects_path) / typed;
+    auto project = resolve_project(folder);
+    if (!project) {
+        refuse(project.error());
+        return;
+    }
+    if (project->name == app.project_name) {
+        // Choosing the project that is open: nothing to reopen, the prompt
+        // simply closes.
+        open_project_editor_exit_no_commit();
+        return;
+    }
+    if (auto reason = source_load_dry_run(project->source)) {
+        refuse(*reason);
+        return;
+    }
+
+    // THE REOPEN. A running render is killed as any dispatch kills it (the
+    // Esc pair — the request, the batch stop, both parked slots disarmed);
+    // the editor closes; the chosen name is seated for gui_main's loop; and
+    // the close request runs with the REOPEN target — the unsaved-tab prompt
+    // exactly as Ctrl+Q's when the tab is dirty, an immediate completion when
+    // it is clean. The prompt's Cancel leaves the seated name behind
+    // harmlessly: the loop reads it only after run() returns, and run()
+    // returns for a reopen only through this request's own completion.
+    (void)cancel_archival_session();
+    open_project_editor_exit_no_commit();
+    app.reopen_project = project->name;
+    prompt.request_close(GuiCloseTarget::Reopen);
+}
+
+bool GuiInputHandler::handle_open_project_editor_key(GuiKey key,
+                                                     GuiInputState mods) {
+    return route_modal_editor_key(
+        app.open_project_editor, key, mods,
+        [this] { return open_project_editor_autocomplete(); },
+        [this] { open_project_editor_commit(); },
+        [this] { open_project_editor_exit_no_commit(); },
+        [this] { open_project_editor_exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });
 }
 

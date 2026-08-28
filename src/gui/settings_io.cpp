@@ -28,7 +28,6 @@ enum class SettingKind {
     ActiveTabViewChar,
     FollowFlag,
     WaveformMagnificationLevel,
-    ProjectsRepoName,
     TrimBegin_A,
     TrimEnd_A,
     TrimBegin_B,
@@ -72,11 +71,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    // (THREE DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
-    // `playback_speed` retired whole, `gui_scale` and `audio_player` moved to
-    // the per-device config, device_config.h. The parser-side record of all
-    // three, and the consequence for a sidecar still carrying one, is at
-    // kCanonicalSettingsKeys, settings_file.cpp.)
+    // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
+    // `playback_speed` retired whole; `gui_scale`, `audio_player` and
+    // `projects_repo` moved to the per-device config, device_config.h. The
+    // parser-side record of all four, and the consequence for a sidecar still
+    // carrying one, is at kCanonicalSettingsKeys, settings_file.cpp.)
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
     // LEVEL, a count of doublings in the range settings_file.h owns for both
     // products. 0 is the untouched picture and the template's stamp. The
@@ -91,23 +90,6 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // same-day retune that renamed it; the parser-side record is at
     // kCanonicalSettingsKeys.)
     { "waveform_magnification_level",SettingKind::WaveformMagnificationLevel, EngineField::Title,            "0"        },
-    // GUI-kind name of the repository holding the projects corpus — the home
-    // of the architect's committed working checkpoints, and what the GitHub
-    // recheck reads history out of. A free-text environment preference with no
-    // dedicated gesture, sitting at the tail of the non-tab GUI band so the
-    // per-tab bands stay contiguous below. (It stood beside audio_player, the
-    // one key of the same shape, until that key moved to the device config
-    // 2026-08-27; the corpus is a property of the PROJECT, so this one stayed.)
-    // The default is non-empty (unlike url/cover), and it is LITERALLY the same
-    // constant both structs that carry the setting are constructed with — this
-    // descriptor names kDefaultProjectsRepo (settings_file.h) rather than
-    // repeating its text, so the template stamp and those defaults are one value
-    // by construction and cannot drift apart with an edit to either.
-    // REQUIRED LIKE EVERY OTHER KEY (architect approval 2026-08-04, retiring the
-    // one-day optional-key exception): this writer always emits the line, and a
-    // file lacking it is load-fatal in both products. NOT an engine key — it
-    // never enters kEngineKeys and never reaches the render fingerprint.
-    { "projects_repo",               SettingKind::ProjectsRepoName,     EngineField::Title,                   kDefaultProjectsRepo },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
@@ -153,9 +135,6 @@ std::optional<std::string> format_nonengine_value(
             // round-trips as `0`.
             std::snprintf(buf, sizeof(buf), "%d", gui.waveform_magnification_level);
             return std::string(buf);
-        case SettingKind::ProjectsRepoName:
-            // Free text, emitted verbatim in UTF-8.
-            return gui.projects_repo;
         case SettingKind::TrimBegin_A:
             return format_authored_frame(gui.tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
@@ -341,13 +320,15 @@ bool write_settings_file(
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key) {
-    // THE DEVICE CONFIG'S TWO KEYS, ahead of the `.settings` walk because they
-    // are not in it any more (2026-08-27) and the settings editor still edits
-    // them — the whole rationale is at the declaration. Each recalls through
-    // the device config's own serializer, so a recall and that file agree byte
-    // for byte exactly as a `.settings` recall and a Ctrl+S do.
-    if (key == "gui_scale")    return format_gui_scale_percent(app.gui_scale);
-    if (key == "audio_player") return app.audio_player;
+    // THE DEVICE CONFIG'S THREE EDITABLE KEYS, ahead of the `.settings` walk
+    // because they are not in it any more (2026-08-27) and the settings editor
+    // still edits them — the whole rationale is at the declaration. Each
+    // recalls through the device config's own serializer or verbatim, so a
+    // recall and that file agree byte for byte exactly as a `.settings` recall
+    // and a Ctrl+S do.
+    if (key == "gui_scale")     return format_gui_scale_percent(app.gui_scale);
+    if (key == "audio_player")  return app.audio_player;
+    if (key == "projects_repo") return app.projects_repo;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {
@@ -380,7 +361,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.waveform_magnification_level,
-        app.projects_repo};
+        app.waveform_magnification_level};
     return format_nonengine_value(desc->kind, gui);
 }

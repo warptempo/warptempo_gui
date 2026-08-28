@@ -31,27 +31,16 @@ using warptempo_parse::prefix_line_error;
 // or validate_gui_setting for a GUI-kind key). kEngineKeys stays file-local to
 // engine_settings_io.cpp; this flat list owns requirement here.
 //
-// EVERY KEY IS REQUIRED, NO EXCEPTIONS — the rule is whole again as of
+// EVERY KEY IS REQUIRED, NO EXCEPTIONS — the rule has been whole since
 // 2026-08-04, when `projects_repo` joined this list at its kSettingsOrder
 // position (architect approval 2026-08-04). It had been the schema's ONE
 // optional key for one day (architect approval 2026-08-03), registered in
 // validate_gui_setting below but deliberately absent here so that sidecars
 // written before it existed kept loading; the architect retired that exception
 // with his eyes open, and "recognized" and "required" are the same membership
-// question for every key once more.
-//
-// THE CONSEQUENCE, stated where the refusal is: a `.settings` written before
-// 2026-08-04 that carries no `projects_repo=` line is LOAD-FATAL in BOTH
-// products, taking the ordinary missing-required-key refusal below — no
-// migration tool and no reader leniency, the standing convention. HAND-EDITING
-// THE LINE IN IS THE WHOLE RECOVERY: a save cannot be the other half of it,
-// since a file that refuses to load can never produce the loaded session a save
-// would be written from (comment-only correction 2026-08-04, under the same
-// day's grant that made the key required). The architect ruled
-// this knowing the cost: the corpus has one live project and its checkpoint
-// already carries the key, and the GUI's writer has emitted the line since the
-// key existed, so the population of files this refuses is the ones written
-// before then.
+// question for every key once more. (The key itself LEFT the schema
+// 2026-08-27 — the record is below with the other departures — but the rule
+// it briefly excepted stands for every key that remains.)
 //
 // THE FOUR RENDER-ENVIRONMENT ATTESTATION KEYS — `libm_hash`, `libmvec_hash`,
 // `fftw3_hash`, `fftw3_threads_hash` — LEFT THE SCHEMA 2026-08-09 (architect
@@ -78,25 +67,29 @@ using warptempo_parse::prefix_line_error;
 // name is unchanged, so a file carrying a level above 4 keeps a canonical key
 // and takes the value refusal below instead — the same re-save once more.
 //
-// THREE KEYS LEFT THE SCHEMA 2026-08-27 (architect approval 2026-08-27) and the
-// consequence is the standing one, in the UNKNOWN-key direction:
-// `playback_speed` RETIRED WHOLE — the architect runs 1.0 everywhere, so the
-// key, its preset vocabulary and the variable-speed machinery behind it are
-// gone from both products; `gui_scale` and `audio_player` are per DEVICE rather
-// than per piece and moved to the GUI's own device config
-// (src/gui/device_config.h, `$XDG_CONFIG_HOME/warptempo_gui/config`), which the
-// CLI has no business reading. A `.settings` still carrying any of the three is
-// load-fatal in both products by the ordinary unknown-key refusal below —
-// hand-editing the lines out is the whole recovery, no migration and no reader
+// FOUR KEYS LEFT THE SCHEMA 2026-08-27 (architect approval 2026-08-27, twice
+// that day — the device-config cut, then the fifth grant on these two files for
+// `projects_repo`) and the consequence is the standing one, in the UNKNOWN-key
+// direction: `playback_speed` RETIRED WHOLE — the architect runs 1.0
+// everywhere, so the key, its preset vocabulary and the variable-speed
+// machinery behind it are gone from both products; `gui_scale`, `audio_player`
+// and `projects_repo` are per DEVICE rather than per piece and moved to the
+// GUI's own device config (src/gui/device_config.h,
+// `$XDG_CONFIG_HOME/warptempo_gui/config`), which the CLI has no business
+// reading — the first two because the panel and the spawnable player are the
+// machine's, the third because ONE user has ONE repository and the recheck
+// reads it from the device now. A `.settings` still carrying any of the four
+// is load-fatal in both products by the ordinary unknown-key refusal below —
+// hand-editing the lines out is the whole recovery, NO migration and no reader
 // leniency, exactly as for `font_size` and the four attestation keys before
-// them. The architect accepted both consequences with his eyes open: a
-// `renders/` recipe written before the cut refuses `'`, and every checkpoint
-// committed before it drops out of the `h` walk through the same strict gate.
+// them; the architect hand-edits his own files. He accepted both consequences
+// with his eyes open: a `renders/` recipe written before the cut refuses `'`,
+// and every checkpoint committed before it drops out of the `h` walk through
+// the same strict gate.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
     "follow", "waveform_magnification_level",
-    "projects_repo",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -309,6 +302,14 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // semantics this schema used to load. The device config took the
     // free-UTF-8-verbatim rule with it.
     //
+    // `projects_repo` (architect approval 2026-08-27, the fifth grant on this
+    // file): MOVED beside the two above and for the model's reason — ONE user,
+    // ONE repository, so the projects home is a fact about the device the
+    // GitHub recheck runs on, not about each piece. The device config took the
+    // free-text arm verbatim, its rationale included (the recheck normalizes
+    // it against the clone's own `origin`; blank never matches). It had been
+    // this schema's key from 2026-08-03 to 2026-08-27.
+    //
     // The four render-environment `*_hash` attestation keys (architect approval
     // 2026-08-09) left under the same rule; their record is at
     // kCanonicalSettingsKeys above.
@@ -333,20 +334,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         if (!parse_authored_frame(value, v) || !is_waveform_magnification_level(v))
             return err("must be an integer in [0, 4] in canonical spelling");
         out.i64 = v;
-        return R(out);
-    }
-    if (key == "projects_repo") {
-        // GUI-kind name of the repository holding the projects corpus. Free
-        // text, taken verbatim in UTF-8 with no host/path grammar enforced
-        // here — the GitHub recheck normalizes it against the local clone's
-        // own `origin` and refuses the mismatch there, which is a far better
-        // place to judge it than a parser that cannot see the clone. An empty
-        // value is legal and simply never matches, disabling the feature.
-        // Registering the key HERE is what makes it recognized; it is REQUIRED
-        // like every other key, sitting in kCanonicalSettingsKeys at its
-        // kSettingsOrder position (architect approval 2026-08-04, retiring the
-        // one-day optional-key exception of 2026-08-03).
-        out.text = value;
         return R(out);
     }
 
@@ -430,14 +417,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
             // validate_gui_setting above, so the narrowing to int is exact
             // (architect approval 2026-08-26).
             out.waveform_magnification_level = static_cast<int>(gv.i64);
-        } else if (key == "projects_repo") {
-            // The reader ALWAYS assigns, like every other required key: a file
-            // omitting the line never reaches this arm, since the required-key
-            // tail refuses the whole load first. (Arm added under architect
-            // approval 2026-08-03; this comment retold 2026-08-04 under the
-            // same-day grant that made the key required, comment-only — the
-            // one-day optional story it used to tell is retired.)
-            out.projects_repo = gv.text;
         }
         return {};
     });

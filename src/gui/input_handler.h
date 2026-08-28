@@ -957,7 +957,7 @@ struct GuiInputHandler {
     // synthesize chords through this same body so every gate applies to them
     // identically — the chrome lift, the dropdown item, and the arrow
     // buttons' hold-repeat tick (input_pointer.cpp). Its boundaries each
-    // live at their own homes: the seven editors' modality
+    // live at their own homes: the eight editors' modality
     // (route_modal_editor_key), strict modifier validation (an unbound
     // modifier combination is a consumed no-op; conventions.md), the Super
     // press drop (deliver_key, input_core.cpp), the modal Enter/Space
@@ -1256,7 +1256,7 @@ struct GuiInputHandler {
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
     // view, which ADMITS this former as its own view-local vocabulary):
-    // prompt, the seven editors via keyboard_modal_editor_active (the flag
+    // prompt, the eight editors via keyboard_modal_editor_active (the flag
     // editor deliberately included though pointer-transparent — every
     // pointer press CLOSES an open flag editor before any claim runs, and
     // this begin, which skips the press path, must not become the first
@@ -2385,7 +2385,7 @@ private:
     // Tab never arrives at all, the on_key gate swallowing it before this route
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
     // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
-    // editor's own damage for a text change — the five dialog surfaces
+    // editor's own damage for a text change — the six dialog surfaces
     // pass the modal's own owner (the bottom row's lane,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
@@ -2453,6 +2453,70 @@ private:
     void load_editor_commit();
     void load_editor_exit_no_commit();
     bool handle_load_editor_key(GuiKey key, GuiInputState mods);
+
+    // THE ONE PREFIX COMPLETION (2026-08-27, hoisted out of the load editor's
+    // Tab when the Open prompt needed the same body): extend `ed`'s pending to
+    // the longest common prefix of the `candidates` that start with it, backed
+    // off to a UTF-8 codepoint boundary, and answer whether the buffer
+    // ADVANCED — the one autocomplete model's whole question
+    // (route_modal_editor_key's Tab arm). Every refusal is a false: no
+    // candidate carries the prefix, a common prefix that does not advance, a
+    // back-off that leaves nothing to add. The comparison is BY BYTE, since a
+    // candidate is a filesystem name; the full rationale, the second-Tab
+    // argument and the back-off's proof are at the definition. The two callers
+    // build their own candidate lists — the render-entry identifiers for the
+    // load editor, the folder names under projects_path for the Open prompt —
+    // and pass them in; nothing here knows which editor it serves beyond the
+    // State it was handed.
+    bool complete_editor_prefix(text_editor::State& ed,
+                                const std::vector<std::string>& candidates);
+
+    // THE OPEN PROJECT PROMPT (architect 2026-08-27) — File → Open's own, the
+    // load editor's exact pattern for the project model's one act: choosing a
+    // project REOPENS IN PLACE (gui_main's loop rebuilds the object set around
+    // the chosen source; the contract is at main.cpp). It MIMICS LOAD IN
+    // PLACE: a text prompt in the bottom-row dialog machinery whose field
+    // completes over the FOLDER NAMES under the device config's projects_path
+    // (project_model.h), built when the prompt opens and never kept fresh.
+    //
+    // open_project_editor: the opener, reached from ONE place — the File
+    // menu's Open row (finish_dropdown_release, the one GuiPopupAct::
+    // OpenProject item; no keyboard chord binds it). Refuses silently, without
+    // touching playback, while a prompt or any editor stands, in the `h`
+    // history view (the allowlist's own answer for a dialog open), and during
+    // a load; stops playback through the shared modal stop only once the
+    // editor is definitely opening, then enters it EMPTY with the candidate
+    // list captured.
+    // open_project_editor_autocomplete: bare Tab. On an EMPTY field it seeds
+    // `last_project` — the most recent project, exactly as load's empty-field
+    // Tab fills the most recent entry — or the first candidate when nothing
+    // has been opened yet; otherwise the one prefix completion above over the
+    // captured names. Returns whether the buffer advanced (the one autocomplete
+    // model: a false lets the Tab walk the ring).
+    // open_project_editor_commit: Enter. Resolves `<projects_path>/<typed>`
+    // through the project model; an invalid name or folder refuses WITH ITS
+    // REASON on the status line and red-flashes, the prompt staying open with
+    // its buffer intact. Then the STRICT SIDECAR DRY-RUN (source_load_dry_run,
+    // file_loader.h) — the load's own failure arms run before anything is torn
+    // down — refusing the same way with the first error. The project already
+    // open is a consumed no-op that closes the prompt. Only a project that
+    // passes both reaches the reopen: a running render is killed as any
+    // dispatch kills it, the editor closes, the name is seated in
+    // app.reopen_project and the close request runs with the REOPEN target —
+    // the unsaved-tab prompt EXACTLY as Ctrl+Q's, its answer completing a
+    // reopen instead of an exit (GuiCloseTarget, prompt.h).
+    // open_project_editor_exit_no_commit: Esc / Ctrl+Q teardown; the candidate
+    // list dies with the session.
+    // handle_open_project_editor_key: the key router, through
+    // route_modal_editor_key like the five editors before it, with the
+    // completion as its Tab hook.
+    // No undo (a reopen discards the stack by construction, and the prompt
+    // authors nothing); legal on a read-only tab for the same reason.
+    void open_project_editor();
+    bool open_project_editor_autocomplete();
+    void open_project_editor_commit();
+    void open_project_editor_exit_no_commit();
+    bool handle_open_project_editor_key(GuiKey key, GuiInputState mods);
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the load editor's exact
     // pattern for the history view's OTHER act. Ctrl+S while the view
@@ -3280,7 +3344,8 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all seven editors, top strip included.
+    // Ctrl+Q). It serves all eight editors, top strip included (the list is
+    // text_editor::Kind).
     bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 

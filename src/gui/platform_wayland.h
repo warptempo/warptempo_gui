@@ -82,8 +82,23 @@ public:
     void set_title_dirty(bool dirty);
 
     void shutdown();
+    // Pump until an exit or a run stop is requested (the loop contract at
+    // platform.h). Re-entrant across the process: the stop bit is cleared at
+    // the head, the exit bit never is.
     void run();
     void request_exit();
+    // THE REOPEN'S HALF OF THE PAIR: make run() return with the window
+    // standing and the exit bit untouched, so gui_main's loop can rebuild the
+    // object set and call run() again (platform.h). Nothing else stops.
+    void request_run_stop();
+    // Has an exit been requested or forced? Read by gui_main after run()
+    // returns to tell the two returns apart.
+    bool exit_requested() const { return should_exit_; }
+    // Fire on_resize with the window's current geometry, for a freshly
+    // installed object set whose window will send no configure of its own —
+    // the reopen's case. A no-op before the first configure (no geometry yet;
+    // that configure delivers it). One call, one fire.
+    void redeliver_geometry();
     void invalidate_region(int x, int y, int w, int h);
     void drain_events();
     void paint_now();
@@ -199,10 +214,11 @@ public:
     // WHEN IT DOES NOT FIRE, and why: not on the EINTR `continue` (nothing was
     // dispatched, so nothing settled), not on any `break` (the loop is leaving,
     // and the two connection-loss breaks leave a display that cannot be talked
-    // to at all), and not once should_exit_ is set (the iteration is the last
-    // one — the objects the consumer reads are still alive, main.cpp's outlive
-    // run(), but the frame it would compute for is never presented). The
-    // condition is stated once, at the fire site.
+    // to at all), and not once should_exit_ or the run stop is set (the
+    // iteration is the last one of this run — the objects the consumer reads
+    // are still alive, main.cpp's outlive run(), but the frame it would
+    // compute for is never presented, or is presented by the NEXT object
+    // set). The condition is stated once, at the fire site.
     //
     // IT EXISTS FOR POINTER-DERIVED FACES WHOSE INPUTS CAN SETTLE WITH NO POINTER
     // EVENT UNDER THEM — one class, and the reason it is a class rather than a
@@ -516,6 +532,8 @@ private:
     int  pending_w_ = 0;   // populated by xdg_toplevel.configure between
     int  pending_h_ = 0;   // configure events; consumed by xdg_surface.configure
     bool should_exit_ = false;
+    // The run-stop request, cleared at the head of every run() (platform.h).
+    bool run_stop_requested_ = false;
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
     bool window_activated_ = false;

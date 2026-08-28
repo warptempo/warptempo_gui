@@ -15,7 +15,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop. The scanner takes it as a
+// set the shared scanner enforces after the loop (five keys since the project
+// model landed 2026-08-27; two before it). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -25,6 +26,9 @@ namespace {
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "audio_player",
+    "projects_path",
+    "projects_repo",
+    "last_project",
 };
 
 } // namespace
@@ -57,13 +61,25 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     for (const char* key : kDeviceConfigKeys) {
         s += key;
         s += '=';
-        if (std::string_view(key) == "gui_scale") {
+        const std::string_view k(key);
+        if (k == "gui_scale") {
             s += format_gui_scale_percent(cfg.gui_scale);
-        } else {
-            // audio_player: free text, emitted verbatim in UTF-8. An empty
-            // value writes the bare `audio_player=` line, which is the
-            // no-player opt-out and reads back as exactly that.
+        } else if (k == "audio_player") {
+            // Free text, emitted verbatim in UTF-8. An empty value writes the
+            // bare `audio_player=` line, which is the no-player opt-out and
+            // reads back as exactly that.
             s += cfg.audio_player;
+        } else if (k == "projects_path") {
+            // Verbatim: the reader accepted it as an absolute path, and
+            // nothing in the program rewrites it.
+            s += cfg.projects_path;
+        } else if (k == "projects_repo") {
+            // Free text, verbatim; blank is legal and never matches a remote.
+            s += cfg.projects_repo;
+        } else {
+            // last_project: the folder name verbatim, blank until the first
+            // successful open.
+            s += cfg.last_project;
         }
         s += '\n';
     }
@@ -104,6 +120,37 @@ std::expected<DeviceConfig, std::string> read_device_config(
             // means "no external player", which is the only spelling of that
             // opt-out. Taken verbatim in UTF-8.
             out.audio_player = value;
+            return {};
+        }
+        if (key == "projects_path") {
+            // Non-empty and absolute, through the one owner in the header;
+            // existence is startup's question, not this reader's.
+            if (!is_projects_path(value)) {
+                return bad_value(ln, key, value,
+                    "must be an absolute path");
+            }
+            out.projects_path = value;
+            return {};
+        }
+        if (key == "projects_repo") {
+            // Free text, taken verbatim in UTF-8 with no host/path grammar
+            // enforced here — the GitHub recheck normalizes it against the
+            // local clone's own `origin` and refuses the mismatch there,
+            // which is a far better place to judge it than a reader that
+            // cannot see the clone. An empty value is legal and simply never
+            // matches, disabling the feature. (The arm moved here verbatim
+            // from the sidecar schema, architect approval 2026-08-27.)
+            out.projects_repo = value;
+            return {};
+        }
+        if (key == "last_project") {
+            // Empty, or one path component — the grammar and the reason a
+            // separator is adversarial are at is_last_project_name.
+            if (!is_last_project_name(value)) {
+                return bad_value(ln, key, value,
+                    "must be one folder name, not a path");
+            }
+            out.last_project = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

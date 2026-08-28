@@ -169,9 +169,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (audio_player, the other device key, has no vocabulary at all and
-    // takes its free-text arm in commit() beside projects_repo, exactly as it
-    // did when both were `.settings` keys.)
+    // move. (audio_player and projects_repo, the other two editable device
+    // keys, have no vocabulary at all and take their free-text arms in
+    // commit(), exactly as they did when all three were `.settings` keys.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -471,11 +471,14 @@ void GuiSettingsEditor::commit() {
     // included) and writes nothing.
     // projects_repo is audio_player's twin in shape — free text, no gesture, no
     // undo history, no dirty tracking — so it takes the same direct-set arm
-    // rather than a chokepoint route that does not exist for it. It is NOT its
-    // twin in provenance: the projects corpus is a property of the piece, so it
-    // stayed in the `.settings` and is still persisted on Ctrl+S. An empty
-    // value simply never matches any remote, which disables the GitHub recheck.
-    // (architect approval 2026-08-03.)
+    // rather than a chokepoint route that does not exist for it, and since
+    // 2026-08-27 its twin in provenance too: ONE user has ONE repository, so
+    // the projects home is the DEVICE config's (device_config.h), Ctrl+S does
+    // not carry it, and THIS COMMIT IS ITS PERSIST — the config is written
+    // right here through the live struct, exactly as the audio_player arm
+    // below writes it. An empty value simply never matches any remote, which
+    // disables the GitHub recheck. A same-value commit no-op-deactivates and
+    // writes nothing.
     if (key == "projects_repo") {
         if (value == app.projects_repo) {
             std::fprintf(stderr,
@@ -486,6 +489,8 @@ void GuiSettingsEditor::commit() {
             return;
         }
         app.projects_repo = value;
+        app.device_config->projects_repo = value;
+        (void)write_device_config(*app.device_config);
         std::fprintf(stderr, "warptempo_gui: projects_repo set: '%s'\n",
             value.c_str());
         viewport.invalidate_modal_dialog_area();
@@ -506,11 +511,11 @@ void GuiSettingsEditor::commit() {
         // THE PERSIST IS THE COMMIT (2026-08-27): the value's home is the
         // device config, and nothing else writes it — no Ctrl+S, no load. A
         // failed write is advisory and prints its own line there; the live
-        // value stands for this session either way.
-        DeviceConfig cfg;
-        cfg.gui_scale    = app.gui_scale;
-        cfg.audio_player = app.audio_player;
-        (void)write_device_config(cfg);
+        // value stands for this session either way. It writes THE LIVE STRUCT
+        // (AppState::device_config, the loop's one), so the other four keys
+        // travel as they stand (the ownership rule is at write_device_config).
+        app.device_config->audio_player = value;
+        (void)write_device_config(*app.device_config);
         std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
             value.c_str());
         viewport.invalidate_modal_dialog_area();
@@ -677,7 +682,8 @@ bool GuiSettingsEditor::autocomplete_value() {
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
     // follow, gui_scale, waveform_magnification_level,
-    // audio_player, projects_repo, per-tab trim / read_only)
+    // audio_player, projects_repo — the last three the device config's —
+    // per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

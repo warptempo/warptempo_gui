@@ -70,11 +70,84 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // contract holds with no side effect at the caller's tail: the load's own
     // full rebuild repaints both surfaces.
     app.waveform_magnification_level = sf.waveform_magnification_level;
-    // The projects home for the GitHub recheck, applied verbatim like every
-    // other key here: the key is required, so a successful load always carries
-    // the file's own value here and there is no "was it present" question to
-    // ask. An empty value is legal and simply disables the feature.
-    app.projects_repo       = sf.projects_repo;
+    // (`projects_repo` LEFT THIS ROUTINE 2026-08-27 with its key: the projects
+    // home is the DEVICE config's now, read once by gui_main and never by a
+    // source load — device_config.h.)
+}
+
+std::optional<std::string> source_load_dry_run(
+        const std::filesystem::path& source) {
+    const std::string path = source.string();
+    auto info = audio_probe(path);
+    if (!info) {
+        return "Source open failed for '" + path + "': " + info.error();
+    }
+    if (info->sample_rate < 44100) {
+        return "Sample rate " + std::to_string(info->sample_rate) +
+               " is below the 44100 floor";
+    }
+    if (info->channels != 2) {
+        return std::to_string(info->channels) +
+               " channels (stereo sources only)";
+    }
+
+    std::filesystem::path parent = source.parent_path();
+    if (parent.empty()) parent = std::filesystem::path(".");
+    const std::string stem = source.stem().string();
+    const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
+    const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
+    const std::filesystem::path set_path = parent / (stem + ".settings");
+    std::error_code ec;
+    auto present = [&](const std::filesystem::path& p) {
+        return std::filesystem::is_regular_file(p, ec);
+    };
+
+    // The three strict readers, each on a file that exists — a missing one is
+    // what load_file will create from its template. Fresh stores and a fresh
+    // SettingsFile, discarded at the return.
+    GuiWarpMarkers       warp;
+    GuiPhaseResetMarkers phase_resets;
+    SettingsTrim tab_a_trim;
+    SettingsTrim tab_b_trim;
+    if (present(wm_path)) {
+        if (auto r = warp.load(wm_path.string()); !r) {
+            return "Invalid warp markers in '" + wm_path.string() + "': " +
+                   r.error();
+        }
+    }
+    if (present(tm_path)) {
+        if (auto r = phase_resets.load(tm_path.string()); !r) {
+            return "Invalid phase reset markers in '" + tm_path.string() +
+                   "': " + r.error();
+        }
+    }
+    if (present(set_path)) {
+        auto sf = read_settings_file(set_path.string());
+        if (!sf) {
+            return "Invalid settings in '" + set_path.string() + "': " +
+                   sf.error();
+        }
+        if (auto collision = render_output_source_collision(sf->engine, path)) {
+            return "Settings in '" + set_path.string() +
+                   "' would make the render output '" + collision->string() +
+                   "' overwrite the source audio file";
+        }
+        tab_a_trim = sf->tab_a.trim;
+        tab_b_trim = sf->tab_b.trim;
+    } else {
+        // No settings yet: the load stamps the full window on both tabs, which
+        // is inside the wall by construction.
+        const TrimState full = full_trim_window(info->frames);
+        tab_a_trim.begin_frame = tab_b_trim.begin_frame = full.begin_frame;
+        tab_a_trim.end_frame   = tab_b_trim.end_frame   = full.end_frame;
+    }
+    if (auto defect = first_past_eof_wall_defect(
+            slice_to_warp_markers(warp.markers()),
+            slice_to_phase_reset_markers(phase_resets.markers()),
+            tab_a_trim, tab_b_trim, info->frames, info->sample_rate)) {
+        return *defect;
+    }
+    return std::nullopt;
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {
@@ -240,6 +313,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
         project_name = title_src.stem().string();
     }
     gui.set_project_title(project_name);
+    // The same name, kept on AppState for the two prompts (the load-in-place
+    // label's `<projects_path>/<name>/renders/` and the Open prompt's
+    // already-open no-op). Under the project model it IS the project folder's
+    // name — startup and the reopen both hand load_file a source directly
+    // under a project folder, so the adversarial arm above is unreachable
+    // there and kept only for the shape.
+    app.project_name = project_name;
 
     create_if_missing(wm_path, "0|1.00\n");
     // The empty file is the canonical blank phase reset sidecar: resets have
@@ -433,8 +513,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // waveform_magnification_level, projects_repo),
-        // VALUES ONLY. The
+        // waveform_magnification_level), VALUES ONLY. The
         // one side effect that consumes these (on_resize) stays below where it
         // always ran.
         apply_settings_engine_and_prefs(app, viewport, sf);

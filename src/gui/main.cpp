@@ -50,6 +50,7 @@
 #include "viewport.h"
 #include "warpmarkers_ops.h"
 #include "platform.h"
+#include "project_model.h"
 #include "locale_check.h"
 
 #include <cairo/cairo.h>
@@ -60,6 +61,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <string>
 #include <utility>
 
@@ -974,77 +976,46 @@ GuiRect clock_invalidate_rect(const AppState& a) {
 
 // THE LINUX ENTRY POINT and nothing more: the argument check, then the one GUI
 // body (gui_main.h). Android's backend has its own entry (android_main) and
-// calls the same body with the source path its own convention produces, so this
-// wrapper is compiled out of that build.
+// calls the same body with no argument, so this wrapper is compiled out of that
+// build.
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
-    // A source is loaded only from the command line: the GUI has no
-    // in-session file open or drag-and-drop (open the next source by
-    // relaunching). The audio path is therefore mandatory — there is no
-    // blank-window state to load into.
-    if (argc != 2) {
-        std::fprintf(stderr, "Usage: warptempo_gui <audio_file>\n");
+    // THE ARGUMENT IS OPTIONAL (2026-08-27, the project model): with none the
+    // app opens the device config's last project, or the first valid one in
+    // name order; with one it must be a project's SOURCE under the config's
+    // projects path (startup_source, project_model.h). There is no blank
+    // window to load into either way — the app always has a project open.
+    if (argc > 2) {
+        std::fprintf(stderr, "Usage: warptempo_gui [<project source .wav>]\n");
         return 1;
     }
-    return gui_main(argv[1]);
+    return gui_main(argc == 2 ? argv[1] : nullptr);
 }
 #endif
 
+namespace {
 
-int gui_main(const char* source_path) {
-    if (!verify_c_numeric_locale("warptempo_gui")) return 1;
+// What one project's session hands back to the loop: the process exit status
+// when the session ends the process, and otherwise the NAME of the project to
+// reopen (empty = exit with `exit_status`).
+struct GuiProjectOutcome {
+    int         exit_status = 0;
+    std::string reopen;
+};
 
-    // Auto-reap the fire-and-forget children the GUI launches. Ignoring SIGCHLD
-    // makes the kernel discard child exit status so a detached child never
-    // lingers as a zombie; set once here, never per-launch.
-    //
-    // THE WHOLE ROSTER OF FORKING SUBSYSTEMS, and every one of them is written
-    // TO this disposition rather than against it:
-    //   * THE EXTERNAL AUDIO PLAYERS the `l` ("Listen to renders") command
-    //     spawns (spawn_audio_player, input_key_dispatch.cpp) — fire and
-    //     forget, nothing waited on, nothing decided from a status.
-    //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
-    //     through two fenced entry points — reads for the diff and the walk,
-    //     and the commit act's `add`/`commit`/`push` — and, because this
-    //     disposition makes waitpid return ECHILD, decides nothing from child
-    //     status: a read reports whether it RAN (an exec self-pipe) and what it
-    //     said, and the commit act's verdicts are observations of the
-    //     repository afterwards.
-    //   * THE TRASHED DELETION's `gio trash` (trash_directory,
-    //     input_key_dispatch.cpp), whose verdict is likewise an observation of
-    //     the filesystem rather than an exit code.
-    // Each helper's own comment owns its reasoning; what matters here is that
-    // none of them depends on the default disposition being restored.
-    std::signal(SIGCHLD, SIG_IGN);
-
-    // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
-    // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
-    // clipboard data-source `send` callback (platform_wayland.cpp): it writes
-    // the payload into a pipe fd the CONSUMER owns, and a consumer that closes
-    // its read end before or during the transfer would otherwise terminate the
-    // GUI outright, the write loop's EPIPE arm never reached. With the signal
-    // ignored that loop sees the short/failed write it is already written for
-    // (abandon the transfer, close the fd, no state to unwind). libjack's
-    // server socket is the same shape and inherits the same protection — it has
-    // no SIGPIPE-dependent behaviour of its own. THE SPAWNED
-    // PLAYERS DO NOT INHERIT THIS: the launcher resets SIGPIPE to default
-    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp),
-    // since an ignored disposition survives exec
-    // and would change the child's own semantics.
-    std::signal(SIGPIPE, SIG_IGN);
-
-    // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
-    // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly
-    // this point — before the first paint and before anything could derive a
-    // value from them. The whole system retired 2026-08-02: the palette is
-    // constexpr, so there is nothing to initialize and every reader, the
-    // waveform worker thread included, sees compile-time constants. The record
-    // is at the palette block, render.h.)
-
+// ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
+// `project`'s source, run, and torn down before this returns (the loop
+// contract is at platform.h; gui_main below is the loop). The window, the
+// input core, the device config and the render cache are the caller's and
+// outlive every call.
+GuiProjectOutcome run_project(GuiPlatform&            gui,
+                              DeviceConfig&           device_config,
+                              RenderCache&            render_cache,
+                              const GuiProjectSource& project,
+                              bool&                   window_up) {
     AppState     app;
     GuiAudio     audio;
     GuiPlayback  playback;
-    GuiPlatform  gui;
     WaveformCache wf_cache;
     // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick. Constructed alongside wf_cache so they share
@@ -1054,46 +1025,28 @@ int gui_main(const char* source_path) {
     // live overlay paint_marker_stems, off this cache's own published stash.)
     FlagCache     flag_cache;
 
-    // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // `gui_scale` and `audio_player` describe the MACHINE, not the piece, so
-    // they live in `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a
-    // source's `.settings` (the file, its schema and its strictness are
-    // device_config.h's). A first run on either device stamps the BACKEND's own
-    // template — the seam's device_config_defaults(), the one platform fact the
-    // GUI proper needs here — and then reads it back like any other launch.
-    //
-    // IT IS FATAL AND IT IS EARLY. A malformed config is the adversarial class
-    // (the file is program-written, so a violation is a hand edit): one blunt
-    // terminal line naming the path and the offending line, and no window at
-    // all — no repair, no partial apply, and above all no silent fallback to
-    // defaults, which would quietly discard a value the user typed.
-    //
-    // THIS IS THE SCALE'S INIT ROAD ON BOTH BACKENDS, and it runs BEFORE
-    // gui.init(): the two pushes below install the scale into the renderer and
-    // the input core, so the FIRST configure and the FIRST painted frame are
-    // already at the user's scale. That is strictly earlier than the sidecar
-    // road it replaces — which could not run until a source had been parsed on
-    // the startup tick, so the tablet's first frame used to paint at 100 % and
-    // jump. The other road is the settings editor's `gui_scale=` commit
-    // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
-    // GuiInputCore::set_touch_slop_px.
-    {
-        auto cfg = load_device_config(GuiPlatform::device_config_defaults());
-        if (!cfg) {
-            std::fprintf(stderr, "warptempo_gui: %s\n", cfg.error().c_str());
-            return 1;
-        }
-        app.gui_scale    = cfg->gui_scale;
-        app.audio_player = cfg->audio_player;
-    }
-    set_gui_scale_percent(app.gui_scale);
-    // The touch slop is a SCALED LENGTH and the core sits below the GUI model,
-    // so the GUI resolves it and hands it down; it follows the push above
-    // because drag_moved_threshold_px() reads what that call installed.
-    gui.set_touch_slop_px(drag_moved_threshold_px());
+    // THE DEVICE CONFIG'S LIVE VALUES, mirrored into this project's AppState
+    // from the loop's one struct, and the struct itself seated by pointer:
+    // the three editable keys keep their AppState fields (their readers did
+    // not move), and every commit writes both the field and the struct, then
+    // the file (the callers inventory at write_device_config, device_config.h).
+    app.device_config = &device_config;
+    app.gui_scale     = device_config.gui_scale;
+    app.audio_player  = device_config.audio_player;
+    app.projects_repo = device_config.projects_repo;
 
-    if (!gui.init(app.width, app.height, "warptempo_gui")) {
-        return 1;
+    // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
+    // every later one inherits it standing (the loop contract, platform.h).
+    // It is here rather than ahead of the loop because init() takes
+    // AppState's cold size, which is a per-project object's — and the scale
+    // and the touch slop are already installed by gui_main by the time the
+    // first session runs, so the first configure and the first painted frame
+    // are at the user's scale as before.
+    if (!window_up) {
+        if (!gui.init(app.width, app.height, "warptempo_gui")) {
+            return {1, {}};
+        }
+        window_up = true;
     }
 
     // -- Viewport + invalidation helpers ------------------------------------
@@ -1115,7 +1068,7 @@ int gui_main(const char* source_path) {
     if (!async_renderer.init()) {
         std::fprintf(stderr,
             "warptempo_gui: Failed to start async renderer; exiting\n");
-        return 1;
+        return {1, {}};
     }
     // Waveform-cache rebuild runs on this dedicated worker; the
     // paint thread becomes blit-only. Must be constructed before
@@ -1124,7 +1077,7 @@ int gui_main(const char* source_path) {
     if (!waveform_worker.init()) {
         std::fprintf(stderr,
             "warptempo_gui: Failed to start waveform worker; exiting\n");
-        return 1;
+        return {1, {}};
     }
     // THE CHECKPOINT WORKER (2026-08-07): the `h` history view's Save-and-Commit
     // act runs its git steps here instead of on the GUI thread, which used to
@@ -1136,7 +1089,7 @@ int gui_main(const char* source_path) {
     if (!history_commit_worker.init()) {
         std::fprintf(stderr,
             "warptempo_gui: Failed to start the checkpoint worker; exiting\n");
-        return 1;
+        return {1, {}};
     }
     // THE HISTORY WALK'S PREFETCH WORKER (2026-08-07): the `h` view's commit
     // walk is built here, at startup and off the GUI thread, instead of at every
@@ -1149,19 +1102,16 @@ int gui_main(const char* source_path) {
         std::fprintf(stderr,
             "warptempo_gui: Failed to start the history prefetch worker; "
             "exiting\n");
-        return 1;
+        return {1, {}};
     }
-    // Shared process-local render cache for target-view reuse, archival
-    // reuse/publish rungs, and the loaded-in-place render's survival after
-    // the renders folder is wiped. init() creates the per-process cache
-    // directory under
-    // the user cache home and sweeps dead-PID orphan directories; shutdown(),
-    // after the event loop, removes this process's directory. Constructed
-    // before target_render, which holds it by reference. A failed init() leaves
+    // THE RENDER CACHE IS THE CALLER'S — the one per-process instance gui_main
+    // constructs, inits and shuts down around the whole project loop (its
+    // reasoning is there): target-view reuse, the archival reuse/publish
+    // rungs and the loaded-in-place render's survival after the renders
+    // folder is wiped all read it through target_render, which holds it by
+    // reference and is constructed just below. A failed init() there leaves
     // the cache disabled (every lookup misses), so target_render needs no
     // special-casing.
-    RenderCache render_cache;
-    render_cache.init();
     // GuiTargetRender is the cancel-restart dispatcher for target-view
     // live audio. It must be constructed after async_renderer
     // (a dependency) and BEFORE the op clusters (which take it as a
@@ -1369,7 +1319,7 @@ int gui_main(const char* source_path) {
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
-    std::string pending_initial_load = source_path;
+    std::string pending_initial_load = project.source.string();
     bool        initial_load_done    = false;
 
     // -- Redraw -------------------------------------------------------------
@@ -1513,7 +1463,7 @@ int gui_main(const char* source_path) {
         // 2026-08-09; it raises no modal now, so these two routes are again the
         // whole list.)
         input_handler.close_dropdown();
-        prompt.request_close();
+        prompt.request_close(GuiCloseTarget::Exit);
         // (The cursor re-resolve this callback used to end with is gone for the
         // same reason the resize path's is — see there. The prompt this may have
         // just raised is one of the zone map's own refusals, and the map is asked
@@ -1850,8 +1800,10 @@ int gui_main(const char* source_path) {
     //
     // load_file (file_loader.{h,cpp}) is the sole loader, invoked once from
     // the startup tick below. The GUI has no in-session file open or
-    // drag-and-drop: the source is fixed at launch, so there is nothing to
-    // wire here.
+    // drag-and-drop INTO A STANDING SET: the source is fixed for this
+    // session's whole life, and File → Open reopens by ending this session
+    // and starting the next around the chosen source (gui_main's loop), so
+    // there is nothing to wire here.
 
     // Tick: runs once per event-loop iteration. During playback, snapshots
     // the audio thread's cursor and mirrors it into the main-thread playhead,
@@ -1868,19 +1820,34 @@ int gui_main(const char* source_path) {
             const std::string p = std::move(pending_initial_load);
             pending_initial_load.clear();
             if (!file_loader.load_file(p)) {
-                // The source argument is mandatory and there is no in-session
-                // replacement surface, so every load refusal is terminal.
-                // Deeper decode/sidecar failures already request exit at the
-                // owning site; request_exit() is idempotent for those paths.
+                // A project is opened by rebuilding this whole object set
+                // around it and there is no in-session replacement surface,
+                // so every load refusal is terminal. It is also the
+                // ADVERSARIAL class by construction: the Open prompt ran the
+                // load's own failure arms before anything was torn down
+                // (source_load_dry_run, file_loader.h), and startup resolved
+                // the folder the same way, so a refusal here means the disk
+                // changed between that check and this load. Deeper
+                // decode/sidecar failures already request exit at the owning
+                // site; request_exit() is idempotent for those paths.
                 gui.request_exit();
                 return;
             }
+            // THE REMEMBERED PROJECT (2026-08-27): every successful open —
+            // startup's included — writes its name into the device config's
+            // last_project, the fourth writer of that file. Gated on a real
+            // change like the other three, so a relaunch of the same project
+            // rewrites nothing.
+            if (device_config.last_project != project.name) {
+                device_config.last_project = project.name;
+                (void)write_device_config(device_config);
+            }
             // THE PREFETCH'S STARTUP KICK (2026-08-07), here because this is
-            // where the source settles: app.source_audio_path and
-            // app.projects_repo are both final by now (the sidecars applied
-            // above), and the scan needs exactly those two. It costs the GUI
-            // thread one queue push — everything else happens on the worker
-            // while the user is still looking at the first frame.
+            // where the source settles: app.source_audio_path is final by now
+            // (the sidecars applied above) and app.projects_repo is the
+            // device config's, and the scan needs exactly those two. It costs
+            // the GUI thread one queue push — everything else happens on the
+            // worker while the user is still looking at the first frame.
             input_handler.kick_history_prefetch();
             return;  // loaded state paints on the next tick
         }
@@ -2111,7 +2078,7 @@ int gui_main(const char* source_path) {
 
         // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
         // comparator's own mechanism applied to a whole surface rather than to
-        // a face. The keyboard appears and disappears with the SEVEN EDITORS'
+        // a face. The keyboard appears and disappears with the EIGHT EDITORS'
         // open and close, and those routes damage the marker lane or the bottom
         // row — never the band this surface paints in, which is the waveform
         // area's lower part. So the live answer is compared against the
@@ -2260,6 +2227,16 @@ int gui_main(const char* source_path) {
                 text_editor::cursor_visible_now(app.measure_offset_editor);
             if (now_visible != app.measure_offset_editor_blink_last) {
                 app.measure_offset_editor_blink_last = now_visible;
+                invalidate_modal_dialog_area();
+            }
+        }
+        // And for the Open project prompt.
+        if (text_editor::is_active(app.open_project_editor)) {
+            const bool now_visible =
+                dialog_field_focused &&
+                text_editor::cursor_visible_now(app.open_project_editor);
+            if (now_visible != app.open_project_editor_blink_last) {
+                app.open_project_editor_blink_last = now_visible;
                 invalidate_modal_dialog_area();
             }
         }
@@ -2564,18 +2541,45 @@ int gui_main(const char* source_path) {
             follow_scroll_if_needed();
     });
 
+    // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure
+    // for a size that did not change, so the platform fires on_resize with
+    // the standing geometry now that every hook is installed (a no-op on
+    // Wayland before the first configure, which delivers it itself; on
+    // Android this is also where the first session's owed fire lands).
+    gui.redeliver_geometry();
+
     // Paint the initial background before any synchronous load begins so the
     // window isn't briefly blank on fast disks.
     gui.invalidate_region(0, 0, app.width, app.height);
     gui.drain_events();
 
     gui.run();
-    // Tear the audio device down before the sample buffer goes out of scope.
+
+    // WHY run() RETURNED, read before anything below dies: an exit (the
+    // platform's own bit — Ctrl+Q, the WM close, a connection loss, a load
+    // that failed) ends the process; otherwise the Open prompt's seated name
+    // is the project to reopen (the loop contract, platform.h).
+    GuiProjectOutcome outcome;
+    if (!gui.exit_requested()) outcome.reopen = app.reopen_project;
+
+    // THE TEARDOWN, in this order. The platform forgets the four worker fds
+    // first — the workers close them below, and the next session registers
+    // its own — then the audio device goes down before the sample buffer
+    // goes out of scope.
+    gui.set_worker_completion_fd(-1, {});
+    gui.set_waveform_worker_completion_fd(-1, {});
+    gui.set_history_worker_completion_fd(-1, {});
+    gui.set_history_prefetch_completion_fd(-1, {});
+    // ON ANDROID THIS IS ONE STREAM STOP AND ONE START PER REOPEN: the AAudio
+    // stream stays started between plays for the transient's sake, and a
+    // reopen is the one moment it is torn down and brought back (the next
+    // session's init owns the rate, and projects may differ in it) — accepted,
+    // one transient per project change rather than per play.
     playback.shutdown();
-    gui.shutdown();
     // Join the render worker before cache teardown so a render completing
     // during shutdown cannot touch the dismantled cache. Idempotent; the
-    // destructor's later call is then a no-op.
+    // destructor's later call is then a no-op. A render still in flight is
+    // cancelled by the join — killed as any dispatch kills it.
     async_renderer.shutdown();
     // Blocks on an in-flight checkpoint rather than abandoning a git child
     // mid-act; the piece is already saved (the act saves before it dispatches),
@@ -2584,7 +2588,180 @@ int gui_main(const char* source_path) {
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.
     history_prefetch.shutdown();
+    // Everything else — the caches, the handlers, the callbacks' captured
+    // objects — dies with this frame, in reverse construction order; the
+    // window keeps the callbacks' std::function shells until the next session
+    // overwrites them, and calls none in between.
+    return outcome;
+}
+
+} // namespace
+
+int gui_main(const char* argument) {
+    if (!verify_c_numeric_locale("warptempo_gui")) return 1;
+
+    // Auto-reap the fire-and-forget children the GUI launches. Ignoring SIGCHLD
+    // makes the kernel discard child exit status so a detached child never
+    // lingers as a zombie; set once here, never per-launch.
+    //
+    // THE WHOLE ROSTER OF FORKING SUBSYSTEMS, and every one of them is written
+    // TO this disposition rather than against it:
+    //   * THE EXTERNAL AUDIO PLAYERS the `l` ("Listen to renders") command
+    //     spawns (spawn_audio_player, input_key_dispatch.cpp) — fire and
+    //     forget, nothing waited on, nothing decided from a status.
+    //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
+    //     through two fenced entry points — reads for the diff and the walk,
+    //     and the commit act's `add`/`commit`/`push` — and, because this
+    //     disposition makes waitpid return ECHILD, decides nothing from child
+    //     status: a read reports whether it RAN (an exec self-pipe) and what it
+    //     said, and the commit act's verdicts are observations of the
+    //     repository afterwards.
+    //   * THE TRASHED DELETION's `gio trash` (trash_directory,
+    //     input_key_dispatch.cpp), whose verdict is likewise an observation of
+    //     the filesystem rather than an exit code.
+    // Each helper's own comment owns its reasoning; what matters here is that
+    // none of them depends on the default disposition being restored.
+    std::signal(SIGCHLD, SIG_IGN);
+
+    // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
+    // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
+    // clipboard data-source `send` callback (platform_wayland.cpp): it writes
+    // the payload into a pipe fd the CONSUMER owns, and a consumer that closes
+    // its read end before or during the transfer would otherwise terminate the
+    // GUI outright, the write loop's EPIPE arm never reached. With the signal
+    // ignored that loop sees the short/failed write it is already written for
+    // (abandon the transfer, close the fd, no state to unwind). libjack's
+    // server socket is the same shape and inherits the same protection — it has
+    // no SIGPIPE-dependent behaviour of its own. THE SPAWNED
+    // PLAYERS DO NOT INHERIT THIS: the launcher resets SIGPIPE to default
+    // alongside SIGCHLD (spawn_audio_player, input_key_dispatch.cpp),
+    // since an ignored disposition survives exec
+    // and would change the child's own semantics.
+    std::signal(SIGPIPE, SIG_IGN);
+
+    // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
+    // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly
+    // this point — before the first paint and before anything could derive a
+    // value from them. The whole system retired 2026-08-02: the palette is
+    // constexpr, so there is nothing to initialize and every reader, the
+    // waveform worker thread included, sees compile-time constants. The record
+    // is at the palette block, render.h.)
+
+    // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
+    // Its five keys describe the MACHINE, not the piece, so they live in
+    // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
+    // `.settings` (the file, its schema and its strictness are
+    // device_config.h's). A first run on either device stamps the BACKEND's
+    // own template — the seam's device_config_defaults(), the one platform fact
+    // the GUI proper needs here — and then reads it back like any other launch.
+    //
+    // IT IS FATAL AND IT IS EARLY. A malformed config is the adversarial class
+    // (the file is program-written, so a violation is a hand edit): one blunt
+    // terminal line naming the path and the offending line, and no window at
+    // all — no repair, no partial apply, and above all no silent fallback to
+    // defaults, which would quietly discard a value the user typed.
+    //
+    // THIS STRUCT IS THE LIVE CONFIG FOR THE PROCESS'S WHOLE LIFE: it outlives
+    // every project the loop below opens, each session's AppState reaches it by
+    // pointer, and every commit that writes the file writes through it — so a
+    // value typed in one project survives the reopen that tears that AppState
+    // down, and a failed persist (advisory) loses nothing the user committed.
+    // Re-reading the file per session was the alternative and is refused for
+    // exactly that loss (the rule is at write_device_config, device_config.h).
+    DeviceConfig device_config;
+    {
+        auto cfg = load_device_config(GuiPlatform::device_config_defaults());
+        if (!cfg) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", cfg.error().c_str());
+            return 1;
+        }
+        device_config = *cfg;
+    }
+    // THIS IS THE SCALE'S INIT ROAD ON BOTH BACKENDS, and it runs BEFORE
+    // gui.init(): the two pushes here install the scale into the renderer and
+    // the input core, so the FIRST configure and the FIRST painted frame are
+    // already at the user's scale. That is strictly earlier than the sidecar
+    // road it replaced — which could not run until a source had been parsed on
+    // the startup tick, so the tablet's first frame used to paint at 100 % and
+    // jump. The other road is the settings editor's `gui_scale=` commit
+    // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
+    // GuiInputCore::set_touch_slop_px.
+    set_gui_scale_percent(device_config.gui_scale);
+
+    // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
+    // project_model.h): the argument, which must be a project's source under
+    // the config's projects path, or with none the remembered project and then
+    // the first valid one in name order. None is the blunt terminal line and
+    // exit 1: the app always has a project open, and there is no empty state
+    // to open a picker over.
+    auto first = startup_source(device_config, argument);
+    if (!first) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", first.error().c_str());
+        return 1;
+    }
+
+    // THE PLATFORM, ONCE PER PROCESS (the loop contract, platform.h). The
+    // touch slop is a SCALED LENGTH and the core sits below the GUI model, so
+    // the GUI resolves it and hands it down; it follows the push above because
+    // drag_moved_threshold_px() reads what that call installed. The window
+    // itself opens inside the first session (run_project), which owns the cold
+    // size it is opened at.
+    GuiPlatform gui;
+    gui.set_touch_slop_px(drag_moved_threshold_px());
+
+    // THE RENDER CACHE, ONCE PER PROCESS: its keying is fingerprint-only — the
+    // source path and its identity are INSIDE the key (render_fingerprint,
+    // render_cache.h) — so nothing in it is per source, and one directory per
+    // process is what init() creates and shutdown() removes. Shared by every
+    // session's target_render, which holds it by reference. A failed init()
+    // leaves the cache disabled (every lookup misses), so target_render needs
+    // no special-casing.
+    RenderCache render_cache;
+    render_cache.init();
+
+    // THE PROJECT LOOP. Everything ONE PER PROCESS is above; everything ONE PER
+    // PROJECT is run_project's, built around the session's source and torn
+    // down before it returns. run() returns for two reasons — an exit, and
+    // the Open prompt's REOPEN — and the outcome carries which. WHAT IS
+    // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
+    // the renderer's file-scope scale (set_gui_scale_percent), the text
+    // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
+    // the bottom row's clock metrics memo (keyed on the text size, not the
+    // piece), the modal session-id counter (text_editor::next_session_id —
+    // monotonic for the process, so no id repeats across reopens), the strict
+    // load's scratch serial (history_diff.cpp), and on Android the glue
+    // pointer g_android_app and the stdio routing. Every other static in the
+    // GUI is either a constant or refreshed on every call
+    // (active_display_context).
+    //
+    // A LOAD THAT FAILS NEVER REACHES A REOPEN: the prompt checked validity
+    // and ran the load's own failure arms at Enter, before this loop tore the
+    // previous set down, so the folder resolved below can refuse only by a
+    // change on disk in between — the adversarial class, and it takes the
+    // same fatal exit a failed load has always taken.
+    GuiProjectSource project = *first;
+    bool window_up   = false;
+    int  exit_status = 0;
+    for (;;) {
+        const GuiProjectOutcome outcome =
+            run_project(gui, device_config, render_cache, project, window_up);
+        if (outcome.reopen.empty()) {
+            exit_status = outcome.exit_status;
+            break;
+        }
+        auto next = resolve_project(
+            std::filesystem::path(device_config.projects_path) /
+            outcome.reopen);
+        if (!next) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", next.error().c_str());
+            exit_status = 1;
+            break;
+        }
+        project = *next;
+    }
+
+    gui.shutdown();
     // Remove this process's render-cache directory.
     render_cache.shutdown();
-    return 0;
+    return exit_status;
 }

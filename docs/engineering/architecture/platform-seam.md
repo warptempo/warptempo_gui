@@ -115,21 +115,37 @@ drag coordinates floor instead of truncating.
   Android through the two bundled Liberation files
   (`gui_font_bundled.cpp`, FT faces over owned copies; a failed install
   aborts before the first paint — a missing asset is a build defect).
-- **Entry**: `gui_main(source_path)` (`gui_main.h`) is the one GUI body;
-  Linux `main()` is a thin wrapper, Android's `android_main` pins
-  `LC_ALL=C` (bionic starts in C.UTF-8), sets `XDG_CACHE_HOME`/`HOME` to
-  the app's files dir, installs the fonts, waits for the window and calls
-  it with THE CURRENT PROJECT'S SOURCE — the app opens that and nothing else,
-  there being no file picker on this platform. The convention lives under
-  `<externalDataPath>` (`/sdcard/Android/data/<pkg>/files`, which adb pushes
-  into with no permission granted): a one-line `current` names a folder under
-  `projects/`, mirroring the laptop's own `projects/<name>/`, and THE SOURCE IS
-  THE ONE `.wav` THERE WHOSE STEM HAS A `.warpmarkers` SIBLING (the sync
-  script's own rule for "the source", so the two ends cannot disagree; a
-  finished render beside it carries no sidecars and never matches). EVERY
-  FAILURE IS FATAL — the sync script is the tree's one producer, so a fallback
-  arm would have nothing that could ever place files where it looked. The app
-  half is `platform_android.cpp`'s `resolve_source_path`, which is authoritative.
+- **Entry**: `gui_main(argument)` (`gui_main.h`) is the one GUI body;
+  Linux `main()` is a thin wrapper passing its optional `<wav>` or nullptr,
+  Android's `android_main` pins `LC_ALL=C` (bionic starts in C.UTF-8), sets
+  `XDG_CACHE_HOME`/`XDG_CONFIG_HOME`/`HOME` to the app's dirs, installs the
+  fonts, waits for the window and calls it with NO ARGUMENT (2026-08-27, the
+  project model): which project opens is the portable owner's question —
+  `startup_source` (`project_model.h`) opens the device config's
+  `last_project` or the first valid project in name order under its
+  `projects_path`, and File → Open is the picker on both platforms. The
+  `current` file and `resolve_source_path` are RETIRED (a stale `current` on
+  the device is simply never read). What the backend still owns of the sync
+  convention is WHERE the projects are: its template stamps
+  `<externalDataPath>/projects` (`/sdcard/Android/data/<pkg>/files/projects`,
+  which adb pushes into with no permission granted) as the projects path.
+- **The loop contract** (`platform.h`, authoritative): ONE `GuiPlatform` per
+  process, MANY `run()` calls. `gui_main` is a loop — everything ONE PER
+  PROCESS (the signals, the device config, the scale install, the platform and
+  its `init`, the render cache) outside it; everything ONE PER PROJECT
+  (`run_project`, main.cpp: AppState, audio, playback, the caches, the workers,
+  the handlers, every callback) built inside, run, torn down in today's order.
+  `run()` returns for an EXIT (`request_exit`; `exit_requested()` true) or a
+  RUN STOP (`request_run_stop`, the Open prompt's reopen — the window and the
+  input core stand; the stop bit is cleared at each `run()`'s head). The
+  worker fds are re-registered per session (each setter takes -1 and, on
+  Android, unwatches what it replaces); the callbacks are re-installed; the
+  geometry is REDELIVERED (`redeliver_geometry`) since the window sends no
+  configure for an unchanged size. Nothing is reset for key repeat, the touch
+  window or a capture — a reopen comes from a key press or a button lift on
+  a modal, where none can stand. Playback is shut down and re-inited per
+  session (one AAudio stream start per reopen, accepted). The unsaved-tab
+  prompt is Ctrl+Q's own with a REOPEN target (`GuiCloseTarget`, prompt.h).
 - **Android stubs** (each named at its site with its Wayland twin):
   clipboard over one stored string, pointer capture as no-ops (the notional-x
   FIELD survives and tracks the finger), cursor kinds stored and never
@@ -169,12 +185,15 @@ rect are one number by construction.
 EVERY CAP IS TEXT, on the one sans face at the product's one text size through
 the one shaping chokepoint — the letter caps, the layer toggle's `abc` / `&123`
 and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
-**Cancel**, **Enter**. **Backspace** is on both layers (each layer's own row 2
+**Cancel**, **Enter**, **Tab**. **Backspace** is on both layers (each layer's own row 2
 ends with one), and **Space**, **Cancel** and **Enter** are on both by
 construction — row 3 is one array shared by the two. **Shift** is the LETTER
-layer's alone: the symbol layer's row 2 opens with a `Role::Blank` slot in its
-place, which is the whole answer to what shift would do on a symbol page. The
-symbol layer's SECOND SPACE is not that row's leading slot either but a
+layer's alone: the symbol layer's row 2 opens with **Tab** in its place
+(2026-08-27, with File → Open — the one key the letter layer has no room for,
+and what the product's prompts COMPLETE on, so the glass gesture for the
+recent project is File → Open, &123, Tab, Enter; a bare `GuiKeys::Tab` through
+the same `synthesize_key` road; the blank role is deleted with its last slot).
+The symbol layer's SECOND SPACE is not that row's leading slot either but a
 deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
 symbol layer for the `/` of `12 7/8` need not go looking for the bar. The function keys wore unmodified Breeze glyphs for their first day
 and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's

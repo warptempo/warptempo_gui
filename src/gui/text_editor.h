@@ -118,6 +118,11 @@ constexpr int kMaxPendingCharsMeasure =
 // in-bracket source and there is nothing longer to type. A tight bound rather
 // than a policy cap, the measure field's own arrangement.
 constexpr int kMaxPendingCharsMeasureOffset = 6;
+// The OPEN PROJECT prompt (File → Open). Holds a project folder's NAME under
+// the device config's projects_path — "550 - 1" — typed or Tab-completed over
+// the folder names there. 256 is the load prompt's own generous ceiling for a
+// program-named path component, and a folder name is one such component.
+constexpr int kMaxPendingCharsOpenProject = 256;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -133,10 +138,14 @@ constexpr int kMaxPendingCharsMeasureOffset = 6;
 // the field's 2026-08-20 rebrand, judged at the commit by marker_measure.h and
 // not at all on the keyboard); and the MEASURE PROPAGATE's paste-offset editor
 // uses MeasureOffset (one signed decimal integer, likewise judged at its commit
-// and not on the keyboard). THERE ARE SEVEN KINDS AND FIVE OF THEM ARE DIALOG
-// EDITORS — the sixth Kind was architect-blessed 2026-08-19 and the seventh
-// arrived with the measure propagate on 2026-08-20; the roster that matters for
-// modality is AppState::dialog_editor_session, which NAMES the five.
+// and not on the keyboard); and the OPEN PROJECT prompt (File → Open) uses
+// OpenProject (a project folder's name under the projects path, resolved
+// against the project model at commit). THERE ARE EIGHT KINDS AND SIX OF THEM
+// ARE DIALOG EDITORS — the sixth Kind was architect-blessed 2026-08-19, the
+// seventh arrived with the measure propagate on 2026-08-20 and the eighth with
+// the project model on 2026-08-27; THIS ENUM IS THE AUTHORITATIVE LIST of the
+// editors, and the roster that matters for modality is
+// AppState::dialog_editor_session, which NAMES the six.
 enum class Kind {
     FlagPayload,
     BpmBracket,
@@ -145,24 +154,32 @@ enum class Kind {
     CommitTitle,
     MeasureText,
     MeasureOffset,
+    OpenProject,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
 // handing out an id that names exactly ONE raise of exactly ONE modal surface
 // for the life of the process (it starts at 1, so 0 is reliably "no session").
 //
-// IT IS HOMED HERE because five of the product's six modal surfaces are text
+// IT IS HOMED HERE because six of the product's seven modal surfaces are text
 // editors and `enter` below is their one activation route, which is what makes
 // the stamping STRUCTURAL rather than disciplinary: no opener can forget to
 // take an id, and each new dialog editor has inherited the identity for free —
-// the fourth in 2026-08-07 and the fifth, the measure paste-offset editor, in
-// 2026-08-20, neither one touching this counter. The
-// PROMPT — the SIXTH surface, and not an editor — takes its id from this same
-// counter at its own one raise route (PromptState::present, app_state.h), so
-// the ids never collide across the two classes and one integer compare answers
-// "is this published geometry the surface that owns input right now" (the
-// doctrine and the comparison's one owner are at AppState::ModalDialogGeometry
-// and GuiInputHandler::modal_dialog_stash_current).
+// the fourth in 2026-08-07, the fifth, the measure paste-offset editor, in
+// 2026-08-20, and the sixth, the Open project prompt, in 2026-08-27, none of
+// them touching this counter. The PROMPT — the SEVENTH surface, and not an
+// editor — takes its id from this same counter at its own one raise route
+// (PromptState::present, app_state.h), so the ids never collide across the two
+// classes and one integer compare answers "is this published geometry the
+// surface that owns input right now" (the doctrine and the comparison's one
+// owner are at AppState::ModalDialogGeometry and
+// GuiInputHandler::modal_dialog_stash_current).
+//
+// THE COUNTER IS THE PROCESS'S, NOT A PROJECT'S: it is a function-local static
+// that lives for the life of the process and only ever grows, so ids never
+// repeat across the reopens gui_main's loop runs (main.cpp) — a geometry
+// published under one project's session can never be mistaken for a surface
+// raised under the next.
 uint64_t next_session_id();
 
 // State for a single editable rect.
@@ -176,7 +193,7 @@ struct State {
     // it alone — `target` is what says "not editing", and a dead session's id
     // must not be reusable). The TOP-STRIP FLAG editor takes one too and
     // nothing ever reads it: it publishes no dialog, so it has no geometry to
-    // validate. What the five DIALOG editors' ids are for is at
+    // validate. What the six DIALOG editors' ids are for is at
     // AppState::ModalDialogGeometry.
     uint64_t session = 0;
 
@@ -261,9 +278,10 @@ struct State {
 // built from — it needs no sequence length and degrades safely on malformed
 // bytes.
 //
-// The ONE outside caller is the load editor's Tab autocomplete
-// (input_key_dispatch.cpp), which backs its byte-wise longest-common-prefix off
-// to a boundary before seeding `pending`. It is exposed rather than the
+// The ONE outside caller is the prompts' shared prefix completion
+// (GuiInputHandler::complete_editor_prefix, input_key_dispatch.cpp — the load
+// editor's and the Open prompt's Tab), which backs its byte-wise
+// longest-common-prefix off to a boundary before seeding `pending`. It is exposed rather than the
 // boundary walks themselves because that is the whole of what the caller needs:
 // prev_codepoint_boundary always steps back a WHOLE codepoint, which is the
 // wrong answer for a prefix that already ends on a complete one.

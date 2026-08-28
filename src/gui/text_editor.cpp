@@ -274,6 +274,7 @@ void replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
     if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
     if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
+    if (s.kind == Kind::OpenProject)       cap = kMaxPendingCharsOpenProject;
     if (s.kind == Kind::FlagPayload && s.iter_grammar)
         cap = kMaxPendingCharsFlagIter;
     // Atomic cap: compute the result size BEFORE mutating anything. Refuse
@@ -628,6 +629,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
         if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
         if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
+        if (s.kind == Kind::OpenProject)       cap = kMaxPendingCharsOpenProject;
         if (s.kind == Kind::FlagPayload && s.iter_grammar)
             cap = kMaxPendingCharsFlagIter;
         // Atomic cap: compute the result size BEFORE erasing the selection,

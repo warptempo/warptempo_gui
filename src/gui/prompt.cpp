@@ -5,7 +5,15 @@
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
     case DialogTrigger::CLOSE_WINDOW:
-        gui.request_exit();
+        // THE TWO COMPLETIONS (GuiCloseTarget): an exit asks the platform to
+        // end the process's run loop for good; a reopen asks it to RETURN
+        // from run() with the window standing, so gui_main's loop can tear
+        // this project's object set down and build the next around
+        // app.reopen_project (the loop contract, main.cpp). Both are
+        // platform requests and nothing else happens here — the teardown
+        // order is the loop's own.
+        if (close_target_ == GuiCloseTarget::Reopen) gui.request_run_stop();
+        else                                         gui.request_exit();
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::ERROR_NOTICE:
@@ -140,10 +148,12 @@ void GuiPrompt::cancel_paste_confirmation() {
 }
 
 // Route a close gesture through the prompt when history is dirty;
-// otherwise proceed immediately. Centralizes the decision so Ctrl+Q and
-// the WM-close callback share identical behavior.
-void GuiPrompt::request_close() {
+// otherwise proceed immediately. Centralizes the decision so Ctrl+Q, the
+// WM-close callback and the Open prompt's commit share identical behaviour;
+// what differs between them is the target, seated here for proceed.
+void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
+    close_target_ = target;
     if (app.dirty)
         open_unsaved(DialogTrigger::CLOSE_WINDOW);
     else

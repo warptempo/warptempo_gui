@@ -139,7 +139,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
             ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.cancel_paste_confirmation();
-            prompt.request_close();
+            prompt.request_close(GuiCloseTarget::Exit);
             return;
         }
         // THE FOCUS RING (2026-08-13), the prompt's half: bare Tab and bare
@@ -232,7 +232,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deferred quit; an urgent abort is pkill / the compositor's force-close.
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            prompt.request_close();
+            prompt.request_close(GuiCloseTarget::Exit);
         }
         return;
     }
@@ -357,6 +357,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_measure_offset_editor_key(key, mods)) return;
     }
 
+    // Open project prompt (File → Open). The same modal shape as the four
+    // blocks above, and mutually exclusive with them by construction: its
+    // opener refuses while any editor owns the keyboard.
+    if (text_editor::is_active(app.open_project_editor)) {
+        if (handle_open_project_editor_key(key, mods)) return;
+    }
+
     // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
     // pasteable "base" / "base*scale" form the flag editor accepts — onto the
     // SYSTEM clipboard, so the implied value of a pass or label ref pastes into
@@ -477,7 +484,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // flow. Bare Esc takes the swallow below with every other key.
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             finalize_active_drags();
-            prompt.request_close();
+            prompt.request_close(GuiCloseTarget::Exit);
             // THE CURSOR RE-RESOLVES AFTER THE FORCE-END, and nothing here has
             // to arrange it: the finalizer cleared the gesture state
             // pointer_cursor_kind reads and request_close may have raised the
@@ -738,10 +745,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
-    //       since it can only fire while one of the seven editors owns the
+    //       since it can only fire while one of the eight editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all seven, through route_modal_editor_key: Esc closes /
+    //   (b) THE EDITORS — all eight, through route_modal_editor_key: Esc closes /
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
     //       place of its own, which is the point of there being one route;
@@ -759,7 +766,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
-    //       — the five dialog editors' veil swallows the press that would open
+    //       — the six dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is
     //       ENDED by the open (toggle_dropdown's open path). It ranks BELOW the
     //       prompt because Ctrl+Q from inside the popup can raise one;
@@ -797,7 +804,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-        prompt.request_close();
+        prompt.request_close(GuiCloseTarget::Exit);
         return;
     }
 
@@ -2632,14 +2639,13 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // per-DEVICE preference now (device_config.h) and Ctrl+S does not carry it,
     // so the only moment it can be written is the moment it changes. The write
     // is advisory — it prints its own line on failure and the live value stands
-    // either way — and it carries audio_player along because the file holds both
-    // keys and is rewritten whole; app.audio_player is the live truth for that
-    // key, so the rewrite preserves it by construction.
+    // either way — and it goes through THE LIVE CONFIG (AppState::device_config,
+    // the loop's one struct): the file holds five keys and is rewritten whole,
+    // and that struct is the one place all five are live at once, across every
+    // reopen (the ownership rule is at write_device_config, device_config.h).
     app.gui_scale = percent;
-    DeviceConfig cfg;
-    cfg.gui_scale    = app.gui_scale;
-    cfg.audio_player = app.audio_player;
-    (void)write_device_config(cfg);
+    app.device_config->gui_scale = percent;
+    (void)write_device_config(*app.device_config);
     set_gui_scale_percent(percent);
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the

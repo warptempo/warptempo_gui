@@ -20,7 +20,7 @@ bool GuiSaveOps::save() {
     // is no concurrent writer of those three paths at all (a second checkpoint
     // act is already refused, single-in-flight).
     //
-    // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the seven editors' own Ctrl+S
+    // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the eight editors' own Ctrl+S
     // admission (route_modal_editor_key) and the close prompt's Save answer all
     // funnel through here, so the lockout needs no second spelling.
     //
@@ -102,8 +102,7 @@ bool GuiSaveOps::save() {
             app.active_audio_view,
             app.active_markers_view,
             app.active_tab_view,
-            app.waveform_magnification_level,
-            app.projects_repo};
+            app.waveform_magnification_level};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             std::fprintf(stderr,
