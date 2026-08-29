@@ -220,7 +220,9 @@ room for, and what the product's prompts COMPLETE on; a bare `GuiKeys::Tab`
 through the same `synthesize_key` road; the blank role is deleted with its last
 slot). IT IS NO LONGER THE OPEN PROMPT'S GLASS ROAD: that prompt's PICKER
 landed 2026-08-28 and takes this keyboard's own band, so the glass gesture is
-File → Open project, tap the row, tap OK, and typing a name is the laptop's.
+File → Open project, tap the row — the tap's lift both highlights and opens
+it, the row's Cancel button its only other reach — and typing a name is the
+laptop's.
 The key stays for every OTHER prompt's completion and ring walk.
 The symbol layer's SECOND SPACE is not that row's leading slot either but a
 deliberate duplicate CHARACTER key beside its `_`, so a hand already in the

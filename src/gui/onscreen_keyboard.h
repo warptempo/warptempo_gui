@@ -144,7 +144,9 @@ inline constexpr KeyDef kLetterRow2[] = {
 // synthesize_key road as every other key here. IT IS NOT THE OPEN PROJECT
 // PICKER'S GLASS ROAD (2026-08-28): that picker is field-less and stands in
 // this band, so the keyboard does not paint there at all and the gesture is
-// File → Open project, tap the project's row, tap OK. What the key serves is
+// File → Open project, tap the project's row — the tap's lift both highlights
+// and opens it, the row's Cancel button its only other reach. What the key
+// serves is
 // every prompt a finger can raise — the settings editor's value recall and
 // the ring walk on the dialogs that publish buttons. Its SPACE key and its comma are
 // deliberate DUPLICATES of row 3's, which is layer-blind — a hand already in

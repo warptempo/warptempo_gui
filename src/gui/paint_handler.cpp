@@ -6074,12 +6074,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                     static_cast<double>(track.h) * 0.5;
                 const double hrad = static_cast<double>(hdia) * 0.5 -
                                     static_cast<double>(gs) * 0.5;
+                // IDLE NEVER SHOWS THE ACCENT: the press over the handle is a
+                // consumed no-op while the transport is idle
+                // (claim_player_scrub_press), so a face that lit up under the
+                // pointer there would promise a gesture the press refuses.
+                // LIVE and PAUSED still hover and drag normally.
                 const bool hovered =
-                    rp.scrub.armed ||
-                    (app.pointer_in_window &&
-                     render_player_scrub_handle_hit(track, hx,
-                                                    app.last_mouse_x,
-                                                    app.last_mouse_y));
+                    rp.transport != AppState::RenderPlayer::Transport::Idle &&
+                    (rp.scrub.armed ||
+                     (app.pointer_in_window &&
+                      render_player_scrub_handle_hit(track, hx,
+                                                     app.last_mouse_x,
+                                                     app.last_mouse_y)));
                 cairo_save(cr);
                 cairo_new_path(cr);
                 cairo_arc(cr, static_cast<double>(hx), hcy, hrad,

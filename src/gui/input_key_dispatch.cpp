@@ -4716,9 +4716,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // highlight either way) and only what a bare Enter means. Left/Right are
     // NOT the ring's here: they are the seeks, the car's rewind and
     // fast-forward, on a button or off it. THE PICKER'S RING IS THE SAME
-    // SHAPE (2026-08-28): [list, OK, Cancel], opening nowhere, and Left/Right
-    // are not its either — its router consumes them, the list's walk being
-    // Up/Down — so the two list-bearing owners share one arm.
+    // SHAPE, one member shorter (its row is Cancel alone since 2026-08-29):
+    // [list, Cancel], opening nowhere, and Left/Right are not its either —
+    // its router consumes them, the list's walk being Up/Down — so the two
+    // list-bearing owners share one arm.
     const bool list_up = !prompt_up &&
                          (app.render_player.active || app.picker.active);
     const bool on_list = list_up && app.folder_overlay.list_focused;
