@@ -57,15 +57,18 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
     // at the writer — rather than in the `p` toggle below, which is where codex
-    // round 20 put it and where round 21 found the hole: this helper's OTHER
-    // caller is the propagate paste's target-view tail, which reaches it direct
-    // and inherited nothing. Below the same-mode early return, so a switch that
-    // never happened clears nothing. This is the FRESH-GRIP half of the rule —
-    // the flip moves neither domain nor viewport, so the held frame stays
-    // arithmetically valid and the cost is a re-seat at the centroid on the next
-    // two-finger frame. The membership, the derivation and the correctness /
-    // fresh-grip split are at clear_touch_zoom_seat's declaration
-    // (input_handler.h).
+    // round 20 put it and where round 21 found the hole: the toggle is not this
+    // helper's only caller, and the others reach it DIRECT and inherit nothing
+    // it spells (the undo restore's column tag, the propagate paste's
+    // target-view tail and Shift+S's drop from any view all call this, each
+    // writing its own selection or landing its own act after the clear — grep
+    // the name for the live list). Below the same-mode early return, so a
+    // switch that never happened clears nothing. This is the FRESH-GRIP half
+    // of the rule — the flip moves neither domain nor viewport, so the held
+    // frame stays arithmetically valid and the cost is a re-seat at the
+    // centroid on the next two-finger frame. The membership, the derivation
+    // and the correctness / fresh-grip split are at clear_touch_zoom_seat's
+    // declaration (input_handler.h).
     clear_touch_zoom_seat(app, viewport);
     app.active_markers_view = target_mode;
 }

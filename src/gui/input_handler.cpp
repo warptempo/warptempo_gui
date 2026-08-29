@@ -1151,8 +1151,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (the perceived transient), which composes with Space's lead-in
         // audition — drop then Space cancels the two N/2 offsets and auditions
         // from exactly where the cursor was.
-        // Ctrl+S saves; every other modifier combination on `s` is unbound and a
-        // consumed no-op here.
+        // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S
+        // saves, and Shift+S (2026-08-28) drops a phase reset from any view —
+        // the same lead-in drop with the trip to T+P in front of it. Every
+        // other modifier combination on `s` is unbound and a consumed no-op
+        // here.
         //
         // THE HISTORY VIEW SELECTS THE OTHER COMMAND (architect 2026-08-08, the
         // iteration bit's own bit-selects-the-command precedent applied to this
@@ -1177,6 +1180,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 return;
             }
             save_ops.save();
+            return;
+        }
+        // SHIFT+S DROPS A PHASE RESET FROM ANY VIEW (architect 2026-08-28):
+        // "Shift+S should set a phase reset marker in T+P from S+W at the
+        // current playhead frame, switch to T+P, and highlight the marker that
+        // was just created." It sits ABOVE the home-view gate below because it
+        // does not need the gate's permission — it GOES to the home view first
+        // and then drops there, which is why it is not a sixth ruled exception
+        // to the binding (the note is at active_column_authoring_allowed,
+        // app_state.h). Shift-exact through the shared predicate, so this arm
+        // and the read-only allowlist cannot drift; the act's own body carries
+        // every other refusal.
+        if (is_phase_reset_drop_key(key, mods)) {
+            drop_phase_reset_in_target_view();
             return;
         }
         // Both drops are home-view authoring, so off home refuses silently
@@ -2780,6 +2797,77 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
         // view's playback reads source.wav across archival renders.
         target_render.rebind_to_source();
     }
+}
+
+// SHIFT+S — DROP A PHASE RESET FROM ANY VIEW (architect 2026-08-28). The
+// contract is at the declaration (input_handler.h); what lives here is the
+// order and why each step is where it is.
+//
+// THE SWITCHES COME FIRST AND THE DROP LAST, and that is decided rather than
+// chosen. The one drop body reads the playhead in the ACTIVE domain and
+// offsets it by kN/2 OUTPUT samples before inverting to a source frame
+// (drop_phase_reset_lead_in_at_playhead, phaseresetmarkers_ops.cpp), so it is
+// only correct with target view already live: run in source view the same
+// subtraction would take kN/2 SOURCE frames off a source cursor and seat the
+// reset somewhere the lead-in does not reach. Going to target first hands the
+// body the instant the user stood on, already re-expressed — the S/T
+// chokepoint translates the playhead through the live warp frame map — so
+// there is nothing here to convert by hand and no second drop body to keep in
+// step with bare `s`.
+//
+// It is the propagate paste's target-view tail one act over
+// (land_paste_in_target_view, phase_reset_propagate.cpp), and it takes that
+// tail's shape verbatim:
+//   * switch_active_audio_view_to is the SAME chokepoint bare `t` runs, in its
+//     SET-TO spelling, so naming 'T' from a session already in target view is
+//     the chokepoint's own no-op and this body spells no guard for it. Every
+//     invariant it owns — the entry validation, the domain translation of
+//     playhead and viewport, the flag-editor teardown, the seated-pinch clear,
+//     kick_waveform_sync and the target render's ensure_ready — arrives by
+//     construction.
+//   * A REFUSED ENTRY STOPS THE WHOLE PRESS, the absolute view selectors' own
+//     rule (bare 1/2/3, on_key): entering target view can fail its validity
+//     gate (the error-notice class, unreachable from program-written input),
+//     and dropping into the column while the audio view stayed behind would
+//     author in a combination the user did not ask for. The verdict is read
+//     off the state the chokepoint writes, never a new return value.
+//   * switch_active_markers_view_to('P') is the W/P WRITER rather than the `p`
+//     toggle, the propagate paste's reason exactly: the writer's own selection
+//     CLEAR must land before the drop, and the toggle's coincidence
+//     auto-select would only be overwritten by the drop's single-select one
+//     line later. Which is also the whole answer to "does the new reset end up
+//     selected": the drop single-selects what it creates and re-seats the
+//     playhead onto it, and nothing after it touches either.
+//   * ONE UNDO ENTRY, and it is the DROP'S OWN push — this body adds none.
+//     The entry's three view tags are therefore T / P / the standing tab, the
+//     view the reset was authored in, which is where Ctrl+Z lands the reader:
+//     a restore puts him back where the op happened, and the op happened in
+//     T+P (the restore's contract is at UndoEntry, app_state.h). The view he
+//     pressed the key IN is not recoverable from a phase-reset entry —
+//     op_mode is that entry's KIND as well as its column tag — and the whole
+//     act is one press either way.
+//   * THE KICK IS LAST, after the drop, for the reason the paste states: the
+//     column swap moves a flag-cache FINGERPRINT field, and on a W-column
+//     entry the audio switch's own kick ran BEFORE that swap, so its rebuild
+//     read the leaving column. A second kick is harmless (the clamps are
+//     idempotent and the fingerprint republishes identical), and it is this
+//     one that lands the plate, the column and the new selection's flag in the
+//     same frame.
+void GuiInputHandler::drop_phase_reset_in_target_view() {
+    // The blank/loading guard near the top of on_key already covers this; the
+    // helper is defensive for the same reason the S/T chokepoint's own copy is
+    // — nothing below it should run against an empty session.
+    if (app.loading || audio.total_frames() <= 0) return;
+    switch_active_audio_view_to('T');
+    if (app.active_audio_view != 'T') return;   // entry refused
+    active_views.switch_active_markers_view_to('P');
+    // The drop's own refusals — no sample rate, a frame past the EOF wall —
+    // are its, silent, and leave the view where these two switches put it: the
+    // act asked for T+P and got there, which is honest even when the reset
+    // could not be placed.
+    phase_resets.drop_phase_reset_lead_in_at_playhead();
+    viewport.invalidate_status_chain_area();
+    viewport.kick_waveform_sync();
 }
 
 void GuiInputHandler::apply_gui_scale(int percent) {

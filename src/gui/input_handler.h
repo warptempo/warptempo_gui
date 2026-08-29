@@ -3339,11 +3339,46 @@ private:
     // entry gate, the same flag-editor teardown and the same history-focus
     // clear. The SET-TO form exists for the callers that name a view rather than
     // an axis: the bare 1/2/3 absolute selectors, the phase-reset propagate's
-    // land-in-target tail, and — since 2026-08-28 — Undo::restore_history_entry,
-    // which restores the entry's own S/T tag (UndoEntry::audio_view) exactly as
-    // it restores the tab and the column, each through that axis's owner.
+    // land-in-target tail, and — both since 2026-08-28 —
+    // Undo::restore_history_entry, which restores the entry's own S/T tag
+    // (UndoEntry::audio_view) exactly as it restores the tab and the column,
+    // each through that axis's owner, and drop_phase_reset_in_target_view,
+    // Shift+S's trip to phase reset's home ahead of its drop.
     void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
+
+    // SHIFT+S — DROP A PHASE RESET FROM ANY VIEW (architect 2026-08-28):
+    // "Shift+S should set a phase reset marker in T+P from S+W at the current
+    // playhead frame, switch to T+P, and highlight the marker that was just
+    // created — which it would automatically do because it's the one under the
+    // playhead." The act lands the session in T+P through the two view
+    // chokepoints and then runs the ONE lead-in drop bare `s` runs there, so
+    // it is bare `s` with a view trip in front of it and never a second drop
+    // body. In T+P the two chords are the same one call, the trip having
+    // nothing to do.
+    //
+    // WHAT IT LEAVES BEHIND: the new reset SELECTED and the playhead ON it —
+    // both the drop's own doing, which is why the column switch (whose
+    // selection clear would undo them) has to run first. ONE undo entry, the
+    // drop's, tagged T / P / the standing tab.
+    //
+    // THE REFUSALS ARE EVERY GATE THE CHORD ALREADY PASSES, none of them new:
+    // the read-only lock (read_only_key_blocked drops Shift+S beside bare `s`
+    // — a phase reset is authored content), the `h` view (its allowlist admits
+    // neither), a standing modal (on_key's ranked dispatch above the arm), a
+    // blank session, and a target-view ENTRY that refuses its validity gate,
+    // which stops the whole act rather than dropping into a half-applied view.
+    // The drop's own two refusals stay its.
+    //
+    // THE HOME-VIEW BINDING IS NOT INVOLVED and this is not a sixth exception
+    // to it: the act does not author off home, it GOES home first (the note
+    // is at active_column_authoring_allowed, app_state.h).
+    //
+    // TWO CALLERS: on_key's Shift+S arm, and the bottom row's Drop marker
+    // button through the ordinary chord dispatch — its shift-click and its
+    // long press synthesize this very chord (redesign_button_shift_admits),
+    // so glass reaches the act with no keyboard and there is no second road.
+    void drop_phase_reset_in_target_view();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
     // assign app.gui_scale, push it to the renderer

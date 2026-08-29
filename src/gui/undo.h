@@ -2,6 +2,8 @@
 
 #include "active_views.h"
 #include "app_state.h"
+#include "gui_input.h"          // kHoldBeatMs, the product's one beat — the
+                                // tap-coalesce window below IS it
 #include "playback_lifecycle.h"
 #include "selection.h"
 #include "viewport.h"
@@ -88,8 +90,22 @@ enum class GestureKind {
 // This one gates ONLY the tap arm; held keys coalesce by identity with no clock
 // at all (arm (1) at the head of this file), so the value has one job — cover
 // the interval a human leaves between deliberate taps of the same key — and is
-// compositor-independent by construction. 500 ms is the architect's number.
-inline constexpr long long kTapCoalesceMs = 500;
+// compositor-independent by construction. Both halves of that still hold, and
+// neither is what the value is: nothing here reads a compositor setting, and
+// the held-key arm still consults no clock.
+//
+// IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE BEAT — 575 ms, the
+// architect's own labwc <repeatDelay> matched by convention (architect
+// 2026-08-28: "increase the coalesce wait to 575 ms, the global wait time for
+// long press, key repeat, etc."). It was its own 500 from 2026-08-01 until
+// that ruling. THE JOB IS UNCHANGED and so is the argument for the SIZE of it
+// — the interval a human leaves between deliberate taps of one key is the
+// same interval a deliberate hold has to cross and a deliberate second tap has
+// to arrive inside — so the product asks the hand for ONE cadence rather than
+// for a number per surface. The beat's own declaration carries the readers'
+// one inventory and lists this window apart from the holds, as it lists the
+// double-click window: this is not a hold.
+inline constexpr long long kTapCoalesceMs = kHoldBeatMs;
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and

@@ -188,7 +188,10 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N) on
 // the bottom row, and the BPM and iteration openers, listen and the
 // load-in-place in the icon row — are chords this allowlist drops, so the
-// toggle looks the way the `h` history view already looks.
+// toggle looks the way the `h` history view already looks. The drop's SHIFTED
+// chord (Shift+S, 2026-08-28) rides that face rather than asking for a second
+// one: the button is greyed by the same arm, and a greyed button's shift press
+// is consumed with its plain one.
 // THE MIRROR IS NOT AN EQUIVALENCE, and both directions have a member: the
 // propagate copy/paste pair is BLOCKED here with no face left to grey (its two
 // buttons left with the 2026-08-20 relocation), and THE MARKER MEASURE is LIT
@@ -413,6 +416,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Load in place button is still on it (app_state.h).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
+    // SHIFT+S IS BLOCKED, and it needs no term of its own to be: it drops a
+    // phase reset from any view (2026-08-28) — authored content, exactly what
+    // bare `s` drops and exactly what this gate refuses — and the is_save
+    // entry above is ctrl-exact, so the shifted spelling reaches no admission
+    // and falls out at the default. THE FACE FOLLOWS THE KEY WITH NO SECOND
+    // EDIT: the Drop marker button is already one of the four verbs the lock
+    // greys, and its press arm consumes a SHIFT press on a disabled button
+    // exactly as it consumes a plain one (arm_redesign_press, one predicate
+    // for both routes), so the button's shift-click and its long press refuse
+    // where the key refuses.
     // BARE `/` IS BLOCKED and is not admitted by any entry here: it opens the
     // measure EDITOR, and a measure is serialized content. (Shift+`/` was the
     // score-video jump's lock-legal admission from 2026-08-20 until the

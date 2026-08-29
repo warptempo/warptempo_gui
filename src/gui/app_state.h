@@ -2305,6 +2305,20 @@ enum class RedesignButton {
     // ABOUT THEM CHANGED WITH THE ROW — the chords, the gates and both faces
     // came across whole.
     //
+    // THE DROP ADMITS SHIFT (architect 2026-08-28), and it is the group's one
+    // member that does: its twin is SHIFT+S, THE PHASE-RESET DROP FROM ANY
+    // VIEW, so a shift-click or a LONG PRESS lands the session in T+P and
+    // drops the lead-in reset there — bare `s`'s own act with the view trip in
+    // front of it (drop_phase_reset_in_target_view, input_handler.cpp; the
+    // membership is redesign_button_shift_admits below, and the tooltip's
+    // second line is bound to it by the static_assert). The long press is
+    // WANTED here for the play button's reason: a phase reset dropped without
+    // leaving the warp column is a glass workflow as much as a desk one, and
+    // the panel has no shift key. THE LOCK STILL REFUSES IT — the button is
+    // one of the four this arm greys on a read-only tab, and a greyed button
+    // consumes a shift press with its plain one, so the face and both chords
+    // agree with no second edit.
+    //
     // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S, which is the one thing
     // to read twice here: the bottom row is otherwise lit unconditionally, and
     // these four are its exception in both directions. Authoring chords, so
@@ -3303,9 +3317,12 @@ inline int dropdown_h_px(DropdownMenu m) {
 // cross is the interval a deliberate second tap has to arrive inside. It is
 // NOT a hold, which is why the beat's own declaration lists it apart.
 //
-// kTapCoalesceMs (500, the undo-coalescing window, undo.h) is a DIFFERENT
-// window measuring a different thing — how long a standing undo subject keeps
-// accepting rapid taps — and it stays where it is.
+// kTapCoalesceMs (the undo-coalescing window, undo.h) measures a DIFFERENT
+// thing — how long a standing undo subject keeps accepting rapid taps of the
+// same authoring key — and it READS THE SAME BEAT since 2026-08-28, on the
+// same argument this window took a day earlier: one cadence for the hand,
+// not a number per surface. The beat's declaration lists the two of them
+// apart from the holds, neither being one.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
 constexpr int     kDoubleClickSlackPx = 8;
 
@@ -7876,6 +7893,14 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // reason of its own, rewriting tempo through a derivation over a SPAN rather
 // than editing one marker's value. Those four still consult this predicate and
 // still refuse silently off home. Nothing changes in P+source either.
+// SHIFT+S IS NOT A SIXTH EXCEPTION and must not be read as one (2026-08-28):
+// the chord drops a phase reset "from any view", but it does not AUTHOR off
+// home — it runs the two view chokepoints first, so by the time the one drop
+// body executes the session is in T+P and the drop is the ordinary home-view
+// act bare `s` performs there, under this predicate's ordinary answer. The
+// omitted list above is unchanged: the drop is still positional and still
+// home-view-only. (The act is
+// GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp.)
 // The list
 // SHRANK to two on 2026-07-29, grew back to three on 2026-08-07, to four on
 // 2026-08-19 and to five on 2026-08-24: the
@@ -9709,12 +9734,19 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // Shift+`/` score-video jump and left it whole at the 2026-08-21 sunset that
 // removed the jump: the button has one chord again, so there is no twin for a
 // shift press or a long press to reach.)
+// (THE DROP JOINED 2026-08-28, with Shift+S: every shift-enabled gesture whose
+// BARE form has a button admits that button's shift press and its long press,
+// and says so on its second line — the architect's rule, stated here because
+// this is the membership it is about. The drop's shifted twin drops a phase
+// reset from any view, so the button reaches both columns' drops the way the
+// letter does.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
-           b == RedesignButton::TransportPlayStop;
+           b == RedesignButton::TransportPlayStop ||
+           b == RedesignButton::IconMarkerDrop;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over, and the ROSTER'S
@@ -9994,8 +10026,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::TransportSkipForward:
             return {"Go to end (End)",
                     "Press Ctrl to ignore the trim window."};
-        // THE SINGLE-MARKER VERBS (2026-08-12), all one-line, the acts named
-        // plainly in HELP's vocabulary. None admits shift. They are the bottom
+        // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
+        // HELP's vocabulary. ONE OF THEM ADMITS SHIFT since 2026-08-28 — the
+        // DROP, whose shifted chord drops a phase reset from any view — and it
+        // carries the second line that says so; the other three take one line
+        // each. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
@@ -10004,8 +10039,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // buttons' own gates — and a dead icon still explains itself. (The
         // MARKER MEASURE below them shares both greys since the 2026-08-21
         // sunset returned it to the lock's set.)
+        // THE DROP'S SHIFT LINE (2026-08-28) names the act and the modifier
+        // and not a key, this table's rule for second lines; the
+        // static_assert below keeps the line and the admission one fact. It
+        // says "in target view" because that is what the shifted press DOES
+        // beyond dropping — it takes the reader there, phase reset's home,
+        // and drops the reset at the cursor's own instant once it arrives.
         case RedesignButton::IconMarkerDrop:
-            return {"Drop marker (s)", nullptr};
+            return {"Drop marker (s)",
+                    "Press Shift to drop a phase reset in target view."};
         case RedesignButton::IconMarkerDelete:
             return {"Delete markers (Delete)", nullptr};
         case RedesignButton::IconMarkerDisable:
@@ -10272,6 +10314,10 @@ static_assert(
      nullptr) ==
         (redesign_button_shift_admits(RedesignButton::TransportPlayStop) ||
          redesign_button_ctrl_admits(RedesignButton::TransportPlayStop)) &&
+    (redesign_button_tooltip(RedesignButton::IconMarkerDrop).line2 !=
+     nullptr) ==
+        (redesign_button_shift_admits(RedesignButton::IconMarkerDrop) ||
+         redesign_button_ctrl_admits(RedesignButton::IconMarkerDrop)) &&
     (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
     // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
     // each side of the equivalence and cannot pass vacuously if the members

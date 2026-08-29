@@ -97,7 +97,15 @@ struct Viewport {
     //    toggle, so it kicks at its own tail — after the created selection, so the
     //    column and the selection hash rebuild together — and on its W+source
     //    entry that is a harmless SECOND kick, the audio-view toggle's own having
-    //    run before the column swap. Also here: the
+    //    run before the column swap. SHIFT+S — THE DROP FROM ANY VIEW
+    //    (2026-08-28, GuiInputHandler::drop_phase_reset_in_target_view,
+    //    input_handler.cpp) — is that same case through a third door and takes
+    //    the same tail for the same reason: it calls
+    //    switch_active_markers_view_to('P') directly (the writer's selection
+    //    clear has to land before the drop's single-select) and kicks after
+    //    the drop, so the column, the plate and the new reset's flag land in
+    //    one frame; entered from W its audio switch kicked before the column
+    //    swap, making this the harmless second. Also here: the
     //    settings tab_X_viewport_start commit, the strip drag's TERMINATING-EVENT
     //    finalize — re-derived 2026-07-29, the true terminating events being
     //    release, button loss, and the force-end finalizer's three callers

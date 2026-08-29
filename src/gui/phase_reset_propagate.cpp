@@ -607,9 +607,13 @@ void PhaseResetPropagate::paste_state_apply() {
 }
 
 // The architect inspects a propagate paste by eye instead of the old
-// Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate is the one
-// authoring action that starts in the warp (source) view and ends in target
-// view. This tail is shared by its three paste actions.
+// Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate starts in the warp
+// (source) view and ends in target view, and this tail is shared by its three
+// paste actions. IT IS NO LONGER THE ONLY ACT OF THAT SHAPE — SHIFT+S, the
+// drop from any view (2026-08-28,
+// GuiInputHandler::drop_phase_reset_in_target_view), does the same trip for
+// the same reason and takes this tail's own order verbatim, the reasoning
+// below reading straight across.
 //
 // THE CLAIM IS SCOPED TO THIS PROPAGATE (2026-08-20): the MEASURE propagate
 // that joined the family that day switches NO view and has no analogue of this

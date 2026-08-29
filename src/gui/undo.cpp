@@ -219,9 +219,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     on its members) and the tab is what the entry is filed under.
             // The comparison runs on the clock's OWN duration, never on a
             // whole-millisecond count: duration_cast truncates toward zero, so
-            // counting first would have admitted every real interval in
-            // [500ms, 501ms) as "500". Compared directly, the boundary is
-            // exactly kTapCoalesceMs.
+            // counting first would have admitted every real interval inside
+            // the millisecond ABOVE the window as if it were the window's own
+            // last one. Compared directly, the boundary is exactly
+            // kTapCoalesceMs.
             const std::chrono::steady_clock::duration elapsed =
                 std::chrono::steady_clock::now() - last_gesture_time_;
             merge = elapsed <= std::chrono::milliseconds{kTapCoalesceMs}

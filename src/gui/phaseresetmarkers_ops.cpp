@@ -51,9 +51,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.invalidate_waveform_area();
     viewport.invalidate_status_chain_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
-    // create path is the lead-in drop below (bare `s` and the empty-lane
-    // double-click both take it), which authors N/2 BEFORE the playhead, so the
-    // playhead lands back on the seeded reset. This is a drop consequence (the
+    // create path is the lead-in drop below (bare `s`, the empty-lane
+    // double-click and Shift+S all take it), which authors N/2 BEFORE the
+    // playhead, so the playhead lands back on the seeded reset. This is a drop
+    // consequence (the
     // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
@@ -82,9 +83,16 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // drop_phase_reset_at_position so the created reset takes the full create path
 // — walls, undo, selection, the overlay hide the drop's own seat carries —
 // unchanged; only the
-// seed frame is offset. This is the phase column's ONLY drop (bare `s` and the
-// empty-lane double-click), and both routes gate it on the home-view predicate,
-// whose P arm IS target view — where the overlay/lead-in exist.
+// seed frame is offset. This is the phase column's ONLY drop, and its routes
+// are three: bare `s`, the empty-lane double-click, and — since 2026-08-28 —
+// SHIFT+S, the drop from any view. The first two gate on the home-view
+// predicate, whose P arm IS target view; the third does not consult it at all
+// and does not need to, because it SWITCHES the session into T+P first
+// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp) and
+// then calls this. Either way the body runs with target view live, which is
+// what it requires: the kN/2 below is an OUTPUT-domain offset read off an
+// active-domain cursor, and the overlay and the lead-in it aims at exist
+// nowhere else.
 void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     const int64_t ph =

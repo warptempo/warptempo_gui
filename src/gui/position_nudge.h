@@ -282,8 +282,8 @@ int64_t stepped_anchor_frame(
 // follow shifts the viewport — the offscreen-focused case) falls AFTER the
 // accepted-event timestamp record_gesture stamps. The window to the next press is
 // therefore measured from before that render rather than after it, i.e. the render's
-// own duration is spent out of the 500 ms: a manual re-tap landing in the last few
-// milliseconds of the window could open a fresh entry where a
+// own duration is spent out of the WINDOW: a manual re-tap landing in the last
+// few milliseconds of it could open a fresh entry where a
 // record-after-playhead ordering would have merged. ACCEPTED and not worth a
 // reorder: the constant is a human-tapping interval, a discrete sync render is a
 // small fraction of it, and the direction of the error is the SAFE one (an extra

@@ -91,10 +91,20 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //   * and, since 2026-08-27, the DOUBLE-CLICK WINDOW (kDoubleClickMs,
 //     app_state.h), which is NOT a hold and is listed apart for that reason:
 //     it is the interval a deliberate SECOND TAP has to arrive inside, tied to
-//     this beat so the product asks the hand for one cadence and not two.
+//     this beat so the product asks the hand for one cadence and not two;
+//   * and, since 2026-08-28, THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs,
+//     undo.h), which is not a hold either and joins the double-click apart
+//     from the holds for the same reason: it is the interval a deliberate
+//     SECOND PRESS of the same authoring key has to arrive inside to land in
+//     the burst's existing undo entry instead of opening its own. It carried
+//     its own 500 from 2026-08-01 until the architect tied it to the beat
+//     ("the global wait time for long press, key repeat, etc."), and the
+//     properties that made it its own number are untouched by the move: it
+//     gates the TAP arm alone, and the held-key arm beside it consults no
+//     clock at all.
 // So a keyboard hold, a chrome shift hold, a touch region hold, a held
-// button's first repeat and a double tap all land on the same beat rather
-// than on numbers that happen to be near each other.
+// button's first repeat, a double tap and a re-tapped nudge all land on the
+// same beat rather than on numbers that happen to be near each other.
 //
 // 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
 // DELIBERATELY and not by coincidence: it is the architect's own labwc
@@ -206,6 +216,26 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 // row dispatches this very chord through on_key like every other command row.
 inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that DROPS A PHASE RESET FROM ANY VIEW (architect
+// 2026-08-28): SHIFT+S exactly — no ctrl, no alt. It lands the session in
+// T+P, phase reset's home, and drops the lead-in reset at the playhead's own
+// musical instant there, so the reset the architect wants while he is looking
+// at the warp column costs one key instead of a view trip and back. Ctrl+S is
+// the save on this letter and Shift+S was the strict rule's consumed no-op
+// until this date; the shifted `s` is the only decoration on it that binds.
+//
+// IT IS BARE `s`'s ACT WITH THE VIEW TRIP IN FRONT, not a second one: in T+P
+// the two chords reach the same one drop body, and everywhere else the
+// difference is exactly the two view chokepoints Shift+S runs first (the act
+// is GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp).
+// The same two readers as the Space pair above — on_key's dispatch arm
+// (input_handler.cpp) and the read-only allowlist (read_only_key_blocked,
+// input_key_dispatch.cpp, which DROPS the chord: the drop is authored
+// content, exactly as bare `s` is) — and the same one-owner reason.
+inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {
