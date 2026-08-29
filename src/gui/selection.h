@@ -25,6 +25,21 @@ struct Selection {
 
     void repair_last_selected();
     void set_single_selection(int idx);
+    // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
+    // set_single_selection's own body one arity up, with the same two clears
+    // — the shift-range anchor and the STICKY CTRL — because it is the same
+    // boundary: a membership REPLACE is what ends both (the contract is at
+    // AppState::add_to_selection). ONE CALLER, the phase-reset propagate
+    // PASTE's target-view landing (land_paste_in_target_view), which is the
+    // product's one act that installs a set it just created and the LAST
+    // wholesale replace outside a Selection mutator; it wrote the two fields
+    // directly until this date, leaning on the column switch two lines above
+    // it to clear them (behaviour-neutral today — the paste is W-gated, so
+    // that switch always fires — but a property of the paste's entry gate
+    // rather than of the replace). `focus` must be a member (the paste hands the earliest created
+    // reset, the programmatic group's own rule); an EMPTY set with focus -1
+    // degenerates to clear_selection's state.
+    void replace_selection(std::set<int> members, int focus);
     void clear_selection();
     void collapse_to_focused();
     bool toggle_selection_membership(int idx);

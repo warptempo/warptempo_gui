@@ -171,6 +171,18 @@ void GuiPrompt::activate_response(char k) {
     }
 }
 
+// The load confirmation's programmatic abandon (contract at the declaration).
+// It reaches the SAME body Esc reaches — the prompt down, both parked subjects
+// dropped through cancel_load_in_place — so the asynchronous edge and the
+// keyboard's own Cancel cannot leave different state behind.
+void GuiPrompt::cancel_load_confirmation() {
+    if (!app.prompt.active) return;
+    if (app.prompt.trigger != DialogTrigger::LOAD_IN_PLACE_CONFIRM) return;
+    app.prompt.active = false;
+    viewport.invalidate_all();
+    if (input != nullptr) input->cancel_load_in_place();
+}
+
 void GuiPrompt::cancel_paste_confirmation() {
     app.prompt.active = false;
     app.pending_paste_anchor = -1;

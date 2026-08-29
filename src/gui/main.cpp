@@ -1000,7 +1000,11 @@ namespace {
 
 // What one project's session hands back to the loop: the process exit status
 // when the session ends the process, and otherwise the NAME of the project to
-// reopen (empty = exit with `exit_status`).
+// reopen (empty = exit with `exit_status`). `exit_status` is 0 for a clean
+// quit and 1 for a FATAL IN-SESSION LOAD REFUSAL — the same status the loop's
+// own reopen refusal and startup's resolution refusal return, so one refusal
+// class has one status on every road (the session's one writer is the
+// fatal-load bit in run_project).
 struct GuiProjectOutcome {
     int         exit_status = 0;
     std::string reopen;
@@ -1176,7 +1180,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     playback_lifecycle.render_player = &render_player;
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
-                                              playback_lifecycle);
+                                              playback_lifecycle, selection);
     GuiSaveOps save_ops(app, undo, active_views);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle,
@@ -1369,6 +1373,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
     bool initial_load_done = false;
+
+    // THE SESSION'S FATAL-LOAD BIT (2026-08-29), the ONE owner of this
+    // session's non-zero exit status. Every in-session load refusal is
+    // TERMINAL — a project is opened by rebuilding this whole object set and
+    // there is no in-session replacement surface — and the loop's own reopen
+    // refusal (resolve_project below) already returns 1, as startup's does.
+    // Without this bit the outcome defaulted to 0, so a wrapper could not tell
+    // a refused load from a clean quit and the comment at the load site,
+    // which calls them "the same fatal exit", was false. ONE WRITER, the load
+    // tail below — every deeper failure (the decode, the four sidecar arms,
+    // the collision, the past-EOF walls) requests exit AND returns false, so
+    // they all converge on that one `if`. A clean quit leaves it false.
+    bool fatal_load = false;
 
     // -- Redraw -------------------------------------------------------------
 
@@ -1934,6 +1951,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 // changed between that check and this load. Deeper
                 // decode/sidecar failures already request exit at the owning
                 // site; request_exit() is idempotent for those paths.
+                // AND THE STATUS IS 1: the fatal-load bit above is this
+                // session's one owner of a non-zero exit, and every one of
+                // those deeper arms returns false into this `if`, so the
+                // whole class is marked here.
+                fatal_load = true;
                 gui.request_exit();
                 return;
             }
@@ -2675,6 +2697,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // seated name is the project to reopen (the loop contract, platform.h).
     GuiProjectOutcome outcome;
     if (!gui.exit_requested()) outcome.reopen = app.reopen_project;
+    // A REFUSED LOAD EXITS 1, a clean quit 0 — the loop's own reopen refusal
+    // below returns 1 too, and startup's does, so one refusal class has one
+    // status on every road. The bit's owner is the load tail above.
+    if (fatal_load) outcome.exit_status = 1;
 
     // THE TEARDOWN, in this order. The platform forgets the five worker fds
     // first — the workers close them below, and the next session registers

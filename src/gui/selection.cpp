@@ -118,6 +118,22 @@ void Selection::set_single_selection(int idx) {
     damage_overlay_on_subject_change(old_subject);
 }
 
+// The whole-set replace (contract at the declaration): set_single_selection's
+// body one arity up, with the same two clears and the same damage — one
+// chokepoint, so the sticky ctrl and the shift anchor cannot survive a replace
+// made programmatically any more than one made by a click.
+void Selection::replace_selection(std::set<int> members, int focus) {
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
+    app.shift_range_anchor = -1;
+    app.add_to_selection   = false;
+    app.selected_markers   = std::move(members);
+    app.last_selected_marker =
+        app.selected_markers.count(focus) ? focus : -1;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_status_chain_area();
+    damage_overlay_on_subject_change(old_subject);
+}
+
 void Selection::clear_selection() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     app.add_to_selection   = false;   // and the sticky ctrl that fed it

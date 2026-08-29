@@ -150,6 +150,22 @@ struct GuiPrompt {
     // PASTE_CONFIRM prompt is up.
     void cancel_paste_confirmation();
 
+    // Real abandon for a standing LOAD_IN_PLACE_CONFIRM, for a subject that
+    // has just been destroyed under it. Its ONE caller is the history
+    // prefetch's FAILED-SCAN arrival (GuiInputHandler::on_history_prefetch_ready),
+    // which closes the `h` view off a poll and with it clears the walk member
+    // the question names — leaving an actionable "Load `<member>` in place?"
+    // over the ordinary editor whose OK would find no subject and load
+    // nothing, silently. This drops the question and both parked subjects
+    // through the answer's own Cancel body, so a subject cannot outlive its
+    // question on the asynchronous edge either.
+    //
+    // IT IS THIS ONE PROMPT KIND AND NOT A GENERAL DISMISS: the trigger test
+    // is what makes it safe to call from an edge that knows nothing about
+    // which question is standing — an unsaved-work or paste question is left
+    // exactly where it was.
+    void cancel_load_confirmation();
+
 private:
     void open_unsaved(DialogTrigger t);
     void proceed(DialogTrigger t);

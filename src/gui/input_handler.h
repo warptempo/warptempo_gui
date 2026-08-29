@@ -804,8 +804,9 @@ struct GuiInputHandler {
     GuiHistoryCommitWorker&  history_commit_worker;
     // THE HISTORY WALK'S PREFETCH STORE (2026-08-07). The `h` visit BINDS to
     // it (GuiHistoryDiff::init) instead of running git itself, and this handler
-    // owns the three kick sites' one funnel — kick_history_prefetch, which is
-    // also what defers a kick that would land while the view stands.
+    // owns the three kick sites' one funnel — kick_history_prefetch, whose
+    // definition carries the proof that none of the three can fire with a
+    // visit standing.
     GuiHistoryPrefetch&      history_prefetch;
     // The Synchronize to external storage act's background worker
     // (2026-08-27). ONE user: synchronize_to_external_storage, which
@@ -2796,6 +2797,42 @@ private:
                                std::vector<GuiPhaseResetMarker> phase_resets,
                                const EngineSettings& engine);
 
+    // THE PROMOTE ROADS' PAST-EOF WALL GUARD (2026-08-29), the ONE owner for
+    // the three roads that install a marker set the LIVE stores did not
+    // author. It asks the loader's own shared guard
+    // (first_past_eof_wall_defect, marker_store_validate.h) of a candidate
+    // marker pair against THIS session's audio and hands back the guard's own
+    // first-offender sentence, or nullopt when every position is inside its
+    // wall.
+    //
+    // WHY IT EXISTS: the startup loader and the picker's dry run both call
+    // that guard, and a marker past `total - 1` is the ADVERSARIAL class they
+    // hard-fail on — "the audio was swapped outside the GUI". But a `tmp/`
+    // cell, a checkpoint's sidecars and a diff flag's then side are all
+    // sidecar-shaped state authored against WHATEVER audio stood at the time,
+    // and none of them passed through those two doors. Without this the
+    // program could install a marker past the wall, Ctrl+S would write it, and
+    // the next launch would refuse the file this program wrote — the same
+    // class as a program-written file the program then refuses. It also keeps
+    // warp_frame_map_build.cpp's "unreachable from a live store" wall true.
+    //
+    // THE TRIM PAIR PASSED IN IS THE LIVE ONE and can only pass: a load in
+    // place writes no trim, every trim gesture walls at total-1, and the load
+    // boundary proved this pair at startup. It is passed because the guard's
+    // six checks are one call; the marker arms are the only ones that can
+    // fire here.
+    //
+    // THREE CALLERS: load_render_entry_in_place and
+    // load_history_commit_in_place (each of the parsed pair, before
+    // apply_recipe_in_place) and run_history_revert (of the markers the
+    // subject's REMOVED flags would restore, refusing the whole revert). The
+    // LOCAL-tab load is deliberately NOT a caller: its state is a snapshot of
+    // THIS session's own stores, which were proved at the load boundary and
+    // walled by every gesture since, so there is no foreign authoring in it.
+    std::optional<std::string> in_place_load_wall_defect(
+        const std::vector<GuiWarpMarker>& warp,
+        const std::vector<GuiPhaseResetMarker>& phase_resets) const;
+
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
     // agnostic (source OR target authoring view). Reads and validates the wav's
@@ -3975,18 +4012,15 @@ private:
     // run; it measures exactly once — when member 0 first exists, or when the
     // run finishes having delivered none — and is a no-op forever after.
     void measure_history_head_delta();
-    // A KICK THAT WOULD LAND WHILE THE VIEW STANDS IS DEFERRED to the exit —
-    // the visit's list must not be swapped underneath it. Set here, flushed by
-    // close_history_mode.
-    bool deferred_history_prefetch_kick_ = false;
-
 public:
     // -- THE HISTORY PREFETCH'S THREE PUBLIC EDGES (2026-08-07) -------------
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
     // funnel for all three kickers (main.cpp's startup load tail, the
-    // checkpoint completion's re-warm, and the `h` entry's staleness kick), and
-    // the one place the deferred-while-active rule lives.
+    // checkpoint completion's re-warm, and the `h` entry's staleness kick),
+    // none of which can fire with a visit standing (the definition carries the
+    // proof, and the deferral bit that stood for the case none of them
+    // produces was deleted producer-less 2026-08-29).
     void kick_history_prefetch();
     // The same question with the staleness test in front of it: kick only when
     // the store describes another source, another projects_repo, or a branch tip

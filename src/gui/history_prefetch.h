@@ -92,8 +92,9 @@ public:
     // outcome that MAY have committed (four of the six —
     // GuiInputHandler::on_history_checkpoint_complete owns that derivation), and
     // the `h` entry when the store is STALE. All three reach this through
-    // GuiInputHandler::kick_history_prefetch, which is what defers a kick that
-    // would land while the view stands.
+    // GuiInputHandler::kick_history_prefetch, whose definition carries the
+    // proof that NONE of the three can fire with an `h` visit standing — the
+    // property a visit needs, its indices naming this store's deque.
     void kick(std::string source_audio_path, std::string projects_repo);
 
     // What a drain did. `members_appended` is how many walk members arrived (0

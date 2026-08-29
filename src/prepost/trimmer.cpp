@@ -269,7 +269,8 @@ std::expected<TrimPlan, std::string> plan_trim(
     // schedule is therefore the full render's schedule rigidly translated by
     // construction: schedule identity with the full render no longer rests on
     // the translated map above re-interpolating llrint-identically to the full
-    // map at half-integer ties. The loop
+    // map at half-integer ties (architect approval 2026-07-30; the site record
+    // added 2026-08-29 under that day's approval). The loop
     // bound is the engine's own target-extent test on the TRANSLATED map
     // (m*R_s < llrint(close_tgt) + N, the same t_s < target_total_frames the
     // engine steps), derived from the same close_tgt the closing anchor

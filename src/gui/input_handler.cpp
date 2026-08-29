@@ -1513,14 +1513,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
-        if (app.active_markers_view == 'P') {
-            if (app.active_audio_view != 'T') return;   // phase home = target
+        // OFF HOME IS THE CONSUMED REFUSAL, through the ONE predicate
+        // (active_column_authoring_allowed, app_state.h) rather than a second
+        // spelling of its two arms: this site hand-wrote "P wants T, W wants
+        // S" until 2026-08-29, which is exactly that predicate's body, and a
+        // one-owner rule with a hand copy beside it is a rule waiting to
+        // drift. It covers BOTH refusals the routing above describes — P+source
+        // and W+target, the latter having lost the tempo-image step with the
+        // whole tempo drag family.
+        if (!active_column_authoring_allowed(app)) return;
+        if (app.active_markers_view == 'P')
             phase_resets.nudge_selected_phase_resets(direction, rpt);
-        } else if (app.active_audio_view == 'T') {
-            return;   // W+target: no position authoring, no tempo-image step
-        } else {
-            warpops.nudge_selected_markers(direction, rpt);  // warp home: position
-        }
+        else
+            warpops.nudge_selected_markers(direction, rpt);
         return;
     }
 
@@ -2313,16 +2318,35 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     hide_shift_tooltip();
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx 4 — THE FOLDER OVERLAY (2026-08-28): one row per detent, the wheel's
-    // direction the list's (down = later rows), every modifier ignored — the
-    // band scrolls and nothing else moves, whichever content fills it. The
-    // whole wheel vocabulary under either owner is this arm; every other
-    // position is swallowed at the context. The mechanics are the widget's
-    // and the damage this file's, the band being the only thing that moved.
+    // ctx 4 — THE FOLDER OVERLAY (2026-08-28): one row per detent on the PLAIN
+    // wheel, the wheel's direction the list's (down = later rows) — the band
+    // scrolls and nothing else moves, whichever content fills it. The whole
+    // wheel vocabulary under either owner is this arm; every other position is
+    // swallowed at the context. The mechanics are the widget's and the damage
+    // this file's, the band being the only thing that moved.
+    //
+    // EVERY MODIFIED WHEEL IS A SWALLOWED NO-OP HERE (2026-08-29), strict
+    // modifier validation's own rule, which this arm read as "every modifier
+    // ignored" until that date and so let Ctrl / Alt / Shift + wheel scroll
+    // the list. The band binds one wheel act, so the other three chords bind
+    // nothing and must not fall through to a bare one — and none of them may
+    // reach the surfaces BELOW the veil either, which is why the refusal is a
+    // return rather than a fall-through.
+    //
+    // AND THE HOVER IS RE-DERIVED AFTER A SCROLL, at this event's own
+    // coordinates: the rows slide under a stationary pointer, so a stored
+    // hovered_row would light the row that moved INTO that index while the
+    // pointer sits on the row now one place up, and the click would then go to
+    // an unlit row. It is the dropdown hover's problem answered the same way
+    // (main.cpp's loop-settled hook re-derives that one); no second store is
+    // needed here — on_wheel is handed the pointer position.
     if (ctx == 4) {
+        if (mods.ctrl || mods.shift || mods.alt) return;
         const int rows = dir == GuiMouseButton::WheelDown ? count : -count;
-        if (folder_overlay::scroll_rows(app, rows))
+        if (folder_overlay::scroll_rows(app, rows)) {
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
+            update_folder_overlay_hover(x, y);
+        }
         return;
     }
     // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take

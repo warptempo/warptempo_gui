@@ -53,10 +53,14 @@
 // tail (adjust_tempo_cents, below) argues the re-land in full as the precedent
 // these four take.
 // THE POSITIONAL FAMILY IS NOT HERE and stays home-view-only, refusing
-// silently off home as it always did: the drop (drop_marker /
-// drop_copy_previous_at_playhead), the flag drag (marker_drag.cpp), the bare
-// Left/Right nudge (nudge_selected_markers) and the `m` bpm open, which
-// rewrites tempo through a derivation over a SPAN.
+// silently off home as it always did — each at its own DISPATCH site, through
+// the one predicate: the drop (drop_marker / drop_copy_previous_at_playhead),
+// the flag drag (marker_drag.cpp), the bare Left/Right nudge
+// (nudge_selected_markers, whose dispatch joined the predicate's callers
+// 2026-08-29, having spelled its two arms by hand until then) and the `m` bpm
+// open, which rewrites tempo through a derivation over a SPAN. The predicate's
+// own site owns the call-site inventory (active_column_authoring_allowed,
+// app_state.h).
 
 // Index of the nearest marker strictly before `time_frame` that survives
 // into the render, or -1 if none. Uses the same cascade definition as render

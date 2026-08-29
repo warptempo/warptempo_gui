@@ -1616,6 +1616,19 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // product whose gestures were all taken on the finger. Consuming rather
     // than returning it is deliberate: a mouse click that fell through to the
     // system would act on whatever is behind the activity.
+    //
+    // THE S PEN IS IN THAT CLASS AND IS DROPPED DELIBERATELY (recorded
+    // 2026-08-29, the recorded-asymmetry rule). The Tab S10 FE ships one, and
+    // it delivers on AINPUT_SOURCE_STYLUS, which shares the POINTER class bit
+    // with the touchscreen but not the touchscreen's own source bit — so the
+    // whole-source test below fails for it exactly as it fails for a mouse,
+    // and the pen reaches nothing today. It is not routed as a finger: every
+    // touch judgment in the arc was taken on a FINGERTIP — the slop, the
+    // disambiguation window, the region-hold beat, the flag-box carve-out —
+    // and a stylus is a precise instrument those numbers were not measured
+    // for, so admitting it would mean re-taking them on glass rather than
+    // widening a source test. Unverified on the device; it needs an architect
+    // ruling, not a bit.
     const int32_t source = AInputEvent_getSource(event);
     if ((source & AINPUT_SOURCE_TOUCHSCREEN) != AINPUT_SOURCE_TOUCHSCREEN) {
         return 1;

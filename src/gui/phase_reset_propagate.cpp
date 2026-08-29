@@ -694,13 +694,27 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // marker, and the overlay it may leave standing derives from the tab's own
     // trim, unchanged by the paste.
     if (!created.empty()) {
-        app.selected_markers     = created;
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are
         // equal, so there is no clicked marker to prefer (the multi-select
         // CLICKS instead focus what the user clicked, and land there).
-        app.last_selected_marker = *created.begin();
+        //
+        // THROUGH THE SELECTION CHOKEPOINT (2026-08-29). The two fields were
+        // written directly here until that date — the product's LAST wholesale
+        // replace outside a Selection mutator — which left the sticky ctrl
+        // (add_to_selection) and the shift-range anchor depending on a
+        // NEIGHBOUR to clear them: the column switch two lines up, whose
+        // clear_selection puts both clears above its own already-empty early
+        // return. THAT ARGUMENT HOLDS TODAY and the change is behaviour-neutral
+        // — the paste's two chords are W-gated, so the switch to P always
+        // fires — but it rests on the switch not being a no-op, which is a
+        // property of the paste's ENTRY GATE rather than of this act, and
+        // switch_active_markers_view_to DOES return early when the column is
+        // already the target. Riding the chokepoint makes it a property of
+        // this line instead; the contract asking for it is at
+        // AppState::add_to_selection.
+        selection.replace_selection(created, *created.begin());
         // The marker lane owns the playhead (the rule is stated in full at
         // land_playhead_on_marker, input_pointer.cpp): this tail hands the lane a
         // brand-new focus, so it lands on it, and the always-visible cursor then

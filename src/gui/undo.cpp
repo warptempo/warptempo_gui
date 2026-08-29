@@ -167,16 +167,21 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     if (stamp_matches) {
         if (synthesized_repeat) {
             // ARM (1), REPEAT IDENTITY — NO CLOCK. A press the process
-            // synthesized itself from a still-held input merges unconditionally,
-            // because the burst's structure already supplies the adjacency
-            // properties a clock would enforce numerically, in two halves.
+            // synthesized itself from a still-held input merges without a
+            // clock, because the burst's structure already supplies the
+            // adjacency a clock would enforce numerically. Three parts:
+            // (a) and (b) buy the window, (c) tests the subject.
             // (a) Layer (1) of the platform's key-repeat contract (stated at
             // GuiInputCore::maybe_fire_repeat) disarms the
             // hold at every intervening pointer-button press, key press, and
             // completed wheel emission, so a synthesized repeat STRUCTURALLY
-            // CANNOT arrive after another command ran — and the held-BUTTON
-            // producer beside it (tick_chrome_press_repeat, the four cardinal
-            // arrows) buys the same property from its own edge, the physical
+            // CANNOT arrive after another INPUT-BORNE command ran — and the
+            // held-BUTTON producer beside it (tick_chrome_press_repeat, whose
+            // repeat-eligible members are the four cardinal arrows and, since
+            // 2026-08-26, the waveform magnification pair, which fires here
+            // and pushes nothing — the membership is kToolbarChords' own
+            // `repeats` column, never a second list) buys the same property
+            // from its own edge, the physical
             // key delivery (main.cpp's set_on_key hook), the only edge that
             // can let a command in while a finger holds a button (the
             // inventory is at AppState::ChromePress). (b) The burst's OPENER
@@ -191,13 +196,33 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // and the tap arm's own rules, and only the repeats BEHIND it
             // reach this arm — without that, a hold begun over a surviving
             // foreign stamp would merge its first fire into
-            // another subject's entry. "Same selection / same tab
-            // / same history" all follow, which is why this arm needs neither the
-            // window nor the subject test below. Keeping it clock-free is
+            // another subject's entry. What (a) and (b) together buy is the
+            // WINDOW: no clock is needed, and none is asked. THE SUBJECT IS
+            // NOT bought by them — see (c) below. Keeping it clock-free is
             // deliberate: a hold must coalesce at ANY compositor repeat delay or
             // rate, and that independence is the whole reason repeat identity
             // replaced the retired kGestureCoalesceMs.
-            merge = true;
+            //
+            // (c) AND THE SUBJECT IS TESTED ANYWAY, since 2026-08-29 — the tap
+            // arm's own three terms, minus the clock. Halves (a) and (b) argue
+            // that no COMMAND runs between a burst's opener and its repeats,
+            // and layer (1) does disarm at every input edge; what neither can
+            // see is the RUN LOOP'S TICK, which is not an input edge and which
+            // the A/B AUDITION uses to switch tabs mid-act (GuiAbAudition's
+            // natural-end branch calls switch_active_tab_view_to, which clears
+            // the selection and runs the coincidence auto-select). A held
+            // Up/Down straddling that switch would otherwise step the OTHER
+            // tab's marker with no push of its own, so one Ctrl+Z reverted two
+            // markers on two tabs — the exact two-subject composition the
+            // arrival-invalidate below was written to kill, arriving on the
+            // repeat side through the one edge the premise did not cover. A
+            // MISMATCH OPENS A NEW ENTRY; a legitimate burst still merges,
+            // record_gesture re-taking all three on every accepted fire, so
+            // the terms compare a repeat against the fire before it. The
+            // clock stays out: a hold must coalesce at any repeat rate.
+            merge = last_gesture_tab_ == app.active_tab_view
+                 && last_gesture_audio_view_ == app.active_audio_view
+                 && last_gesture_selection_ == app.selected_markers;
         } else {
             // ARM (2), THE TAP WINDOW — a physical press merging into the previous
             // one. Two extra conditions, because a tap has NONE of the repeat

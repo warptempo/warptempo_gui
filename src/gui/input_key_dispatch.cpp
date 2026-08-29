@@ -8,6 +8,8 @@
 #include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
 #include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
+#include "marker_store_validate.h"  // first_past_eof_wall_defect (the three
+                                    // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
 #include "prompt.h"          // GuiCloseTarget (the Open project picker's reopen)
 #include "render_output_naming.h"  // the deliverable's path, composed as a
@@ -44,6 +46,13 @@
 #include <vector>
 
 namespace {
+
+// THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29). The failed-scan
+// arrival prints it on stderr with the store's own reason appended, and
+// run_history_commit's !active arm puts it on the status line bare — the same
+// fact reported to two surfaces, so the words live here rather than twice in
+// string literals that could drift apart.
+constexpr const char* kHistoryUnavailable = "History is unavailable";
 
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
@@ -588,15 +597,10 @@ void GuiInputHandler::close_history_mode() {
     // both above emit theirs and nothing here has to widen for them.
     viewport.invalidate_all();
 
-    // THE DEFERRED PREFETCH KICK, FLUSHED (2026-08-07): a re-warm that arrived
-    // while this visit stood was parked rather than run, the visit being bound
-    // to the store's generation, and this is the first moment nothing is reading
-    // it. STILL LAST, which is the point of its position: it starts a background
-    // scan, so it must not interleave with the restore or the synchronous
-    // republication above it — those two own this press's frame, and the kick owns
-    // nothing but a worker. Through the one funnel, which reads the live source
-    // and setting rather than anything the parked bit carried.
-    if (deferred_history_prefetch_kick_) kick_history_prefetch();
+    // (THE DEFERRED PREFETCH KICK'S FLUSH stood here from 2026-08-07 and is
+    // DELETED 2026-08-29 with the bit it read: no route can park one — the
+    // funnel's own comment carries the three kickers' proof — so this was a
+    // flush of a bit nothing could ever set.)
 }
 
 // DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
@@ -923,19 +927,22 @@ void GuiInputHandler::measure_history_head_delta() {
 // members are dropped by tag. The freshness short-circuit that can DECLINE to
 // kick lives one function down, and only the `h` entry goes through it.
 //
-// A KICK WHILE THE VIEW STANDS IS DEFERRED, never dropped and never run: the
-// visit is BOUND to the store's current generation, and a restart would clear
-// the deque its indices name out from under it — `n/N`, the walls and the lane
-// would all change subject mid-read. The bit is flushed at the exit owner, which
-// is the first moment nothing is reading. (It is one bit rather than a queue
-// because a kick carries no payload but the live source and setting, which the
-// flush reads fresh.)
+// NO KICK CAN ARRIVE WHILE THE VIEW STANDS, and the three kickers are the whole
+// proof (re-derived by grep 2026-08-29): the startup load tail runs once with
+// the view down and no way to have opened it; the `h` ENTRY's own
+// kick_history_prefetch_if_stale runs BEFORE `active` goes up, deliberately, so
+// init binds to the fresh generation; and the checkpoint completion's re-warm
+// runs after run_history_commit has already closed the view, which bare `h`
+// then refuses to reopen while the bit stands. (A DEFERRAL BIT stood here from
+// 2026-08-07 to 2026-08-29 for the case none of those three can produce — a
+// kick parked rather than run because a visit is BOUND to the store's
+// generation and a restart would clear the deque its indices name — and it was
+// deleted with its flush at close_history_mode as producer-less, the project's
+// rule for machinery no route reaches. The ARGUMENT it encoded still holds and
+// is why the entry kicker's placement above `active` is load-bearing rather
+// than incidental: a future fourth kicker that could fire under a standing
+// visit has to answer this question again.)
 void GuiInputHandler::kick_history_prefetch() {
-    if (app.history_mode.active) {
-        deferred_history_prefetch_kick_ = true;
-        return;
-    }
-    deferred_history_prefetch_kick_ = false;
     history_prefetch.kick(app.source_audio_path, app.projects_repo);
 }
 
@@ -1025,12 +1032,33 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //
 // ONE PRODUCER, and it is narrow: a view opened mid-scan whose run then fails.
 // A run that had already failed refuses at init and never opens a view at all.
+//
+// AND IT RETIRES THE VIEW'S OWN STANDING QUESTION BEFORE IT CLOSES (2026-08-29).
+// TWO SURFACES CAN BE UP WHEN THIS FIRES, and the visit's end has to answer for
+// both:
+//   * THE LOAD CONFIRMATION raised by bare `'` on the viewed member
+//     (history_load_in_place). close_history_mode's whole-struct reset clears
+//     pending_load_member, so a question left painted would name a subject that
+//     no longer exists and its OK would load nothing, silently. The prompt is
+//     dropped through the answer's own Cancel body first
+//     (GuiPrompt::cancel_load_confirmation). THE HISTORY SUBJECT IS THE TERM
+//     and the player's cannot be standing here: the player and this view
+//     exclude each other — bare `l` and the Play renders button are outside the
+//     mode's allowlist, and route_render_player_key consumes bare `h` — so the
+//     only LOAD_IN_PLACE_CONFIRM reachable under a standing visit is this one.
+//   * THE COMMIT-TITLE EDITOR, which is left standing deliberately (a modal
+//     editor is not a question about a member) and whose Enter then meets
+//     run_history_commit's own !active arm, which says "History is unavailable"
+//     on the status line rather than returning in silence.
+// The FILE MENU's standing-menu decision is above, and unchanged.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
     if (r.became_done && history_prefetch.run_failed()) {
-        std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n", kHistoryUnavailable,
                      history_prefetch.scan_failure_reason().c_str());
+        if (app.history_mode.pending_load_member)
+            prompt.cancel_load_confirmation();
         finalize_active_drags();
         close_history_mode();
         return;
@@ -2692,7 +2720,19 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // its own act and the common one; this act is a save that also PUBLISHES. Two
 // buttons because one is to disk and one is to disk and the remote.
 void GuiInputHandler::run_history_commit(const std::string& title) {
-    if (!app.history_mode.active) return;
+    // THE VIEW CAN HAVE GONE UNDER THE EDITOR, and the act says so rather than
+    // returning in silence (2026-08-29): the commit-title editor is the one
+    // surface the FAILED-SCAN ARRIVAL leaves standing when it ends the visit
+    // off a poll (on_history_prefetch_ready owns that edge and names both
+    // surfaces), so a user who has already typed a checkpoint name can press
+    // Enter into a mode that is no longer there. The status line carries the
+    // arrival's own sentence — the view is down by now, so nothing outranks a
+    // transient (the chain's tiers are at AppState::transient_status_message).
+    if (!app.history_mode.active) {
+        app.transient_status_message = kHistoryUnavailable;
+        viewport.invalidate_status_chain_area();
+        return;
+    }
     // A SECOND ACT CANNOT ARRIVE HERE — the chord is not admitted while one is in
     // flight — so this guard is unreachable, and it asks THE WORKER rather than
     // the AppState mirror the admission reads, because what it protects is that
@@ -2990,6 +3030,49 @@ void GuiInputHandler::run_history_revert() {
     }
     if (subject.empty()) return;
 
+    // THE COLUMN, hoisted above the wall guard below because both read it:
+    // the active one by construction (the lane paints only that half of a
+    // delta), so the store is chosen once for the whole act.
+    const bool phase = (app.active_markers_view == 'P');
+
+    // THE PAST-EOF WALL, ahead of everything (2026-08-29): the flags' THEN
+    // side is a commit's sidecar text, authored against whatever audio stood
+    // at that checkpoint, so a removed flag can carry a frame past this
+    // session's `total - 1` exactly as a whole checkpoint load can. THE ACT
+    // REFUSES WHOLE rather than skipping the offender: a revert applies a
+    // delta, and a partially applied one leaves a state the user did not ask
+    // for and cannot name. THE FRAME IS THE FLAG'S OWN — the phase arm copies
+    // f.time_frame into the fresh marker and the warp arm re-spells it with
+    // format_authored_frame, so the parsed line lands on exactly this value —
+    // which is what lets the check run before the loop parses anything.
+    // Stderr alone: the mode's line outranks a transient written while the
+    // view stands (AppState::transient_status_message). It sits ABOVE the
+    // stop below because a refusal is not the act; in this mode the stop is a
+    // formality either way (its own comment says why).
+    {
+        std::vector<GuiWarpMarker>       restored_warp;
+        std::vector<GuiPhaseResetMarker> restored_phase;
+        for (int idx : subject) {
+            const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
+            if (!f.removed) continue;   // an added flag DELETES; it lands none
+            if (phase) {
+                GuiPhaseResetMarker nm;
+                nm.time_frame = f.time_frame;
+                restored_phase.push_back(nm);
+            } else {
+                GuiWarpMarker nm;
+                nm.time_frame = f.time_frame;
+                restored_warp.push_back(nm);
+            }
+        }
+        if (auto defect =
+                in_place_load_wall_defect(restored_warp, restored_phase)) {
+            std::fprintf(stderr,
+                "warptempo_gui: Revert refused: %s\n", defect->c_str());
+            return;
+        }
+    }
+
     // THE MODE'S OWN STOP-UP-FRONT REGIME, unconditional and ahead of the loop —
     // the shape its Tab cycle, its Home/End and its `c` all take, and the
     // load-in-place's reason besides (a store rewrite under a live audition).
@@ -3002,7 +3085,6 @@ void GuiInputHandler::run_history_revert() {
     // effects that do wait on a change.
     playback_lifecycle.stop_playback_if_playing();
 
-    const bool phase = (app.active_markers_view == 'P');
     // ONE SNAPSHOT FOR THE WHOLE ACT, taken before the first write — the shape
     // every multi-marker single-store mutation in the product takes (the two
     // delete-selected bodies, the two status toggles). The undo push is at the
@@ -3300,6 +3382,21 @@ ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::IsoLeftTab) return ModalRingTab::Reverse;
     if (key != GuiKeys::Tab) return ModalRingTab::None;
     return mods.shift ? ModalRingTab::Reverse : ModalRingTab::Forward;
+}
+
+// THE RING'S KEY NORMALIZATION — KEYPAD ENTER IS RETURN'S TWIN (2026-08-29),
+// the one owner, read by the ring's walk at its head and by the release arm
+// (GuiInputHandler::on_key_release) before its compare. The pair is one key
+// everywhere else in the product — the editors' session keys
+// (text_editor::classify_key), the flag editor's open chord, and the picker's
+// and the player's list routers, which both spell `case Return: case KpEnter:`
+// — and a ring that read Return alone made the difference depend on nothing
+// but where the focus happened to be, letting a keypad Enter on a focused
+// button reach the LIST instead. Normalizing at both ends is what keeps a
+// press stored as Return answerable by the KpEnter release that ends it.
+// Every other key passes through unchanged.
+GuiKey modal_ring_press_key(GuiKey key) {
+    return key == GuiKeys::KpEnter ? GuiKeys::Return : key;
 }
 
 }  // namespace
@@ -4085,6 +4182,25 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     return false;
 }
 
+// The promote roads' past-EOF wall guard (contract at the declaration): the
+// loader's own shared check, asked of a candidate marker pair against this
+// session's audio. The live trim pair rides along because the guard's six
+// checks are one call; only the two marker arms can answer here.
+std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
+        const std::vector<GuiWarpMarker>& warp,
+        const std::vector<GuiPhaseResetMarker>& phase_resets) const {
+    auto trim_of = [](const TrimState& t) {
+        SettingsTrim s;
+        s.begin_frame = t.begin_frame;
+        s.end_frame   = t.end_frame;
+        return s;
+    };
+    return first_past_eof_wall_defect(
+        slice_to_warp_markers(warp), slice_to_phase_reset_markers(phase_resets),
+        trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
+        audio.total_frames(), audio.sample_rate());
+}
+
 // -- THE RECIPE APPLY, the two sidecar load-in-places' one body -------
 //
 // The RULE this body exists to state once — a load in place writes exactly what
@@ -4273,6 +4389,20 @@ bool GuiInputHandler::load_render_entry_in_place(
             return false;
         }
         src_phase_resets = t.markers();
+    }
+
+    // THE PAST-EOF WALL, the loader's own adversarial guard asked of the
+    // parsed pair before anything is installed (in_place_load_wall_defect
+    // carries the whole reasoning). A cell authored against a longer take
+    // would otherwise land markers past `total - 1` in the live store, Ctrl+S
+    // would write them, and the next launch would refuse the file. The
+    // refusal is WHOLE — not a dropped marker — and names its cause on stderr
+    // like every other arm here; the caller's "Load refused" is the status
+    // line's half.
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
+        std::fprintf(stderr,
+            "warptempo_gui: Load in place refused: %s\n", defect->c_str());
+        return false;
     }
 
     // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
@@ -4472,6 +4602,20 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     std::vector<GuiWarpMarker>       src_warp = std::move(loaded.warp_markers);
     std::vector<GuiPhaseResetMarker> src_phase_resets =
         std::move(loaded.phase_reset_markers);
+
+    // THE PAST-EOF WALL, the sibling's own line and for its reason: a
+    // checkpoint's sidecars are state authored against whatever audio stood
+    // when it was committed, and load_commit_sidecars_strict reads them
+    // against no audio at all (in_place_load_wall_defect carries the whole
+    // reasoning). The refusal is WHOLE and names its cause on stderr like
+    // every other arm here; THE STATUS LINE STAYS SILENT, the `h` mode's own
+    // line outranking a transient written while the view stands (the class is
+    // at AppState::transient_status_message).
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
+        std::fprintf(stderr,
+            "warptempo_gui: Load in place refused: %s\n", defect->c_str());
+        return false;
+    }
 
     // Every input is in hand and valid; nothing below refuses.
 
@@ -4702,6 +4846,18 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
 // shape here declines.
 bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
                                                    GuiInputState mods) {
+    // KEYPAD ENTER IS RETURN, HERE AS EVERYWHERE (2026-08-29). The pair is one
+    // key at every other surface in the product — the editors' session keys,
+    // the flag editor's open chord, and the two LIST routers below, which map
+    // KpEnter onto the highlight's own act — so a ring that knew only Return
+    // let a keypad Enter fall PAST a focused button and open the highlighted
+    // row instead: Tab onto the picker's Cancel and press it, and the picker
+    // opened a project. NORMALIZED AT THE HEAD, so the press arm's compare and
+    // the key it STORES for the release are both Return and a KpEnter press
+    // released as KpEnter still completes (on_key_release normalizes the same
+    // way, through the same owner). With the LIST focused (at < 0) both keys
+    // still fall through to the list routers exactly as before.
+    key = modal_ring_press_key(key);
     const ModalRingTab tab_shape = modal_ring_tab_shape(key, mods);
     if (tab_shape == ModalRingTab::None &&
         (mods.ctrl || mods.shift || mods.alt)) {
@@ -4762,9 +4918,12 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         if (at < 0 && !prompt_up) return false;   // the field's own arrows
         next = (at < 0) ? n - 1 : (at + n - 1) % n;
     } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
-        // THE BUTTON'S KEYBOARD PRESS. With no button focused this is not the
-        // ring's key at all: an editor's field keeps Enter's commit and Space's
-        // typed character, and both fall through untouched.
+        // THE BUTTON'S KEYBOARD PRESS — Return here NAMES BOTH ENTER KEYS, the
+        // main one and the keypad's, normalized to this spelling at the head
+        // (modal_ring_press_key); no other site restates that pairing. With no
+        // button focused this is not the ring's key at all: an editor's field
+        // keeps Enter's commit and Space's typed character, and both fall
+        // through untouched.
         if (at < 0) return false;
         // A SYNTHESIZED REPEAT IS CONSUMED AND CHANGES NOTHING — the act
         // happens once, at the physical release. repeat_eligible refuses to
@@ -4833,6 +4992,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
 // is bare-exact, and a shift tapped mid-hold does not turn a committed press
 // into something else.
 void GuiInputHandler::on_key_release(GuiKey key) {
+    // KEYPAD ENTER IS RETURN at both ends of the arm — the press stored
+    // Return through the same owner, so the release has to ask the same
+    // question or a KpEnter hold could never complete (modal_ring_press_key).
+    key = modal_ring_press_key(key);
     const int armed = app.modal_dialog_key_pressed;
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
@@ -5138,11 +5301,11 @@ void GuiInputHandler::build_project_picker_rows() {
     folder_overlay::set_highlight(app, current);
 }
 
-// THE OPEN ACT on row `index`. Validity through the project model, then the
-// strict sidecar dry-run, each refusal on the status line with the picker
-// still open; the project already open is a consumed no-op that closes it;
-// and a project that passes reaches the reopen through the one close request,
-// REOPEN-targeted.
+// THE OPEN ACT on row `index`. A publishing checkpoint refuses first, then
+// validity through the project model, then the strict sidecar dry-run, each
+// refusal on the status line with the picker still open; the project already
+// open is a consumed no-op that closes it; and a project that passes reaches
+// the reopen through the one close request, REOPEN-targeted.
 void GuiInputHandler::open_project_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -5156,6 +5319,20 @@ void GuiInputHandler::open_project_commit(int index) {
         app.transient_status_message = reason;
         viewport.invalidate_status_chain_area();
     };
+
+    // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-29), bare `h`'s own
+    // refusal one act over and in the same words. A reopen JOINS the commit
+    // worker in the teardown (main.cpp's run_project) — and the teardown
+    // forgets the completion fd first, so the worker's verdict never reaches
+    // on_history_checkpoint_complete: a CommittedNotPushed or CommitFailed
+    // would go to stderr alone, invisible on the tablet, with the critical
+    // chip that verdict owes the user never painted. The wait is seconds and
+    // the bit falls by itself. THE PICKER STAYS OPEN, like its other two
+    // refusals, so the answer is one line and another Enter.
+    if (app.history_checkpoint_in_flight) {
+        refuse("A checkpoint is still publishing; try again when it finishes");
+        return;
+    }
 
     // The row's name is ONE folder name by construction (the enumeration's own
     // membership rule, project_model.h), so the model is the first real test.

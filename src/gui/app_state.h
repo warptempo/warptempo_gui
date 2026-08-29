@@ -4343,12 +4343,16 @@ struct AppState {
     // assignment of app.selected_markers outside those mutators, after the
     // parked-selection deletion took three of the five the list used to carry
     // (the `p` swap's slot restore, undo's inline W/P swap restore, and
-    // Ctrl+Tab's slot restore) — are TWO, and both are covered: the propagate
-    // paste's tail (phase_reset_propagate.cpp) assigns its created set one line
-    // after switch_active_markers_view_to's clear_selection, whose same-mode
-    // early return is unreachable from there (the paste is W-mode-gated), and
-    // undo's touched-set restore (undo.cpp) is followed by
-    // sanitize_selection_after_restore on exactly the same non-'S' gate. That
+    // Ctrl+Tab's slot restore) — were TWO and are ONE since 2026-08-29: the
+    // propagate paste's tail went through the chokepoint that day
+    // (Selection::replace_selection, added for it), leaving only undo's
+    // touched-set restore (undo.cpp), which is followed by
+    // sanitize_selection_after_restore on exactly the same non-'S' gate. (The
+    // paste's own coverage had been the SWITCH beside it — its created set was
+    // assigned one line after switch_active_markers_view_to's clear_selection,
+    // whose same-mode early return is unreachable from there, the paste being
+    // W-mode-gated. True, and true of the ENTRY GATE rather than of the
+    // replace; the mutator makes it true of the line.) That
     // sanitize is also the orthogonal index-invalidation concern — a
     // store/selection mutation under a still-held shift — and it is what closes
     // Ctrl+Shift+Z, which arrives WITH shift held.
@@ -4415,11 +4419,18 @@ struct AppState {
     // mode and clears the anchor, while Selection::select_range_from_anchor
     // keeps the anchor and clears the mode; every OTHER Selection mutator
     // clears BOTH. THE AUTHORITATIVE CLEAR LIST, re-derived by grepping every
-    // Selection body rather than copied from the anchor's: set_single_selection,
-    // clear_selection, collapse_to_focused, select_range_from_anchor and
+    // Selection body 2026-08-29 rather than copied from the anchor's:
+    // set_single_selection, replace_selection, clear_selection,
+    // collapse_to_focused, select_range_from_anchor and
     // sanitize_selection_after_restore (cycle_selection and the two marker
     // walks clear through set_single_selection; load_source_file's explicit
     // clear is belt over the clear_selection it already runs).
+    // replace_selection joined on 2026-08-29 WITH ITS ONE CALLER: the
+    // phase-reset propagate paste's target-view landing wrote the two fields
+    // directly until then — the last act that installed a membership without
+    // passing this chokepoint, leaning on the column switch beside it to clear
+    // both bits (behaviour-neutral today, and now a property of the replace
+    // itself; see the anchor's wholesale-replace record above).
     // repair_last_selected is NOT one of them and must not become one: it is a
     // FOCUS repair reached only from inside the toggle, so clearing there
     // would make the mode die on the very act that defines it.
@@ -6563,6 +6574,15 @@ struct AppState {
         // coexist (the player's opener refuses in this view and this key never
         // reaches the player), so at most one is parked. Read back and dropped
         // by GuiInputHandler::confirm_load_in_place / cancel_load_in_place.
+        //
+        // THREE CLEARERS, and the third is why the second is reachable
+        // programmatically: OK (confirm_load_in_place, which consumes it),
+        // Cancel / Esc (cancel_load_in_place), and THE FAILED-SCAN ARRIVAL —
+        // the one asynchronous edge that ends a visit
+        // (GuiInputHandler::on_history_prefetch_ready), which cancels the
+        // standing confirmation through GuiPrompt::cancel_load_confirmation
+        // BEFORE close_history_mode's whole-struct reset would drop this
+        // field under a question still painted.
         std::optional<std::size_t> pending_load_member;
         void set_walk_index(std::size_t to) {
             if (source == GuiHistoryWalkSource::Local) local_index = to;
@@ -6935,7 +6955,19 @@ struct AppState {
     // Committed or NothingToCommit clears it, because a success supersedes the
     // stale failure it replaces — the message says what the repository's last
     // answer was, so a newer answer is what retires it. Otherwise it stands
-    // until the program closes.
+    // until THE PROJECT closes.
+    //
+    // IT IS PROJECT-SCOPED, AND THAT IS THE RULING RATHER THAN AN ACCIDENT
+    // (2026-08-29): AppState is built and torn down per project by
+    // gui_main's reopen loop, so this string — like history_cumulative — dies
+    // with the session it was written in, and a chip standing over project A
+    // does not follow the user into project B. The message names what THIS
+    // piece's last checkpoint answered, and the piece is what the reopen
+    // changes. Nothing is hoisted to the process for it. The verdict itself
+    // cannot be lost to a reopen: File → Open project refuses while
+    // history_checkpoint_in_flight (open_project_commit), bare `h`'s own
+    // refusal one act over, so the worker always answers into the session
+    // that dispatched it.
     //
     // IT IS SESSION-SCOPED AND SURVIVES EVERYTHING BELOW IT: the history view's
     // entry and exit, every view and tab switch, and BOTH load-in-places (a
@@ -7941,7 +7973,13 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // Left/Right position nudge, and the `m` BPM open — which is omitted for a
 // reason of its own, rewriting tempo through a derivation over a SPAN rather
 // than editing one marker's value. Those four still consult this predicate and
-// still refuse silently off home. Nothing changes in P+source either.
+// still refuse silently off home — the NUDGE literally so since 2026-08-29,
+// its dispatch having hand-spelled this predicate's own two arms until then.
+// SEVEN CALL SITES, re-derived by grep that day: the keyboard drop
+// (input_handler.cpp), the phase-reset arms of Ctrl+D and Delete (same file,
+// which is where the fifth exception's warp/phase split lands), the bare
+// Left/Right nudge (same file), the `m` bpm open (input_key_dispatch.cpp), the
+// empty-lane double-click drop and the flag drag (input_pointer.cpp). Nothing changes in P+source either.
 // SHIFT+S IS NOT A SIXTH EXCEPTION and must not be read as one (2026-08-28):
 // the chord drops a phase reset "from any view", but it does not AUTHOR off
 // home — it runs the two view chokepoints first, so by the time the one drop
@@ -10335,49 +10373,28 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // build here. The two admissions are ORed because a button carries ONE second
 // line, and they are exclusive by the assert at redesign_button_ctrl_admits, so
 // the line that exists names the one modifier that acts.
-static_assert(
-    (redesign_button_tooltip(RedesignButton::Render).line2 != nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::Render) ||
-         redesign_button_ctrl_admits(RedesignButton::Render)) &&
-    (redesign_button_tooltip(RedesignButton::IconShowRegion).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::IconShowRegion) ||
-         redesign_button_ctrl_admits(RedesignButton::IconShowRegion)) &&
-    (redesign_button_tooltip(RedesignButton::HistoryOlder).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::HistoryOlder) ||
-         redesign_button_ctrl_admits(RedesignButton::HistoryOlder)) &&
-    (redesign_button_tooltip(RedesignButton::HistoryNewer).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::HistoryNewer) ||
-         redesign_button_ctrl_admits(RedesignButton::HistoryNewer)) &&
-    (redesign_button_tooltip(RedesignButton::TransportSkipBack).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::TransportSkipBack) ||
-         redesign_button_ctrl_admits(RedesignButton::TransportSkipBack)) &&
-    (redesign_button_tooltip(RedesignButton::TransportSkipForward).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::TransportSkipForward) ||
-         redesign_button_ctrl_admits(RedesignButton::TransportSkipForward)) &&
-    (redesign_button_tooltip(RedesignButton::TransportPlayStop).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::TransportPlayStop) ||
-         redesign_button_ctrl_admits(RedesignButton::TransportPlayStop)) &&
-    (redesign_button_tooltip(RedesignButton::IconMarkerDrop).line2 !=
-     nullptr) ==
-        (redesign_button_shift_admits(RedesignButton::IconMarkerDrop) ||
-         redesign_button_ctrl_admits(RedesignButton::IconMarkerDrop)) &&
-    (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
-    // THE NON-MEMBER EXAMPLES. Two of them, so the assert has a witness on
-    // each side of the equivalence and cannot pass vacuously if the members
-    // above are ever emptied. It was Save and IconCopy until 2026-08-20, when
-    // IconCopy was deleted with the propagate relocation and IconBpm — its
-    // group neighbour and then that group's leader — took the seat; IconBpm
-    // was itself deleted with the Series relocation on 2026-08-27 and FOLLOW,
-    // the last survivor of that same group, took the seat in turn. (The
-    // MARKER MEASURE was a member row from 2026-08-20 until the 2026-08-21
-    // sunset unbound its shift half with the score-video jump.)
-    (redesign_button_tooltip(RedesignButton::IconFollow).line2 == nullptr),
+//
+// IT WALKS THE WHOLE ROSTER (2026-08-29), it does not list buttons. This was a
+// hand-kept enumeration of ten — eight members plus two negatives kept as
+// witnesses so the equivalence could not pass vacuously — which is a discipline
+// gap of exactly the kind the standing rule refuses: a fifty-third button
+// carrying a second line and no admission would have been true of every row
+// listed and false of the roster. The three predicates are constexpr over
+// RedesignButton, the enumerators are contiguous and kRedesignButtonCount is
+// their count, so the walk is expressible and the witnesses are structural —
+// every button is on both sides of the equivalence. (The render player's own
+// copy at player_button_shift_admits was already exhaustive over its seven.)
+constexpr bool redesign_button_modifier_hint_agrees() {
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        const RedesignButton b = static_cast<RedesignButton>(i);
+        const bool line2 = redesign_button_tooltip(b).line2 != nullptr;
+        const bool admits = redesign_button_shift_admits(b) ||
+                            redesign_button_ctrl_admits(b);
+        if (line2 != admits) return false;
+    }
+    return true;
+}
+static_assert(redesign_button_modifier_hint_agrees(),
     "the modifier hint and the modifier binding must name the same buttons");
 
 // THE HOVER ZONE — "the pointer is over this button in a way the surface

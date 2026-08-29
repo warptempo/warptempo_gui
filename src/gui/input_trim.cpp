@@ -721,20 +721,22 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // each other at all. The partner clamp the 2026-08-02 ruling added
         // belongs to the single-bound arm below — the only one that can push a
         // handle toward its twin.
-        // begin_wall_active and end_wall_active compute the identical
-        // expression — shape-residue of a retired per-bound wall split, now
-        // that the ceiling is shared; a future pass may collapse them to one
-        // local (comments-only wave, so left as two here).
-        const int64_t begin_wall_active = static_cast<int64_t>(std::nearbyint(
+        // ONE CEILING, ONE LOCAL (2026-08-29). The two bounds had SEPARATE
+        // walls when this clamp was written (2026-07-08): begin at frame
+        // EOF-1, end at frame EOF, an end bound being exclusive then. The
+        // domain unification put both bounds on the shared inclusive
+        // [0, total-1] — an end stored at exactly total frames is adversarial
+        // load-fatal now (marker_store_validate.h) — so the two expressions
+        // became identical and stood as two locals with a note saying so. They
+        // are one: a second local that must equal the first is a split waiting
+        // to be re-read as a distinction.
+        const int64_t wall_active = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(
                 static_cast<double>(audio.total_frames() - 1), dmap)));
-        const int64_t end_wall_active = static_cast<int64_t>(std::nearbyint(
-            map_source_to_target(
-                static_cast<double>(audio.total_frames() - 1), dmap)));
-        if (ob + df < 0)                 df = -ob;
-        if (oe + df < 0)                 df = -oe;
-        if (ob + df > begin_wall_active) df = begin_wall_active - ob;
-        if (oe + df > end_wall_active)   df = end_wall_active - oe;
+        if (ob + df < 0)            df = -ob;
+        if (oe + df < 0)            df = -oe;
+        if (ob + df > wall_active)  df = wall_active - ob;
+        if (oe + df > wall_active)  df = wall_active - oe;
         // snap_authored_frame lands each result on a whole int64 frame (the
         // single fractional-to-authored route). These are mid-gesture tracking
         // values; the release in commit_trim_drag snaps each moved bound to its

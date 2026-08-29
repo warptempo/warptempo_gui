@@ -160,8 +160,9 @@ std::vector<WarpMarker> normalized_surviving_markers(
     // deterministic cascade rather than a guess at which member to keep.
     //
     // The collapse verdict comes from warp_coincident_collapse_members,
-    // the rule's one owner — a raw-store classifier looked up
-    // through raw[]. EQUIVALENCE with the former adjacent-run predicate
+    // the rule's one owner (architect approval 2026-07-30; the site record
+    // added 2026-08-29 under that day's approval) — a raw-store classifier
+    // looked up through raw[]. EQUIVALENCE with the former adjacent-run predicate
     // `j - i >= 2`: stage-1 survivors are exactly the effectively-enabled
     // raw markers, filtering preserves order and times are non-decreasing,
     // so the adjacent equal-frame survivor run [i, j) in norm IS the

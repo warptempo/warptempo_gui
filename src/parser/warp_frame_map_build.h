@@ -155,7 +155,9 @@ std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
 // The stage-2 coincident-collapse rule as a pure classifier over the RAW
-// authored store (the one owner): out[i] is true iff raw index i
+// authored store (the one owner; architect approval 2026-07-30, the site
+// record added 2026-08-29 under that day's approval): out[i] is true iff raw
+// index i
 // belongs to an exact-frame run whose effectively-enabled member count is >= 2
 // — the run that stage 2 collapses to one synthetic 1.00 owner. Positions are
 // whole int64 frames (exact equality IS the coincidence predicate) and the

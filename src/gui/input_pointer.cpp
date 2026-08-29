@@ -2604,6 +2604,19 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // waveform behind it (this gesture skips the press road entirely, so no
     // veil refuses it).
     if (folder_overlay_stands(app)) return;
+    // AND THE ON-SCREEN KEYBOARD TAKES NONE EITHER (2026-08-29), the overlay
+    // clause's twin and the same hole one tenant over: the keyboard paints
+    // over the waveform's lower part and `wheel_context` answers 1 there (the
+    // band sits inside waveform_area and the wheel carries no keyboard term),
+    // so two thumbs landing on keys inside the disambiguation window became a
+    // Nav pinch and zoomed the waveform BEHIND the keyboard, about a column
+    // the user cannot see. The pan zone already yields under this same rect
+    // (touch_point_in_pan_zone's second clause) — this is the two-finger half
+    // of that answer, and it asks the same two owners, so the two cannot
+    // disagree. A key is not a navigation surface at any finger count.
+    if (onscreen_keyboard::stands(app, gui) &&
+        rect_contains(onscreen_keyboard::surface_rect(app), f.x, f.y))
+        return;
     // AND THE THIN LANES TAKE NO NAV GESTURE AT ALL — the OVERVIEW STRIP and
     // the TRIM BAR (architect 2026-08-15, from the rig: "get rid of all
     // two-finger gestures on the overview strip and on the trim bar; once one
@@ -3119,6 +3132,17 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
             clear_modal_dialog_key_press();
             app.modal_dialog_focus        = armed;
             app.modal_dialog_focus_active = false;
+            // AND THE LIST'S RING BIT GOES WITH IT (2026-08-29): on the two
+            // list-bearing owners the ring's stops are [list, buttons…], and
+            // a feint REPLACES whatever focus the dialog had, of EITHER
+            // STRENGTH — the ruling's own words. Without this the band kept
+            // its accent outline beside the button's new passive face, so the
+            // ring looked like it was in two places at once. Paint-only, but
+            // the outline is the ring's whole cue.
+            if (app.folder_overlay.list_focused) {
+                app.folder_overlay.list_focused = false;
+                viewport.invalidate_rect(folder_overlay::surface_rect(app));
+            }
         }
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);

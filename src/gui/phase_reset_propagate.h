@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "playback_lifecycle.h"
+#include "selection.h"    // the paste's membership replace rides the chokepoint
 #include "undo.h"
 #include "viewport.h"
 
@@ -55,6 +56,13 @@ struct PhaseResetPropagate {
     // The paste-confirm prompt is a modal surface; its open stops playback
     // through this lifecycle handle.
     GuiPlaybackLifecycle& playback_lifecycle;
+    // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the target-view
+    // landing REPLACES the membership with the set the paste created, and a
+    // replace must run through a Selection mutator or the sticky ctrl and the
+    // shift anchor outlive it (Selection::replace_selection carries the whole
+    // reasoning; the contract is at AppState::add_to_selection). Every other
+    // selection effect on this path is already the column switch's own clear.
+    Selection&            selection;
 
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this propagate by reference, so the
@@ -67,10 +75,11 @@ struct PhaseResetPropagate {
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
                         GuiTargetRender& target_render_,
                         GuiActiveViews& active_views_,
-                        GuiPlaybackLifecycle& playback_lifecycle_)
+                        GuiPlaybackLifecycle& playback_lifecycle_,
+                        Selection& selection_)
         : app(app_), viewport(viewport_), undo(undo_),
           target_render(target_render_), active_views(active_views_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_), selection(selection_) {}
 
     // Ctrl+P copy. Caller has already verified W-mode + a CONTIGUOUS run of
     // warp markers selected (the paste walks labeled blocks in strict lockstep,
