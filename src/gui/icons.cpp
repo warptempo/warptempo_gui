@@ -746,6 +746,39 @@ constexpr IconPath kAudioXWavPaths[] = {
      "M 8 4 L 18 4 L 18 6 L 8 6 L 8 4 z "},
 };
 
+// -- THE PLAYER ROW'S REPEAT TOGGLE (2026-08-28, architect R30) ---------------
+//
+// PROVENANCE, per the theme-provenance rule: breeze-dark's
+// actions/22/media-repeat-single.svg, a real file on this host; the committed
+// assets/icons/breeze/media-repeat-single.svg is that install's bytes
+// verbatim. THREE `<path>` elements in one `class="ColorScheme-Text"
+// fill="currentColor"` group under the file's own `.ColorScheme-Text { color:
+// #fcfcfc }` stylesheet, so all three resolve to kIconText — the lower arrow,
+// the upper arrow with its two corner curves, and the numeral 1. Relative
+// `m` / `l` / `h` / `v` / `c` with implicit repetition and a closing `z` on
+// each, all of it the interpreter's oldest arms (edit-undo's own spelling,
+// compact numbers included).
+//
+// THE FILE'S ONE `fill-rule="evenodd"`, on the numeral, NEEDS NO FIELD and
+// that is a transcription decision rather than an omission: the numeral is a
+// SINGLE non-self-intersecting subpath, on which even-odd and the nonzero
+// default fill identically, so an IconPath fill-rule flag would have exactly
+// one producer and no observable consequence. (The rule the table follows is
+// the `d` stays verbatim; an attribute that changes no pixel does not become a
+// row.)
+//
+// ONE GLYPH FOR BOTH STATES (R30, "a plain toggle: off is the unpressed face,
+// on is the pressed/lit face"), so there is no second file here and no glyph
+// swap at the painter — the modal row's lamp carries the state.
+constexpr IconPath kMediaRepeatSinglePaths[] = {
+    {kIconText, "m6 12-3 2.5 3 2.5v-2h9v-1h-9z"},
+    {kIconText,
+     "m16 5v2h-10c-1.662 0-3 1.338-3 3v1h1v-1c0-1.108.892-2 2-2h10v2l3-2.5z"},
+    {kIconText,
+     "m17.29296875 11-1.5 1.5.70703125.70703125.5-.5v3.29296875h-1v1h3v-1h-1v"
+     "-5z"},
+};
+
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
 //
 // Same rules as every entry above: `d` verbatim from the committed file, the
@@ -1101,6 +1134,7 @@ constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
 constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
 constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
 constexpr IconDef kAudioXWav          {22.0, kAudioXWavPaths,           1};
+constexpr IconDef kMediaRepeatSingle  {22.0, kMediaRepeatSinglePaths,   3};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1152,6 +1186,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::TextField:           return kTextField;
         case Icon::Folder:              return kFolder;
         case Icon::AudioXWav:           return kAudioXWav;
+        case Icon::MediaRepeatSingle:   return kMediaRepeatSingle;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;

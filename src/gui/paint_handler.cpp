@@ -5631,19 +5631,31 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // kModalBtnBoxPx SQUARE — the three transport buttons wear
     // MediaSkipBackward, MediaPlaybackStart (swapped to MediaPlaybackStop
     // while the transport is live, the bottom row's one-button-two-faces
-    // rule) and MediaSkipForward — while a word button keeps the label box
-    // every prompt and editor button has always had. `player_act` is the
-    // player's dispatch vocabulary; the other two stay zero/false on its
-    // buttons.
+    // rule) and MediaSkipForward, and the REPEAT ONE toggle wears
+    // MediaRepeatSingle in both its states — while a word button keeps the
+    // label box every prompt and editor button has always had. A GLYPH BUTTON
+    // WEARS NO RESTING OUTLINE (architect R25: "icon buttons have no border —
+    // the regular transport has none; text buttons keep theirs"), which is the
+    // face ladder's one fork on this field. `lit` is the roster's SELECTED
+    // face — the row's one lamp, Repeat one, and no other button has a state
+    // to say. `player_act` is the player's dispatch vocabulary; the other two
+    // stay zero/false on its buttons.
     struct DialogButtonPlan {
         std::string label;
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
         bool        glyph        = false;
+        bool        lit          = false;
         icons::Icon icon         = icons::Icon::MediaPlaybackStart;
         std::string tooltip;     // the player's own; empty = the composer's
         int         w            = 0;
+        // WHERE IT PAINTS. The single left-flushed cluster every other owner
+        // lays out is written into this field by the walk below; THE PLAYER'S
+        // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
+        // separator, the lamp — then the word buttons FLUSH RIGHT), so its own
+        // branch writes all six and the walk simply paints where it is told.
+        int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
     if (prompt_up) {
@@ -5655,15 +5667,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
-        // THE PLAYER'S ROW: Previous · Play/Pause · Next · Load in place ·
-        // Close — Close LAST, the escape sentinel by construction as every
-        // prompt has it (architect 2026-08-28, the revised row).
+        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25): the
+        // TRANSPORT — Previous · Play/Pause · Next — then the separator, the
+        // scrub, the clock and the second separator (all three laid out in the
+        // player's own branch below), then the REPEAT ONE lamp, and the two
+        // WORD buttons FLUSH RIGHT: Load in place · Close. Close LAST, the
+        // escape sentinel by construction as every prompt has it. The plan's
+        // order is also the ring's, so Tab walks the row left to right.
         const bool live = app.render_player.transport_live;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
-                                icons::Icon icon) {
+                                icons::Icon icon, bool lit = false) {
             DialogButtonPlan b;
             b.player_act = act;
             b.glyph      = true;
+            b.lit        = lit;
             b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, live);
             plan.push_back(std::move(b));
@@ -5683,6 +5700,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           : icons::Icon::MediaPlaybackStart);
         glyph_button(AppState::PlayerButtonAct::Next,
                      icons::Icon::MediaSkipForward);
+        glyph_button(AppState::PlayerButtonAct::RepeatOne,
+                     icons::Icon::MediaRepeatSingle,
+                     app.render_player.repeat_one);
         word_button(AppState::PlayerButtonAct::LoadInPlace, "Load in place");
         word_button(AppState::PlayerButtonAct::Close, "Close");
     } else {
@@ -5700,6 +5720,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         cancel.label = "Cancel";
         plan.push_back(std::move(cancel));
     }
+    // EVERY BUTTON'S WIDTH, and the ONE CLUSTER'S total behind it — the total
+    // is the SINGLE-CLUSTER owners' (a prompt, the picker, an editor), whose
+    // cap `buttons_x_max` is measured against it; the player spends the same
+    // widths on its own two-cluster arrangement and reads no total.
     int buttons_w = 0;
     for (size_t i = 0; i < plan.size(); ++i) {
         if (plan[i].glyph) {
@@ -5826,17 +5850,227 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                               static_cast<double>(content.h)));
         cairo_restore(cr);
     } else if (player_up) {
-        // -- THE RENDER PLAYER'S ROW (2026-08-28): the buttons FIRST at the
-        //    left pad (the transport is what the hand reaches for), then the
-        //    CLOCK, then the PLAY-SCRUB across the free width to the right
-        //    pad. The buttons stay whole and the scrub gives, floored at a
-        //    width that is still a track. --
+        // -- THE RENDER PLAYER'S ROW (architect 2026-08-28, R25 — the relaid
+        //    row): TRANSPORT · separator · SCRUB · CLOCK · separator · REPEAT
+        //    ONE ......... LOAD IN PLACE · CLOSE, the last two flush right.
+        //    The arrangement is Audacious-Qt's under Breeze Dark, which is
+        //    what the architect ruled off his own screen — "not the
+        //    screenshot as a whole, just the layout: transport, separator,
+        //    scrub, then the time, then another separator, then the repeat
+        //    button".
+        //
+        //    THE SCRUB IS THE ONE FLEXIBLE ITEM and everything else is fixed,
+        //    so the row's primacy rule reads plainly here: THE BUTTONS STAY
+        //    WHOLE AND THE SCRUB GIVES, and past its floor it PUBLISHES ZERO
+        //    — the honest answer the tick and the press router already read
+        //    (a zero rect contains no point and damages nothing) rather than a
+        //    track too small to seat a handle.
+        //
+        //    THIS BRANCH LAYS OUT AND PAINTS EVERYTHING BUT THE BUTTONS: it
+        //    writes each button's own x (the walk below paints where it is
+        //    told) and draws the two separators, the slider and the clock
+        //    between them. The items are disjoint, so painting them ahead of
+        //    the buttons is only an ordering of convenience — the clock's
+        //    face is put back to the row's sans at the end of the block, for
+        //    the word buttons that paint after it. --
         dlg.owner  = AppState::ModalDialogOwner::Player;
-        buttons_x0 = cx0;
-        // The clock and the scrub are laid out and painted AFTER the button
-        // loop below, which needs to run first for the cluster's right edge;
-        // the loop's own x is what places them, so the block after it owns
-        // both.
+        buttons_x0 = cx0;   // unread on this branch; the plan carries the x's
+
+        // THE SEPARATOR IS THE BOTTOM ROW'S OWN (kTransportSep*, above): a 1px
+        // kRedesignTabLine line the height of the button box, with 5px of air
+        // each side. Breeze's toolbar separator is the same 1px line in the
+        // same #4c4e51 — its own item is 8px wide with 4px of air and 3, and
+        // the ruled height is the toolbar row's — so this row's sampled
+        // numbers ARE that separator at row 8's metrics, and the modal row
+        // (which stands in row 8's lane, in place of exactly those buttons)
+        // takes them rather than authoring a second spec for the same line in
+        // the same place.
+        const int ggap     = scaled_px(kIconBtnGapPx);
+        const int sep_gap  = scaled_px(kTransportSepGapPx);
+        const int sep_w    = scaled_px(kTransportSepWidthPx, 1);
+        const int sep_h    = scaled_px(kTransportSepHeightPx);
+        const int sep_y    = content.y + (content.h - sep_h) / 2;
+        const int sep_span = sep_gap + sep_w + sep_gap;
+        const auto paint_separator = [&](int line_x) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
+            cairo_rectangle(cr, line_x, sep_y, sep_w, sep_h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        };
+
+        // THE CLOCK'S CELL IS MEASURED BEFORE ANYTHING IS PLACED, its width
+        // being one of the fixed terms the scrub's own is what is left over.
+        // ONE FACE, TWO CELLS (2026-08-28): the row-8 clock's face, size, cell
+        // metrics and authored offsets, so the digits never walk between the
+        // project's clock and the player's.
+        gui_select_font_face(cr, GuiFontFamily::Mono);
+        const double csize = clock_font_size_px();
+        cairo_set_font_size(cr, csize);
+        cairo_scaled_font_t* cfont = cairo_get_scaled_font(cr);
+        const double cell_w = clock_cell_width_px(cfont, csize);
+        const double csep_w = text_shape::shape_text_run(cfont, " / ").width_px;
+        const int clock_w   = static_cast<int>(std::ceil(2.0 * cell_w + csep_w));
+
+        // -- The walk: the fixed left run, the right-flushed word cluster, and
+        //    the scrub taking what is between them. --
+        int px = cx0;
+        plan[0].x = px; px += btn_h + ggap;      // Previous
+        plan[1].x = px; px += btn_h + ggap;      // Play / Pause
+        plan[2].x = px; px += btn_h;             // Next
+        const int sep1_x = px + sep_gap;
+        px += sep_span;
+        const int scrub_x0 = px;
+
+        // The word cluster, right-flushed inside the reserved ring exactly as
+        // the single cluster's cap is on every other owner.
+        const int words_w  = plan[4].w + bgap + plan[5].w;
+        const int words_x0 = std::max(cx0, cx1 - ring - words_w);
+        // What the row owes AFTER the scrub: a pad, the clock cell, the second
+        // separator, the lamp with its reserved halo, and one pad of clearance
+        // before the word cluster.
+        const int after_scrub = pad + clock_w + sep_span + btn_h + ring + pad;
+        // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
+        // at each end is not a track, and it is the same 40 authored px the
+        // scrub floored at before the slider gave the number a derivation.
+        int scrub_w = words_x0 - after_scrub - scrub_x0;
+        if (scrub_w < 2 * scrub_handle_box_px()) scrub_w = 0;
+
+        const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + pad : 0);
+        const int clock_end = clock_x0 + clock_w;
+        const int sep2_x    = clock_end + sep_gap;
+        plan[3].x = clock_end + sep_span;        // Repeat one
+        plan[4].x = words_x0;                    // Load in place
+        plan[5].x = words_x0 + plan[4].w + bgap; // Close
+
+        paint_separator(sep1_x);
+        paint_separator(sep2_x);
+
+        // -- THE PLAY-SCRUB, A BREEZE SLIDER (R29; the metrics, the colours
+        //    and their provenance are at render.h's scrub block). The ITEM is
+        //    published (dlg.scrub) and it is the button box's own band, so a
+        //    press anywhere on it is on the slider and the per-position damage
+        //    covers the handle's whole travel; the MAPPING owns the inset
+        //    (render_player_scrub_x_of), the handle's centre being the frame's
+        //    position. --
+        const AppState::RenderPlayer& rp = app.render_player;
+        const int64_t pos = render_player_position(app, playback);
+        if (scrub_w > 0) {
+            const GuiRect track{scrub_x0, btn_y, scrub_w, btn_h};
+            dlg.scrub = track;
+            const int    gh   = scaled_px(kScrubGrooveThicknessPx, 2);
+            const int    gy   = track.y + (track.h - gh) / 2;
+            const int    gs   = scaled_px(kScrubOutlineWidthPx, 1);
+            const double grad = kScrubGrooveRadiusPx * gui_scale_factor();
+            // THE WHOLE GROOVE FIRST, then the played part over its left
+            // portion — Breeze's own two-pass construction, both passes the
+            // same rounded rect at the same radius, so the played part's right
+            // cap is round and hidden under the handle.
+            redesign_face_box(cr, track.x, gy, track.w, gh, gs, grad,
+                              &kScrubGroove, &kScrubGrooveOutline);
+            if (rp.frames > 0) {
+                // THE HANDLE'S COLUMN: the drag's carried x while the marker
+                // is being dragged (the sound continues where it was and the
+                // seek commits at the release), the item position's own
+                // otherwise.
+                const int hx = rp.scrub.armed
+                                   ? rp.scrub.marker_x
+                                   : render_player_scrub_x_of(app, pos);
+                // THE PLAYED PART TAKES THE WINDOW'S FOCUS (R29): the 17:46
+                // shot's blue while the window is activated, the 16:46 shot's
+                // dimmed one while it is not — the scrub is the third surface
+                // that reads AppState::window_activated, after rows 1 and 2,
+                // and the activation hook damages this row for it.
+                const bool     act = app.window_activated;
+                const GuiColor played_fill =
+                    act ? kScrubPlayed : kScrubPlayedInactive;
+                const GuiColor played_line =
+                    act ? kScrubPlayedOutline : kScrubPlayedInactiveOutline;
+                const int played_w = hx - track.x;
+                if (played_w > 2 * gs) {
+                    redesign_face_box(cr, track.x, gy, played_w, gh, gs, grad,
+                                      &played_fill, &played_line);
+                }
+                // THE HANDLE — an 18px circle inside its 20px box, filled and
+                // stroked on ONE path at the half-stroke inset every face box
+                // in the tree takes. ITS OUTLINE SAYS WHERE THE POINTER IS,
+                // the accent's job everywhere else on this surface: hovered or
+                // dragged it is kRedesignAccent, at rest Breeze's own
+                // mix(Button, ButtonText, 0.2).
+                //
+                // THE HOVER IS READ AT PAINT from the remembered pointer
+                // position rather than kept as a bit, and that is the cheaper
+                // HONEST answer: the handle MOVES under a stationary pointer
+                // while the transport plays, so a bit written by the motion
+                // walk would be stale in both directions between motions,
+                // while this cannot be — the tick damages this cell on every
+                // position change and the frame recomputes it. The motion
+                // walk's part is one damage of the cell, not an answer.
+                const int    hdia = scaled_px(kScrubHandleDiameterPx, 2);
+                const double hcy  = static_cast<double>(track.y) +
+                                    static_cast<double>(track.h) * 0.5;
+                const double hrad = static_cast<double>(hdia) * 0.5 -
+                                    static_cast<double>(gs) * 0.5;
+                const bool hovered =
+                    rp.scrub.armed ||
+                    (app.pointer_in_window &&
+                     render_player_scrub_handle_hit(track, hx,
+                                                    app.last_mouse_x,
+                                                    app.last_mouse_y));
+                cairo_save(cr);
+                cairo_new_path(cr);
+                cairo_arc(cr, static_cast<double>(hx), hcy, hrad,
+                          0.0, 2.0 * 3.14159265358979323846);
+                cairo_set_source_rgb(cr, kScrubHandleFill.r, kScrubHandleFill.g,
+                                     kScrubHandleFill.b);
+                cairo_fill_preserve(cr);
+                const GuiColor hline =
+                    hovered ? kRedesignAccent : kScrubHandleOutline;
+                cairo_set_source_rgb(cr, hline.r, hline.g, hline.b);
+                cairo_set_line_width(cr, static_cast<double>(gs));
+                cairo_stroke(cr);
+                cairo_restore(cr);
+            }
+        }
+
+        // -- THE CLOCK, after the scrub (R25 put the time there; the cell
+        //    itself is unchanged). Its cell is PUBLISHED (dlg.clock) for the
+        //    tick's per-position damage, beside the scrub's, and it CLIPS at
+        //    the lane's right pad on a narrow window. --
+        const double cbase =
+            redesign_baseline(cfont, static_cast<double>(content.y),
+                              static_cast<double>(content.h)) +
+            scaled_px(kClockCellOffsetYPx);
+        const int sr = audio.sample_rate();
+        auto seconds_of = [sr](int64_t frames) {
+            return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
+                          : 0.0;
+        };
+        const std::string clock_text =
+            format_timestamp(seconds_of(pos)) + " / " +
+            format_timestamp(seconds_of(rp.frames));
+        const int clock_right = std::min(clock_end, cx1);
+        if (clock_right > clock_x0) {
+            cairo_save(cr);
+            cairo_rectangle(cr, clock_x0, content.y, clock_right - clock_x0,
+                            content.h);
+            cairo_clip(cr);
+            show_row_text(cr, cfont, static_cast<double>(clock_x0), cbase,
+                          clock_text, kRedesignLabel);
+            cairo_restore(cr);
+            dlg.clock = GuiRect{clock_x0 - 1, content.y,
+                                clock_right - clock_x0 + 2, content.h};
+        }
+        // THE SANS FACE BACK, AND THE HANDLE WITH IT, for the word buttons the
+        // walk paints below: a cairo_scaled_font_t* borrowed from the context
+        // is only good until the context's font changes, and the clock's
+        // monospace switch is exactly that change — so the row's `font` is
+        // RE-TAKEN here rather than assumed to have survived. (This is the one
+        // branch that switches faces before the buttons are painted; the
+        // clock's own cell was painted after them until R25 moved the time.)
+        font = select_bottom_row_face(cr);
     } else if (picker_up) {
         // -- THE PICKER'S ROW (2026-08-28, architect R22): OK · Cancel at the
         //    left pad and NOTHING ELSE — no label, no field. The list in the
@@ -6104,11 +6338,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.field = field_inner;
     }
 
-    // -- The button row, starting where the content above left off. --
+    // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
+    //    player's relaid row): the single left-flushed cluster is laid out
+    //    here, in the walk that has always laid it out, and the PLAYER's
+    //    branch above has already written all six of its own — one walk, two
+    //    arrangements, and no second painter. --
     const int lw = std::max(1, scaled_px(kIconOutlineStrokePx));
-    int x = buttons_x0;
+    if (!player_up) {
+        int cluster_x = buttons_x0;
+        for (size_t i = 0; i < plan.size(); ++i) {
+            if (i > 0) cluster_x += bgap;
+            plan[i].x = cluster_x;
+            cluster_x += plan[i].w;
+        }
+    }
     for (size_t i = 0; i < plan.size(); ++i) {
-        if (i > 0) x += bgap;
+        const int x = plan[i].x;
         const GuiRect r{x, btn_y, plan[i].w, btn_h};
         // THE FACE LADDER (architect 2026-08-13: "the modal buttons should
         // basically look like the icons, but with a resting outline"). It IS
@@ -6116,17 +6361,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the STATE and the outline says where the pointer or the keyboard
         // IS, decided separately, so every combination falls out instead of
         // being enumerated — with two differences, both the ruling's:
-        //   REST paints the 1px kRedesignLine outline where the icon row
-        //   paints nothing (the row ground still shows through — no fill, the
-        //   icon buttons plus that one line), so has_line is unconditional
-        //   here where the icon row makes it a term.
+        //   REST paints the 1px kRedesignLine outline ON A WORD BUTTON where
+        //   the icon row paints nothing (the row ground still shows through —
+        //   no fill, the icon buttons plus that one line). A GLYPH BUTTON
+        //   TAKES THE ICON ROW'S REST INSTEAD — nothing at all — which is
+        //   architect R25 (2026-08-28): "icon buttons have no border (the
+        //   regular transport has none), text buttons keep theirs", the player
+        //   row's transport reading as the transport it replaces. So the rest
+        //   line is the `glyph` fork and not the unconditional it was.
         //   FOCUS is a face the icon row does not have (nothing up there takes
         //   the keyboard): its own fill under the accent outline, plus the
-        //   halo painted below.
-        // There is NO selected and NO disabled state on this surface — a
-        // dialog button is always live while its dialog stands — so the icon
-        // row's kRedesignSelectedFill and its kRedesignDisabledMix `keep` term
-        // have no counterparts here and are deliberately not invented.
+        //   halo painted below. A GLYPH BUTTON KEEPS IT WHOLE — the ring must
+        //   be visible wherever it lands, and a borderless button with no
+        //   focus face would swallow it.
+        // THE SELECTED FACE ARRIVED WITH THE ROW'S ONE LAMP (2026-08-28, R26 —
+        // Repeat one): kRedesignSelectedFill under the resting line, the
+        // roster's own SELECTED face, ranked under the press and over the
+        // focus fill exactly as the icon row ranks them — the fill says the
+        // STATE, so a focused lamp still reads as lit and its outline is what
+        // says the keyboard is there. There is still NO disabled state on this
+        // surface — a dialog button is always live while its dialog stands —
+        // so the icon row's kRedesignDisabledMix `keep` term has no
+        // counterpart here and is deliberately not invented.
         // THE CLICK FACE IS REAL NOW: these buttons act at the RELEASE, so the
         // pressed interior is the standing statement that the act is armed and
         // the lift will run it (it was unpainted while they acted at the
@@ -6168,17 +6424,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                               r.w + 2 * ring, r.h + 2 * ring,
                               ring, rad + ring, nullptr, &kModalFocusRing);
         }
+        const bool lit = plan[i].lit;
         const GuiColor fill =
             pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
                                 kRedesignClickMix)
-                    : kModalFocusFill;
+                    : lit ? kRedesignSelectedFill
+                          : kModalFocusFill;
         const GuiColor line =
             (hovered || armed || pressed || active_focus)
                 ? kRedesignAccent
                 : focused ? kModalFocusLinePassive
                           : kRedesignLine;
+        const bool has_fill = pressed || focused || lit;
+        // The rest line is the word button's; a glyph button shows one only
+        // while something claims it or its lamp stands (the ladder above).
+        const bool has_line = !plan[i].glyph || hovered || armed || pressed ||
+                              focused || lit;
         redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,
-                          (pressed || focused) ? &fill : nullptr, &line);
+                          has_fill ? &fill : nullptr,
+                          has_line ? &line : nullptr);
         if (plan[i].glyph) {
             // THE GLYPH, the icon row's own draw: the roster's 22 px icon box
             // centred in the 32 px button, full ink (a modal button has no
@@ -6212,108 +6476,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                      plan[i].editor_ok)
                           : plan[i].tooltip;
         dlg.buttons.push_back(out);
-        x += plan[i].w;
-    }
-
-    if (player_up) {
-        // -- THE CLOCK AND THE PLAY-SCRUB, after the cluster. --
-        //
-        // THE CLOCK is the bottom row's own monospace cell said twice —
-        // `<position> / <length>` in the product's clock shape, the same
-        // face, size, cell metrics and authored offsets as the transport
-        // row's clock (paint_bottom_row_buttons_and_clock), so the digits
-        // never walk and the player's clock reads exactly as the project's.
-        // Its cell is PUBLISHED (dlg.clock) for the tick's per-position
-        // damage, beside the scrub's.
-        const int clock_x0 = x + ring + pad;
-        gui_select_font_face(cr, GuiFontFamily::Mono);
-        const double csize = clock_font_size_px();
-        cairo_set_font_size(cr, csize);
-        cairo_scaled_font_t* cfont = cairo_get_scaled_font(cr);
-        const double cell_w = clock_cell_width_px(cfont, csize);
-        const double sep_w  = text_shape::shape_text_run(cfont, " / ").width_px;
-        const int clock_w   = static_cast<int>(std::ceil(2.0 * cell_w + sep_w));
-        const double cbase  =
-            redesign_baseline(cfont, static_cast<double>(content.y),
-                              static_cast<double>(content.h)) +
-            scaled_px(kClockCellOffsetYPx);
-        const int sr = audio.sample_rate();
-        const int64_t pos = render_player_position(app, playback);
-        const int64_t len = app.render_player.frames;
-        auto seconds_of = [sr](int64_t frames) {
-            return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
-                          : 0.0;
-        };
-        const std::string clock_text =
-            format_timestamp(seconds_of(pos)) + " / " +
-            format_timestamp(seconds_of(len));
-        // The cell, clipped to the lane's right pad on a narrow window — the
-        // scrub then has no room and publishes zero, the honest answer.
-        const int clock_right = std::min(clock_x0 + clock_w, cx1);
-        if (clock_right > clock_x0) {
-            cairo_save(cr);
-            cairo_rectangle(cr, clock_x0, content.y, clock_right - clock_x0,
-                            content.h);
-            cairo_clip(cr);
-            show_row_text(cr, cfont, static_cast<double>(clock_x0), cbase,
-                          clock_text, kRedesignLabel);
-            cairo_restore(cr);
-            dlg.clock = GuiRect{clock_x0 - 1, content.y,
-                                clock_right - clock_x0 + 2, content.h};
-        }
-        // The sans face back for anything after (nothing today; the restore
-        // below closes the body either way).
-        select_bottom_row_face(cr);
-
-        // THE PLAY-SCRUB: a track from the clock's right pad to the lane's
-        // right pad less the ring, the field's height and ground under the
-        // dropdown's border grey (kRedesignTabLine), the PLAYED portion in
-        // the accent, and the MARKER — a 1 px column of the ink the whole
-        // height of the track — at the item position, or at the drag's own
-        // x while the marker is being dragged (the seek commits at the
-        // release; the sound continues where it was). NOT a button: it takes
-        // no face, no focus and no tooltip. Published as dlg.scrub — the one
-        // rect the press router and the mapping (render_player_scrub_x_of /
-        // _frame_at, app_state.h) read.
-        const int scrub_x0 = clock_right + pad;
-        const int scrub_x1 = cx1 - ring;
-        const int scrub_h  = scaled_px(kModalFieldHeightPx);
-        const int scrub_y  = content.y + (content.h - scrub_h) / 2;
-        if (scrub_x1 - scrub_x0 >= scaled_px(40.0, 1) && scrub_h > 2) {
-            const GuiRect track{scrub_x0, scrub_y, scrub_x1 - scrub_x0, scrub_h};
-            dlg.scrub = track;
-            const int bord = scaled_px(kModalFieldBorderPx, 1);
-            redesign_face_box(cr, track.x, track.y, track.w, track.h, bord,
-                              rad, &kModalFieldGround, &kRedesignTabLine);
-            const AppState::RenderPlayer& rp = app.render_player;
-            if (rp.frames > 0) {
-                const int marker_x =
-                    rp.scrub.armed ? rp.scrub.marker_x
-                                   : render_player_scrub_x_of(app, pos);
-                cairo_save(cr);
-                redesign_rounded_rect_path(
-                    cr, static_cast<double>(track.x + bord),
-                    static_cast<double>(track.y + bord),
-                    static_cast<double>(track.w - 2 * bord),
-                    static_cast<double>(track.h - 2 * bord),
-                    rad - static_cast<double>(bord));
-                cairo_clip(cr);
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                     kRedesignAccent.b);
-                cairo_rectangle(cr, track.x + bord, track.y + bord,
-                                std::max(0, marker_x - (track.x + bord)),
-                                track.h - 2 * bord);
-                cairo_fill(cr);
-                cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                     kRedesignLabel.b);
-                cairo_rectangle(cr, marker_x, track.y + bord,
-                                std::max(1, scaled_px(1.0, 1)),
-                                track.h - 2 * bord);
-                cairo_fill(cr);
-                cairo_restore(cr);
-            }
-        }
     }
 
     // THE MODAL'S SURFACE IS THE LANE — border-top included, because that is

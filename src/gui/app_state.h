@@ -4903,7 +4903,8 @@ struct AppState {
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
-    // Previous / Play-Pause / Next / Close, the clock and the play-scrub — is
+    // Previous / Play-Pause / Next, the play-scrub, the clock, the Repeat one
+    // lamp and the two word buttons Load in place / Close (R25's order) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
@@ -4921,13 +4922,14 @@ struct AppState {
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free.
     enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
-    // THE PLAYER'S FOUR BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S SIX BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
-    // there).
+    // there). REPEAT ONE joined 2026-08-28 (architect R26) — the row's one
+    // LAMP, the only member here whose face carries a state.
     enum class PlayerButtonAct {
-        None, Previous, PlayPause, Next, LoadInPlace, Close
+        None, Previous, PlayPause, Next, RepeatOne, LoadInPlace, Close
     };
     // THE OK BIT SERVES TWO OWNERS (2026-08-28): an EDITOR dialog's OK /
     // Cancel is the session's own Enter / Esc, and the PICKER's OK / Cancel is
@@ -4950,9 +4952,12 @@ struct AppState {
         GuiRect                        box{0, 0, 0, 0};
         GuiRect                        field{0, 0, 0, 0};
         // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
-        // other owner: the PLAY-SCRUB track (the press router seeks and arms
-        // the marker drag against it — published geometry may only SELECT,
-        // the seek's frame is decided against the live item length) and the
+        // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
+        // box's own band, so a press anywhere on it is on the slider and the
+        // per-position damage covers the handle's whole travel; the press
+        // router seeks and arms the handle drag against it — published
+        // geometry may only SELECT, the seek's frame is decided against the
+        // live item length — and the
         // CLOCK cell (the tick's per-position damage while the player's
         // transport is live, beside the scrub's). Both follow the owner-tag
         // doctrine above: read only through a stash that names the live
@@ -6563,11 +6568,16 @@ struct AppState {
     // the platform's is already true and fires no edge for a focus that never
     // changed. The redesigned rows 1 and 2 paint their ground from
     // it — focused #292c30, unfocused #202326 — so the app's header tracks the
-    // labwc titlebar above it, which darkens the same way. Nothing else reads
-    // it and nothing else in the rows changes: separators, borders, the accent,
-    // labels and icons all keep their colors, and there is NO fade — a hard
-    // swap on the edge. Row 3's ground is already the unfocused value and does
-    // not move. False until the first configure IN THE FIRST SESSION, which is
+    // labwc titlebar above it, which darkens the same way. Nothing else in
+    // those rows changes: separators, borders, the accent, labels and icons
+    // all keep their colors, and there is NO fade — a hard swap on the edge.
+    // Row 3's ground is already the unfocused value and does not move.
+    // THE READERS ARE THREE since 2026-08-28 (architect R29): those two rows
+    // and THE RENDER PLAYER'S PLAY-SCRUB, whose played groove takes the
+    // focused blue or the shot's dimmed one — the only reader below the
+    // waveform, and the reason the activation hook damages the modal row too
+    // while the player stands (main.cpp, where the pair of rects is stated).
+    // False until the first configure IN THE FIRST SESSION, which is
     // the honest cold answer (the platform's accessor states why that is never
     // visible); every later session starts from the platform's live reading
     // instead.
@@ -7175,14 +7185,33 @@ struct AppState {
     //              a seek while paused moves this alone;
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
-    //   `scrub`    the play-scrub MARKER DRAG's arm: armed by a press on the
-    //              marker's grab band, the marker's painted x following the
-    //              pointer while playback continues where it was, the seek
-    //              committing at the release (the product's deferred-click
-    //              shape); each of the three hard ends — the pointer-leave
-    //              hook, the button-lost edge and the force-end finalizer,
-    //              through clear_player_scrub_drag — drops it and seeks
-    //              nowhere;
+    //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the
+    //              HANDLE'S OWN BOX (its 20 px, the one grab band since the
+    //              scrub became a Breeze slider), the handle's painted x
+    //              following the pointer — clamped onto the handle's own
+    //              travel, never the item's ends — while playback continues
+    //              where it was, the seek committing at the release (the
+    //              product's deferred-click shape); each of the three hard
+    //              ends — the pointer-leave hook, the button-lost edge and
+    //              the force-end finalizer, through clear_player_scrub_drag —
+    //              drops it and seeks nowhere;
+    //   `repeat_one` THE ONE SANCTIONED EXCEPTION TO NOTHING LOOPS (architect
+    //              2026-08-28, R26): a two-state toggle — off, or repeat the
+    //              ONE item — with no repeat-all ("the user can just press
+    //              play once the playlist finishes... repeat one is much more
+    //              useful"). While it stands, the natural end replays the item
+    //              from its start instead of advancing. SESSION-ONLY: false at
+    //              every open(), never serialized, carried by no sidecar and
+    //              no device-config key;
+    //   `ended_at_folder_end` THE FOLDER FINISHED (architect 2026-08-28, R27):
+    //              set by the natural end when the item was the LAST wav of
+    //              its folder and repeat_one was off — the transport stops
+    //              with the item resting at its start, as it always has — and
+    //              read by play_button_act alone, where it turns the next Play
+    //              (the car's included) into "start the folder's FIRST file"
+    //              rather than "replay this one". Cleared by every play,
+    //              resume, seek, open-a-row, open and close, so it names the
+    //              END OF THE FOLDER and no other resting state;
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
     //              asks about; consumed by its OK, dropped by its Cancel.
     struct RenderPlayer {
@@ -7197,6 +7226,8 @@ struct AppState {
         std::vector<float>         buffer;
         int64_t                    frames         = 0;
         bool                       transport_live = false;
+        bool                       repeat_one     = false;
+        bool                       ended_at_folder_end = false;
         int64_t                    resume_frame   = 0;
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
@@ -7242,6 +7273,10 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::PlayPause:
             return transport_live ? "Pause (Space)" : "Play (Space)";
         case AppState::PlayerButtonAct::Next:        return "Next (Page Down)";
+        // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
+        // roster's own table states once (architect 2026-08-09): the key AS
+        // TYPED, a capital naming a shifted press this product does not bind.
+        case AppState::PlayerButtonAct::RepeatOne:   return "Repeat one (r)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in place (')";
         case AppState::PlayerButtonAct::Close:       return "Close (Escape)";
         case AppState::PlayerButtonAct::None:        break;
@@ -7263,27 +7298,54 @@ inline int64_t render_player_position(const AppState& a,
 }
 
 // THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED track rect
-// (AppState::ModalDialogGeometry::scrub): a frame's column on the track and
-// the column's frame back. The painter's marker and the press router's seek
-// share it, so the pixel a press lands on and the pixel the marker paints at
-// answer the same frame. Banker's rounding onto the cells, like every grid
-// conversion.
+// (AppState::ModalDialogGeometry::scrub, which is the whole SLIDER ITEM): a
+// frame's column on the track and the column's frame back. The painter's
+// handle and the press router's seek share it, so the pixel a press lands on
+// and the pixel the handle paints at answer the same frame. Banker's rounding
+// onto the cells, like every grid conversion.
+//
+// IT OWNS THE INSET, and the inset is the HANDLE'S OWN BOX (2026-08-28, when
+// the scrub became a Breeze slider — the metric block is at
+// scrub_handle_box_px, render.h): Breeze travels the 20 px control's LEFT edge
+// across `width - 20`, so the handle's CENTRE — which is what names the frame
+// — runs from half a box in to half a box short of the end, never off either
+// end of its own track. The USABLE SPAN is the item less that box; an item too
+// narrow to hold one seats the centre at the left inset and answers frame 0,
+// the same cold answer a zero item gives.
+inline int render_player_scrub_usable_span(const GuiRect& track) {
+    return track.w - scrub_handle_box_px();
+}
 inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    if (track.w <= 1 || frames <= 0) return track.x;
+    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int span = render_player_scrub_usable_span(track);
+    if (span <= 0 || frames <= 0) return x0;
     const int64_t f = frame < 0 ? 0 : (frame > frames ? frames : frame);
     const double t = static_cast<double>(f) / static_cast<double>(frames);
-    return track.x + static_cast<int>(std::nearbyint(t * (track.w - 1)));
+    return x0 + static_cast<int>(std::nearbyint(t * span));
+}
+// THE HANDLE'S GRAB BAND — its own 20 px box, and the ONE test its two
+// readers share (2026-08-28, when the scrub became a Breeze slider): the press
+// router asks it to arm the marker drag, and the painter asks it for the
+// hovered outline, so what looks grabbable and what grabs are one answer.
+// `handle_x` is the handle's painted centre — the position's own column, or
+// the drag's carried one while a drag stands.
+inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
+                                           int x, int y) {
+    if (track.w <= 0 || track.h <= 0) return false;
+    if (y < track.y || y >= track.y + track.h) return false;
+    const int half = scrub_handle_box_px() / 2;
+    return x >= handle_x - half && x <= handle_x + half;
 }
 inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    if (track.w <= 1 || frames <= 0) return 0;
-    const int cx = x < track.x ? track.x
-                 : (x > track.x + track.w - 1 ? track.x + track.w - 1 : x);
-    const double t = static_cast<double>(cx - track.x) /
-                     static_cast<double>(track.w - 1);
+    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int span = render_player_scrub_usable_span(track);
+    if (span <= 0 || frames <= 0) return 0;
+    const int cx = x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
+    const double t = static_cast<double>(cx - x0) / static_cast<double>(span);
     const int64_t f =
         static_cast<int64_t>(std::nearbyint(t * static_cast<double>(frames)));
     return f < 0 ? 0 : (f > frames ? frames : f);

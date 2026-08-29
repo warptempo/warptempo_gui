@@ -3545,8 +3545,8 @@ private:
     // plays); Space is the Play button's act; Up / Down move the highlight;
     // Left / Right seek ∓5 s; Home the item's start; Backspace up one folder
     // (a consumed no-op at the root); Page Up / Page Down previous / next in
-    // the item's folder; `'` the Load in place button's chord; `l` and Esc
-    // close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
+    // the item's folder; `r` the Repeat one lamp; `'` the Load in place
+    // button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
     // neither gesture restates the step). EVERY OTHER
@@ -3591,17 +3591,22 @@ private:
     // callers.)
 
     // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
-    // painter's published track (AppState::ModalDialogGeometry::scrub): a
-    // press ON THE MARKER's grab band (kTrimEndcapGrabPx, scaled) arms the
-    // marker drag — the marker's painted x follows the pointer while playback
-    // continues where it was, and the RELEASE commits the seek (the product's
-    // deferred-click shape); a press on the track elsewhere SEEKS AT THE
-    // PRESS (identity certain) and arms nothing. The hard end — the
+    // painter's published slider item (AppState::ModalDialogGeometry::scrub):
+    // a press ON THE HANDLE'S OWN BOX (its 20 px, through the one test
+    // render_player_scrub_handle_hit — the trim endcaps' 10 px band until
+    // 2026-08-28, when the scrub became a Breeze slider and the handle got a
+    // size) arms the handle drag — its painted x follows the pointer while
+    // playback continues where it was, and the RELEASE commits the seek (the
+    // product's deferred-click shape); a press on the track elsewhere SEEKS AT
+    // THE PRESS (identity certain) and arms nothing. The hard end — the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // drops the arm and commits nothing.
     bool claim_player_scrub_press(int x, int y, GuiInputState mods);
     bool finish_player_scrub_release(int x, int y);
     void update_player_scrub_motion(int x);
+    // The drag's carried column clamped onto the handle's TRAVEL, the two
+    // writers' one expression (the body says why).
+    int  clamp_player_scrub_marker_x(int x) const;
     // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
     // for the same hook and the same finalizer.)
 

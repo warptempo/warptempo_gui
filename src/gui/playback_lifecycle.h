@@ -199,7 +199,10 @@ struct GuiPlaybackLifecycle {
     // paint domain — and play `span` frames, the session's end being
     // `start + span` clamped to the active view's own end (the song's in
     // source view, the bound preview buffer's in target) rather than that end
-    // itself. NOTHING LOOPS still: this is a discrete play to ITS end, the
+    // itself. NOTHING LOOPS still — the rule has exactly ONE sanctioned
+    // exception since 2026-08-28, the render player's REPEAT ONE lamp
+    // (render_player.h), which is not this body's and reaches no project
+    // audio: this is a discrete play to ITS end, the
     // natural-end teardown is its one terminal, and the resting cursor is
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end

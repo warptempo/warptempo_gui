@@ -3121,6 +3121,19 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
+    // THE PLAY-SCRUB'S HANDLE HAS A HOVERED OUTLINE AND NO BIT (2026-08-28):
+    // the painter re-answers it every frame from the remembered pointer
+    // position against the published item, because the handle MOVES under a
+    // stationary pointer while the transport plays and a stored answer would
+    // be stale in both directions between motions. What this walk owes is the
+    // DAMAGE — one small rect while the player's stash stands, so the frame
+    // that re-answers is drawn — and it is unconditional rather than
+    // change-driven for the same reason there is no bit: this walk cannot know
+    // the answer it would be comparing against without keeping one.
+    if (app.render_player.active && app.modal_dialog.valid &&
+        app.modal_dialog.scrub.w > 0 && app.modal_dialog.scrub.h > 0) {
+        viewport.invalidate_rect(app.modal_dialog.scrub);
+    }
     // AND IT OWNS THIS SURFACE'S TOOLTIP DWELL (2026-08-13, when the modal
     // buttons took hints instead of bracketed accelerators): the same helper
     // and the same 700ms tick the roster's walk uses, keyed on the Dialog half
@@ -3294,6 +3307,9 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index) {
                 return true;
             case AppState::PlayerButtonAct::Next:
                 render_player.next();
+                return true;
+            case AppState::PlayerButtonAct::RepeatOne:
+                render_player.toggle_repeat_one();
                 return true;
             case AppState::PlayerButtonAct::LoadInPlace:
                 render_player_load_in_place();
@@ -4002,17 +4018,33 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // -- THE PLAY-SCRUB'S POINTER HALF (2026-08-28) --------------------------------
 //
 // Over the painter's published track (AppState::ModalDialogGeometry::scrub,
-// zero under every owner but the player and read only through a stash that
-// names the live player session). The mapping between a column and a frame
-// is the one the painter's marker uses (render_player_scrub_x_of /
-// _frame_at, app_state.h). A press on the MARKER's grab band — the trim
-// endcaps' own 10 px, scaled — arms the marker drag: the marker's painted x
-// follows the pointer while the sound continues where it was, and the
-// RELEASE commits the seek, the product's deferred-click shape (the same
-// press could have been a tap on the track under the marker, whose meaning
-// is the seek at the press; on the marker the identity is not certain
+// the whole SLIDER ITEM — zero under every owner but the player and read only
+// through a stash that names the live player session). The mapping between a
+// column and a frame is the one the painter's handle uses
+// (render_player_scrub_x_of / _frame_at, app_state.h), which owns the handle
+// box's inset at both ends. A press on the HANDLE'S OWN BOX — its 20 px, the
+// one grab band, through the one test both this router and the painter's
+// hovered outline ask (render_player_scrub_handle_hit; it took over from the
+// trim endcaps' 10 px band on 2026-08-28, when the scrub became a Breeze
+// slider and grew a handle with a size of its own) — arms the marker drag: the
+// handle's painted x follows the pointer while the sound continues where it
+// was, and the RELEASE commits the seek, the product's deferred-click shape
+// (the same press could have been a tap on the track under the handle, whose
+// meaning is the seek at the press; on the handle the identity is not certain
 // until the lift). A press on the track ELSEWHERE seeks at the press — its
 // identity is certain — and arms nothing.
+
+// THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
+// expression its two writers (the press's arm, the motion) share, so the
+// painted handle sits inside its own track at every point of a drag and the
+// release's seek reads the same span the mapping does.
+int GuiInputHandler::clamp_player_scrub_marker_x(int x) const {
+    const GuiRect track = app.modal_dialog.scrub;
+    const int x0   = track.x + scrub_handle_box_px() / 2;
+    const int span = render_player_scrub_usable_span(track);
+    if (span <= 0) return x0;
+    return x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
+}
 
 bool GuiInputHandler::claim_player_scrub_press(int x, int y,
                                                GuiInputState mods) {
@@ -4027,10 +4059,14 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
         return true;
     const int marker_x =
         render_player_scrub_x_of(app, render_player_position(app, playback));
-    if (std::abs(x - marker_x) <= trim_endcap_grab_px()) {
+    if (render_player_scrub_handle_hit(track, marker_x, x, y)) {
         app.render_player.scrub.armed    = true;
-        app.render_player.scrub.marker_x =
-            std::clamp(x, track.x, track.x + track.w - 1);
+        // THE CARRIED x IS A HANDLE CENTRE, so it is clamped onto the handle's
+        // OWN TRAVEL and not onto the item — the painter draws the circle at
+        // it, and a centre past either inset would hang the handle off its
+        // track (the travel is the mapping's, one owner:
+        // render_player_scrub_usable_span).
+        app.render_player.scrub.marker_x = clamp_player_scrub_marker_x(x);
         viewport.invalidate_rect(track);
         return true;
     }
@@ -4043,7 +4079,7 @@ void GuiInputHandler::update_player_scrub_motion(int x) {
     if (!drag.armed) return;
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0) return;
-    const int mx = std::clamp(x, track.x, track.x + track.w - 1);
+    const int mx = clamp_player_scrub_marker_x(x);
     if (mx == drag.marker_x) return;
     drag.marker_x = mx;
     viewport.invalidate_rect(track);

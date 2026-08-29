@@ -36,8 +36,10 @@ struct GuiInputHandler;
 // renders through the one playback engine: the folder overlay above the
 // bottom row (folder_overlay.h) lists the project's OUTPUT FOLDERS — `render/`
 // with the deliverable, `tmp/` with its batch folders and their cells — and
-// the bottom row's modal carries the transport (Previous / Play-Pause / Next /
-// Load in place / Close, the clock, the play-scrub). The state it moves is
+// the bottom row's modal carries the transport (Previous / Play-Pause / Next,
+// the play-scrub, the clock, the Repeat one lamp, and Load in place / Close
+// flush right — the row's order and faces are the painter's, R25). The state
+// it moves is
 // AppState::render_player and AppState::folder_overlay (app_state.h, where
 // every field is described); this struct owns the acts.
 //
@@ -50,10 +52,27 @@ struct GuiInputHandler;
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
 // row, and AUTO-ADVANCE, Previous and Next walk ITS FOLDER'S wav list as it
-// was listed when the item was played — never another folder, never a wrap,
-// and NOTHING LOOPS: at the folder's last wav the transport stops with the
-// item resting at its start, and a following Play replays it (a user act).
-// Every listing is built when its folder is entered and never kept fresh.
+// was listed when the item was played — never another folder and never a
+// wrap. Every listing is built when its folder is entered and never kept
+// fresh.
+//
+// NOTHING LOOPS, WITH ONE SANCTIONED EXCEPTION — REPEAT ONE (architect
+// 2026-08-28, R26): the player's lamp is a two-state toggle, off or repeat
+// the ONE item ("the user can just press play once the playlist finishes...
+// repeat one is much more useful", which is why there is no repeat-all), and
+// while it stands THE NATURAL END REPLAYS THE ITEM FROM ITS START through the
+// player's own play road instead of advancing. It is the whole of the
+// exception: nothing else in the product plays anything twice by itself, and
+// the state is session-only (false at every open, serialized nowhere).
+//
+// AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
+// item resting at its start — and THE NEXT PLAY STARTS THE FOLDER'S FIRST
+// WAV rather than replaying that last one (architect 2026-08-28, R27: the
+// car's Play at the end of a playlist). `ended_at_folder_end` is the one bit
+// that says the transport is resting THERE, cleared by every play, resume,
+// seek, row open, open and close; `play_button_act` is its one reader and so
+// the one owner of the act, which the car's Play reaches through the same
+// key as every other Play.
 //
 // THE ITEM IS A WAV PLAYED AS IT IS: decoded through the in-tree WAV reader
 // (wav_read_full, audio_io — called, never changed) after the PROBE has
@@ -186,7 +205,9 @@ struct GuiRenderPlayer {
     // THE PLAY BUTTON'S ACT (and Space's): a highlighted wav that is not the
     // transport's item plays from its start; a highlighted folder or `..`
     // OPENS (the car-stereo OK/Play convention, so glass never needs a
-    // double-tap to navigate); otherwise pause / resume the item.
+    // double-tap to navigate); otherwise pause / resume the item — EXCEPT at
+    // the folder's end, where it starts the item folder's FIRST wav (R27, the
+    // bit's one reader; the contract is at the head of this file).
     void play_button_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
@@ -194,6 +215,13 @@ struct GuiRenderPlayer {
     // The item's neighbours within ITS folder; a consumed no-op at either end.
     void previous();
     void next();
+    // REPEAT ONE (architect 2026-08-28, R26) — the row's one lamp, flipped by
+    // its button and by bare `r`: while it stands the natural end replays the
+    // item from its start instead of advancing. Session-only state
+    // (AppState::RenderPlayer::repeat_one, false at every open), and this is
+    // its ONE writer past that reset; it damages the row for the lamp and
+    // touches no transport.
+    void toggle_repeat_one();
     // Seek by `delta_frames` from the current position, clamped into the
     // item; a no-op with no item. A live transport reseeks in place, a paused
     // one moves its resume point.
@@ -314,8 +342,11 @@ private:
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index);
-    // The natural end: the fence through the one stop body, then the next
-    // wav of the item's folder or the rest at the item's start. A NATURAL
+    // The natural end: the fence through the one stop body, then — with the
+    // REPEAT ONE lamp lit — the item again from its start (the sanctioned
+    // exception at the head of this file), else the next wav of the item's
+    // folder, else the rest at the item's start with the folder-end bit set.
+    // A NATURAL
     // END IS THE CURSOR REACHING THE END, NOT THE ABSENCE OF A DEVICE
     // (2026-08-28): a Bluetooth drop, a headphone pull and an audio device
     // that never came up all leave the same `playing` flag false, and the

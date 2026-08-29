@@ -5855,6 +5855,13 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::Apostrophe:
             render_player_load_in_place();
             return true;
+        case GuiKeys::R:
+            // REPEAT ONE (architect 2026-08-28, R26), the Repeat one button's
+            // own chord: one-shot like every other act key here, and bare-
+            // exact like all of them — every modified spelling of `r` is
+            // consumed above by the router's `if (!bare) return true`.
+            render_player.toggle_repeat_one();
+            return true;
         case GuiKeys::Return:
         case GuiKeys::KpEnter:
             // With no button focused, Enter OPENS the highlight.

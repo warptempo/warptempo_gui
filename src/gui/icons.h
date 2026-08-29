@@ -371,11 +371,25 @@ enum class Icon {
     // are their Breeze file names, the theme-provenance rule.
     Folder,              // a folder row (render / tmp / a batch / `..`)
     AudioXWav,           // a wav row
+
+    // THE RENDER PLAYER'S REPEAT TOGGLE (2026-08-28, architect R30): Breeze's
+    // actions/22/media-repeat-single — the loop with a "1" — worn in BOTH
+    // states by the modal row's one lamp, "a plain toggle: off is the
+    // unpressed face, on is the pressed/lit face", so the glyph never
+    // changes and the LAMP carries the state (the Show trim region toggle's
+    // own precedent). Breeze spells "repeat one" as media-repeat-single /
+    // media-playlist-repeat-song, two names for one artwork; there is no
+    // media-repeat-one.
+    MediaRepeatSingle,   // Repeat one (the player's modal row)
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 50 SINCE 2026-08-28, THE PLAYER ROW'S REPEAT TOGGLE: 49 + media-repeat-
+// single, one fresh transcription — three `<path>` elements with verbatim
+// relative `d` strings, nothing new for the interpreter, and the file's one
+// `fill-rule="evenodd"` needs no field (the entry says why).
 // 49 SINCE 2026-08-28, THE FOLDER OVERLAY: 47 + folder and audio-x-wav, the
 // render player's two row glyphs — two fresh transcriptions; audio-x-wav is
 // the table's first path whose file wraps it in a group transform and its
@@ -443,7 +457,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 49;
+inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

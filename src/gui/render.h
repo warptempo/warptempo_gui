@@ -1412,6 +1412,97 @@ inline constexpr double kIconGlyphPx  = 22.0;   // the icon box inside the butto
 // so it does not come through scaled_px.
 inline constexpr double kIconCornerRadiusPx = 5.0;
 
+// -- THE PLAY-SCRUB: A BREEZE SLIDER (architect 2026-08-28, R25/R29) --------
+//
+// The render player's modal row carries the transport's scrub bar, and the
+// architect ruled its design to be the one his own desktop paints: a plain
+// Qt `QSlider` under Breeze Dark, the widget Audacious's time slider IS (it
+// derives from QSlider and overrides one style HINT, never a paint). So both
+// the METRICS and the COLOURS below are Breeze's own, and the block holds
+// them together because one owner cannot be split across two files: the
+// painter (paint_modal_dialog) and the MAPPING (render_player_scrub_x_of,
+// app_state.h) both read the handle box, and the press router reads it as the
+// handle's grab band.
+//
+// THE METRICS ARE breeze/kstyle/breezemetrics.h's, verified against the
+// architect's screenshot at 100% (the groove ink measures 6 px, the handle 18
+// inside a 20 px box, and the label's margin lands on its own metric — three
+// independent confirmations that the shot carries no HiDPI multiplier):
+//   Slider_GrooveThickness   6  -> kScrubGrooveThicknessPx
+//   0.5 * that               3  -> kScrubGrooveRadiusPx (semicircular caps)
+//   PenWidth::Frame          1  -> the groove's and the handle's outline
+//   Slider_ControlThickness 20  -> kScrubHandleBoxPx, and the handle's TRAVEL
+//                                  is the track less that box (Breeze moves
+//                                  the 20 px control's LEFT edge across
+//                                  `width - 20`, so its CENTRE runs between
+//                                  the two half-box insets — which is what
+//                                  the mapping's inset is).
+//   the painted circle      18  -> kScrubHandleDiameterPx (the box inset 1 px
+//                                  per side, breezehelper.cpp's own adjust).
+// They are AUTHORED 100% lengths like every other number here and ride
+// gui_scale through scaled_px / gui_scale_factor().
+//
+// THE COLOURS ARE MEASURED OFF THE ARCHITECT'S OWN TWO SHOTS of that widget
+// (2026-08-28, 17:46 FOCUSED and 16:46 UNFOCUSED), which is the ruling: "the
+// focused colours are the 17:46 shot's" — played groove #3787b1, unplayed
+// #46494c, handle fill #292c30 — "and the 16:46 shot's dimmed blue is the
+// UNFOCUSED face the scrub takes when the window loses focus". So THE SCRUB
+// IS THE THIRD SURFACE THAT READS AppState::window_activated, after rows 1
+// and 2, and it is the only one that reads it below the waveform.
+//
+// THE OUTLINES SHIP AS THE COMPOSITED EDGE ROWS THEY PAINT, not as the alphas
+// Breeze strokes them with — the palette is FULLY OPAQUE by ruling. Breeze
+// strokes each groove's rounded path with its own fill colour forced to
+// alpha = frameContrast (0.2), and over this ground that resolves to the rows
+// the shots carry: #585a5c on the unplayed groove (the derivation reproduces
+// the shot's own row exactly), #344753 on the played one at the INACTIVE
+// accent (measured), and #457c99 at the ACTIVE accent (derived by the same
+// arithmetic, the window being unfocused in the shot that could have shown
+// it). THE EDGE ROWS ARE BREEZE'S AND THE FILLS ARE THE ARCHITECT'S MEASURED
+// PAIR, which is a hair inconsistent by construction — his focused shot reads
+// a lighter unplayed groove than the derivation's ground gives — and it is
+// ACCEPTED: the ruling named the fills, the edge is a 1 px line, and a retune
+// of a fill wants its own edge row recomputed the same way rather than
+// nudged.
+//
+// THE HANDLE'S FILL IS Breeze's `QPalette::Button` and its resting outline is
+// mix(Button, ButtonText, 0.2) — both COINCIDE with constants this product
+// already carries (kRedesignRowGround #292c30, kRedesignLine #535659) and are
+// deliberately their own here, the standing numerically-equal-is-not-the-same-
+// constant rule (kRedesignRowGroundUnfocused): those two are kdenlive crops of
+// a header row and a separator, these are Breeze roles on a slider, and a
+// retune of one must not follow the other. The handle's HOVER/FOCUS outline is
+// `Helper::hoverColor` = [Colors:View] DecorationHover = #3daee9, which IS
+// kRedesignAccent's own value and role — the accent says "the pointer is
+// here" on this surface exactly as it does on every button — so that one is
+// READ from the accent rather than re-declared.
+// NOT TRANSCRIBED: the handle's shadow (a 12.5% black crescent — an alpha,
+// which this palette does not have) and the disabled groove (a dialog surface
+// has no disabled state).
+inline constexpr double kScrubGrooveThicknessPx = 6.0;
+inline constexpr double kScrubGrooveRadiusPx    = 3.0;
+inline constexpr double kScrubHandleBoxPx       = 20.0;
+inline constexpr double kScrubHandleDiameterPx  = 18.0;
+inline constexpr double kScrubOutlineWidthPx    = 1.0;
+
+inline constexpr GuiColor kScrubGroove                = hex(0x46494C);
+inline constexpr GuiColor kScrubGrooveOutline         = hex(0x585A5C);
+inline constexpr GuiColor kScrubPlayed                = hex(0x3787B1);
+inline constexpr GuiColor kScrubPlayedOutline         = hex(0x457C99);
+inline constexpr GuiColor kScrubPlayedInactive        = hex(0x1D3847);
+inline constexpr GuiColor kScrubPlayedInactiveOutline = hex(0x344753);
+inline constexpr GuiColor kScrubHandleFill            = hex(0x292C30);
+inline constexpr GuiColor kScrubHandleOutline         = hex(0x535659);
+
+// THE HANDLE'S BOX IN DEVICE PIXELS — the ONE owner of that length for its
+// three readers: the painter draws the circle in it, the MAPPING insets the
+// track by half of it at each end (the handle's centre is the frame's
+// position), and the press router takes it as THE HANDLE'S GRAB BAND. Floored
+// at 2 so the half-box inset is never zero and the band never degenerates.
+inline int scrub_handle_box_px() {
+    return scaled_px(kScrubHandleBoxPx, 2);
+}
+
 // ROW 5's THREE LANES, measured off row_5_full.png (the composite is the
 // authority): trim y0..8, ruler y9..36, marker y37..56, and the waveform starts
 // at 57 — so the marker lane's bottom edge IS the waveform top, with no gap.

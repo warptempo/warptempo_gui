@@ -1736,6 +1736,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // ever arrive to say so.
         input_handler.clear_folder_overlay_hover();
         input_handler.clear_player_scrub_drag();
+        // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
+        // question one surface over: the handle's accent is re-answered at
+        // PAINT from the remembered position and the in-window flag (which
+        // this hook has just cleared), so what it owes is the damage — the
+        // cell, while the player owns the row.
+        if (app.render_player.active && app.modal_dialog.valid &&
+            app.modal_dialog.scrub.w > 0 && app.modal_dialog.scrub.h > 0) {
+            viewport.invalidate_rect(app.modal_dialog.scrub);
+        }
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook
@@ -1744,8 +1753,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // its own. It takes the pointer-leave hook's shape for the pointer-leave
     // hook's reason: a protocol edge that changes what should be on screen and
     // carries no other event to repaint it.
-    // TOP-STRIP damage is the exact rect — rows 1 and 2 are the only surfaces
-    // that read the flag, and both live there.
+    // TOP-STRIP damage is the exact rect — rows 1 and 2 read the flag for
+    // their ground, and both live there — PLUS THE MODAL ROW WHILE THE RENDER
+    // PLAYER STANDS (2026-08-28): the play-scrub is the flag's THIRD reader
+    // and the only one below the waveform, its played groove taking the
+    // focused blue or the dimmed one (architect R29). THE READERS ARE THREE
+    // AND THE DAMAGE IS TWO RECTS, re-grepped at this line rather than
+    // inherited; the row's rect is spent only while the player owns it,
+    // because that is the only state in which anything down there reads the
+    // flag at all.
     // THE MIRROR IS SEEDED HERE AND KEPT BY THE HOOK, and the seed is what a
     // REOPEN needs (2026-08-28): the loop builds a FRESH AppState per project
     // (gui_main's contract, platform.h) whose window_activated is born false,
@@ -1761,6 +1777,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.set_activation_changed_hook([&] {
         app.window_activated = gui.window_activated();
         viewport.invalidate_top_strip();
+        if (app.render_player.active) viewport.invalidate_modal_dialog_area();
     });
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES (codex round 4, 2026-08-11):
