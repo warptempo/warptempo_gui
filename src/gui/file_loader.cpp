@@ -78,10 +78,16 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
 
 std::optional<std::string> source_load_dry_run(
         const std::filesystem::path& source) {
+    // EVERY REASON BELOW IS A NOTIFICATION CARD'S ONE LINE — the Open project
+    // picker's third refusal — so every path in one is named by the basename
+    // rule's composer (shown_project_path, device_config.h: the project folder
+    // and the file, never the projects path). The full spelling stays in
+    // `path`, which is what the probe and the collision check are ASKED of.
     const std::string path = source.string();
     auto info = audio_probe(path);
     if (!info) {
-        return "Source open failed for '" + path + "': " + info.error();
+        return "Source open failed for '" + shown_project_path(source) +
+               "': " + info.error();
     }
     if (info->sample_rate < 44100) {
         return "Sample rate " + std::to_string(info->sample_rate) +
@@ -101,7 +107,8 @@ std::optional<std::string> source_load_dry_run(
     if (auto samples = checked_audio_sample_count(info->frames,
                                                   info->channels);
         !samples) {
-        return "Source open failed for '" + path + "': " + samples.error();
+        return "Source open failed for '" + shown_project_path(source) +
+               "': " + samples.error();
     }
 
     std::filesystem::path parent = source.parent_path();
@@ -126,16 +133,16 @@ std::optional<std::string> source_load_dry_run(
     if (!wm_here) return wm_here.error();
     if (*wm_here) {
         if (auto r = warp.load(wm_path.string()); !r) {
-            return "Invalid warp markers in '" + wm_path.string() + "': " +
-                   r.error();
+            return "Invalid warp markers in '" + shown_project_path(wm_path) +
+                   "': " + r.error();
         }
     }
     auto tm_here = sidecar_present(tm_path);
     if (!tm_here) return tm_here.error();
     if (*tm_here) {
         if (auto r = phase_resets.load(tm_path.string()); !r) {
-            return "Invalid phase reset markers in '" + tm_path.string() +
-                   "': " + r.error();
+            return "Invalid phase reset markers in '" +
+                   shown_project_path(tm_path) + "': " + r.error();
         }
     }
     auto set_here = sidecar_present(set_path);
@@ -143,12 +150,13 @@ std::optional<std::string> source_load_dry_run(
     if (*set_here) {
         auto sf = read_settings_file(set_path.string());
         if (!sf) {
-            return "Invalid settings in '" + set_path.string() + "': " +
-                   sf.error();
+            return "Invalid settings in '" + shown_project_path(set_path) +
+                   "': " + sf.error();
         }
         if (auto collision = render_output_source_collision(sf->engine, path)) {
-            return "Settings in '" + set_path.string() +
-                   "' would make the render output '" + collision->string() +
+            return "Settings in '" + shown_project_path(set_path) +
+                   "' would make the render output '" +
+                   shown_project_path(*collision) +
                    "' overwrite the source audio file";
         }
         tab_a_trim = sf->tab_a.trim;

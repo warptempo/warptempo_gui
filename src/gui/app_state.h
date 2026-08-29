@@ -3469,10 +3469,11 @@ inline int drag_moved_threshold_px() {
 // readout, its pasteable copy payload and three staleness generations (both
 // marker stores plus the displayed map), and it drove three surfaces: the
 // marker-text lane's one-run fallback tier and its spell-out expansion, the
-// bottom strip's resolved readout, and the Ctrl+C copy. All three are settled
+// resolved readout, and the Ctrl+C copy. All three are settled
 // without it — the lane and its resolver are gone (a marker's value is written
 // on its flag), and the readout and the copy both took the SELECTION
-// translation (their sites: paint_bottom_strip and the Ctrl+C binding in
+// translation (their sites: paint_status_bar, the readout being the STATUS
+// BAR's right cell since 2026-08-29, and the Ctrl+C binding in
 // input_handler.cpp). The staleness machinery went with it: the three
 // generations, the convergence loop, the on_tick repair and the pointer-leave
 // clear all existed to keep a CACHE honest, and there is no cache left.

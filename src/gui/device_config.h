@@ -128,6 +128,27 @@ inline bool is_projects_path(const std::string& v) {
     return !v.empty() && std::filesystem::path(v).is_absolute();
 }
 
+// HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
+// rule's composer for everything the project model and the loaders say
+// (messaging.md; `external_sync.cpp`'s `shown` is the mirror's own, relative
+// to its two roots). A sentence that carries a path names THE PROJECT FOLDER
+// AND THE FILE — `550 - 1/07 - Menuetto.settings` — and never the projects
+// path itself, because every one of those sentences is one line on a
+// notification card that CLIPS, and the leading `/home/.../projects/` is the
+// one part of it the reader already knows: it is this file's own key, the
+// same for every project on the device. A path with no parent falls back to
+// its filename. Lexical, following no link.
+//
+// IT LIVES BESIDE THE KEY IT REFUSES TO SPELL rather than in the project
+// model, so the sidecar readers (settings_io.cpp) can compose the same
+// sentence without depending on the model; the model's own refusals name the
+// FOLDER NAME alone, which is `folder.filename()` and needs nothing from here.
+inline std::string shown_project_path(const std::filesystem::path& p) {
+    const std::string parent = p.parent_path().filename().string();
+    if (parent.empty()) return p.filename().string();
+    return parent + "/" + p.filename().string();
+}
+
 // THE last_project GRAMMAR — the ONE owner: EMPTY, or exactly ONE path
 // component — no `/`, not `.`, not `..`, no LINE SEPARATOR anywhere in it
 // (`\n` or `\r`), and no leading or trailing ASCII WHITESPACE (all six of it:

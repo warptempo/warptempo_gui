@@ -33,7 +33,10 @@ bool atomic_write_string_to_path(const std::string& path,
 // (the real load's create_if_missing below, and source_load_dry_run's
 // pre-flight, file_loader.h) or the dry-run would approve a reopen the load
 // then refuses. A stat that FAILS is neither present nor absent: it answers
-// with the system's own words, never a silent "absent".
+// with the system's own words, never a silent "absent" — and it names the
+// file the basename rule's way (the project folder and the file,
+// shown_project_path), because the dry run hands that sentence to a
+// notification card (messaging.md).
 std::expected<bool, std::string> sidecar_present(
     const std::filesystem::path& p);
 

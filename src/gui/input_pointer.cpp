@@ -4118,7 +4118,14 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
 
 void GuiInputHandler::update_folder_overlay_hover(int x, int y) {
     if (!folder_overlay::stands(app)) return;
-    const int hit = folder_overlay::row_at(app, x, y);
+    // A NOTIFICATION CARD IS OPAQUE TO THE POINTER (notifications.h), the
+    // roster walk's own term one surface over: the stack grows DOWN from row
+    // 1 and the band's ceiling is the waveform's midpoint, so on a short
+    // window at a large scale the two do overlap, and a row under a card must
+    // neither light nor promise the press the card's claim will consume.
+    const int hit = notification_card_at(app, x, y) != 0
+                        ? -1
+                        : folder_overlay::row_at(app, x, y);
     if (hit == app.folder_overlay.hovered_row) return;
     const int old = app.folder_overlay.hovered_row;
     app.folder_overlay.hovered_row = hit;
@@ -4142,6 +4149,11 @@ void GuiInputHandler::clear_folder_overlay_hover() {
 
 bool GuiInputHandler::claim_notification_press(GuiMouseButton button, int x,
                                                int y) {
+    // The hit owner has already asked the LIVE stack (notifications.h): a
+    // published rect whose card has expired or been demoted into the queue
+    // answers 0 here, so this press is claimed by NOTHING and falls through to
+    // the surface underneath — the pixels the user is about to see there at
+    // the next paint, which is the honest place for it to land.
     const uint64_t id = notification_card_at(app, x, y);
     if (id == 0) return false;
     // Consumed from here, whatever the button: the card is opaque.
@@ -6722,6 +6734,19 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (!app.pointer_in_window) return;
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
+    // AND IT REFUSES UNDER A NOTIFICATION CARD, for the opacity rule rather
+    // than for honesty: a card is opaque to the pointer (notifications.h), so
+    // no button beneath one may wear a hover face or start a tooltip dwell —
+    // a hover face is a PROMISE OF PRESSABILITY and the card's claim consumes
+    // that press before any roster gate sees it. THE TERM LIVES HERE, at the
+    // faces' one derivation, and not at the motion handler, because this walk
+    // has TWO callers and the other is the TICK: a pointer RESTING on a card
+    // over the icon row is exactly the case the review found, and a
+    // motion-side guard would be undone by the next tick's recompute. It is
+    // folded into `under_pointer` below rather than spelled as an early
+    // return so the walk still writes `hovered = false` on whatever it lit
+    // before the card slid up.
+    const bool under_card = notification_card_at(app, mx, my) != 0;
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
     // walk because the walk below is what stamps it; the rule is stated at the
     // stamp itself.
@@ -6759,7 +6784,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // all, and both refusals live in that one predicate rather than as
         // conditions here or in the painter. There is no in-window term: the
         // whole walk refused above.
-        const bool under_pointer = !modal_veil &&
+        const bool under_pointer = !modal_veil && !under_card &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
         // THE FACE ADDS THE ENABLED TERM AND THE HINT DOES NOT (architect
@@ -8682,10 +8707,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch for the
     // menu-row exit's reason: the cards are hit above every veil, so their
     // hover must be answered under every modal too, and every branch below
-    // returns. A card is opaque — the motion over one still re-derives
-    // nothing for what lies under it, because the roster and row walks below
-    // test rects the card covers only where the press would have been
-    // consumed anyway, and the cursor map answers the card first.
+    // returns.
+    //
+    // THE CARD'S OPACITY IS NOT SPELLED HERE, and deliberately not: the two
+    // hover walks a card can stand over — the roster's
+    // (recompute_redesign_button_hover) and the band's
+    // (update_folder_overlay_hover) — each carry the term themselves, because
+    // the roster's has a SECOND caller, the tick, and a pointer RESTING on a
+    // card is exactly the case that must not light what is under it. An early
+    // return here would be undone by the next tick and would freeze a live
+    // gesture whose pointer merely crossed a card. The cursor map, the press
+    // claim and the touch pan zone ask the same one owner
+    // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
     // (THE POINTER CURSOR IS NOT RESOLVED HERE, 2026-08-03. A push stood at this
     // spot — above every gesture branch, so that each early return below still

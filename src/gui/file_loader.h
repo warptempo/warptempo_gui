@@ -110,6 +110,11 @@ struct GuiFileLoader {
 // template creation is advisory, a crossed trim pair NORMALIZES to the full
 // window, a target-view restore that will not build forces source view
 // silently, and a failed playback init only disables playback.
+//
+// EVERY REASON IT RETURNS IS A NOTIFICATION CARD'S ONE LINE (the picker's
+// third refusal), so a path in one names THE PROJECT FOLDER AND THE FILE and
+// never the projects path — shown_project_path, device_config.h, the basename
+// rule's one composer (messaging.md).
 std::optional<std::string> source_load_dry_run(
     const std::filesystem::path& source);
 

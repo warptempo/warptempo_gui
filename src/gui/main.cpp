@@ -158,8 +158,9 @@ namespace {
 // row-5 live test, though the ruler painter still draws it, needing the tick
 // columns), whose bottom edge is the
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
-// font-scaled lanes in this strip. The BOTTOM strip is ONE lane again: THE
-// UNIFIED BOTTOM ROW, bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
+// font-scaled lanes in this strip. The BOTTOM strip is TWO LANES (2026-08-29,
+// with the status bar): lane 1 is THE UNIFIED BOTTOM ROW,
+// bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
 // pad and, flush right, the four single-marker verbs with the Edit flag
@@ -171,11 +172,13 @@ namespace {
 // which deleted the mode SWAP that put the history companions in the arrows'
 // slots inside the `h` view). All at the icon row's boxes, the clock in
 // monospace beside the transport's own separator —
-// sitting AT THE WINDOW'S FOOT with the flexible gap 2
-// between it and the waveform. (The strip was one lane from row 7's collapse,
+// sitting ONE LANE IN FROM THE WINDOW'S FOOT with the flexible gap 2
+// between it and the waveform — and lane 0 is THE STATUS BAR on the foot
+// itself (status_bar_h_px(), the messaging redesign's state surface:
+// messaging.md). (The strip was one lane from row 7's collapse,
 // 2026-08-01, two from row 8, 2026-08-11, one at the unification, two again
-// when the overview strip landed below the row that afternoon, and one from
-// commit B.) It rides the
+// when the overview strip landed below the row that afternoon, one from
+// commit B, and two from the status bar.) BOTH ride the
 // gui_scale axis like every other redesigned row, so no lane anywhere is
 // font-scaled any more.
 //
@@ -1494,7 +1497,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // popup_eligible_marker is a free function in app_state.{h,cpp}. Its two
     // remaining callers reach it directly with the (app, idx) signature — the
-    // bottom strip's resolved readout (paint_handler.cpp) and the Ctrl+C copy
+    // STATUS BAR's right cell, the resolved readout (paint_status_bar,
+    // paint_handler.cpp; it was the bottom strip's until 2026-08-29, and the
+    // tab row's status chain's between), and the Ctrl+C copy
     // (input_handler.cpp), the two surfaces that took the SELECTION translation
     // when the hover machinery was deleted. The iteration-mode part of its gate
     // is documented above its declaration in app_state.h.
@@ -1997,6 +2002,30 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the atomic playing flag.
     gui.set_on_tick([&]() {
+        // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
+        // thing this body does on EVERY tick, ahead of all four of its early
+        // returns (the startup load's, the render player's fork, the
+        // loading/blank guard and the playing-only guard). A card is a
+        // message about something that has ALREADY happened, so nothing
+        // below can be a precondition for retiring one, while every return
+        // below is a mode a card can stand over: the render player's own "No
+        // audio device" card would otherwise stand for the whole player
+        // session, and a card pushed while the window is blank would never
+        // leave at all. So it sits as early as a deadline sampler can sit,
+        // on the timerfd expiry itself.
+        //
+        // This is the run loop's own deadline tick, the same expiry the
+        // platform's two software deadlines ride — key repeat and the touch
+        // disambiguation window (maybe_fire_repeat / maybe_resolve_touch_window,
+        // input_core.cpp: GuiInputCore::tick) — and the chrome button
+        // hold-repeat and the A/B audition's rests below; the cards are the
+        // tick's FOURTH software deadline and, like the other three, schedule
+        // nothing (kNotificationMs, gui_input.h; the model at notifications.h).
+        // One size test when no card stands; it also re-answers the hover from
+        // the remembered pointer, so a card that slid up under a resting
+        // pointer pauses.
+        notifications.fire_if_due();
+
         // Startup file load, deferred out of pre-run() so the window maps and
         // paints first (the compositor's initial configure / first frame only
         // land once run() is pumping). Gated on has_initial_configure() so the
@@ -2442,25 +2471,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // is cleared at the open and cannot arm — so the player's own tick
         // takes the natural end (through the one stop body, the fence
         // first) and the per-position damage of its clock and scrub, and
-        // nothing below this line applies.
+        // nothing below this line applies — the CARDS' CLOCK excepted, and it
+        // is not below: it is polled at the head of this body, above this fork
+        // and every other early return, because a card must age and expire
+        // while the player stands (the player's own refusals are cards).
         if (app.render_player.active) {
             render_player.tick();
             return;
         }
-
-        // THE NOTIFICATION CARDS' CLOCK, sampled here and ABOVE the
-        // playing-only guard below — an idle window must still retire an
-        // expired card. This is the run loop's own deadline tick, the same
-        // timerfd expiry the platform's two software deadlines ride — key
-        // repeat and the touch disambiguation window (maybe_fire_repeat /
-        // maybe_resolve_touch_window, input_core.cpp: GuiInputCore::tick) —
-        // the chrome button hold-repeat above and the A/B audition's rests
-        // just below; the cards are the tick's FOURTH software deadline and,
-        // like the other three, schedule nothing (kNotificationMs,
-        // gui_input.h; the model at notifications.h). One size test when no
-        // card stands; it also re-answers the hover from the remembered
-        // pointer, so a card that slid up under a resting pointer pauses.
-        notifications.fire_if_due();
 
         // THE A/B AUDITION'S REST DEADLINE, sampled here and ABOVE the
         // playing-only guard below — a rest has nothing playing and no scanner
@@ -2468,8 +2486,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // This is the run loop's own deadline tick, the same timerfd expiry the
         // platform's key-repeat and touch-disambiguation deadlines ride
         // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
-        // and the same one the chrome button hold-repeat and the notification
-        // cards' clock ride above; the act
+        // and the same one the chrome button hold-repeat above and the
+        // notification cards' clock at this body's head ride; the act
         // adds no timer of its own. One enum compare when no rest stands. It
         // sits ahead of ma_playing so a play launched here takes this tick's
         // scanner heartbeat rather than waiting for the next.

@@ -226,8 +226,15 @@ std::expected<bool, std::string> sidecar_present(
     std::error_code ec;
     const bool here = std::filesystem::exists(p, ec);
     if (ec) {
-        return std::unexpected("Cannot read '" + p.string() + "': " +
-                               ec.message());
+        // THE BASENAME RULE (messaging.md): this sentence is one of the Open
+        // project picker's card lines by way of source_load_dry_run, so it
+        // names the project folder and the file rather than the projects path
+        // (shown_project_path, device_config.h). ONE SENTENCE, BOTH ROADS —
+        // create_if_missing prints the same words to stderr, where the folder
+        // name is diagnosis enough: the projects path is the device config's
+        // one setting, the same for every project on the machine.
+        return std::unexpected("Cannot read '" + shown_project_path(p) +
+                               "': " + ec.message());
     }
     return here;
 }

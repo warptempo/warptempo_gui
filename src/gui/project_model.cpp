@@ -25,9 +25,20 @@ bool is_sidecar_extension(const std::string& ext) {
 
 std::expected<GuiProjectSource, std::string> resolve_project(
         const std::filesystem::path& folder) {
+    // EVERY REFUSAL BELOW NAMES THE FOLDER BY ITS NAME AND A FILE BY ITS
+    // BASENAME, never the projects path (the basename rule, messaging.md):
+    // these sentences are the Open project picker's second refusal, one line
+    // on a notification card that CLIPS, and the leading
+    // `/home/.../projects/` is the one part of them the reader already knows —
+    // it is the device config's own key, the same for every project on the
+    // machine. ONE SENTENCE PER REASON, on every road: the two FATAL roads
+    // (startup's resolve and gui_main's reopen, both stderr + exit 1) print
+    // the same words, and startup's own zero case is what names the projects
+    // path out loud ("No project under <projects_path>").
+    const std::string name = folder.filename().string();
     std::error_code ec;
     if (!std::filesystem::is_directory(folder, ec)) {
-        return std::unexpected("'" + folder.string() + "' is not a folder" +
+        return std::unexpected("'" + name + "' is not a folder" +
                                (ec ? " (" + ec.message() + ")" : ""));
     }
 
@@ -46,8 +57,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
 
     std::filesystem::directory_iterator it(folder, ec);
     if (ec) {
-        return std::unexpected("Cannot read '" + folder.string() + "': " +
-                               ec.message());
+        return std::unexpected("Cannot read '" + name + "': " + ec.message());
     }
     const std::filesystem::directory_iterator walk_end;
     while (it != walk_end) {
@@ -57,8 +67,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
         if (entry_ec) {
             return std::unexpected("Cannot read '" +
                                    entry.filename().string() + "' in '" +
-                                   folder.string() + "': " +
-                                   entry_ec.message());
+                                   name + "': " + entry_ec.message());
         }
         if (regular) {
             const std::string ext  = entry.extension().string();
@@ -71,8 +80,8 @@ std::expected<GuiProjectSource, std::string> resolve_project(
         }
         it.increment(ec);
         if (ec) {
-            return std::unexpected("Cannot read '" + folder.string() +
-                                   "': " + ec.message());
+            return std::unexpected("Cannot read '" + name + "': " +
+                                   ec.message());
         }
     }
     // The walk's order is unspecified, so both name sets are sorted before any
@@ -88,7 +97,6 @@ std::expected<GuiProjectSource, std::string> resolve_project(
         std::unique(sidecar_stems.begin(), sidecar_stems.end()),
         sidecar_stems.end());
 
-    const std::string name = folder.filename().string();
     auto make = [&](const std::string& stem) {
         GuiProjectSource out;
         out.name   = name;

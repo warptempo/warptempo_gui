@@ -159,7 +159,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
-// used by the bottom-strip resolved readout and the Ctrl+C copy.
+// used by the STATUS BAR's resolved readout (its right cell) and the
+// Ctrl+C copy.
 // Exception: when the prior marker is a label ref, the copy is skipped and a
 // neutral owner (base 1.0 / empty scale) is dropped instead. Copying the
 // ref's resolved effective value would freeze a literal of the pre-drop

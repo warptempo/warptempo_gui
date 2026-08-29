@@ -28,10 +28,27 @@ GuiRect notification_stack_bound(const AppState& a) {
                           (kNotificationVisibleMax - 1) * gap};
 }
 
+bool notification_visible(const AppState& a, uint64_t id) {
+    if (id == 0) return false;
+    const std::vector<AppState::Notification>& cards = a.notifications.cards;
+    for (size_t i = 0; i < cards.size(); ++i) {
+        if (cards[i].id != id) continue;
+        return i < static_cast<size_t>(kNotificationVisibleMax);
+    }
+    return false;
+}
+
 uint64_t notification_card_at(const AppState& a, int x, int y) {
     if (a.dropdown.open() && rect_contains(a.dropdown.rect, x, y)) return 0;
     for (const AppState::NotificationPainted& p : a.notifications.painted) {
-        if (rect_contains(p.rect, x, y)) return p.id;
+        if (!rect_contains(p.rect, x, y)) continue;
+        // THE PUBLICATION SELECTS, THE LIVE STACK DECIDES: the rects were
+        // painted, the card may since have expired or been demoted into the
+        // queue by a push, and a stale rect must neither dismiss it nor
+        // consume the press over it. The published rects do not overlap, so
+        // a hit that fails this test is the whole answer — nothing beneath
+        // it in the publication can be the card the user sees.
+        return notification_visible(a, p.id) ? p.id : 0;
     }
     return 0;
 }
@@ -106,7 +123,15 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
 }
 
 void GuiNotifications::dismiss(uint64_t id) {
+    // A QUEUED CARD IS NOT DISMISSABLE — the same live test the hit asks
+    // (notification_visible), asked here of the act's own argument. The X that
+    // named a card was painted while it was visible; a push may have demoted
+    // it into the queue since, and those pixels now belong to whatever took
+    // its place, so the act must not reach past the screen into the queue.
+    if (!notification_visible(app, id)) return;
     std::vector<AppState::Notification>& cards = app.notifications.cards;
+    // The test above already found the card among the visible ones; this walk
+    // is here for the erase's iterator and cannot come back empty.
     auto it = std::find_if(cards.begin(), cards.end(),
                            [id](const AppState::Notification& n) {
                                return n.id == id;
@@ -165,12 +190,23 @@ void GuiNotifications::set_hover(uint64_t id, bool close) {
         // ENTER the new one: a visible normal card with a running clock
         // banks what is left of its life. A queued card cannot be hovered
         // (it is not painted) and a critical one has no clock to bank.
+        //
+        // A CARD ALREADY DUE IS NOT BANKED. The pointer can arrive after the
+        // deadline has passed and before the tick that retires it — the
+        // deadlines are polled, not scheduled — and banking a life of zero
+        // would pause a card that has already earned its exit and hold it
+        // there for as long as the pointer rested. Left running, it leaves
+        // on the next fire_if_due exactly as an unhovered one would: HOVER
+        // PAUSES A CLOCK, it does not resurrect one.
         if (AppState::Notification* n = find(id)) {
             if (n->cls == AppState::NotificationClass::Normal &&
                 !n->paused && n->expiry_ms != 0) {
-                n->paused       = true;
-                n->remaining_ms = std::max<int64_t>(0, n->expiry_ms - now);
-                n->expiry_ms    = 0;
+                const int64_t left = n->expiry_ms - now;
+                if (left > 0) {
+                    n->paused       = true;
+                    n->remaining_ms = left;
+                    n->expiry_ms    = 0;
+                }
             }
         }
     }
@@ -186,10 +222,9 @@ void GuiNotifications::set_hover(uint64_t id, bool close) {
 }
 
 void GuiNotifications::update_hover(int x, int y) {
+    // The hit owner has already asked the live stack (a departed or demoted
+    // card answers 0 there), so this walk owes only the X's own box.
     const uint64_t id = notification_card_at(app, x, y);
-    // The publication may name a card that has since left; the live stack
-    // decides, and a departed id hovers nothing.
-    if (id != 0 && find(id) == nullptr) { set_hover(0, false); return; }
     set_hover(id, id != 0 && notification_close_at(app, id, x, y));
 }
 

@@ -2203,6 +2203,15 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // every gesture — the marker flag's pending click included, so a wheel
     // cannot pan or zoom the viewport out from under a flag press before it
     // resolves.
+    // A NOTIFICATION CARD SWALLOWS THE WHEEL (2026-08-29), first and above
+    // every veil below exactly as its press claim ranks above them: a card is
+    // opaque to the pointer and it is not a scroll surface, so a detent over
+    // one must neither reach the waveform under it nor scroll the band it may
+    // overlap. -1 rather than 0 for the inert bands' own reason — the
+    // platform grows no sub-detent remainder in a context that can fire
+    // nothing. It yields to an open dropdown inside the one hit owner
+    // (notification_card_at), so the two floaters need no ordering here.
+    if (notification_card_at(app, x, y) != 0) return -1;
     if (app.prompt.active) return -1;
     // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
     // predicate is const and the platform probes it speculatively — so on_wheel

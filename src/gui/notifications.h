@@ -40,10 +40,14 @@
 // expires unseen.
 //
 // THE CLOCK RIDES THE RUN LOOP'S OWN DEADLINE TICK, polled: fire_if_due is
-// called from main.cpp's on_tick beside the A/B audition's rest sampler,
-// above the playing-only guard, so an idle window still retires an expired
-// card. It reads monotonic_ms() — the one clock every software deadline in
-// the product is stamped on — and nothing here schedules anything.
+// called at the HEAD of main.cpp's on_tick, above every early return that
+// body has — the startup load's, the render player's fork, the loading/blank
+// guard and the playing-only guard — because a card is a message about
+// something that has already happened, so nothing the tick does below can be
+// a precondition for retiring one, while every one of those returns is a mode
+// a card can stand over (the render player's own "No audio device" card, the
+// blank window's). It reads monotonic_ms() — the one clock every software
+// deadline in the product is stamped on — and nothing here schedules anything.
 //
 // THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
 // THE X, AND ONLY THE X, DISMISSES A CARD, on both backends. A press on the
@@ -104,10 +108,31 @@ int notification_card_max_w_px(const AppState& a);
 // clock.
 GuiRect notification_stack_bound(const AppState& a);
 
-// The published card under (x, y), or 0. A card under the OPEN DROPDOWN's
-// box yields to it — the dropdown is the one pointer-owning surface that
-// paints above the cards — so the three readers (the press claim, the cursor
-// map, the hover walk) agree on the z-order in one place.
+// Whether `id` names a card that is VISIBLE RIGHT NOW — present in the live
+// stack and among its first kNotificationVisibleMax. THE ONE LIVE TEST every
+// act on a published hit asks, and the one dismiss() asks of its argument.
+bool notification_visible(const AppState& a, uint64_t id);
+
+// The card under (x, y), or 0. PUBLISHED GEOMETRY MAY ONLY SELECT, LIVE STATE
+// DECIDES (the owner-tag doctrine, recorded at ModalDialogGeometry): the walk
+// picks an id out of the painter's rects and then answers 0 unless
+// notification_visible still holds for it, so a card that expired or was
+// pushed into the queue between the paint and the event is hit by nothing,
+// and a press on the stale rect falls through to whatever the NEXT paint will
+// put there, which is what the user is about to see. A card under the OPEN
+// DROPDOWN's box yields to it — the dropdown is the one pointer-owning
+// surface that paints above the cards — so every reader agrees on the z-order
+// in one place too.
+//
+// THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
+// press claim (claim_notification_press), the cursor map
+// (pointer_cursor_kind), the card hover walk (GuiNotifications::update_hover),
+// the WHEEL's routing predicate (wheel_context, which swallows a detent over
+// a card), the touch pan zone (touch_point_in_pan_zone) and the two hover
+// walks a card can stand over — the roster's
+// (recompute_redesign_button_hover) and the folder overlay band's
+// (update_folder_overlay_hover), each answering "nothing under the pointer"
+// so no surface beneath a card wears a face or promises a press.
 uint64_t notification_card_at(const AppState& a, int x, int y);
 
 // Whether (x, y) lies in the published X box of the card `id`.
@@ -142,7 +167,10 @@ struct GuiNotifications {
 
     // The hover walk, from the motion handler and the tick: which card the
     // pointer rests on and whether it is inside the X box. Entering a visible
-    // normal card banks its remaining life; leaving re-arms it.
+    // normal card banks its remaining life; leaving re-arms it. A card whose
+    // deadline has ALREADY passed is not banked — hover pauses a clock, it
+    // does not resurrect one — so it retires on the next fire_if_due as an
+    // unhovered one would.
     void update_hover(int x, int y);
     // The pointer-left hook's half: no card is hovered, every bank re-armed.
     void clear_hover();

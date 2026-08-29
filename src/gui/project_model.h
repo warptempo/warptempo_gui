@@ -84,7 +84,12 @@ struct GuiProjectSource {
 // THE SOURCE OF ONE FOLDER, by the rule at the head of this file, or the one
 // sentence that says why the folder is not a project (proper capitalization,
 // no trailing period — a notification card and the terminal both print it
-// verbatim). The directory is walked ONCE (std::filesystem::directory_iterator,
+// verbatim). EVERY ONE OF THOSE SENTENCES NAMES THE FOLDER BY ITS NAME AND A
+// FILE BY ITS BASENAME, never the projects path: they are one line on a card
+// that clips, and the leading path is the one part the reader already knows
+// (the basename rule, messaging.md; the loaders' own composer for a file
+// under a project is shown_project_path, device_config.h). The directory is
+// walked ONCE (std::filesystem::directory_iterator,
 // regular files only); a folder that cannot be walked refuses with the
 // system's own words. Never creates anything; never reads a file's bytes.
 std::expected<GuiProjectSource, std::string> resolve_project(
