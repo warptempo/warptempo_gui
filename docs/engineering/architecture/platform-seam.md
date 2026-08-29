@@ -25,7 +25,9 @@ contract. The port split them:
   exception, `device_config_defaults` is a third of the same kind,
   `removable_volume` (Synchronize to external storage, below) is a fourth,
   and the car's two (`set_on_media_command`, stored and never fired on
-  Wayland in `set_on_close`'s shape, and `publish_media_state`, a no-op body
+  Wayland — the STORED-HOOK shape `set_on_close` carried on the Android side
+  until BACK became its producer there on 2026-08-29, leaving this the seam's
+  one hook a backend never fires — and `publish_media_state`, a no-op body
   there — The car, below) are the fifth and sixth):
   `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
@@ -164,7 +166,33 @@ drag coordinates floor instead of truncating.
 - **Android stubs** (each named at its site with its Wayland twin):
   clipboard over one stored string, pointer capture as no-ops (the notional-x
   FIELD survives and tracks the finger), cursor kinds stored and never
-  applied, titles, close.
+  applied, titles. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
+  BACK (architect — the tablet's BACK asks the unsaved-work question the
+  laptop's X asks). `AKEYCODE_BACK` is consumed WHOLE in `on_input_event` —
+  the one KeyEvent this backend answers — and its ACTION_UP fires the seam's
+  `CloseCallback`, the very hook Wayland fires for `xdg_toplevel.close`, so the
+  consumer's one close road runs: `GuiPrompt::request_close` prompts on a dirty
+  tab and completes at once on a clean one, and the exit that follows is
+  `request_exit`'s own (`should_exit_` plus `ANativeActivity_finish`, the one
+  asker `android_main`'s tail shares), so `run()` returns, `gui_main` returns
+  and the activity goes exactly as Quit's does. The DOWN is consumed too, not
+  merely ignored: the framework's own back handling runs off the UP after
+  tracking the DOWN, so an unconsumed DOWN would leave the system holding a
+  tracked press it could still act on beside a prompt we had just raised; DOWN
+  repeats ride the consume and fire nothing. Firing from the input drain is
+  safe under `drain_looper`'s "nothing may block" rule — the callback raises a
+  bottom-row prompt or requests an exit and returns. Every other key still
+  returns 0 (hardware keyboards are out of scope, `touch.md`), and the road
+  into the core's key path stays `synthesize_key`. **BACK ASKS; A DESTROY
+  CANNOT** is the residual loss, recorded at `drain_looper`'s
+  `destroyRequested` arm: `APP_CMD_DESTROY` is the system stating the activity
+  is already going, with nobody left to answer a prompt, so a session killed
+  from the task switcher still goes unasked. Predictive back does not take this
+  road away: the manifest declares no `android:enableOnBackInvokedCallback` and
+  targets SDK 34, so the framework dispatches the legacy `KEYCODE_BACK` to the
+  activity — which is the mechanism BACK already left the app by (the key arm
+  returned 0 and the system's default finished the activity), measured on the
+  tablet (`android/NOTES.md`).
 - **Key repeat on Android** is hard-coded `set_repeat_info(30, kHoldBeatMs)`
   (architect 2026-08-23: labwc's numbers by convention; the platform
   advertises none). Hardware keyboards are out of scope; the owned painted
@@ -505,7 +533,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
 - **`set_on_media_command`** — the hook the loop fires ON ITS OWN THREAD, one
   call per command in arrival order, from the pass that dispatches the worker
   completions and before that pass's settled hook and paint. Wayland stores
-  it and never fires it (the `set_on_close` shape). Android's road DOWN:
+  it and never fires it (the stored-hook shape `set_on_close` carried on the Android side until BACK became its producer there, 2026-08-29). Android's road DOWN:
   `MainActivity`'s `MediaSession.Callback` (`onPlay`, `onPause`, `onStop`,
   `onSkipToNext`, `onSkipToPrevious`, `onFastForward`, `onRewind`,
   `onSeekTo` — reached now only by a controller calling an action directly —

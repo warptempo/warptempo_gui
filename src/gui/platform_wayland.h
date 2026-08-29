@@ -516,9 +516,11 @@ public:
     // project and clears it at the session tail, so a button pressed between
     // two projects reaches nothing.
     //
-    // ON THIS BACKEND THE HOOK IS STORED AND NEVER FIRED — the set_on_close
-    // shape: the laptop has no media session and no head unit, and its car
-    // keys are simply the keyboard. The setter stays because the seam's
+    // ON THIS BACKEND THE HOOK IS STORED AND NEVER FIRED — the seam's
+    // STORED-HOOK SHAPE, which set_on_close carried on the ANDROID side until
+    // BACK became its producer there (2026-08-29) and which this hook is the
+    // seam's one remaining example of: the laptop has no media session and no
+    // head unit, and its car keys are simply the keyboard. The setter stays because the seam's
     // promise is that a consumer compiles against either backend unchanged.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
 

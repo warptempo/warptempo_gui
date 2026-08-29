@@ -1080,10 +1080,17 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   reads it.
 //   and THE FILE ANCHOR since 2026-08-13 — THE ONE LIVE ENTRY THAT IS NOT A
 //   CHORD'S ADMISSION, which is why it is spelled in the body rather than
-//   derived: an anchor has no chord to ask about, its menu opens in the view
-//   and its one item is Ctrl+Q, which the mode's allowlist admits, so a dead
-//   face would be a lie about a working button. (THE NAVIGATION ANCHOR was the
-//   other one, live here from 2026-08-08 on that same reasoning, and it left
+//   derived: an anchor has no chord to ask about, so the four anchor arms
+//   answer ONE criterion by hand — an anchor is dead iff every row of its menu
+//   is dead — and File is the one that answers it the other way. ITS MENU IS
+//   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
+//   "admit both"): Ctrl+Q always was, Ctrl+O joined the mode's allowlist that
+//   day, and Synchronize is the menu's one CHORDLESS row, which meets that
+//   allowlist nowhere and answers inside its own act. Two of the three were
+//   consumed nothings from their 2026-08-28 landing until that ruling, the state
+//   this arm's own criterion would have greyed the anchor for had an anchor
+//   been derivable at all. (THE NAVIGATION ANCHOR was the
+//   other live one, from 2026-08-08 on that same reasoning, and it left
 //   the roster with its menu on 2026-08-15 — so the LIVE hand entries went from
 //   two to one and the hand entries in total from three to two.)
 //   DEAD — Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z); RENDER since 2026-08-08
@@ -1154,6 +1161,13 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // unlisted button is LIVE), and its half of the pair is at
     // toggle_dropdown, which refuses to open it at all.
     if (b == RedesignButton::Series) return true;
+    // FILE IS THE ANCHOR THE CRITERION ANSWERS LIVE (2026-08-29): all three of
+    // its rows act in the view — Ctrl+Q and Ctrl+O through the allowlist,
+    // Synchronize being chordless — so the menu opens onto three working rows
+    // and a dead face would be a lie. Hand-named for the anchors' shared
+    // reason (no chord for the walk below to ask about), and kept as its own
+    // arm rather than left to the walk's unlisted default so that the tail's
+    // "not in the table and not an anchor" claim stays true.
     if (b == RedesignButton::File) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
@@ -4467,21 +4481,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
     }
 
-    if (text_editor::is_active(app.settings_editor)) return;
-    if (text_editor::is_active(app.commit_title_editor)) return;
-    if (text_editor::is_active(app.measure_offset_editor)) return;
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        // The BPM editor is a dialog modal owner (like the settings
-        // editor). Mouse input does not interact with it beyond its dialog's
-        // own field and buttons, claimed above; the session ends only through
-        // Esc / the Enter dispatch path / the dialog's Cancel and OK
-        // (`m` is just a typed character now). Swallow
-        // the press so it cannot drive a region drag / marker click / or
-        // tear the editor down through the top-strip flag-edit routine
-        // below.
-        return;
-    }
+    // THE VEIL'S LAST WORD: any DIALOG editor still standing here swallows the
+    // press. It asks the membership's own predicate rather than spelling the
+    // four surfaces again — the set is NAMED once (modal_dialog_editor_active
+    // over AppState::dialog_editor_session, whose declaration says so) so it
+    // cannot drift, and a fifth dialog editor would be veiled here by existing
+    // rather than by an edit. What the swallow buys is the same for all four,
+    // and the BPM editor is the case that names it: mouse input does not
+    // interact with a dialog beyond its own field and buttons, claimed above,
+    // and the session ends only through Esc / the Enter dispatch path / the
+    // dialog's Cancel and OK (`m` is just a typed character now) — so the
+    // press must not drive a region drag or a marker click, nor tear the
+    // editor down through the top-strip flag-edit routine below.
+    if (modal_dialog_editor_active()) return;
     // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
     // FLOATS over them: a press on one of its items runs that item, and a press
     // anywhere else closes it and is CONSUMED so nothing underneath acts. The

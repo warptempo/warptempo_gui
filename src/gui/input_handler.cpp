@@ -893,11 +893,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // every state that must refuse the picker refuses it ABOVE this line (a
     // standing prompt, the player's and the picker's own routers, an open
     // dropdown, loading-or-absent audio, the editor text drag, any
-    // keyboard-modal editor, the `h` view's allowlist, which admits no Ctrl+O
-    // and so drops the press as a consumed no-op exactly as the opener's own
-    // history-mode guard would) or inside the opener's own body, which is the
+    // keyboard-modal editor) or inside the opener's own body, which is the
     // road the File menu's row takes and carries the gates for both. Nothing
-    // is restated here. Not repeat-eligible: that gate is an allowlist of the
+    // is restated here. THE `h` VIEW IS NOT ONE OF THOSE STATES since
+    // 2026-08-29 (architect, "admit both"): its allowlist ADMITS this chord
+    // beside Ctrl+Q, so the press reaches this line in the view and the picker
+    // opens over it — the same act on the same road, one act on the session as
+    // a whole beside the other. Not repeat-eligible: that gate is an allowlist of the
     // stepping keys and this letter is not on it, so a held Ctrl+O opens the
     // picker once.
     if (is_open_project_key(key, mods)) {

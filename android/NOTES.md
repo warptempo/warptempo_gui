@@ -666,12 +666,21 @@ consumer, and the seam has no addition at all — §13.3.)*
   the content rect's origin on the way in (§12's note), so what the core sees is
   CONTENT pixels. **History samples are not replayed**: the core
   coalesces motion to the frame boundary anyway.
-- **Keys**: none translated. `AINPUT_EVENT_TYPE_KEY` returns 0 so BACK still
-  leaves the app — AND IT LEAVES WITHOUT THE UNSAVED-WORK PROMPT: that prompt is
-  raised by the GUI's own close road (Ctrl+Q and the compositor's X), which no
-  BACK press reaches, so a dirty session is torn down silently on this backend
-  where the laptop's would ask. Recorded as the fact it is; what the road SHOULD
-  do is the architect's ruling and is not taken here. Hardware keyboards are out of scope (touch.md).
+- **Keys**: one translated, and it is BACK. `AKEYCODE_BACK` is consumed WHOLE
+  (both actions) and its ACTION_UP fires the seam's `CloseCallback` — the same
+  hook the Wayland backend fires for the compositor's X — so BACK NOW ASKS THE
+  UNSAVED-WORK QUESTION (architect 2026-08-29). A dirty tab gets the prompt, a
+  clean one exits at once, and the exit road is `request_exit`'s own
+  (`should_exit_` + `ANativeActivity_finish`), so the activity still goes.
+  Until that ruling this arm returned 0 for every key: the framework's default
+  handling finished the activity and no GUI close road ran, so a dirty session
+  was torn down silently where the laptop's would have asked. The DOWN is
+  consumed as well as the UP because the framework's own back handling runs off
+  the UP after tracking the DOWN; DOWN repeats fire nothing. THE SYSTEM DESTROY
+  is untouched and cannot ask — BACK asks, a destroy cannot — so a session
+  killed from the task switcher still goes unasked. EVERY OTHER KEY still
+  returns 0: hardware keyboards are out of scope (touch.md), and the road into
+  the core's key path is `synthesize_key`.
 - **Mouse**: consumed, not routed and not returned — a click that fell through
   would act on whatever is behind the activity.
 - **Key repeat**: `set_repeat_info(30, kHoldBeatMs)`, hard-coded (architect
@@ -831,10 +840,15 @@ compared pixel-for-pixel.
 - **The overview strip's outside-the-box press teleports at the press.**
 - **BACK leaves the activity cleanly** (no crash, no ANR) and a relaunch runs
   `android_main` a SECOND time in the same process and comes up identical —
-  the destroyed-and-remade path exercised for real. WHAT IT DOES NOT DO is raise
-  the unsaved-work prompt: BACK is not the GUI's close road, so a dirty session
-  goes with the activity (the key note above carries the same fact; the ruling
-  is pending).
+  the destroyed-and-remade path exercised for real. WHAT IT DID NOT DO on this
+  pass was raise the unsaved-work prompt: BACK was not the GUI's close road
+  then, so a dirty session went with the activity. THE RULING LANDED 2026-08-29
+  and BACK is that road now (the key note above): the press reaches the key arm
+  exactly as it did here — which is what this trace proves, the legacy
+  `KEYCODE_BACK` dispatch being alive on this One UI build for a target-34
+  activity that declares no `enableOnBackInvokedCallback` — and the arm fires
+  the close callback instead of handing the key back. Unverified on glass since
+  the change: the prompt itself.
 - **The target-view preview render ran the full PGHI engine on the tablet**
   unprompted at startup (the pushed `.settings` carries `active_audio_view=T`),
   all three passes, `[success]`.

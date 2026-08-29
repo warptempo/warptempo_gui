@@ -2016,7 +2016,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // merely in principle: a command menu OPENS inside the view (the architect
 // narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
 // the settings editor by a direct call and so have no gate of their own), and
-// this predicate is what admits File's Ctrl+Q in there.
+// this predicate is what admits File's Ctrl+Q — and, since 2026-08-29, its
+// Ctrl+O — in there. THE FILE MENU HAS NO DEAD ROW IN THE VIEW as of that day
+// (architect, "admit both"): Open project rides this admission, Quit always
+// did, and Synchronize is the menu's one CHORDLESS row, which meets no gate
+// here at all and refuses or runs inside its own act.
 // (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
 // the same way, refusing nothing else on it — its remaining four were claimed
 // one line above as the mode's own vocabulary — while the row whose chord means
@@ -2147,6 +2151,28 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
          !mode.head_delta_empty &&
          !app.history_checkpoint_in_flight);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
+    // CTRL+O IS ADMITTED (architect 2026-08-29, "admit both"), and it is the
+    // ONE OTHER ACT ON THE SESSION AS A WHOLE — Ctrl+Q's own family, sitting
+    // beside it here as it sits beside it in on_key's dispatch. The reasoning
+    // is the quit's exactly: an open TEARS THIS VIEW DOWN, which is not a
+    // reason to refuse it but a description of what a reopen does to
+    // everything, and the admitted Ctrl+Q already ends the view the same way.
+    // The picker it raises stands OVER the mode — its router runs ahead of
+    // this gate in on_key, its veil consumes the view's presses, and its band
+    // is the waveform's lower half, clear of the diff lane — so a Cancel or an
+    // Esc leaves the view exactly as it stood, this view owning no navigation
+    // state to disturb. Until this date the chord fell through this list as a
+    // consumed no-op, which made two of the File menu's three rows dead in
+    // here while the third was live.
+    //
+    // IT IS THE SHARED PREDICATE'S SHAPE and not a second spelling of it
+    // (is_open_project_key, gui_input.h — ctrl-exact, so Ctrl+Shift+O stays
+    // the strict rule's consumed no-op here as everywhere), which is also what
+    // keeps this admission and the read-only allowlist's answering the same
+    // question the same way. THE FILE ANCHOR'S FACE READS THIS LINE by the
+    // derived partition: with Synchronize chordless and Quit and Open both
+    // admitted, every row of that menu is live in the view.
+    const bool is_open_project = is_open_project_key(key, mods);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
     // all three bare-exact, read off their own arms in on_key (the `t` toggle,
     // the `p` toggle, and the 1/2/3 absolute selectors, which compose those two
@@ -2189,7 +2215,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_ctrl_q);
+             is_save || is_ctrl_q || is_open_project);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -3323,8 +3349,10 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it names is the POINTER-facing
 // behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (re-grepped 2026-08-29 — EIGHT calling functions over nine
-// call sites, the modal-trap block that used to stand among them deleted)
+// the caller roster (re-grepped 2026-08-29 — NINE calling functions over ten
+// call sites, on_button_press's own veil joining that day when it stopped
+// spelling the four is_active tests inline, and the modal-trap block that used
+// to stand among them deleted)
 // is
 // the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
@@ -5228,11 +5256,20 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 // road meets earlier still.
 void GuiInputHandler::open_project_picker() {
     if (app.prompt.active || keyboard_modal_editor_active()) return;
-    // The `h` history view admits no dialog open but its own two (the `'`
-    // load confirmation and the commit title): a reopen would tear the view down
-    // from under itself, so the opener refuses here exactly as the allowlist
-    // refuses the keyboard openers.
-    if (app.history_mode.active) return;
+    // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
+    // "admit both": the File menu's three rows are all live in the view now,
+    // and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
+    // premise was that "a reopen would tear the view down from under itself",
+    // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
+    // everything — Ctrl+Q, which is admitted, ends the view the same way. The
+    // picker stands OVER the view (its router runs ahead of the mode's gate in
+    // on_key, its veil consumes the view's presses, and its band is the
+    // waveform's lower half, clear of the diff lane), a Cancel or Esc leaves
+    // the view exactly as it stood — this view owns no navigation state — and
+    // a successful open reaches the reopen through the one close request,
+    // whose teardown joins the prefetch and the commit worker with everything
+    // else per project. What the act still refuses in here is what it refuses
+    // everywhere: a publishing checkpoint, at open_project_commit.)
     // The render player is a modal MODE, not one of the editors the predicate
     // above answers for, so it refuses on its own term: a reopen would tear
     // the player's item and its bound buffer down from under it. Both roads
@@ -5321,6 +5358,16 @@ void GuiInputHandler::open_project_commit(int index) {
     const std::string name =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
+    // THE THREE REFUSALS BELOW ARE TRANSIENTS, AND IN THE `h` VIEW THEY ARE
+    // INVISIBLE (recorded 2026-08-29, when the opener was admitted there): the
+    // mode's own line is the status chain's top tier, so a reason written
+    // while the view stands is hidden until the view closes and a transient is
+    // cleared by the next key press anyway (the class at
+    // AppState::transient_status_message). The picker still STAYS OPEN on
+    // every one of them, which is the answer the user can act on — press
+    // another row, or Esc — so the act never lies about what it did; what a
+    // viewer does not get is the sentence saying why. No second tier is
+    // invented here.
     auto refuse = [&](const std::string& reason) {
         app.transient_status_message = reason;
         viewport.invalidate_status_chain_area();
@@ -5536,15 +5583,34 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 // reached from the File menu's Synchronize row alone, whose release has
 // already closed the popup.
 void GuiInputHandler::synchronize_to_external_storage() {
-    // The Open project row's own three gates, mirrored: a menu row's refusals belong
+    // The Open project row's own gates, mirrored: a menu row's refusals belong
     // to the menu, not to the act. Each returns without touching playback —
     // and neither does the act itself, which is silent and changes no audio.
+    // (THE `h` VIEW'S REFUSAL WENT WITH THE OPEN ROW'S — architect 2026-08-29,
+    // "admit both", so the File menu has no dead row in the view. This act was
+    // always the easier admission of the two: it is READ-ONLY-LEGAL already,
+    // authors nothing, stops no playback and writes outside the project
+    // entirely, so a viewer running it is a viewer copying files.)
     if (app.prompt.active || keyboard_modal_editor_active()) return;
-    if (app.history_mode.active) return;
     if (app.loading) return;
     // Nothing loaded is nothing to mirror.
     if (app.source_audio_path.empty() || app.project_name.empty()) return;
 
+    // THE REPORT IS A TRANSIENT, AND IN THE `h` VIEW IT IS INVISIBLE (recorded
+    // 2026-08-29, when the act was admitted there): the mode's own line is the
+    // chain's top tier, so every sentence this act writes — the dispatch
+    // notice, the volume's refusal, the already-running answer and the
+    // worker's verdict on the way back (on_external_sync_complete, which
+    // writes the same field) — is hidden under the view's line until the view
+    // closes, and a transient clears on the next key press, so leaving the
+    // view by `h` clears it on the way out. The act still RUNS correctly in
+    // there; what a viewer does not get is the sentence. Recorded as the fact
+    // it is, by the class at AppState::transient_status_message: no second
+    // tier is invented here. THE WORKER'S FAILURES ARE STILL LOUD wherever the
+    // act runs — run_external_sync's one refusal owner writes every failing
+    // line to stderr beside this field (logcat on the tablet) — so what a
+    // mirror run from the view actually loses is the dispatch notice, the
+    // volume's own refusal, the already-running answer and the SUCCESS count.
     auto report = [&](std::string line) {
         app.transient_status_message = std::move(line);
         viewport.invalidate_status_chain_area();

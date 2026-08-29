@@ -1357,16 +1357,21 @@ private:
     //     recorded (the point count), not routed — the mid-gesture rule
     //     above.
     //   * touch_cancel — the window system claims the touches. One contract
-    //     with capability loss: a live Pointer translation gets its release
-    //     DELIVERED at the last position (a commit, not a vanish) then the
-    //     translation end on the release's own edge (the UP clause's
+    //     with capability loss: a live Pointer translation takes THE ABNORMAL
+    //     END (2026-08-29 — a touch the system takes away is not a click
+    //     unless it moved), a lost-button MOTION delivered at the last
+    //     position (an end, not a vanish: a moved drag finalizes, an unmoved
+    //     press commits nothing, and the drag-modal gate un-latches either
+    //     way) then the
+    //     translation end on that delivery's own edge (the UP clause's
     //     focus fork and sibling-suppression rule apply here identically —
     //     one owner); a live Nav
     //     gesture (single- or two-finger — one arm) DROPS its staged dirty
     //     frame
     //     (the window system's claim means that motion retroactively was not
-    //     ours — the recorded asymmetry with the Pointer release, which MUST
-    //     deliver; the end split at end_touch_nav_gesture) and ends through
+    //     ours — the recorded asymmetry with the Pointer translation, whose
+    //     edge MUST deliver whatever it delivers; the end split at
+    //     end_touch_nav_gesture) and ends through
     //     its end path (commits iff an update was delivered); a live REGION
     //     gesture takes the Nav shape — staged frame DROPPED, then
     //     region_end (the end itself ALWAYS fires: the GUI-side region drag
@@ -1713,6 +1718,10 @@ private:
     // ABNORMAL END, a lost-button MOTION instead (the hold bit still drops,
     // so nothing sticks) — the product's own button-lost spelling, under
     // which a moved drag finalizes and an unmoved press commits nothing.
+    // THE FINGER'S OWN LIFT IS THE ONLY CLEAN CALLER since 2026-08-29: the
+    // upgrade and the two HARD ENDS are the ends where no finger left, and
+    // both take the abnormal one (architect: a touch the system takes away is
+    // not a click unless it moved).
     // RETURNS whether the end was delivered — the translation end's own
     // edge: every end site goes through deliver_touch_translation_end below,
     // which acts iff the end fired (a sibling-suppressed end means
@@ -1727,9 +1736,9 @@ private:
     // the pointer, so the unified pointer is where the mouse is; the
     // cursor-residue fix), no
     // mouse focus gets the ordinary leave as before. clean_release is passed
-    // through to end_touch_left_hold and chooses nothing else: the two
-    // LIFT-shaped callers pass true, the UPGRADE — where no finger left —
-    // passes false. Rationale, edges and
+    // through to end_touch_left_hold and chooses nothing else: the finger's
+    // OWN LIFT passes true, and the two ends where no finger left — the
+    // UPGRADE and the HARD END (2026-08-29) — pass false. Rationale, edges and
     // the armed-anchor judgment at the definition.
     void deliver_touch_translation_end(bool clean_release);
     // Compute + deliver the Nav frame's centroid/distance update through the

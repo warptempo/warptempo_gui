@@ -234,7 +234,8 @@ std::vector<char> warp_coincident_collapse_members(
 // tempo-image step). No hypothetical resolve exists in the product any more, so
 // no caller wants silence.
 // FIVE CALL SITES, re-derived by grep 2026-07-29 (the deletion round's own prose had
-// said four): the CLI's render path, the GUI render pipeline, the target-render
+// said four; architect approval 2026-07-29, the site record added 2026-08-29 under
+// that day's approval): the CLI's render path, the GUI render pipeline, the target-render
 // fingerprint, the target-view entry VALIDATION, and the target-view map shim. All
 // five had always passed the loud default, so loud-always is equivalence, not a
 // behavior change.

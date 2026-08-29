@@ -2201,8 +2201,10 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
 
 // THE CAR'S TWO SEAM MEMBERS (contracts at the declarations, which this
 // backend owns). This platform has no media session and no head unit: the hook
-// is stored and never fired — the set_on_close shape, a producer this platform
-// does not have — and the push has nowhere to go, so its body is empty. Both
+// is stored and never fired — the seam's stored-hook shape, a producer this
+// platform does not have, and since 2026-08-29 the seam's one instance of it
+// (set_on_close carried the same shape on the Android side until BACK became
+// its producer there) — and the push has nowhere to go, so its body is empty. Both
 // exist so the render player compiles against either backend unchanged; on the
 // laptop the car keys are simply the keyboard.
 void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) {

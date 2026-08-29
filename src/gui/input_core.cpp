@@ -1201,9 +1201,12 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     // then deliver at the owner's last position.
     // WHAT is delivered on that edge FORKS ON clean_release (codex round 19),
     // and the fork is one line at the bottom of this body:
-    //   * CLEAN (the finger's own lift, the hard end) — the left RELEASE, as
-    //     ever: the press was a click, and every act-at-lift surface runs.
-    //   * ABNORMAL (the second-finger upgrade) — the product's own LOST-BUTTON
+    //   * CLEAN (the finger's own lift, and nothing else since 2026-08-29) —
+    //     the left RELEASE: the press was a click, and every act-at-lift
+    //     surface runs.
+    //   * ABNORMAL (the second-finger upgrade, and THE HARD ENDS since
+    //     2026-08-29 — a touch the system takes away is not a click unless it
+    //     moved; the arm is at hard_end_touch_stream) — the product's own LOST-BUTTON
     //     edge instead: the hold bit drops here exactly as it does on a clean
     //     end, so nothing sticks, and the GUI is told through a MOTION at the
     //     finger's last position carrying `primary_button_held` false. That is
@@ -1234,8 +1237,11 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     of them, and with a mouse focused in the window — where the fork takes
     //     the restore motion instead of the leave hook — a stale arm survived
     //     the whole pinch and swallowed the next tap. The promise now is flat:
-    //     an upgrade ends every arm the vanished press could have committed,
-    //     because the finger that armed them is not going to lift.
+    //     an abnormal end ends every arm the vanished press could have
+    //     committed, because the finger that armed them is not going to lift —
+    //     and since 2026-08-29 that promise is what carries the HARD ENDS too,
+    //     where the finger is not going to lift because the window system took
+    //     it.
     const bool edge = !pointer_left_held_ && !synth_left_held_;
     const bool deliver =
         edge && (clean_release ? on_button_release_ != nullptr
@@ -1569,10 +1575,11 @@ void GuiInputCore::touch_up(int32_t id) {
             // suppresses release, leave and restore alike) and the rationale
             // live at deliver_touch_translation_end, the one owner this site,
             // the hard end and the second-finger upgrade all call. THE LIFT IS
-            // A CLEAN END — the finger really did leave, so its press was a
-            // click and every act-at-lift surface is owed its act (the upgrade
-            // is the one caller that passes false; the fork is at
-            // end_touch_left_hold).
+            // A CLEAN END, AND SINCE 2026-08-29 IT IS THE ONLY ONE — the
+            // finger really did leave, so its press was a click and every
+            // act-at-lift surface is owed its act, while the two ends where no
+            // finger left (the upgrade and the hard end) both pass false; the
+            // fork is at end_touch_left_hold.
             deliver_touch_translation_end(/*clean_release=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
@@ -1864,9 +1871,12 @@ void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     //     staged frame is DROPPED deliberately — the window system's claim
     //     means that motion retroactively was not ours — and the end hook still
     //     fires iff an update was delivered. The asymmetry with the POINTER
-    //     translation's hard end is deliberate: that release MUST deliver (a
-    //     vanished hold would latch the drag-modal gate with no event left to
-    //     lift it), while dropped nav motion wedges nothing — nothing the
+    //     translation's hard end is deliberate and survives that arm's move to
+    //     the abnormal end (2026-08-29): the translation's edge MUST DELIVER
+    //     SOMETHING (a vanished hold would latch the drag-modal gate with no
+    //     event left to lift it) and only WHAT it delivers changed — a
+    //     lost-button motion rather than a release — while dropped nav motion
+    //     wedges nothing: nothing the
     //     gesture leaves in the GUI is held OPEN. Its one GUI-side record
     //     since 2026-08-14 is the pinch's seated pivot (TouchNavZoomState),
     //     and it cannot survive a hard end: the seat exists only where a frame
@@ -1916,9 +1926,11 @@ void GuiInputCore::touch_cancel() {
 void GuiInputCore::touch_capability_lost() {
     // THE HARD END OF THE TOUCH STREAM: no motion, up, or cancel will arrive
     // from this device again. The contract is the cancel's, shared whole
-    // (hard_end_touch_stream): a live pointer translation commits — release
-    // delivered at the last position, then the focus-forked translation end
-    // (deliver_touch_translation_end: the ordinary leave, or a restore motion
+    // (hard_end_touch_stream): a live pointer translation takes the ABNORMAL
+    // end — a lost-button motion delivered at the last position, so a moved
+    // drag finalizes and an unmoved press commits nothing, then the
+    // focus-forked translation end (deliver_touch_translation_end: the
+    // ordinary leave, or a restore motion
     // at a focused mouse) — a live nav gesture (single- or two-finger) ends
     // through its end path with its staged final frame dropped, an unresolved
     // disambiguation window drops silently, and all touch state is forgotten.
@@ -1930,22 +1942,43 @@ void GuiInputCore::touch_capability_lost() {
 void GuiInputCore::hard_end_touch_stream() {
     switch (touch_phase_) {
         case TouchPhase::Pointer:
-            // A live translation COMMITS — one delivered release on the
-            // logical edge, at the last position (the pointer-capability-loss
-            // precedent: a vanished hold would latch the drag-modal gate with
-            // no event left to lift it) — then the translation end ON THE
-            // RELEASE'S OWN EDGE, exactly as the finger's own lift delivers
-            // it: the ordinary leave, or the focus-forked restore motion when
-            // a mouse rests in the window (the round-3 fork), through the one
-            // owner. A sibling-held logical left suppresses the release here
-            // too, and the end with it — whatever happened to the glass, the
-            // mouse is still there, mid-press, and its live press claim is
-            // not this stream's to destroy.
-            // A CLEAN END: the hard end COMMITS (the no-cancel family), so the
-            // press ends as the click it was, exactly as the lift's does. Only
-            // the second-finger upgrade — where no finger left — takes the
-            // abnormal end (the fork is at end_touch_left_hold).
-            deliver_touch_translation_end(/*clean_release=*/true);
+            // A live translation ENDS, and the END IS DELIVERED — one
+            // delivery on the logical edge, at the last position (the
+            // pointer-capability-loss precedent: a vanished hold would latch
+            // the drag-modal gate with no event left to lift it) — then the
+            // translation end ON THAT DELIVERY'S OWN EDGE, exactly as the
+            // finger's own lift delivers it: the ordinary leave, or the
+            // focus-forked restore motion when a mouse rests in the window
+            // (the round-3 fork), through the one owner. A sibling-held
+            // logical left suppresses the delivery here too, and the end with
+            // it — whatever happened to the glass, the mouse is still there,
+            // mid-press, and its live press claim is not this stream's to
+            // destroy.
+            // AN ABNORMAL END SINCE 2026-08-29 (architect: "a touch the system
+            // takes away is not a click unless it moved"), where this arm
+            // passed a CLEAN release from the contract's landing until then.
+            // A HARD END IS NOT A LIFT: the window system took the contacts —
+            // its own gesture recognition, an edge back-swipe, a shade pull, a
+            // task switch — and the user never raised the finger, which is the
+            // second-finger upgrade's own reasoning arriving by another road.
+            // A clean release SPOKE FOR A LIFT THAT DID NOT HAPPEN: it re-hit
+            // the box at the last position and every act-at-lift surface ran,
+            // so a back-swipe that started on a bottom-row button toggled
+            // playback or authored (Undo, Delete, Drop marker) on its way out
+            // of the app.
+            // THE ABNORMAL END GIVES THIS ARM EXACTLY WHAT IT NEEDED, and the
+            // three properties are the whole reason it is the right spelling
+            // rather than a new suppression (the fork and its own rationale
+            // are at end_touch_left_hold): a MOVED drag still finalizes, so
+            // nothing pops mid-gesture and the no-cancel family is untouched;
+            // an UNMOVED press commits nothing further; and the drag-modal
+            // gate still un-latches, because the lost-button MOTION this
+            // delivers ends every member of any_pointer_gesture_active — each
+            // motion-driven gesture through its own button-lost arm and the
+            // release-time arms through clear_release_time_press_arms (both in
+            // GuiInputHandler::on_motion), which is the same edge a lost
+            // PHYSICAL button already rides.
+            deliver_touch_translation_end(/*clean_release=*/false);
             break;
         case TouchPhase::Nav:
             // A live nav gesture — single- or two-finger, one arm — ends

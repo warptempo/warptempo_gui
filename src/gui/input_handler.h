@@ -2545,11 +2545,17 @@ private:
     //   contract is at main.cpp).
     //     open_project_picker: the opener. Refuses silently, without touching
     //       playback, while a prompt, any editor, the render player or a
-    //       picker stands, in the `h` history view (the allowlist's own
-    //       answer for the key road — history_mode_key_blocked admits no
-    //       Ctrl+O — and this body's for the menu's), and during a load;
-    //       stops playback through the shared modal stop only once the picker
-    //       is definitely opening, mints the session and builds the list.
+    //       picker stands, and during a load; stops playback through the
+    //       shared modal stop only once the picker is definitely opening,
+    //       mints the session and builds the list. IT IS ADMITTED IN THE `h`
+    //       HISTORY VIEW since 2026-08-29 (architect, "admit both"), on both
+    //       roads: history_mode_key_blocked admits Ctrl+O beside Ctrl+Q, and
+    //       this body's own refusal is deleted, so the File menu has no dead
+    //       row in the view. The picker stands OVER the mode (its router runs
+    //       ahead of the mode's gate in on_key and its veil consumes the
+    //       view's presses); a Cancel leaves the view untouched, this view
+    //       owning no navigation state; an open tears it down as Ctrl+Q's
+    //       exit does.
     //     build_project_picker_rows: THE SESSION'S ONE LIST, built AT THE
     //       OPEN — the folder names under projects_path (the model's own
     //       order and its own membership, project_model.h: the enumeration
@@ -2657,10 +2663,16 @@ private:
     // half.
     //
     // synchronize_to_external_storage: the opener. It refuses silently, without
-    // touching playback, while a prompt or any editor stands, in the `h`
-    // history view and during a load — the Open project row's own three gates, mirrored
+    // touching playback, while a prompt or any editor stands and during a
+    // load — the Open project row's own gates, mirrored
     // because a menu row's refusals are the menu's, not the act's — and it
-    // refuses with no source loaded, having nothing to mirror. It is LEGAL ON A
+    // refuses with no source loaded, having nothing to mirror. IT IS ADMITTED
+    // IN THE `h` HISTORY VIEW since 2026-08-29 (architect, "admit both", with
+    // the Open row): a viewer running it is a viewer copying files. WHAT THE
+    // VIEW COSTS IT IS THE REPORT, not the act — the mode's line is the status
+    // chain's top tier, so every sentence this act writes is hidden until the
+    // view closes; the record and what survives on stderr are at the act's own
+    // report lambda. It is LEGAL ON A
     // READ-ONLY TAB (it authors nothing: it reads two output folders and writes
     // outside the project entirely) and STOPS NO PLAYBACK (the act is silent
     // and changes no audio; nothing about the sound is different while it
@@ -3564,12 +3576,15 @@ private:
     // editor and the Open project editor were members until 2026-08-28, when
     // both became the field-less PICKER — a modal owner with its own
     // predicate, picker_active, and NOT in this answer, exactly as the render
-    // player is not.) EIGHT CALLING
-    // FUNCTIONS, RE-DERIVED BY GREP 2026-08-14 (two left that day with the
-    // round-15 session fix — the dialog BUTTON claim in on_button_press and
-    // dispatch_modal_dialog_button, both of which ask
-    // modal_dialog_stash_current instead, a strictly narrower question that
-    // implies this one): SIX ask about a POINTER fact and TWO about a KEY.
+    // player is not.) NINE CALLING
+    // FUNCTIONS, RE-DERIVED BY GREP 2026-08-29 (the count was eight from
+    // 2026-08-14, when two left with the round-15 session fix — the dialog
+    // BUTTON claim in on_button_press and dispatch_modal_dialog_button, both
+    // of which ask modal_dialog_stash_current instead, a strictly narrower
+    // question that implies this one; the ninth arrived 2026-08-29, and it is
+    // not a new reader but a re-spelling: on_button_press's own veil had the
+    // four is_active tests written out and now asks here):
+    // SEVEN ask about a POINTER fact and TWO about a KEY.
     //   wheel_context's swallow (input_handler.cpp), because the wheel is
     //     NAVIGATION and display, not a chord, so it still punches through
     //     an open top-strip flag editor;
@@ -3580,6 +3595,10 @@ private:
     //     (2026-08-13 — the buttons act at the lift) and on_motion's
     //     dialog-hover branch (2026-08-12) — the modal's own two pointer
     //     surfaces;
+    //   THE VEIL ITSELF, at the tail of on_button_press's modal block: a
+    //     press that reached neither the field nor the buttons is swallowed
+    //     while any of the four stands (it spelled the four is_active tests
+    //     inline until 2026-08-29);
     //   the CHROME release's veil re-ask (finish_chrome_press_release,
     //     2026-08-13), which since the reach-through's retirement refuses
     //     every armed kind outright — one term above the kind switch — and

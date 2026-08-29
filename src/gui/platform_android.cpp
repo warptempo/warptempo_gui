@@ -1389,9 +1389,15 @@ void GuiPlatform::drain_looper(int timeout_ms) {
 
         if (app_ && app_->destroyRequested != 0) {
             // The system is tearing the activity down and android_main must
-            // return. This is the CloseCallback's edge too — the consumer's
-            // quit path — but nothing may block here, so the hook is not
-            // fired: the GUI's own teardown runs on the way out of gui_main.
+            // return. THE CLOSE CALLBACK IS NOT FIRED HERE: the hook is a
+            // REQUEST to close, and a destroy is the system stating that the
+            // activity is already going — there is nobody left to answer a
+            // prompt, and nothing may block here anyway. BACK ASKS; A DESTROY
+            // CANNOT, and that is the residual loss in one sentence: a dirty
+            // session killed from the task switcher or by the system goes
+            // unasked, while the user's own BACK now takes the unsaved-work
+            // road (the arm is at on_input_event). The GUI's own teardown
+            // still runs on the way out of gui_main.
             should_exit_ = true;
             break;
         }
@@ -1599,12 +1605,52 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     const int32_t type = AInputEvent_getType(event);
 
     if (type == AINPUT_EVENT_TYPE_KEY) {
-        // HARDWARE KEYBOARDS ARE OUT OF SCOPE ON THIS PLATFORM (touch.md), and
-        // this backend translates no KeyEvent: returning 0 hands the event
-        // back to the system, which is what keeps BACK leaving the app instead
-        // of being swallowed by a GUI that has no use for it. The road INTO
-        // the core's key path exists and is public — synthesize_key — for an
-        // on-screen keyboard this backend owns.
+        // BACK IS THIS PLATFORM'S CLOSE REQUEST (architect 2026-08-29), and it
+        // is the ONE KeyEvent this backend answers. It fires the seam's
+        // CloseCallback — the very hook the Wayland backend fires for the
+        // compositor's title-bar X (on_toplevel_close) — so the tablet's BACK
+        // asks the unsaved-work question the laptop's X asks: the consumer
+        // routes it through GuiPrompt::request_close, which prompts on a dirty
+        // tab and completes at once on a clean one, and the EXIT that follows
+        // is request_exit's own — should_exit_ plus ANativeActivity_finish,
+        // the one asker android_main's tail shares — so run() returns,
+        // gui_main returns and the activity goes exactly as Quit's does.
+        // Until this landed the arm returned 0 for every key and the framework
+        // finished the activity on the system's own default handling, which
+        // reached no GUI road at all: a dirty session was torn down silently
+        // where the laptop's would have asked.
+        //
+        // THE WHOLE KEYCODE IS CONSUMED and the callback fires on the ACTION_UP
+        // alone. Consuming the DOWN as well is what makes the arm airtight
+        // rather than merely early: the framework's own back handling runs off
+        // the UP (it starts tracking on the DOWN), so an unconsumed DOWN would
+        // leave the system holding a tracked press it could still act on
+        // beside a prompt we had just raised. The UP is the fire because that
+        // is where the gesture is complete and where the platform's own
+        // convention puts it; DOWN repeats ride the consume and fire nothing.
+        // Firing here is safe under drain_looper's "nothing may block" rule:
+        // the callback raises a bottom-row prompt or requests an exit and
+        // returns — it waits on nothing, exactly as the motion path's GUI
+        // hooks below do not.
+        //
+        // EVERY OTHER KEY STILL RETURNS 0, unchanged: HARDWARE KEYBOARDS ARE
+        // OUT OF SCOPE ON THIS PLATFORM (touch.md), so a KeyEvent that is not
+        // BACK is handed back to the system rather than swallowed by a GUI
+        // with no use for it. The road INTO the core's key path exists and is
+        // public — synthesize_key — for an on-screen keyboard this backend
+        // owns, and for the car's media buttons that ride it.
+        //
+        // (THE SYSTEM DESTROY IS NOT THIS ROAD and cannot be: APP_CMD_DESTROY
+        // / destroyRequested is the system stating the activity is already
+        // going, so BACK asks and a destroy cannot — the residual loss is
+        // recorded at that site, drain_looper.)
+        if (AKeyEvent_getKeyCode(event) == AKEYCODE_BACK) {
+            if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_UP &&
+                on_close_) {
+                on_close_();
+            }
+            return 1;
+        }
         return 0;
     }
 

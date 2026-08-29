@@ -44,8 +44,10 @@
 // SAME DAY, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the mechanism is platform-seam.md's car section): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
-// MediaSession hands down — stored and never fired on Wayland,
-// set_on_close's shape — and publish_media_state, the push back up into that
+// MediaSession hands down — stored and never fired on Wayland, which is the
+// STORED-HOOK SHAPE set_on_close itself carried on THIS side until BACK became
+// its producer here (2026-08-29), leaving the car's hook the seam's one example
+// of it — and publish_media_state, the push back up into that
 // session's metadata and playback state, whose Wayland body is empty. The
 // seven
 // consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
@@ -194,15 +196,19 @@ public:
     void set_on_button_release(ButtonCallback cb);
     void set_on_wheel(WheelCallback cb);
     void set_on_motion(MotionCallback cb);
-    // THE CLOSE HOOK HAS NO PRODUCER ON THIS PLATFORM and is deliberately
-    // never fired. Its Wayland twin is xdg_toplevel.close — a REQUEST the
-    // program may answer with the unsaved-work prompt — while Android's
-    // counterpart (APP_CMD_DESTROY / destroyRequested) is the system stating
-    // that the activity is already going and the loop must return at once.
-    // Raising a prompt nobody could answer would be worse than silence, so the
-    // teardown runs on the way out of gui_main instead. The setter stays
-    // because the seam's promise is that a consumer compiles against either
-    // backend unchanged.
+    // THE CLOSE HOOK'S PRODUCER HERE IS THE BACK KEY (architect 2026-08-29):
+    // AKEYCODE_BACK is consumed whole in on_input_event and fires this
+    // callback on its ACTION_UP, which is the exact twin of the Wayland
+    // backend's xdg_toplevel.close — a REQUEST the program answers with the
+    // unsaved-work prompt when the tab is dirty and with an immediate exit
+    // when it is clean. So the tablet's BACK asks the question the laptop's X
+    // asks, and the seam's two sides now both fire this hook rather than one
+    // storing it.
+    // WHAT IS STILL NOT THIS HOOK is APP_CMD_DESTROY / destroyRequested: that
+    // is the system stating the activity is already going, with nobody left to
+    // answer a prompt and nothing allowed to block, so the loop returns at
+    // once and the teardown runs on the way out of gui_main. BACK asks; a
+    // destroy cannot.
     void set_on_close(CloseCallback cb);
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
