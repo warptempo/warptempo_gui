@@ -1333,7 +1333,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // full zoom out, whose ceiling arm runs the `c` command) and bare `c` are
     // untouched, and CTRL+0 — the magnification reset that stood beside them
     // for one day — IS UNBOUND AGAIN, retired with its button: the settings
-    // editor's `:waveform_magnification_level=0` is the reset road, and an
+    // editor's `waveform_magnification_level=0` is the reset road, and an
     // unbound combination is a consumed no-op under the strict-modifier rule.
     //
     // ALL FOUR SPELLINGS ARE EXACT, no shift and no alt on either pair:
@@ -2165,10 +2165,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // them here means the platform never grows remainder in a context the
     // eventual emission could not fire in.
     //
-    // Only the DIALOG modal surfaces swallow the wheel (the settings, load
-    // and commit-title editors and the BpmBracket reuse of top_flag_editor
-    // — membership re-greped 2026-08-12 at the dialog arc; the inherited
-    // list had omitted the commit-title editor) —
+    // Only the DIALOG modal surfaces swallow the wheel HERE — the roster is
+    // AppState::dialog_editor_session's and this line restates none of it
+    // (it named the retired LOAD editor until 2026-08-29; the settings,
+    // commit-title, measure paste-offset and BpmBracket editors are the four
+    // today) —
     // modal_dialog_editor_active, deliberately NOT the keyboard gate's
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,

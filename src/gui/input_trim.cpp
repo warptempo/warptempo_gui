@@ -46,7 +46,7 @@
 //     PendingClickAct, app_state.h, and a CROSSING runs the set at the press
 //     column and then hands over to that bound's endcap drag): the guard is
 //     unchanged and is simply re-asked live where the act now runs.
-//   THE TYPED AND LOADED ROUTES (the settings editor's `:trim_*=` commits, and
+//   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
 //     because a clamp is only meaningful where a bound is being pushed.
@@ -78,7 +78,7 @@
 //     touch region hold), which writes per motion event and commits at its
 //     release through commit_region_sweep, on the endcap drag's own timing for
 //     the same reason;
-//   * the SETTINGS EDITOR's `:trim_*=` ACTIVE-tab commits (settings_editor.cpp),
+//   * the SETTINGS EDITOR's `trim_*=` ACTIVE-tab commits (settings_editor.cpp),
 //     which move the cursor from inside a modal editor — accepted for
 //     uniformity: a typed commit is a commit, and the editor's own surface is
 //     the bottom row's modal, not the waveform. The INACTIVE-band arm parks nothing:
@@ -215,7 +215,7 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // drag, the sweep, the bridge and the typed routes all reach the whole-song
 // reset here rather than each spelling an escape of its own.
 // Every trim commit site — the SWEEP's release, the endcap/bridge drag release,
-// the bound-set click and the settings-editor `:trim_*=` commit — calls this
+// the bound-set click and the settings-editor `trim_*=` commit — calls this
 // after its mutation and before its invalidations, so the repaint shows the
 // reset state. (The sweep took the retired set-from-region act's place in this
 // list on 2026-08-18; the per-route inventory is at the head of this file.)

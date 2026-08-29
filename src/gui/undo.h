@@ -198,7 +198,11 @@ struct Undo {
     bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
     // Record this eligible press as the burst's latest, stamping the whole
     // coalescing state: the KIND, the ACCEPTED-EVENT TIMESTAMP the tap window
-    // measures from, and the SUBJECT (selection + A/B tab) the tap arm re-tests.
+    // measures from, and the SUBJECT — THREE tags since 2026-08-29: the
+    // selection, the A/B tab and the S/T AUDIO VIEW, which both the tap arm
+    // and the held-key arm re-test (the audio view joined when the A/B
+    // audition's tick-driven switch was found able to land between a burst's
+    // opener and its repeats).
     // Call after the push / skip — and ONLY on the accepted path, which is what
     // makes a refusing press leave the stamp invalid.
     void record_gesture(GestureKind kind);

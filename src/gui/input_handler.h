@@ -3021,7 +3021,7 @@ private:
     // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
-    // input_trim.cpp, plus the settings editor's `:trim_*=` active-tab arm
+    // input_trim.cpp, plus the settings editor's `trim_*=` active-tab arm
     // (settings_editor.cpp, reaching it through the friendship above; its
     // status-chain repaint rides applied() as well, harmlessly twice).
     // Callers own everything around it: their refusals, the playback stop and
@@ -3451,7 +3451,7 @@ private:
     // steps up, bare `-` steps down, since 2026-08-27), the two icon-row
     // buttons reach it through those same chords, THE PLAIN WHEEL reaches it
     // per frame (handle_wheel's own arm), and the settings editor's
-    // `:waveform_magnification_level=` commit calls it directly — which is also
+    // `waveform_magnification_level=` commit calls it directly — which is also
     // the reset road, level 0 having no chord of its own since Ctrl+0 was
     // retired with its button. `level` must
     // be in the schema's range (is_waveform_magnification_level,

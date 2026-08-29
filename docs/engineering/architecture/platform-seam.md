@@ -31,7 +31,7 @@ contract. The port split them:
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
-  selects the header; the seven consumers include it and change nothing.
+  selects the header; every consumer includes it and changes nothing (NINE translation units and headers today, re-grepped 2026-08-29 — the number is a consequence of the seam, not a fact about it, so nothing here keeps a list).
 - **B — `GuiInputCore` (`input_core.{h,cpp}`)**, the product's platform-neutral
   input policy, existing ONCE: the touch translation state machine (the
   disambiguation window, the region hold, the two-finger nav frames, the
@@ -173,8 +173,8 @@ drag coordinates floor instead of truncating.
 ## The on-screen keyboard
 
 The glass has no hardware keys, so the product paints its own (2026-08-27): a
-four-row Maliit-shaped surface standing while ANY OF THE EIGHT TEXT EDITORS
-stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
+four-row Maliit-shaped surface standing while ANY OF THE TEXT EDITORS
+(`text_editor::Kind` is the authoritative list — six today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
 directly above the bottom row over the waveform area's lower part, whose every
 key press goes through `synthesize_key` into the ORDINARY key path — so the
 editors' grammars, their refusals, the undo coalescing and the core's repeat

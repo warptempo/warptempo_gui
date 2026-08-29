@@ -1578,15 +1578,17 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 197
-// (menu 35 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
-// the overview lane and the tab row each grew a border row 2026-08-13)
+// produces by construction. At 100% scale, with the top lanes summing 193
+// (menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
+// the overview lane and the tab row each grew a border row 2026-08-13, and
+// the menu lane went 35 -> 31 on 2026-08-21)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 836, so the
-// waveform CLAMPS at 500 and the two gaps take 93 (top) + 243 (bottom); the
-// Pi's 1024x600 leftover is 356, UNCLAMPED, and the centering is infeasible
-// there so both gaps floor at 0 and the waveform keeps the whole 356. The full
-// stacks are recorded at main.cpp's vertical block.
+// 1920x1080 monitor's leftover is 840, so the
+// waveform CLAMPS at 500 and the two gaps take 97 (top) + 243 (bottom); a
+// 1024x600 SHORT WINDOW's leftover is 360, UNCLAMPED, and the centering is
+// infeasible there so both gaps floor at 0 and the waveform keeps the whole
+// 360. The full stacks and their derivation are main.cpp's vertical block,
+// the one owner; these figures are its, re-derived 2026-08-29.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the

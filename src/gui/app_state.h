@@ -1992,7 +1992,7 @@ enum class RedesignButton {
     // (THE MAGNIFICATION RESET WAS A THIRD MEMBER FOR ONE DAY — Ctrl+0,
     // wearing Breeze's zoom-fit-height, 2026-08-26 to 2026-08-27 — and the
     // architect deleted the BUTTON with the spelling swap, its chord going with
-    // it. The settings editor's `:waveform_magnification_level=0` is the reset
+    // it. The settings editor's `waveform_magnification_level=0` is the reset
     // road now, which is the road every other GUI-kind key already has.)
     //
     // THEY EXIST FOR GLASS. The setting is hotkey-operated on the laptop, and a
@@ -2909,12 +2909,16 @@ struct SettingsPopupItem {
 // A menu of KEYS TO EDIT does not care which file a key rests in.
 //
 // THE WAVEFORM MAGNIFICATION LEVEL JOINED THE GUI HALF 2026-08-26, a third GUI
-// key beside the two — it is settable here like every key that can appear in a
+// key beside `gui_scale` and `playback_speed` — and the GUI HALF IS TWO since
+// the next day, when playback_speed retired whole and took its item with it.
+// It is settable here like every key that can appear in a
 // `.settings`, and its click prefills through the ordinary recall serializer
 // with nothing translated. It is the WIDEST LABEL, which costs nothing: the
 // popup's width is DERIVED from the widest measured label plus the pads (the
 // derivation is at the paint site), so the box simply grows. The KEY's real
-// gestures are its three chords and its three icon-row buttons — a dropdown
+// gestures are its TWO bare chords (`=` / `-`), the PLAIN WHEEL and its TWO
+// icon-row buttons — the third chord Ctrl+0 and the third button retired
+// together 2026-08-27 — and a dropdown
 // item is the typed route's convenience, not the act's home.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI scale",      "gui_scale",      false},
@@ -3637,9 +3641,12 @@ struct PromptState {
     // one assignment site.
     PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — the four raisers
-    // (re-grepped 2026-08-28: the unsaved-work prompt, the error notice, the
-    // paste confirmation and the render player's load confirmation) and the
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SIX call sites
+    // (re-grepped 2026-08-29: the unsaved-work prompt, the error notice, the
+    // paste confirmation, and the LOAD CONFIRMATION at BOTH its subjects'
+    // raisers since 2026-08-29 — the render player's entry and the `h`
+    // view's viewed walk member, one prompt body forked at
+    // confirm_load_in_place) and the
     // save-failed rung's in-place restatement, which is a raise as far as
     // this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
@@ -4182,7 +4189,7 @@ struct AppState {
     // window between AppState's constructor and that read, and nothing else.
     //
     // Not engine input, not authoring state, no undo, no dirty. Set through the
-    // settings editor (`:gui_scale=`, no hotkey), which APPLIES it live through
+    // settings editor (`gui_scale=`, no hotkey), which APPLIES it live through
     // GuiInputHandler::apply_gui_scale (the resize-path geometry rebuild) —
     // LIVE since 2026-07-31. Pushed to the renderer's file-scope state via
     // set_gui_scale_percent at both application points (that commit, and
@@ -4218,7 +4225,7 @@ struct AppState {
     // GuiInputHandler::apply_waveform_magnification_level — which the two
     // hotkeys (bare `=` / bare `-`, since 2026-08-27), the two icon-row
     // buttons, the PLAIN WHEEL and the settings editor's
-    // `:waveform_magnification_level=` commit all call and nothing else does. History-less like every GUI-kind key: no undo, no
+    // `waveform_magnification_level=` commit all call and nothing else does. History-less like every GUI-kind key: no undo, no
     // dirty. The `'` load-in-place leaves it live — a recipe is markers plus
     // the engine block, and this is neither.
     int     waveform_magnification_level = 0;
@@ -4235,7 +4242,7 @@ struct AppState {
     // the `.settings` for the device config (device_config.h) under that
     // day's fifth parser grant, Ctrl+S does not carry it, gui_main reads it
     // once at startup, and its one authoring surface — the settings editor's
-    // `:projects_repo=<host/path>` — writes the config at the commit. The
+    // `projects_repo=<host/path>` — writes the config at the commit. The
     // initializer reads kDefaultProjectsRepo (device_config.h, the template
     // stamp) so a session that has not read the config yet names the same
     // repository a first run stamps; every reader (the prefetch kick, the
@@ -7825,13 +7832,15 @@ inline int64_t snap_authored_frame(double frame) {
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// SEVEN CONSUMERS, re-derived by grep 2026-08-28 (the render player's key gate
-// joined with the player's two arms above; the follow chase joined 2026-08-12; the
+// EIGHT CONSUMERS, re-derived by grep 2026-08-29 (the render player's key gate
+// joined with the player's two arms above and THE PICKER'S GATE with the picker,
+// both on 2026-08-28 — the count read SEVEN until the re-grep found the second of
+// that pair missing from this list; the follow chase joined 2026-08-12; the
 // eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the
 // bare right-press scrub's gate — and the timer-free touch model had deleted
 // begin_touch_trim_move the same day). EACH STATES THE SAME
 // "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
-// two kinds: the five INPUT-ROUTE consumers refuse events, and the run loop's
+// two kinds: the SIX INPUT-ROUTE consumers refuse events, and the run loop's
 // TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
 // world's autonomous movers for the gesture's life:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
@@ -7850,6 +7859,13 @@ inline int64_t snap_authored_frame(double frame) {
 //     list inline (the two arms above are deliberately absent from it — the
 //     player's gate above it already owns them, and nothing else it guards is
 //     reachable under the player);
+//   * THE PICKER'S KEY GATE (input_handler.cpp's on_key, 2026-08-28) — the
+//     player's clause spelled again at the picker's rank, the two never
+//     standing together: the overlay's row press arm is a member of this
+//     predicate under EITHER owner, so the picker asks the same question and
+//     swallows every key under a live gesture with the same single Ctrl+Q
+//     hatch. Two gates rather than one because each owns its own router;
+//     folder_overlay_stands is what makes the arm one thing under both;
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
@@ -7880,7 +7896,7 @@ inline int64_t snap_authored_frame(double frame) {
 // lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
 // spells its eleven in its own order.
-// THE DISPLAYED-BASIS FREEZE IS NOT A SEVENTH CONSUMER: displayed_basis_frozen
+// THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags plus the two pendings
 // that aim them — and answers a different question ("the displayed paint basis

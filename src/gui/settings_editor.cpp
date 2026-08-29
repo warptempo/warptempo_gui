@@ -183,7 +183,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // whole commit — since
         // 2026-07-31 the redesigned rows size on this value, so the commit
         // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
-        // runs the resize-path rebuild), and a `:gui_scale=200` is visible
+        // runs the resize-path rebuild), and a `gui_scale=200` is visible
         // without a restart. It marks nothing dirty and Ctrl+S does not carry
         // it: since 2026-08-27 the applier WRITES THE DEVICE CONFIG at the
         // commit, so the value is persisted the moment it is applied.
@@ -216,7 +216,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // synthesize them and the PLAIN WHEEL use — the third of each retired
         // 2026-08-27 with Ctrl+0 and the reset button, this editor line being
         // the reset road that replaced them. A typed
-        // `:waveform_magnification_level=4` is one more caller of
+        // `waveform_magnification_level=4` is one more caller of
         // apply_waveform_magnification_level, never a parallel writer. The
         // RANGE was already enforced by validate_gui_setting above, so an
         // out-of-range value never reaches here: it red-flashes at the grammar

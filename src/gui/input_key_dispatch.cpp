@@ -1223,7 +1223,7 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     if (mods.alt) return false;
-    // THE ONE CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
+    // THE FIRST CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
     // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
     // are available [in the view], and ctrl+shift+tab is just short for
     // 'tab, ctrl+tab, tab'" — so the chord means one thing everywhere and only
@@ -3309,19 +3309,22 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     return true;        // every other chord is inert while the popup is up
 }
 
-// The DIALOG-HOSTED modal editors: the settings editor, the load
-// editor, the bpm editor (top_flag_editor reused with Kind::BpmBracket) and,
-// since 2026-08-07, the history view's commit-title editor — the four
-// surfaces painting in the centered modal dialog since 2026-08-12 (they
-// lived on the bottom strip before, whence the predicate's old
-// modal_bottom_strip_editor_active name; the membership is unchanged) —
-// plus the prompts, which own input through
+// The DIALOG-HOSTED modal editors: the settings editor, the bpm editor
+// (top_flag_editor reused with Kind::BpmBracket), the history view's
+// commit-title editor (2026-08-07) and the measure paste-offset editor
+// (2026-08-20) — the four surfaces painting in THE BOTTOM ROW'S MODAL since
+// 2026-08-13 (a centered modal dialog for the one day from 2026-08-12, and
+// the bottom strip before that, whence the predicate's old
+// modal_bottom_strip_editor_active name). The LOAD editor stood among them
+// until 2026-08-28, when it became the field-less picker, which is a modal
+// owner and not an editor — the membership is AppState::dialog_editor_session's
+// and nothing here restates it. Plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
 // is keyboard_modal_editor_active); what it names is the POINTER-facing
 // behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the caller roster (re-derived by grep at the reach-through's retirement,
-// 2026-08-13 — ten calling functions plus the dialog painter's fork by proxy)
+// the caller roster (re-grepped 2026-08-29 — EIGHT calling functions over nine
+// call sites, the modal-trap block that used to stand among them deleted)
 // is
 // the declaration's, in input_handler.h. The playback stop is
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
@@ -3584,12 +3587,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // stepping a ladder is a continuous step gesture, and a held key walking
     // it is how a passage is brought to the span the eye wants in one
     // press-and-hold. Ctrl-exact, matching the dispatch arms; the shifted
-    // shapes bind nothing and stay one-shot by this term. The two zoom
-    // icon-row buttons' hold-repeat asks THIS predicate about exactly this
-    // chord (arm_redesign_press / tick_chrome_press_repeat), so the key and
-    // the button walk at one speed by construction — the magnification pair's
-    // buttons ask it about the BARE spelling and get the same answer from the
-    // arrows' term above.
+    // shapes bind nothing and stay one-shot by this term. THE TWO ZOOM
+    // ICON-ROW BUTTONS DO NOT REPEAT AT ALL and never asked this: they carry
+    // no `repeats` in kToolbarChords (input_pointer.cpp), which is the chrome
+    // hold's whole membership, so a held zoom button is one step at its lift
+    // like every other non-repeating button. The MAGNIFICATION pair's buttons
+    // DO carry it, and what they ask this predicate about is the BARE
+    // spelling of these same two keys, answered by the arrows' term above —
+    // so on that pair the key and the button walk at one speed by
+    // construction.
     //
     // CTRL+0 IS DELIBERATELY ABSENT because it binds nothing at all since
     // 2026-08-27: the magnification reset that wore it for one day retired with

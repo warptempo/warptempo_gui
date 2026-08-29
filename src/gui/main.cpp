@@ -207,8 +207,8 @@ namespace {
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WHEN CENTERING IS INFEASIBLE the gaps floor at 0 and the WAVEFORM absorbs the
 // shortfall — one clean formula, no second constant: on a short window the
-// leftover is under the clamp, so W takes all of it and both gaps are 0 (the Pi
-// exactly). A window tall enough for the clamp but too shallow to center it
+// leftover is under the clamp, so W takes all of it and both gaps are 0 (the
+// 1024x600 short window below exactly). A window tall enough for the clamp but too shallow to center it
 // (the top block being taller than the bottom row) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
@@ -225,7 +225,10 @@ namespace {
 //     (the clamp fixes its height and the midpoint rule its centre, so the
 //     four pixels the menu row gave back go into gap 1 and the centered
 //     block does not move).
-//   1024x600 (the Pi): leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
+//   1024x600, A SHORT WINDOW (the Pi's old panel, kept as the worked case the
+//   floors exist for; that rig is returned and no host runs this geometry —
+//   the glass host is 2304x1440 at gui_scale 225):
+//     leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
 //     — 31 / 0 / 162 / 360 / 0 / 47. Centering is infeasible there (the
 //     midpoint rule would want gap 1 = -73), so the waveform keeps everything
 //     and takes the four pixels itself, which is the rule's own floor rather
@@ -395,7 +398,8 @@ int top_flex_gap(int win_h) {
 // GAP 2 — the flexible blank band between the waveform's bottom border and the
 // UNIFIED BOTTOM ROW at the window's foot: the REMAINDER of the leftover, which
 // is what makes the stack add up to the window exactly. Zero whenever the
-// waveform took the whole leftover (every window short of the clamp — the Pi).
+// waveform took the whole leftover (every window short of the clamp — the
+// 1024x600 case worked at the vertical block above).
 // The floor is defensive only: gap 1 can never exceed the remainder, since that
 // would need the bottom row to be taller than the menu row plus the whole block
 // above the waveform.

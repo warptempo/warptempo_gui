@@ -1014,7 +1014,7 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
 // right margin − 8 chrome, at 100%):
 //
-//   File      "Quit" | "Ctrl+Q"                              -> 168   FLOOR
+//   File      "Synchronize to external storage" | "Ctrl+Q"   -> content
 //   Series    "Iterations" | "M"                             -> 171   FLOOR
 //   Settings  "Waveform magnification level" (no column)     -> 288   content
 //   Edit      "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
@@ -1026,11 +1026,20 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // so that popup is DERIVED at every scale now — 296px wide with its chrome —
 // and the +42 no longer lands on it at all.
 //
-// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS: FILE, one row of "Quit"
-// beside "Ctrl+Q", and SERIES, two rows of "BPM"/"Iterations" beside single
-// letters. Neither is anywhere near 242, so the floor IS their width — which is
-// what gives a one- or two-row menu a box that reads as a menu at all, and is
-// the whole of what this constant is for. (The deleted NAVIGATION menu was the
+// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: SERIES, two rows of
+// "BPM"/"Iterations" beside single letters. It is nowhere near 242, so the
+// floor IS its width — which is what gives a two-row menu a box that reads as a
+// menu at all, and is the whole of what this constant is for.
+//
+// FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
+// when the table above was written and asked 168; it carries THREE rows now —
+// "Open project" | "Ctrl+O", "Synchronize to external storage" (the one
+// chord-less row) and "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
+// run puts its content past the 242, so that popup is DERIVED at every scale
+// now like Settings and Edit. NO NUMBER IS STATED FOR IT HERE: the ink is the
+// shaper's and the rows are app_state.h's (kFilePopupItems), so a figure
+// written down here would go stale the next time either moves, and which TERM
+// WINS is the only thing this table has to say. (The deleted NAVIGATION menu was the
 // one that never reached it: its accelerator column put content at 57 + 117
 // ("Previous marker") + 13 + 101 ("Ctrl+Shift+Tab") + 30 − 8 = 310, already
 // past both floors, so its box stayed 318px wide. That measurement is kept
@@ -3369,8 +3378,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // The authored minimum applies to both — it is the item box's floor and the
     // reason a menu of short labels still reads as a menu. It gave the FILE
     // menu its whole width while its rows were short, and stopped doing so on
-    // 2026-08-27, when "Synchronize to external storage" made that menu the
-    // widest in the product; the expression is unchanged either way, the floor
+    // 2026-08-27, when "Synchronize to external storage" joined its rows and
+    // its own content won; the expression is unchanged either way, the floor
     // and the shaped run simply trading which one wins. (The deleted NAVIGATION
     // menu's long labels never reached the floor either, which is how the two
     // were shown to compose.)

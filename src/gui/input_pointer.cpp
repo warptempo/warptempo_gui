@@ -112,7 +112,8 @@ struct ToolbarChord {
     bool           click_face;
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the pointer twin of holding the key (the bottom row's four
-    // cardinal arrows and nothing else, 2026-08-16). The press arms the burst
+    // cardinal arrows from 2026-08-16, joined by the waveform magnification
+    // pair on 2026-08-26 — see below). The press arms the burst
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
@@ -267,7 +268,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the architect retired the third member when the pair moved onto the bare
     // keys, its Ctrl+0 chord going with it rather than standing beside two
     // spellings it no longer matched. The settings editor's
-    // `:waveform_magnification_level=0` is the reset road now.)
+    // `waveform_magnification_level=0` is the reset road now.)
     {RedesignButton::IconWaveformMagnify,
      GuiKeys::Equal,  false, false, false, false, true,  true},                     // bare =
     {RedesignButton::IconWaveformReduce,
@@ -420,9 +421,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
-    // THE FOUR ARROWS ARE THE TABLE'S ONLY `repeats` ROWS (architect
+    // THE FOUR ARROWS TAKE THE TABLE'S `repeats` COLUMN (architect
     // 2026-08-16, reversing his own 2026-08-13 deletion of the same gesture,
-    // which he finds did not hold up in practice): the touch panel has no
+    // which he finds did not hold up in practice; the column is the whole
+    // membership and no list restates it — the magnification pair joined on
+    // 2026-08-26): the touch panel has no
     // keyboard beside the synthetic one, so a HELD ARROW BUTTON is the panel's
     // only nudge run, and the substitutes the deletion counted on — dragging
     // the marker, typing the tempo in the editor — do not cover it.
@@ -576,7 +579,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
-    // column is `repeats`, and these four are the only rows that set it.
+    // column is `repeats`, which these four set — as does the waveform
+    // magnification pair above since 2026-08-26; the column IS the
+    // membership (the contract is at ToolbarChord::repeats).
     {RedesignButton::TransportDown,
      GuiKeys::Down,   false, false, false, false, true, true},                       // bare Down
     {RedesignButton::TransportUp,
@@ -833,9 +838,10 @@ struct ActiveEditorText {
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
     // true = one of the four DIALOG editors (settings / commit-title /
-    // measure paste-offset / BPM, painting in the centered modal dialog since
-    // 2026-08-12 — the field was `bottom_strip` while they lived on the
-    // status lane); false = the top-strip flag editor. Selects the claim
+    // measure paste-offset / BPM, painting in the BOTTOM ROW'S modal since
+    // 2026-08-13 — centered for the one day from 2026-08-12, and the field
+    // was `bottom_strip` while they lived on the status lane); false = the
+    // top-strip flag editor. Selects the claim
     // region and the repaint owner.
     bool                dialog       = false;
 };

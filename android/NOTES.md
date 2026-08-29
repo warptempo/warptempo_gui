@@ -667,7 +667,11 @@ consumer, and the seam has no addition at all — §13.3.)*
   CONTENT pixels. **History samples are not replayed**: the core
   coalesces motion to the frame boundary anyway.
 - **Keys**: none translated. `AINPUT_EVENT_TYPE_KEY` returns 0 so BACK still
-  leaves the app. Hardware keyboards are out of scope (touch.md).
+  leaves the app — AND IT LEAVES WITHOUT THE UNSAVED-WORK PROMPT: that prompt is
+  raised by the GUI's own close road (Ctrl+Q and the compositor's X), which no
+  BACK press reaches, so a dirty session is torn down silently on this backend
+  where the laptop's would ask. Recorded as the fact it is; what the road SHOULD
+  do is the architect's ruling and is not taken here. Hardware keyboards are out of scope (touch.md).
 - **Mouse**: consumed, not routed and not returned — a click that fell through
   would act on whatever is behind the activity.
 - **Key repeat**: `set_repeat_info(30, kHoldBeatMs)`, hard-coded (architect
@@ -827,7 +831,10 @@ compared pixel-for-pixel.
 - **The overview strip's outside-the-box press teleports at the press.**
 - **BACK leaves the activity cleanly** (no crash, no ANR) and a relaunch runs
   `android_main` a SECOND time in the same process and comes up identical —
-  the destroyed-and-remade path exercised for real.
+  the destroyed-and-remade path exercised for real. WHAT IT DOES NOT DO is raise
+  the unsaved-work prompt: BACK is not the GUI's close road, so a dirty session
+  goes with the activity (the key note above carries the same fact; the ruling
+  is pending).
 - **The target-view preview render ran the full PGHI engine on the tablet**
   unprompted at startup (the pushed `.settings` carries `active_audio_view=T`),
   all three passes, `[success]`.
