@@ -856,8 +856,11 @@ bool GuiFlagEditor::commit_bpm_edit() {
     }
     // Derived-value bracket gate. Every sweep cell carries a derived base
     // tempo into its cell markers, a derived scale into its cell .settings,
-    // and — since 2026-08-26 — a rescaled tempo into every owning marker
-    // outside the span; the derivation (compute_base_tempo_scale) is
+    // and — since 2026-08-26 — a rescaled tempo into every effectively
+    // ENABLED owning marker outside the span (a disabled one is invisible to
+    // the act since 2026-08-29, in the span and out of it, so it can neither
+    // be rescaled nor refuse a bracket); the derivation
+    // (compute_base_tempo_scale) is
     // monotone in bpm and the rescale rides it, so the bracket ends bound
     // every cell: if either endpoint bpm refuses — the derived base tempo
     // lands outside [kTempoMinCents, kTempoMaxCents], the derived scale
@@ -905,7 +908,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
                     return false;
                 }
                 // The RESCALED MAP's arm of the same gate (2026-08-26): the
-                // sweep rescales every owning marker outside the span by
+                // sweep rescales every effectively enabled owning marker
+                // outside the span by
                 // the owner's change (bpm_cell_warp_markers, input_handler.h
                 // — the sweep's own per-cell rewrite, run here at the two
                 // ends the derivation's monotonicity makes sufficient), and

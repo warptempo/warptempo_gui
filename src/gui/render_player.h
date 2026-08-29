@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -35,7 +36,9 @@ struct GuiInputHandler;
 // car) — the operations cluster for the MODE that plays the project's own
 // renders through the one playback engine: the folder overlay above the
 // bottom row (folder_overlay.h) lists the project's OUTPUT FOLDERS — `render/`
-// with the deliverable, `tmp/` with its batch folders and their cells — and
+// with the deliverable, which is the CURRENT TITLE'S ONE WAV and nothing else
+// (the listing prunes the folder to it, prune_render_folder in renders_dir.h),
+// `tmp/` with its batch folders and their cells — and
 // the bottom row's modal carries the transport (Previous / Play-Pause / Stop /
 // Next, the play-scrub, the clock, the Repeat one lamp, and Load in place /
 // Close flush right — the row's order and faces are the painter's, R25/R36).
@@ -142,8 +145,9 @@ struct GuiInputHandler;
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
 // `h` view and their two icon-row buttons all reach it through on_key — and
-// it refuses with "No renders to play" when neither `render/` holds a wav
-// nor `tmp/` a cell; its callers refuse the modal states (a prompt, an
+// it refuses with "No renders to play" when neither `render/` holds the
+// current title's wav nor `tmp/` a cell; its callers refuse the modal
+// states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
 // listing and a whole-window damage. close() takes the stop body, clears
@@ -447,8 +451,17 @@ private:
     std::vector<AppState::FolderOverlayRow> listing_wavs() const;
     // Whether any playable wav exists — the opener's refusal.
     bool has_playable_render() const;
-    // The deliverable folder's regular `*.wav` files, byte order.
-    std::vector<std::filesystem::path> deliverable_wavs() const;
+    // THE DELIVERABLE — the CURRENT TITLE'S wav in `render/`, present iff it
+    // is there as a regular file, and the folder holds nothing else by the
+    // time this answers: IT PRUNES FIRST (prune_render_folder, renders_dir.h,
+    // whose declaration carries the ruling and the refusals). So `render/` is
+    // a ONE-FILE FOLDER in the player — the root row stands iff this answers,
+    // the Deliverable listing is `..` plus at most that one row, and the
+    // folder's play order, Previous, Next and the two ends are the degenerate
+    // one-item case of the walks they already were, needing no arm of their
+    // own (architect 2026-08-29: "player should only list a file if it matches
+    // the current title, and delete the rest also").
+    std::optional<std::filesystem::path> deliverable_wav() const;
     // Damage helpers: the band, the modal row.
     //
     // ONE BAND DAMAGE since R35 (2026-08-28): the panel's height is fixed at

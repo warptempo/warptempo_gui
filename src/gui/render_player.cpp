@@ -1,16 +1,16 @@
 #include "render_player.h"
 
-#include "directory_walk.h"         // the one non-throwing listing walk
 #include "folder_overlay.h"
 #include "input_handler.h"          // the ring clear's one owner
                                     // (clear_modal_dialog_key_press)
-#include "render_output_naming.h"   // render_output_directory (the deliverable)
+#include "render_output_naming.h"   // the deliverable's directory and stem
 #include "text_editor.h"            // next_session_id (the one modal counter)
 #include "wav_io.h"                 // wav_probe, checked_audio_sample_count,
                                     // wav_read_full — called, never changed
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -36,36 +36,28 @@ void GuiRenderPlayer::status(const std::string& line) {
 
 // -- The folders ----------------------------------------------------------------
 
-std::vector<std::filesystem::path> GuiRenderPlayer::deliverable_wavs() const {
-    std::vector<std::filesystem::path> out;
-    if (app.source_audio_path.empty()) return out;
-    const std::filesystem::path dir =
-        render_output_directory(app.source_audio_path);
+std::optional<std::filesystem::path>
+GuiRenderPlayer::deliverable_wav() const {
+    if (app.source_audio_path.empty()) return std::nullopt;
+    // THE PRUNE IS THE LISTING'S FIRST ACT (architect 2026-08-29): `render/`
+    // holds the current title's deliverable and nothing else, so the folder is
+    // brought to that definition before it is read rather than filtered on the
+    // way out. Its whole contract — the two callers, the CLI asymmetry, the
+    // running render, the refusals — is at prune_render_folder (renders_dir.h).
+    prune_render_folder(app.source_audio_path, app.engine_settings);
+    // The one path, composed by the parser's owners exactly as a render
+    // composes it — never a directory scan, because there is nothing to
+    // search for.
+    const std::filesystem::path p = compose_render_output_path(
+        render_output_directory(app.source_audio_path),
+        render_output_stem(app.engine_settings));
     std::error_code ec;
-    if (!std::filesystem::is_directory(dir, ec)) return out;
-    // THE WALK NEVER THROWS (directory_walk.h): a folder removed or made
-    // unreadable while the player is listing it answers what it saw — an empty
-    // or partial listing, which "No renders to play" and the row walk already
-    // handle — instead of terminating the process.
-    for_each_directory_entry(dir, ec, [&out](
-            const std::filesystem::directory_entry& de) {
-        std::error_code entry_ec;
-        if (!de.is_regular_file(entry_ec) || entry_ec) return;
-        if (de.path().extension() != ".wav") return;
-        out.push_back(de.path());
-    });
-    // BYTE ORDER of the file names — the listing's one order, and the folder's
-    // play order with it.
-    std::sort(out.begin(), out.end(),
-              [](const std::filesystem::path& a,
-                 const std::filesystem::path& b) {
-                  return a.filename().string() < b.filename().string();
-              });
-    return out;
+    if (!std::filesystem::is_regular_file(p, ec) || ec) return std::nullopt;
+    return p;
 }
 
 bool GuiRenderPlayer::has_playable_render() const {
-    if (!deliverable_wavs().empty()) return true;
+    if (deliverable_wav()) return true;
     return !renders_dir.enumerate_render_entries().empty();
 }
 
@@ -99,10 +91,11 @@ void GuiRenderPlayer::rebuild_rows() {
 
     switch (rp.folder) {
         case Folder::Root: {
-            // THE ROOT SHOWS `render` IFF IT HOLDS A WAV AND `tmp` IFF A CELL
-            // EXISTS — no `..` at the root (R13). Both are asked fresh here:
-            // a listing is built when its folder is entered (R4).
-            if (!deliverable_wavs().empty()) {
+            // THE ROOT SHOWS `render` IFF THE CURRENT TITLE'S WAV IS THERE AND
+            // `tmp` IFF A CELL EXISTS — no `..` at the root (R13). Both are
+            // asked fresh here: a listing is built when its folder is entered
+            // (R4), and the deliverable question prunes the folder as it asks.
+            if (deliverable_wav()) {
                 ov.rows.push_back(folder_row(
                     kDeliverableFolderName,
                     render_output_directory(app.source_audio_path)));
@@ -116,11 +109,16 @@ void GuiRenderPlayer::rebuild_rows() {
         }
         case Folder::Deliverable: {
             ov.rows.push_back(up_row());
-            for (const std::filesystem::path& p : deliverable_wavs()) {
+            // ONE ROW AT MOST, after the `..`: the folder is the current
+            // title's deliverable alone. Play order, Previous / Next and the
+            // two folder ends read this list like any other and are simply
+            // degenerate over it — no arm of their own.
+            if (const std::optional<std::filesystem::path> p =
+                    deliverable_wav()) {
                 Row r;
                 r.kind = Row::Kind::Wav;
-                r.name = p.filename().string();
-                r.path = p;
+                r.name = p->filename().string();
+                r.path = *p;
                 // NO ENTRY: the deliverable carries no render-entry sidecars,
                 // so it is not load-capable (R15) — the load road's refusal.
                 ov.rows.push_back(std::move(r));

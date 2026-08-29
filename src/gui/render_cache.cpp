@@ -205,7 +205,6 @@ constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // file itself. The fingerprint content version is serialized inside the
 // fingerprint payload by render_fingerprint.
 constexpr uint32_t kSidecarVersion     = 1;
-constexpr char     kSidecarExtension[] = ".fingerprint";
 
 bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes) {
     std::FILE* f = std::fopen(path.c_str(), "wb");
@@ -375,7 +374,7 @@ std::vector<uint8_t> render_fingerprint(
 
 std::string fingerprint_sidecar_path(const std::string& wav_path) {
     std::filesystem::path p(wav_path);
-    p.replace_extension(kSidecarExtension);
+    p.replace_extension(kFingerprintSidecarExtension);
     return p.string();
 }
 

@@ -97,6 +97,13 @@ std::vector<uint8_t> render_fingerprint(
     // — one owner, GUI and CLI alike); this function is pure serialization.
     bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame);
 
+// THE FINGERPRINT SIDECAR'S EXTENSION — the one spelling of it, and the
+// reason it is in the header rather than beside its writer: the deliverable
+// folder's prune (prune_render_folder, renders_dir.h) classifies a `render/`
+// entry by extension, and a hand-restated ".fingerprint" there would be a
+// second spelling of a name this unit owns.
+inline constexpr char kFingerprintSidecarExtension[] = ".fingerprint";
+
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 
 // Encodes interleaved float32 samples as a complete PCM_24 wav in an

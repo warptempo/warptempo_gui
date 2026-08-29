@@ -5389,6 +5389,13 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // is composed exactly as a render composes it (the parser's one owner), so
     // the file the act looks for is the file Ctrl+Alt+R writes; an absent one
     // is simply not in the set. The batch root is the GUI's own owner's.
+    //   THE SET IS THE FOLDER'S OWN CONTENTS since 2026-08-29: the render
+    // player's listing and the deliverable's publish prune `render/` down to
+    // exactly this one file (prune_render_folder, renders_dir.h), so the
+    // mirror's deletions on the stick and the prune's on disk are ONE
+    // definition rather than two that happen to agree — a previous title's
+    // deliverable is gone from both sides, not swept off the volume while it
+    // sits on disk.
     GuiExternalSyncJob job;
     job.volume       = *volume;
     job.project_name = app.project_name;
@@ -5603,10 +5610,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // and an owner outside every coincident-collapse run; any other selection
     // is a silent no-op. Under the contiguity rule every in-span marker up to the last
     // selected one IS selected, so a selected span-internal marker may be
-    // disabled and is still converted to a plain pass per sweep cell — as are
-    // the disabled markers the extended boundary sweeps in past it; a
-    // disabled OWNER is rejected (bpm_popup_eligible_marker now excludes
-    // disabled — a disabled owner was a render-inert rewrite).
+    // disabled — and since 2026-08-29 the sweep cell LEAVES IT EXACTLY AS IT
+    // IS rather than converting it to a plain pass, as it leaves the disabled
+    // markers the extended boundary sweeps in past it (a disabled marker is
+    // invisible to the act in the span and out of it, the ruling at
+    // bpm_cell_warp_markers, input_handler.h); a disabled OWNER is rejected
+    // (bpm_popup_eligible_marker excludes disabled — a disabled owner was a
+    // render-inert rewrite).
     // There is no toggle-off branch: the bpm editor is a modal dialog
     // surface, so while it is open `m` never reaches this dispatch — it is
     // just a typed character the bracket grammar rejects — and bpm mode never
@@ -5696,7 +5706,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // exists to prevent — and the rule is what makes the owner's change
         // the whole span's. Effectively-disabled members pass over for the
         // reason the ref scan passes over them: they contribute no tempo to
-        // the render. The scan covers the SELECTED run [owner .. last_sel];
+        // the render, and the cell never rewrites them (2026-08-29), so a
+        // disagreeing disabled member has nothing to erase. The scan covers
+        // the SELECTED run [owner .. last_sel];
         // the disabled markers the boundary walk sweeps in past it are
         // render-inert by construction and were never selected.
         for (int i = owner + 1; i <= last_sel; ++i) {

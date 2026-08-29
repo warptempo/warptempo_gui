@@ -17,9 +17,10 @@
 // constructor an error_code therefore buys nothing on its own: a folder removed,
 // unmounted or made unreadable WHILE a listing is being built still throws out
 // of the loop, and the GUI has no handler anywhere above it, so the process
-// dies. The events are ordinary here, not adversarial: `l` lists `render/` and
-// `tmp/` on a project the sync script or the trash road is editing under it, a
-// render dispatch scans the batch root, an OTG stick is pulled mid-listing.
+// dies. The events are ordinary here, not adversarial: `l` prunes and lists
+// `render/` and `tmp/` on a project the sync script or the trash road is
+// editing under it, a render dispatch scans the batch root, an OTG stick is
+// pulled mid-listing.
 //
 // THE CONTRACT. Construct with `ec`; walk to the end; increment with `ec` and
 // stop at the FIRST error; hand every entry to `fn` in between. `ec` is the
@@ -34,9 +35,11 @@
 // (re-grep `directory_iterator` when this list is retold):
 //
 //   THROUGH THIS OWNER
-//     render_player.cpp        deliverable_wavs — the `render/` listing
 //     renders_dir.cpp          enumerate_render_entries — the batch roots and,
-//                              per batch, its cells (two walks)
+//                              per batch, its cells (two walks); and
+//                              prune_render_folder — the `render/` folder,
+//                              classified whole and then removed from, so no
+//                              iterator is live while the folder changes
 //     input_render_dispatch.cpp  max_renders_batch_index — the batch root's
 //                              numbering; and the miscellaneous cell's own
 //                              next-index scan (two walks)

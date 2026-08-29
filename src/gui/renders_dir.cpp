@@ -1,9 +1,12 @@
 #include "renders_dir.h"
 
-#include "directory_walk.h"   // the one non-throwing listing walk
+#include "directory_walk.h"         // the one non-throwing listing walk
+#include "render_cache.h"           // kFingerprintSidecarExtension
+#include "render_output_naming.h"   // render_output_directory / _stem
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdio>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -12,7 +15,8 @@
 // The batch folder's path composition and its enumeration: the flat list of
 // valid render entries under <source parent>/tmp/, plus the per-entry
 // .settings path helper. The render player's listings and its load road call
-// the latter two.
+// the latter two. Beside them, the DELIVERABLE folder's prune (the contract is
+// at its declaration).
 
 // The project folder: the source's parent, or "." for a bare filename.
 static std::filesystem::path project_folder_of(
@@ -118,4 +122,51 @@ GuiRendersDir::enumerate_render_entries() {
 std::filesystem::path GuiRendersDir::settings_path(
         const AppState::RenderEntry& e) {
     return e.batch_folder / (e.basename + ".settings");
+}
+
+// THE DELIVERABLE FOLDER'S PRUNE. The whole contract — the definition it
+// serves, its two callers, the CLI asymmetry, the running-render case and the
+// refusals — is at the declaration (renders_dir.h); what is stated here is
+// only what the shape of the body is for.
+void prune_render_folder(const std::string& source_audio_path,
+                         const EngineSettings& es) {
+    if (source_audio_path.empty()) return;
+    // The naming owner's stem, never composed by hand. An empty one is the
+    // breach backstop: it matches nothing, and pruning "everything that is not
+    // the empty stem" would empty the folder.
+    const std::string stem = render_output_stem(es);
+    if (stem.empty()) return;
+
+    const std::filesystem::path dir =
+        render_output_directory(source_audio_path);
+    std::error_code ec;
+    if (!std::filesystem::is_directory(dir, ec)) return;
+
+    // CLASSIFY WHOLE, THEN REMOVE. A removal inside the walk would change the
+    // directory a live directory_iterator is reading; the mirror's own
+    // deletion pass is two passes for the same reason (external_sync.h rule 1).
+    // The walk never throws (directory_walk.h) and stops at the first fault —
+    // every entry it did reach is a positive identification, so the list below
+    // is removed whatever `ec` ended up holding, and nothing past the fault is.
+    std::vector<std::filesystem::path> doomed;
+    for_each_directory_entry(dir, ec, [&](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_regular_file(entry_ec) || entry_ec) return;   // dirs, faults
+        const std::filesystem::path& p = de.path();
+        const std::string ext = p.extension().string();
+        if (ext != ".wav" && ext != kFingerprintSidecarExtension) return;
+        if (p.stem().string() == stem) return;            // the title's own
+        doomed.push_back(p);
+    });
+
+    for (const std::filesystem::path& p : doomed) {
+        std::error_code rm_ec;
+        std::filesystem::remove(p, rm_ec);
+        if (rm_ec) {
+            std::fprintf(stderr,
+                "warptempo_gui: Could not remove '%s': %s\n",
+                p.string().c_str(), rm_ec.message().c_str());
+        }
+    }
 }

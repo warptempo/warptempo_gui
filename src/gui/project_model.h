@@ -36,7 +36,12 @@
 // `tmp/`, named by renders_dir.h), so a second wav beside the source is
 // a file that has not moved yet, and the refusal names the move rather than
 // guessing: "Move `<name>.wav` into render/". The folder is not opened until it
-// is done. BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY
+// is done. WHAT `render/` THEN KEEPS IS THE CURRENT TITLE'S DELIVERABLE ALONE
+// (prune_render_folder, renders_dir.h): a wav moved in under a PREVIOUS title
+// is deleted the first time the render player lists the folder or a deliverable
+// publishes into it, so the refusal's move is the right home for the current
+// title's wav and a parking spot for nothing else.
+// BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY
 // CONSTRUCTION: the walk below reads regular files only, so a directory —
 // `render/`, `tmp/`, `peaks/`, `score/` — can never be a candidate and neither
 // folder needs an exclusion rule of its own.

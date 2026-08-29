@@ -68,6 +68,14 @@
 //      A read fault can therefore never arrive after a deletion has already
 //      run, and no directory_iterator is ever live while its own directory is
 //      being changed.
+//      THE SET THIS MIRRORS IS THE ONE THE DISK ALREADY HOLDS (architect
+//      2026-08-29): the render player's listing and the deliverable's publish
+//      prune `render/` to the current title's `<title>.wav` and its
+//      `.fingerprint` and nothing else (prune_render_folder, renders_dir.h), so
+//      the deliverable this act copies and the deletions it makes on the stick
+//      are ONE definition with the prune's on disk — a previous title's
+//      deliverable is not a file the mirror sweeps off a volume while it still
+//      sits in the project.
 //   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
 //      claim above true by construction rather than lexically. Before anything
 //      is created or written, THE VOLUME ITSELF, the project's folder on the

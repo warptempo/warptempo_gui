@@ -132,20 +132,41 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // tempo, and the editor red-flashes what the sweep would otherwise have to
 // reject cell by cell.
 //
-// THE SPAN [owner_idx, endpoint_idx) WORKS AS IT ALWAYS HAS: the owner takes
-// the derived base tempo (typed scale reset — the residual rides the cell's
-// .settings scale), and every span-internal marker becomes a pass, the
-// disabled ones trailing the selection included (render-inert: a disabled
-// marker is dropped before the warp map is built; a ref among them keeps its
-// ref, the writer branching on label_ref first; label_def, disabled and every
-// non-tempo field are untouched). The boundary marker, when one exists, is
-// simply the first marker OUTSIDE the span.
+// A DISABLED MARKER IS INVISIBLE TO THIS ACT, IN THE SPAN AND OUT OF IT
+// (architect 2026-08-29: "`m` should disregard disabled markers — it should
+// calculate the span by ignoring disabled, and it should not update the base
+// tempos of disabled markers"). THE SPAN HALF IS ALREADY STRUCTURAL and needs
+// nothing here: the span's boundary is section_end_index (warpmarkers.h), the
+// next marker that PARTICIPATES IN THE RENDER, so a disabled marker never
+// bounds the span and the duration compute_base_tempo_scale is handed — the
+// boundary marker's frame, or the song end — never stops at one. THE REWRITE
+// HALF is the two loops below: an effectively-disabled marker is SKIPPED by
+// both, every field untouched, and `effective_disabled` (warpmarkers.h, the
+// store's one predicate, never re-spelled) is the verdict at each. It reads
+// `base`, which the rewrite cannot move — the cell touches tempo fields only,
+// and disabledness is `disabled`, `label_ref` and the ref's def.
+//   THIS SUPERSEDES THE RE-ENABLE ARGUMENT of 2026-08-26 ("so a marker
+// re-enabled later still sits in proportion"). By ruling a marker re-enabled
+// later carries the tempo it had when it was disabled; the act simply does not
+// see it.
 //
-// EVERYTHING OUTSIDE THE SPAN KEEPS ITS SHAPE: every marker that OWNS its
-// tempo (tempo_inherits false, no label_ref — disabled or not, so a marker
-// re-enabled later still sits in proportion) has its tempo cents rescaled by
-// THE OWNER'S OWN CHANGE, the ratio of the derived base tempo to the owner's
-// old effective tempo (its base times its typed scale, which the cell resets):
+// THE SPAN [owner_idx, endpoint_idx) WORKS AS IT ALWAYS HAS FOR THE MARKERS
+// THAT PARTICIPATE: the owner takes the derived base tempo (typed scale reset
+// — the residual rides the cell's .settings scale), and every effectively
+// ENABLED span-internal marker becomes a pass — the three tempo fields and
+// nothing else, so label_def, label_ref, disabled and every other field are
+// untouched (the `m` gate refuses an effectively-enabled in-span ref up front,
+// so a ref reaching this loop is disabled and skipped above). The disabled
+// ones the extended boundary sweeps in past the selection are left exactly as
+// they are. The boundary
+// marker, when one exists, is simply the first marker OUTSIDE the span, and it
+// is effectively enabled by the boundary walk's own rule.
+//
+// EVERYTHING OUTSIDE THE SPAN KEEPS ITS SHAPE: every EFFECTIVELY ENABLED
+// marker that OWNS its tempo (tempo_inherits false, no label_ref) has its
+// tempo cents rescaled by THE OWNER'S OWN CHANGE, the ratio of the derived
+// base tempo to the owner's old effective tempo (its base times its typed
+// scale, which the cell resets):
 //
 //     cents_i' = nearbyint(cents_i * new_cents / (old_cents * owner_scale))
 //
@@ -166,7 +187,9 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // tempo_from_cents conversions for that reason (the /100s cancel and would
 // only add rounding). A rescaled value outside [kTempoMinCents, kTempoMaxCents]
 // REFUSES the cell (nullopt), never clamps — a clamped section would deform
-// the very shape this exists to preserve.
+// the very shape this exists to preserve. A DISABLED MARKER'S VALUE CAN NO
+// LONGER TRIGGER THAT REFUSAL, since it is never rescaled: only the tempos
+// that reach the render can refuse a cell.
 //
 // THE RESOLVER'S OWN 1.00s STAND OUTSIDE THE RESCALE (recorded asymmetry,
 // codex 2026-08-26): the rewrite moves AUTHORED values, and what the render
@@ -202,12 +225,14 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
     cell[owner_idx].tempo_cents    = derived_base_tempo_cents;
     cell[owner_idx].tempo_scale.reset();
     for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
+        if (effective_disabled(base, i)) continue;   // invisible to the act
         cell[i].tempo_inherits = true;
         cell[i].tempo_cents    = 100;   // inert default
         cell[i].tempo_scale.reset();    // inert: no typed scale
     }
     for (int i = 0; i < n; ++i) {
         if (i >= owner_idx && i < endpoint_idx) continue;   // the span
+        if (effective_disabled(base, i)) continue;   // invisible to the act
         GuiWarpMarker& m = cell[i];
         if (m.tempo_inherits || !m.label_ref.empty()) continue;
         const double rescaled = std::nearbyint(

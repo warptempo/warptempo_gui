@@ -39,9 +39,11 @@ struct GuiWarpMarker : WarpMarker {
     // whole extent — the sections every selected marker owns, the LAST
     // marker's section INCLUDED. bpm_endpoint holds the index that CLOSES
     // that last section (== store size means the span runs to the song end).
-    // The map OUTSIDE the span keeps its shape: every owning marker there is
-    // rescaled by the owner's own change in each cell (bpm_cell_warp_markers,
-    // input_handler.h, the cell rewrite's one owner; the `m` gate's one-tempo
+    // The map OUTSIDE the span keeps its shape: every effectively ENABLED
+    // owning marker there is rescaled by the owner's own change in each cell
+    // (bpm_cell_warp_markers, input_handler.h, the cell rewrite's one owner,
+    // which since 2026-08-29 leaves a disabled marker untouched wherever it
+    // sits; the `m` gate's one-tempo
     // rule over the selected run is what makes the owner's change the span's).
     // At most one marker at a time has bpm_owner=true (invariant
     // maintained by the `m` toggle handler). "Committed" is
@@ -64,9 +66,9 @@ struct GuiWarpMarker : WarpMarker {
     // the phase-reset propagate's too. The BPM region runs
     // [this owner, bpm_endpoint) over the store, and the tempo covers the
     // sections owned by every marker in that half-open range — which is every
-    // SELECTED marker plus any disabled markers trailing them, disabled
-    // markers taking no part in the render and so being swept in
-    // render-inertly. bpm_endpoint == store size is the SONG-END sentinel: no
+    // SELECTED marker plus any disabled markers trailing them, the disabled
+    // ones taking no part in the render and so being swept in without being
+    // written at all. bpm_endpoint == store size is the SONG-END sentinel: no
     // enabled marker follows, so the last section runs to total_frames and
     // there is no closing marker. When bpm_endpoint < size, the marker at that
     // index is the boundary: it is effectively enabled, it owns the FOLLOWING

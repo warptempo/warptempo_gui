@@ -372,6 +372,13 @@ void GuiInputHandler::maybe_reestablish_target_buffer() {
 void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
+    // WHICH FOLDER THIS REQUEST PUBLISHES INTO, read before the move: an empty
+    // batch_folder selects the deliverable naming convention inside do_render
+    // (`render/<title>.wav`), a set one a batch cell under `tmp/`. It is the
+    // whole of the prune's membership below — Ctrl+Alt+R's plain single render
+    // is the deliverable arm, and Ctrl+Alt+Shift+R's miscellaneous cell, which
+    // arrives here with its folder late-bound, is not.
+    const bool publishes_deliverable = req.batch_folder.empty();
     // THE MESSAGE IS PARKED, NOT SHOWN (architect 2026-08-08). do_render's three
     // reuse rungs are ahead of all engine work by design, so a dispatch says
     // nothing about whether anything will be rendered: an up-to-date artifact, a
@@ -382,12 +389,31 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     park_render_status("Rendering...");
     req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
-        [this](RenderOutcome o) {
+        [this, publishes_deliverable](RenderOutcome o) {
             const bool success = (o == RenderOutcome::Success);
             if (o == RenderOutcome::Cancelled) {
                 std::fprintf(stderr, "warptempo_gui: Render cancelled\n");
             }
             finalize_render_run();
+            // THE DELIVERABLE'S PUBLISH PRUNES `render/` (architect
+            // 2026-08-29): the folder holds the current title's deliverable
+            // and nothing else, so a retitle's first render takes the previous
+            // title's pair with it instead of leaving it for the player to
+            // list and the Synchronize mirror to sweep off the stick. It runs
+            // HERE, on the GUI thread after do_render returned, so the wav and
+            // its .fingerprint are both on disk — do_render writes the
+            // fingerprint last, as the attestation that the set is complete —
+            // before anything else goes. The stem it keeps is the LIVE title,
+            // not the request's: the definition is "the current title's", one
+            // definition shared with the player's listing (prune_render_folder,
+            // renders_dir.h), so a title edited in the settings editor while
+            // this render ran leaves what it published for the same prune the
+            // next listing would run. Only Success prunes — a killed or failed
+            // render published nothing — and only the deliverable arm: a batch
+            // cell lands in `tmp/`, a different folder, never pruned.
+            if (success && publishes_deliverable) {
+                prune_render_folder(app.source_audio_path, app.engine_settings);
+            }
             // On success, re-establish a cold/stale target buffer (see
             // maybe_reestablish_target_buffer for the full rationale).
             if (success) maybe_reestablish_target_buffer();
@@ -562,8 +588,9 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // substantive difference from the iter render handler is per-cell
 // mutation of cell_settings.scale, in addition to per-cell marker mutation —
 // which since 2026-08-26 reaches the WHOLE map, not the span alone: every
-// owning marker outside the span is rescaled by the owner's own change
-// (bpm_cell_warp_markers, input_handler.h).
+// effectively enabled owning marker outside the span is rescaled by the
+// owner's own change (bpm_cell_warp_markers, input_handler.h, which since
+// 2026-08-29 leaves every disabled marker untouched in the span and out).
 // Returns true iff a batch was dispatched; every guard bail returns false.
 // Body is the former Ctrl+Alt+M block verbatim, minus the keystroke gate.
 bool GuiInputHandler::render_bpm_sweep() {
@@ -688,9 +715,11 @@ bool GuiInputHandler::render_bpm_sweep() {
 
         // The cell's marker vector, whole, from its one owner
         // (bpm_cell_warp_markers, input_handler.h): the owner stamped with
-        // the derived base tempo, the span passed, and EVERY OWNING MARKER
-        // OUTSIDE THE SPAN rescaled by the owner's own change so the map
-        // keeps its shape. The editor commit already ran the same rewrite at
+        // the derived base tempo, the span's enabled markers passed, and
+        // EVERY ENABLED OWNING MARKER OUTSIDE THE SPAN rescaled by the
+        // owner's own change so the map keeps its shape — a disabled marker
+        // is untouched wherever it sits. The editor commit already ran the
+        // same rewrite at
         // both bracket ends (monotone in bpm), so in practice every cell
         // rescales in-bracket; the refusal here is the per-cell backstop,
         // reported like a refused derivation.
