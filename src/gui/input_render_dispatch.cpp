@@ -74,7 +74,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
         s.view_playhead_frame       = app.playhead_cursor_sample;
     } else {
         // Source view: forward-map the playhead through the live target map
-        // the same way handle_active_audio_view_toggle does its S-to-T
+        // the same way switch_active_audio_view_to does its S-to-T
         // anchor, so the captured position is the target image of the
         // on-screen playhead with its screen column preserved. At dispatch
         // the live stores equal the request's stores for plain dispatches,

@@ -5708,12 +5708,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
-        // claim), button-is-its-chord. THE PICKER TAKES THE SAME TWO WORDS ON
-        // THE SAME OK BIT (2026-08-28): OK is its open act on the highlight,
-        // Cancel its close, and the hint composer's Enter / Escape are that
-        // router's own keys for the two (route_picker_key).
+        // claim), button-is-its-chord. THE PICKER TAKES THE SAME OK BIT AND
+        // THE SAME CANCEL, and its OK IS NAMED BY ITS ACT (architect
+        // 2026-08-28): "Open" on the Open project picker, "Load in place" on
+        // the `h` view's history picker — never the bare "OK", and never the
+        // menu row's longer "Open project", the row naming the ACT the button
+        // runs rather than the item that opened it. The word is composed from
+        // the OVERLAY'S OWNER, which is the same tag the picker's open act
+        // forks on (AppState::FolderOverlay::owner), so the button cannot
+        // name one act while Enter runs the other. Cancel is untouched and
+        // stays LAST, the escape sentinel; the hint composer's "<word>
+        // (Enter)" / "Cancel (Escape)" follows the word for free, those being
+        // route_picker_key's own two keys.
         DialogButtonPlan ok;
-        ok.label     = "OK";
+        ok.label     = !picker_up ? "OK"
+                     : (app.folder_overlay.owner ==
+                        AppState::FolderOverlay::Owner::HistoryPicker)
+                         ? "Load in place"
+                         : "Open";
         ok.editor_ok = true;
         plan.push_back(std::move(ok));
         DialogButtonPlan cancel;
@@ -6072,14 +6084,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // clock's own cell was painted after them until R25 moved the time.)
         font = select_bottom_row_face(cr);
     } else if (picker_up) {
-        // -- THE PICKER'S ROW (2026-08-28, architect R22): OK · Cancel at the
-        //    left pad and NOTHING ELSE — no label, no field. The list in the
+        // -- THE PICKER'S ROW (2026-08-28, architect R22): the two word
+        //    buttons and NOTHING ELSE — no label, no field. The list in the
         //    band above is the whole question, and the prompt's
-        //    `<projects_path>/` prefix went with the field it labelled. The
-        //    player's own shape one owner up: the buttons first, where the
-        //    hand reaches. --
+        //    `<projects_path>/` prefix went with the field it labelled.
+        //
+        //    THE OUTLINED BUTTONS SIT ON THE RIGHT (architect 2026-08-28, on
+        //    seeing the picker on the tablet — "I am right-handed"): only the
+        //    TRANSPORT — the borderless glyph buttons of the player's row one
+        //    branch up — is left-aligned; a row of WORD buttons is flush
+        //    right, where the thumb is. So the cluster starts at
+        //    `buttons_x_max`, the same rightmost seat every other owner uses
+        //    as its CAP, and with nothing to its left the row is the two
+        //    buttons alone: Open (or Load in place) · Cancel, Cancel still
+        //    last and so rightmost, the escape sentinel. The prompts and the
+        //    dialog editors keep their left flush — their rows carry a
+        //    message or a field, which reads from the left. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
-        buttons_x0 = cx0;
+        buttons_x0 = buttons_x_max;
     } else {
         // -- The editor: the label at the left pad, then the inset field,
         //    then the buttons after it. The field absorbs whatever the label

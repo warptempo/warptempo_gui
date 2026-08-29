@@ -621,15 +621,16 @@ void PhaseResetPropagate::paste_state_apply() {
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // wholesale region hide, then the selection set (the playhead land rides with
 // it, after the swap):
-//   * handle_active_audio_view_toggle is the SAME chokepoint the `t` key runs
+//   * switch_active_audio_view_to is the SAME chokepoint the `t` key runs
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
 //     the region hide, kick_waveform_sync, and target_render.ensure_ready all
-//     fire exactly once). It is a TOGGLE, so it is called only when the session
-//     is not already in target view.
+//     fire exactly once). It is the SET-TO spelling, so naming 'T' from a
+//     session already in target view is the chokepoint's own no-op and this
+//     tail spells no guard of its own.
 //   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
 //     clears) — so the selection must be set AFTER it or that clear would wipe
 //     the new one.
-//   * handle_active_audio_view_toggle DOES touch the selection since 2026-07-29
+//   * the S/T switch DOES touch the selection since 2026-07-29
 //     (it collapses a 2+ selection to its focus, the point-form view-switch
 //     rule), but its placement here is still free — SELECTION-NEUTRAL for every
 //     reachable paste, and that is GATE-DERIVED rather than incidental: both
@@ -658,7 +659,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // cache before that paint, which is exactly what the bare `p` toggle takes for
 // the same reason (active_views.cpp).
 // IT COVERS BOTH ENTRY CONTEXTS, and it is needed in both:
-//   * W+SOURCE entry — handle_active_audio_view_toggle runs and kicks, but it
+//   * W+SOURCE entry — the S/T switch runs and kicks, but it
 //     kicks BEFORE the column swap below, so its rebuild reads the OLD
 //     active_markers_view and the stale-flag frame stands. The tail kick is then
 //     the SECOND on this path, and a second kick is harmless: kick_waveform_sync's
@@ -678,9 +679,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // moved into the tab row (2026-08-13), and is kept as this route's own honest
 // statement that it rewrites the chain's transient tier.
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
-    if (input && app.active_audio_view != 'T') {
-        input->handle_active_audio_view_toggle();
-    }
+    if (input) input->switch_active_audio_view_to('T');
     active_views.switch_active_markers_view_to('P');
     // (THE TAIL'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
     // inventory it belonged to.) The CREATED-SET arm below still hides, where

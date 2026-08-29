@@ -11,6 +11,7 @@
 #include <vector>
 
 struct GuiTargetRender;
+struct GuiInputHandler;
 
 // UNDO COALESCING, A HYBRID OF TWO RULES (architect 2026-08-01, superseding the
 // pure repeat-identity model's "separate presses are separate entries" clause on
@@ -95,8 +96,9 @@ inline constexpr long long kTapCoalesceMs = 500;
 // write; bodies are byte-identical to the originals modulo `this->` access
 // on the captured references. The viewport reference is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
-// switch_active_tab_view_to is reached through active_views (so do_undo / do_redo
-// can restore the originating A/B tab before applying the marker change).
+// switch_active_tab_view_to and switch_active_markers_view_to are reached
+// through active_views (so do_undo / do_redo can restore the originating A/B tab
+// and W/P column before applying the marker change).
 struct Undo {
     AppState&             app;
     Viewport&             viewport;
@@ -104,6 +106,14 @@ struct Undo {
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiActiveViews&       active_views;
     GuiTargetRender&   target_render;
+    // Back-pointer to the input handler, wired in main.cpp after both are
+    // constructed (the input handler holds Undo by reference, so the dependency
+    // is a cycle resolved with a pointer set post-construction — the same shape
+    // as the settings editor's and the propagate's `input` back-wires). ONE
+    // READER: restore_history_entry, which restores the entry's S/T tag through
+    // switch_active_audio_view_to — the third view axis's owner lives on
+    // GuiInputHandler, the other two on GuiActiveViews above.
+    GuiInputHandler*      input = nullptr;
 
     Undo(AppState&             app_,
          Viewport&             viewport_,

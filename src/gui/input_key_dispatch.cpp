@@ -291,7 +291,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // iter brackets are session-only (never serialized, affects_persistence
     // false, excluded from the render recipe) so the write reached neither disk
     // nor a render. THAT WIPE IS DELETED with the ruling that iteration mode is
-    // TARGET-LEGAL (the record is at handle_active_audio_view_toggle,
+    // TARGET-LEGAL (the record is at switch_active_audio_view_to,
     // input_handler.cpp), so the admission now rests on nothing but the
     // persistent-mutation standard above. The former reasoning is kept because
     // TWO OTHER GATES leaned on it (the history mode's allowlist below, and the
@@ -483,12 +483,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // VIEWER and a review's pans and zooms are the review's. The architect reversed
 // that whole ownership: the window is the USER'S throughout, entry and exit
 // included, so the view leaves it exactly where the review left it and each A/B
-// tab keeps whatever band it had. THE THREE LOAD-IN-PLACES ARE UNAFFECTED and
-// their asymmetry simply stops mattering — the COMMIT load applies the loaded
-// file's own band some seventy lines past its call to this closer (the tab_a /
-// tab_b replace, the live-band pull, the clamps), the LOCAL load applies none
-// at all (a timeline state carries none), and neither now has a restore under
-// or over it. AppState::HistoryMode's field block owns the ruling and the
+// tab keeps whatever band it had. THE THREE LOAD-IN-PLACES ARE UNAFFECTED, and
+// the asymmetry that made this worth stating is GONE: all three route through
+// apply_recipe_in_place (2026-08-24), which writes the two marker columns and
+// the engine block and NOTHING ELSE — no tab band, no view bits, no clamps — so
+// the COMMIT load applies no band either now, and there is no restore under or
+// over any of them. AppState::HistoryMode's field block owns the ruling and the
 // record of what went.
 //
 // THIS OWNER DOES NOT CLOSE A DROPDOWN, and since 2026-08-09 that is a decision
@@ -1711,7 +1711,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             walk's frozen-stack premise had to reason about
 //                             — is deleted with the ruling that iteration mode
 //                             is target-legal (the record is at
-//                             handle_active_audio_view_toggle,
+//                             switch_active_audio_view_to,
 //                             input_handler.cpp). `i` is not on this allowlist,
 //                             so the bit cannot toggle in here either, and the
 //                             view now has NO undo-stack producer at all.
@@ -1752,11 +1752,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
 //                             redesigned button.
-//   - ' (bare)              → THE LOAD EDITOR, and the mode's one admitted
+//   - ' (bare)              → THE HISTORY PICKER, and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
-//                             the mode it loads something else in place: the editor
-//                             opens prefilled with the viewed member and loads
-//                             THAT MEMBER's state in place, which is the
+//                             the mode it loads something else in place: the
+//                             picker lists the viewed walk's members with the
+//                             band on the viewed one and loads THE HIGHLIGHTED
+//                             MEMBER's state in place, which is the
 //                             mode's own
 //                             act rather than an authoring chord that would
 //                             leave the frozen now side describing a state that
@@ -1805,7 +1806,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             head-delta grey calls "nothing to checkpoint" — is
 //                             saved by leaving the view first. (Ctrl+S inside
 //                             the commit-title editor is still the plain save,
-//                             through the five-editor modal contract, which this
+//                             through the ONE route_modal_editor_key contract
+//                             — one contract whatever the editor count stands
+//                             at — which this
 //                             gate never sees: the keyboard-modal gate sits
 //                             above it.)
 //                             IT IS ONE OF THE THREE ADMISSIONS CONDITIONAL ON
@@ -5563,7 +5566,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         if (app.active_markers_view == 'W') {
             // THE GATE IS THE WARP COLUMN ALONE — both audio views (architect
             // 2026-08-07, iteration mode is TARGET-LEGAL; the deleted S->T
-            // wipe's record is in handle_active_audio_view_toggle,
+            // wipe's record is in switch_active_audio_view_to,
             // input_handler.cpp). It read active_column_authoring_allowed
             // until then, which pinned the toggle to warp's SOURCE home. The
             // relaxation is about MODE STATE rather than authoring, which is

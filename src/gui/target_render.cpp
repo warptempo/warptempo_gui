@@ -765,7 +765,7 @@ void GuiTargetRender::ensure_ready() {
             // the guard rather than being hoisted the way trigger()'s was,
             // because no route reaches this branch inside the sub-tick window
             // with an act still standing: the S→T flip takes the one stop body
-            // far ahead of it (handle_active_audio_view_toggle), and neither
+            // far ahead of it (switch_active_audio_view_to), and neither
             // other caller can reach this branch at all with a standing act —
             // maybe_reestablish_target_buffer calls in only when the buffer is
             // dirty or empty, which falls through to trigger() and its

@@ -692,7 +692,7 @@ void GuiRenderPlayer::close() {
     if (audio.total_frames() > 0) {
         playback.rebind_buffer(audio.samples_ptr(), audio.total_frames(), 0);
     }
-    // THE S/T FLIP'S OWN TAIL FORK, verbatim (handle_active_audio_view_toggle,
+    // THE S/T FLIP'S OWN TAIL FORK, verbatim (switch_active_audio_view_to,
     // input_handler.cpp): target view rebinds the current preview or
     // dispatches a fresh one, source view rebinds source.wav.
     if (app.active_audio_view == 'T') {

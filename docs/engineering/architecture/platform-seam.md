@@ -190,8 +190,10 @@ on Wayland, which is what makes the laptop build's behaviour identical by
 construction rather than by care.
 
 THE BAND HAS A SECOND TENANT SINCE 2026-08-28 and the keyboard yields it: the
-RENDER PLAYER'S FOLDER OVERLAY paints in this exact rect, so
-`onscreen_keyboard::stands` gained a third term (`!render_player.active`) and
+RENDER PLAYER'S FOLDER OVERLAY paints in this exact rect. `onscreen_keyboard::
+stands` gained a third term for it that same day and LOST IT AGAIN when the
+pickers lost their fields — the exclusion is structural, no editor and the
+overlay being able to stand together (the record is at the predicate) — while
 `waveform_paint_area` gates on EITHER tenant, against one as-painted bit that
 describes the SLOT rather than either surface
 (`AppState::keyboard_slot_painted_standing`). The overlay takes no platform

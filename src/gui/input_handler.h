@@ -227,7 +227,7 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
 //
 // The single definition of "may this state enter target view", shared by
 // the two entry surfaces: the keyboard S → T toggle
-// (GuiInputHandler::handle_active_audio_view_toggle) and the load-time
+// (GuiInputHandler::switch_active_audio_view_to) and the load-time
 // restore of active_audio_view=T from .settings (GuiFileLoader::load_file).
 // If a keystroke entry would be blocked, a load restore is blocked
 // identically — the predicate changes in one place or not at all.
@@ -459,22 +459,21 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // the one place it is enumerated. Round 20 installed the clear at the three USER
 // COMMANDS (`t`, Ctrl+Tab, `p`) and three routes still reached a switch without
 // it: the propagate paste, which calls switch_active_markers_view_to directly;
-// Undo's own inline W/P swap; and apply_settings_engine_and_prefs, which
+// Undo's own inline W/P swap (deleted 2026-08-28 — the restore reaches the
+// writer itself now); and apply_settings_engine_and_prefs, which
 // replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
-//   * GuiInputHandler::handle_active_audio_view_toggle — the S/T writer (bare
+//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (bare
 //     `t`, the settings `active_audio_view=` key, the propagate paste's audio
 //     half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below its
 //     same-mode early return (`p` through toggle_active_markers_view, the
-//     settings key, and the propagate paste, which reaches this helper direct).
+//     settings key, the propagate paste, which reaches this helper direct, and
+//     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
+//     of this body in restore_history_entry was deleted for it).
 //   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab, the
 //     settings `active_tab_view=` key, Undo's cross-tab restore).
-//   * Undo's inline W/P swap in Undo::restore_history_entry — a deliberate copy
-//     of switch_active_markers_view_to (Undo does not hold that cluster), so it
-//     carries this rule by hand exactly as it already carries the column
-//     switch's selection clear.
 //   * apply_settings_engine_and_prefs (file_loader.cpp) — all three fields at
 //     once, the source load's alone since 2026-08-24 (a load in place writes no
 //     view state at all now). It takes a
@@ -485,9 +484,11 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // of a failed target-view restore) need no call of their own: it runs the
 // routine above in the same body, and it is invoked once from the startup tick,
 // before any input exists.
-// THE COMMAND WRAPPERS DO NOT SPELL IT — `t` and Ctrl+Tab keep their calls
-// because they ARE the writers, and toggle_active_markers_view lost its call to
-// the helper it delegates to, so there is ONE spelling of the rule per write.
+// THE COMMAND WRAPPERS DO NOT SPELL IT — Ctrl+Tab keeps its call because it IS
+// the writer, while toggle_active_markers_view and
+// handle_active_audio_view_toggle each lost (or never had) a call of their own
+// to the writer they delegate to, so there is ONE spelling of the rule per
+// write.
 // The bare 1/2/3 selectors, the view bar's buttons, the S/T + W/P radios and the
 // settings keys all compose those writers and inherit it.
 //
@@ -957,10 +958,15 @@ struct GuiInputHandler {
     // commit_trim_mutation); the friendship lets the editor reach them
     // through its back-pointer without a parallel writer.
     friend struct GuiSettingsEditor;
-    // The propagate's paste tail lands in target view through the same
-    // handle_active_audio_view_toggle chokepoint; the friendship lets it
-    // reach that private method through its back-pointer.
+    // The propagate's paste tail lands in target view through the same S/T
+    // chokepoint in its set-to spelling (switch_active_audio_view_to); the
+    // friendship lets it reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
+    // AND THE UNDO RESTORE, for the same private method (2026-08-28): an undo
+    // entry records the S/T view beside the tab and the column, and the restore
+    // hands each axis to its own owner — the other two live on GuiActiveViews,
+    // which Undo holds outright, and this one lives here.
+    friend struct Undo;
     // (NO GuiPrompt FRIENDSHIP. The prompt needed one while the history mode's
     // commit confirmation lived there — its `y` reached the private act through
     // a back-pointer — and both went with the prompt on 2026-08-07: the act is
@@ -3316,13 +3322,27 @@ private:
     // confidently wrong cue derived from virtual coordinates.
     GuiCursorKind pointer_cursor_kind(int x, int y, GuiInputState mods) const;
 
-    // Bare `t` toggle: flip app.active_audio_view between Source and Target.
-    // Stops any current playback before switching domains. Source → Target
-    // translates app.viewport_start_sample / playhead_cursor_sample /
+    // THE S/T CHOKEPOINT, in its two spellings. The BODY is the set-to form:
+    // put app.active_audio_view at 'S' or 'T', a no-op when it is already
+    // there. Stops any current playback before switching domains. Source →
+    // Target translates app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level through the current warp_frame_map in place and enters target
-    // view only when target view is available. target-view playback is
-    // allowed once the target buffer is ready; target render
+    // view only when target view is available (a refusal leaves the view where
+    // it was and opens the error notice, so callers read the verdict off
+    // app.active_audio_view rather than a return value). Target-view playback
+    // is allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere.
+    //
+    // `handle_active_audio_view_toggle` is the FLIP — bare `t` and the settings
+    // editor's `active_audio_view=` commit — and it is one line over the set-to
+    // form, so both spellings own the same translation, the same target-view
+    // entry gate, the same flag-editor teardown and the same history-focus
+    // clear. The SET-TO form exists for the callers that name a view rather than
+    // an axis: the bare 1/2/3 absolute selectors, the phase-reset propagate's
+    // land-in-target tail, and — since 2026-08-28 — Undo::restore_history_entry,
+    // which restores the entry's own S/T tag (UndoEntry::audio_view) exactly as
+    // it restores the tab and the column, each through that axis's owner.
+    void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
 
     // Apply a new GUI scale (percent), running the shared live sequence:

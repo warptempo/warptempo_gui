@@ -218,9 +218,21 @@ struct SettingsSnapshot {
 // Every entry also carries the pre-mutation phase reset snapshot and the mode
 // the operation was performed in. Both lists are always restored on undo/redo
 // so the inverse is symmetric regardless of which list the op actually
-// touched. `op_mode` lets undo flip the active mode; `tab` lets undo switch
-// the active tab — both are context tags that restore the original authoring
-// view as visual feedback for what's being undone.
+// touched.
+//
+// THE AUTHORING VIEW IS THREE TAGS, NOT TWO (architect bug report 2026-08-28):
+// `op_mode` is the W/P column, `tab` the A/B tab and `audio_view` the S/T audio
+// view — the three axes the product's view state has, captured together at every
+// push and restored together at every restore, as visual feedback for what is
+// being undone. The third one was missing until that report, and its absence had
+// a name: a restore could only half-restore, so undoing a T+P op from S+W landed
+// the COLUMN in P and left the audio view at S — the keyless S+P combination, all
+// three view lamps dark, the phase-reset lane drawn over the source-domain
+// waveform, and active_column_authoring_allowed false for the column just handed
+// back. With the third tag recorded, a restore lands the combination the op was
+// AUTHORED in and can synthesize no other; S+P still arrives when — and only
+// when — the user was standing in it (it is reachable by toggling `t` off T+P,
+// and the marker MEASURE authors there, home-view exception (4)).
 //
 // Carry-everywhere shape: every entry — marker, phase reset, or settings
 // — populates `settings` from app at push time, so do_undo/do_redo can
@@ -234,6 +246,12 @@ struct UndoEntry {
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
+    // The S/T audio view the op was authored in — the third context tag, and
+    // the one whose restore must go through the S/T chokepoint
+    // (GuiInputHandler::switch_active_audio_view_to) rather than a bare
+    // assignment: the flip is a DOMAIN TRANSLATION of the playhead and the
+    // viewport, not a bit.
+    char                      audio_view           = 'S';
     // False for an iteration-bracket-only snapshot. Iteration brackets are
     // session state and never serialize, so crossing such an entry must not
     // make recompute_dirty report a warp-file difference.
@@ -4449,7 +4467,7 @@ struct AppState {
     // view) / cleared-value promotion (source view, mapless items); CLEARED
     // (with the staged value) at source load, at both sidecar load-in-places
     // (those two through the shared reset_displayed_target_basis, below this
-    // struct) and at a view toggle (handle_active_audio_view_toggle). Shutdown is terminal — no teardown
+    // struct) and at a view toggle (switch_active_audio_view_to). Shutdown is terminal — no teardown
     // clear. The item hit tests read it through displayed_or_live_target_map so
     // what you grab is what you see (event-synchronized hit geometry — the
     // ruling at that selector). Empty = cold (no target frame has committed its
@@ -6072,7 +6090,7 @@ struct AppState {
     // producer — the S->T view switch's iteration-bracket push — and that push is
     // DELETED with the ruling that iteration mode is target-legal, so entering
     // target view changes no store (the record is at
-    // handle_active_audio_view_toggle, input_handler.cpp). The bit itself cannot
+    // switch_active_audio_view_to, input_handler.cpp). The bit itself cannot
     // move in here either: `i` is not on the keyboard allowlist and the icon
     // row's iteration button greys with it. So the walk has NO producer to
     // tolerate, and the derivation is the whole argument — no runtime check
@@ -7008,7 +7026,7 @@ struct AppState {
     // switch in both directions — ITERATION MODE IS TARGET-LEGAL (architect
     // 2026-08-07, superseding his 2026-07-23 ruling that entering target view
     // wipes the brackets and exits the mode; the deleted wipe's record is at
-    // handle_active_audio_view_toggle, input_handler.cpp, and the sweep
+    // switch_active_audio_view_to, input_handler.cpp, and the sweep
     // dispatches from either view too). BRACKET AUTHORING FOLLOWED THE EDITOR
     // ON 2026-08-24: it was source-only only because the flag editor was, and
     // the editor is now the home-view binding's fifth ruled exception

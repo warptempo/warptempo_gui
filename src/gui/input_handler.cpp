@@ -702,10 +702,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // intends dedicated BUTTONS for these later, outside today's icon-row
     // layout; for now the keyboard is the whole surface.)
     //
-    // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very handler its
-    // own key uses — handle_active_audio_view_toggle for S/T (bare `t`) and
-    // GuiActiveViews::toggle_active_markers_view for W/P (bare `p`) — and only
-    // when that axis actually differs. Every invariant those two own therefore
+    // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
+    // its own key uses — switch_active_audio_view_to for S/T (the body bare `t`
+    // flips through) and GuiActiveViews::toggle_active_markers_view for W/P
+    // (bare `p`) — and only when that axis actually differs, which the S/T
+    // chokepoint's own same-view no-op decides rather than a guard spelled
+    // here. Every invariant those two own therefore
     // arrives by construction: the target-view entry validation and its error
     // notice, the domain translation of viewport / playhead / zoom, the flag
     // editor teardown and the iter wipe, the selection clear, the coincidence
@@ -735,10 +737,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
          key == GuiKeys::Digit3) && !ctrl && !shift && !alt) {
         const char want_audio   = (key == GuiKeys::Digit1) ? 'S' : 'T';
         const char want_markers = (key == GuiKeys::Digit2) ? 'P' : 'W';
-        if (app.active_audio_view != want_audio) {
-            handle_active_audio_view_toggle();
-            if (app.active_audio_view != want_audio) return;   // refused
-        }
+        switch_active_audio_view_to(want_audio);
+        if (app.active_audio_view != want_audio) return;   // refused
         if (app.active_markers_view != want_markers) {
             active_views.toggle_active_markers_view();
         }
@@ -2369,12 +2369,28 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
     return std::move(*r);
 }
 
+// THE FLIP, one line over the set-to form below — bare `t` and the settings
+// editor's `active_audio_view=` commit. Every invariant the switch owns lives in
+// the one body; the contract for both spellings is at the declaration
+// (input_handler.h).
 void GuiInputHandler::handle_active_audio_view_toggle() {
+    switch_active_audio_view_to(app.active_audio_view == 'S' ? 'T' : 'S');
+}
+
+void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // Audio must be loaded — `t` is a silent no-op in blank state.
     // (The blank/loading guard near the top of on_key already covers
     // this, but the helper is defensive in case future callers reach
     // it from elsewhere.)
     if (audio.total_frames() <= 0) return;
+
+    // THE SAME-VIEW NO-OP, the set-to form's own first line: naming the view you
+    // are already in changes nothing — no stop, no translation, no editor
+    // teardown, no kick. It is what lets a caller that names a COMBINATION (the
+    // 1/2/3 selectors, the undo restore) hand this axis its tag unconditionally
+    // instead of spelling the guard by hand. The flip above can never reach it.
+    if (target_view != 'S' && target_view != 'T') return;
+    if (target_view == app.active_audio_view) return;
 
     // Build the current warp_frame_map from the live warp marker store.
     // Same resolve-then-build pipeline the render pipeline runs, so the

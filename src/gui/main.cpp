@@ -1227,11 +1227,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // one reader is apply_working_zoom; the rule is at ab_audition.h).
     ab_audition.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in
-    // target view through handle_active_audio_view_toggle, the chokepoint that
+    // target view through switch_active_audio_view_to, the chokepoint that
     // lives on the input handler (constructed after the propagate, which the
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
+    // And Undo's, for the same chokepoint: a restore puts the reader back in the
+    // authoring view the entry recorded, and the S/T axis of it is the input
+    // handler's (the other two are GuiActiveViews', which Undo holds outright).
+    // Its one reader is recorded at the member, undo.h.
+    undo.input = &input_handler;
     // The prefetch's ready fd is wired HERE rather than beside the other three,
     // because its callback needs the input handler: a drain fills the store AND,
     // while the view stands, measures the head delta and damages the window for

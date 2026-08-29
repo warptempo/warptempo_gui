@@ -2,7 +2,8 @@
 
 #include "input_handler.h"        // land_playhead_on_marker (which owns the
                                   // restore's overlay hide),
-                                  // clear_touch_zoom_seat — the W/P write's own,
+                                  // GuiInputHandler::switch_active_audio_view_to
+                                  // — the S/T tag's restore chokepoint,
                                   // bring_span_into_view — the restore visual
                                   // tail's group framing (the shared owner
                                   // since 2026-08-16; frame_span_into_view is
@@ -84,6 +85,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
+    e.audio_view         = app.active_audio_view;
     e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
@@ -105,6 +107,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
+    e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -120,6 +123,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
     e.tab                = app.active_tab_view;
+    e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
@@ -131,6 +135,7 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
+    e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     recompute_dirty();
@@ -533,6 +538,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.tab                 = entry.tab;
+    // The three context tags travel VERBATIM onto the counter rather than being
+    // re-captured from live state: they describe the OP, and the counter is the
+    // same op in the opposite direction, so redoing it must land the same
+    // authoring view undoing it did.
+    counter.audio_view          = entry.audio_view;
     counter.affects_persistence = entry.affects_persistence;
     // The touched-set identity hints SWAP coordinate spaces on the counter: the
     // counter's snapshot is the op's after-state, so the rows touched by a
@@ -552,11 +562,67 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // destination cannot overflow.
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
-    // Restore the originating A/B tab before the marker swap. The swap writes
-    // the live marker store and the post-restore rules write the tab-bound
-    // selection, so both must land on the tab the action was authored on.
+    // -- THE AUTHORING VIEW, ALL THREE AXES, EACH THROUGH ITS OWN OWNER -----
+    //
+    // A restore puts the reader back where the op was authored, and the view has
+    // THREE axes, not two (architect bug report 2026-08-28; the field list and
+    // the defect the third one closes are at UndoEntry, app_state.h). Each is
+    // written by the chokepoint that owns it — the same body its own key runs —
+    // so every invariant those three carry arrives by construction rather than
+    // being re-spelled here: the tab's band swap and coincidence auto-select,
+    // the S/T domain translation of playhead and viewport with its target-view
+    // entry gate and its flag-editor teardown, the column's selection clear.
+    //
+    // THE ORDER IS TAB, AUDIO VIEW, COLUMN, THEN THE DATA, and every step of it
+    // is decided rather than chosen:
+    //   * THE TAB FIRST, because the S/T switch treats the two tabs
+    //     DIFFERENTLY: the ACTIVE tab's playhead is translated and re-anchored
+    //     on its own painted column (and re-expressed onto a focused marker),
+    //     while the parked tab's is translated and its viewport merely shifted
+    //     by the same delta. Running the switch first would hand the careful
+    //     half to the tab the restore is about to leave.
+    //   * THE AUDIO VIEW BEFORE THE DATA, because it is a TRANSLATION of the
+    //     live playhead out of the domain it is currently expressed in — the
+    //     live markers and the live engine block are what define that domain, so
+    //     the map it translates through must be read before the swap replaces
+    //     them. The tail's unconditional kick and target_render.trigger() own
+    //     the post-swap re-warp, exactly as they do for every other restore.
+    //   * THE COLUMN BEFORE THE DATA, because its selection clear damages the
+    //     LEAVING column's painted stems and flags — damage follows the basis of
+    //     the pixels it erases, and after the swap that basis is gone.
+    //   * THEN the settings and the marker pair, and then the post-restore
+    //     rules, which write the tab- and column-bound selection into the
+    //     finished combination.
     if (entry.tab != app.active_tab_view) {
         active_views.switch_active_tab_view_to(entry.tab);
+    }
+    // THE S/T RESTORE, through the set-to spelling of the `t` chokepoint (the
+    // contract is at its declaration, input_handler.h). Unconditional like the
+    // tab restore above — a settings-only entry carries the view it was typed in
+    // just as it carries the tab — and the chokepoint's own same-view early
+    // return is what makes that free. It is BEST-EFFORT in exactly one direction:
+    // entering target view can refuse its validity gate (the error-notice class,
+    // unreachable from program-written input), and a refusal leaves the audio
+    // view where it stands while the rest of the restore proceeds — there is no
+    // aborting a restore whose entry is already popped.
+    //
+    // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
+    // recorded, a restore lands the combination the op was AUTHORED in; the
+    // keyless S+P now arrives when, and only when, the op was authored there
+    // (reachable by toggling `t` off T+P, where the marker MEASURE authors —
+    // the home-view binding's fourth ruled exception). Before this tag existed
+    // the restore MANUFACTURED S+P out of a T+P entry undone from S+W, which is
+    // the defect it closes.
+    if (input) input->switch_active_audio_view_to(entry.audio_view);
+
+    // THE W/P RESTORE, through the `p` chokepoint's own writer
+    // (GuiActiveViews::switch_active_markers_view_to, which Undo reaches like
+    // the tab's — the column switch's selection clear and the seated pinch's
+    // anchor clear are that helper's, not a hand-kept copy of it). Gated off 'S'
+    // because op_mode is that entry kind's MARKER rather than a column: a
+    // settings-only entry carries no authoring column to return to.
+    if (entry.op_mode != 'S') {
+        active_views.switch_active_markers_view_to(entry.op_mode);
     }
 
     // Restore engine settings before the marker swap. Marker entries get their
@@ -576,42 +642,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
-    // Switch active mode to match the op being restored before applying
-    // post-restore rules — selection state is mode-bound, so the rules
-    // and the sanitize step must run against the correct list. Skip
-    // entirely for settings-only entries: they don't carry an authoring
-    // mode, and active_markers_view is a view-state key that's not undoable.
-    //
-    // A COLUMN SWITCH CLEARS THE SELECTION (the scope rule), so the swap is the
-    // clear plus the mode assignment and nothing else — no slot is stashed and
-    // none is restored (the parked selections died 2026-07-29, and their restore
-    // half here was already dead: the post-restore rules below write the touched
-    // set wholesale). clear_selection also takes the shift-range anchor through
-    // the ordinary mutator contract; the visual tail hides the trim region
-    // overlay outright above the 'S' gate. Damage rides this
-    // function's own unconditional full-waveform invalidate in the tail.
-    //
-    // Kept inline rather than delegated to
-    // GuiActiveViews::switch_active_markers_view_to only because Undo does not
-    // hold that cluster; the two now agree on the whole selection story (clear,
-    // then flip); the helper's one extra act was a hover-popup clear, and the
-    // hover popup no longer exists (row 5).
-    // AND THE SEATED PINCH'S ANCHOR GOES WITH THE COLUMN, the same rule this
-    // block already carries by hand for the selection (codex round 21: the clear
-    // rides every WRITE of the active view state, and this is the second W/P
-    // write in the product — the tab restore above inherits its own through
-    // switch_active_tab_view_to). Ctrl+Z is an ordinary key, so nothing stops it
-    // arriving with two fingers resting on the glass. FRESH-GRIP half: the held
-    // frame stays arithmetically valid across a column flip. The membership and
-    // the derivation are at clear_touch_zoom_seat's declaration
-    // (input_handler.h). Its damage rides this function's own unconditional
-    // full-waveform invalidate in the tail, exactly as the selection clear's
-    // does.
-    if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
-        selection.clear_selection();
-        clear_touch_zoom_seat(app, viewport);
-        app.active_markers_view = entry.op_mode;
-    }
+    // (THE COLUMN SWAP IS NOT HERE ANY MORE — it moved UP, above the marker
+    // swap, and onto its own owner, GuiActiveViews::switch_active_markers_view_to,
+    // with the third view tag's landing on 2026-08-28. It stood here as a
+    // deliberate copy of that helper under the note "Undo does not hold that
+    // cluster", which had already stopped being true — the tab restore reaches
+    // active_views a few lines above it — so the copy was carrying the column
+    // switch's selection clear and the seated pinch's anchor clear by hand for
+    // nothing. Selection state is mode-bound and the post-restore rules below
+    // still need the column settled before they run, which the new site
+    // satisfies with room to spare.)
 
     // Settings-only entries carry no marker or focus post-restore work.
     if (entry.op_mode == 'P') {

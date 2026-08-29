@@ -1343,7 +1343,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // the callers whose land is not a movement (2026-08-19). RE-DERIVED BY GREP —
 // two:
 //   * THE S/T AUDIO-VIEW FLIP's re-express of a surviving focus
-//     (handle_active_audio_view_toggle, input_handler.cpp). A TRANSLATION IS NOT
+//     (switch_active_audio_view_to, input_handler.cpp). A TRANSLATION IS NOT
 //     A MOVEMENT: the flip maps the same musical instant into the other domain
 //     and this call is the accurate spelling of that map for a focused marker,
 //     the generic double round trip being the inaccurate one. The user has not

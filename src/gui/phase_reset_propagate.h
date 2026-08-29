@@ -59,7 +59,7 @@ struct PhaseResetPropagate {
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this propagate by reference, so the
     // dependency is a pointer set after construction, mirroring the settings
-    // editor's `input` back-wire). Reaches handle_active_audio_view_toggle so a
+    // editor's `input` back-wire). Reaches switch_active_audio_view_to so a
     // completed paste can land in target view through the SAME chokepoint the
     // `t` key uses.
     GuiInputHandler*      input = nullptr;

@@ -223,7 +223,7 @@ void GuiActiveViews::toggle_active_markers_view() {
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH — the W/P half of the
     // rule the S/T toggle carries at its own chokepoint
-    // (handle_active_audio_view_toggle; the contract and the full clearer list
+    // (switch_active_audio_view_to; the contract and the full clearer list
     // are at AppState::HistoryMode::focus). The focus is an ordinal into the
     // PAINTED diff-flag list, and this flip changes that list wholesale: the
     // mode paints the ACTIVE column's half of a commit's delta, so W and P show

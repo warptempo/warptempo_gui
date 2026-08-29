@@ -748,7 +748,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // the mode paints it on the flags. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
 // OF THEM (2026-08-07): iteration mode is target-legal, so entering target view
 // neither exits the mode nor clears anything (the record is at
-// handle_active_audio_view_toggle, input_handler.cpp). Two of the three
+// switch_active_audio_view_to, input_handler.cpp). Two of the three
 // surviving callers can now run in TARGET view, where the write is the granted
 // home-view-binding exception argued at the sweep's tail
 // (run_iteration_sweep_render, input_key_dispatch.cpp).
