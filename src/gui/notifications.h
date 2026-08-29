@@ -29,7 +29,7 @@
 // every QUESTION (the prompts and the dialog editors); and what is TRUE NOW
 // rather than what happened — the render's progress line, the `h` walk's
 // line and the selected marker's readout, which are state and live on the
-// status chain.
+// STATUS BAR, the window's last row.
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
 // it and nothing else writes a card. A text identical to a VISIBLE card's of

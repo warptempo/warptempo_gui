@@ -193,11 +193,12 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the status chain before clearing queue_progress_text.
-    // invalidate_status_chain_area covers the TAB ROW's lane — the chain's
-    // home since 2026-08-13 — and the label lives nowhere else; keep this
+    // Invalidate the status bar before clearing queue_progress_text.
+    // invalidate_status_bar_area covers the window's LAST LANE — the label's
+    // home since 2026-08-29, the tab row's from 2026-08-13 — and the label
+    // lives nowhere else; keep this
     // ordering consistent with the other status-clear paths.
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     app.queue_progress_text.clear();
     // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
     // DIE HERE or a rung-served run — which never promoted, so this clear of the
@@ -233,7 +234,7 @@ void GuiInputHandler::park_render_status(std::string text) {
     if (status_promoted_) {
         // Invalidate before clearing, the ordering every status-clear path here
         // keeps.
-        viewport.invalidate_status_chain_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
         status_promoted_ = false;
     }
@@ -309,7 +310,7 @@ void GuiInputHandler::tick_promote_render_status() {
     // the next park retract it and keeps that retraction from touching another
     // owner's message.
     status_promoted_ = true;
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
 }
 
 // THE FIELD REPORT OF 2026-08-13 AND WHAT IT ACTUALLY WAS, recorded here
@@ -336,8 +337,10 @@ void GuiInputHandler::tick_promote_render_status() {
 //     GuiTargetRender::stamp_updating states the ~40ms single-tap lifetime).
 // What the relayout DID change is where a shown label lands: the chain went
 // from the bottom-LEFT lead-in to the gutter between the clock and the arrows.
-// The 2026-08-13 move to the tab row's top right addresses that and nothing
-// else.
+// The 2026-08-13 move to the tab row's top right addressed that and nothing
+// else. THE LABEL'S HOME TODAY IS THE STATUS BAR'S LEFT CELL, the window's
+// last row (2026-08-29, messaging.md) — the third surface it has had, and the
+// three causes above are untouched by every one of the moves.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
     if (app.active_audio_view == 'T' &&

@@ -363,7 +363,7 @@ bool popup_eligible_marker(const AppState& app, int idx) {
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
     const auto& m = mv[idx];
-    // This gates the BOTTOM-STRIP resolved readout and the Ctrl+C copy — a
+    // This gates the STATUS BAR's resolved readout and the Ctrl+C copy — a
     // marker's OWN value is written on its flag regardless of eligibility. Render
     // resolution (resolve_warp_markers_for_render) drops disabled markers
     // outright and drops label refs whose definition is disabled (the

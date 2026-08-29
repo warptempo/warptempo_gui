@@ -699,7 +699,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // render recipe) and lands on dispatch_render_now's reuse rungs.
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the
     // disabled bit, the iter bracket — and never a placement one, so it is a
@@ -956,13 +956,14 @@ bool GuiFlagEditor::commit_bpm_edit() {
     proposed[idx].bpm_hi    = hi;
     app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
-    // TWO SURFACES, TWO OWNERS (2026-08-13, when the status chain left this
-    // row for the tab row): the dialog editor just came down, which is the
+    // TWO SURFACES, TWO OWNERS (2026-08-13, when the status strings left this
+    // row for the tab row; they are the STATUS BAR's since 2026-08-29): the
+    // dialog editor just came down, which is the
     // BOTTOM row's damage, and the stamped marker is a bpm OWNER now — a
-    // class the resolved readout has nothing to resolve for — so the chain's
-    // lowest tier changes with it.
+    // class the resolved readout has nothing to resolve for — so the bar's
+    // right cell changes with it.
     viewport.invalidate_modal_dialog_area();
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     return true;
 }
 

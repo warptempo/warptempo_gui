@@ -442,7 +442,7 @@ void PhaseResetPropagate::paste_apply() {
         undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_chain_area();
+        viewport.invalidate_status_bar_area();
         target_render.trigger();
     }
 
@@ -589,7 +589,7 @@ void PhaseResetPropagate::paste_state_apply() {
         undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_chain_area();
+        viewport.invalidate_status_bar_area();
         target_render.trigger();
     }
 
@@ -679,11 +679,12 @@ void PhaseResetPropagate::paste_state_apply() {
 // The ordinary damage stays beside it: the rebuild damages y=0 through the
 // waveform's bottom (top strip included), so invalidate_top_strip and
 // invalidate_waveform_area are coalesced duplicates, while
-// invalidate_status_chain_area is a coalesced duplicate too since the status chain
-// moved into the tab row (2026-08-13), and is kept as this route's own honest
-// statement that the selection it lands moves the chain's readout tier (the
+// invalidate_status_bar_area is NOT — the bar is the window's last lane and
+// lies well below the rebuild's rect — so that call is this route's own
+// necessary damage for the readout the selection it lands moves (the
 // paste's "Stopped at …" report itself is a notification card since
-// 2026-08-29 and touches no chain tier).
+// 2026-08-29 and touches neither cell). It was a coalesced duplicate from
+// 2026-08-13, when the strings sat in the tab row, until the bar took them.
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input) input->switch_active_audio_view_to('T');
     active_views.switch_active_markers_view_to('P');
@@ -740,7 +741,7 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // the swap used to restore, deleted 2026-07-29 with the parked slots.)
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     // LAST, after the created selection is installed, so
     // the flag cache rebuilds against the final column AND the final selection
     // hash in one pass (the reasoning, and the two entry contexts it covers, are

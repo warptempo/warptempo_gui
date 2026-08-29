@@ -6250,7 +6250,7 @@ struct AppState {
         // PAIR, and four call sites spelling that fork is four places for a
         // Local tab to keep showing commit flags. Its readers, re-derived by
         // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
-        // and the bottom strip's corner line — it had two more until 2026-08-18,
+        // and the status bar's walk line — it had two more until 2026-08-18,
         // the mode's diff-span framing and paint_trim's diff-span substitution,
         // both deleted with the trim bar's return to the ordinary framing. The
         // ONE reader that deliberately does NOT is
@@ -6934,8 +6934,8 @@ struct AppState {
     //
     // EVENTS, not state: something happened that answers an act, or that the
     // user was not watching. What is TRUE right now (the render's progress
-    // line, the `h` walk's line, the selected marker's readout) stays on the
-    // tab row's status chain; what HAPPENED becomes a CARD here. The model,
+    // line, the `h` walk's line, the selected marker's readout) lives on the
+    // STATUS BAR, the window's last row; what HAPPENED becomes a CARD here. The model,
     // the ops and the whole inventory of what is and is not notified are at
     // notifications.h (GuiNotifications); docs/engineering/architecture/
     // messaging.md is the ruling. This is only what the product remembers.
@@ -7008,22 +7008,25 @@ struct AppState {
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
-    // Non-interactive status text — TIER 2 of the TAB ROW's status chain since
-    // 2026-08-13 — giving the user visual feedback while no other UI is
-    // updating. Driven by the shared batch
+    // Non-interactive status text — THE STATUS BAR'S LEFT CELL since
+    // 2026-08-29 (the tab row's status chain ranked it tier 2 from 2026-08-13,
+    // and the bottom row carried it before that) — giving the user visual
+    // feedback while no other UI is updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status".
-    // IT COEXISTS WITH prompt.active AS STATE, and since the chain left the
+    // IT COEXISTS WITH prompt.active AS STATE, and since the string left the
     // bottom row IT ALSO PAINTS THROUGH A MODAL: an archival render runs on,
     // so dirtying the project and pressing Ctrl+Q raises the close prompt over
     // a live run (the prompt cancels nothing), and the run's own completion can
     // rewrite or clear this string while the prompt stands — the prompt owns
-    // the BOTTOM row and the chain owns a span of the TAB row, two surfaces
-    // that no longer contend. (Until that move the row yielded whole to the
+    // the BOTTOM row and this cell is the STATUS BAR's, two lanes that cannot
+    // contend. (Until that move the row yielded whole to the
     // modal and the string was simply not painted while one stood.) NO
     // PRECEDENCE TIER IS INVOLVED either way: the old shared-cell ordering
     // (the prompt as the chain's first tier) is superseded structurally, and
-    // no status write needs a modal test of its own.
+    // no status write needs a modal test of its own. The bar's OTHER cell, the
+    // readout, is a cell beside this one and not a tier under it: both paint
+    // whenever both are set.
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch
@@ -7624,18 +7627,27 @@ GuiRect top_ruler_row_area(const AppState& a);
 // arc's merged trim-bar + ruler input band — lived between these accessors for
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
-// strip's ONE lane (bottom lane 0), resting on the WINDOW'S FOOT since the
-// relayout's commit B with GAP 2's blank ground between it and the waveform —
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the UPPER of the
+// bottom strip's two lanes (bottom lane 1), with GAP 2's blank ground between
+// it and the waveform and the STATUS BAR below it —
 // the lane including its 1px
 // border-top, and the content band under that border. (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
 // stood, 2026-08-11..12, the strip's whole surface at the unification, one of
-// two again while the OVERVIEW STRIP sat below it that afternoon, and the
-// strip's one lane from commit B; each flexible gap is strip geometry, not a
-// lane.)
+// two again while the OVERVIEW STRIP sat below it that afternoon, the strip's
+// one lane resting on the WINDOW'S FOOT from commit B, and one of two again
+// since the status bar took that foot on 2026-08-29; each flexible gap is
+// strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+// THE STATUS BAR (architect 2026-08-29): the bottom strip's LOWER lane (bottom
+// lane 0), on the WINDOW'S FOOT — the lane including its two 1px border rows,
+// and the 31-px ground between them that the two STATE cells work in. Its
+// painter is GuiPaintHandler::paint_status_bar and its damage owner is
+// Viewport::invalidate_status_bar_area; the ruling is
+// docs/engineering/architecture/messaging.md.
+GuiRect status_bar_area(const AppState& a);
+GuiRect status_bar_content_area(const AppState& a);
 
 // -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
 //
@@ -7653,7 +7665,11 @@ GuiRect bottom_row_content_area(const AppState& a);
 // THE BAND: the BOTTOM ROW'S OWN lane, lifted by `height` — x and w taken
 // from that lane rather than from a.width so the two rects are the same band
 // by construction (the lane accessors run on the CLAMPED window dimensions
-// and a raw a.width would disagree with them on a sub-minimum window). It
+// and a raw a.width would disagree with them on a sub-minimum window). THE
+// FLOOR IS THE BOTTOM ROW'S TOP, NOT THE WINDOW'S: the STATUS BAR sits below
+// that row on the window's foot since 2026-08-29, and neither tenant ever
+// paints over it — reading the row's lane is what keeps that true with no term
+// of its own. It
 // does not ask whether anything stands: a rect is a fact about geometry and
 // standing is a decision each caller makes for itself. The one zero rect is
 // the degenerate one — a bottom row with no width, or a height that scales to
@@ -8410,12 +8426,14 @@ std::pair<long long, long long> compute_trim_samples(
 //
 // (THE STATUS CELL'S OWNER LIVED HERE UNTIL 2026-08-13, when the architect
 // moved the whole status chain — the four-tier ladder and the critical chip —
-// into the TAB ROW. Its span ran from the clock's cell to the arrow cluster's
-// left edge and it was this row's high-traffic string owner; the chain's home
-// is Viewport::invalidate_status_chain_area now, and the two families that
+// into the TAB ROW, from which the chain was deleted whole on 2026-08-29. Its
+// span ran from the clock's cell to the arrow cluster's
+// left edge and it was this row's high-traffic string owner; the three STATE
+// strings live on the STATUS BAR now, one lane below this one, under
+// Viewport::invalidate_status_bar_area, and the two families that
 // shared the old owner — the string writers and the dialog editors' repaint
 // sites — are two populations with two owners, each inventoried at its own
-// declaration in viewport.h. A route touching the clock AND the chain, as a
+// declaration in viewport.h. A route touching the clock AND the bar, as a
 // load-in-place or an undo restore does, still calls both, spelling the two
 // surfaces it dirties rather than widening to one rect over them.)
 GuiRect clock_invalidate_rect(const AppState& a);
@@ -10736,6 +10754,7 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // numeric tempo (pass markers and label_ref markers qualify; owning markers
 // don't). Requires warp view with iteration mode off; always false in phase
 // reset view (no pass concept). Its two callers are the surfaces that took the
-// SELECTION translation in row 5: the bottom strip's readout and the Ctrl+C
-// copy. The name is the hover popup's — the gate is not.
+// SELECTION translation in row 5: the STATUS BAR's right cell (the bottom
+// strip's readout when this was written, the tab row's chain in between) and
+// the Ctrl+C copy. The name is the hover popup's — the gate is not.
 bool popup_eligible_marker(const AppState& app, int idx);

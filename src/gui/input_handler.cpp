@@ -410,7 +410,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // payload used to be cached in hover_popup at each rect-entry and this
     // binding fired only while a hover readout showed; the hover machinery is
     // gone, so the subject is the LAST-SELECTED marker — the same subject the
-    // bottom-strip readout now names, resolved through the same eligibility gate
+    // status bar's readout now names, resolved through the same eligibility gate
     // and the same frozen composer, so what you see is what you copy. An EMPTY
     // SELECTION (or an ineligible focus — an owner, a phase reset, iteration
     // mode, the 'P' column) is a CONSUMED NO-OP: the payload comes back empty
@@ -746,10 +746,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         ViewState& vs = active_view_state(app);
         vs.read_only = !vs.read_only;
-        // The bottom row still repaints here: it is cheap, and the row-2/row-4
-        // enabled faces below share this flag's fate frame for frame.
-        viewport.invalidate_status_chain_area();
-        // AND THE TOP STRIP: the read-only bit WEARS A FACE up there — the
+        // (A SECOND DAMAGE STOOD HERE and is deleted 2026-08-29: it took the
+        // TAB ROW's lane, where the status chain lived, on the reading that
+        // the flag moved that row's own face — and the top-strip damage below
+        // already covers that lane as a superset. The chain is gone and its
+        // three STATE strings are the STATUS BAR's; the read-only bit writes
+        // none of them, so the call had no producer left on either surface.
+        // The bottom row's own greyed faces ride the tick comparator, as they
+        // always did.)
+        // THE TOP STRIP: the read-only bit WEARS A FACE up there — the
         // icon row's read-only toggle since 2026-08-14 (the active tab's own
         // padlock slot, 2026-08-01..14, before that). The button's LAMP does
         // ride the tick comparator's `selected` bit, but its GLYPH swaps
@@ -2886,7 +2891,7 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // act asked for T+P and got there, which is honest even when the reset
     // could not be placed.
     phase_resets.drop_phase_reset_lead_in_at_playhead();
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     viewport.kick_waveform_sync();
 }
 

@@ -68,7 +68,7 @@ struct Selection {
     // need the proposed value mid-drag.
     // THREE READERS. Two are the damage owner just below (called at every
     // selection mutator): the overlay lives in the WAVEFORM but the selection
-    // mutators damage only the top strip / status chain, so a change of subject
+    // mutators damage only the top strip / status bar, so a change of subject
     // needs waveform damage to paint/erase the overlay's forward span. The third is SPACE
     // (input_handler.cpp, architect 2026-07-28): a start-edge Space with a
     // subject launches the lead-in audition at cursor + kN/2. That reader is why

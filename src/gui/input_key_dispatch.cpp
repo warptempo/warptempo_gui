@@ -590,7 +590,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and the tab row's status chain rewrites its `n/N shortsha`.
+    // with it, and the status bar rewrites its `n/N shortsha` walk line.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It
     // covers the restore's and the republication's own damage too, which is why
@@ -4036,6 +4036,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
     viewport.invalidate_top_strip();
+    // AND THE STATUS BAR (2026-08-29): the mode bit is one of the resolved
+    // readout's own eligibility terms (popup_eligible_marker, app_state.cpp),
+    // so clearing it can bring the bar's right cell back — and the bar is the
+    // window's last lane, which the top-strip damage above does not reach.
+    viewport.invalidate_status_bar_area();
 }
 
 // Render-trigger chords. See the declaration for the chord list.
@@ -4313,7 +4318,7 @@ void GuiInputHandler::apply_recipe_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_chain_area();
+    viewport.invalidate_status_bar_area();
     viewport.invalidate_clock_area();
 
     // The trigger owns the rebind for a session standing in TARGET view: it
@@ -5828,6 +5833,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;
             viewport.invalidate_top_strip();
+            // AND THE STATUS BAR (2026-08-29): the mode bit is one of the
+            // resolved readout's eligibility terms (popup_eligible_marker),
+            // so the toggle hides or restores the bar's right cell, and the
+            // bar is the window's last lane — outside the top strip's rect.
+            viewport.invalidate_status_bar_area();
         }
         return true;
     }

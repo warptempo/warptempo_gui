@@ -25,7 +25,7 @@ class GuiWaveformWorker;
 //     deliberately omitted: paint never calls a Viewport method (geometry
 //     queries go through free functions waveform_area / top_strip_area /
 //     current_samples_per_pixel declared in app_state.h) and never calls
-//     popup_eligible_marker directly through this reference (the bottom strip's
+//     popup_eligible_marker directly through this reference (the status bar's
 //     readout calls the free function). Both omitted to avoid dead weight.
 //   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
 //     for gui.invalidate_region calls. It carries no cached paint surface of
@@ -45,38 +45,25 @@ class GuiWaveformWorker;
 // ONE text size since row 7 — lives in render.h so render.cpp can reach it
 // without pulling paint_handler.h into the lower-layer include graph.
 
-// THE STATUS CHAIN'S PAD, MEASURED off row_7_text.png: fitting the crop's own
-// string offscreen at the row's 16px size puts the pen at x = 13 (12 and 14
-// both fit worse; the fit is at the crop's left edge, which is the window's;
-// the architect confirmed the crop's x0 is the window edge at the relayout).
-// Authored at 100% and scaled on gui_scale_factor() like every other
-// redesigned dimension, rounded with std::nearbyint so it stays an integer.
-//
-// ONE CONSTANT, ONE USE since 2026-08-29: the RIGHT margin the status chain
-// aligns to — the tab row's right edge, where the chain has lived since the
-// architect moved it there on 2026-08-13, the bottom row's arrow cluster
-// before that. The measured number is kept across every move so the chain's
-// own spacing never changed under it. (Its two other uses are gone: the gap
-// from the bottom row's clock cell to the chain's left clip bound died with
-// that bound, and the gap between the critical chip and the chain's text died
-// with the chip, whose four checkpoint verdicts are notification cards now.)
-inline int status_chain_pad_x() {
-    return scaled_px(13.0);
-}
-
 // THE ICON ROW'S LEFT PAD — the row's 8px lead-in, and since 2026-08-14 THE
 // BOTTOM ROW'S PAD TOO, at both ends and for the modal that displaces its
 // tenants (architect: "make sure bottom row is same height and metrics
-// (padding, etc.) as main icon row"). It lives in this header rather than in
-// the painter's file because that unification gave it a reader outside the
-// row — one source, so a retune of the icon row carries to the bottom one by
-// construction.
+// (padding, etc.) as main icon row"). SINCE 2026-08-29 IT IS THE STATUS BAR'S
+// TOO, at both ends and for the air between its two cells: the bar is a
+// redesigned row like the others and reads the same 8. It lives in this header
+// rather than in the painter's file because that unification gave it a reader
+// outside the row — one source, so a retune of the icon row carries to the
+// other two by construction.
 //
-// (bottom_row_pad_x, the modal's own accessor, is deleted with the ruling: it
-// was a separately-measured 13 — the status chain's number, which the modal
-// inherited when it landed on this row — while the row's own buttons
-// already walked from this 8. Two pads on one lane was the drift; the chain's
-// 13 stays its own, on the TAB row, at status_chain_pad_x above.)
+// TWO SEPARATELY-MEASURED PADS DIED INTO THIS ONE. bottom_row_pad_x, the
+// modal's own accessor, went at the 2026-08-14 ruling: it was a
+// separately-measured 13 — the status chain's number, which the modal
+// inherited when it landed on this row — while the row's own buttons already
+// walked from this 8. status_chain_pad_x, that 13 itself (measured off
+// row_7_text.png: fitting the crop's own string offscreen at the row's 16px
+// size put the pen at x = 13), went on 2026-08-29 with the chain it aligned:
+// the STATUS BAR that took the chain's three strings reads this 8 like every
+// other redesigned row, so the product has one lane pad and no second number.
 inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }
@@ -112,8 +99,8 @@ constexpr const char* kMeasureOffsetEditorPrefix = "Paste measures, offset: ";
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
 // original `[+] <payload>`). Defined in waveform_cache.cpp beside its first
-// caller and declared here for its SECOND (2026-08-05): the bottom strip's
-// corner line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
+// caller and declared here for its SECOND (2026-08-05): the STATUS BAR's walk
+// line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
 // another surface, so the two cannot spell the sign differently.
 //   * a WARP payload is the tempo token, so this reads `[+]1.05` live and
 //     `[+]#1.05` disabled;
@@ -791,16 +778,19 @@ private:
     // sampled ground plus the four menu
     // buttons and the view bar), the TAB ROW
     // (top lane 1, row 3: the
-    // "A"/"B" Breeze tabs, their frame and its broken border-bottom, and —
-    // since 2026-08-13 — the right-aligned STATUS CHAIN painted under them),
+    // "A"/"B" Breeze tabs, their frame and its broken border-bottom — the row
+    // paints tabs and nothing else since 2026-08-29, when the STATUS CHAIN it
+    // had carried under them from 2026-08-13 was deleted for the status bar),
     // the
     // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
     // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
-    // cluster (bottom lane 0, the strip's one lane since the relayout's commit
-    // B: the transport three and the clock left, then the marker verbs, the
+    // cluster (bottom lane 1, the upper of the strip's two lanes since the
+    // status bar took the window's foot on 2026-08-29 — it was the strip's ONE
+    // lane, on that foot, from the relayout's commit B:
+    // the transport three and the clock left, then the marker verbs, the
     // marker-walk three and the arrow four flush
     // right behind their separators, declared
     // below).
@@ -822,19 +812,6 @@ private:
     // its four buttons are the icon row's first group.)
     void paint_menu_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
-    // THE STATUS CHAIN — three STATE tiers since 2026-08-29 (the walk line,
-    // the progress line, the readout; the transient tier and the critical
-    // chip left for the notification cards that day), right-aligned at the
-    // TAB ROW's right margin (architect 2026-08-13). Called
-    // from paint_tab_row ALONE and BEFORE its tab walk, which is the whole
-    // collision rule: the tabs paint over the chain and win, and text pushed
-    // under a tab is accepted. Takes the row's already-selected face and its
-    // CONTENT BAND — the lane less its two border rows — so the chain and the
-    // tab labels cannot resolve two baselines and neither border is reachable
-    // from inside here. The full layout record and the tier ladder are at the
-    // definition.
-    void paint_status_chain(cairo_t* cr, const GuiRect& band,
-                            cairo_scaled_font_t* font);
     void paint_icon_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the arrows flush right since the same day's relayout): the
@@ -850,6 +827,16 @@ private:
     // painter separate only because the button cluster's tables and the
     // clock's metrics live beside it.
     void paint_bottom_row_buttons_and_clock(cairo_t* cr);
+    // THE STATUS BAR — the window's LAST ROW (architect 2026-08-29), and no
+    // part of the four-row group above: it carries no button, publishes no
+    // rect and owns no hit test. TWO CELLS of STATE, the three strings the tab
+    // row's status chain used to rank — the `h` walk line or the process line
+    // at the LEFT, the resolved readout at the RIGHT, both true at once
+    // whenever both are set. Called from on_redraw on its own lane exposure,
+    // beside paint_bottom_strip, and it grounds its own three bands. The full
+    // layout record, the no-separator ruling and the clip rule are at the
+    // definition.
+    void paint_status_bar(cairo_t* cr);
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
     // overlap the rows they hang over. They cannot coexist, and the claim rests

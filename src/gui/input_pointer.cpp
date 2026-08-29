@@ -4837,10 +4837,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect tab_row = top_tab_row_area(app);
         if (rect_contains(tab_row, x, y)) {
             if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-            // THE STATUS CHAIN ON THIS ROW IS POINTER-INERT (it moved here
-            // 2026-08-13): it publishes no rect, so a press over its text is
-            // the band's own consumed nothing, exactly as the empty tail past
-            // the last tab already was. THE TABS ARE THIS ROW'S ONLY TARGETS
+            // THE ROW CARRIES NO TEXT BUT ITS TABS since 2026-08-29, when
+            // the STATUS CHAIN that had painted here from 2026-08-13 was
+            // deleted for the status bar. It was pointer-inert the whole time
+            // — it published no rect, so a press over its text was the band's
+            // own consumed nothing — and the empty stretch it left answers the
+            // same way the tail past the last tab always did.
+            // THE TABS ARE THIS ROW'S ONLY TARGETS
             // since 2026-08-14: the active tab's padlock was a second one
             // until the read-only toggle moved into the icon row.
             //
@@ -4877,8 +4880,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is the bottom strip's ONE lane, on the
-    // window's foot since commit B, and everything else is the shape above —
+    // on the block's own terms: the band is the bottom strip's UPPER lane, one
+    // in from the window's foot, and everything else is the shape above —
     // below the modal gates (a prompt or a dialog editor swallows the
     // press; the pointer-transparent flag editor does not, and its KEYBOARD
     // modality then answers the dispatched chord exactly as it answers the
@@ -4888,10 +4891,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // beside it, the lane's pointer-inert span (the status chain that shared
     // that ground until 2026-08-13 took no clicks either, and took none away
     // with it). The
-    // lane rests on the WINDOW'S FOOT
-    // since the relayout's commit B, so NOTHING is below it; ABOVE it lies GAP
-    // 2's blank window ground, outside every band and falling through to the
-    // tail's consumed nothing (window ground by the vertical rule, main.cpp).
+    // lane rested on the WINDOW'S FOOT
+    // from the relayout's commit B until 2026-08-29; BELOW it now lies THE
+    // STATUS BAR, which is paint-only and claims nothing, and ABOVE it lies GAP
+    // 2's blank window ground — both outside every band here and both falling
+    // through to the tail's consumed nothing (the bar by its own ruling, the
+    // gap as window ground by the vertical rule, main.cpp).
     // (The OVERVIEW STRIP sat under this lane for the afternoon it landed and
     // is a top-strip lane now; its own claim is further down, past the gesture
     // guards — the endcap / teleport-pan / ctrl-zoom vocabulary.)
@@ -8623,7 +8628,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // down through the waveform, so the marker-lane head is inside it (the
     // triangle this used to name retired with its lane in row 5); the
     // TIMESTAMP invalidate is owed
-    // separately because the bottom-strip readout shows this cursor whenever
+    // separately because the bottom row's CLOCK shows this cursor whenever
     // no scanner is active, and it lives outside the waveform area.
     // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check
     // (2026-08-18) and stayed retired when the minimum width floor went the
