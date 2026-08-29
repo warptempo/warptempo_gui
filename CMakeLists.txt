@@ -172,6 +172,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/settings_editor.cpp
     src/gui/active_views.cpp
     src/gui/ab_audition.cpp
+    # THE NOTIFICATION CARDS (2026-08-29): the stack owner, its clock on the
+    # run loop's tick and its hit geometry. GUI-only like every painting
+    # concern.
+    src/gui/notifications.cpp
     # THE RENDER PLAYER (2026-08-28): the in-app player over the project's
     # output folders, on the one playback engine. GUI-ONLY like every
     # painting and playback concern; it calls the audio_io WAV reader.

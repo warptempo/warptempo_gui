@@ -48,10 +48,10 @@
 namespace {
 
 // THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29). The failed-scan
-// arrival prints it on stderr with the store's own reason appended, and
-// run_history_commit's !active arm puts it on the status line bare — the same
-// fact reported to two surfaces, so the words live here rather than twice in
-// string literals that could drift apart.
+// arrival prints it on stderr with the store's own reason appended and raises
+// it as a notification card the same way, and run_history_commit's !active
+// arm raises it bare — the same fact reported to two surfaces, so the words
+// live here rather than twice in string literals that could drift apart.
 constexpr const char* kHistoryUnavailable = "History is unavailable";
 
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
@@ -1049,14 +1049,20 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //   * THE COMMIT-TITLE EDITOR, which is left standing deliberately (a modal
 //     editor is not a question about a member) and whose Enter then meets
 //     run_history_commit's own !active arm, which says "History is unavailable"
-//     on the status line rather than returning in silence.
+//     on a notification card rather than returning in silence.
 // The FILE MENU's standing-menu decision is above, and unchanged.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
     if (r.became_done && history_prefetch.run_failed()) {
+        // A view closing under the user is an event he was not watching, so
+        // the arrival's sentence is a notification card beside its stderr
+        // line (2026-08-29), the store's own reason appended on both.
         std::fprintf(stderr, "warptempo_gui: %s: %s\n", kHistoryUnavailable,
                      history_prefetch.scan_failure_reason().c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::string(kHistoryUnavailable) + ": " +
+                                 history_prefetch.scan_failure_reason());
         if (app.history_mode.pending_load_member)
             prompt.cancel_load_confirmation();
         finalize_active_drags();
@@ -2630,10 +2636,11 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
         undo.recompute_dirty();
     }
     viewport.invalidate_top_strip();
+    // The divergence report is a notification card (2026-08-29); a clean or
+    // empty walk says nothing.
     if (!stop_message.empty()) {
-        app.transient_status_message = std::move(stop_message);
+        notifications.notify(AppState::NotificationClass::Normal, std::move(stop_message));
     }
-    viewport.invalidate_status_chain_area();
     return true;
 }
 
@@ -2673,9 +2680,9 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // open until then would be a modal wait dressed as a review. So a failed save
 // leaves the view exactly as it was (every refusal's shape) and a successful one
 // closes it, whatever the repository then says; the four failing verdicts
-// report through the BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09,
-// superseding the acknowledge notice they reported through until then) instead
-// of through a view left standing.
+// report through a CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
+// row's permanent critical chip from 2026-08-09, an acknowledge notice before
+// that) instead of through a view left standing.
 //
 // AND THE ACT IS ASYNCHRONOUS FROM THAT POINT (same ruling). The save is the
 // user's own bytes and stays synchronous; the checkpoint is `git add`, `git
@@ -2751,12 +2758,10 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // surface the FAILED-SCAN ARRIVAL leaves standing when it ends the visit
     // off a poll (on_history_prefetch_ready owns that edge and names both
     // surfaces), so a user who has already typed a checkpoint name can press
-    // Enter into a mode that is no longer there. The status line carries the
-    // arrival's own sentence — the view is down by now, so nothing outranks a
-    // transient (the chain's tiers are at AppState::transient_status_message).
+    // Enter into a mode that is no longer there. A notification card carries
+    // the arrival's own sentence (2026-08-29).
     if (!app.history_mode.active) {
-        app.transient_status_message = kHistoryUnavailable;
-        viewport.invalidate_status_chain_area();
+        notifications.notify(AppState::NotificationClass::Normal, kHistoryUnavailable);
         return;
     }
     // A SECOND ACT CANNOT ARRIVE HERE — the chord is not admitted while one is in
@@ -2825,20 +2830,23 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // this owns is the ONE thing a background act cannot do for itself: telling the
 // user, at the window, when the checkpoint he asked for did not happen.
 //
-// IT WRITES THE CRITICAL SLOT (architect 2026-08-09, REPLACING the acknowledge
-// modal this raised from 2026-08-07): a failed checkpoint is critical, so its
-// report is PERMANENT and PAINT-ONLY — the bottom row's leftmost cell, in the
-// product's one invalid red, standing until a later checkpoint succeeds or the
-// program closes. AppState::critical_error_message owns the contract; this is
-// its one producer.
+// IT RAISES A CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
+// row's permanent critical chip from 2026-08-09 until then, and an
+// acknowledge modal from 2026-08-07 before that): a failed checkpoint is
+// critical, so its card STANDS UNTIL ITS X IS PRESSED — no clock, and
+// nothing that comes after takes it down, a later success included. The
+// chip's one clearing route was a later established success, because the
+// chip was a SLOT that held the repository's last answer; a card is an
+// EVENT, and the user closes it once he has read it, whatever the next act
+// answered (the architect: persistent, the X alone). GuiNotifications owns
+// the card; this is the critical class's one producer.
 //
 // THE PARTITION, over the act's SIX verdicts (GuiHistoryCommitOutcome,
 // history_diff.h, whose contract comment owns what each one establishes):
-//   ESTABLISHED, AND THEY CLEAR THE SLOT — Committed (made and published, the
+//   ESTABLISHED, AND THEY RAISE NOTHING — Committed (made and published, the
 //   ordinary ending) and NothingToCommit (the newest checkpoint already carried
-//   these bytes AND the remote already had it). Neither is a failure, and either
-//   one supersedes a failure the slot is still showing: the message describes
-//   the repository's last answer, and this is a newer one.
+//   these bytes AND the remote already had it). Neither is a failure; each
+//   says what it has to say on stderr.
 //   THE FOUR FAILURES — WriteFailed (nothing reached the repository at all),
 //   CommitFailed (git made no checkpoint the act can stand behind), Committed-
 //   NotPushed (the checkpoint is in the local branch and the remote has not got
@@ -2848,14 +2856,14 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 //   which class each falls in, so the arms are not re-enumerated here.
 //   The texts differ exactly where the
 //   user's next move does, which is why the act distinguishes them at all. They
-//   are SHORT because the row is one line and the detail is already on stderr,
+//   are SHORT because a card is one line and the detail is already on stderr,
 //   verbatim and unchanged by this arc.
 //
 // AN UNANSWERED QUESTION IS NOT A SUCCESS, which is the whole point of the sixth
 // verdict: Unconfirmed came back as NothingToCommit until 2026-08-09, so an act
-// that established neither content nor publication CLEARED a standing critical
-// report — the one thing this slot must never do on anything but a newer,
-// better answer.
+// that established neither content nor publication was reported as a clean
+// ending. It raises its own card like the other three failures; what it must
+// never do is claim to have established anything.
 //
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, and since 2026-08-09 no
 // in-app retry either: a checkpoint that committed and failed to push is pushed
@@ -2872,8 +2880,8 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // owes those guards in its own body: it force-ends every live gesture, hides the
 // hint and closes the popup before raising the unsaved-work prompt. What is gone
 // is an async opener that had to park and clear on someone ELSE's behalf — a
-// paint-only slot can be written from any clock at all, because it takes nothing
-// from anyone.
+// card can be pushed from any clock at all, because it takes nothing from
+// anyone.
 void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome) {
     app.history_checkpoint_in_flight = false;
@@ -2920,53 +2928,35 @@ void GuiInputHandler::on_history_checkpoint_complete(
     switch (outcome) {
     case GuiHistoryCommitOutcome::Committed:
     case GuiHistoryCommitOutcome::NothingToCommit:
-        // THE TWO ESTABLISHED ANSWERS, and the only two that clear the slot:
-        // the checkpoint is committed AND the remote observably carries it, so
-        // a failure the slot was showing is superseded — including one the user
-        // fixed in the terminal, which is exactly what the act's clean arm
-        // re-observes.
-        app.critical_error_message.clear();
+        // THE TWO ESTABLISHED ANSWERS raise nothing: the checkpoint is
+        // committed AND the remote observably carries it, and a clean ending
+        // is not an event the user needs a card for (a render's completion
+        // is ruled the same way). A failure card standing from an earlier
+        // act stands on — it is the user's to close.
         break;
     case GuiHistoryCommitOutcome::WriteFailed:
-        app.critical_error_message = "Checkpoint failed: nothing was committed";
+        notifications.notify(AppState::NotificationClass::Critical,
+                             "Checkpoint failed: nothing was committed");
         break;
     case GuiHistoryCommitOutcome::CommitFailed:
-        app.critical_error_message =
-            "Checkpoint failed: files written but not committed";
+        notifications.notify(
+            AppState::NotificationClass::Critical,
+            "Checkpoint failed: files written but not committed");
         break;
     case GuiHistoryCommitOutcome::Unconfirmed:
-        // NOTHING WAS ESTABLISHED HERE, so nothing is DISPLACED here: it does
-        // not overwrite a report already standing. THE OVERWRITE IS THE POINT OF
-        // THE CONDITION — an act run over a session that already reads
-        // "committed; push failed" and comes back merely unconfirmed would
-        // replace the actionable text with a vaguer one, losing the thing the
-        // user could act on to an answer that added nothing. So it FILLS AN
-        // EMPTY SLOT and otherwise leaves the standing report alone, which is
-        // what "a standing report stands" has to mean for an outcome that
-        // establishes nothing.
-        if (app.critical_error_message.empty()) {
-            app.critical_error_message = "Checkpoint could not be confirmed";
-        }
+        // NOTHING WAS ESTABLISHED HERE, and the card says exactly that. (The
+        // chip's fill-only-an-empty-slot condition is gone with the slot: a
+        // standing "committed; push failed" card is not overwritten by this
+        // one, both stand, and the actionable text is not lost to the vaguer
+        // one.)
+        notifications.notify(AppState::NotificationClass::Critical, "Checkpoint could not be confirmed");
         break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
         // The commit landed and the push did not. The fix is `git push` in the
-        // terminal; the next checkpoint act observes the branch against its
-        // remote and takes this report down.
-        app.critical_error_message = "Checkpoint committed; push failed";
+        // terminal; the card stands until the user closes it.
+        notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed; push failed");
         break;
     }
-
-    // THE ROW'S OWN DAMAGE, UNCONDITIONAL, and it is the DAMAGE that is
-    // unconditional rather than the write: five arms always write the slot (the
-    // two established ones by clearing it, which erases a cell that was painting
-    // a moment ago and is exactly as much a change as setting one), while
-    // Unconfirmed writes only into an empty slot and may well leave the row
-    // untouched. Damaging anyway costs one repaint of one row on a keypress-rare
-    // event and needs no arm to remember it. This is the chip's one
-    // invalidation (invalidate_status_chain_area — the TAB ROW's lane, where
-    // the chip has been the chain's leftmost member since 2026-08-13), the
-    // same call every transient-status writer makes.
-    viewport.invalidate_status_chain_area();
 }
 
 // -- THE REVERT ACT --------------------------------------------------------
@@ -3071,8 +3061,9 @@ void GuiInputHandler::run_history_revert() {
     // f.time_frame into the fresh marker and the warp arm re-spells it with
     // format_authored_frame, so the parsed line lands on exactly this value —
     // which is what lets the check run before the loop parses anything.
-    // Stderr alone: the mode's line outranks a transient written while the
-    // view stands (AppState::transient_status_message). It sits ABOVE the
+    // The refusal is a notification card beside its stderr line (2026-08-29;
+    // stderr alone until then, the view's own line having outranked the
+    // transient tier it would have written). It sits ABOVE the
     // stop below because a refusal is not the act; in this mode the stop is a
     // formality either way (its own comment says why).
     {
@@ -3095,6 +3086,7 @@ void GuiInputHandler::run_history_revert() {
                 in_place_load_wall_defect(restored_warp, restored_phase)) {
             std::fprintf(stderr,
                 "warptempo_gui: Revert refused: %s\n", defect->c_str());
+            notifications.notify(AppState::NotificationClass::Normal, "Revert refused: " + *defect);
             return;
         }
     }
@@ -4349,9 +4341,9 @@ void GuiInputHandler::apply_recipe_in_place(
 // failure leaves authoring untouched. THE GENUINE-FAILURE ARMS NAME THEIR CAUSE
 // ON STDERR (architect 2026-08-02), one line each with the offending path, since
 // a trusted sidecar failing to read is a real fault the user cannot diagnose
-// from a status line; first-error-only holds by construction (each arm
-// returns). The caller says "Load refused" on the status line and leaves the
-// cause to those stderr lines. Returns true after the recipe is applied and
+// from a one-line card; first-error-only holds by construction (each arm
+// returns). The caller says "Load refused" on a notification card and leaves
+// the cause to those stderr lines. Returns true after the recipe is applied and
 // tmp/ wiped.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
@@ -4566,9 +4558,9 @@ bool GuiInputHandler::load_render_entry_in_place(
 // parse-gating the architect ruled, and the reason no second, looser grammar
 // is written anywhere on this path. A refusal is one stderr line naming its
 // cause with the committed path and the SHA (first error only — the gate's own
-// contract), and the caller says nothing on the status
-// line (the class at AppState::transient_status_message, restated at
-// confirm_load_in_place).
+// contract) AND a notification card carrying the same sentence
+// (2026-08-29; stderr alone until then, the view's own status line having
+// outranked the transient tier a refusal would have written).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
 // stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
@@ -4630,6 +4622,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
                                      reason)) {
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      reason.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, "Load in place refused: " + reason);
         return false;
     }
     const SettingsFile& settings = loaded.settings;
@@ -4641,13 +4634,12 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     // checkpoint's sidecars are state authored against whatever audio stood
     // when it was committed, and load_commit_sidecars_strict reads them
     // against no audio at all (in_place_load_wall_defect carries the whole
-    // reasoning). The refusal is WHOLE and names its cause on stderr like
-    // every other arm here; THE STATUS LINE STAYS SILENT, the `h` mode's own
-    // line outranking a transient written while the view stands (the class is
-    // at AppState::transient_status_message).
+    // reasoning). The refusal is WHOLE and names its cause on stderr and on a
+    // notification card like every other arm here.
     if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
         std::fprintf(stderr,
             "warptempo_gui: Load in place refused: %s\n", defect->c_str());
+        notifications.notify(AppState::NotificationClass::Normal, "Load in place refused: " + *defect);
         return false;
     }
 
@@ -4761,6 +4753,11 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
         std::fprintf(stderr,
             "warptempo_gui: Load in place refused: %zu is not a history entry "
             "number (1..%zu)\n", number, count);
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "Load in place refused: " + std::to_string(number) +
+                " is not a history entry number (1.." +
+                std::to_string(count) + ")");
         return false;
     }
 
@@ -5346,7 +5343,7 @@ void GuiInputHandler::build_project_picker_rows() {
 
 // THE OPEN ACT on row `index`. A publishing checkpoint refuses first, then
 // validity through the project model, then the strict sidecar dry-run, each
-// refusal on the status line with the picker still open; the project already
+// refusal a notification card with the picker still open; the project already
 // open is a consumed no-op that closes it; and a project that passes reaches
 // the reopen through the one close request, REOPEN-targeted.
 void GuiInputHandler::open_project_commit(int index) {
@@ -5358,19 +5355,13 @@ void GuiInputHandler::open_project_commit(int index) {
     const std::string name =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
-    // THE THREE REFUSALS BELOW ARE TRANSIENTS, AND IN THE `h` VIEW THEY ARE
-    // INVISIBLE (recorded 2026-08-29, when the opener was admitted there): the
-    // mode's own line is the status chain's top tier, so a reason written
-    // while the view stands is hidden until the view closes and a transient is
-    // cleared by the next key press anyway (the class at
-    // AppState::transient_status_message). The picker still STAYS OPEN on
-    // every one of them, which is the answer the user can act on — press
-    // another row, or Esc — so the act never lies about what it did; what a
-    // viewer does not get is the sentence saying why. No second tier is
-    // invented here.
+    // THE THREE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
+    // in the `h` view like anywhere else — they were the status chain's
+    // transient tier for one day, invisible under the view's own line — and
+    // the picker STAYS OPEN on every one of them, which is the answer the
+    // user can act on: press another row, or Esc.
     auto refuse = [&](const std::string& reason) {
-        app.transient_status_message = reason;
-        viewport.invalidate_status_chain_area();
+        notifications.notify(AppState::NotificationClass::Normal, reason);
     };
 
     // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-29), bare `h`'s own
@@ -5596,24 +5587,19 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // Nothing loaded is nothing to mirror.
     if (app.source_audio_path.empty() || app.project_name.empty()) return;
 
-    // THE REPORT IS A TRANSIENT, AND IN THE `h` VIEW IT IS INVISIBLE (recorded
-    // 2026-08-29, when the act was admitted there): the mode's own line is the
-    // chain's top tier, so every sentence this act writes — the dispatch
-    // notice, the volume's refusal, the already-running answer and the
-    // worker's verdict on the way back (on_external_sync_complete, which
-    // writes the same field) — is hidden under the view's line until the view
-    // closes, and a transient clears on the next key press, so leaving the
-    // view by `h` clears it on the way out. The act still RUNS correctly in
-    // there; what a viewer does not get is the sentence. Recorded as the fact
-    // it is, by the class at AppState::transient_status_message: no second
-    // tier is invented here. THE WORKER'S FAILURES ARE STILL LOUD wherever the
-    // act runs — run_external_sync's one refusal owner writes every failing
-    // line to stderr beside this field (logcat on the tablet) — so what a
-    // mirror run from the view actually loses is the dispatch notice, the
-    // volume's own refusal, the already-running answer and the SUCCESS count.
+    // EVERY SENTENCE THIS ACT WRITES IS A NOTIFICATION CARD (2026-08-29) —
+    // the volume's refusal, the already-running answer and the worker's
+    // verdict on the way back (on_external_sync_complete) — visible in the
+    // `h` view like anywhere else; they were the status chain's transient
+    // tier for one day, invisible under the view's own line. THE DISPATCH
+    // NOTICE IS DROPPED with the move: "Synchronizing to …" was a process
+    // line, state rather than an event, and the design gives the mirror no
+    // bar cell — the act's own verdict follows within seconds and is the
+    // event. THE WORKER'S FAILURES ARE STILL LOUD on stderr too —
+    // run_external_sync's one refusal owner writes every failing line there
+    // beside the verdict (logcat on the tablet).
     auto report = [&](std::string line) {
-        app.transient_status_message = std::move(line);
-        viewport.invalidate_status_chain_area();
+        notifications.notify(AppState::NotificationClass::Normal, std::move(line));
     };
 
     // SINGLE ACT IN FLIGHT, answered in words: the menu item never greys (the
@@ -5652,8 +5638,12 @@ void GuiInputHandler::synchronize_to_external_storage() {
         render_output_directory(app.source_audio_path),
         render_output_stem(app.engine_settings));
     job.batch_root   = project_batch_root(app.source_audio_path);
+    // The project folder itself — the source's own parent, the project
+    // model's rule — so the act can name every project-side path relative to
+    // it (the basename rule at external_sync.h's rule 1).
+    job.project_dir  =
+        std::filesystem::path(app.source_audio_path).parent_path();
 
-    report("Synchronizing to " + volume->string() + "...");
     external_sync_worker.dispatch(
         std::move(job),
         [this](GuiExternalSyncOutcome outcome) {
@@ -5662,13 +5652,13 @@ void GuiInputHandler::synchronize_to_external_storage() {
 }
 
 // The verdict, back on the main thread (the platform's completion eventfd,
-// main.cpp's wiring). The worker composed the sentence; this writes it to the
-// status line and does nothing else — a failure is a status line only, never
-// the permanent critical chip, the reason being at the declaration.
+// main.cpp's wiring). The worker composed the sentence; this raises it as a
+// NORMAL notification card and does nothing else — a failed mirror is
+// retried by pressing the row again, so it is never the critical class,
+// which is the checkpoint act's alone (the reason at the declaration).
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
-    app.transient_status_message = std::move(outcome.message);
-    viewport.invalidate_status_chain_area();
+    notifications.notify(AppState::NotificationClass::Normal, std::move(outcome.message));
 }
 
 // P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash
@@ -5735,8 +5725,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // no-op, and so is a selection that is not exactly one marker — the same
     // all-refusals-are-silent rule as its Ctrl+Alt+P sibling above, where the
     // rationale is stated. Unlike Ctrl+Alt+P, no confirmation prompt — applies
-    // directly. Divergence/mismatch is reported via the bottom-strip
-    // transient status message rather than a modal dialog.
+    // directly. Divergence/mismatch is reported as a notification card
+    // rather than a modal dialog.
     if (key == GuiKeys::P && ctrl && shift && alt) {
         if (app.active_markers_view != 'W') return true;
         if (app.phase_reset_clipboard.empty()) return true;
@@ -6181,18 +6171,19 @@ void GuiInputHandler::render_player_load_in_place() {
     // the engine block, exactly what the read-only tab protects. The button
     // wears no disabled face by ruling, so the refusal is the act's.
     if (active_view_state(app).read_only) return;
-    // THE RUNNING-RENDER REFUSAL IS SILENT (architect 2026-08-28): the load
-    // wipes tmp/, which must never race a batch publishing into it, so the
-    // refusal itself stays — but it says nothing, because the progress line
-    // standing on the status chain ("Rendering...", the batch's "Rendering N
-    // of M (...)...") is already its explanation, and a transient written
-    // under that line is invisible until the line clears and then stale (the
-    // class is recorded at AppState::transient_status_message).
+    // THE RUNNING-RENDER REFUSAL IS SILENT (architect 2026-08-28, re-decided
+    // 2026-08-29 when refusals became cards): the load wipes tmp/, which must
+    // never race a batch publishing into it, so the refusal itself stays —
+    // and it says nothing because the progress line standing on the status
+    // chain ("Rendering...", the batch's "Rendering N of M (...)...") is
+    // already its explanation; a card would restate what the screen shows.
     if (app.queue_running || app.pending_archival.armed) return;
     const AppState::RenderEntry* entry = render_player.highlighted_entry();
     if (entry == nullptr) {
-        app.transient_status_message = "Only batch renders load in place";
-        viewport.invalidate_status_chain_area();
+        // Said on a card because the button and `'` are live on every row
+        // the band can hold, so a silent nothing would read as a broken
+        // button (validation_topology.md's row).
+        notifications.notify(AppState::NotificationClass::Normal, "Only batch renders load in place");
         return;
     }
     // A modal surface is opening over a possibly live transport: PAUSE it
@@ -6246,10 +6237,9 @@ void GuiInputHandler::confirm_load_in_place() {
             return;
         }
         // The act's own cause is on stderr (its every refusal arm names it);
-        // the player has no field to red-flash, so the status line says the
-        // one thing it can.
-        app.transient_status_message = "Load refused";
-        viewport.invalidate_status_chain_area();
+        // the player has no field to red-flash, so a card says the one thing
+        // it can.
+        notifications.notify(AppState::NotificationClass::Normal, "Load refused");
         return;
     }
     if (app.history_mode.pending_load_member) {
@@ -6263,11 +6253,9 @@ void GuiInputHandler::confirm_load_in_place() {
         // through load_history_local_entry_in_place. The SHA is COPIED out of
         // the store before the act, which closes the mode and drops the
         // session a reference would point into. Each act owns every refusal on
-        // its own route and names it on stderr; THE REFUSAL IS SILENT ON THE
-        // STATUS LINE, by the class recorded at
-        // AppState::transient_status_message — the `h` mode's own line is the
-        // chain's top tier, so a transient written while the view stands is
-        // invisible until the view closes and stale then.
+        // its own route and names it on stderr AND on a notification card
+        // (2026-08-29; stderr alone until then, the view's own line having
+        // outranked the transient tier), so nothing is said here.
         const std::string sha = app.history_mode.session.sha_at(member);
         (void)(app.history_mode.source == GuiHistoryWalkSource::Local
                    ? load_history_local_entry_in_place(member + 1)

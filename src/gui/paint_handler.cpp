@@ -1,4 +1,5 @@
 #include "paint_handler.h"
+#include "notifications.h"
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -39,10 +40,11 @@
 // reversal is scoped to the clock and nothing else in the product may take
 // the face.
 //
-// EVERY STRING THE STATUS CHAIN CARRIES — the queue/render/transient status,
-// the resolved readout, the history line and the critical chip — is the
-// redesign's sans at the redesign's size, shaped and painted through the ONE
-// chokepoint like every other redesigned row. It reads the TAB ROW's own
+// EVERY STRING THE STATUS CHAIN CARRIES — the queue/render status, the
+// resolved readout and the history line — is the redesign's sans at the
+// redesign's size, shaped and painted through the ONE chokepoint like every
+// other redesigned row, and so is every NOTIFICATION CARD's line
+// (paint_notifications, 2026-08-29). It reads the TAB ROW's own
 // already-selected face since the chain moved up there (2026-08-13), which is
 // the same sans at the same size: the product has one text size, so the move
 // changed no glyph. (The dirty mark used to be on
@@ -86,22 +88,28 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // painter that draws it is paint_status_chain and its one caller is
 // paint_tab_row.
 //
+// IT CARRIES STATE ALONE since 2026-08-29 — what is true right now: the `h`
+// walk's line, the render's progress line, the selected marker's readout,
+// THREE tiers in that precedence. Its two EVENT tenants left that day for the
+// NOTIFICATION CARDS (paint_notifications, notifications.h; the ruling in
+// docs/engineering/architecture/messaging.md): the TRANSIENT tier — the
+// one-line refusals and reports, which the chain hid under a progress line,
+// revealed stale when it cleared and wiped on the next key press — and the
+// CRITICAL CHIP, the checkpoint act's permanent red box at the chain's left,
+// whose four verdicts are critical cards now.
+//
 // IT IS RIGHT-ALIGNED, and its pen IS a function of the live text. That does
 // not resurrect the twitch the retired fixed-section layout existed to
 // prevent: the product's per-frame changer was always the CLOCK, which stayed
 // on the bottom row in its own reserved no-wiggle cell, while every string
 // this chain can show changes only on discrete events — the same frames that
-// rewrite the row anyway (the critical chip's own-text exception of
-// 2026-08-09, generalized to the whole chain at the unification).
+// rewrite the row anyway.
 //
 // THE LAYOUT, right to left:  ... | THE CHAIN | pad(margin) | window edge
-// with the chain = [CRITICAL chip | pad |] C's status text, right-aligned as
-// one unit. THE CHIP IS THE CHAIN'S LEFTMOST MEMBER, which is what keeps its
-// impossible-to-miss primacy under right alignment: when the chain overflows
-// the lane it anchors LEFT at the lane's own edge instead — the chip stays
-// wholly visible and C clips at the right margin, so the critical report is
-// still the last thing given up. No ellipsis, no shrink, no scroll (the
-// standing "a screen too small for the line is a user problem" ruling).
+// with the chain = the one tier's text, right-aligned. When it overflows the
+// lane it anchors LEFT at the lane's own edge and clips at the right margin.
+// No ellipsis, no shrink, no scroll (the standing "a screen too small for the
+// line is a user problem" ruling).
 //
 // AND THE TABS WIN, BY PAINT ORDER — that is the WHOLE collision rule
 // (architect, same ruling): the chain paints FIRST, the tab walk paints over
@@ -114,11 +122,6 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // mode's own line — is the longest thing the chain ever shows, and it shows it
 // beside tabs the view no longer widens (the walk selector's "Remote" / "Local"
 // words were wider than A/B until 2026-08-18).
-//
-// The chip keeps the marker flag's ANATOMY (1px left border, pads, fill, top
-// edge — the one invalid red, called not copied) but RE-DERIVES ITS BOX on
-// this row's own face rather than importing the marker lane's height (the
-// derivation is at the paint site). C keeps its precedence chain unchanged.
 //
 // THE DIRTY DOT is not a tenant: it rides the WINDOW TITLE beside the project
 // name, where labwc paints it (GuiPlatform::apply_window_title).
@@ -1790,9 +1793,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 //
 // THE STATUS CHAIN, right-aligned in the TAB ROW (architect 2026-08-13; the
 // ruling, the layout and the tabs-win collision rule are at the chain block
-// near the head of this file). ONE SLOT, ONE LADDER, moved as one unit off the
-// bottom row: the critical chip then section C's four tiers, in the precedence
-// they have always resolved in.
+// near the head of this file). ONE SLOT, ONE LADDER OF THREE STATE TIERS since
+// 2026-08-29 — the `h` walk's line, the progress line, the readout, in the
+// precedence they have always resolved in; the transient tier and the
+// critical chip left for the notification cards that day (the chain block).
 //
 // Called from paint_tab_row and nowhere else, BEFORE its tab walk, on the bar
 // the row has already grounded — the paint order IS the collision rule. It
@@ -1805,8 +1809,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // chain owns no hit test, no hover and no cursor cue: a press on the lane
 // still resolves against the TABS and falls through to
 // the row's consumed nothing everywhere else, exactly as it did before this
-// text arrived (the critical chip's paint-only contract, generalized to the
-// whole chain by its new home). AND IT CARRIES NO EXPOSURE GATE: the row it
+// text arrived. AND IT CARRIES NO EXPOSURE GATE: the row it
 // sits on shapes its tab labels on every exposure anyway, so there is nothing
 // to spare — unlike the bottom row, where the chain's HarfBuzz passes had to
 // be kept off the clock's per-frame damage.
@@ -1822,8 +1825,10 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
     // branches build the string and ONE layout-and-paint tail follows.
     //
     // PRECEDENCE, highest first: the `h` history mode's line > the queue /
-    // render / loading status > the transient message > the resolved-value
-    // readout. A MODAL IS NOT A TIER AND HAS NOT BEEN ONE SINCE THE DIALOG ARC
+    // render / loading status > the resolved-value readout — three STATE
+    // tiers; the transient message that ranked between the last two until
+    // 2026-08-29 is a notification card now, being an event. A MODAL IS NOT A
+    // TIER AND HAS NOT BEEN ONE SINCE THE DIALOG ARC
     // (2026-08-12); since this chain left the bottom row it does not even share
     // a surface with one, so a prompt or a dialog editor neither displaces nor
     // hides it.
@@ -1912,11 +1917,6 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         // one slot, and one of the reasons this chain rides a row that paints
         // on every frame class (it is the only feedback on the loading frame).
         status = app.queue_progress_text;
-    } else if (!app.transient_status_message.empty()) {
-        // The transient one-line outcome report (phase-reset paste divergence,
-        // "No renders to play", ...). It takes its place in the
-        // chain, directly above the readout. Cleared by the next key press.
-        status = app.transient_status_message;
     } else if (popup_eligible_marker(app, app.last_selected_marker)) {
         // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
         // to be "hover wins, else the last-selected marker"; the hover arm died
@@ -1941,20 +1941,18 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
             audio.total_frames());
     }
 
-    const std::string_view critical = app.critical_error_message;
-    if (status.empty() && critical.empty()) return;
+    if (status.empty()) return;
 
-    // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain, chip first. ---
+    // --- THE LAYOUT-AND-PAINT TAIL: right-align the chain. ---
     //
     // The span runs from the band's own left edge to ONE PAD IN FROM ITS RIGHT
-    // (the window's right edge — this lane spans the window). The chain
+    // (the window's right edge — this lane spans the window). The text
     // right-aligns inside it, and when it does not fit it LEFT-anchors at the
-    // band's edge instead: the chip (the chain's leftmost member) stays wholly
-    // visible and C clips at the right bound, the chip's primacy under right
-    // alignment. THE CLIP IS THE CONTENT BAND, which is the whole rect this
-    // function was handed, so nothing here can reach either of the row's 1px
-    // border rows — the caller's partition, not this site's care. Nothing clips
-    // against the TABS: they paint after this and win, which is the whole rule.
+    // band's edge instead and clips at the right bound. THE CLIP IS THE
+    // CONTENT BAND, which is the whole rect this function was handed, so
+    // nothing here can reach either of the row's 1px border rows — the
+    // caller's partition, not this site's care. Nothing clips against the
+    // TABS: they paint after this and win, which is the whole rule.
     const double pad     = static_cast<double>(status_chain_pad_x());
     const double span_x0 = static_cast<double>(band.x);
     const double span_x1 = std::nearbyint(
@@ -1965,105 +1963,18 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
     const double baseline = redesign_baseline(font,
                                               static_cast<double>(band.y),
                                               static_cast<double>(band.h));
-
-    text_shape::ShapedRun status_run;
-    if (!status.empty())
-        status_run = text_shape::shape_text_run(font, status);
-    text_shape::ShapedRun crit_run;
-    double chip_box_w = 0.0;
-    const int pad_l    = marker_flag_pad_left_px();
-    const int pad_r    = marker_flag_pad_right_px();
-    const int border_w = marker_flag_border_px();
-    if (!critical.empty()) {
-        crit_run = text_shape::shape_text_run(font, critical);
-        chip_box_w = border_w + pad_l + std::nearbyint(crit_run.width_px) +
-                     pad_r;
-    }
-    const double chain_w =
-        (critical.empty() ? 0.0 : chip_box_w + pad) +
-        (status.empty() ? 0.0 : status_run.width_px);
+    const text_shape::ShapedRun status_run =
+        text_shape::shape_text_run(font, status);
     const double chain_x = std::nearbyint(
-        std::max(span_x0, span_x1 - chain_w));
+        std::max(span_x0, span_x1 - status_run.width_px));
 
     cairo_save(cr);
     cairo_rectangle(cr, span_x0, static_cast<double>(band.y),
                     span_x1 - span_x0, static_cast<double>(band.h));
     cairo_clip(cr);
-
-    double pen = chain_x;
-    if (!critical.empty()) {
-        // THE CRITICAL CHIP, the chain's leftmost member (architect
-        // 2026-08-09: a checkpoint failure may be neither missed nor used to
-        // hijack the keyboard — a paint-only chip that simply stays, until a
-        // later checkpoint succeeds or the program closes; the contract, the
-        // one producer and the one clearing route are at
-        // AppState::critical_error_message).
-        //
-        // IT WEARS THE PRODUCT'S ONE INVALID RED, called rather than copied:
-        // kMarkerFlagFillRed under kMarkerFlagEdgeRed over the flag's own 1px
-        // left border, in the flag's own paint order and on the flag's own
-        // horizontal pads — the marker flag's anatomy (the dialog editors'
-        // invalid flash recolors the dialog FIELD in the same red pair). The
-        // ink is the row's ordinary label colour.
-        //
-        // THE BOX IS RE-DERIVED FOR THIS ROW, and that is the one thing the
-        // chain's move changed about it (2026-08-13). The flag's box is 20 tall
-        // with its baseline at row 16 — kMarkerLaneHeightPx and
-        // kMarkerFlagBaselinePx, both authored off the row-5 crop — which is
-        // that lane's OWN height and a 16/4 split that only describes the crop
-        // it came from. What the two numbers actually express is the face's own
-        // (ascent + descent) band wrapped tight around the label, so the
-        // anatomy transfers by asking THIS row's face for that band instead of
-        // importing a lane height that does not belong here: ascent above the
-        // baseline, descent below, each rounded UP so no ink falls outside the
-        // fill. It reproduces the flag's proportions (the product has one text
-        // size, so both rows shape the same face), it centres itself on the
-        // row's own baseline, and it fits the content band at every gui_scale
-        // by construction — box and band ride the same one factor, and the
-        // band is the taller of the two at 100% by 11 px.
-        cairo_font_extents_t fe;
-        cairo_scaled_font_extents(font, &fe);
-        const int asc  = static_cast<int>(std::ceil(fe.ascent));
-        const int desc = static_cast<int>(std::ceil(fe.descent));
-        const int edge_h = marker_flag_edge_h_px();
-        // THE TWO CASTS BELOW ARE INTEGRAL BY CONSTRUCTION, which is why they
-        // truncate where the baseline one rounds: `pen` starts at chain_x,
-        // already through std::nearbyint above, and `chip_box_w` is scaled
-        // integer pads and a border around a std::nearbyint'ed run width — both
-        // doubles hold whole numbers here, so no rounding rule is in play.
-        // `baseline` is the only genuinely fractional input on this line and it
-        // takes std::nearbyint, the project's rule.
-        const int fx = static_cast<int>(pen) + border_w;
-        const int fw = static_cast<int>(chip_box_w) - border_w;
-        const int fy = static_cast<int>(std::nearbyint(baseline)) - asc;
-        const int fh = asc + desc;
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kMarkerFlagBorder.r, kMarkerFlagBorder.g,
-                             kMarkerFlagBorder.b);
-        cairo_rectangle(cr, fx - border_w, fy, border_w, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagFillRed.r, kMarkerFlagFillRed.g,
-                             kMarkerFlagFillRed.b);
-        cairo_rectangle(cr, fx, fy, fw, fh);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r, kMarkerFlagEdgeRed.g,
-                             kMarkerFlagEdgeRed.b);
-        cairo_rectangle(cr, fx, fy, fw, edge_h);
-        cairo_fill(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        text_shape::show_shaped_run(cr, crit_run,
-                                    static_cast<double>(fx + pad_l), baseline);
-        cairo_restore(cr);
-        pen += chip_box_w + pad;
-    }
-    if (!status.empty()) {
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
-        text_shape::show_shaped_run(cr, status_run, pen, baseline);
-    }
+    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                         kRedesignLabel.b);
+    text_shape::show_shaped_run(cr, status_run, chain_x, baseline);
     cairo_restore(cr);   // the chain's clip
     cairo_restore(cr);   // the row's colour state
 }
@@ -3047,8 +2958,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // CEIL, NOT nearbyint: cell_w is a fractional advance sum and this is
         // a DAMAGE box, which may be a hair too wide but never a hair too
         // narrow — rounding down could leave the cell's last column unerased.
-        // Same round-up rule the critical chip's box takes on its ascent and
-        // descent (the status chain's paint tail), for the same reason.
+        // Same round-up rule the modal row's buttons and message take on
+        // their shaped widths (paint_modal_dialog), for the same reason.
         app.clock_cell_rect = GuiRect{
             cell_x - 1, content_y,
             static_cast<int>(std::ceil(cell_w)) + 2, content_h};
@@ -3270,6 +3181,129 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                               band2));
     }
 
+    cairo_restore(cr);
+}
+
+// -- GuiPaintHandler::paint_notifications ---------------------------------
+//
+// THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
+// classes, the hit rule and the inventory at notifications.h). The visible
+// stack — the first kNotificationVisibleMax of AppState::Notifications::cards,
+// newest first — painted top-right under ROW 1's view radios, right-aligned
+// at icon_row_pad_x() from the window's edge, growing DOWN over whatever
+// lies there (the tab row's right stretch, the icon row's empty right, the
+// thin lanes, the waveform), the cards kIconBtnGapPx apart.
+//
+// THE LOOK (his picked mockup, tmp/previous/messaging_mockups/cards_AB.png's
+// look 1; the chrome record at render.h's palette block): the player's dark
+// ground under the popup's 1 px border through the one popup box painter;
+// ONE ROW of the icon row's own height, holding — left to right, at the
+// row's pad — a 32 px button box with the CLASS GLYPH centred at the box's
+// own inset (dialog-information for a normal card, dialog-error for a
+// critical one, each in its file's own colours: the roster paints every
+// path in the table's ink and colours nothing here — the two files are a
+// blue or red plate under a white glyph, and that plate is what tells the
+// classes apart at a glance), the overlay row's icon-to-name gap, ONE LINE
+// of the one sans in the row's ink CLIPPED at the run's room (no wrap, no
+// ellipsis — the folder overlay rows' precedent), the same gap, and the
+// window-close X in a second button box at the row's pad. The card's width
+// is its content's, clamped to [kNotificationMinWidthPx, a third of the
+// window] (the floor wins on a window narrower than three floors — a
+// contrived window). THE X WEARS THE ICON BUTTON'S HOVER FACE while the
+// pointer rests in its box — the 1 px accent outline through the shared face
+// box, nothing else — and the card's body wears none.
+//
+// IT PUBLISHES WHAT IT DREW: each card's rect and X box, and their union,
+// into AppState::Notifications (the owner-tag doctrine at
+// ModalDialogGeometry — published geometry may only SELECT; the press claim,
+// the cursor map and the hover walk read this and then ask the live stack).
+// It runs on every frame, cards or none, for the floating surfaces' reason:
+// a skipped run would strand a stale publication. Its damage is not its own —
+// every stack change damages the stack's BOUND through the viewport owner,
+// and the hover its X box.
+void GuiPaintHandler::paint_notifications(cairo_t* cr) {
+    AppState::Notifications& st = app.notifications;
+    st.painted.clear();
+    st.painted_rect = GuiRect{0, 0, 0, 0};
+    if (st.cards.empty()) return;
+
+    cairo_save(cr);
+    gui_select_font_face(cr, GuiFontFamily::Sans);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int card_h   = notification_card_h_px();
+    const int max_w    = notification_card_max_w_px(app);
+    const int min_w    = scaled_px(kNotificationMinWidthPx);
+    const int gap      = scaled_px(kIconBtnGapPx, 1);
+    const int btn      = scaled_px(kIconBtnPx);
+    const int glyph_px = scaled_px(kIconGlyphPx);
+    const int inset    = (btn - glyph_px) / 2;
+    const int box_dy   = (card_h - btn) / 2;
+    const int pad_x    = icon_row_pad_x();
+    const int text_gap = folder_overlay::row_icon_gap_px();
+    const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double radius = std::nearbyint(kIconCornerRadiusPx *
+                                         gui_scale_factor());
+    const GuiRect bound = notification_stack_bound(app);
+    const int right_x = bound.x + bound.w;
+    // The chrome every card carries besides its text: two pads, two boxes,
+    // two gaps.
+    const int chrome_w = 2 * pad_x + 2 * btn + 2 * text_gap;
+
+    int y = bound.y;
+    for (size_t i = 0; i < st.cards.size() &&
+                       i < static_cast<size_t>(kNotificationVisibleMax); ++i) {
+        const AppState::Notification& n = st.cards[i];
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(font, n.text);
+        int w = chrome_w + static_cast<int>(std::nearbyint(run.width_px));
+        w = std::clamp(w, min_w, std::max(min_w, max_w));
+        const GuiRect card{right_x - w, y, w, card_h};
+        paint_popup_chrome(cr, card, kModalFieldGround, kRedesignTabLine);
+
+        const int box_y   = card.y + box_dy;
+        const int glyph_x = card.x + pad_x;
+        icons::draw(cr,
+                    n.cls == AppState::NotificationClass::Critical
+                        ? icons::Icon::DialogError
+                        : icons::Icon::DialogInformation,
+                    static_cast<double>(glyph_x + inset),
+                    static_cast<double>(box_y + inset),
+                    static_cast<double>(glyph_px));
+
+        const int close_x   = card.x + card.w - pad_x - btn;
+        const int text_x    = glyph_x + btn + text_gap;
+        const int text_room = close_x - text_gap - text_x;
+        if (text_room > 0) {
+            cairo_save(cr);
+            cairo_rectangle(cr, text_x, card.y, text_room, card.h);
+            cairo_clip(cr);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(
+                cr, run, static_cast<double>(text_x),
+                redesign_baseline(font, static_cast<double>(card.y),
+                                  static_cast<double>(card.h)));
+            cairo_restore(cr);
+        }
+
+        const GuiRect close{close_x, box_y, btn, btn};
+        if (st.hovered_id == n.id && st.close_hovered) {
+            const GuiColor line = kRedesignAccent;
+            redesign_face_box(cr, close.x, close.y, btn, btn, lw, radius,
+                              nullptr, &line);
+        }
+        icons::draw(cr, icons::Icon::WindowClose,
+                    static_cast<double>(close.x + inset),
+                    static_cast<double>(close.y + inset),
+                    static_cast<double>(glyph_px));
+
+        st.painted.push_back(AppState::NotificationPainted{n.id, card, close});
+        st.painted_rect = st.painted.size() == 1
+                              ? card : union_rect(st.painted_rect, card);
+        y += card_h + gap;
+    }
     cairo_restore(cr);
 }
 
@@ -5786,9 +5820,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // CEIL, NOT nearbyint: a measured run width is fractional and the
             // box it sizes must CONTAIN the ink, so it rounds UP — rounding
             // to nearest could clip the label's last column inside its own
-            // pads. The same round-up rule the critical chip's box takes on
-            // its ascent and descent (the status chain's paint tail), applied
-            // to a width.
+            // pads. The same round-up rule the clock cell's damage box takes
+            // on its width (paint_bottom_strip).
             plan[i].w = btn_pad_l + static_cast<int>(std::ceil(lw)) + btn_pad_r;
         }
         buttons_w += plan[i].w + (i > 0 ? bgap : 0);
@@ -5837,7 +5870,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // button being the whole of that case.
     //
     // NOTHING OVERFLOWS THE LANE, and the primacy is the STATUS CHAIN'S OWN
-    // (the critical chip's rule, one row and one collision discipline): THE
+    // (one row and one collision discipline — the chain anchors left and
+    // clips when it overflows): THE
     // BUTTONS STAY WHOLE AND THE CONTENT GIVES. A prompt with no reachable
     // button is a modal with no way out, while a clipped message is still
     // readable to its clip — so the cluster's left edge is capped at
@@ -5894,7 +5928,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // CEIL: the shaped width is fractional and it sets where the buttons
         // may start, so it rounds UP — a nearest-rounded width could place the
         // cluster inside the message's last column. The round-up rule again
-        // (the critical chip's box, the status chain's paint tail).
+        // (the buttons' widths above, the clock cell's damage box).
         const int msg_w = static_cast<int>(std::ceil(msg.width_px));
         buttons_x0 = std::min(cx0 + msg_w + pad + ring, buttons_x_max);
         const int msg_clip = std::max(0, (buttons_x0 - ring - pad) - cx0);
@@ -7298,11 +7332,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      PAINTED rect while either tenant stands
         //      (onscreen_keyboard::waveform_paint_area, read just above this
         //      block).
-        //  13. the flag editor's box, then the dropdown — the floating
-        //      surfaces, after every pass above and outside this branch — then
-        //      the MODAL DIALOG (paint_modal_dialog, 2026-08-12; the bottom
-        //      row the prompts and the five modal editors paint in since
-        //      2026-08-13), and LAST the TOOLTIP, which reads that stash.
+        //  13. the flag editor's box, then THE NOTIFICATION CARDS
+        //      (paint_notifications, 2026-08-29 — the top-right stack, above
+        //      every lane and the keyboard slot), then the dropdown — the
+        //      floating surfaces, after every pass above and outside this
+        //      branch — then the MODAL DIALOG (paint_modal_dialog,
+        //      2026-08-12; the bottom row the prompts and the five modal
+        //      editors paint in since 2026-08-13), and LAST the TOOLTIP,
+        //      which reads that stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and
         // overlaps none of these passes.)
@@ -7442,7 +7479,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // is under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect it painted (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to
-    // read. Hidden, each costs one boolean.
+    // read. Hidden, each costs one boolean. THE NOTIFICATION CARDS (2026-08-29)
+    // are a third floater of the same kind — they hang from row 1 down over
+    // the lanes and the waveform and publish what they drew on every run —
+    // and paint BELOW these two and the modal row: a dropdown or a hint the
+    // pointer just raised belongs on top of a message, and the modal row is
+    // the modal row.
     //
     // THE DROPDOWN AND THE TOOLTIP CANNOT COEXIST, so their order between
     // themselves is moot: the dropdown opens on a PRESS and a press hides the
@@ -7458,6 +7500,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // for the same reason — that branch is where the publication would go
     // missing.
     render_flag_editor_box(cr, app, audio);
+    // THE NOTIFICATION CARDS (2026-08-29) paint after the flag editor's box
+    // and before the dropdown: above every lane, the waveform, the keyboard
+    // slot and the folder overlay's band, below the three surfaces that stay
+    // topmost — the dropdown and the tooltip (the two pointer-transient
+    // floaters) and the modal row. Unconditional for the floating surfaces'
+    // reason: it publishes the geometry the pointer path reads.
+    paint_notifications(cr);
     paint_dropdown(cr);
 
     // THE MODAL DIALOG PAINTS AFTER THOSE TWO (2026-08-12): it owns the bottom

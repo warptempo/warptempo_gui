@@ -293,8 +293,8 @@ void PhaseResetPropagate::paste_apply() {
         // entry, no waveform / render flush, but the view-switch fires
         // per the always-switch rule.
         if (!stop_message.empty()) {
-            app.transient_status_message = std::move(stop_message);
-            viewport.invalidate_status_chain_area();
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 std::move(stop_message));
         }
         // Nothing materialized: land in target view with no new selection.
         land_paste_in_target_view({});
@@ -450,8 +450,8 @@ void PhaseResetPropagate::paste_apply() {
     // pasted AND the divergence is reported. A clean full paste leaves
     // stop_message empty and shows nothing.
     if (!stop_message.empty()) {
-        app.transient_status_message = std::move(stop_message);
-        viewport.invalidate_status_chain_area();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::move(stop_message));
     }
 
     // Land in target view (phase reset's home) with exactly the newly pasted
@@ -594,8 +594,8 @@ void PhaseResetPropagate::paste_state_apply() {
     }
 
     if (!stop_message.empty()) {
-        app.transient_status_message = std::move(stop_message);
-        viewport.invalidate_status_chain_area();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::move(stop_message));
     }
 
     // Land in target view (phase reset's home) at the end of a completed
@@ -681,7 +681,9 @@ void PhaseResetPropagate::paste_state_apply() {
 // invalidate_waveform_area are coalesced duplicates, while
 // invalidate_status_chain_area is a coalesced duplicate too since the status chain
 // moved into the tab row (2026-08-13), and is kept as this route's own honest
-// statement that it rewrites the chain's transient tier.
+// statement that the selection it lands moves the chain's readout tier (the
+// paste's "Stopped at …" report itself is a notification card since
+// 2026-08-29 and touches no chain tier).
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input) input->switch_active_audio_view_to('T');
     active_views.switch_active_markers_view_to('P');

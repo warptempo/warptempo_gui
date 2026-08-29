@@ -575,7 +575,12 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
     } else {
+        // The one preview outcome the user was not watching for: a card
+        // beside the stderr line (2026-08-29). Cancelled says nothing — it is
+        // the product's own supersession, never a fault.
         std::fprintf(stderr, "warptempo_gui: Target render failed\n");
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Target render failed");
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
     }

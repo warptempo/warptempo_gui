@@ -130,7 +130,8 @@ struct GuiPrompt {
     // would have swallowed. On 2026-08-09 the architect replaced it with the
     // bottom row's PERMANENT PAINT-ONLY CRITICAL SLOT — a critical failure must
     // be impossible to miss and impossible to hijack with — and that whole
-    // family of guards went with it as producer-less.)
+    // family of guards went with it as producer-less; since 2026-08-29 the
+    // report is a CRITICAL NOTIFICATION CARD, which hijacks nothing either.)
     //
     // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it is not this
     // one: the compositor's WM close raises the unsaved-work prompt

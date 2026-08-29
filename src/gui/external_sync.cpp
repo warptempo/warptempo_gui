@@ -22,29 +22,66 @@
 
 namespace {
 
-// The two failure lines, and both name a PATH and then the system's own words
-// verbatim. `read_failure` is rule 1's — every enumeration and every status
-// that answers with an error_code ends here — and it names the path that could
-// not be read. `copy_failure` names the DESTINATION side rather than the
-// source: every way a write fails is a destination-side one — a read-only
-// mount, a full stick, a permission the app was not granted — and on the
-// tablet the first copy IS the plain-open() probe under the All-files
-// permission, whose whole diagnostic is the `/storage/<uuid>/...` path it was
-// refused. A staged copy names the staging path it was writing and its rename
-// names the final one, so the line names the path the call itself failed on.
-std::string read_failure(const std::filesystem::path& p,
-                         const std::error_code&       ec) {
-    return "Cannot read '" + p.string() + "': " + ec.message();
+// HOW A PATH IS NAMED IN A SENTENCE (the basename rule, architect 2026-08-29:
+// a message that carries a path names the file, never a full path — the
+// sentence is one line on a notification card that clips): RELATIVE TO THE
+// MIRROR'S TWO ROOTS. A path on the volume is `<volume name>/<its path under
+// the volume>` — the volume's own folder name leads so the reader knows which
+// side failed, the root itself being just that name; a path in the project
+// is its path under the project folder (the folder itself its own name); and
+// anything under neither — nothing in the act composes one — falls back to
+// its filename. Lexical, like the paths themselves: every name in the act is
+// composed under one of the two roots and no symlink is ever followed.
+std::string shown(const GuiExternalSyncJob& job, const std::filesystem::path& p) {
+    auto under = [&p](const std::filesystem::path& root,
+                      std::string& out) -> bool {
+        if (root.empty()) return false;
+        const std::filesystem::path rel = p.lexically_relative(root);
+        if (rel.empty()) return false;
+        const std::string r = rel.generic_string();
+        if (r == ".." || r.rfind("../", 0) == 0) return false;
+        out = (r == ".") ? std::string() : r;
+        return true;
+    };
+    std::string rel;
+    if (under(job.volume, rel)) {
+        const std::string name = job.volume.filename().string();
+        return rel.empty() ? name : name + "/" + rel;
+    }
+    if (under(job.project_dir, rel)) {
+        return rel.empty() ? job.project_dir.filename().string() : rel;
+    }
+    return p.filename().string();
 }
 
-std::string copy_failure(const std::filesystem::path& to,
+// The two failure lines, and both name a PATH (as `shown` names it) and then
+// the system's own words verbatim. `read_failure` is rule 1's — every
+// enumeration and every status that answers with an error_code ends here —
+// and it names the path that could not be read. `copy_failure` names the
+// DESTINATION side rather than the source: every way a write fails is a
+// destination-side one — a read-only mount, a full stick, a permission the
+// app was not granted — and on the tablet the first copy IS the plain-open()
+// probe under the All-files permission, whose whole diagnostic is the
+// `/storage/<uuid>/...` path it was refused (the full path is on stderr; the
+// card names it under the volume). A staged copy names the staging path it
+// was writing and its rename names the final one, so the line names the path
+// the call itself failed on.
+std::string read_failure(const GuiExternalSyncJob&    job,
+                         const std::filesystem::path& p,
                          const std::error_code&       ec) {
-    return "Could not copy '" + to.string() + "': " + ec.message();
+    return "Cannot read '" + shown(job, p) + "': " + ec.message();
 }
 
-std::string remove_failure(const std::filesystem::path& p,
+std::string copy_failure(const GuiExternalSyncJob&    job,
+                         const std::filesystem::path& to,
+                         const std::error_code&       ec) {
+    return "Could not copy '" + shown(job, to) + "': " + ec.message();
+}
+
+std::string remove_failure(const GuiExternalSyncJob&    job,
+                           const std::filesystem::path& p,
                            const std::error_code&       ec) {
-    return "Could not remove '" + p.string() + "': " + ec.message();
+    return "Could not remove '" + shown(job, p) + "': " + ec.message();
 }
 
 // ONE NON-THROWING DIRECTORY WALK, used by every listing in the act below.
@@ -66,7 +103,8 @@ std::string remove_failure(const std::filesystem::path& p,
 using WalkFn =
     std::function<std::optional<std::string>(const std::filesystem::directory_entry&)>;
 
-std::optional<std::string> walk_directory(const std::filesystem::path& dir,
+std::optional<std::string> walk_directory(const GuiExternalSyncJob&    job,
+                                          const std::filesystem::path& dir,
                                           bool                         optional_root,
                                           const WalkFn&                fn) {
     std::error_code ec;
@@ -74,13 +112,13 @@ std::optional<std::string> walk_directory(const std::filesystem::path& dir,
     if (ec) {
         if (optional_root && ec == std::errc::no_such_file_or_directory)
             return std::nullopt;
-        return read_failure(dir, ec);
+        return read_failure(job, dir, ec);
     }
     const std::filesystem::directory_iterator end;
     while (it != end) {
         if (std::optional<std::string> fault = fn(*it)) return fault;
         it.increment(ec);
-        if (ec) return read_failure(dir, ec);
+        if (ec) return read_failure(job, dir, ec);
     }
     return std::nullopt;
 }
@@ -121,7 +159,8 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     const std::filesystem::path dest = job.volume / job.project_name;
 
     // EVERY REFUSAL LEAVES THROUGH HERE: the line the act composed becomes the
-    // status line and the stderr line together, `ok` stays false, and nothing
+    // notification card and the stderr line together, `ok` stays false, and
+    // nothing
     // below the refusal runs. On the tablet the stderr half reaches logcat
     // without a word of Android in this file, stderr being redirected onto the
     // log at the file descriptor (platform_android.cpp).
@@ -138,8 +177,8 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // the one asked here at the act's head, before the set is even built: every
     // path in the act is composed under it.
     enum class DestKind { Volume, Directory, RegularFile };
-    auto claim_destination = [](const std::filesystem::path& p,
-                                DestKind kind) -> std::optional<std::string> {
+    auto claim_destination = [&job](const std::filesystem::path& p,
+                                    DestKind kind) -> std::optional<std::string> {
         std::error_code st_ec;
         const std::filesystem::file_status st =
             std::filesystem::symlink_status(p, st_ec);
@@ -148,16 +187,16 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
             // below — and it is not one for the volume, which the platform has
             // just answered is mounted.
             if (kind != DestKind::Volume) return std::nullopt;
-            return "'" + p.string() + "' is not a directory";
+            return "'" + shown(job, p) + "' is not a directory";
         }
-        if (st_ec) return read_failure(p, st_ec);
+        if (st_ec) return read_failure(job, p, st_ec);
         if (std::filesystem::is_symlink(st))
-            return "'" + p.string() + "' is a symbolic link";
+            return "'" + shown(job, p) + "' is a symbolic link";
         if (kind != DestKind::RegularFile && !std::filesystem::is_directory(st))
-            return "'" + p.string() + "' is not a directory";
+            return "'" + shown(job, p) + "' is not a directory";
         if (kind == DestKind::RegularFile &&
             !std::filesystem::is_regular_file(st))
-            return "'" + p.string() + "' is not a regular file";
+            return "'" + shown(job, p) + "' is not a regular file";
         return std::nullopt;
     };
     if (auto bad = claim_destination(job.volume, DestKind::Volume))
@@ -186,7 +225,7 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         const bool present =
             std::filesystem::is_regular_file(job.deliverable, ec);
         if (ec && ec != std::errc::no_such_file_or_directory)
-            return refuse(read_failure(job.deliverable, ec));
+            return refuse(read_failure(job, job.deliverable, ec));
         if (present) {
             copies.push_back(
                 {job.deliverable, dest / job.deliverable.filename()});
@@ -203,12 +242,12 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // folders read.
     std::vector<std::filesystem::path> batches;
     if (auto fault = walk_directory(
-            job.batch_root, true,
+            job, job.batch_root, true,
             [&](const std::filesystem::directory_entry& de)
                     -> std::optional<std::string> {
                 std::error_code de_ec;
                 const bool is_dir = de.is_directory(de_ec);
-                if (de_ec) return read_failure(de.path(), de_ec);
+                if (de_ec) return read_failure(job, de.path(), de_ec);
                 if (is_dir) batches.push_back(de.path());
                 return std::nullopt;
             })) {
@@ -221,12 +260,12 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     for (const std::filesystem::path& batch : batches) {
         std::vector<std::filesystem::path> wavs;
         if (auto fault = walk_directory(
-                batch, true,
+                job, batch, true,
                 [&](const std::filesystem::directory_entry& de)
                         -> std::optional<std::string> {
                     std::error_code de_ec;
                     const bool is_file = de.is_regular_file(de_ec);
-                    if (de_ec) return read_failure(de.path(), de_ec);
+                    if (de_ec) return read_failure(job, de.path(), de_ec);
                     if (!is_file) return std::nullopt;
                     if (de.path().extension() != ".wav") return std::nullopt;
                     wavs.push_back(de.path());
@@ -275,10 +314,10 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // failed copy and reports the same way, since it is the same write to the
     // same volume.
     std::filesystem::create_directories(dest, ec);
-    if (ec) return refuse(copy_failure(dest, ec));
+    if (ec) return refuse(copy_failure(job, dest, ec));
     for (const std::filesystem::path& batch_dest : kept_dirs) {
         std::filesystem::create_directories(batch_dest, ec);
-        if (ec) return refuse(copy_failure(batch_dest, ec));
+        if (ec) return refuse(copy_failure(job, batch_dest, ec));
     }
     for (const Copy& c : copies) {
         // Rule 3: the bytes land on the staging sibling and only a complete
@@ -290,13 +329,13 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         // which is the atomicity this act assumes and all it needs.
         const std::filesystem::path staging(render_staging_path(c.to.string()));
         std::filesystem::remove(staging, ec);
-        if (ec) return refuse(remove_failure(staging, ec));
+        if (ec) return refuse(remove_failure(job, staging, ec));
         std::filesystem::copy_file(
             c.from, staging, std::filesystem::copy_options::overwrite_existing,
             ec);
-        if (ec) return refuse(copy_failure(staging, ec));
+        if (ec) return refuse(copy_failure(job, staging, ec));
         std::filesystem::rename(staging, c.to, ec);
-        if (ec) return refuse(copy_failure(c.to, ec));
+        if (ec) return refuse(copy_failure(job, c.to, ec));
     }
 
     // -- THE DELETIONS, AFTER -----------------------------------------------
@@ -331,9 +370,9 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // UNKEPT BY CONSTRUCTION: the kept set holds final names only, and
     // `<name>.wav.tmp` is a different file from `<name>.wav`.
     auto kept_by_identity =
-        [](const std::filesystem::path&              entry,
-           const std::vector<std::filesystem::path>& kept,
-           bool& answer) -> std::optional<std::string> {
+        [&job](const std::filesystem::path&              entry,
+               const std::vector<std::filesystem::path>& kept,
+               bool& answer) -> std::optional<std::string> {
         answer = false;
         for (const std::filesystem::path& k : kept) {
             std::error_code eq_ec;
@@ -341,18 +380,18 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
                 answer = true;
                 return std::nullopt;
             }
-            if (eq_ec) return read_failure(entry, eq_ec);
+            if (eq_ec) return read_failure(job, entry, eq_ec);
         }
         return std::nullopt;
     };
 
     if (auto fault = walk_directory(
-            dest, false,
+            job, dest, false,
             [&](const std::filesystem::directory_entry& de)
                     -> std::optional<std::string> {
                 std::error_code st_ec;
                 const std::filesystem::file_status st = de.symlink_status(st_ec);
-                if (st_ec) return read_failure(de.path(), st_ec);
+                if (st_ec) return read_failure(job, de.path(), st_ec);
                 if (std::filesystem::is_symlink(st)) {
                     doomed.push_back({de.path(), true});
                     return std::nullopt;
@@ -378,13 +417,13 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // time, and each of these folders is one the top level just proved kept.
     for (const std::filesystem::path& batch_dest : kept_dirs_present) {
         if (auto fault = walk_directory(
-                batch_dest, false,
+                job, batch_dest, false,
                 [&](const std::filesystem::directory_entry& fe)
                         -> std::optional<std::string> {
                     std::error_code fe_ec;
                     const std::filesystem::file_status fst =
                         fe.symlink_status(fe_ec);
-                    if (fe_ec) return read_failure(fe.path(), fe_ec);
+                    if (fe_ec) return read_failure(job, fe.path(), fe_ec);
                     if (std::filesystem::is_symlink(fst)) {
                         doomed.push_back({fe.path(), true});
                         return std::nullopt;
@@ -409,13 +448,13 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         std::error_code rm_ec;
         if (d.is_link) std::filesystem::remove(d.path, rm_ec);
         else           std::filesystem::remove_all(d.path, rm_ec);
-        if (rm_ec) return refuse(remove_failure(d.path, rm_ec));
+        if (rm_ec) return refuse(remove_failure(job, d.path, rm_ec));
     }
 
     out.ok = true;
     out.message = "Synchronized " + std::to_string(copies.size()) +
                   (copies.size() == 1 ? " file to " : " files to ") +
-                  dest.string();
+                  shown(job, dest);
     return out;
 }
 
@@ -465,9 +504,10 @@ void GuiExternalSyncWorker::shutdown() {
 
 void GuiExternalSyncWorker::dispatch(GuiExternalSyncJob job,
                                      DoneCallback       on_done) {
-    // The caller serializes: a second act is refused on the status line while
-    // one is in flight. Arriving here busy is a programming error — say so and
-    // drop, never race.
+    // The caller serializes: a second act is refused on a notification card
+    // while one is in flight (synchronize_to_external_storage asks is_busy
+    // first, so this arm has no reachable producer). Arriving here busy is a
+    // programming error — say so and drop, never race.
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
             "warptempo_gui: Synchronization worker dispatch while busy "

@@ -52,14 +52,14 @@ class GuiWaveformWorker;
 // Authored at 100% and scaled on gui_scale_factor() like every other
 // redesigned dimension, rounded with std::nearbyint so it stays an integer.
 //
-// ONE CONSTANT, TWO USES, and it TRAVELLED WITH THE CHAIN when the architect
-// moved it into the tab row (2026-08-13): the RIGHT margin the chain aligns to
-// — the tab row's right edge now, the bottom row's arrow cluster before that —
-// and, on a row carrying a critical message, the gap between the critical chip
-// and section C inside the chain. The measured number is kept across the move
-// so the chain's own spacing did not change under it. (Its third use, the gap
-// from the bottom row's clock cell to the chain's left clip bound, died with
-// that bound.)
+// ONE CONSTANT, ONE USE since 2026-08-29: the RIGHT margin the status chain
+// aligns to — the tab row's right edge, where the chain has lived since the
+// architect moved it there on 2026-08-13, the bottom row's arrow cluster
+// before that. The measured number is kept across every move so the chain's
+// own spacing never changed under it. (Its two other uses are gone: the gap
+// from the bottom row's clock cell to the chain's left clip bound died with
+// that bound, and the gap between the critical chip and the chain's text died
+// with the chip, whose four checkpoint verdicts are notification cards now.)
 inline int status_chain_pad_x() {
     return scaled_px(13.0);
 }
@@ -822,15 +822,17 @@ private:
     // its four buttons are the icon row's first group.)
     void paint_menu_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
-    // THE STATUS CHAIN — the critical chip then section C's four-tier ladder,
-    // right-aligned at the TAB ROW's right margin (architect 2026-08-13). Called
+    // THE STATUS CHAIN — three STATE tiers since 2026-08-29 (the walk line,
+    // the progress line, the readout; the transient tier and the critical
+    // chip left for the notification cards that day), right-aligned at the
+    // TAB ROW's right margin (architect 2026-08-13). Called
     // from paint_tab_row ALONE and BEFORE its tab walk, which is the whole
     // collision rule: the tabs paint over the chain and win, and text pushed
     // under a tab is accepted. Takes the row's already-selected face and its
     // CONTENT BAND — the lane less its two border rows — so the chain and the
     // tab labels cannot resolve two baselines and neither border is reachable
-    // from inside here. The full layout record, the tier ladder and the chip's
-    // derived box are at the definition.
+    // from inside here. The full layout record and the tier ladder are at the
+    // definition.
     void paint_status_chain(cairo_t* cr, const GuiRect& band,
                             cairo_scaled_font_t* font);
     void paint_icon_row(cairo_t* cr);
@@ -873,6 +875,15 @@ private:
     // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                             GuiColor ground, GuiColor border);
+    // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
+    // row 1, painted after the flag editor's box and before the dropdown —
+    // above every lane and the keyboard slot, below the two pointer-transient
+    // floaters and the modal row (the order is on_redraw's step 13). It
+    // PUBLISHES each card's rect and X box (AppState::Notifications::painted)
+    // for the press claim, the cursor map and the hover walk, and runs on
+    // every frame for the floating surfaces' own reason: a skipped run would
+    // strand a stale publication. Model and ruling at notifications.h.
+    void paint_notifications(cairo_t* cr);
     // (The open flag editor has no pass member here. It is render_flag_editor_box
     // in render.cpp — the last of the marker-text lane's paint pass, unrolled
     // into the flag itself in row 5's checkpoint C, where it shares the flag

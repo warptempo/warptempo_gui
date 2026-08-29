@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "input_handler.h"   // clear_region_highlight (the movement owner's hide)
+#include "notifications.h"   // notification_stack_bound (the stack's damage rect)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -150,6 +151,13 @@ void Viewport::invalidate_status_chain_area() {
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+}
+
+// THE NOTIFICATION STACK'S DAMAGE — its bound whole; the callers and the
+// reasoning are at the declaration, viewport.h.
+void Viewport::invalidate_notification_stack() {
+    const GuiRect r = notification_stack_bound(app);
+    gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
 void Viewport::invalidate_clock_area() {

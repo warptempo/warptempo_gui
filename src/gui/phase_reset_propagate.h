@@ -1,5 +1,6 @@
 #pragma once
 
+#include "notifications.h"
 #include "app_state.h"
 #include "playback_lifecycle.h"
 #include "selection.h"    // the paste's membership replace rides the chokepoint
@@ -56,6 +57,9 @@ struct PhaseResetPropagate {
     // The paste-confirm prompt is a modal surface; its open stops playback
     // through this lifecycle handle.
     GuiPlaybackLifecycle& playback_lifecycle;
+    // The three pastes' "Stopped at …" reports are notification cards
+    // (2026-08-29); this is the one push chokepoint they reach.
+    GuiNotifications&     notifications;
     // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the target-view
     // landing REPLACES the membership with the set the paste created, and a
     // replace must run through a Selection mutator or the sticky ctrl and the
@@ -76,10 +80,12 @@ struct PhaseResetPropagate {
                         GuiTargetRender& target_render_,
                         GuiActiveViews& active_views_,
                         GuiPlaybackLifecycle& playback_lifecycle_,
+                        GuiNotifications& notifications_,
                         Selection& selection_)
         : app(app_), viewport(viewport_), undo(undo_),
           target_render(target_render_), active_views(active_views_),
-          playback_lifecycle(playback_lifecycle_), selection(selection_) {}
+          playback_lifecycle(playback_lifecycle_),
+          notifications(notifications_), selection(selection_) {}
 
     // Ctrl+P copy. Caller has already verified W-mode + a CONTIGUOUS run of
     // warp markers selected (the paste walks labeled blocks in strict lockstep,
@@ -112,9 +118,8 @@ struct PhaseResetPropagate {
     // destination block list in lockstep with the clipboard, stops at
     // the first label divergence or per-block phase-reset count
     // mismatch, and produces at most one undo entry covering all
-    // aligned blocks. A divergence/mismatch is reported via
-    // AppState::transient_status_message; a clean or empty run is
-    // silent.
+    // aligned blocks. A divergence/mismatch is reported as a notification
+    // card (GuiNotifications::notify); a clean or empty run is silent.
     void paste_state_apply();
 
     // Shared end-of-paste tail for all three paste actions: land the completed

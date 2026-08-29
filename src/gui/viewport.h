@@ -297,12 +297,13 @@ struct Viewport {
     void invalidate_waveform_area();
     // THE STATUS CHAIN'S HOME — THE TAB ROW'S LANE (architect 2026-08-13:
     // "just put that text in the tab row, there's plenty of space there";
-    // top lane 1, top_tab_row_area). The chain — the critical chip then
-    // section C's four-tier precedence ladder — right-aligns at that row's
-    // right margin and the TABS PAINT OVER IT, so this is the owner for
-    // EVERY route that changes one of the five strings the chain can show:
-    // the `h` history line, the queue / render / loading text, the transient
-    // message, the selection readout, and the critical chip.
+    // top lane 1, top_tab_row_area). The chain — three STATE tiers since
+    // 2026-08-29, when its transient tier and its critical chip left for the
+    // notification cards (notifications.h; the stack has its own owner
+    // below) — right-aligns at that row's right margin and the TABS PAINT
+    // OVER IT, so this is the owner for EVERY route that changes one of the
+    // three strings the chain can show: the `h` history line, the queue /
+    // render / loading text and the selection readout.
     //
     // THE RECT IS THE LANE WHOLE, not a span of it, and deliberately: the
     // chain's left extent is a function of the live text (it right-aligns),
@@ -313,36 +314,33 @@ struct Viewport {
     // scanner's per-frame cadence (the row's per-frame changer, the clock,
     // stayed on the bottom row with its own cell owner below).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-08-13 —
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-08-29 —
     // membership is "this route changes what the chain shows":
     //
-    //   THE FIVE STRINGS' OWN WRITERS —
+    //   THE THREE STRINGS' OWN WRITERS —
     //   * the queue / render text: input_render_dispatch (the promote, the
     //     park's retraction, finalize_render_run) and target_render (the
     //     "Updating..." stamp, the run hold's late clear and the three
     //     context-ending clears).
-    //   * the transient message: its clear at on_key's top
-    //     (input_handler.cpp), phase_reset_propagate's three divergence
-    //     reports, and input_key_dispatch's four one-line refusals (`'` with
-    //     a render running or no renders, `l` with no player or no renders).
-    //   * the critical chip: on_history_checkpoint_complete
-    //     (input_key_dispatch), the slot's one producer.
     //   * the history line: it rides the mode edges, which republish the lane
     //     and invalidate more widely; no site here is its alone.
     //   THE SELECTION READOUT (the lowest tier, so any selection or marker
-    //   value change can move it) — Selection's six mutators, warpmarkers_ops
-    //   and phaseresetmarkers_ops' drop / delete / toggle / tempo-step tails,
-    //   marker_drag's commit, position_nudge's shared tail, the flag editor's
-    //   commit and its BPM commit, undo's restore tail, active_views' two
-    //   switches, input_trim's FIVE commit / drag sites (re-greped 2026-08-18:
-    //   the SWEEP's own per-motion write joined them when the region became the
-    //   trim), and
-    //   input_key_dispatch's ONE load-in-place tail (apply_recipe_in_place, the
-    //   whole family's shared body since 2026-08-24).
+    //   value change can move it) — Selection's mutators (seven sites),
+    //   warpmarkers_ops and phaseresetmarkers_ops' drop / delete / toggle /
+    //   tempo-step tails, marker_drag's commit, position_nudge's shared tail,
+    //   the flag editor's commit and its BPM commit, undo's restore tail,
+    //   active_views' two switches, input_trim's FIVE commit / drag sites (the
+    //   SWEEP's own per-motion write among them), phase_reset_propagate's
+    //   three tails (the two pastes' store-changed damage and the target-view
+    //   landing, whose selection moves the readout), input_key_dispatch's ONE
+    //   load-in-place tail (apply_recipe_in_place, the whole family's shared
+    //   body) and input_handler's Shift+S drop tail.
     //   ONE READ-ONLY ROUTE — bare `o` (input_handler.cpp), which is on this
     //   lane because it moves the TAB's own face; its padlock BUTTON is the
     //   icon row's since 2026-08-14, and the top-strip damage beside this one
     //   is what repaints that.
+    //   (The transient writers' calls and the checkpoint completion's left
+    //   with their strings on 2026-08-29.)
     //
     // Routes that damage the WHOLE TOP STRIP or the whole window
     // (invalidate_top_strip, invalidate_waveform_area — whose rect runs from
@@ -512,6 +510,16 @@ struct Viewport {
     // passes bottom_row_area here where the top rows call
     // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
+    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's BOUND —
+    // notification_stack_bound, notifications.h — which is the rect the
+    // visible cards can ever occupy, so one call both erases what stood and
+    // admits what comes, and no caller shapes a glyph to size the damage.
+    // ITS CALLERS, re-derived by grep 2026-08-29, are GuiNotifications' three
+    // stack changes and nothing else: notify (a push), dismiss (the X) and
+    // fire_if_due (an expiry). The hover face is narrower and takes
+    // invalidate_rect on the X box alone, and the painter publishes the
+    // rects it drew rather than damaging anything.
+    void invalidate_notification_stack();
 
     // THE MARKER HOVER IS GONE (row 5, 2026-08-01). clear_hover_popup and
     // recompute_hover_at_cursor lived here — one clear reachable from every

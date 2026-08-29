@@ -1,4 +1,5 @@
 #include "input_handler.h"
+#include "notifications.h"
 
 #include "gui_display_context.h"
 #include "warp_frame_map_view.h"
@@ -664,6 +665,13 @@ static_assert(std::size(kToolbarChords) + 4 ==
 // KEYBOARD CONTRACT IS UNTOUCHED — route_modal_editor_key still admits bare
 // Esc, Ctrl+S and Ctrl+Q while an editor stands, which is where that pair's
 // pointer-side mirror note used to point.)
+//
+// THE NOTIFICATION CARDS ARE HIT ABOVE THE VEIL, BY RULING, AND ARE NOT AN
+// EXCEPTION TO IT (architect 2026-08-29): a card is not a reach into the
+// veiled surface — it is the message about the act the veil stands over —
+// so its X must answer under a prompt, the player, the picker and every
+// dialog editor alike. The claim sits at on_button_press's head, ahead of
+// every gate (the rule at notifications.h).
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
 // painter's stash and nothing here re-shapes or re-measures, so the clickable
@@ -1576,6 +1584,9 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 // re-read out of on_button_press rather than remembered, and each applying to
 // EVERY kind (this is what makes the cues hover-only — with the trim gesture's
 // one named exception, stated at its arm):
+//   0. a notification card under the pointer (2026-08-29) — the press's own
+//      first claim, above every veil, and opaque: the Arrow, whatever lies
+//      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
 //   2. the five DIALOG modal editors' veil, which consumes every press
@@ -1595,6 +1606,12 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      trim gesture owns the cursor (the arm below, architect 2026-08-03).
 GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
+    // THE NOTIFICATION CARDS FIRST (2026-08-29), ahead of every refusal
+    // below as their press claim is ahead of every gate: a card is opaque
+    // to the pointer — no zone underneath it can promise anything — and its
+    // own two surfaces, the body and the X, are a consumed press and a
+    // button, which carry no cue anywhere in the product.
+    if (notification_card_at(app, x, y) != 0) return GuiCursorKind::Arrow;
     if (app.prompt.active) return GuiCursorKind::Arrow;
     // THE RENDER PLAYER IS THE ARROW EVERYWHERE (2026-08-28): its three
     // pointer surfaces — the overlay's rows, the scrub, the modal row's
@@ -2895,6 +2912,15 @@ void GuiInputHandler::end_touch_nav() {
 // lower half is the tap-at-lift burst whose motionless press-release IS the
 // deferred scrub act — the mouse's own machinery, inherited with no touch code.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
+    // keyboard clause's reason below: the cards stack over the waveform's
+    // upper right, the whole waveform is the pan zone, and a finger landing
+    // on a card's X inside a pan zone would become the phone-model pan and
+    // NEVER DELIVER A PRESS. Answering false lets the finger resolve to the
+    // pointer translation and reach the card's own press claim, where the X
+    // acts. The card is opaque to the pointer everywhere else too (the
+    // cursor map, the hover walk), so the zone agrees with them.
+    if (notification_card_at(app, x, y) != 0) return false;
     // AND THE ZONE YIELDS INSIDE THE SHOWN TRIM REGION OVERLAY (2026-08-15).
     // Without this the feature would be unreachable on the exact surface it
     // exists for: the whole waveform is the pan zone, so a finger landing
@@ -4108,6 +4134,33 @@ void GuiInputHandler::clear_folder_overlay_hover() {
         viewport.invalidate_rect(folder_overlay::row_rect(app, old));
 }
 
+// -- THE NOTIFICATION CARDS' POINTER HALF (2026-08-29) -------------------------
+//
+// The rule and its reasons are at notifications.h and at the claim's site in
+// on_button_press. The three bodies here are thin: geometry is the painter's
+// publication, the act is GuiNotifications' own.
+
+bool GuiInputHandler::claim_notification_press(GuiMouseButton button, int x,
+                                               int y) {
+    const uint64_t id = notification_card_at(app, x, y);
+    if (id == 0) return false;
+    // Consumed from here, whatever the button: the card is opaque.
+    if (button != GuiMouseButton::Left) return true;
+    // THE X, AND ONLY THE X, DISMISSES (architect 2026-08-29); a press on the
+    // body is the consumed nothing above. dismiss re-asks the live stack, so
+    // a stale published rect lands nothing.
+    if (notification_close_at(app, id, x, y)) notifications.dismiss(id);
+    return true;
+}
+
+void GuiInputHandler::update_notification_hover(int x, int y) {
+    notifications.update_hover(x, y);
+}
+
+void GuiInputHandler::clear_notification_hover() {
+    notifications.clear_hover();
+}
+
 void GuiInputHandler::clear_folder_overlay_press() {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;
@@ -4263,6 +4316,34 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
 
+    // THE NOTIFICATION CARDS, ABOVE EVERY GATE AND EVERY VEIL (architect
+    // 2026-08-29): a press on a published card is consumed whole — arms
+    // nothing, moves nothing, lands no playhead, opens no drag, reaches
+    // nothing underneath — and the LEFT press on the card's X box dismisses
+    // it. THE X, AND ONLY THE X: the router cannot fork on tap versus click
+    // (no origin bit rides a press; GuiInputState carries modifiers alone),
+    // so the rule is one for both hosts, and the X's box is the icon row's
+    // 32 px button box, already the product's glass target, which is why no
+    // finger-fattened body target exists. Any other button over a card is
+    // consumed in the veil's own manner. It ranks above the veils because a
+    // card is the message ABOUT the act a veil stands over, not a reach into
+    // the veiled surface (the record at the retired reach-through's site
+    // above). The act is the PRESS'S — content acts the moment its identity
+    // is certain — so the release owes nothing and no arm is left standing:
+    // this return precedes every arm below, and on_button_release's claims
+    // (the keyboard's key-up, the dropdown's, the chrome arm, the modal's,
+    // the overlay's) each test their own armed state, none of which a card
+    // press set. ON GLASS the one-finger translation delivers this press only
+    // once the disambiguation window has resolved to the pointer (a tap, or
+    // an off-zone hold or crossing — input_core.cpp), which is what keeps a
+    // two-finger landing off it; the pan zone answers false on a card
+    // (touch_point_in_pan_zone), so a finger landing on one resolves to this
+    // press rather than to the phone-model pan. The geometry read here is the
+    // last paint's publication, and dismiss asks the live stack whether the
+    // id still stands — a card that left between paint and press lands
+    // nothing.
+    if (claim_notification_press(button, x, y)) return;
+
     // THE ON-SCREEN KEYBOARD, ABOVE EVERY GATE (2026-08-27). While it stands
     // its rect belongs to no other surface, so there is nothing below to
     // arbitrate with — and it MUST outrank the dialog editors' veil further
@@ -4373,7 +4454,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the session's own Esc. With Quit's button gone to the File menu the
     // membership had already derived down to Save, and a convenience chord is
     // not worth an exception to the veil. SO THE VEIL HAS NO EXCEPTION: while
-    // a dialog editor stands every press outside the modal is consumed. The
+    // a dialog editor stands every press outside the modal is consumed — the
+    // notification cards' claim at the head of this function is hit ABOVE
+    // the veil by ruling and is not one (a card is the message about the
+    // veiled act, not a reach into the surface). The
     // KEYBOARD is untouched — Ctrl+S still saves with the editor open, through
     // the admission this block used to mirror. The full retirement record is at
     // the deleted predicate's site near the head of this file.)
@@ -8590,6 +8674,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // and their asymmetric guard lists are at their definitions
     // (update_menu_row_exit / open_menu_row_anchor_on_hover).
     update_menu_row_exit(mouse_x, mouse_y);
+    // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch for the
+    // menu-row exit's reason: the cards are hit above every veil, so their
+    // hover must be answered under every modal too, and every branch below
+    // returns. A card is opaque — the motion over one still re-derives
+    // nothing for what lies under it, because the roster and row walks below
+    // test rects the card covers only where the press would have been
+    // consumed anyway, and the cursor map answers the card first.
+    update_notification_hover(mouse_x, mouse_y);
     // (THE POINTER CURSOR IS NOT RESOLVED HERE, 2026-08-03. A push stood at this
     // spot — above every gesture branch, so that each early return below still
     // left the right cue up — and it went with the other twenty-two: the cursor

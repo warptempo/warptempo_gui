@@ -280,7 +280,7 @@ three gates (a prompt or editor standing, the `h` history view, a load in
 progress) and with nothing loaded; it is LEGAL ON A READ-ONLY TAB and STOPS
 NO PLAYBACK, since it authors nothing and writes outside the project
 entirely. A second dispatch while one is already running writes
-`Synchronization already running` to the status line and stops there — the
+`Synchronization already running` to a notification card and stops there — the
 checkpoint act's own single-in-flight shape, answered in words since a menu
 item never greys. Otherwise it asks `GuiPlatform::removable_volume()` for the
 destination; that call's own refusal (`No removable volume mounted` /
@@ -338,15 +338,19 @@ one completion eventfd the platform polls. SINGLE JOB IN FLIGHT structurally,
 and NO CANCEL — `shutdown()` JOINS an act already running rather than
 interrupting it, a copy left half-written being worse than a mirror caught
 between its copies and its deletions. The worker's own verdict lands back on
-the main thread through `on_external_sync_complete`, which writes it to the
-status line and nothing else: `Synchronized <N> file(s) to <path>` on
-success, or, on the first failure of any kind, the path it was reading or
-writing and the system's own words (`Cannot read '<path>': <...>` / `Could
-not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or one of the
-symlink rule's own three lines (`'<path>' is a symbolic link` / `'<path>' is
-not a directory` / `'<path>' is not a regular file`). A FAILURE IS A STATUS LINE ONLY, never the permanent critical chip —
-that chip is the checkpoint act's, whose failure needs the terminal; a failed
-synchronization is retried by pressing the row again.
+the main thread through `on_external_sync_complete`, which raises it as a
+NORMAL notification card and nothing else (2026-08-29; the status chain's
+transient tier for one day before that): `Synchronized <N> file(s) to
+<path>` on success, or, on the first failure of any kind, the path it was
+reading or writing and the system's own words (`Cannot read '<path>': <...>`
+/ `Could not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or
+one of the symlink rule's own three lines (`'<path>' is a symbolic link` /
+`'<path>' is not a directory` / `'<path>' is not a regular file`) — every
+`<path>` named RELATIVE TO THE MIRROR'S TWO ROOTS (`<volume name>/…` on the
+stick, the path under the project folder in the project; the full path is on
+stderr), the basename rule of the cards. A FAILURE IS A NORMAL CARD, never
+the critical class — that class is the checkpoint act's, whose failure needs
+the terminal; a failed synchronization is retried by pressing the row again.
 
 THE SEAM GREW TWO MEMBERS FOR IT, declared identically on both backends
 (contract at `platform_wayland.h`, which owns it) and each answered
@@ -611,8 +615,8 @@ NO DEVICE PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback` gained
 sound: the AAudio disconnect latch and its refused reopen AND, on both, the
 device that never came up (an init that failed; JACK still records nothing for
 a server that vanishes mid-play) — and the render player's tick forks on it
-BEFORE its natural-end test, pausing in place with "No audio device" on the
-status line and a "paused" push, where before a Bluetooth drop read as a
+BEFORE its natural-end test, pausing in place with "No audio device" on a
+notification card and a "paused" push, where before a Bluetooth drop read as a
 natural end and auto-advanced, and a laptop without pipewire-jack raced
 through the folder a wav per tick.
 

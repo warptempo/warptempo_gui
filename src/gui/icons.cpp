@@ -1118,6 +1118,58 @@ constexpr IconPath kBoostPaths[] = {
     {kIconText, "m12.632 14.621 4.9583 1.8758-4.9583 1.8758", {}, true, true},
 };
 
+// -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
+//
+// Same rules: every `d` verbatim from the committed file, every fill the
+// value the file resolves to. TWO OF THE THREE ARE TWO-COLOUR — the first
+// since media-record — and the second colour is NEW TO THE TABLE: both
+// dialog files paint a rounded plate (`<rect ... rx="2">` in a scheme class)
+// under a glyph filled with the literal `#fff`. The PLATE is transcribed as
+// the four-number derivation the table's one `<rect>` file established
+// (tool-rect-selection: there is no `d` in the file to copy), spelled as the
+// rounded rectangle SVG defines for rx = ry = 2 — four straight edges and
+// four quarter arcs, `a2 2 0 0 1` — so the plate's pixels are the file's; the
+// GLYPH's `d` is copied verbatim. #fff is NOT kIconText's #fcfcfc: the file
+// says #fff, so the table says #fff (the numerically-close-is-not-the-same
+// rule the palette keeps everywhere), and it gets its own ink below.
+//
+// dialog-information's plate is `.ColorScheme-Accent` (kIconAccent, the
+// value the file resolves to, recorded above deep-history) and
+// dialog-error's is `.ColorScheme-NegativeText` (kIconNegativeText, the
+// value list-remove's cross resolves to, recorded above it). So the two
+// class glyphs are Breeze's own blue and red, and a card names its class by
+// them alone — the card's painter colours nothing (paint_notifications).
+//
+// window-close is an ordinary `.ColorScheme-Text` X in TWO paths inside one
+// group with `stroke-linecap="square"`: the first, "m6 6 10 10m-10 0 10-10",
+// is two zero-area line segments FILLED (the group carries no stroke), so it
+// draws nothing — view-hidden's artifact precedent, transcribed verbatim
+// rather than edited out — and the second is the X's outline that shows.
+// The cap attribute is read only on a stroked path and neither is stroked,
+// so it transcribes as nothing.
+constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
+
+constexpr IconPath kDialogInformationPaths[] = {
+    {kIconAccent,
+     "M5 3h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2z"},
+    {kIconPlainWhite,
+     "m10 6v2h2v-2zm0 4v6h2v-6z"},
+};
+
+constexpr IconPath kDialogErrorPaths[] = {
+    {kIconNegativeText,
+     "M5 3h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2z"},
+    {kIconPlainWhite,
+     "M 6.414,5 5,6.414 9.586,11 5,15.586 6.414,17 11,12.414 15.586,17 17,15.586 12.414,11 17,6.414 15.586,5 11,9.586 Z"},
+};
+
+constexpr IconPath kWindowClosePaths[] = {
+    {kIconText,
+     "m6 6 10 10m-10 0 10-10"},
+    {kIconText,
+     "M 6,5.1523437 5.1523437,6 10.152344,11 5.1523437,16 6,16.847656 l 5,-5 5,5 L 16.847656,16 l -5,-5 5,-5 L 16,5.1523437 11,10.152344 Z"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -1169,6 +1221,9 @@ constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
 constexpr IconDef kBoost              {22.0, kBoostPaths,               4};
+constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
+constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
+constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -1223,6 +1278,9 @@ const IconDef& icon_def(Icon icon) {
         case Icon::BboxNext:            return kBboxNext;
         case Icon::Boost:               return kBoost;
         case Icon::DialogOkApply:       break;
+        case Icon::DialogInformation:   return kDialogInformation;
+        case Icon::DialogError:         return kDialogError;
+        case Icon::WindowClose:         return kWindowClose;
     }
     return kDialogOkApply;
 }

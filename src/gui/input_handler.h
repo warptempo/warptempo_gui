@@ -17,6 +17,7 @@
 #include "active_views.h"
 #include "ab_audition.h"
 #include "render_player.h"
+#include "notifications.h"
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
@@ -795,6 +796,13 @@ struct GuiInputHandler {
     // own key router (route_render_player_key), the overlay's and the
     // scrub's press routers, and the load road; the tick is main.cpp's.
     GuiRenderPlayer&         render_player;
+    // THE NOTIFICATION CARDS (2026-08-29). Its readers here: every producer
+    // that answers a user's act with a sentence (the load-in-place refusals,
+    // the picker's, Synchronize's, the checkpoint verdicts, the measure
+    // paste's stop, the revert's wall) calls notify; the X's press claim
+    // calls dismiss; the motion handler and the pointer-left hook drive the
+    // hover; the tick is main.cpp's.
+    GuiNotifications&        notifications;
     PhaseResetPropagate&     phase_reset_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
@@ -931,6 +939,7 @@ struct GuiInputHandler {
                     GuiActiveViews&          active_views_,
                     GuiAbAudition&           ab_audition_,
                     GuiRenderPlayer&         render_player_,
+                    GuiNotifications&        notifications_,
                     PhaseResetPropagate&     phase_reset_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
@@ -957,6 +966,7 @@ struct GuiInputHandler {
           active_views(active_views_),
           ab_audition(ab_audition_),
           render_player(render_player_),
+          notifications(notifications_),
           phase_reset_propagate(phase_reset_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
@@ -1732,6 +1742,16 @@ struct GuiInputHandler {
     // half of the ruling.
     void clear_folder_overlay_hover();
     void clear_player_scrub_drag();
+    // THE NOTIFICATION CARDS' THREE POINTER HALVES (2026-08-29; the rule is
+    // at notifications.h). The CLAIM ranks above every veil in
+    // on_button_press: a press on a published card is consumed whole, and
+    // the LEFT press on its X box dismisses it — the X and only the X, on
+    // both backends (architect 2026-08-29). The HOVER is re-derived on every
+    // motion and cleared on the pointer-left edge, exactly as the folder
+    // overlay's is.
+    bool claim_notification_press(GuiMouseButton button, int x, int y);
+    void update_notification_hover(int x, int y);
+    void clear_notification_hover();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
     // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers
     // OK or Cancel. ONE PROMPT BODY, TWO SUBJECTS since 2026-08-29 (the
@@ -2573,8 +2593,9 @@ private:
     //       project already open is a consumed no-op that CLOSES the picker;
     //       then the STRICT SIDECAR DRY-RUN (source_load_dry_run,
     //       file_loader.h) — the load's own failure arms run before anything
-    //       is torn down. Either refusal says its reason on the status line
-    //       and the picker STAYS OPEN (there is no field to red-flash). Only a
+    //       is torn down. Either refusal says its reason on a notification
+    //       card and the picker STAYS OPEN (there is no field to red-flash).
+    //       Only a
     //       project that passes both reaches the reopen: the picker closes,
     //       the name is seated in app.reopen_project and the close request
     //       runs with the REOPEN target — the unsaved-tab prompt EXACTLY as
@@ -2677,16 +2698,18 @@ private:
     // outside the project entirely) and STOPS NO PLAYBACK (the act is silent
     // and changes no audio; nothing about the sound is different while it
     // runs). A SECOND ACT WHILE ONE RUNS is a consumed no-op that says so on
-    // the status line — the checkpoint act's single-in-flight shape, answered
-    // in words rather than with a grey, since a menu item never greys. Then the
-    // volume: its refusal is that same status line and the act ends there.
-    // Otherwise the job is captured whole by value — the volume, the project
-    // name, the deliverable's composed path and the batch root — the status
-    // line says the act has started, and the worker takes it.
+    // a notification card — the checkpoint act's single-in-flight shape,
+    // answered in words rather than with a grey, since a menu item never
+    // greys. Then the volume: its refusal is a card too and the act ends
+    // there. Otherwise the job is captured whole by value — the volume, the
+    // project name, the project folder, the deliverable's composed path and
+    // the batch root — and the worker takes it; nothing says the act has
+    // started (a process line is state, and the verdict follows within
+    // seconds).
     // on_external_sync_complete: the verdict, back on the main thread through
-    // main.cpp's eventfd wiring. It writes the worker's own sentence to the
-    // status line and nothing else. A FAILURE IS A STATUS LINE ONLY and never
-    // the permanent critical chip: that chip is the checkpoint act's, whose
+    // main.cpp's eventfd wiring. It raises the worker's own sentence as a
+    // NORMAL notification card and nothing else. A FAILURE IS A NORMAL CARD
+    // and never the critical class: that class is the checkpoint act's, whose
     // failure leaves the repository in a state only the terminal can fix, while
     // a failed synchronization is retried by pressing the row again.
     void synchronize_to_external_storage();
@@ -3754,8 +3777,8 @@ private:
     // focused, so a bare Enter answers OK (the reason is at the raise). The
     // prompt's OK runs confirm_load_in_place's player arm (the shared act
     // load_render_entry_in_place, whose success closes the player and whose
-    // refusal says "Load refused" on the status line — its own cause is on
-    // stderr); Cancel runs cancel_load_in_place.
+    // refusal says "Load refused" on a notification card — its own cause is
+    // on stderr); Cancel runs cancel_load_in_place.
     // THE TWO-ROAD SANCTION RETIRED with the typed renders road the same day;
     // the record is at load_render_entry_in_place, which has this one caller.
     void render_player_load_in_place();
@@ -3989,12 +4012,13 @@ private:
     //     Its body owns the close partition (THE VIEW CLOSES IFF THE SAVE
     //     LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
-    //     the main thread: it clears the in-flight bit and writes the CRITICAL
-    //     SLOT — the four failing verdicts set it, the two established ones
-    //     clear it
-    //     (AppState::critical_error_message owns the contract). It raised an
-    //     acknowledge modal until 2026-08-09; the slot is paint-only, so the
-    //     completion now needs nothing from the input layer at all.
+    //     the main thread: it clears the in-flight bit and RAISES A CRITICAL
+    //     NOTIFICATION CARD for each of the four failing verdicts (the two
+    //     established ones raise nothing; GuiNotifications owns the card).
+    //     It raised an acknowledge modal until 2026-08-09 and wrote the tab
+    //     row's permanent critical chip until 2026-08-29; a card takes
+    //     nothing from the keyboard either, so the completion still needs
+    //     nothing from the input layer.
     // THE REVERT ACT is the odd one out and deliberately so:
     //   * run_history_revert applies the SELECTED diff flags backwards into the
     //     live store of the active column and then closes the view. Its chord,

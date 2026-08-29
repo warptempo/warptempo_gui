@@ -79,17 +79,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // Transient bottom-strip status message clears on every real
-    // keypress, including the press that may set a new message later
-    // in this same on_key call (the handler that sets it does so at
-    // the very end of its branch, after this clear). Guarded so the
-    // bottom-strip invalidate fires only when there was a message to
-    // erase. See AppState::transient_status_message.
-    if (!app.transient_status_message.empty()) {
-        app.transient_status_message.clear();
-        viewport.invalidate_status_chain_area();
-    }
-
     // The modal prompt (painted on the bottom row since 2026-08-13) owns input while
     // active. Only the prompt's
     // own response keys do anything; everything else is swallowed so

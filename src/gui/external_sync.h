@@ -56,7 +56,13 @@
 //      named it — is ENOENT and is an empty set. ANY OTHER answer, on either
 //      side, ends the act with "Cannot read '<path>': <the system's own
 //      words>" BEFORE a single deletion, a destination-enumeration error
-//      included, which therefore can never report success. A directory that
+//      included, which therefore can never report success. EVERY PATH A
+//      SENTENCE NAMES IS RELATIVE TO THE MIRROR'S TWO ROOTS (architect
+//      2026-08-29, the basename rule — the sentence is one line on a
+//      notification card that clips, never a full path): `<volume
+//      name>/<path under the volume>` on the stick, the path under the
+//      project folder in the project (the one composer is `shown`,
+//      external_sync.cpp; the full path is on stderr beside it). A directory that
 //      cannot be opened, an iterator that stops half way and a stat that is
 //      refused would each make good files on the volume look unwanted, and
 //      that is the one mistake a mirror must not make. SO THE DELETION IS TWO
@@ -185,10 +191,14 @@ struct GuiExternalSyncJob {
     std::filesystem::path deliverable;
     // `<project>/tmp`, the batch root (renders_dir.h). May not exist.
     std::filesystem::path batch_root;
+    // The project folder itself (the source's parent, project_model.h) —
+    // held so the act can name every project-side path relative to it (rule
+    // 1's naming clause); nothing is read through it.
+    std::filesystem::path project_dir;
 };
 
-// The act's verdict, composed on the worker and painted verbatim by the GUI
-// thread's status line. `ok` false means the act stopped where it stood and
+// The act's verdict, composed on the worker and raised verbatim as a NORMAL
+// notification card by the GUI thread (on_external_sync_complete). `ok` false means the act stopped where it stood and
 // `message` names the path that stopped it; WHAT IT LEFT BEHIND is the head's
 // (a)(b)(c) — no deletion at all unless every copy and the whole destination
 // classification succeeded, a copy-phase failure leaving the replacements
@@ -213,7 +223,7 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job);
 // on_completion_event() and run the stored callback on the MAIN thread.
 //
 // SINGLE JOB IN FLIGHT, structurally: the caller refuses a second act while
-// one runs (it asks is_busy() and answers on the status line), and a dispatch
+// one runs (it asks is_busy() and answers on a notification card), and a dispatch
 // that arrives busy anyway is a programming error this class logs and drops
 // rather than racing.
 //

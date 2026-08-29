@@ -29,6 +29,7 @@
 #include "gui_display_context.h"
 #include "gui_main.h"
 #include "input_handler.h"
+#include "notifications.h"
 #include "onscreen_keyboard.h"
 #include "paint_handler.h"
 #include "playback.h"
@@ -1072,6 +1073,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // active_views — reached by their callsites as direct method calls.
 
     Viewport viewport(app, audio, gui, playback);
+    // THE NOTIFICATION CARDS (2026-08-29): right after the damage owner it
+    // holds and before every producer that holds it — the target preview,
+    // the render player, the propagate and the input handler. Its clock is
+    // the on_tick fork below; its stack dies with this AppState (the chip's
+    // own per-project scope, by construction).
+    GuiNotifications notifications(app, viewport);
     GuiPlaybackLifecycle playback_lifecycle(app, audio, playback, viewport);
     Selection selection(app, audio, viewport);
     GuiAsyncRenderer async_renderer;
@@ -1142,7 +1149,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // ref). The trigger() method is a no-op in source view, so injecting
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
-                                  viewport, render_cache);
+                                  viewport, render_cache, notifications);
     // Paint handler constructed before file_loader, which applies gui_scale
     // changes through its on_resize (the shared geometry-and-cache rebuild
     // path). The settings-editor gui_scale commit uses the input handler's own
@@ -1177,14 +1184,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (after playback.shutdown at the session tail, so the engine never
     // outlives what it is bound to).
     GuiRenderPlayer render_player(app, audio, gui, playback, playback_lifecycle,
-                                  viewport, target_render, renders_dir);
+                                  viewport, target_render, renders_dir,
+                                  notifications);
     // The stop body's back-pointer onto the player (the field's own comment,
     // playback_lifecycle.h): the one stop body publishes the head unit's
     // "paused" from its player fork, and the player is built after it.
     playback_lifecycle.render_player = &render_player;
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
-                                              playback_lifecycle, selection);
+                                              playback_lifecycle,
+                                              notifications, selection);
     GuiSaveOps save_ops(app, undo, active_views);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle,
@@ -1209,7 +1218,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   warpops, phase_resets, marker_drag,
                                   flag_editor,
                                   renders_dir, active_views, ab_audition,
-                                  render_player,
+                                  render_player, notifications,
                                   phase_reset_propagate,
                                   async_renderer,
                                   history_commit_worker,
@@ -1519,7 +1528,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // here or the hint stands over the prompt until the tick's dwell refusal
         // catches it a frame later. (The checkpoint worker's failure report was a
         // second such opener from 2026-08-07 until 2026-08-09, when it became the
-        // bottom row's paint-only critical slot and stopped raising anything.)
+        // bottom row's paint-only critical slot and stopped raising anything;
+        // it is a critical notification card since 2026-08-29, which raises no
+        // modal either.)
         // Ordered ABOVE request_close so the box's published rect is
         // damaged before the prompt's own repaint, and beside the popup close for
         // the reason below — the two floating surfaces go down together.
@@ -1761,6 +1772,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // question: a pointer that has left is on no row, and no motion will
         // ever arrive to say so.
         input_handler.clear_folder_overlay_hover();
+        // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), the same hover half:
+        // a pointer that has left rests on no card, so every paused card's
+        // clock is re-armed here and the X's face goes dark.
+        input_handler.clear_notification_hover();
         input_handler.clear_player_scrub_drag();
         // AND THE SCRUB HANDLE'S HOVERED OUTLINE, the same hover half of the
         // question one surface over: the handle's accent is re-answered at
@@ -2366,10 +2381,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
         // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until
         // 2026-08-09, when the architect replaced the acknowledge modal with the
-        // bottom row's PERMANENT CRITICAL SLOT. A paint-only cell needs no poll
-        // and no free strip to wait for: the completion writes the string and
-        // damages the row, and the next paint shows it — so the pump is gone with
-        // the modal it pumped.)
+        // bottom row's PERMANENT CRITICAL SLOT — a critical notification card
+        // since 2026-08-29. Neither needs a poll or a free strip to wait for:
+        // the completion pushes the card and damages the stack, and the next
+        // paint shows it — so the pump is gone with the modal it pumped.)
 
         if (app.loading || audio.total_frames() <= 0) return;
 
@@ -2385,13 +2400,28 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return;
         }
 
+        // THE NOTIFICATION CARDS' CLOCK, sampled here and ABOVE the
+        // playing-only guard below — an idle window must still retire an
+        // expired card. This is the run loop's own deadline tick, the same
+        // timerfd expiry the platform's two software deadlines ride — key
+        // repeat and the touch disambiguation window (maybe_fire_repeat /
+        // maybe_resolve_touch_window, input_core.cpp: GuiInputCore::tick) —
+        // the chrome button hold-repeat above and the A/B audition's rests
+        // just below; the cards are the tick's FOURTH software deadline and,
+        // like the other three, schedule nothing (kNotificationMs,
+        // gui_input.h; the model at notifications.h). One size test when no
+        // card stands; it also re-answers the hover from the remembered
+        // pointer, so a card that slid up under a resting pointer pauses.
+        notifications.fire_if_due();
+
         // THE A/B AUDITION'S REST DEADLINE, sampled here and ABOVE the
         // playing-only guard below — a rest has nothing playing and no scanner
         // by definition, so a call under that guard would never run during one.
         // This is the run loop's own deadline tick, the same timerfd expiry the
         // platform's key-repeat and touch-disambiguation deadlines ride
         // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
-        // and the same one the chrome button hold-repeat rides above; the act
+        // and the same one the chrome button hold-repeat and the notification
+        // cards' clock ride above; the act
         // adds no timer of its own. One enum compare when no rest stands. It
         // sits ahead of ma_playing so a play launched here takes this tick's
         // scanner heartbeat rather than waiting for the next.

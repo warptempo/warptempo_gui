@@ -127,6 +127,16 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // has nothing to say about it.
 constexpr int kHoldBeatMs = 575;
 
+// THE NOTIFICATION CARD'S LIFE (architect design 2026-08-29): a NORMAL card
+// leaves the stack on its own this long after it became VISIBLE, the pointer
+// resting on it pausing the clock (the model is at GuiNotifications,
+// notifications.h; the sampler is its fire_if_due on the run loop's deadline
+// tick, beside the beat's own readers). It is NOT the beat and does not read
+// it: a card's life is neither a hold nor a second tap, it is how long a
+// sentence stays readable, and Plasma's own default for the same thing is
+// what it takes. A duration like the beat, so it rides no scale either.
+constexpr int kNotificationMs = 5000;
+
 struct GuiInputState {
     bool     ctrl                = false;
     bool     shift               = false;

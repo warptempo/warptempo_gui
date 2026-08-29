@@ -1,5 +1,6 @@
 #pragma once
 
+#include "notifications.h"
 #include "app_state.h"
 #include "audio.h"
 #include "gui_media.h"
@@ -97,7 +98,7 @@ struct GuiInputHandler;
 // player's own play road instead of advancing — AND IT OUTRANKS THE ADVANCE
 // WHETHER THE REPLAY SOUNDS OR REFUSES: a replay that cannot decode (the file
 // deleted or republished in another shape while it played) leaves its own
-// words on the status line and the transport resting on that item at its
+// words on a notification card and the transport resting on that item at its
 // start, never the folder's next wav and never the folder-end bit. It is the
 // whole of the exception: nothing else in the product plays anything twice by
 // itself, and the state is session-only (false at every open, serialized
@@ -179,6 +180,9 @@ struct GuiRenderPlayer {
     Viewport&             viewport;
     GuiTargetRender&      target_render;
     GuiRendersDir&        renders_dir;
+    // The player's refusals are notification cards (2026-08-29); status()
+    // below is the thin road onto the one push chokepoint.
+    GuiNotifications&     notifications;
 
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the handler takes this cluster by reference, so it cannot
@@ -195,7 +199,8 @@ struct GuiRenderPlayer {
                     GuiPlaybackLifecycle& playback_lifecycle_,
                     Viewport&             viewport_,
                     GuiTargetRender&      target_render_,
-                    GuiRendersDir&        renders_dir_)
+                    GuiRendersDir&        renders_dir_,
+                    GuiNotifications&     notifications_)
         : app(app_),
           audio(audio_),
           gui(gui_),
@@ -203,10 +208,11 @@ struct GuiRenderPlayer {
           playback_lifecycle(playback_lifecycle_),
           viewport(viewport_),
           target_render(target_render_),
-          renders_dir(renders_dir_) {}
+          renders_dir(renders_dir_),
+          notifications(notifications_) {}
 
     // THE OPENER (the contract above). Returns whether the mode opened; a
-    // refusal has already written its status line or has nothing to say.
+    // refusal has already raised its card or has nothing to say.
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //
@@ -428,7 +434,7 @@ private:
     // Decode `path` under the vocabulary above; on success bind it as the
     // item and play it from its start. `folder_wavs` / `index` name the
     // item's folder list and its place in it. Returns whether it played; a
-    // refusal has written its status line and changed nothing.
+    // refusal has raised its card and changed nothing.
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index);
@@ -473,5 +479,12 @@ private:
     // reader.
     void damage_band();
     void damage_row();
+    // THE PLAYER'S ONE VOICE: a NORMAL notification card (2026-08-29; it was
+    // the status chain's transient tier until then). Its callers are the
+    // decode road's refusals (the probe's, the allocation ceiling's, the
+    // read's, the rate-and-channel equality twice, "Empty wav"), "No audio
+    // device" and the opener's "No renders to play" — every one a sentence
+    // answering an act, none a state. Kept as a thin call rather than
+    // deleted so the player's refusals stay one grep.
     void status(const std::string& line);
 };

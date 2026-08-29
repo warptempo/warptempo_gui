@@ -6041,8 +6041,7 @@ struct AppState {
     // at apply_recipe_in_place, input_handler.h) — into the live session in
     // place (GuiInputHandler::load_history_commit_in_place — parse-gated by the
     // strict whole-file loaders, so a missing sidecar or a legacy format is one
-    // stderr line with nothing touched — silent on
-    // the status line, whose top tier is this mode's own line).
+    // stderr line and one notification card with nothing touched).
     // ON THE LOCAL TAB it loads THAT STATE of this session's timeline — the two
     // marker columns and the engine block, all an undo entry carries
     // (GuiInputHandler::load_history_local_entry_in_place). EITHER WAY it is
@@ -6097,15 +6096,14 @@ struct AppState {
     // steps are a network act, and freezing the window for them was the one
     // place this product made the user wait on a remote. The act captures what
     // it needs by value, closes the view and hands the job to
-    // GuiHistoryCommitWorker; its four failing verdicts come back to THE
-    // BOTTOM ROW'S CRITICAL SLOT (architect 2026-08-09, replacing the
-    // acknowledge modal they raised until then: a critical failure must be
-    // impossible to miss and impossible to hijack the keyboard with, so the
-    // report is permanent and paint-only — critical_error_message, below), and
-    // its two ESTABLISHED ones say what they have to say on stderr and CLEAR the
-    // slot. The fourth failure is Unconfirmed, split out of NothingToCommit that
-    // same day: an act that confirmed neither the content nor the publication
-    // must not clear a standing report by claiming a clean ending.
+    // GuiHistoryCommitWorker; its four failing verdicts come back as a
+    // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that stands
+    // until its X is pressed and takes nothing from the keyboard; it was the
+    // tab row's permanent critical chip from 2026-08-09, and before that an
+    // acknowledge modal), and its two ESTABLISHED ones say what they have to
+    // say on stderr and raise nothing. The fourth failure is Unconfirmed,
+    // split out of NothingToCommit on 2026-08-09: an act that confirmed
+    // neither the content nor the publication is not a clean ending.
     //
     // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
     // superseding the checkpoint-in-the-repository partition of 2026-08-05,
@@ -6932,65 +6930,71 @@ struct AppState {
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
 
-    // THE CRITICAL SLOT — the status chain's LEFTMOST member (right-aligned in
-    // the TAB ROW since 2026-08-13, leftmost-in-chain so it can
-    // never be pushed off — the chain left-anchors when it overflows and C
-    // clips instead; the layout is at paint_status_chain), and the product's
-    // one
-    // permanent failure surface (architect 2026-08-09, REPLACING the acknowledge
-    // modal the checkpoint's failures used to raise). A critical failure must be
-    // IMPOSSIBLE TO MISS and IMPOSSIBLE TO HIJACK WITH: a modal is missable
-    // (it can be dismissed with a keystroke aimed at something else) and it is a
-    // hijack (it takes the keyboard from whatever the user was doing, on a
-    // clock he did not choose). This is neither. It is PAINT-ONLY — it owns no
-    // key, no chord, no click and no rect the pointer can reach — and it is
-    // PERMANENT: nothing in the input layer can clear it, there is no timer
-    // behind it, and there is nothing to dismiss.
+    // -- THE NOTIFICATION STACK (architect design 2026-08-29) -------------
     //
-    // ONE THING CAN COVER IT, and covers it without touching it: a TAB drawn
-    // over it. The chain paints FIRST and the tabs paint over it (architect
-    // 2026-08-13: "if there is ever a resolution small enough that there's a
-    // conflict, the tabs should win... but don't anticipate that"), so on a
-    // window narrow enough for the two to meet the chip's box is the thing
-    // that gives. That is accepted and deliberately not engineered around —
-    // no clipping against the tabs, no reflow — and it costs the chip nothing,
-    // the state being untouched and permanent. (A MODAL used to hide it
-    // instead: the chain lived on the bottom row until 2026-08-13 and that row
-    // yields whole to a dialog. The two surfaces no longer contend.)
+    // EVENTS, not state: something happened that answers an act, or that the
+    // user was not watching. What is TRUE right now (the render's progress
+    // line, the `h` walk's line, the selected marker's readout) stays on the
+    // tab row's status chain; what HAPPENED becomes a CARD here. The model,
+    // the ops and the whole inventory of what is and is not notified are at
+    // notifications.h (GuiNotifications); docs/engineering/architecture/
+    // messaging.md is the ruling. This is only what the product remembers.
     //
-    // ITS ONE CLEARING ROUTE IS A LATER SUCCESS: a checkpoint act that ends
-    // Committed or NothingToCommit clears it, because a success supersedes the
-    // stale failure it replaces — the message says what the repository's last
-    // answer was, so a newer answer is what retires it. Otherwise it stands
-    // until THE PROJECT closes.
+    //   `cards`   newest FIRST. The first kNotificationVisibleMax are the
+    //             VISIBLE stack; the rest are QUEUED and surface as visible
+    //             ones leave. A card is one class, one line of text and a
+    //             clock:
+    //               NORMAL   leaves on its own kNotificationMs after it
+    //                        became VISIBLE (a queued card's clock has not
+    //                        started: `expiry_ms` 0), or at its X;
+    //               CRITICAL stands until its X — no clock, ever. The four
+    //                        checkpoint outcomes are its producers.
+    //             `paused` with `remaining_ms` is the HOVER BANK: while the
+    //             pointer rests on a visible normal card its clock stops, the
+    //             remaining time banked at hover-enter and re-armed at
+    //             hover-leave.
+    //   `hovered_id` / `close_hovered` the card under the pointer and whether
+    //             the pointer is inside its X box — the X wears the icon
+    //             button's hover face; the body wears none.
+    //   `painted` / `painted_rect` THE LAST PAINT'S PUBLICATION: each visible
+    //             card's rect and its X box as drawn, and their union. The
+    //             press router, the cursor map and the hover walk read THESE,
+    //             never a re-derivation (published geometry may only SELECT;
+    //             live state decides — the doctrine at ModalDialogGeometry):
+    //             a card that left between paint and press is not in `cards`
+    //             any more, so a press on its stale rect finds no card and
+    //             lands nothing.
     //
-    // IT IS PROJECT-SCOPED, AND THAT IS THE RULING RATHER THAN AN ACCIDENT
-    // (2026-08-29): AppState is built and torn down per project by
-    // gui_main's reopen loop, so this string — like history_cumulative — dies
-    // with the session it was written in, and a chip standing over project A
-    // does not follow the user into project B. The message names what THIS
-    // piece's last checkpoint answered, and the piece is what the reopen
-    // changes. Nothing is hoisted to the process for it. The verdict itself
-    // cannot be lost to a reopen: File → Open project refuses while
-    // history_checkpoint_in_flight (open_project_commit), bare `h`'s own
-    // refusal one act over, so the worker always answers into the session
-    // that dispatched it.
+    // ONE WRITER OF A CARD: GuiNotifications::notify. Nothing else pushes.
     //
-    // IT IS SESSION-SCOPED AND SURVIVES EVERYTHING BELOW IT: the history view's
-    // entry and exit, every view and tab switch, and BOTH load-in-places (a
-    // commit's or a timeline state's) leave it exactly as they found it. That is
-    // deliberate rather than incidental — loading another state in place does
-    // not un-fail the checkpoint that failed, and the row is global.
-    //
-    // GENERAL-PURPOSE IN SHAPE, ONE PRODUCER TODAY. The name and the contract say
-    // "critical", not "checkpoint", so a future critical producer can write it
-    // with no new surface; today the only writer is the checkpoint worker's
-    // completion (GuiInputHandler::on_history_checkpoint_complete), which sets it
-    // on the four failing verdicts and clears it on the two ESTABLISHED ones —
-    // never on an answer that merely failed to establish anything. Empty
-    // means nothing critical has happened, which is the resting state of every
-    // session that never publishes a checkpoint.
-    std::string critical_error_message;
+    // IT IS PROJECT-SCOPED BY CONSTRUCTION, which the permanent critical chip
+    // it replaced had as its ruling (2026-08-29): AppState is built and torn
+    // down per project by gui_main's reopen loop, so a stack standing over
+    // project A does not follow the user into project B. No clear site
+    // exists because none is needed — the reopen constructs a fresh one.
+    enum class NotificationClass { Normal, Critical };
+    struct Notification {
+        uint64_t          id           = 0;
+        NotificationClass cls          = NotificationClass::Normal;
+        std::string       text;
+        int64_t           expiry_ms    = 0;      // Normal, visible, running
+        bool              paused       = false;  // the hover bank holds
+        int64_t           remaining_ms = 0;      // the bank's contents
+    };
+    struct NotificationPainted {
+        uint64_t id = 0;
+        GuiRect  rect{0, 0, 0, 0};
+        GuiRect  close{0, 0, 0, 0};
+    };
+    struct Notifications {
+        std::vector<Notification>        cards;   // newest first
+        uint64_t                         next_id = 1;
+        uint64_t                         hovered_id = 0;
+        bool                             close_hovered = false;
+        std::vector<NotificationPainted> painted;
+        GuiRect                          painted_rect{0, 0, 0, 0};
+    };
+    Notifications notifications;
 
     // Tick backstop bookkeeping: last live-domain total observed by the
     // on_tick clamp (see main.cpp). 0 = not yet observed.
@@ -7021,33 +7025,6 @@ struct AppState {
     // (the prompt as the chain's first tier) is superseded structurally, and
     // no status write needs a modal test of its own.
     std::string queue_progress_text;
-
-    // Transient one-line status message shown in the TAB ROW's status
-    // span, one tier above the resolved readout (the row-7
-    // chain; it was an appendix on the status line when the strip had two
-    // rows and view letters, and a bottom-row tenant until the chain moved up
-    // on 2026-08-13). Set by a
-    // command that wants to report a non-fatal outcome (e.g. phase-reset
-    // state-paste divergence); cleared on the next keyboard press in
-    // on_key. Empty = nothing to show. General-purpose: not specific to
-    // any one command, so future commands can reuse it.
-    //
-    // A TRANSIENT WRITTEN UNDER A STANDING queue_progress_text IS HIDDEN BY IT
-    // AND REVEALED WHEN IT CLEARS (the class, recorded 2026-08-28 after a
-    // refusal written during a render appeared on screen once the render had
-    // finished and stayed there): the paint chain ranks the progress line
-    // ABOVE this one, and this one is cleared ONLY by the next key press — not
-    // by a pointer act, and not by the progress line ending — so a write made
-    // while a render's line stands surfaces late and stale. NO WRITER MAY
-    // STAMP A TRANSIENT WHILE A PROGRESS LINE STANDS. The check belongs to the
-    // WRITER: a refusal whose cause IS the running render says nothing at all
-    // (the progress line is the answer — render_player_load_in_place's), and
-    // any other writer that can fire under a render must mean the late reveal.
-    // THE `h` MODE'S LINE IS THE SAME CLASS ONE TIER UP (2026-08-28): it
-    // ranks above the progress line too, so a writer that can fire INSIDE the
-    // view says nothing here either — the `'` load's refusal is
-    // that writer, and its stderr line is its whole report.
-    std::string transient_status_message;
 
     // One-slot pending archival render command. An archival dispatch
     // (Ctrl+Alt+R / the iteration or bpm sweep) that finds the

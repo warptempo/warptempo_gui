@@ -83,7 +83,7 @@ struct GuiProjectSource {
 
 // THE SOURCE OF ONE FOLDER, by the rule at the head of this file, or the one
 // sentence that says why the folder is not a project (proper capitalization,
-// no trailing period — the status line and the terminal both print it
+// no trailing period — a notification card and the terminal both print it
 // verbatim). The directory is walked ONCE (std::filesystem::directory_iterator,
 // regular files only); a folder that cannot be walked refuses with the
 // system's own words. Never creates anything; never reads a file's bytes.

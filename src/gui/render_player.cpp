@@ -30,8 +30,7 @@ void GuiRenderPlayer::damage_row() {
 }
 
 void GuiRenderPlayer::status(const std::string& line) {
-    app.transient_status_message = line;
-    viewport.invalidate_status_chain_area();
+    notifications.notify(AppState::NotificationClass::Normal, line);
 }
 
 // -- The folders ----------------------------------------------------------------
@@ -666,7 +665,7 @@ void GuiRenderPlayer::on_natural_end() {
     // THE ARM RETURNS WHETHER THE REPLAY SOUNDED OR REFUSED, and that is what
     // "outranks" means: a replay that cannot decode (the item deleted or
     // republished in another shape while it played) has already put its own
-    // words on the status line and left the item untouched, and the rest
+    // words on a notification card and left the item untouched, and the rest
     // written above leaves the transport on that item at its start. Falling
     // through to the arms below would answer a refused REPEAT with the folder's
     // next wav — or, on the last wav, with ended_at_folder_end standing under a

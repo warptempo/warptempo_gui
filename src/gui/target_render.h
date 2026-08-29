@@ -1,5 +1,6 @@
 #pragma once
 
+#include "notifications.h"
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
@@ -99,19 +100,26 @@ struct GuiTargetRender {
     GuiPlayback&      playback;
     Viewport&         viewport;
     RenderCache&      render_cache;
+    // A FAILED preview is an event the user was not watching, so it is a
+    // notification card (2026-08-29) beside its stderr line; this is the one
+    // push chokepoint. A CANCELLED preview is the product's own doing and
+    // says nothing.
+    GuiNotifications& notifications;
 
     GuiTargetRender(AppState&         app_,
                     const GuiAudio&   audio_,
                     GuiAsyncRenderer& async_renderer_,
                     GuiPlayback&      playback_,
                     Viewport&         viewport_,
-                    RenderCache&      render_cache_)
+                    RenderCache&      render_cache_,
+                    GuiNotifications& notifications_)
         : app(app_),
           audio(audio_),
           async_renderer(async_renderer_),
           playback(playback_),
           viewport(viewport_),
-          render_cache(render_cache_) {}
+          render_cache(render_cache_),
+          notifications(notifications_) {}
 
     // Output-affecting mutation hook. Called from every site that mutates
     // engine input (markers, phase resets, trim, output-affecting settings,

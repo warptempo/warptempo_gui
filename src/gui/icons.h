@@ -29,11 +29,15 @@
 // stroke for distortionfx and did NOT come back with it — neither stroked file
 // carries a transform — so that one is still git history alone.
 //
-// ONE FILE DEPARTS FROM THE VERBATIM RULE and it is stated here as well as at
-// its table entry, because the rule is what this header promises:
+// THREE FILES DEPART FROM THE VERBATIM RULE and they are stated here as well
+// as at their table entries, because the rule is what this header promises:
 // tool-rect-selection's geometry is a `<rect>` element, not a `<path>`, so
 // there is no `d` in the file to copy and its row holds a four-number
-// derivation instead. A `<rect>` parser was declined for one file.
+// derivation instead, and since 2026-08-29 the two dialog glyphs' PLATES
+// (dialog-information, dialog-error) are `<rect rx="2">` elements under a
+// verbatim glyph path, their rows spelling the rounded rectangle SVG defines
+// for that rx. A `<rect>` parser was declined for one file and stays
+// declined for three.
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
@@ -391,6 +395,24 @@ enum class Icon {
     // media-playlist-repeat-song, two names for one artwork; there is no
     // media-repeat-one.
     MediaRepeatSingle,   // Repeat one (the player's modal row)
+    // THE NOTIFICATION CARDS' THREE (2026-08-29, the messaging redesign's
+    // card half — notifications.h): the two CLASS glyphs at a card's left and
+    // the X at its right, three fresh verbatim transcriptions from the
+    // architect's own Breeze Dark (status/22/dialog-information,
+    // status/22/dialog-error — both symlinks in the theme, onto
+    // data-information and data-error, copied resolved — and
+    // actions/22/window-close). The two dialog files are TWO-COLOUR icons in
+    // media-record's shape, a coloured plate under a white glyph: the plate
+    // is the file's own scheme class (`.ColorScheme-Accent` for information,
+    // `.ColorScheme-NegativeText` for error, the roster's existing
+    // kIconAccent and kIconNegativeText) and the glyph is the file's literal
+    // #fff, so the glyph is what tells the classes apart at a glance and no
+    // caller colours it — the roster paints each path in the table's own ink,
+    // as it always has. window-close is the ordinary `.ColorScheme-Text` X.
+    DialogInformation,   // a NORMAL card's glyph
+    DialogError,         // a CRITICAL card's glyph
+    WindowClose,         // the X on every card
+
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
@@ -471,7 +493,11 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 51;
+// 54 since 2026-08-29, THE NOTIFICATION CARDS: 51 + dialog-information,
+// dialog-error and window-close — the card's two class glyphs and its X,
+// three fresh verbatim transcriptions with no departures beside them (the
+// two dialog files are two-colour, media-record's shape).
+inline constexpr int kIconCount = 54;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'
