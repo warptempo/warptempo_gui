@@ -1939,8 +1939,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
             // THE REMEMBERED PROJECT (2026-08-27): every successful open —
             // startup's included — writes its name into the device config's
-            // last_project, the fourth writer of that file. Gated on a real
-            // change like the other three, so a relaunch of the same project
+            // last_project, the THIRD writer of that file (the inventory is
+            // at write_device_config, device_config.h). Gated on a real
+            // change like the other two, so a relaunch of the same project
             // rewrites nothing.
             if (device_config.last_project != project.name) {
                 device_config.last_project = project.name;
@@ -2697,7 +2698,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Join the render worker before cache teardown so a render completing
     // during shutdown cannot touch the dismantled cache. Idempotent; the
     // destructor's later call is then a no-op. A render still in flight is
-    // cancelled by the join — killed as any dispatch kills it.
+    // cancelled by the join — killed as any dispatch kills it. THIS IS THE
+    // KILL FOR BOTH COMPLETIONS, the exit's and the REOPEN's: the Open
+    // project picker's act only asks to close, and its unsaved-tab question
+    // can be answered Cancel, so the kill belongs here — where the session is
+    // actually ending — rather than at the click that proposed it.
     async_renderer.shutdown();
     // Blocks on an in-flight checkpoint rather than abandoning a git child
     // mid-act; the piece is already saved (the act saves before it dispatches),
@@ -2771,7 +2776,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its five keys describe the MACHINE, not the piece, so they live in
+    // Its four keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's

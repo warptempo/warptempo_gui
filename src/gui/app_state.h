@@ -2986,7 +2986,7 @@ struct CommandPopupItem {
 // project model's one pointer home on both platforms; the label is the
 // architect's own, R8: "we would call it open project instead of open file",
 // and the row raises the Open project picker — the folder overlay's list of
-// projects in the keyboard's band over an OK / Cancel row) and **Synchronize to external storage** under
+// projects in the keyboard's band over a Cancel-alone row) and **Synchronize to external storage** under
 // it (architect
 // 2026-08-27, the deliverable and the batch cells mirrored onto the one
 // mounted removable volume — the act is external_sync.h's and this row is its
@@ -7367,8 +7367,9 @@ struct AppState {
 // being an editor and the term lost its producer — the record is at
 // onscreen_keyboard::stands.) (It
 // lives here rather than beside the geometry because onscreen_keyboard.h
-// needs it and folder_overlay.h INCLUDES that header, so the panel's own
-// header cannot be the owner.)
+// needs it and IT is the header that includes folder_overlay.h — the
+// dependency runs keyboard -> panel — so the panel's own header cannot be
+// the owner without inverting it.)
 inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }

@@ -362,6 +362,12 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     rp.frames = frames;
     playback.rebind_buffer(rp.buffer.data(), rp.frames, 0);
 
+    // THE SEAT BELOW IS GATED ON THIS, read before the item is overwritten
+    // (the fence above touches no field of the item): the band follows the
+    // transport at an item CHANGE, and a play on the item already resting
+    // here is not one.
+    const bool item_changed = rp.item != path;
+
     rp.item           = path;
     rp.item_folder    = folder_wavs;
     rp.item_index     = index;
@@ -376,20 +382,28 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // project's playhead does not move.
     playback.play(0, rp.frames);
     rp.transport = Transport::Live;
-    // THE BAND FOLLOWS THE ITEM (R38, the contract at the head of
+    // THE BAND FOLLOWS THE ITEM AT A CHANGE (R38, the contract at the head of
     // render_player.h): this is the ONE place the item changes, so seating the
     // highlight here covers every change the transport makes on its own —
     // Previous, Next, the folder's ends, the auto-advance and the folder-end
-    // restart — with no membership list to keep. IT MOVES ONLY WHERE THE ITEM
-    // IS LISTED: a user who has walked into another folder keeps his place,
-    // and a user's own play finds the band already on the row. The listing is
-    // walked rather than asked for a row index because item_index names the
-    // ITEM FOLDER's wav list, which is not this listing when the two differ.
-    for (size_t i = 0; i < app.folder_overlay.rows.size(); ++i) {
-        const Row& r = app.folder_overlay.rows[i];
-        if (r.kind == Row::Kind::Wav && r.path == rp.item) {
-            folder_overlay::set_highlight(app, static_cast<int>(i));
-            break;
+    // restart — with no membership list to keep. THE GATE IS WHAT KEEPS THE
+    // OTHER HALF OF THE RULE: a user's own highlight moves are untouched, and
+    // the road that would otherwise fight the band back onto the item is the
+    // REPEAT ONE REPLAY, which re-enters this body on the item already
+    // resting here at every natural end — the band a user has walked
+    // elsewhere under a lit lamp must stay where he put it. IT MOVES ONLY
+    // WHERE THE ITEM IS LISTED: a user who has walked into another folder
+    // keeps his place, and a user's own play finds the band already on the
+    // row. The listing is walked rather than asked for a row index because
+    // item_index names the ITEM FOLDER's wav list, which is not this listing
+    // when the two differ.
+    if (item_changed) {
+        for (size_t i = 0; i < app.folder_overlay.rows.size(); ++i) {
+            const Row& r = app.folder_overlay.rows[i];
+            if (r.kind == Row::Kind::Wav && r.path == rp.item) {
+                folder_overlay::set_highlight(app, static_cast<int>(i));
+                break;
+            }
         }
     }
     damage_band();

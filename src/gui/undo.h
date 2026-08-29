@@ -240,14 +240,20 @@ struct Undo {
     // in for the structural adjacency the platform's repeat contract gives arm (1)
     // for free and arm (2) not at all. Both eligible gesture families derive their
     // target from the selection (the nudges from its focus, the tempo step from
-    // its members) and an undo entry is filed under an A/B tab, so a tap that
-    // follows a marker click, a Tab, a range extension or a Ctrl+Tab finds a
-    // CHANGED subject and opens its own entry instead of merging into an entry
-    // about someone else. Captured POST-act (record_gesture), so the position
+    // its members) and AN UNDO ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
+    // tab, the W/P column and the S/T audio view, all three of which the restore
+    // writes back — so a tap that follows a marker click, a Tab, a range
+    // extension, a Ctrl+Tab or a `t` finds a CHANGED subject and opens its own
+    // entry instead of merging into an entry filed elsewhere. THE COLUMN NEEDS
+    // NO TERM OF ITS OWN: switch_active_markers_view_to CLEARS the selection
+    // (the scope rule), and both eligible families refuse without one, so a
+    // column switch between two taps is already a subject change the selection
+    // term sees. Captured POST-act (record_gesture), so the position
     // nudges' focus collapse and their reorder remap are already reflected and a
     // steady run of taps compares like against like.
     std::set<int> last_gesture_selection_;
     char          last_gesture_tab_ = 0;
+    char          last_gesture_audio_view_ = 0;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab

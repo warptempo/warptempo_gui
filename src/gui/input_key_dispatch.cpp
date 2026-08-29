@@ -4293,9 +4293,12 @@ bool GuiInputHandler::load_render_entry_in_place(
     // callers. It stays here rather than moving into the shared recipe apply
     // below: the mode's other load closes it too, but only after reading the
     // session the close clears (see there), so the close is each act's own line.
-    // IN PRACTICE IT IS AN IDEMPOTENT NO-OP: the mode ADMITS bare `'`, but in the
-    // view that editor's Enter routes to one of the mode's own two loads, so no
-    // renders-side load ever runs with a visit standing (the closer inventory at
+    // IN PRACTICE IT IS AN IDEMPOTENT NO-OP: the mode ADMITS bare `'`, but in
+    // the view that key raises the confirmation on the VIEWED WALK MEMBER, and
+    // that prompt's OK forks at confirm_load_in_place to one of the mode's own
+    // two loads — never to this act, whose subject is the render player's
+    // parked entry and whose opener the mode refuses. So no renders-side load
+    // ever runs with a visit standing (the closer inventory at
     // close_history_mode states it). The line stays for the same reason the
     // close is at the mutator at all.
     close_history_mode();
@@ -5175,15 +5178,19 @@ void GuiInputHandler::open_project_commit(int index) {
         return;
     }
 
-    // THE REOPEN. A running render is killed as any dispatch kills it (the
-    // Esc pair — the request, the batch stop, both parked slots disarmed);
-    // the picker closes; the chosen name is seated for gui_main's loop; and
-    // the close request runs with the REOPEN target — the unsaved-tab prompt
-    // exactly as Ctrl+Q's when the tab is dirty, an immediate completion when
-    // it is clean. The prompt's Cancel leaves the seated name behind
-    // harmlessly: the loop reads it only after run() returns, and run()
-    // returns for a reopen only through this request's own completion.
-    (void)cancel_archival_session();
+    // THE REOPEN. The picker closes; the chosen name is seated for gui_main's
+    // loop; and the close request runs with the REOPEN target — the
+    // unsaved-tab prompt exactly as Ctrl+Q's when the tab is dirty, an
+    // immediate completion when it is clean. The prompt's Cancel leaves the
+    // seated name behind harmlessly: the loop reads it only after run()
+    // returns, and run() returns for a reopen only through this request's own
+    // completion.
+    // A RUNNING RENDER IS KILLED WHERE THE REOPEN IS CERTAIN, not here: this
+    // act only ASKS to close, and the question can be answered Cancel — a kill
+    // spelled at the click would have taken a running sweep down for a reopen
+    // that never happened. The teardown's own worker join kills it (main.cpp's
+    // run_project), on the reopen road and the exit road alike, so both
+    // completions kill exactly once and nothing here needs a kill of its own.
     close_picker();
     app.reopen_project = project->name;
     prompt.request_close(GuiCloseTarget::Reopen);

@@ -2542,12 +2542,16 @@ private:
     //       file_loader.h) — the load's own failure arms run before anything
     //       is torn down. Either refusal says its reason on the status line
     //       and the picker STAYS OPEN (there is no field to red-flash). Only a
-    //       project that passes both reaches the reopen: a running render is
-    //       killed as any dispatch kills it, the picker closes, the name is
-    //       seated in app.reopen_project and the close request runs with the
-    //       REOPEN target — the unsaved-tab prompt EXACTLY as Ctrl+Q's, its
-    //       answer completing a reopen instead of an exit (GuiCloseTarget,
-    //       prompt.h).
+    //       project that passes both reaches the reopen: the picker closes,
+    //       the name is seated in app.reopen_project and the close request
+    //       runs with the REOPEN target — the unsaved-tab prompt EXACTLY as
+    //       Ctrl+Q's, its answer completing a reopen instead of an exit
+    //       (GuiCloseTarget, prompt.h). A RUNNING RENDER IS KILLED BY THE
+    //       SESSION'S TEARDOWN and not by this act, because this act only
+    //       ASKS: the prompt's Cancel keeps the session, and a kill spelled
+    //       here would already have taken a sweep down for a reopen that did
+    //       not happen. The teardown's worker join is the one kill, shared by
+    //       both completions (main.cpp's run_project).
     //
     //   (THE `h` VIEW HAD A SECOND PICKER for one day — bare `'` over the
     //   viewed walk's members — and it was retired 2026-08-29 as

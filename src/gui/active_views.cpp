@@ -43,10 +43,13 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // waveform lane instead of leaving an invisible authoring mode armed). Nothing
 // is parked and nothing is restored.
 // Visible state (viewport / zoom / playhead) is genuinely unaffected here — with
-// the selection emptied this helper owes the marker lane no land at all. Its two
-// callers own what happens next: toggle_active_markers_view (`p`) runs the
-// coincidence auto-select, while the propagate
-// paste's target-view tail writes its OWN selection and lands on that.
+// the selection emptied this helper owes the marker lane no land at all. ITS
+// FOUR CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
+// toggle_active_markers_view (`p`, below) runs the coincidence auto-select;
+// the propagate paste's target-view tail (phase_reset_propagate.cpp) writes
+// its OWN selection and lands on that; the undo restore (undo.cpp) writes the
+// entry's column tag with its data already installed; and Shift+S's drop from
+// any view (input_handler.cpp) lands its own act after the clear.
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
 // basis of the pixels it erases. Caller decides what further invalidations to
@@ -214,9 +217,10 @@ void GuiActiveViews::toggle_active_markers_view() {
     // onto a column that has a marker exactly under the cursor arrives with that
     // marker selected — the lane re-entered by coincidence rather than by memory.
     // It lives HERE rather than in
-    // switch_active_markers_view_to because that helper's second caller — the
-    // propagate paste's target-view tail — writes its own selection one line later
-    // and an auto-select there would be overwritten for nothing.
+    // switch_active_markers_view_to because that helper has other callers (its
+    // own comment owns the inventory) — the propagate paste's target-view tail
+    // writes its own selection one line later, and an auto-select there would
+    // be overwritten for nothing.
     // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
     // switch_active_markers_view_to above, at codex round 21 — this toggle's own
     // call was one of the three command-wrapper spellings that let the propagate

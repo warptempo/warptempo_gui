@@ -216,7 +216,15 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     exact composition the arrival-invalidate was introduced to kill
             //     on the repeat side. The selection is the honest subject for all
             //     three eligible kinds (the nudges act on its focus, the tempo step
-            //     on its members) and the tab is what the entry is filed under.
+            //     on its members) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
+            //     THREE TAGS THE ENTRY IS FILED UNDER — the restore writes the
+            //     A/B tab, the W/P column and the S/T audio view back, so a `t`
+            //     between two taps must open a new entry exactly as a Ctrl+Tab
+            //     does, or Ctrl+Z would land the view the burst OPENED in while
+            //     the last press was authored in the other. THE COLUMN NEEDS NO
+            //     TERM: switch_active_markers_view_to clears the selection and
+            //     both eligible families refuse without one, so a column switch
+            //     is already a subject change the selection term sees.
             // The comparison runs on the clock's OWN duration, never on a
             // whole-millisecond count: duration_cast truncates toward zero, so
             // counting first would have admitted every real interval inside
@@ -227,6 +235,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
                 std::chrono::steady_clock::now() - last_gesture_time_;
             merge = elapsed <= std::chrono::milliseconds{kTapCoalesceMs}
                  && last_gesture_tab_ == app.active_tab_view
+                 && last_gesture_audio_view_ == app.active_audio_view
                  && last_gesture_selection_ == app.selected_markers;
         }
     }
@@ -274,10 +283,11 @@ void Undo::record_gesture(GestureKind kind) {
     // the burst's first press; the subject is captured POST-act, so a position
     // nudge's focus collapse and its reorder remap are already folded in and the
     // next tap compares against what this press actually left standing.
-    last_gesture_kind_      = kind;
-    last_gesture_time_      = std::chrono::steady_clock::now();
-    last_gesture_tab_       = app.active_tab_view;
-    last_gesture_selection_ = app.selected_markers;
+    last_gesture_kind_       = kind;
+    last_gesture_time_       = std::chrono::steady_clock::now();
+    last_gesture_tab_        = app.active_tab_view;
+    last_gesture_audio_view_ = app.active_audio_view;
+    last_gesture_selection_  = app.selected_markers;
 }
 
 void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {

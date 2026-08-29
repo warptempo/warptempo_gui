@@ -1582,8 +1582,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // product, and every other zone is behind its veil.
     if (app.render_player.active) return GuiCursorKind::Arrow;
     // AND SO IS THE PICKER (2026-08-28): its two pointer surfaces — the
-    // overlay's rows and the modal row's OK / Cancel — are a list and two
-    // buttons, and it has no field to name the I-beam for.
+    // overlay's rows and the modal row's one Cancel button — are a list and a
+    // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
     // THE VEIL'S ONE EXCEPTION IS THE FIELD (architect 2026-08-13, with the
     // Text kind). The blanket above it is unchanged in kind: a dialog editor
@@ -4287,8 +4287,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE PICKER'S VEIL (2026-08-28), the player's shape one mode over: while
     // a picker stands the pointer has TWO targets, the overlay's rows
-    // (claimed above) and the modal row's OK / Cancel (the arm every dialog
-    // button takes), and EVERY OTHER PRESS IS CONSUMED. There is no field
+    // (claimed above) and the modal row's one Cancel button (the arm every
+    // dialog button takes), and EVERY OTHER PRESS IS CONSUMED. A ROW CLICK IS
+    // THE OPEN ACT, which is why the row carries no OK beside that Cancel. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
     if (app.picker.active) {
@@ -6092,7 +6093,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
-    // row's armed OK / Cancel through the one shared dispatch, and every
+    // row's armed Cancel through the one shared dispatch, and every
     // other lift consumed — the veil's answer.
     if (app.picker.active) {
         if (button == GuiMouseButton::Left) {

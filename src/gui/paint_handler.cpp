@@ -5191,7 +5191,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its OK / Cancel row) or any dialog editor. The
+// (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
 static bool modal_owns_bottom_row(AppState& app) {
@@ -5649,10 +5649,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    row's total before anything can be placed). --
     // A BUTTON IS A WORD OR A GLYPH (2026-08-28, the render player's row):
     // `glyph` set means the button is the roster's own icon in a
-    // kModalBtnBoxPx SQUARE — the three transport buttons wear
-    // MediaSkipBackward, MediaPlaybackStart (swapped to MediaPlaybackStop
+    // kModalBtnBoxPx SQUARE — the FOUR transport buttons wear
+    // MediaSkipBackward, MediaPlaybackStart (swapped to MediaPlaybackPause
     // while the transport is live, the bottom row's one-button-two-faces
-    // rule) and MediaSkipForward, and the REPEAT ONE toggle wears
+    // rule), MediaPlaybackStop — Stop being a button of its own since R36,
+    // which is why the live face is a pause and not the stop square — and
+    // MediaSkipForward, and the REPEAT ONE toggle wears
     // MediaRepeatSingle in both its states — while a word button keeps the
     // label box every prompt and editor button has always had. A GLYPH BUTTON
     // WEARS NO RESTING OUTLINE (architect R25: "icon buttons have no border —
@@ -6833,7 +6835,9 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // ground is the bottom row's, so the two lanes read as one block.
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
-// list's keyboard focus — what Enter, Space, Play and Load in place act on)
+// list's keyboard focus — what Enter and Load in place act on, and nothing
+// else: Space and the Play button answer the TRANSPORT and never read the
+// highlight)
 // and the TRANSPORT'S ITEM, whose wav glyph is swapped for the roster's
 // MediaPlaybackStart (the one-button-two-faces precedent) whether the item is
 // live or paused.
@@ -6883,7 +6887,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             if (!rects_intersect(surf, r)) return;
 
             const bool highlighted = index == ov.highlight_row;
-            const bool hovered     = index == ov.hovered_row;
+            // NO ROW HOVERS UNDER A PROMPT. A prompt outranks both contents
+            // and its veil takes the pointer, so on_motion's prompt branch
+            // returns before the band's hover walk and the stored row keeps
+            // whatever it held at the raise. The term lives HERE, at the
+            // paint, for the same reason the roster's does: the hover face is
+            // a promise the pointer can act, and under a prompt it cannot.
+            // The raise damages the whole window, so the row goes out with it.
+            const bool hovered     = index == ov.hovered_row &&
+                                     !app.prompt.active;
             const bool pressed     = ov.press.armed && ov.press.row == index &&
                                      ov.press.inside && !ov.press.scrolling;
             // THE FACE IS TWO AXES, NOT A LADDER (R32's own table): LIT — the

@@ -80,7 +80,11 @@ struct GuiInputHandler;
 // one owner is play_wav, which is the one place the item changes, so the rule
 // covers the user's own plays for free (the row is already the highlight
 // there) and needs no membership list. A USER'S OWN HIGHLIGHT MOVES ARE
-// UNTOUCHED — nothing here fights the band back onto the item.
+// UNTOUCHED — nothing here fights the band back onto the item, which is why
+// THE SEAT IS GATED ON THE CHANGE and not run at every call: the REPEAT ONE
+// replay re-enters play_wav on the item already resting there at every
+// natural end, and an ungated seat would drag the band off the row a user
+// walked to under a lit lamp — repeatedly, and under his next Load in place.
 //
 // NOTHING LOOPS, WITH ONE SANCTIONED EXCEPTION — REPEAT ONE (architect
 // 2026-08-28, R26): the player's lamp is a two-state toggle, off or repeat

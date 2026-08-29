@@ -56,9 +56,9 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its five keys). It is a PLATFORM FACT and lives on the seam for
-    // exactly that reason: the scale a panel wants, whether the system has a
-    // spawnable audio player, and where on THIS device the projects live are
+    // schema and its four keys). It is a PLATFORM FACT and lives on the seam for
+    // exactly that reason: the scale a panel wants and where on THIS device the
+    // projects live are
     // answers only the backend has, and routing them through here is what keeps
     // the GUI proper free of the `#ifdef` the alternative would need. STATIC because it is asked before any window
     // exists — gui_main resolves the config ahead of init().
