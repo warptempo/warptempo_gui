@@ -1871,7 +1871,7 @@ void GuiPaintHandler::paint_status_chain(cairo_t* cr, const GuiRect& band,
         status += std::to_string(count);
         if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
             // THE ONE SPELLING OWNER (member_label, app_state.h): the short
-            // SHA the history picker's rows spell too. Empty for an
+            // SHA the `'` load confirmation names too. Empty for an
             // out-of-range index, which is exactly the empty walk, so the
             // count needs no test of its own here.
             const std::string label =
@@ -2751,6 +2751,19 @@ constexpr const char* kClockShape = "DD:DD.DDD";
 // or the baseline. They ride gui_scale like every other authored length here.
 constexpr double kClockCellOffsetXPx = 4.0;
 constexpr double kClockCellOffsetYPx = 1.0;
+
+// THE SEPARATOR → TIMESTAMP DISTANCE, this row's own and now the ONE OWNER of
+// that distance (architect 2026-08-29): the whole air between the divider's
+// line and the first digit, which this row spends in its two halves — the
+// separator's own trailing gap above, then the cell's authored margin mirror.
+// The RENDER PLAYER'S MODAL ROW reads it whole for every gap around its
+// play-scrub (left separator → scrub, scrub → clock, clock → right
+// separator), the architect's ruling being that those gaps ARE this one:
+// the modal row stands in row 8's lane and its clock is row 8's cell said
+// twice, so it takes this distance rather than authoring a second spec for
+// the same air in the same place.
+constexpr double kTransportSepToClockPx =
+    kTransportSepGapPx + kClockCellOffsetXPx;
 
 // The clock's cell width, MEMOISED ON THE FONT SIZE — eleven tiny shaping
 // passes (ten digits plus the specimen) that answer the same thing on every
@@ -5418,8 +5431,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   kModalFieldHeightPx 31 — editor.png's field, borders included (y=5..35),
 //                          vertically centred in the row's content band.
 //   kModalFieldPadXPx 7  — its border-to-ink inset (x=86..92).
-//   kModalLabelGapPx 11  — its label-to-field gap (label ink ends x=73,
-//                          field border x=85).
+//   (the label-to-field gap is NOT a constant of its own since 2026-08-29:
+//    the architect ruled it EQUAL TO THE WINDOW-EDGE → LABEL PAD, so both
+//    are `pad`, icon_row_pad_x, read twice — the crop's own 11 is retired,
+//    two numbers for one visual gap being the drift.)
 //   kModalFieldWidthPx 520 — AUTHORED, not sampled (the crop's field width is
 //                          its dialog's layout, not a rule): wide enough for
 //                          every render-entry id and settings line met in
@@ -5457,7 +5472,6 @@ constexpr double kModalButtonGapPx    = 8.0;
 constexpr double kModalFieldHeightPx  = 31.0;   // includes its two 1px borders
 constexpr double kModalFieldBorderPx  = 1.0;
 constexpr double kModalFieldPadXPx    = 7.0;
-constexpr double kModalLabelGapPx     = 11.0;
 // THE LABEL'S AUTHORED 1px DROP (architect-measured 2026-08-21, looking at the
 // painted row: the dialog label — "Setting:" and its siblings — sat one pixel
 // high). The kClockCellOffsetYPx arrangement exactly: an authored offset, not
@@ -5727,26 +5741,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
-        // claim), button-is-its-chord. THE PICKER TAKES THE SAME OK BIT AND
-        // THE SAME CANCEL, and its OK IS NAMED BY ITS ACT (architect
-        // 2026-08-28): "Open" on the Open project picker, "Load in place" on
-        // the `h` view's history picker — never the bare "OK", and never the
-        // menu row's longer "Open project", the row naming the ACT the button
-        // runs rather than the item that opened it. The word is composed from
-        // the OVERLAY'S OWNER, which is the same tag the picker's open act
-        // forks on (AppState::FolderOverlay::owner), so the button cannot
-        // name one act while Enter runs the other. Cancel is untouched and
-        // stays LAST, the escape sentinel; the hint composer's "<word>
-        // (Enter)" / "Cancel (Escape)" follows the word for free, those being
-        // route_picker_key's own two keys.
-        DialogButtonPlan ok;
-        ok.label     = !picker_up ? "OK"
-                     : (app.folder_overlay.owner ==
-                        AppState::FolderOverlay::Owner::HistoryPicker)
-                         ? "Load in place"
-                         : "Open";
-        ok.editor_ok = true;
-        plan.push_back(std::move(ok));
+        // claim), button-is-its-chord.
+        // THE PICKER'S ROW IS **Cancel** ALONE (architect 2026-08-29): a click
+        // on a row opens it, so there is nothing for an OK to add — Enter on
+        // the list is the same act from the keyboard. Its one-day OK, named by
+        // the act it ran, went with the row-click ruling; Cancel is untouched
+        // and stays LAST, which on a one-button row makes it the escape
+        // sentinel by construction. The hint composer's "OK (Enter)" /
+        // "Cancel (Escape)" follows for free, those being the two routers'
+        // own keys.
+        if (!picker_up) {
+            DialogButtonPlan ok;
+            ok.label     = "OK";
+            ok.editor_ok = true;
+            plan.push_back(std::move(ok));
+        }
         DialogButtonPlan cancel;
         cancel.label = "Cancel";
         plan.push_back(std::move(cancel));
@@ -5779,11 +5788,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // owns the supersession and the two facts that make it safe, the first of
     // which is that the last button is always the ESCAPE SENTINEL). WHICH
     // button is the RAISE'S OWN CHOICE (PromptInitialFocus, carried on the
-    // question since 2026-08-28): the last on every prompt but the render
-    // player's load confirmation, which asks for its FIRST — its OK is one
-    // undo entry away from being undone rather than destructive, and its Enter
-    // then means what the `h` view's history picker's Enter means on the
-    // same act. This is the ONE assignment site: it rides the same reset the
+    // question since 2026-08-28): the last on every prompt but THE LOAD
+    // CONFIRMATION, which asks for its FIRST — its OK is one
+    // undo entry away from being undone rather than destructive. That one
+    // prompt body carries both `'` subjects (the player's entry and the `h`
+    // view's walk member), so the two roads answer Enter alike. This is the
+    // ONE assignment site: it rides the same reset the
     // focus's other three edges ride, so a fresh prompt and a prompt replacing
     // a prompt are one case, and it runs HERE rather than at the reset because
     // the plan's ends are not known until the plan exists. An EDITOR dialog is
@@ -5807,6 +5817,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // label, the field, one pad, then the buttons. The right-aligned cluster
     // of hours earlier is retired with the reserved right-pad ring that
     // anchored it.
+    //
+    // THE ALIGNMENT RULE, ONE SENTENCE FOR EVERY OWNER (architect 2026-08-29,
+    // and its full statement is in the PICKER's branch below): a modal that
+    // carries A FIELD OR A MESSAGE sits FLUSH LEFT with it — the prompts, the
+    // dialog editors, and the player, whose transport is that row's left-hand
+    // content — while a LIST's buttons sit FLUSH RIGHT, the picker's one
+    // button being the whole of that case.
     //
     // NOTHING OVERFLOWS THE LANE, and the primacy is the STATUS CHAIN'S OWN
     // (the critical chip's rule, one row and one collision discipline): THE
@@ -5918,10 +5935,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the same place.
         const int ggap     = scaled_px(kIconBtnGapPx);
         const int sep_gap  = scaled_px(kTransportSepGapPx);
+        // THE AIR AROUND THE SCRUB, all three of it, is ROW 8'S OWN SEPARATOR
+        // → TIMESTAMP DISTANCE (architect 2026-08-29; the owner and its
+        // derivation are at kTransportSepToClockPx): left separator → scrub,
+        // scrub → clock, clock → right separator. One number, read three
+        // times, and it is the number the row under this modal already spends
+        // between its divider and its digits.
+        const int sep_pad  = scaled_px(kTransportSepToClockPx);
         const int sep_w    = scaled_px(kTransportSepWidthPx, 1);
         const int sep_h    = scaled_px(kTransportSepHeightPx);
         const int sep_y    = content.y + (content.h - sep_h) / 2;
-        const int sep_span = sep_gap + sep_w + sep_gap;
         const auto paint_separator = [&](int line_x) {
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -5952,28 +5975,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
         plan[2].x = px; px += btn_h + ggap;      // Stop
         plan[3].x = px; px += btn_h;             // Next
-        const int sep1_x = px + sep_gap;
-        px += sep_span;
-        const int scrub_x0 = px;
+        // The separator keeps the spec's own 5px on its BUTTON side; the
+        // scrub side takes the distance above, exactly as row 8's clock does.
+        const int sep1_x   = px + sep_gap;
+        const int scrub_x0 = sep1_x + sep_w + sep_pad;
 
         // The word cluster, right-flushed inside the reserved ring exactly as
         // the single cluster's cap is on every other owner.
         const int words_w  = plan[5].w + bgap + plan[6].w;
         const int words_x0 = std::max(cx0, cx1 - ring - words_w);
-        // What the row owes AFTER the scrub: a pad, the clock cell, the second
-        // separator, the lamp with its reserved halo, and one pad of clearance
-        // before the word cluster.
-        const int after_scrub = pad + clock_w + sep_span + btn_h + ring + pad;
+        // What the row owes AFTER the scrub: the scrub → clock distance, the
+        // clock cell, the clock → separator distance, the second separator
+        // with its own button-side air, the lamp, and the WORD BUTTONS' OWN
+        // GAP before the cluster — architect 2026-08-29: the air between
+        // Repeat one and Load in place is the air between Load in place and
+        // Close, the modal word buttons' spacing winning over the icon gap
+        // between clusters (it was the reserved ring plus a pad).
+        const int after_scrub =
+            sep_pad + clock_w + sep_pad + sep_w + sep_gap + btn_h + bgap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
         // at each end is not a track, and it is the same 40 authored px the
         // scrub floored at before the slider gave the number a derivation.
         int scrub_w = words_x0 - after_scrub - scrub_x0;
         if (scrub_w < 2 * scrub_handle_box_px()) scrub_w = 0;
 
-        const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + pad : 0);
+        const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + sep_pad : 0);
         const int clock_end = clock_x0 + clock_w;
-        const int sep2_x    = clock_end + sep_gap;
-        plan[4].x = clock_end + sep_span;        // Repeat one
+        const int sep2_x    = clock_end + sep_pad;
+        plan[4].x = sep2_x + sep_w + sep_gap;    // Repeat one
         plan[5].x = words_x0;                    // Load in place
         plan[6].x = words_x0 + plan[5].w + bgap; // Close
 
@@ -6104,22 +6133,26 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // clock's own cell was painted after them until R25 moved the time.)
         font = select_bottom_row_face(cr);
     } else if (picker_up) {
-        // -- THE PICKER'S ROW (2026-08-28, architect R22): the two word
-        //    buttons and NOTHING ELSE — no label, no field. The list in the
-        //    band above is the whole question, and the prompt's
-        //    `<projects_path>/` prefix went with the field it labelled.
+        // -- THE PICKER'S ROW (2026-08-28, architect R22; ONE BUTTON since
+        //    2026-08-29): **Cancel** and NOTHING ELSE — no label, no field,
+        //    no OK. The list in the
+        //    band above is the whole question, a click on a row is the answer,
+        //    and the prompt's `<projects_path>/` prefix went with the field it
+        //    labelled.
         //
-        //    THE OUTLINED BUTTONS SIT ON THE RIGHT (architect 2026-08-28, on
-        //    seeing the picker on the tablet — "I am right-handed"): only the
-        //    TRANSPORT — the borderless glyph buttons of the player's row one
-        //    branch up — is left-aligned; a row of WORD buttons is flush
-        //    right, where the thumb is. So the cluster starts at
+        //    THE ALIGNMENT RULE (architect 2026-08-29, stated here because
+        //    this body is where every owner's row is laid out): A MODAL THAT
+        //    CARRIES A FIELD OR A MESSAGE SITS FLUSH LEFT WITH IT — the
+        //    prompts, the dialog editors and the player's transport, whose
+        //    row reads from the left because that is where the thing being
+        //    read or typed into begins ("if my hand is on the left edge to
+        //    type, the buttons should be right there") — WHILE A LIST'S
+        //    BUTTONS SIT FLUSH RIGHT ("if I'm using the picker my hand stays
+        //    on the right"; "I am right-handed", 2026-08-28, on seeing the
+        //    picker on the tablet). So the cluster starts at
         //    `buttons_x_max`, the same rightmost seat every other owner uses
-        //    as its CAP, and with nothing to its left the row is the two
-        //    buttons alone: Open (or Load in place) · Cancel, Cancel still
-        //    last and so rightmost, the escape sentinel. The prompts and the
-        //    dialog editors keep their left flush — their rows carry a
-        //    message or a field, which reads from the left. --
+        //    as its CAP, and with nothing to its left the row is that one
+        //    button. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
         buttons_x0 = buttons_x_max;
     } else {
@@ -6135,7 +6168,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int label_w = static_cast<int>(
             std::ceil(text_shape::shape_text_run(font, prefix.c_str()).width_px));
         const int fbord = scaled_px(kModalFieldBorderPx, 1);
-        const int fx    = cx0 + label_w + scaled_px(kModalLabelGapPx);
+        // THE LABEL → FIELD GAP IS THE ROW'S OWN PAD (architect 2026-08-29):
+        // the air between the window edge and the label, and the air between
+        // the label and the field, are ONE number read twice — the separately
+        // sampled 11 that stood here is retired. Every dialog editor's label
+        // ("Setting:", "BPM:", the commit title's, the measure offset's)
+        // reads it.
+        const int fx    = cx0 + label_w + pad;
         // The room a field may take before the buttons would have to give:
         // the cluster's cap, less its reserved left ring and the pad.
         const int field_room = (buttons_x_max - ring - pad) - fx;
@@ -6746,16 +6785,15 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // -- GuiPaintHandler::paint_folder_overlay -----------------------------------
 //
 // THE KEYBOARD-SLOT LIST PANEL (2026-08-28), ONE PAINTER FOR EVERY CONTENT —
-// the render player's folders and wavs, the Open project picker's project
-// folders and the history picker's walk members. Contract and gate are at the declaration; the geometry, the scroll
+// the render player's folders and wavs and the Open project picker's project
+// folders. Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. Nothing here asks WHOSE rows these are: the
-// project picker's are all Folder rows and the history picker's all TEXT
-// rows, each taking its glyph (or none) from the row's KIND and its face
-// from the same ladder the player's rows do, and the transport mark below is
-// structurally absent under either picker (the player holds no item while a
-// picker stands).
+// project picker's are all Folder rows, each taking its glyph from the row's
+// KIND and its face from the same ladder the player's rows do, and the
+// transport mark below is structurally absent under the picker (the player
+// holds no item while a picker stands).
 //
 // THE ROWS ARE BUTTONS AND THE PALETTE IS THE FILE MANAGER'S (architect
 // 2026-08-28, R31/R32, superseding the keyboard's palette this band opened
@@ -6864,16 +6902,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius,
                               (lit || hovered) ? &fill : nullptr, line);
 
-            // THE GLYPH: the folder for folder rows and the up row (it names
-            // a folder), the wav for wav rows — swapped for the transport
-            // glyph on the item's row — and NONE for a TEXT row (the history
-            // picker's members, which name neither a folder nor a file). At
+            // THE GLYPH, on EVERY row: the folder for folder rows and the up
+            // row (it names a folder), the wav for wav rows — swapped for the
+            // transport glyph on the item's row. (The glyph-less TEXT kind
+            // went with the history picker on 2026-08-29.) At
             // the BUTTON'S OWN INSET from the row's left edge and centred in
             // its height, which are the same number: a row is a wide button
             // and this is how a button seats its glyph.
             const int gx = r.x + inset;
-            int text_x = gx;
-            if (row.kind != AppState::FolderOverlayRow::Kind::Text) {
+            {
                 icons::Icon icon = icons::Icon::Folder;
                 if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                     icon = (!rp.item.empty() && row.path == rp.item)
@@ -6884,14 +6921,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 icons::draw(cr, icon, static_cast<double>(gx),
                             static_cast<double>(gy),
                             static_cast<double>(glyph));
-                text_x = gx + glyph + gap;
             }
+            const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
-            // or, on a TEXT row, WHERE THE GLYPH WOULD HAVE STARTED: the
-            // button's own inset is the row's left pad, so a glyph-less row
-            // reads as the same button family with its word seated where a
-            // word button seats its ink — in the band's ONE ink (black on the
+            // in the band's ONE ink (black on the
             // accent would be the marker lane's rule, not this band's: R32
             // gives the selected row white text, kdenlive's own band carries
             // it, and a row that changes ink with its face would be a second

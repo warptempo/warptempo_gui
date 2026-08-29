@@ -96,7 +96,8 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // <id>` and free UTF-8 text the user may rewrite. 256 is a generous ceiling,
 // well past the ~50-character summary line a commit title is written to be.
 // (The `h` view's load prompt took the same ceiling until 2026-08-28, when
-// the field-less history picker replaced it.)
+// the field-less picker replaced it; that picker retired the next day and the
+// view's `'` raises a plain confirmation now, with nothing to type at all.)
 constexpr int kMaxPendingCharsCommitTitle = 256;
 // The marker MEASURE editor (bare `/`, its bottom-row button, the double-click
 // on the blue box). The cap IS the load bound, taken from its one owner rather
@@ -160,7 +161,7 @@ enum class Kind {
 // THE THREE SURFACES THAT ARE NOT EDITORS take their ids from this same
 // counter at their own one raise route each — the PROMPT (PromptState::present,
 // app_state.h), the RENDER PLAYER (GuiRenderPlayer::open) and the PICKER
-// (GuiInputHandler::open_project_picker / open_history_picker, both through
+// (GuiInputHandler::open_project_picker, through
 // AppState::Picker) — so the ids never collide across the classes and one
 // integer compare answers "is this published geometry the surface that owns
 // input right now" (the doctrine and the comparison's one owner are at

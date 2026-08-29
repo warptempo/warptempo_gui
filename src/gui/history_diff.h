@@ -444,7 +444,7 @@ struct GuiHistoryCommitSidecars {
 };
 
 // THE SEVEN-CHARACTER SPELLING every user-facing line uses for a commit —
-// the corner's SHA token and the history picker's rows through
+// the corner's SHA token and the `'` load confirmation's question through
 // AppState::HistoryMode::member_label, and every reason this module composes.
 // The full SHA is returned unchanged when it is shorter than seven, which no
 // git answer is.
@@ -458,7 +458,7 @@ std::string short_sha(const std::string& sha);
 //
 // `spelling` is anything `git rev-parse --verify <spelling>^{commit}` resolves.
 // BOTH CALLERS HAND IT A FULL SHA THE STORE ALREADY HOLDS since 2026-08-28 —
-// the walk's scan its candidate, the history picker its highlighted member —
+// the walk's scan its candidate, the `'` confirmation its viewed member —
 // so the resolution is a verification rather than a lookup (the typed load
 // prompt that took "a SHA pasted from GitHub's web UI" retired with its field,
 // architect R23). The peel suffix is what makes the answer a COMMIT rather

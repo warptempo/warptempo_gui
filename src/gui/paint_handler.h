@@ -95,7 +95,8 @@ constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // (The Open project prompt's `Open: <projects_path>/` label and the `h`
 // view's `Load: ` label stood here until 2026-08-28, when both prompts lost
 // their text fields and became the field-less picker over the folder overlay
-// — architect R22/R23; the picker's row is OK · Cancel and wears no label.)
+// — architect R22/R23; the picker's row is Cancel alone since 2026-08-29 and
+// wears no label.)
 // The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
 // message the checkpoint commit will carry. One trailing space, like every
 // prefix here that names a subject rather than a path.

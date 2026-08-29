@@ -9,10 +9,11 @@
 #include "viewport.h"
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
-// unsaved-work dialog and the paste-confirm dialog, and ANSWERS the render
-// player's load confirmation (LOAD_IN_PLACE_CONFIRM, raised by
-// GuiInputHandler::render_player_load_in_place and answered back through the
-// input-handler back-pointer below). Two entry points are exposed:
+// unsaved-work dialog and the paste-confirm dialog, and ANSWERS the load
+// confirmation (LOAD_IN_PLACE_CONFIRM — one prompt body over two subjects,
+// raised by GuiInputHandler::render_player_load_in_place in the player and by
+// GuiInputHandler::history_load_in_place in the `h` view, and answered back
+// through the input-handler back-pointer below). Two entry points are exposed:
 // request_close (called by Ctrl+Q, the WM-close callback and the Open
 // prompt's commit — the ONE close road, which is why the render player's
 // close and the modal editors' abandon both live inside it) and
@@ -51,11 +52,11 @@ struct GuiPrompt {
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this prompt by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
-    // the settings editor's own shape). TWO READERS: the render player's load
+    // the settings editor's own shape). TWO READERS: the load
     // confirmation, whose OK and Cancel reach the acts that live on
-    // GuiInputHandler (confirm_render_player_load, cancel_render_player_load)
-    // — load_render_entry_in_place being a private act of that struct, and
-    // the player its one road — and request_close's own two closing steps
+    // GuiInputHandler (confirm_load_in_place, cancel_load_in_place)
+    // — the three load acts being private to that struct — and
+    // request_close's own two closing steps
     // (close_picker and close_modal_editors_no_commit), the picker's close
     // and each editor's exit body living there beside the surfaces
     // themselves.

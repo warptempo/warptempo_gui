@@ -3374,13 +3374,12 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         }
         return false;
     }
-    // THE PICKER'S TWO BUTTONS (2026-08-28), on the OK bit the editor dialogs
-    // publish (the reason is at ModalDialogButton): OK is the open act on the
-    // highlight — the same body the list's Enter runs, each content's own
-    // act re-asking its own state — and Cancel is the one close body.
+    // THE PICKER'S ONE BUTTON (architect 2026-08-29): its row is **Cancel**
+    // alone, because a click on a row is the open act now — so this arm reads
+    // no bit and runs the one close body. (Enter on the list is still the open
+    // act, through picker_open_highlight, the keyboard's own click.)
     if (app.picker.active) {
-        if (b.editor_ok) picker_open_highlight();
-        else             close_picker();
+        close_picker();
         return true;
     }
     dispatch_modal_dialog_editor_act(b.editor_ok);
@@ -3899,20 +3898,22 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 // table and the press arm are AppState::folder_overlay's, where every field
 // is described. THE ROWS ARE CHROME (conventions.md's third clause): the
 // press ARMS because the same press may still become the band's scroll drag,
-// so its identity is not certain at the press; the motionless lift
-// HIGHLIGHTS. The one press whose identity IS certain — a recognized
-// double-click's second press — acts at the press and arms nothing, exactly
-// as the marker flag's does.
+// so its identity is not certain at the press; THE MOTIONLESS LIFT HIGHLIGHTS
+// THE ROW AND OPENS IT — a click activates (architect 2026-08-29), which is
+// why the panel has no double-click surface any more: the act is at the one
+// edge that can tell a click from a drag, and a second press has nothing
+// left to mean.
 //
-// ONE PRESS ROUTER, THREE CONTENTS. The claim below stands ABOVE the two
+// ONE PRESS ROUTER, TWO CONTENTS. The claim below stands ABOVE the two
 // mode veils (the player's and the picker's), each of which admits exactly
 // the band and its own modal row, and BELOW the prompt gate, which outranks
-// every surface as it always has. What a lift and a double-click MEAN is the
-// owner's, and the two forks below are the whole of it: nothing else in this
+// every surface as it always has. What the OPEN means is the owner's, and the
+// two forks below are the whole of it: nothing else in this
 // file asks which content fills the rows.
 
-// THE MOTIONLESS LIFT'S ACT: the band moves, under every owner — the pickers
-// have no field beside it (architect R22), so the band IS what Enter opens.
+// THE MOTIONLESS LIFT'S FIRST HALF: the band moves, under every owner — the
+// picker has no field beside it (architect R22), so the band IS what Enter
+// opens.
 void GuiInputHandler::folder_overlay_highlight_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -3921,17 +3922,15 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
             render_player.set_highlight(index);
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
-        case AppState::FolderOverlay::Owner::HistoryPicker:
             picker_set_highlight(index);
             return;
     }
 }
 
-// THE OPEN ACT (the double-click's second press, Enter on the highlight and
-// the picker's OK). Under the player a folder enters, the up row goes to the
-// parent and a wav plays; under the project picker the row's project is
-// reopened; under the history picker the row's member is loaded in place —
-// one body per content, which Enter, OK and the double-click all reach.
+// THE OPEN ACT (the row click's own second half and Enter on the highlight).
+// Under the player a folder enters, the up row goes to the parent and a wav
+// plays; under the project picker the row's project is reopened — one body
+// per content, which the click and Enter both reach.
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -3942,15 +3941,11 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
         case AppState::FolderOverlay::Owner::ProjectPicker:
             open_project_commit(index);
             return;
-        case AppState::FolderOverlay::Owner::HistoryPicker:
-            history_picker_commit(index);
-            return;
     }
 }
 
 bool GuiInputHandler::claim_folder_overlay_press(
-        int x, int y, GuiMouseButton button, GuiInputState mods,
-        const DoubleClickCandidate& dc_at_press) {
+        int x, int y, GuiMouseButton button, GuiInputState mods) {
     if (!folder_overlay::stands(app)) return false;
     if (button != GuiMouseButton::Left) return false;
     const GuiRect surf = folder_overlay::surface_rect(app);
@@ -3964,17 +3959,10 @@ bool GuiInputHandler::claim_folder_overlay_press(
     if (mods.ctrl || mods.shift || mods.alt) return true;
     const int hit = folder_overlay::row_at(app, x, y);
     if (hit < 0) return true;
-    // THE DOUBLE-CLICK'S SECOND PRESS: the same row within kDoubleClickMs and
-    // the slack of the first click's press — the OPEN act at the press, no
-    // arm (the act may rebuild the listing under the pointer).
-    if (dc_at_press.surface == DoubleClickSurface::FolderRow &&
-        dc_at_press.target == hit &&
-        monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
-        std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
-        std::abs(y - dc_at_press.press_y) <= double_click_slack_px()) {
-        folder_overlay_open_row(hit);
-        return true;
-    }
+    // THE PRESS ONLY ARMS — a click activates, but the act rides the
+    // MOTIONLESS LIFT because this same press may still become the band's
+    // scroll drag (architect 2026-08-29; the row press is chrome, and past the
+    // drag gate it IS the drag).
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     press.armed           = true;
     press.row             = hit;
@@ -4027,16 +4015,17 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
         viewport.invalidate_rect(folder_overlay::row_rect(app, press.row));
     // A scroll drag ends here with nothing else owed.
     if (press.scrolling) return true;
-    // A MOTIONLESS LIFT ON THE ARMED ROW highlights it and seeds the
-    // double-click candidate — the press coordinates with the release stamp,
-    // the marker seed's own split. A lift elsewhere is a consumed nothing.
+    // A MOTIONLESS LIFT ON THE ARMED ROW HIGHLIGHTS IT AND THEN OPENS IT — A
+    // CLICK ACTIVATES (architect 2026-08-29: in the player a wav plays from
+    // its start, a folder is entered and `..` goes up; in the Open project
+    // picker the row's project opens, refusals and all, exactly as Enter's
+    // does). The band moves first, so what the act runs on is what the user
+    // can see it named. A lift elsewhere is a consumed nothing.
+    // NOTHING IS SEEDED HERE ANY MORE: the row's double-click surface went
+    // with the ruling, no second meaning being left for a second press.
     if (folder_overlay::row_at(app, x, y) != press.row) return true;
     folder_overlay_highlight_row(press.row);
-    app.double_click = DoubleClickCandidate{
-        .surface = DoubleClickSurface::FolderRow,
-        .time_ms = monotonic_ms(),
-        .press_x = press.press_x, .press_y = press.press_y,
-        .target  = press.row};
+    folder_overlay_open_row(press.row);
     return true;
 }
 
@@ -4109,6 +4098,12 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     if (mods.ctrl || mods.shift || mods.alt) return true;
     if (app.render_player.frames <= 0 || app.render_player.item.empty())
         return true;
+    // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
+    // Audacious's own slider — dead while stopped): the press is a consumed
+    // no-op, neither seeking nor arming the handle drag, and the painter keeps
+    // drawing the handle at the resting point. LIVE and PAUSED are unchanged.
+    if (app.render_player.transport == AppState::RenderPlayer::Transport::Idle)
+        return true;
     const int marker_x =
         render_player_scrub_x_of(app, render_player_position(app, playback));
     if (render_player_scrub_handle_hit(track, marker_x, x, y)) {
@@ -4180,7 +4175,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
-    // its own fresh candidate — ALL FIVE at a motionless RELEASE now (TrimBar /
+    // its own fresh candidate — ALL FOUR at a motionless RELEASE now (TrimBar /
     // EditorText / EmptyLane, the empty lane joining that class 2026-08-12 with
     // its press becoming the navigation surface's pending click, so only the
     // release knows it stayed a click and a pan that crossed the threshold seeds
@@ -4194,9 +4189,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // position looking back so the spatial pairing stays press-to-press, the
     // stamp being the seed's own so the window is measured release-to-press as it
     // is for the other three. The full reasoning is at the seed itself
-    // (on_button_release's marker-pending arm); the FOLDER ROW's seed
-    // (2026-08-28, finish_folder_overlay_release) takes the same split for
-    // the same reason. One closed instrumentation
+    // (on_button_release's marker-pending arm). One closed instrumentation
     // point — the clear covers
     // every non-consuming press (a strip/region/trim arm, a modal swallow)
     // without a clear scattered on each path. It sits ABOVE the prompt swallow
@@ -4266,7 +4259,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // and consumes the rest. The claim is opaque and owns its own button
     // gate, so a non-left press on the band falls to whichever veil stands
     // and is consumed there.
-    if (claim_folder_overlay_press(x, y, button, mods, dc_at_press)) return;
+    if (claim_folder_overlay_press(x, y, button, mods)) return;
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
@@ -6071,9 +6064,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     // THE FOLDER OVERLAY'S ROW ARM ENDS HERE, the hoisted claim's mirror and
-    // at the same rank: a motionless lift highlights, a scroll drag simply
+    // at the same rank: a motionless lift HIGHLIGHTS THE ROW AND OPENS IT (a
+    // click activates, 2026-08-29), a scroll drag simply
     // ends. It is a no-op with no arm standing, so it costs the other
-    // releases one test.
+    // releases one test. The act may take the whole surface down under this
+    // frame — a wav's play rebinds the engine, a project row's open closes the
+    // picker and requests the reopen — which is why the arm is cleared at the
+    // head of that body and this arm returns immediately after it.
     if (button == GuiMouseButton::Left && finish_folder_overlay_release(x, y))
         return;
     // THE RENDER PLAYER'S OTHER RELEASES (2026-08-28), the press block's

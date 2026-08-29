@@ -55,14 +55,16 @@ struct GuiInputHandler;
 // is PAUSED, which no reading of the resume point could say) — and the table
 // is at play_button_act.
 //
-// THE MODEL (R1, R2, revised 2026-08-28 after the first pass): the listing is
-// navigated THE REGULAR WAY — a highlighted folder OPENS on the double-click,
-// Enter or the Play button, the `..` row at the top of every non-root listing
-// goes up (Backspace on plastic) — and a single click only HIGHLIGHTS (the
-// band is the list's keyboard focus; Up/Down walk it). A WAV PLAYS from its
-// start when opened, or when it is highlighted and Play is pressed WITH THE
-// TRANSPORT IDLE (the states above). THE TRANSPORT'S ITEM is separate from
-// the highlight: it keeps playing while
+// THE MODEL (R1, R2, revised 2026-08-29): the listing is navigated THE
+// REGULAR WAY and A CLICK ACTIVATES — a click or tap on a folder row ENTERS
+// it, on the `..` row at the top of every non-root listing goes UP (Backspace
+// on plastic), on a wav row PLAYS IT FROM ITS START. The click's act rides
+// the motionless LIFT (the press still arms, the same press being the band's
+// possible scroll drag) and the highlight moves onto the row first; Enter is
+// the keyboard's own click on the highlight and Up/Down walk the band without
+// opening anything. THE PLAY BUTTON DOES NOT READ THE HIGHLIGHT AT ALL — it
+// answers the transport (the table at play_button_act). THE TRANSPORT'S ITEM
+// is separate from the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
 // row, and AUTO-ADVANCE, Previous, Next and the two Shift+Page ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
@@ -213,15 +215,18 @@ struct GuiRenderPlayer {
     // -- The listing --------------------------------------------------------
 
     // THE OPEN ACT on row `index` of the live listing: a folder row enters
-    // it, the up row goes to the parent, a wav row plays from its start.
+    // it, the up row goes to the parent, a wav row plays from its start. Its
+    // producers are the row click's motionless lift and Enter on the
+    // highlight, both through the overlay's one row-act fork.
     void open_row(int index);
     // One folder up; a consumed no-op at the root.
     void up();
     // The widget's three mechanics with the player's damage on top
-    // (folder_overlay.h owns the clamps and the scroll-into-view; the pickers
-    // drive the same mechanics through their own damage): move the highlight by
-    // `delta` rows, seat it on `index` — the motionless click's act — and
-    // scroll the band by `rows` rows, the wheel's detent step.
+    // (folder_overlay.h owns the clamps and the scroll-into-view; the picker
+    // drives the same mechanics through its own damage): move the highlight by
+    // `delta` rows, seat it on `index` — the click's first half, the open
+    // being its second — and scroll the band by `rows` rows, the wheel's
+    // detent step.
     void move_highlight(int delta);
     void set_highlight(int index);
     void scroll_rows(int rows);
@@ -232,35 +237,34 @@ struct GuiRenderPlayer {
     // -- The transport ------------------------------------------------------
 
     // THE PLAY BUTTON'S ACT (and Space's, and the car's Play / PlayPause).
-    // The three states it forks on are STORED in
-    // AppState::RenderPlayer::transport, which owns them: LIVE is the
-    // sounding transport, PAUSED an item the transport parked AT WHATEVER
-    // FRAME (a pause that caught the cursor at 0 answers PAUSED here and
-    // resumes its own item), IDLE everything with nothing to resume.
-    // THE TRANSPORT IS ASKED AHEAD OF THE HIGHLIGHT (architect 2026-08-28,
-    // R36's bug: a Next while a double-clicked track played advanced the item
-    // but not the band, and the live button — wearing Pause — then PLAYED the
-    // row still highlighted behind it instead of pausing what was sounding):
+    // IT NEVER READS THE HIGHLIGHT, IN ANY STATE (architect 2026-08-29,
+    // Audacious: Play when idle plays the current track). The three states it
+    // forks on are STORED in AppState::RenderPlayer::transport, which owns
+    // them: LIVE is the sounding transport, PAUSED an item the transport
+    // parked AT WHATEVER FRAME (a pause that caught the cursor at 0 answers
+    // PAUSED here and resumes its own item), IDLE everything with nothing to
+    // resume.
     //
-    //   LIVE    -> pause it. The highlight is not read at all.
-    //   PAUSED  -> resume it. Likewise.
-    //   IDLE    -> the highlight decides:
-    //                a wav that is not the item      -> play it from its start
-    //                a folder or `..`                -> the OPEN act (the
-    //                                                   car-stereo OK/Play
-    //                                                   convention, so glass
-    //                                                   never needs a
-    //                                                   double-tap to navigate)
-    //                the item, or nothing playable   -> the transport arm: at
-    //                                                   the folder's END the
-    //                                                   item folder's FIRST
-    //                                                   wav (R27, the bit's
-    //                                                   one reader), else the
-    //                                                   item from where it
-    //                                                   rests
+    //   LIVE    -> pause it.
+    //   PAUSED  -> resume it.
+    //   IDLE with an item -> at the folder's END the item folder's FIRST wav
+    //                        (R27, the bit's one reader), else the item from
+    //                        where it rests — its START in every rest the
+    //                        transport's own acts leave it in (a STOP, a
+    //                        natural end, a fresh bind); a seek while idle has
+    //                        deliberately moved that point and the clock is
+    //                        already showing it.
+    //   IDLE with no item -> nothing.
     //
-    // (R38 makes the band follow the item, so the IDLE branch's "the item" arm
-    // is the ordinary case rather than a coincidence.)
+    // THE ROW ACTS ARE THE ROWS' OWN since the same ruling: a click on a
+    // folder opens it and a click on a wav plays it, so this button no longer
+    // carries the car-stereo OK/Play convention R17 gave it (the highlight's
+    // folder open and its play-another-wav arm are both gone).
+    // THE BUG THAT PUT THE TRANSPORT AHEAD OF THE HIGHLIGHT IN THE FIRST
+    // PLACE (architect 2026-08-28, R36) is subsumed rather than superseded: a
+    // Next while a track played advanced the item but not the band, and the
+    // live button — wearing Pause — then PLAYED the row still highlighted
+    // behind it instead of pausing what was sounding.
     void play_button_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.

@@ -88,8 +88,9 @@ struct GuiPlaybackLifecycle {
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
     // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-28 — NINE
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
-    // input_key_dispatch.cpp the `'` HISTORY PICKER (open_history_picker,
-    // the `h` view's), the `m`
+    // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
+    // (history_load_in_place — the history picker it replaced on 2026-08-29
+    // was this caller before it), the `m`
     // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
     // (open_history_commit_editor), the MEASURE PASTE-OFFSET editor
     // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT PICKER
@@ -132,7 +133,7 @@ struct GuiPlaybackLifecycle {
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
     //   * DIALOG modal surfaces — the four dialog editors, the prompts and
-    //     the two pickers, all painted as the bottom row's modal since
+    //     the picker, all painted as the bottom row's modal since
     //     2026-08-13 — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and

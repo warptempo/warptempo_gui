@@ -157,16 +157,11 @@ void GuiRenderPlayer::rebuild_rows() {
     ov.scroll_px     = 0;
     ov.hovered_row   = -1;
     ov.press         = AppState::FolderOverlayPress{};
-    // A REBUILT LISTING RENAMES EVERY ROW, so no double-click candidate may
-    // cross one: the FolderRow seed's target is a row INDEX, and index 0 of
-    // the listing this call installs is not the row the seed was taken on.
-    // The clear is the MUTATOR'S (the file load's own shape — the candidate
-    // is one field, so the whole of it goes), and it is the rule stated at
-    // DoubleClickSurface::FolderRow. Every OTHER road into a rebuild happens
-    // to pass a chokepoint that clears — on_key's, on_wheel's, or
-    // on_button_press's top-of-frame clear — but that is the callers'
-    // accident and not a contract the listing may rest on.
-    app.double_click = DoubleClickCandidate{};
+    // (A REBUILT LISTING RENAMES EVERY ROW, which is why this body also
+    // cleared the double-click candidate while the rows had one: its target
+    // was a row INDEX into the listing being replaced. The clear went with
+    // DoubleClickSurface::FolderRow on 2026-08-29, when a click became the
+    // open act and the second press lost its meaning.)
     ov.highlight_row = ov.rows.empty() ? -1 : 0;
     if (!rp.item.empty()) {
         for (size_t i = 0; i < ov.rows.size(); ++i) {
@@ -241,10 +236,6 @@ void GuiRenderPlayer::open_row(int index) {
             play_wav(row.path, wavs, wi);
             return;
         }
-        case Row::Kind::Text:
-            // The history picker's kind; the player's listings never carry
-            // one (rebuild_rows writes the three above and nothing else).
-            return;
     }
 }
 
@@ -409,18 +400,14 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 }
 
 void GuiRenderPlayer::play_button_act() {
-    const AppState::FolderOverlay& ov = app.folder_overlay;
-    const AppState::RenderPlayer&  rp = app.render_player;
-    // THE TRANSPORT IS ASKED AHEAD OF THE HIGHLIGHT (R36; the table is at the
-    // declaration). A SOUNDING or PAUSED transport is what this button is
-    // about — its face says Pause while live — and the row the band happens to
-    // sit on has nothing to say about it. That is the whole of the bug the
-    // architect found: with the band left behind on the row a double-click
-    // started, the live button PLAYED that row instead of pausing the item
-    // that was sounding.
-    // THE STATE IS THE STORED FIELD (AppState::RenderPlayer::transport), so a
-    // transport parked at frame 0 — the no-device pause on a wav that never
-    // sounded — answers PAUSED here and resumes ITS item.
+    const AppState::RenderPlayer& rp = app.render_player;
+    // THE HIGHLIGHT IS NOT READ HERE AT ALL (architect 2026-08-29; the table
+    // is at the declaration): PLAY WHEN IDLE PLAYS THE CURRENT TRACK, which is
+    // Audacious's own answer, and the row acts belong to the rows now — a
+    // click on a folder opens it, a click on a wav plays it. THE STATE IS THE
+    // STORED FIELD (AppState::RenderPlayer::transport), so a transport parked
+    // at frame 0 — the no-device pause on a wav that never sounded — answers
+    // PAUSED here and resumes ITS item.
     switch (rp.transport) {
         case Transport::Live:
         case Transport::Paused:
@@ -429,40 +416,24 @@ void GuiRenderPlayer::play_button_act() {
         case Transport::Idle:
             break;
     }
-    const int h = ov.highlight_row;
-    // THE TRANSPORT-ITEM ARM — reached with the transport IDLE and the
-    // highlight on the item or on nothing playable, and the one place R27
-    // lives (architect 2026-08-28): PLAY AFTER THE FOLDER FINISHED STARTS THE
-    // FOLDER'S FIRST FILE, the car's Play at the end of a playlist. The bit is
-    // set only by the natural end at the item folder's last wav with the lamp
-    // off, so reaching here with it standing means the transport is resting
-    // exactly there; the car's own Play arrives as the Space that runs this
-    // act, and the restart moves the band onto the first file like every other
-    // item change the transport makes for itself (R38). ITS OTHER ARM IS THE
-    // REPLAY: an item left resting at its start by a Stop or by the folder's
-    // end plays from the beginning, `toggle_pause`'s resume from 0.
-    const auto transport_act = [&]() {
-        if (rp.ended_at_folder_end && !rp.item_folder.empty()) {
-            const std::vector<Row> folder = rp.item_folder;
-            play_wav(folder[0].path, folder, 0);
-            return;
-        }
-        toggle_pause();
-    };
-    if (h < 0 || h >= static_cast<int>(ov.rows.size())) {
-        transport_act();
+    // IDLE. THE FOLDER-END ARM IS R27 (architect 2026-08-28): PLAY AFTER THE
+    // FOLDER FINISHED STARTS THE FOLDER'S FIRST FILE, the car's Play at the
+    // end of a playlist. The bit is set only by the natural end at the item
+    // folder's last wav with the lamp off, so reaching here with it standing
+    // means the transport is resting exactly there; the car's own Play arrives
+    // as the Space that runs this act, and the restart moves the band onto the
+    // first file like every other item change the transport makes for itself
+    // (R38).
+    if (rp.ended_at_folder_end && !rp.item_folder.empty()) {
+        const std::vector<Row> folder = rp.item_folder;
+        play_wav(folder[0].path, folder, 0);
         return;
     }
-    const Row& row = ov.rows[static_cast<size_t>(h)];
-    if (row.kind != Row::Kind::Wav) {
-        open_row(h);
-        return;
-    }
-    if (row.path != rp.item) {
-        open_row(h);
-        return;
-    }
-    transport_act();
+    // ELSE THE ITEM FROM WHERE IT RESTS — its start after a Stop, a natural
+    // end or a fresh bind, which is every rest the transport's own acts leave.
+    // toggle_pause's resume arm is that play, and it is a consumed no-op with
+    // no item.
+    toggle_pause();
 }
 
 void GuiRenderPlayer::toggle_repeat_one() {
@@ -511,9 +482,9 @@ void GuiRenderPlayer::stop() {
     // for a stop to do to an item already where a stop leaves it, and the test
     // is the three things this body writes. THE STATE IS PART OF IT: a
     // transport PAUSED at frame 0 (the no-device arm's own rest) is not where
-    // a stop leaves one, because its next Play resumes that item instead of
-    // reading the highlight — and the folder-end rest is not that state
-    // either, its bit being what the next Play reads.
+    // a stop leaves one, its next Play resuming from a state a Play would not
+    // resume from — and the folder-end rest is not that state either, its bit
+    // being what the next Play reads.
     if (rp.transport == Transport::Idle && rp.resume_frame == 0 &&
         !rp.ended_at_folder_end)
         return;
@@ -623,9 +594,10 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // A SEEK MOVES THE POINT, NOT THE STATE: the transport's state is written
     // by its own acts (the field's writer set, app_state.h), so a paused
     // transport stays paused at its new point and an idle one stays idle —
-    // where Play still reads the highlight, and resumes this item from the
-    // moved point when the highlight is the item's own row (R38 leaves it
-    // there) or nothing playable.
+    // where the next Play resumes this item from the moved point, the clock
+    // and the scrub already showing it. (No POINTER road reaches this arm:
+    // the scrub rests while the transport is idle. Left / Right, Home and the
+    // head unit's absolute seek do.)
     if (rp.resume_frame != target) {
         rp.resume_frame = target;
         damage_row();
@@ -651,8 +623,9 @@ void GuiRenderPlayer::on_natural_end() {
     playback_lifecycle.stop_playback_if_playing();
     // THE REST IS IDLE, NOT PAUSED: the item rests AT ITS START, and there is
     // nothing there to resume that a Play from the start does not do
-    // identically — so the next Play reads the highlight (and, at the folder's
-    // end, R27's bit). Written over the PAUSED the stop body's fork leaves on
+    // identically — so the next Play replays this item, or, at the folder's
+    // end, starts the folder over (R27's bit). Written over the PAUSED the
+    // stop body's fork leaves on
     // every live transport, and ahead of the two arms below, which play again
     // and take LIVE with them.
     rp.transport = Transport::Idle;
@@ -719,8 +692,8 @@ void GuiRenderPlayer::tick() {
         // once on a dead or absent device and whose player fork moves the
         // transport to PAUSED and publishes the head unit's "paused" —
         // PAUSED AT THE HELD CURSOR EVEN WHERE THAT IS FRAME 0, which is the
-        // whole reason the state is stored: the next Play resumes this item
-        // rather than opening the highlighted row. ONE LINE FOR BOTH SHAPES:
+        // whole reason the state is stored: the next Play resumes this item at
+        // that cursor rather than restarting it. ONE LINE FOR BOTH SHAPES:
         // what the user needs to know is that nothing will sound, not which
         // way it will not. Nothing here retries; on Android
         // the next Space reopens the device by the backend's own rule.

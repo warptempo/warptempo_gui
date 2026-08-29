@@ -112,21 +112,23 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::LOAD_IN_PLACE_CONFIRM) {
-        // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): `o` is OK and
-        // runs the shared act through the input handler (which closes the
-        // player on success); Escape drops the parked entry. The prompt
-        // closes first either way, so the act runs on the ordinary modal
-        // state — the player's own row comes back under it.
+        // THE LOAD CONFIRMATION (2026-08-28; TWO SUBJECTS since 2026-08-29 —
+        // the render player's highlighted batch entry and the `h` view's
+        // viewed walk member): `o` is OK and runs the act the parked subject
+        // names, through the input handler; Escape drops both parked subjects.
+        // ONE PROMPT BODY, so this arm knows nothing about which raise it is
+        // answering — the fork is the handler's. The prompt closes first
+        // either way, so the act runs on the ordinary modal state.
         if (k == 'o') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            if (input != nullptr) input->confirm_render_player_load();
+            if (input != nullptr) input->confirm_load_in_place();
             return;
         }
         if (k == '\x1b') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            if (input != nullptr) input->cancel_render_player_load();
+            if (input != nullptr) input->cancel_load_in_place();
             return;
         }
         return;

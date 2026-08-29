@@ -256,7 +256,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // THE PICKER IS KEYBOARD-MODAL THE SAME WAY (2026-08-28, architect
-    // R22/R23): the field-less Open project / history picker over the folder
+    // R22/R23): the field-less Open project picker over the folder
     // overlay, at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
@@ -834,12 +834,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       gate below it). It ranks below the prompt because its load
     //       confirmation IS a prompt, and it cannot collide with (a)/(b): the
     //       player never opens under an editor and admits no editor opener;
-    //   (c4) THE PICKER (2026-08-28, the seventh — the Open project and
-    //       history pickers, one router) — Esc closes it (route_picker_key,
+    //   (c4) THE PICKER (2026-08-28, the seventh — the Open project picker,
+    //       one router) — Esc closes it (route_picker_key,
     //       at the player's rank and with its argument: the reopen's
     //       unsaved-tab question IS a prompt, and no picker opens under an
     //       editor or admits an editor opener). The two typed prompts it
-    //       replaced were members of (b), so the count grew by one place;
+    //       replaced were members of (b), so the count grew by one place, and
+    //       it did not move again when the `h` view's own picker retired
+    //       2026-08-29 — that key raises a PROMPT there now, rung (c);
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
@@ -849,12 +851,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // MOVE: its allowlist stopped dropping the key, which lets (d) run
     // inside the view. That rung is what the ADMISSION buys, not the only rung
     // reachable in there (re-derived 2026-08-28): the view also opens the
-    // history picker on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a), (b)
-    // and (c4) run in it too — and (c) with them, the checkpoint's own failure notice being a
-    // prompt this view can raise — but each of those gates sits ABOVE the
-    // allowlist in on_key, so the press never reaches the admission at all. It gained no
-    // binding of its own, and Esc cannot close it: the view's toggle is
-    // handle_history_mode_key's, whose whole vocabulary is enumerated at
+    // load confirmation on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a),
+    // (b) and (c) run in it too — the checkpoint's own failure notice being
+    // another prompt this view can raise — but each of those gates sits ABOVE
+    // the allowlist in on_key, so the press never reaches the admission at
+    // all. It gained no binding of its own, and Esc cannot close it: the
+    // view's toggle is handle_history_mode_key's, whose whole vocabulary is
+    // enumerated at
     // history_mode_owns_key (input_key_dispatch.cpp) and carries no Esc shape in
     // any modifier combination, so no Esc reaches it.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
@@ -1170,10 +1173,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // definition, so it belongs on the save chord and the Render hijack is
         // gone whole.) Inside the commit-title editor Ctrl+S is the PLAIN save
         // again, through the editors' modal contract, which sits above this
-        // arm and never reaches it — and so is it inside the history picker,
+        // arm and never reaches it — and so is it inside a standing PICKER,
         // whose router consumes the chord as that same plain save above this
         // arm (route_picker_key), the commit-title editor never opening over
-        // a standing picker.
+        // one.
         if (ctrl && !shift && !alt) {
             if (app.history_mode.active) {
                 open_history_commit_editor();
@@ -1421,8 +1424,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the flag editor's exemption live at its declaration). THE STOP IS THE
     // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
     // refusal that day (a locked tab authors no engine settings), so the stop
-    // moved inside GuiSettingsEditor::open past that gate, the history
-    // picker's own precedent (open_history_picker). This key never meets that
+    // moved inside GuiSettingsEditor::open past that gate, the `h` view's
+    // load raise being the same shape (history_load_in_place). This key
+    // never meets that
     // refusal anyway — `;` is off the
     // read-only allowlist and drops far above — but the two openers share one
     // owner rather than one of them keeping a private copy.
@@ -1435,22 +1439,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // design 2026-08-28). OUTSIDE the `h` view it opens the RENDER PLAYER,
     // which is where a render entry is chosen — a highlighted batch cell and
     // the modal row's Load in place button, `'` again inside the player. IN
-    // the view it opens the HISTORY PICKER over the viewed walk's members — a
+    // the view it RAISES THE LOAD CONFIRMATION ON THE VIEWED MEMBER — a
     // commit by its short SHA, or a local member by its number
-    // (open_history_picker; the mode admits this one key through
-    // history_mode_key_blocked above) — the view's own road, field-less since
-    // R23 ("it's just for consistency; otherwise it looks odd"). The fork is
-    // HERE rather than inside either opener, so each opener owns one surface
+    // (history_load_in_place; the mode admits this one key through
+    // history_mode_key_blocked above) — the view's own road, with no list
+    // since 2026-08-29 ("overengineered; I don't really need it": `,` and `.`
+    // already walk the members and the lane shows the one they stand on). The
+    // fork is HERE rather than inside either road, so each owns one surface
     // whole. TWO PRODUCERS, ONE ROUTE: this key and the icon row's load
     // button, which synthesizes exactly this bare chord through the redesign
     // chord table, so both roads reach both producers and no second opener
-    // exists. The picker is a modal surface, and its opener owns the
+    // exists. Each road is a modal surface and owns its own
     // no-source guard AND the playback stop: playback halts only when the
-    // modal actually opens, so a refused open leaves a listening session
-    // undisturbed (once open, Space is the picker router's consumed nothing,
-    // so playback cannot restart until the picker closes).
+    // modal actually opens, so a refused raise leaves a listening session
+    // undisturbed.
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
-        if (app.history_mode.active) open_history_picker();
+        if (app.history_mode.active) history_load_in_place();
         else                         toggle_render_player();
         return;
     }

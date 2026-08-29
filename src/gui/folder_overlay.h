@@ -1,9 +1,11 @@
 #pragma once
 
 // THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, the OPEN PROJECT PICKER's valid project folders, and the
-// HISTORY PICKER's walk members. Which one fills it is
+// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, and the OPEN PROJECT PICKER's valid project folders. (A
+// third stood for one day, the `h` view's history picker; it was retired
+// 2026-08-29 as overengineered, that view's `'` raising its confirmation on
+// the viewed member with no list at all.) Which one fills it is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate
 // (folder_overlay_stands, app_state.h; stands() below forwards to it). This
 // header is the panel's ONE OWNER of everything that is not pixels, a press
@@ -16,9 +18,9 @@
 // hit cannot describe different rows. The ROW TABLE ITSELF is
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
-// WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows,
-// WAV rows and TEXT rows (a glyph-less kind, the history picker's) — each an
-// icon (or none) and a name, painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
+// WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows
+// and WAV rows — each an
+// icon and a name, painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
 // full window width, standing from the waveform's midpoint down to the bottom
 // row — over the waveform area's lower part, which the waveform's passes then
 // do not paint
@@ -71,20 +73,21 @@
 // NO ALTERNATING ROWS.
 //
 // THE ROWS ARE CHROME (conventions.md's third clause): a row press ARMS —
-// the same press may become the band's scroll drag — and a motionless lift
-// HIGHLIGHTS the row (the band moves onto it and nothing else happens:
-// architect 2026-08-28, "a single click highlights"). OPENING a row is the
-// DOUBLE-CLICK (the marker flag's own seed shape, the second press acting at
-// the press) or Enter on the highlight. The arm's whole state is
+// the same press may become the band's scroll drag, so the row's identity is
+// not certain at the press — and A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND
+// THEN OPENS IT. A CLICK ACTIVATES (architect 2026-08-29, over the
+// 2026-08-28 "a single click highlights; opening is the double-click or
+// Enter"): Plasma's single-click, which he runs, and GNOME's touch agree, and
+// the double-click surface went with the ruling — the second press has no
+// second meaning left to carry. The arm's whole state is
 // AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
-// highlights under every owner — the pickers have no field beside the band):
-// under the PLAYER an open enters a folder, goes up, or plays a wav (the Play
-// button and Space act on the highlight too); under the PROJECT PICKER it
-// reopens the row's project; under the HISTORY PICKER it loads the row's
-// member in place (OK and Enter open the highlight on both). The fork is at
+// highlights under every owner — the picker has no field beside the band):
+// under the PLAYER an open enters a folder, goes up, or plays a wav; under
+// the PROJECT PICKER it reopens the row's project. Enter on the highlight is
+// the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
-// not projects or commits.
+// not projects.
 
 // THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
 // dependency runs the other way (that header includes this one, for the
@@ -119,6 +122,7 @@ inline constexpr double kRowIconGapPx = 8.0;
 // THE ROW BOX: the button's box, the button's between-boxes gap, the button's
 // glyph. A folder row wears icons::Icon::Folder, a wav row
 // icons::Icon::AudioXWav, the up row the folder glyph too (it names a folder).
+// Every row has one: the glyph-less TEXT kind went with the history picker.
 inline int row_height_px()   { return scaled_px(kIconBtnPx, 1); }
 inline int row_gap_px()      { return scaled_px(kIconBtnGapPx, 1); }
 inline int pad_px()          { return scaled_px(kPanelPadPx); }
@@ -173,8 +177,8 @@ inline int content_height_px(const AppState& a) {
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses "No
-// renders to play", the project picker always lists at least the project that
-// is open, and the history picker's opener refuses an empty walk).
+// renders to play" and the project picker always lists at least the project
+// that is open).
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }

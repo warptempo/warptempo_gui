@@ -1694,14 +1694,27 @@ struct GuiInputHandler {
     // roster's own clear_redesign_button_hover beside it): every other end of
     // a hover is a MOTION, which the hover walk answers by itself. A leave
     // delivers none, so the lit row would stay lit with the pointer gone.
+    // THIS EDGE IS ALSO A FINGER'S LIFT, which is why the panel needs no
+    // touch term of its own for it (architect 2026-08-29: "hover clears at a
+    // finger's lift", GTK's and Kirigami's habit — no prelight left behind
+    // after a touch): the touch translation's end delivers the button release
+    // and then, with no mouse resting in the window, this very leave
+    // (GuiInputCore::deliver_touch_translation_end), so the row the tap lit is
+    // dark again in the same frame. With a mouse focused the end delivers a
+    // restore MOTION at the mouse's own position instead, and the hover walk
+    // re-answers from there — the mouse's hover, unchanged, which is the other
+    // half of the ruling.
     void clear_folder_overlay_hover();
     void clear_player_scrub_drag();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
     // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers
-    // OK or Cancel; the road's contract is at render_player_load_in_place in
-    // the player's block below.
-    void confirm_render_player_load();
-    void cancel_render_player_load();
+    // OK or Cancel. ONE PROMPT BODY, TWO SUBJECTS since 2026-08-29 (the
+    // player's highlighted batch entry, and the `h` view's viewed walk
+    // member): the OK forks on which subject the raise parked and the Cancel
+    // drops both. The two roads' contracts are at render_player_load_in_place
+    // and history_load_in_place.
+    void confirm_load_in_place();
+    void cancel_load_in_place();
 
     // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half (2026-08-28):
     // every standing keyboard-modal editor abandoned without committing, each
@@ -2493,8 +2506,9 @@ private:
     // and it works fine". The state is AppState::Picker (one bit and a
     // session id; the overlay's owner tag says WHICH content stands), the
     // fourth ModalDialogOwner and never an editor: the band is the whole
-    // state, the row is OK · Cancel, and route_picker_key below is its whole
-    // plastic vocabulary. TWO CONTENTS, ONE MACHINERY:
+    // state, the row is **Cancel** alone since 2026-08-29 (a click on a row is
+    // the open act), and route_picker_key below is its whole
+    // plastic vocabulary. ONE CONTENT:
     //
     //   THE OPEN PROJECT PICKER — File → Open project and Ctrl+O, one chord
     //   (is_open_project_key, gui_input.h; on_key's arm dispatches it at the
@@ -2520,8 +2534,8 @@ private:
     //       stands shows at the next open), no `..` row and no folder inside
     //       a project — a project is a leaf here. The band opens on the
     //       CURRENT project's row.
-    //     open_project_commit: THE OPEN ACT on row `index` — Enter on the
-    //       list, OK, and a row's double-click all reach it, one body. The
+    //     open_project_commit: THE OPEN ACT on row `index` — a click on the
+    //       row and Enter on the highlight both reach it, one body. The
     //       row's name goes through the project model (resolve_project); the
     //       project already open is a consumed no-op that CLOSES the picker;
     //       then the STRICT SIDECAR DRY-RUN (source_load_dry_run,
@@ -2535,46 +2549,22 @@ private:
     //       answer completing a reopen instead of an exit (GuiCloseTarget,
     //       prompt.h).
     //
-    //   THE HISTORY PICKER — bare `'` in the `h` view (R23: "it won't be
-    //   terribly useful there because there's already a way to step
-    //   backwards and forwards, but it's just for consistency; otherwise it
-    //   looks odd"), reached from on_key's `'` arm under history_mode.active
-    //   (the fork between this and the render player lives THERE, so each
-    //   opener owns one surface whole) and from the icon row's Load in place
-    //   button, which synthesizes that bare chord.
-    //     open_history_picker: the opener. The mode is the caller's gate and
-    //       the empty walk is the ALLOWLIST'S (history_mode_key_blocked
-    //       admits `'` only while the walk carries a member, and the button
-    //       greys from that same line), restated here as a guard. Refuses
-    //       under a prompt, an editor, the player or a standing picker, and
-    //       with no source; stops playback only once the picker is opening.
-    //     build_history_picker_rows: the VIEWED WALK'S MEMBERS as TEXT rows
-    //       in walk order — the prefetch store's eligible commits on the
-    //       Remote tab (what has ARRIVED: a walk still streaming lists the
-    //       members it holds at the open and is never kept fresh, R4's
-    //       built-at-entry rule), the session walk's states on the Local one
-    //       — each spelled by the ONE owner HistoryMode::member_label (the
-    //       corner's own spelling). The band opens on the VIEWED member.
-    //     history_picker_commit: THE OPEN ACT on row `index` — the fork on
-    //       the walk source: the Remote tab loads the store's SHA at that
-    //       index through load_history_commit_in_place, the Local tab the
-    //       member number through load_history_local_entry_in_place. Success
-    //       lands the one undo entry, closes the mode (inside the act) and
-    //       closes the picker; a refusal leaves the picker standing with the
-    //       act's own stderr line as its whole report (silent on the status
-    //       line — the `h` mode's line is the chain's top tier, the class at
-    //       AppState::transient_status_message).
+    //   (THE `h` VIEW HAD A SECOND PICKER for one day — bare `'` over the
+    //   viewed walk's members — and it was retired 2026-08-29 as
+    //   "overengineered; I don't really need it": that key raises the load
+    //   CONFIRMATION on the viewed member directly now, with no list
+    //   (history_load_in_place, input_key_dispatch.cpp).)
     //
-    //   SHARED, BOTH CONTENTS:
-    //     picker_open_highlight: Enter on the list and the OK button — the
-    //       open act on the highlighted row, forked on the overlay's owner
-    //       through folder_overlay_open_row; a -1 highlight is a consumed
-    //       no-op.
+    //   THE PICKER'S SHARED MACHINERY:
+    //     picker_open_highlight: Enter on the list — the open act on the
+    //       highlighted row, forked on the overlay's owner through
+    //       folder_overlay_open_row; a -1 highlight is a consumed no-op.
     //     picker_set_highlight / picker_move_highlight: the widget's two
     //       highlight mechanics (folder_overlay.h) with the picker's damage —
-    //       the motionless lift's seat (folder_overlay_highlight_row's picker
-    //       arms) and bare Up / Down's walk.
-    //     close_picker: THE ONE CLOSE BODY — Esc, Cancel, Ctrl+Q's and the
+    //       the row click's first half (folder_overlay_highlight_row's picker
+    //       arm) and bare Up / Down's walk.
+    //     close_picker: THE ONE CLOSE BODY — Esc, the Cancel button,
+    //       Ctrl+Q's and the
     //       compositor's close road (GuiPrompt::request_close, at its head
     //       beside the player's close), the same-project no-op and the
     //       reopen's own tail all pass through it; the overlay leaves with
@@ -2583,23 +2573,22 @@ private:
     //     route_picker_key: THE WHOLE PLASTIC VOCABULARY while a picker
     //       stands, in the render player's router's shape and at its rank in
     //       on_key (under the prompt gate and the dropdown gate, above every
-    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, OK,
-    //       Cancel] through the one modal ring route (opening NOWHERE, the
+    //       ordinary dispatch): Tab / Shift+Tab walk the ring [list, Cancel]
+    //       through the one modal ring route (opening NOWHERE, the
     //       first Tab landing on the list); Enter presses a ring-focused
     //       button (press-at-press, commit-at-release, the modal's own) or,
     //       with none focused, OPENS the highlight; Space presses a focused
     //       button only; Up / Down walk the highlight (repeat-eligible,
     //       scrolling to keep it visible); Esc closes; Ctrl+S saves with the
-    //       picker standing (GuiSaveOps::save — the typed prompts' own
-    //       contract, and in the `h` view NOT the commit-title editor, which
-    //       must not open over a picker); Ctrl+Q falls through to the close
+    //       picker standing (GuiSaveOps::save — the typed prompt's own
+    //       contract); Ctrl+Q falls through to the close
     //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
     //       no-op). Returns true when consumed here, false for the one
     //       fall-through.
     //
     // No undo (a reopen discards the stack by construction, and the project
-    // picker authors nothing; the history picker's load is the act's own one
-    // entry); LEGAL ON A READ-ONLY TAB (Ctrl+O is a named entry on
+    // picker authors nothing); LEGAL ON A READ-ONLY TAB (Ctrl+O is a named
+    // entry on
     // read_only_key_blocked's allowlist; bare `'` stays blocked there, its
     // name being the load's). Ctrl+O admits no shift and no alt, so
     // Ctrl+Shift+O stays the strict rule's consumed no-op, and no editor
@@ -2610,13 +2599,10 @@ private:
     // no-second-road doctrine's stated exception for the Open prompt
     // (2026-08-28, one afternoon: GLASS NEEDS A ROAD THAT IS NOT TYPING) is
     // SPENT rather than kept — the list is now the only road on both
-    // backends, and Enter, OK and the double-click are one act on it.
+    // backends, and a row's click and Enter are one act on it.
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
-    void open_history_picker();
-    void build_history_picker_rows();
-    void history_picker_commit(int index);
     void picker_open_highlight();
     void picker_set_highlight(int index);
     void picker_move_highlight(int delta);
@@ -2791,8 +2777,9 @@ private:
     // apply_recipe_in_place above — the marker pair and the engine block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
     // ONE CALLER, re-greped: the RENDER PLAYER's Load in place button through
-    // its confirmation (confirm_render_player_load, the highlighted batch
-    // cell), which copies the entry before calling — the tail wipes tmp/. THE
+    // its confirmation (confirm_load_in_place's player arm, the highlighted
+    // batch cell), which copies the entry before calling — the tail wipes
+    // tmp/. THE
     // TWO-ROAD SANCTION RETIRED WITH THE TYPED ROAD (2026-08-28): the act had
     // a second caller for part of that day, the `'` load editor's Enter
     // matching a typed entry id, and the design (§4) sanctioned the pair as the
@@ -2804,9 +2791,9 @@ private:
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
     // source — apply the three sidecars commit `sha` carried (the full SHA
-    // the prefetch store holds for the history picker's highlighted row —
-    // since 2026-08-28 the one caller hands it a store member, the typed
-    // spelling having retired with the load prompt's field) as the new
+    // the prefetch store holds for the VIEWED member — the one caller,
+    // confirm_load_in_place, hands it a store member; the typed spelling
+    // retired with the load prompt's field) as the new
     // authoring baseline, in memory, with the disk untouched.
     // Validate-before-mutate like its sibling: the resolve, the three-sidecar
     // presence and all three STRICT whole-file parses run before any store is
@@ -2820,8 +2807,8 @@ private:
 
     // load_history_local_entry_in_place: the same act with A STATE OF THIS
     // SESSION'S OWN UNDO/REDO TIMELINE as its source (architect 2026-08-08) —
-    // apply member `number`, its displayed NUMBER in [1, N] (the history
-    // picker's highlighted row since 2026-08-28), as the new authoring
+    // apply member `number`, its displayed NUMBER in [1, N] (the VIEWED
+    // member, handed over by confirm_load_in_place), as the new authoring
     // baseline. Validate-before-mutate like both siblings: a zero,
     // out-of-range or unreadable member is one stderr line and a false return
     // with nothing touched. It restores exactly what an undo
@@ -3622,11 +3609,11 @@ private:
     void toggle_render_player();
 
     // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
-    // FOR EVERY CONTENT: the row press claim (arm at the press; a recognized
-    // DOUBLE-CLICK opens the row at the press and arms nothing; a modified or
-    // non-left press is consumed — the shift the player's MODAL ROW admits
-    // since R37 is the row's, never a row of the list's), the release (a motionless lift highlights
-    // and seeds the double-click candidate; a scroll drag ends), the motion
+    // FOR EVERY CONTENT: the row press claim (arm at the press — a modified or
+    // non-left press is consumed, the shift the player's MODAL ROW admits
+    // since R37 being the row's, never a row of the list's), the release (A
+    // MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click activates,
+    // architect 2026-08-29; a scroll drag ends), the motion
     // (past the vertical drag gate the arm is the band's scroll drag; inside
     // it the feint's inside bit), the hover walk, and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
@@ -3635,16 +3622,14 @@ private:
     // picker's), each of which admits exactly the band and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.
     bool claim_folder_overlay_press(int x, int y, GuiMouseButton button,
-                                    GuiInputState mods,
-                                    const DoubleClickCandidate& dc_at_press);
+                                    GuiInputState mods);
     bool finish_folder_overlay_release(int x, int y);
     void update_folder_overlay_press_motion(int x, int y);
     void update_folder_overlay_hover(int x, int y);
-    // THE TWO ROW ACTS, FORKED ON THE OWNER and nowhere else: the motionless
-    // lift's highlight (the band moves, under every owner — the pickers have
+    // THE TWO HALVES OF THE ROW CLICK, FORKED ON THE OWNER and nowhere else:
+    // the highlight (the band moves, under every owner — the picker has
     // no field beside it) and the open act (the player enters a folder, goes
-    // up or plays a wav; the project picker reopens the row's project; the
-    // history picker loads the row's member in place).
+    // up or plays a wav; the project picker reopens the row's project).
     void folder_overlay_highlight_row(int index);
     void folder_overlay_open_row(int index);
     // (clear_folder_overlay_press is public, beside clear_modal_dialog_press:
@@ -3680,14 +3665,23 @@ private:
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry — the one prompt raised with its FIRST button
     // focused, so a bare Enter answers OK (the reason is at the raise). The
-    // prompt's OK runs confirm_render_player_load (the shared act
+    // prompt's OK runs confirm_load_in_place's player arm (the shared act
     // load_render_entry_in_place, whose success closes the player and whose
     // refusal says "Load refused" on the status line — its own cause is on
-    // stderr); Cancel runs cancel_render_player_load.
+    // stderr); Cancel runs cancel_load_in_place.
     // THE TWO-ROAD SANCTION RETIRED with the typed renders road the same day;
     // the record is at load_render_entry_in_place, which has this one caller.
     void render_player_load_in_place();
-    // (confirm_render_player_load / cancel_render_player_load — the prompt's
+    // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29, retiring the one-day
+    // history picker): bare `'` there raises THE SAME PROMPT on the VIEWED
+    // walk member — "Load `<member label>` in place?", Enter answering OK —
+    // and the OK runs that walk's own act (the fork is at
+    // confirm_load_in_place, the one site of it). Its guards are the picker's
+    // former ones: the mode standing, no prompt or editor, no player and no
+    // picker, a source loaded, and a walk that carries a member (the
+    // allowlist's own term, restated as a guard).
+    void history_load_in_place();
+    // (confirm_load_in_place / cancel_load_in_place — the prompt's
     // two answers — are public, beside the hard-end clearers above: GuiPrompt
     // reaches them through its back-pointer.)
 

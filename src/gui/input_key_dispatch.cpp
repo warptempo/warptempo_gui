@@ -481,9 +481,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //   * load_history_commit_in_place and load_history_local_entry_in_place — the
 //     mode's own `'`, one act per walk;
 //   * load_render_entry_in_place — the RENDER PLAYER's load, which has ONE
-//     caller (confirm_render_player_load) and therefore CANNOT run with the
-//     view standing: the player's opener refuses in the mode, where bare `'`
-//     is the history picker and its open act routes to one of the two above.
+//     caller (confirm_load_in_place's player arm) and therefore CANNOT run
+//     with the view standing: the player's opener refuses in the mode, where
+//     bare `'` raises the same prompt on a walk member and routes to one of
+//     the two above.
 //     Its call is the idempotent no-op this function's early return
 //     exists for, placed at the mutator so the close travels with the act.
 // There is no pointer closer, and no closer outside this file's two acts, its
@@ -1765,13 +1766,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
 //                             redesigned button.
-//   - ' (bare)              → THE HISTORY PICKER, and the mode's one admitted
+//   - ' (bare)              → THE LOAD CONFIRMATION on the VIEWED walk member,
+//                             and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
 //                             the mode it loads something else in place: the
-//                             picker lists the viewed walk's members with the
-//                             band on the viewed one and loads THE HIGHLIGHTED
-//                             MEMBER's state in place, which is the
-//                             mode's own
+//                             key names the member the walk stands on and its
+//                             OK loads THAT MEMBER's state in place, which is
+//                             the mode's own
 //                             act rather than an authoring chord that would
 //                             leave the frozen now side describing a state that
 //                             no longer exists — and the load-in-place closes
@@ -2054,13 +2055,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
     // the 2026-08-07 "the Local walk consumes it": a local member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
-    // act does). The two differ only in what the history picker lists — the
-    // commits by short SHA on the Remote tab, the members by NUMBER on the
-    // Local one — and the routing lives at history_picker_commit, not here.
+    // act does). The two differ only in how the member is SPELLED in the
+    // confirmation — a short SHA on the Remote tab, a NUMBER on the Local one
+    // — and the routing lives at confirm_load_in_place, not here.
     //
     // THE TERM IS THE ACTIVE WALK'S, AND IT IS ONE TERM FOR BOTH SINCE
-    // 2026-08-09: the walk must have a member. The picker lists THE WALK and
-    // opens on the viewed member, so a walk with none has nothing to list and
+    // 2026-08-09: the walk must have a member. The act names THE VIEWED one,
+    // so a walk with none has nothing to name and
     // nothing to load, and one decision refuses the key and greys the icon
     // row's load-in-place button — the head delta's own shape.
     //
@@ -2069,8 +2070,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // empty UNBOUND, while the Remote one now opens at `0/0` whenever a piece
     // has no eligible checkpoint. So the honest gate against the blank-lane
     // walk covers both, and the source fork this predicate carried for it is
-    // gone (the vocabulary fork stays where it always was, at the rows' spelling
-    // and at history_picker_commit).
+    // gone (the vocabulary fork stays where it always was, at member_label's
+    // spelling and at confirm_load_in_place).
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare && mode.walk_count() > 0);
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
@@ -4184,7 +4185,7 @@ void GuiInputHandler::apply_recipe_in_place(
 // Load render entry `e`'s frozen sidecar recipe in place as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
 // takes an explicit entry, and the caller owns the visible refusal. ONE
-// CALLER, re-greped: confirm_render_player_load, the player's Load in place
+// CALLER, re-greped: confirm_load_in_place's player arm, the Load in place
 // button through its confirmation, which acts on the HIGHLIGHTED batch cell
 // and so has no name to fail to resolve — its own refusals (the lock, a
 // running render, a highlight that is not a batch cell) all run before the
@@ -4377,8 +4378,8 @@ bool GuiInputHandler::load_render_entry_in_place(
 //
 // WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
 // history as its source instead of a render entry. `sha` is the full SHA the
-// prefetch store holds for the history picker's highlighted row — since
-// 2026-08-28 the one caller (history_picker_commit) hands it a walk member
+// prefetch store holds for the VIEWED member — the one caller
+// (confirm_load_in_place) hands it a walk member
 // and nothing else; the typed spelling, and with it the "short SHA pasted out
 // of GitHub's web UI" use case, retired with the load prompt's field
 // (architect R23). ONE STATE IN, ONE STATE OUT: the three sidecars THAT
@@ -4398,9 +4399,9 @@ bool GuiInputHandler::load_render_entry_in_place(
 // parse-gating the architect ruled, and the reason no second, looser grammar
 // is written anywhere on this path. A refusal is one stderr line naming its
 // cause with the committed path and the SHA (first error only — the gate's own
-// contract), and the caller keeps the picker open (silently on the status
-// line — the class at AppState::transient_status_message, restated at
-// history_picker_commit).
+// contract), and the caller says nothing on the status
+// line (the class at AppState::transient_status_message, restated at
+// confirm_load_in_place).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
 // stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
@@ -4473,7 +4474,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
 
     // NOT a modal open, so NOT the modal-open owner's business — the standalone
     // mutator's own self-guard, exactly as the render-entry load-in-place
-    // spells it. The history picker's open already froze playback through
+    // spells it. The `'` raise already froze playback through
     // that owner on the keyboard route; stopping again here keeps the mutator
     // correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
@@ -4500,15 +4501,15 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     return true;
 }
 
-// -- Load-in-place from a LOCAL HISTORY MEMBER (the history picker on a Local
-//    tab) --
+// -- Load-in-place from a LOCAL HISTORY MEMBER (the `'` confirmation on a
+//    Local tab) --
 //
 // WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
 // superseding his own "the Local walk consumes `'`"), with A STATE OF THIS
 // SESSION'S OWN UNDO/REDO TIMELINE as its source. `number` is the highlighted
-// row's displayed NUMBER — the corner's own `n/N` vocabulary, which is the
-// only name a local member has (since 2026-08-28 the one caller,
-// history_picker_commit, hands it a listed member; the typed number retired
+// VIEWED member's displayed NUMBER — the corner's own `n/N` vocabulary, which
+// is the only name a local member has (the one caller,
+// confirm_load_in_place, hands it that member; the typed number retired
 // with the load prompt's field).
 //
 // IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
@@ -4558,7 +4559,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
 bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     // The mode is the route's precondition — the walk lives on it, and the close
     // below is part of the act. The source test is the routing's own fact
-    // restated defensively: history_picker_commit sends only Local-tab
+    // restated defensively: confirm_load_in_place sends only Local-tab
     // members here.
     if (!app.history_mode.active) return false;
     if (app.history_mode.source != GuiHistoryWalkSource::Local) return false;
@@ -5054,8 +5055,8 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 // road meets earlier still.
 void GuiInputHandler::open_project_picker() {
     if (app.prompt.active || keyboard_modal_editor_active()) return;
-    // The `h` history view admits no dialog open but its own two (the
-    // history picker and the commit title): a reopen would tear the view down
+    // The `h` history view admits no dialog open but its own two (the `'`
+    // load confirmation and the commit title): a reopen would tear the view down
     // from under itself, so the opener refuses here exactly as the allowlist
     // refuses the keyboard openers.
     if (app.history_mode.active) return;
@@ -5187,106 +5188,63 @@ void GuiInputHandler::open_project_commit(int index) {
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
-// The history picker's opener — THE `h` HISTORY VIEW'S ROAD ONTO LOAD IN
-// PLACE, AND ITS ALONE (architect 2026-08-28: "we can keep the single quote
-// for load in place because that still works in the history view"; the
-// field-less form is R23's). A RENDER ENTRY is loaded from the PLAYER — its
-// Load in place button on the highlighted batch cell — so this picker has ONE
-// subject, the viewed walk's members.
+// THE `h` VIEW'S LOAD IN PLACE — bare `'` there, and its road alone (architect
+// 2026-08-28: "we can keep the single quote for load in place because that
+// still works in the history view"). IT ACTS ON THE VIEWED MEMBER WITH NO LIST
+// (architect 2026-08-29, retiring the one-day history picker as
+// "overengineered; I don't really need it"): `,` and `.` already walk the
+// members and the lane already shows the one the walk stands on, so the key
+// raises THE CONFIRMATION straight away — the render player's own prompt body
+// with the walk member as its subject, "Load `<member label>` in place?",
+// OK / Cancel with Enter answering OK.
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
 // caller is on_key's `'` arm under history_mode.active, which is where the
-// fork between this picker and the player lives. THE EMPTY WALK IS THE
+// fork between this act and the player lives. THE EMPTY WALK IS THE
 // ALLOWLIST'S: the mode opens on an EMPTY commit walk, and the honest gate
 // against a walk with no member is the `'` admission's own term
 // (history_mode_key_blocked — the chord is refused and the icon row's load
 // button greys from the same line), restated below as a guard so the body is
 // correct from any caller. No-op with no source loaded. Stops playback only
-// when the modal actually opens (after every guard), so a refused open leaves
-// a listening session running.
-void GuiInputHandler::open_history_picker() {
+// when the prompt actually opens (after every guard), so a refused raise
+// leaves a listening session running.
+void GuiInputHandler::history_load_in_place() {
     if (!app.history_mode.active) return;
     if (app.prompt.active || keyboard_modal_editor_active()) return;
     if (render_player_active() || picker_active()) return;
     if (app.source_audio_path.empty()) return;
-    if (app.history_mode.walk_count() == 0) return;
+    const std::size_t count = app.history_mode.walk_count();
+    if (count == 0) return;
+    const std::size_t member = app.history_mode.walk_index();
+    if (member >= count) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
-    app.picker.active  = true;
-    app.picker.session = text_editor::next_session_id();
-    build_history_picker_rows();
+    // THE SUBJECT IS PARKED, not the act: the prompt answers back through the
+    // input-handler back-pointer and confirm_load_in_place forks on which of
+    // the two subjects is standing (the player's entry, or this member).
+    app.history_mode.pending_load_member = member;
+    // The member in the ONE spelling both walks share (member_label — the
+    // short SHA on the Remote tab, the displayed number on the Local one), so
+    // the question names the member exactly as the mode's own corner does.
+    // Cancel LAST, the escape sentinel every prompt derives its Esc from; the
+    // FIRST button takes the passive focus, this prompt's own choice on both
+    // its subjects (PromptInitialFocus).
+    app.prompt.present(
+        "Load `" + app.history_mode.member_label(member) + "` in place?",
+        {'o', '\x1b'},
+        {"OK", "Cancel"},
+        DialogTrigger::LOAD_IN_PLACE_CONFIRM,
+        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
-}
-
-void GuiInputHandler::build_history_picker_rows() {
-    AppState::FolderOverlay& ov = app.folder_overlay;
-    ov       = AppState::FolderOverlay{};
-    ov.owner = AppState::FolderOverlay::Owner::HistoryPicker;
-    // THE VIEWED WALK'S MEMBERS, in walk order, as TEXT rows (no glyph — a
-    // member names neither a folder nor a file): the prefetch store's
-    // eligible commits on the Remote tab, the session walk's states on the
-    // Local one, each spelled by the ONE owner the corner reads too
-    // (HistoryMode::member_label — the short SHA, or the displayed number).
-    // WHAT HAS ARRIVED IS WHAT IS LISTED: a commit walk still streaming lists
-    // the members the store holds at the open, and the listing is never kept
-    // fresh — R4's built-at-entry rule, the player's own; a member arriving
-    // while the picker stands shows at the next open. The row INDEX is the
-    // walk index, which is what the open act reads back.
-    const std::size_t count = app.history_mode.walk_count();
-    for (std::size_t i = 0; i < count; ++i) {
-        AppState::FolderOverlayRow row;
-        row.kind = AppState::FolderOverlayRow::Kind::Text;
-        row.name = app.history_mode.member_label(i);
-        ov.rows.push_back(std::move(row));
-    }
-    // THE BAND OPENS ON THE VIEWED MEMBER — the corner's own position.
-    folder_overlay::clamp_scroll(app);
-    folder_overlay::set_highlight(
-        app, static_cast<int>(app.history_mode.walk_index()));
-}
-
-// THE OPEN ACT on row `index` — the fork on the walk SOURCE, and the one
-// site of it: the Remote tab loads the store's SHA at that index through
-// load_history_commit_in_place, the Local tab the member's number through
-// load_history_local_entry_in_place. Each act owns every refusal on its own
-// route and names it on stderr; both share this function's SHAPE — a true
-// result closes the picker (the act has already closed the mode), a false one
-// leaves it standing. THE REFUSAL IS SILENT ON THE STATUS LINE, by the class
-// recorded at AppState::transient_status_message: the `h` mode's own line is
-// the chain's top tier, so a transient written while the view stands is
-// invisible until the view closes and stale then — and a listed member
-// refuses only on a change in the clone between the scan and the act (a walk
-// that shrank under a standing picker is unreachable, a kick while the mode
-// stands being deferred to the exit), so the stderr line the act writes is
-// the whole report. The row index is a walk index by the list builder's
-// construction.
-void GuiInputHandler::history_picker_commit(int index) {
-    if (!app.picker.active) return;
-    if (app.folder_overlay.owner !=
-        AppState::FolderOverlay::Owner::HistoryPicker) return;
-    if (!app.history_mode.active) return;
-    const int n = static_cast<int>(app.folder_overlay.rows.size());
-    if (index < 0 || index >= n) return;
-    const std::size_t member = static_cast<std::size_t>(index);
-
-    // The SHA is COPIED out of the store before the act: the act closes the
-    // mode, which drops the session the reference would point into.
-    const std::string sha = app.history_mode.session.sha_at(member);
-    const bool loaded =
-        app.history_mode.source == GuiHistoryWalkSource::Local
-            ? load_history_local_entry_in_place(member + 1)
-            : load_history_commit_in_place(sha);
-    if (loaded) close_picker();
-    // A refusal: the act's own cause is on stderr, the picker stays, and no
-    // transient is written (the head of this function).
 }
 
 // -- The picker's shared machinery --------------------------------------------
 
-// Enter on the list and the OK button: the open act on the highlighted row,
-// forked on the overlay's owner through the one row-act fork
-// (folder_overlay_open_row, input_pointer.cpp — the double-click's second
-// press reaches the same fork). A -1 highlight is a consumed no-op.
+// ENTER ON THE LIST — the keyboard's own click on the highlight, through the
+// one row-act fork (folder_overlay_open_row, input_pointer.cpp, which the row
+// click's motionless lift reaches too). A -1 highlight is a consumed no-op.
+// The row's own OK button went with the ruling that a click activates: the
+// picker's row is Cancel alone.
 void GuiInputHandler::picker_open_highlight() {
     if (!app.picker.active) return;
     const int highlight = app.folder_overlay.highlight_row;
@@ -5309,7 +5267,7 @@ void GuiInputHandler::picker_move_highlight(int delta) {
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
 }
 
-// THE ONE CLOSE BODY, both contents (the caller inventory is at the
+// THE ONE CLOSE BODY (the caller inventory is at the
 // declaration). THE OVERLAY LEAVES WITH THE PICKER: the reset restores
 // Owner::None, which IS the band's standing predicate answering false. The
 // damage is the whole window, as the open's is — the band's pixels sit over
@@ -5332,11 +5290,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     const bool bare  = !ctrl && !shift && !alt;
 
     // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner — the
-    // contract the two typed prompts this picker replaced carried
-    // (route_modal_editor_key's Ctrl+S arm), kept because it is what the `h`
-    // view needs: the ordinary dispatch's Ctrl+S IS the Save-and-Commit act
-    // in that view, and its commit-title editor must not open over a
-    // standing picker (no two modals stand together). The save is a
+    // contract the typed prompt this picker replaced carried
+    // (route_modal_editor_key's Ctrl+S arm). The save is a
     // consumed no-op where the save owner refuses (a checkpoint in flight).
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
         save_ops.save();
@@ -5348,7 +5303,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // than here, so the two roads cannot drift.
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // THE RING: Tab / Shift+Tab walk [list, OK, Cancel] through the one modal
+    // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
     // ring route, whose list arm the player and the picker share. A
     // RING-FOCUSED BUTTON takes Enter and Space as its own press
     // (press-at-press, commit-at-release — the route above already armed it
@@ -5364,8 +5319,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
             return true;
         case GuiKeys::Return:
         case GuiKeys::KpEnter:
-            // With no button focused, Enter OPENS the highlight — the OK
-            // button's own act.
+            // With no button focused, Enter OPENS the highlight — the row
+            // click's own act from the keyboard.
             if (mods.synthesized_repeat) return true;
             picker_open_highlight();
             return true;
@@ -5983,9 +5938,9 @@ void GuiInputHandler::render_player_load_in_place() {
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, this prompt alone
     // (architect 2026-08-28): a bare ENTER here answers OK, because the load
     // is not a destructive answer — it lands ONE undo entry, which the
-    // ordinary Ctrl+Z takes back — and because the product's other `'` load
-    // road, the `h` view's history picker, opens its highlight on Enter. The
-    // two load roads answer alike instead of opposite ways. Through
+    // ordinary Ctrl+Z takes back — and it is this same prompt body that the
+    // `h` view's `'` raises on its viewed member, so the two `'` load roads
+    // answer alike by construction. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
                        {'o', '\x1b'},
@@ -5995,28 +5950,64 @@ void GuiInputHandler::render_player_load_in_place() {
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::confirm_render_player_load() {
-    if (!app.render_player.active || !app.render_player.pending_load) return;
-    // Copied before the act: its tail wipes tmp/, and the player's close
-    // resets the slot.
-    const AppState::RenderEntry entry = *app.render_player.pending_load;
-    app.render_player.pending_load.reset();
-    if (load_render_entry_in_place(entry)) {
-        // SUCCESS CLOSES THE PLAYER: the close's re-express rebinds the
-        // view's buffer (the load's own trigger() already dispatched the
-        // target preview where the view is target), then frees the item.
-        render_player.close();
+// THE LOAD CONFIRMATION'S OK — ONE PROMPT BODY, TWO SUBJECTS (architect
+// 2026-08-29). The raise parks exactly one of them and this fork runs the act
+// that subject names: the PLAYER's highlighted batch entry
+// (AppState::RenderPlayer::pending_load, raised by its Load in place button or
+// bare `'` inside it) or the `h` VIEW's viewed walk member
+// (AppState::HistoryMode::pending_load_member, raised by bare `'` there). The
+// two raises cannot coexist — the player's opener refuses in the view and the
+// view's key never reaches the player — so the order between the arms is free,
+// and each arm re-asks its own mode live because the prompt outlives neither.
+void GuiInputHandler::confirm_load_in_place() {
+    if (app.render_player.pending_load) {
+        if (!app.render_player.active) return;
+        // Copied before the act: its tail wipes tmp/, and the player's close
+        // resets the slot.
+        const AppState::RenderEntry entry = *app.render_player.pending_load;
+        app.render_player.pending_load.reset();
+        if (load_render_entry_in_place(entry)) {
+            // SUCCESS CLOSES THE PLAYER: the close's re-express rebinds the
+            // view's buffer (the load's own trigger() already dispatched the
+            // target preview where the view is target), then frees the item.
+            render_player.close();
+            return;
+        }
+        // The act's own cause is on stderr (its every refusal arm names it);
+        // the player has no field to red-flash, so the status line says the
+        // one thing it can.
+        app.transient_status_message = "Load refused";
+        viewport.invalidate_status_chain_area();
         return;
     }
-    // The act's own cause is on stderr (its every refusal arm names it); the
-    // player has no field to red-flash, so the status line says the one
-    // thing it can.
-    app.transient_status_message = "Load refused";
-    viewport.invalidate_status_chain_area();
+    if (app.history_mode.pending_load_member) {
+        const std::size_t member = *app.history_mode.pending_load_member;
+        app.history_mode.pending_load_member.reset();
+        if (!app.history_mode.active) return;
+        if (member >= app.history_mode.walk_count()) return;
+        // THE FORK ON THE WALK SOURCE, and the one site of it: the Remote tab
+        // loads the store's SHA at that index through
+        // load_history_commit_in_place, the Local tab the member's number
+        // through load_history_local_entry_in_place. The SHA is COPIED out of
+        // the store before the act, which closes the mode and drops the
+        // session a reference would point into. Each act owns every refusal on
+        // its own route and names it on stderr; THE REFUSAL IS SILENT ON THE
+        // STATUS LINE, by the class recorded at
+        // AppState::transient_status_message — the `h` mode's own line is the
+        // chain's top tier, so a transient written while the view stands is
+        // invisible until the view closes and stale then.
+        const std::string sha = app.history_mode.session.sha_at(member);
+        (void)(app.history_mode.source == GuiHistoryWalkSource::Local
+                   ? load_history_local_entry_in_place(member + 1)
+                   : load_history_commit_in_place(sha));
+    }
 }
 
-void GuiInputHandler::cancel_render_player_load() {
+// THE CONFIRMATION'S CANCEL: both subjects dropped, whichever was parked —
+// one body, so a subject cannot outlive the question that named it.
+void GuiInputHandler::cancel_load_in_place() {
     app.render_player.pending_load.reset();
+    app.history_mode.pending_load_member.reset();
 }
 
 // Tab-key family. See the declaration for the chord list.
