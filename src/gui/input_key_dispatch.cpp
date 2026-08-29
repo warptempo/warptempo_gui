@@ -5973,7 +5973,8 @@ void GuiInputHandler::render_player_load_in_place() {
     // through the player's own pause (which takes the one stop body through
     // the player's fork and keeps the resume point) — the recorded exception
     // at stop_playback_for_modal_open.
-    if (app.render_player.transport_live) render_player.toggle_pause();
+    if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
+        render_player.toggle_pause();
     app.render_player.pending_load = *entry;
     // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
     // renders_dir.h), OK / Cancel — Cancel the Escape sentinel LAST like every

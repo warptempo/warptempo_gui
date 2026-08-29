@@ -2222,7 +2222,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 // THE SLOT'S BAND AT ITS TALLEST, not either tenant's own:
                 // on the HIDE the rect has to erase a surface that no longer
                 // stands (so there is nothing to ask its height of), and the
-                // overlay's band is as tall as its listing while the
+                // overlay's band is the ceiling whenever it stands while the
                 // keyboard's is its four key rows — one rect that contains
                 // both (onscreen_keyboard::slot_damage_rect).
                 viewport.invalidate_rect(

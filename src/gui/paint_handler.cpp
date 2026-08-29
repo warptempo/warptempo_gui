@@ -5683,7 +5683,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
         // right. STOP SITS AFTER PLAY/PAUSE, Audacious's own order (R36).
-        const bool live = app.render_player.transport_live;
+        const bool live = app.render_player.transport ==
+                          AppState::RenderPlayer::Transport::Live;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {
             DialogButtonPlan b;
@@ -6718,12 +6719,13 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // frame the comparator's own damage produces; every other frame leaves it
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
-    // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is as
-    // tall as its listing and the keyboard's is its four key rows, so "the
-    // band" is a question with two answers and the bit describes the pixels
-    // THIS frame may have written. With NEITHER standing the band to cover is
-    // the slot's tallest — the hide's own damage, which is what has to erase
-    // the departed tenant.
+    // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is the
+    // CEILING BAND every time it stands — from the waveform's midpoint down,
+    // whatever its listing's length (R35) — and the keyboard's is its four key
+    // rows, so "the band" is a question with two answers and the bit describes
+    // the pixels THIS frame may have written. With NEITHER standing the band
+    // to cover is the slot's tallest — the hide's own damage, which is what
+    // has to erase the departed tenant.
     const bool keyboard = onscreen_keyboard::stands(app, gui);
     const bool overlay  = folder_overlay::stands(app);
     const GuiRect surf  = overlay  ? folder_overlay::surface_rect(app)

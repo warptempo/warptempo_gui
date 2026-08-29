@@ -47,9 +47,13 @@ struct GuiInputHandler;
 // wants to go back to the beginning of that track, they can hit stop and then
 // play again. This is different from the live transport, because there we have
 // the scrub, and a pause wouldn't make sense — the scrub always returns to the
-// playhead when not playing"). The states are `transport_state()` below —
-// IDLE (no item, or an item resting at its start), LIVE, PAUSED (an item
-// resting past its start) — and the table is at play_button_act.
+// playhead when not playing"). THE STATE IS STORED, in
+// `AppState::RenderPlayer::transport` (that field's block owns the reasons,
+// the writer set and the readers) — IDLE (nothing to resume: no item, or an
+// item a STOP, a natural end or a fresh open left resting at its start), LIVE,
+// PAUSED (an item the transport parked, AT WHATEVER FRAME — a pause at frame 0
+// is PAUSED, which no reading of the resume point could say) — and the table
+// is at play_button_act.
 //
 // THE MODEL (R1, R2, revised 2026-08-28 after the first pass): the listing is
 // navigated THE REGULAR WAY — a highlighted folder OPENS on the double-click,
@@ -121,13 +125,13 @@ struct GuiInputHandler;
 // which the player does not display. The project's resting playhead does not
 // move while the player plays, its scanner never runs, and the item's domain
 // is the decoded buffer's own [0, frames). So play_item / resume / seek call
-// playback.play directly against that domain, and the bit that says the
-// transport is live is the player's own (`transport_live`, the scanner
-// flag's mirror). THE STOP IS STILL THE ONE STOP BODY: every pause, natural
-// end and close takes GuiPlaybackLifecycle::stop_playback_if_playing, which
-// carries the player's fork inside it (the fence, then the transport bit
-// cleared and the modal row damaged instead of the scanner teardown), so the
-// keyboard stop rule and the fence-before-rebind ordering hold by
+// playback.play directly against that domain, and the state that says the
+// transport is live is the player's own (`transport`'s LIVE value, the
+// scanner flag's mirror). THE STOP IS STILL THE ONE STOP BODY: every pause,
+// natural end and close takes GuiPlaybackLifecycle::stop_playback_if_playing,
+// which carries the player's fork inside it (the fence, then the transport
+// moved to PAUSED and the modal row damaged instead of the scanner teardown),
+// so the keyboard stop rule and the fence-before-rebind ordering hold by
 // construction.
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
@@ -227,16 +231,12 @@ struct GuiRenderPlayer {
 
     // -- The transport ------------------------------------------------------
 
-    // THE TRANSPORT'S THREE STATES, the one fork the row's buttons read
-    // (R36). It is derived, never stored: LIVE is the transport bit, and what
-    // separates PAUSED from IDLE is whether the rest is PAST the item's start
-    // — a resume point of 0 is where a Stop, a natural end and a fresh open
-    // all leave it, and there is nothing there to resume that a Play from the
-    // start does not do identically.
-    enum class TransportState { Idle, Live, Paused };
-    TransportState transport_state() const;
-
     // THE PLAY BUTTON'S ACT (and Space's, and the car's Play / PlayPause).
+    // The three states it forks on are STORED in
+    // AppState::RenderPlayer::transport, which owns them: LIVE is the
+    // sounding transport, PAUSED an item the transport parked AT WHATEVER
+    // FRAME (a pause that caught the cursor at 0 answers PAUSED here and
+    // resumes its own item), IDLE everything with nothing to resume.
     // THE TRANSPORT IS ASKED AHEAD OF THE HIGHLIGHT (architect 2026-08-28,
     // R36's bug: a Next while a double-clicked track played advanced the item
     // but not the band, and the live button — wearing Pause — then PLAYED the
@@ -383,8 +383,8 @@ struct GuiRenderPlayer {
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
     // re-derived by grep (six call sites): open() — active, no item, stopped;
-    // play_wav's tail and toggle_pause's resume arm — the two writers of
-    // transport_live = true, playing; THE STOP BODY'S PLAYER FORK
+    // play_wav's tail and toggle_pause's resume arm — the two writers of the
+    // LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
     // covers the pause, the natural end's last-wav rest, the dead device and

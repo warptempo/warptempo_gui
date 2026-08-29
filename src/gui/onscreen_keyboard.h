@@ -463,8 +463,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // replaces it in the same band — folder_overlay.h), and the ONE OWNER of the
 // rule that THE WAVEFORM IS NOT PAINTED WHERE
 // THE SLOT PAINTS. IT SUBTRACTS THE STANDING TENANT'S OWN RECT, which since
-// 2026-08-28 is a real fork rather than a formality: the overlay's band is as
-// tall as its listing and the keyboard's is its four key rows, so a rect
+// 2026-08-28 is a real fork rather than a formality: the overlay's band is the
+// CEILING every time it stands (the waveform's midpoint down, whatever its
+// listing's length) and the keyboard's is its four key rows, so a rect
 // borrowed from the other tenant would either hide waveform nothing paints
 // over or leave the panel painting where the waveform still runs.
 //

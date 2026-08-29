@@ -14,8 +14,9 @@
 #include <system_error>
 #include <utility>
 
-using Folder = AppState::RenderPlayer::Folder;
-using Row    = AppState::FolderOverlayRow;
+using Folder    = AppState::RenderPlayer::Folder;
+using Row       = AppState::FolderOverlayRow;
+using Transport = AppState::RenderPlayer::Transport;
 
 // -- Damage and status --------------------------------------------------------
 
@@ -383,7 +384,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // the item's domain is [0, frames), the scanner never runs, and the
     // project's playhead does not move.
     playback.play(0, rp.frames);
-    rp.transport_live = true;
+    rp.transport = Transport::Live;
     // THE BAND FOLLOWS THE ITEM (R38, the contract at the head of
     // render_player.h): this is the ONE place the item changes, so seating the
     // highlight here covers every change the transport makes on its own —
@@ -407,16 +408,6 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     return true;
 }
 
-GuiRenderPlayer::TransportState GuiRenderPlayer::transport_state() const {
-    const AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item.empty() || rp.frames <= 0) return TransportState::Idle;
-    if (rp.transport_live)                 return TransportState::Live;
-    // A REST AT THE START IS IDLE, NOT PAUSED (the reason is at the
-    // declaration): a Stop, a natural end and a fresh item all leave the
-    // resume point at 0, and "resume" there is a play from the start.
-    return rp.resume_frame > 0 ? TransportState::Paused : TransportState::Idle;
-}
-
 void GuiRenderPlayer::play_button_act() {
     const AppState::FolderOverlay& ov = app.folder_overlay;
     const AppState::RenderPlayer&  rp = app.render_player;
@@ -427,12 +418,15 @@ void GuiRenderPlayer::play_button_act() {
     // architect found: with the band left behind on the row a double-click
     // started, the live button PLAYED that row instead of pausing the item
     // that was sounding.
-    switch (transport_state()) {
-        case TransportState::Live:
-        case TransportState::Paused:
+    // THE STATE IS THE STORED FIELD (AppState::RenderPlayer::transport), so a
+    // transport parked at frame 0 — the no-device pause on a wav that never
+    // sounded — answers PAUSED here and resumes ITS item.
+    switch (rp.transport) {
+        case Transport::Live:
+        case Transport::Paused:
             toggle_pause();
             return;
-        case TransportState::Idle:
+        case Transport::Idle:
             break;
     }
     const int h = ov.highlight_row;
@@ -481,10 +475,11 @@ void GuiRenderPlayer::toggle_repeat_one() {
 void GuiRenderPlayer::toggle_pause() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
-    if (rp.transport_live) {
+    if (rp.transport == Transport::Live) {
         // PAUSE: the resume point is the engine's own position, read BEFORE
-        // the stop body (whose fence is the one stop); the body clears the
-        // transport bit and damages the row.
+        // the stop body (whose fence is the one stop); the body's player fork
+        // moves the transport to PAUSED — at whatever frame the cursor holds,
+        // the item's start included — and damages the row.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         return;
@@ -503,7 +498,7 @@ void GuiRenderPlayer::toggle_pause() {
     // line is what keeps that true rather than a claim about callers.
     rp.ended_at_folder_end = false;
     playback.play(from, rp.frames);
-    rp.transport_live = true;
+    rp.transport = Transport::Live;
     damage_row();
     // The head unit: playing again (the inventory at the declaration).
     publish_media_state();
@@ -513,10 +508,14 @@ void GuiRenderPlayer::stop() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
     // ALREADY RESTING AT THE START IS A CONSUMED NO-OP (R36): there is nothing
-    // for a stop to do to an item that is already where a stop leaves it — and
-    // the folder-end rest is NOT that state, its bit being what the next Play
-    // reads.
-    if (!rp.transport_live && rp.resume_frame == 0 && !rp.ended_at_folder_end)
+    // for a stop to do to an item already where a stop leaves it, and the test
+    // is the three things this body writes. THE STATE IS PART OF IT: a
+    // transport PAUSED at frame 0 (the no-device arm's own rest) is not where
+    // a stop leaves one, because its next Play resumes that item instead of
+    // reading the highlight — and the folder-end rest is not that state
+    // either, its bit being what the next Play reads.
+    if (rp.transport == Transport::Idle && rp.resume_frame == 0 &&
+        !rp.ended_at_folder_end)
         return;
     // THE REST IS AT THE ITEM'S START, written BEFORE the stop body so the
     // "paused" that body's player fork publishes reads position 0 — the
@@ -528,14 +527,21 @@ void GuiRenderPlayer::stop() {
     // rather than starting the folder over (R27's bit, whose membership is
     // every play, resume, seek, row open, open, close — and now this stop).
     rp.ended_at_folder_end = false;
-    if (rp.transport_live) {
-        // THE FENCE, the transport bit, the row's damage and the head unit's
-        // push are all the one stop body's player fork.
+    if (rp.transport == Transport::Live) {
+        // THE FENCE, the row's damage and the head unit's push are the one
+        // stop body's player fork, which leaves the transport PAUSED; the
+        // state a STOP means is written over it here. No second push: the
+        // fork's own already carried "not playing" at the rest this body
+        // wrote above, and the wire does not distinguish idle from paused.
         playback_lifecycle.stop_playback_if_playing();
+        rp.transport = Transport::Idle;
         return;
     }
-    // A PAUSED transport has already passed that fork; what is left is the
-    // rest moving to 0, which the clock, the scrub and the head unit read.
+    // A TRANSPORT THAT IS NOT SOUNDING has already passed that fork — paused,
+    // or idle with a seeked rest or the folder-end bit standing — so what is
+    // left is the state and the rest moving to 0, which the clock, the scrub
+    // and the head unit read.
+    rp.transport = Transport::Idle;
     damage_row();
     publish_media_state();
 }
@@ -596,7 +602,7 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // rather than starting the folder over.
     rp.ended_at_folder_end = false;
     const int64_t target = std::clamp<int64_t>(frame, 0, rp.frames);
-    if (rp.transport_live) {
+    if (rp.transport == Transport::Live) {
         // A LIVE RESEEK is the engine's own keep-alive shape (play() over a
         // live session, the reseek body's precedent): the window stays the
         // item and only the resume point moves. A target inside the last
@@ -614,6 +620,12 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         publish_media_state();
         return;
     }
+    // A SEEK MOVES THE POINT, NOT THE STATE: the transport's state is written
+    // by its own acts (the field's writer set, app_state.h), so a paused
+    // transport stays paused at its new point and an idle one stays idle —
+    // where Play still reads the highlight, and resumes this item from the
+    // moved point when the highlight is the item's own row (R38 leaves it
+    // there) or nothing playable.
     if (rp.resume_frame != target) {
         rp.resume_frame = target;
         damage_row();
@@ -634,9 +646,16 @@ void GuiRenderPlayer::on_natural_end() {
     rp.resume_frame = 0;
     // THE FENCE FIRST, through the one stop body: `playing` is already false
     // (the audio thread published it) but stop() is the quiescence proof the
-    // next rebind requires, and the body's player fork clears the transport
-    // bit behind it — the tick's own natural-end shape.
+    // next rebind requires, and the body's player fork takes the transport
+    // down behind it — the tick's own natural-end shape.
     playback_lifecycle.stop_playback_if_playing();
+    // THE REST IS IDLE, NOT PAUSED: the item rests AT ITS START, and there is
+    // nothing there to resume that a Play from the start does not do
+    // identically — so the next Play reads the highlight (and, at the folder's
+    // end, R27's bit). Written over the PAUSED the stop body's fork leaves on
+    // every live transport, and ahead of the two arms below, which play again
+    // and take LIVE with them.
+    rp.transport = Transport::Idle;
     // REPEAT ONE, THE ONE SANCTIONED EXCEPTION TO NOTHING LOOPS (architect
     // 2026-08-28, R26): the lamp replays THIS item from its start through the
     // player's own play road — the same road a user's Play takes, so the item
@@ -685,7 +704,7 @@ void GuiRenderPlayer::on_natural_end() {
 
 void GuiRenderPlayer::tick() {
     AppState::RenderPlayer& rp = app.render_player;
-    if (!rp.transport_live) return;
+    if (rp.transport != Transport::Live) return;
     if (playback.device_unavailable()) {
         // NO DEVICE PAUSES, IT DOES NOT ADVANCE (the rule at on_natural_end's
         // declaration): an engine that cannot sound leaves `playing` false
@@ -697,10 +716,13 @@ void GuiRenderPlayer::tick() {
         // arm of toggle_pause with one line added — the resume point is the
         // engine's held cursor (a suspended device holds it rather than
         // extrapolating), read before the stop body, whose fence returns at
-        // once on a dead or absent device and whose player fork clears the
-        // transport bit and publishes the head unit's "paused". ONE LINE FOR
-        // BOTH SHAPES: what the user needs to know is that nothing will
-        // sound, not which way it will not. Nothing here retries; on Android
+        // once on a dead or absent device and whose player fork moves the
+        // transport to PAUSED and publishes the head unit's "paused" —
+        // PAUSED AT THE HELD CURSOR EVEN WHERE THAT IS FRAME 0, which is the
+        // whole reason the state is stored: the next Play resumes this item
+        // rather than opening the highlighted row. ONE LINE FOR BOTH SHAPES:
+        // what the user needs to know is that nothing will sound, not which
+        // way it will not. Nothing here retries; on Android
         // the next Space reopens the device by the backend's own rule.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
@@ -749,7 +771,7 @@ bool GuiRenderPlayer::open() {
     rp.item_index     = -1;
     rp.buffer.clear();
     rp.frames         = 0;
-    rp.transport_live = false;
+    rp.transport      = Transport::Idle;
     // REPEAT ONE IS SESSION-ONLY AND OFF AT EVERY OPEN (R26), like the mode's
     // every other bit; the folder-end rest cannot outlive an open either.
     rp.repeat_one     = false;
@@ -782,7 +804,7 @@ void GuiRenderPlayer::close() {
     // holding the pointer until the rebind.
     playback_lifecycle.stop_playback_if_playing();
     rp.active         = false;
-    rp.transport_live = false;
+    rp.transport      = Transport::Idle;
     rp.ended_at_folder_end = false;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
@@ -866,14 +888,14 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // FOLDER'S END the transport is down, so this Play passes the gate
             // and reaches play_button_act's transport arm — which is where
             // R27 starts the folder's first file, the car's own case.
-            if (!rp.transport_live) press(GuiKeys::Space);
+            if (rp.transport != Transport::Live) press(GuiKeys::Space);
             return;
         case Kind::Pause:
         case Kind::FocusLost:
         case Kind::FocusLostTransient:
             // A focus loss pauses (Android's one imposed interrupt). A
             // "pause" said to a resting transport must not start it.
-            if (rp.transport_live) press(GuiKeys::Space);
+            if (rp.transport == Transport::Live) press(GuiKeys::Space);
             return;
         case Kind::Stop:
             // THE HEAD UNIT'S STOP IS THE PLAYER'S STOP since R36, where it
@@ -931,7 +953,7 @@ void GuiRenderPlayer::publish_media_state() {
     // the wheel is not worth a field on the wire.
     GuiMediaState st;
     st.session_active = rp.active;
-    st.playing        = rp.active && rp.transport_live;
+    st.playing        = rp.active && rp.transport == Transport::Live;
     st.artist         = app.project_name;
     if (rp.active && !rp.item.empty() && rp.frames > 0) {
         // THE ITEM'S SPELLING WITH ITS FOLDER, relative to the project

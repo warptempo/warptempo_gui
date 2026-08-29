@@ -5132,11 +5132,13 @@ struct AppState {
     // pixel of its own band, so the drift between this and the live answer is
     // what pays for the show/hide repaint. ONE WRITER, the slot's paint
     // dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps it only
-    // on a rect that fully covers THE STANDING TENANT'S BAND — the two are
-    // different rects since the overlay's height became its listing's, and
-    // with neither standing the band to cover is the slot's tallest, which
-    // is what the hide's own damage draws — and then paints whichever tenant
-    // stands, so neither painter can claim pixels the frame did not write.
+    // on a rect that fully covers THE STANDING TENANT'S BAND — two different
+    // rects: the overlay's is the CEILING BAND every time it stands (from the
+    // waveform's midpoint down, whatever its listing's length, R35) while the
+    // keyboard's is its four key rows, and with neither standing the band to
+    // cover is the slot's tallest, which is what the hide's own damage draws
+    // — and then paints whichever tenant stands, so neither painter can claim
+    // pixels the frame did not write.
     bool keyboard_slot_painted_standing = false;
 
     // The hovered dialog button's index into modal_dialog.buttons, -1 none —
@@ -7245,16 +7247,35 @@ struct AppState {
     //              rate — the decode refuses any other shape); freed at close
     //              only AFTER the view's buffer is rebound, the engine holding
     //              the pointer until then;
-    //   `transport_live` the player's mirror of playhead_scanner_active's
-    //              role — set at play, cleared at pause, at R36's STOP, at the
-    //              close and at the natural end; the play/pause glyph and the
-    //              tick's damage read it;
-    //   `resume_frame` where a pause left the cursor (0 after a fresh bind,
-    //              a natural end or a STOP); a seek while paused moves this
-    //              alone. IT IS ALSO THE IDLE/PAUSED LINE (R36): a rest PAST
-    //              the start is a paused transport, a rest AT it is an idle
-    //              one — GuiRenderPlayer::transport_state, which the row's
-    //              Play/Pause reads before it reads the highlight;
+    //   `transport` THE TRANSPORT'S STATE, STORED and never derived (R36's
+    //              three states; the table is at
+    //              GuiRenderPlayer::play_button_act): IDLE — nothing to
+    //              resume, which is no item, an item a STOP or a natural end
+    //              left resting at its start, or a fresh open; LIVE —
+    //              sounding; PAUSED — an item the transport parked, AT
+    //              WHATEVER FRAME. PAUSED AT FRAME ZERO IS PAUSED, NOT IDLE,
+    //              and that is why this is a field rather than a reading of
+    //              `resume_frame`: the tick's no-device arm parks a wav that
+    //              never sounded a frame, and the next Play must resume THAT
+    //              item rather than fall through to whatever row the highlight
+    //              sits on. THREE CLASSES OF WRITER: LIVE at the two plays
+    //              (GuiRenderPlayer::play_wav and toggle_pause's resume arm),
+    //              PAUSED at the ONE STOP BODY'S PLAYER FORK
+    //              (GuiPlaybackLifecycle::stop_playback_if_playing — every
+    //              live transport that stops passes there, the pause, the
+    //              dead device, the natural end and the close alike), and IDLE
+    //              at the four acts that mean "resting at the start": stop(),
+    //              the natural end's own rest, open() and close(), each
+    //              written AFTER that fork — open()'s reset alone never
+    //              meeting it, since it runs with the mode down. LIVE is what
+    //              the play/pause glyph, the tick, the position reader, the
+    //              car's directional gates and the head unit's `playing` all
+    //              ask for;
+    //   `resume_frame` THE RESUME POINT AND NOTHING ELSE — where a pause left
+    //              the cursor (0 after a fresh bind, a natural end or a STOP);
+    //              a seek moves it on a resting transport and the play moves
+    //              it on a live one, and it says nothing about which state the
+    //              transport is in;
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
     //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the
@@ -7290,6 +7311,9 @@ struct AppState {
     //              asks about; consumed by its OK, dropped by its Cancel.
     struct RenderPlayer {
         enum class Folder { Root, Deliverable, Batches, Batch };
+        // THE TRANSPORT'S THREE STATES (R36), stored in `transport` below —
+        // the reasons, the writers and the readers are at the field.
+        enum class Transport { Idle, Live, Paused };
         bool                       active         = false;
         uint64_t                   session        = 0;
         Folder                     folder         = Folder::Root;
@@ -7299,7 +7323,7 @@ struct AppState {
         int                        item_index     = -1;
         std::vector<float>         buffer;
         int64_t                    frames         = 0;
-        bool                       transport_live = false;
+        Transport                  transport      = Transport::Idle;
         bool                       repeat_one     = false;
         bool                       ended_at_folder_end = false;
         int64_t                    resume_frame   = 0;
@@ -7422,7 +7446,9 @@ inline int64_t render_player_position(const AppState& a,
                                       const GuiPlayback& playback) {
     const AppState::RenderPlayer& rp = a.render_player;
     if (rp.item.empty() || rp.frames <= 0) return 0;
-    const int64_t pos = rp.transport_live ? playback.cursor() : rp.resume_frame;
+    const int64_t pos = rp.transport == AppState::RenderPlayer::Transport::Live
+                            ? playback.cursor()
+                            : rp.resume_frame;
     return pos < 0 ? 0 : (pos > rp.frames ? rp.frames : pos);
 }
 

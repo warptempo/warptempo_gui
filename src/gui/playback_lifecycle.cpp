@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstdint>
 
+using RenderPlayerTransport = AppState::RenderPlayer::Transport;
+
 // Gesture-stop: called by any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
 // the two keyboard TRIM MUTATIONS, which stop without touching the cursor at all.
@@ -32,20 +34,28 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     clear_audition_sequence(app);
     // THE RENDER PLAYER'S FORK, INSIDE THE ONE STOP BODY (2026-08-28): the
     // player's transport is a session over ITS OWN buffer with no scanner and
-    // no waveform picture, so its "a session stood" bit is `transport_live`
-    // (the scanner flag's mirror) and its teardown is that bit cleared plus
-    // the modal row damaged — the play/pause glyph, the clock and the scrub
-    // all read it. The FENCE is the same: playback.stop() proves the callback
+    // no waveform picture, so its "a session stood" state is
+    // `render_player.transport` in its LIVE value (the scanner flag's mirror)
+    // and its teardown is that state moved to PAUSED plus the modal row
+    // damaged — the play/pause glyph, the clock and the scrub all read it.
+    // PAUSED IS WHAT THIS BODY MEANS, AND THIS FORK IS ITS ONE WRITER: a
+    // sounding transport that stops is parked where it stopped, at frame 0 as
+    // anywhere else, so the next Play resumes THAT item. The callers that mean
+    // IDLE instead — stop(), the natural end's rest and close() — write it
+    // after this returns, and open()'s own reset never reaches this fork (the
+    // state's whole writer set is at the field, app_state.h).
+    // The FENCE is the same: playback.stop() proves the callback
     // is out of the item's buffer before a rebind or a free, exactly as it
     // proves it out of the source's. Every player stop — the pause, the
     // natural end, the close, the rebind ahead of the next item — comes here
     // and nowhere else, which is what keeps the keyboard stop rule and the
     // fence-before-rebind ordering one body.
     if (app.render_player.active) {
-        if (!playback.is_playing() && !app.render_player.transport_live)
+        if (!playback.is_playing() &&
+            app.render_player.transport != RenderPlayerTransport::Live)
             return;
         playback.stop();
-        app.render_player.transport_live = false;
+        app.render_player.transport = RenderPlayerTransport::Paused;
         viewport.invalidate_modal_dialog_area();
         // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE
         // (2026-08-28): this fork is the one place every player stop passes
