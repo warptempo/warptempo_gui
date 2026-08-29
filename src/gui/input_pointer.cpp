@@ -3161,6 +3161,8 @@ void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
+    app.modal_dialog_press_shift  = false;
+    app.modal_dialog_press_ms     = 0;
     if (app.modal_dialog.valid)
         viewport.invalidate_rect(app.modal_dialog.box);
 }
@@ -3184,13 +3186,25 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 }
 
 // A dialog button's PRESS: arm the index and paint it, dispatching nothing.
-// Shared by the prompt claim and the editor claim — the two differ in what
-// their RELEASE runs, not in what their press does. Returns true when a
-// button was armed (the claim then consumes the press; the veil consumes it
-// either way).
-bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
+// Shared by the prompt claim, the player's, the picker's and the editor claim
+// — they differ in what their RELEASE runs, not in what their press does.
+// Returns true when a button was hit (the claim then consumes the press; the
+// veil consumes it either way).
+//
+// `shift` IS THE PRESS-TIME MODIFIER (R37), and only the player's claim ever
+// passes true — every other claim admits a plain press alone. A SHIFT PRESS ON
+// A BUTTON WITH NO SHIFTED TWIN IS A CONSUMED NOTHING, never the unshifted
+// act: the roster's own rule (arm_redesign_press), and a silent unshifted act
+// would be a lie about what the modifier did. THE CLOCK IS STAMPED FOR EVERY
+// ARM, a press having a time whatever it landed on; what the lift makes of it
+// is modal_dialog_press_shifted's.
+bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     const int hit = modal_dialog_button_hit(x, y);
     if (hit < 0) return false;
+    if (shift &&
+        !player_button_shift_admits(
+            app.modal_dialog.buttons[static_cast<size_t>(hit)].player_act))
+        return true;
     if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
         app.modal_dialog_pressed = hit;
         // A press is inside what it hit, by construction — the feint's bit
@@ -3198,7 +3212,25 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
         app.modal_dialog_press_inside = true;
         viewport.invalidate_rect(app.modal_dialog.box);
     }
+    app.modal_dialog_press_shift = shift;
+    app.modal_dialog_press_ms    = monotonic_ms();
     return true;
+}
+
+// THE SHIFTED-TWIN VERDICT for the arm as it stands (R37) — the roster lift's
+// own term over this surface: the CARRIED press-time shift ORed with a press
+// HELD past kChromeShiftHoldMs, so a physical Shift+click and a long press
+// reach the same dispatch and holding a shift-clicked button changes nothing.
+// It is measured at the LIFT against the arm's own stamp — no timer, no tick —
+// and it asks nothing about WHICH button: the dispatch reads it only where
+// player_button_shift_admits says so, which is what lets a button with no twin
+// be held for as long as you like and still get its plain act. THE HOLD IS THE
+// GLASS HALF of the pair and passes silently, the roster's ruling (tooltips do
+// not show on the panel the gesture exists for).
+bool GuiInputHandler::modal_dialog_press_shifted() const {
+    if (app.modal_dialog_pressed < 0) return false;
+    return app.modal_dialog_press_shift ||
+           monotonic_ms() - app.modal_dialog_press_ms >= kChromeShiftHoldMs;
 }
 
 // A dialog button's RELEASE: the act runs iff the lift lands on the SAME
@@ -3214,6 +3246,10 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     if (armed < 0) return -1;
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
+    // The arm's two shifted-twin fields die with it (the verdict is read
+    // BEFORE this call, modal_dialog_press_shifted).
+    app.modal_dialog_press_shift  = false;
+    app.modal_dialog_press_ms     = 0;
     if (app.modal_dialog.valid)
         viewport.invalidate_rect(app.modal_dialog.box);
     return modal_dialog_button_hit(x, y) == armed ? armed : -1;
@@ -3278,7 +3314,7 @@ int GuiInputHandler::modal_dialog_focus_live() const {
 //   set, a different question from the stash's and asked separately.
 // Returns true iff something dispatched, so a caller can tell a consumed
 // nothing from an act.
-bool GuiInputHandler::dispatch_modal_dialog_button(int index) {
+bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (index < 0 || index >= static_cast<int>(dlg.buttons.size()))
         return false;
@@ -3301,14 +3337,28 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index) {
     // highlight), so a stale stash can select at worst a consumed nothing.
     if (app.render_player.active) {
         switch (b.player_act) {
+            // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
+            // shifted twin — a Shift+click on plastic, a long press on glass,
+            // ONE term either way — is the item folder's END rather than its
+            // neighbour, the keys' own Shift+Page Up / Shift+Page Down. THE
+            // ARMS THAT READ `shifted` ARE THE ADMISSION'S OWN MEMBERS
+            // (player_button_shift_admits, app_state.h): every other act below
+            // ignores the bit, so a held Play or Close is its plain act — the
+            // roster's rule that a button with no twin may be held for as long
+            // as you like.
             case AppState::PlayerButtonAct::Previous:
-                render_player.previous();
+                if (shifted) render_player.first_in_item_folder();
+                else         render_player.previous();
                 return true;
             case AppState::PlayerButtonAct::PlayPause:
                 render_player.play_button_act();
                 return true;
+            case AppState::PlayerButtonAct::Stop:
+                render_player.stop();
+                return true;
             case AppState::PlayerButtonAct::Next:
-                render_player.next();
+                if (shifted) render_player.last_in_item_folder();
+                else         render_player.next();
                 return true;
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();
@@ -4226,12 +4276,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (the arm every dialog button takes), and EVERY OTHER PRESS IS CONSUMED
     // — the tabs, the flags, the waveform, the menu anchors, the dead roster.
     // The whole rule is stated at render_player_active (input_handler.h).
+    // THE ONE ROW THAT ADMITS SHIFT (2026-08-28, R37): the player's two skips
+    // carry a shifted twin — the item folder's ends — so a SHIFT press reaches
+    // the arm here and the lift dispatches that twin, the roster's own
+    // shift-click over this surface. The arm body applies the admission (a
+    // shift press on a button with no twin is a consumed nothing, never the
+    // plain act); ctrl and alt spell nothing on any modal row and stay
+    // consumed by the veil below.
     if (app.render_player.active) {
         if (button != GuiMouseButton::Left) return;
         if (claim_player_scrub_press(x, y, mods)) return;
-        if (!mods.ctrl && !mods.shift && !mods.alt &&
-            modal_dialog_stash_current()) {
-            arm_modal_dialog_press(x, y);
+        if (!mods.ctrl && !mods.alt && modal_dialog_stash_current()) {
+            arm_modal_dialog_press(x, y, mods.shift);
         }
         return;
     }
@@ -6029,7 +6085,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.render_player.active) {
         if (button == GuiMouseButton::Left) {
             if (finish_player_scrub_release(x, y)) return;
-            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+            // THE SHIFTED-TWIN VERDICT IS READ BEFORE THE TAKE, which clears
+            // the arm the hold is measured against (R37; the term's two roads
+            // are at modal_dialog_press_shifted).
+            const bool shifted = modal_dialog_press_shifted();
+            dispatch_modal_dialog_button(take_modal_dialog_release(x, y),
+                                         shifted);
         }
         return;
     }

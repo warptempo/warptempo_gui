@@ -388,8 +388,11 @@ inline GuiRect surface_rect(const AppState& a) {
 }
 
 // THE SLOT'S DAMAGE RECT, the band AT ITS TALLEST — the taller of this
-// keyboard's fixed height and the overlay's ceiling (the band grows upward
-// from a fixed bottom edge, so the taller of the two contains the other).
+// keyboard's four key rows and the overlay's ceiling (both bands are fixed and
+// both rise from the slot's one bottom edge, so the taller contains the
+// other). It stays a MAX rather than collapsing with the overlay's own fixed
+// height (R35): the two tenants still differ, this keyboard's height being its
+// rows' and the panel's the ceiling.
 // THE SHOW/HIDE COMPARATOR TAKES IT (main.cpp): those two edges damage a band
 // whose tenant is arriving or has already gone, so the rect cannot be either
 // tenant's own — on the hide the departed surface's pixels are exactly what

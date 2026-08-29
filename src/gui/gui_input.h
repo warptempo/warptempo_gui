@@ -78,7 +78,10 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 // rest before it crosses into its held meaning, and THE ONE CADENCE THE HAND
 // IS ASKED FOR ANYWHERE. This is the readers' one inventory, re-derived from
 // the tree rather than inherited:
-//   * the chrome roster's shift long press (kChromeShiftHoldMs, app_state.h);
+//   * the chrome roster's shift long press (kChromeShiftHoldMs, app_state.h),
+//     which the RENDER PLAYER'S MODAL ROW joined 2026-08-28 (R37) — its two
+//     skips admit a modified press, so their long press reaches the same twin
+//     a shift-click does, one constant and one term;
 //   * the touch pan zone's region hold (kTouchRegionHoldMs, input_core.cpp);
 //   * the hold-repeating buttons' FIRST fire (input_pointer.cpp's arm, where
 //     every LATER fire is the compositor's advertised repeat interval);

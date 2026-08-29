@@ -19,8 +19,9 @@
 // WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows,
 // WAV rows and TEXT rows (a glyph-less kind, the history picker's) — each an
 // icon (or none) and a name, painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, sitting directly above the bottom row over the waveform
-// area's lower part, which the waveform's passes then do not paint
+// full window width, standing from the waveform's midpoint down to the bottom
+// row — over the waveform area's lower part, which the waveform's passes then
+// do not paint
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect). The architect's ruling (R3):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
@@ -40,12 +41,18 @@
 // restated here:
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
-//     keyboard's surface_rect reads too). Its HEIGHT IS ITS CONTENT'S, up to
-//     THE CEILING: the panel grows a row at a time until it reaches the
-//     MIDDLE OF THE WAVEFORM (keyboard_slot_max_height_px, the same header),
-//     and past that it stops growing and scrolls. R33 in one line — "it grows
-//     with its content up to that cap, then scrolls" — after the fixed
-//     four-row band read too short in use.
+//     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
+//     EXTENT, every time it stands: from the MIDDLE OF THE WAVEFORM
+//     (keyboard_slot_max_height_px, the same header) down to the bottom row,
+//     whatever the listing's length — architect 2026-08-28, R35: "we should
+//     automatically make the height from the midpoint of the waveform down so
+//     that it's not a fluid height — it's always a fixed height". A SHORT
+//     LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one scrolls.
+//     This retired the growing half of R33 (which read "it grows with its
+//     content up to that cap, then scrolls") the same day, the panel having
+//     jumped under the pointer as the listings changed size; the CEILING is
+//     R33's own and unmoved. The content's height stays the SCROLL CLAMP's
+//     input and is nothing else's.
 //   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
 //     2px gap between boxes, the same corner radius, the same 22px glyph
 //     centred at the box's own (32-22)/2 inset, every number read from
@@ -141,8 +148,9 @@ inline bool stands(const AppState& a) {
 // -- The surface's rect ------------------------------------------------------
 
 // The content's whole height: the pad at both ends, every row and the gaps
-// between them. Zero for an empty listing. (Declared ahead of the band, which
-// is sized by it.)
+// between them. Zero for an empty listing. IT SIZES NOTHING (R35 took the
+// band's height off it): its ONE consumer is the scroll ceiling below, which
+// is how far the content runs past the band.
 inline int content_height_px(const AppState& a) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return 0;
@@ -150,28 +158,24 @@ inline int content_height_px(const AppState& a) {
 }
 
 // THE BAND: the slot's band (its x, its width and its bottom edge — one
-// owner, app_state.h), AS TALL AS ITS CONTENT UP TO THE CEILING. Like the
-// keyboard's own accessor it does not ask whether the panel stands.
+// owner, app_state.h) AT THE CEILING'S WHOLE EXTENT, a FIXED height (R35, the
+// ruling above). Like the keyboard's own accessor it does not ask whether the
+// panel stands.
 //
-// AN EMPTY LISTING ANSWERS A ZERO-HEIGHT RECT and needs no guard of its own:
-// no content can stand empty (the player refuses "No renders to play", the
-// project picker always lists at least the project that is open, and the
-// history picker's opener refuses an empty walk), and the painter and the
-// hit test already read a zero rect as nothing.
+// IT IS THE PANEL'S ONE RECT, and that is what the fixed height bought: the
+// band a damage must erase is the band that was painted, so a listing that
+// SHRANK leaves nothing standing above a shorter one and there is no second
+// "the band at its ceiling" rect to remember to use. (There was one —
+// band_damage_rect, whose single reader was the player's listing rebuild — and
+// it went with the growing band that gave it its reason: a rect exists iff it
+// answers a question, and the two answers are now the same rect.)
+//
+// A degenerate stack answers a zero-height rect, which the painter and the hit
+// test already read as nothing. An EMPTY LISTING is a painted band with no
+// rows in it — no content can stand empty anyway (the player refuses "No
+// renders to play", the project picker always lists at least the project that
+// is open, and the history picker's opener refuses an empty walk).
 inline GuiRect surface_rect(const AppState& a) {
-    return keyboard_slot_band(
-        a, std::min(content_height_px(a), keyboard_slot_max_height_px(a)));
-}
-
-// THE BAND'S DAMAGE RECT — the band AT THE CEILING, whatever the listing is:
-// the panel grows and shrinks UPWARD from a fixed bottom edge, so an act that
-// SHORTENS it (a rebuild into a smaller folder) leaves the departed rows'
-// pixels standing above the new band, and a rect sized to the new content
-// would not erase them. Every damage that can change the listing takes this
-// rect; the damages that only move something INSIDE a standing band — the
-// scroll, the highlight, one row's face — take surface_rect or the row's own,
-// which is the whole of what they touched.
-inline GuiRect band_damage_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 

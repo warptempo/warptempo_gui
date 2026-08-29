@@ -36,25 +36,45 @@ struct GuiInputHandler;
 // renders through the one playback engine: the folder overlay above the
 // bottom row (folder_overlay.h) lists the project's OUTPUT FOLDERS — `render/`
 // with the deliverable, `tmp/` with its batch folders and their cells — and
-// the bottom row's modal carries the transport (Previous / Play-Pause / Next,
-// the play-scrub, the clock, the Repeat one lamp, and Load in place / Close
-// flush right — the row's order and faces are the painter's, R25). The state
-// it moves is
-// AppState::render_player and AppState::folder_overlay (app_state.h, where
-// every field is described); this struct owns the acts.
+// the bottom row's modal carries the transport (Previous / Play-Pause / Stop /
+// Next, the play-scrub, the clock, the Repeat one lamp, and Load in place /
+// Close flush right — the row's order and faces are the painter's, R25/R36).
+// The state it moves is AppState::render_player and AppState::folder_overlay
+// (app_state.h, where every field is described); this struct owns the acts.
+//
+// THE TRANSPORT HAS THREE STATES AND THE BUTTONS ANSWER THEM (architect
+// 2026-08-28, R36 — PLAY/PAUSE PLUS STOP, "if the user is playing a track and
+// wants to go back to the beginning of that track, they can hit stop and then
+// play again. This is different from the live transport, because there we have
+// the scrub, and a pause wouldn't make sense — the scrub always returns to the
+// playhead when not playing"). The states are `transport_state()` below —
+// IDLE (no item, or an item resting at its start), LIVE, PAUSED (an item
+// resting past its start) — and the table is at play_button_act.
 //
 // THE MODEL (R1, R2, revised 2026-08-28 after the first pass): the listing is
 // navigated THE REGULAR WAY — a highlighted folder OPENS on the double-click,
 // Enter or the Play button, the `..` row at the top of every non-root listing
 // goes up (Backspace on plastic) — and a single click only HIGHLIGHTS (the
 // band is the list's keyboard focus; Up/Down walk it). A WAV PLAYS from its
-// start when opened, or when it is highlighted and Play is pressed. THE
-// TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
+// start when opened, or when it is highlighted and Play is pressed WITH THE
+// TRANSPORT IDLE (the states above). THE TRANSPORT'S ITEM is separate from
+// the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
-// row, and AUTO-ADVANCE, Previous and Next walk ITS FOLDER'S wav list as it
-// was listed when the item was played — never another folder and never a
-// wrap. Every listing is built when its folder is entered and never kept
-// fresh.
+// row, and AUTO-ADVANCE, Previous, Next and the two Shift+Page ENDS walk ITS
+// FOLDER'S wav list as it was listed when the item was played — never another
+// folder and never a wrap. Every listing is built when its folder is entered
+// and never kept fresh.
+//
+// THE HIGHLIGHT FOLLOWS THE TRANSPORT'S ITEM (architect 2026-08-28, R38,
+// superseding the design's "Previous and Next never move the highlight"): at
+// every item change THE TRANSPORT MAKES ON ITS OWN — Previous / Next / the
+// folder's ends / auto-advance / the folder-end restart — the band moves onto
+// the new item's row and scrolls it into view WHEN THAT ROW IS IN THE LIVE
+// LISTING, and stays where it is when the user has navigated elsewhere. Its
+// one owner is play_wav, which is the one place the item changes, so the rule
+// covers the user's own plays for free (the row is already the highlight
+// there) and needs no membership list. A USER'S OWN HIGHLIGHT MOVES ARE
+// UNTOUCHED — nothing here fights the band back onto the item.
 //
 // NOTHING LOOPS, WITH ONE SANCTIONED EXCEPTION — REPEAT ONE (architect
 // 2026-08-28, R26): the player's lamp is a two-state toggle, off or repeat
@@ -75,9 +95,9 @@ struct GuiInputHandler;
 // WAV rather than replaying that last one (architect 2026-08-28, R27: the
 // car's Play at the end of a playlist). `ended_at_folder_end` is the one bit
 // that says the transport is resting THERE, cleared by every play, resume,
-// seek, row open, open and close; `play_button_act` is its one reader and so
-// the one owner of the act, which the car's Play reaches through the same
-// key as every other Play.
+// seek, row open, open, close and STOP; `play_button_act` is its one reader
+// and so the one owner of the act, which the car's Play reaches through the
+// same key as every other Play.
 //
 // THE ITEM IS A WAV PLAYED AS IT IS: decoded through the in-tree WAV reader
 // (wav_read_full, audio_io — called, never changed) after the PROBE has
@@ -207,19 +227,61 @@ struct GuiRenderPlayer {
 
     // -- The transport ------------------------------------------------------
 
-    // THE PLAY BUTTON'S ACT (and Space's): a highlighted wav that is not the
-    // transport's item plays from its start; a highlighted folder or `..`
-    // OPENS (the car-stereo OK/Play convention, so glass never needs a
-    // double-tap to navigate); otherwise pause / resume the item — EXCEPT at
-    // the folder's end, where it starts the item folder's FIRST wav (R27, the
-    // bit's one reader; the contract is at the head of this file).
+    // THE TRANSPORT'S THREE STATES, the one fork the row's buttons read
+    // (R36). It is derived, never stored: LIVE is the transport bit, and what
+    // separates PAUSED from IDLE is whether the rest is PAST the item's start
+    // — a resume point of 0 is where a Stop, a natural end and a fresh open
+    // all leave it, and there is nothing there to resume that a Play from the
+    // start does not do identically.
+    enum class TransportState { Idle, Live, Paused };
+    TransportState transport_state() const;
+
+    // THE PLAY BUTTON'S ACT (and Space's, and the car's Play / PlayPause).
+    // THE TRANSPORT IS ASKED AHEAD OF THE HIGHLIGHT (architect 2026-08-28,
+    // R36's bug: a Next while a double-clicked track played advanced the item
+    // but not the band, and the live button — wearing Pause — then PLAYED the
+    // row still highlighted behind it instead of pausing what was sounding):
+    //
+    //   LIVE    -> pause it. The highlight is not read at all.
+    //   PAUSED  -> resume it. Likewise.
+    //   IDLE    -> the highlight decides:
+    //                a wav that is not the item      -> play it from its start
+    //                a folder or `..`                -> the OPEN act (the
+    //                                                   car-stereo OK/Play
+    //                                                   convention, so glass
+    //                                                   never needs a
+    //                                                   double-tap to navigate)
+    //                the item, or nothing playable   -> the transport arm: at
+    //                                                   the folder's END the
+    //                                                   item folder's FIRST
+    //                                                   wav (R27, the bit's
+    //                                                   one reader), else the
+    //                                                   item from where it
+    //                                                   rests
+    //
+    // (R38 makes the band follow the item, so the IDLE branch's "the item" arm
+    // is the ordinary case rather than a coincidence.)
     void play_button_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
     void toggle_pause();
+    // STOP (R36): the transport goes idle with the item resting at ITS START —
+    // the resume point cleared to 0 and the folder-end bit with it, THE ITEM
+    // ITSELF UNTOUCHED, so a following Play replays it from the beginning.
+    // That is the whole difference from a pause, and it is why the row carries
+    // both. A consumed no-op with no item and on an item already resting at
+    // its start.
+    void stop();
     // The item's neighbours within ITS folder; a consumed no-op at either end.
     void previous();
     void next();
+    // THE ITEM FOLDER'S ENDS (R37, Shift+Page Up / Shift+Page Down and the two
+    // skip buttons' shift-click or long press): the first / last wav of
+    // `item_folder`, played from its start on the neighbours' own road — never
+    // a wrap, and a consumed no-op with no item AND on an item already at that
+    // end, exactly as the neighbours refuse there.
+    void first_in_item_folder();
+    void last_in_item_folder();
     // REPEAT ONE (architect 2026-08-28, R26) — the row's one lamp, flipped by
     // its button and by bare `r`: while it stands the natural end replays the
     // item from its start instead of advancing. Session-only state
@@ -288,10 +350,13 @@ struct GuiRenderPlayer {
     // undivided toggle key, which the sliver maps itself rather than letting
     // the framework split it — gui_media.h; Space is play_button_act's own
     // toggle, so the key and the act say the same thing and no gate belongs
-    // between them); Play -> Space ONLY WITH THE TRANSPORT DOWN; Pause, Stop,
+    // between them); Play -> Space ONLY WITH THE TRANSPORT DOWN; Pause,
     // FocusLost and FocusLostTransient -> Space ONLY WITH THE TRANSPORT LIVE
-    // (stop is a pause by ruling; a focus loss pauses, Android's one imposed
-    // interrupt); Next / Previous -> PageDown / PageUp; FastForward / Rewind
+    // (a focus loss pauses, Android's one imposed interrupt); STOP -> THE STOP
+    // KEY, unconditionally (R36 gave the player a real stop, so the head
+    // unit's stop is no longer a pause; the key names an act rather than a
+    // toggle, so no state gate belongs on it and the act's own idle refusal is
+    // the answer); Next / Previous -> PageDown / PageUp; FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
     // posture; the user presses play). The state gate on the DIRECTIONAL
@@ -370,15 +435,14 @@ private:
     std::vector<std::filesystem::path> deliverable_wavs() const;
     // Damage helpers: the band, the modal row.
     //
-    // TWO BAND DAMAGES, and the difference is whether the LISTING moved. The
-    // panel is as tall as its content up to the ceiling and grows upward from
-    // a fixed bottom edge (folder_overlay.h), so a rebuild that SHORTENS the
-    // listing leaves the departed rows' pixels above the new band:
-    // damage_band_full covers the band at its ceiling and is the rebuild's,
-    // while damage_band covers the band as it stands and is every damage
-    // INSIDE a standing one — the highlight, the scroll, the item's glyph.
+    // ONE BAND DAMAGE since R35 (2026-08-28): the panel's height is fixed at
+    // the slot's ceiling whatever the listing is (folder_overlay.h), so the
+    // band a rebuild must erase IS the band every other damage covers — a
+    // shorter listing can no longer leave departed rows standing above it. The
+    // second helper this file carried for exactly that case went with the
+    // growing band, and with it folder_overlay::band_damage_rect, its one
+    // reader.
     void damage_band();
-    void damage_band_full();
     void damage_row();
     void status(const std::string& line);
 };

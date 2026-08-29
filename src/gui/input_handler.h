@@ -3545,7 +3545,11 @@ private:
     // redesign_button_enabled's first arm (their faces grey, their press
     // claims refuse). The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
-    // tooltip dwell is the modal buttons' own. THE CHORD MODALITY is the key
+    // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
+    // WITH ONE ADMISSION (R37): a SHIFT press on the modal row's two skips
+    // arms their shifted twin, the roster's shift-click over this surface, and
+    // ctrl, alt and every other shift press stay the consumed nothing they
+    // were. THE CHORD MODALITY is the key
     // router below, which runs in on_key ahead of every ordinary dispatch (the
     // prompt gate and the dropdown gate above it, a prompt outranking the
     // player). This predicate is what every one of those readers asks; it is
@@ -3565,8 +3569,9 @@ private:
     // plays); Space is the Play button's act; Up / Down move the highlight;
     // Left / Right seek ∓5 s; Home the item's start; Backspace up one folder
     // (a consumed no-op at the root); Page Up / Page Down previous / next in
-    // the item's folder; `r` the Repeat one lamp; `'` the Load in place
-    // button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
+    // the item's folder and SHIFT+Page Up / Shift+Page Down its FIRST / LAST
+    // wav (R37); bare `s` STOP (R36); `r` the Repeat one lamp; `'` the Load in
+    // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
     // neither gesture restates the step). EVERY OTHER
@@ -3584,7 +3589,8 @@ private:
     // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
     // FOR EVERY CONTENT: the row press claim (arm at the press; a recognized
     // DOUBLE-CLICK opens the row at the press and arms nothing; a modified or
-    // non-left press is consumed), the release (a motionless lift highlights
+    // non-left press is consumed — the shift the player's MODAL ROW admits
+    // since R37 is the row's, never a row of the list's), the release (a motionless lift highlights
     // and seeds the double-click candidate; a scroll drag ends), the motion
     // (past the vertical drag gate the arm is the band's scroll drag; inside
     // it the feint's inside bit), the hover walk, and the hard end (the
@@ -3698,10 +3704,20 @@ private:
     // AppState::modal_dialog_pressed, whose declaration carries the whole edge
     // list and the reason it is not the roster's own arm (AppState::ChromePress).
     //   arm_modal_dialog_press    — press: arm the hit button and paint it,
-    //                               dispatching nothing. True iff one was hit.
+    //                               dispatching nothing. True iff one was hit
+    //                               (or a shift press was consumed on a button
+    //                               with no shifted twin). `shift` is the
+    //                               PRESS-TIME modifier, carried on the arm;
+    //                               only the player's claim ever passes true.
     //   take_modal_dialog_release — release: consume the arm and return the
     //                               button the lift LANDED on if it is the one
     //                               armed, else -1.
+    //   modal_dialog_press_shifted — the SHIFTED-TWIN verdict for the arm that
+    //                               is still standing (R37): the press-time
+    //                               shift ORed with a hold past
+    //                               kChromeShiftHoldMs, the roster lift's own
+    //                               term. Read BEFORE the take, which clears
+    //                               the arm.
     //   clear_modal_dialog_press  — the pointer-leave / capability-loss edge
     //                               (main.cpp's hook, beside the roster's own
     //                               clear; PUBLIC for that one caller, like
@@ -3713,9 +3729,15 @@ private:
     //                               response-set validation, so the three
     //                               lifts cannot drift. True iff it
     //                               dispatched.
-    bool arm_modal_dialog_press(int x, int y);
+    bool arm_modal_dialog_press(int x, int y, bool shift = false);
     int  take_modal_dialog_release(int x, int y);
-    bool dispatch_modal_dialog_button(int index);
+    bool modal_dialog_press_shifted() const;
+    // `shifted` reaches only the buttons player_button_shift_admits names
+    // (app_state.h); every other act ignores it, so a held Play is a plain
+    // Play exactly as a held roster button with no twin is its plain act. The
+    // KEYBOARD's own release passes the default: a ring-focused button's Enter
+    // or Space is bare by the strict-modifier rule.
+    bool dispatch_modal_dialog_button(int index, bool shifted = false);
 
     // IS THE PUBLISHED STASH THE LIVE SURFACE'S — the ONE comparison behind
     // "published geometry may only SELECT; live state DECIDES" (the doctrine,

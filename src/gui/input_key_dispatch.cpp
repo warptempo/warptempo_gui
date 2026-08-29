@@ -3339,19 +3339,23 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         modal_dialog_focus_live() >= 0)
         return false;
     // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
-    // highlight walk (Up/Down), the seeks (Left/Right) and the item walk
-    // (Page Up/Down) — and nothing else does: Enter and Space are the
-    // modal's one-shot press or the open/play acts, the closers and the load
-    // chord are one-shot commands, and the ring's Tab repeats through the
-    // arm below exactly as every ring's does. A prompt over the player is
-    // the prompt's own answer, which the arm above and the blanket below
-    // already give.
+    // highlight walk (Up/Down), the seeks (Left/Right), the item walk
+    // (Page Up/Down) and, since R37, the SHIFTED pair on those same two keys
+    // (the item folder's ends, which the architect ruled repeat-eligible with
+    // their neighbours) — and nothing else does: Enter and Space are the
+    // modal's one-shot press or the open/play acts, the closers, the stop
+    // chord and the load chord are one-shot commands, and the ring's Tab
+    // repeats through the arm below exactly as every ring's does. A prompt
+    // over the player is the prompt's own answer, which the arm above and the
+    // blanket below already give.
     if (app.render_player.active && !app.prompt.active) {
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        return !mods.ctrl && !mods.shift && !mods.alt &&
-               (key == GuiKeys::Left || key == GuiKeys::Right ||
-                key == GuiKeys::Up || key == GuiKeys::Down ||
-                key == GuiKeys::PageUp || key == GuiKeys::PageDown);
+        if (mods.ctrl || mods.alt) return false;
+        if (mods.shift)
+            return key == GuiKeys::PageUp || key == GuiKeys::PageDown;
+        return key == GuiKeys::Left || key == GuiKeys::Right ||
+               key == GuiKeys::Up || key == GuiKeys::Down ||
+               key == GuiKeys::PageUp || key == GuiKeys::PageDown;
     }
     // THE PICKER (2026-08-28), the player's shape with the player's reason:
     // the highlight walk (Up/Down) repeats — a continuous step that decides
@@ -5847,6 +5851,23 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // then, deliberately — the player's ring has no Left/Right walk, since
     // those keys are the car's rewind and fast-forward.
 
+    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37): Shift+Page Up and
+    // Shift+Page Down are the neighbours' keys with the modifier — the first
+    // and the last wav of the transport item's own folder, never a wrap and a
+    // consumed no-op with no item. Ahead of the blanket below because that
+    // blanket is what consumes every OTHER shifted spelling; these two are
+    // repeat-eligible with Page Up / Page Down (repeat_eligible's player arm).
+    if (shift && !ctrl && !alt) {
+        if (key == GuiKeys::PageUp) {
+            render_player.first_in_item_folder();
+            return true;
+        }
+        if (key == GuiKeys::PageDown) {
+            render_player.last_in_item_folder();
+            return true;
+        }
+    }
+
     if (!bare) return true;   // every other modified chord: consumed
 
     const int highlight = app.folder_overlay.highlight_row;
@@ -5854,6 +5875,16 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::Escape:
         case GuiKeys::L:
             render_player.close();
+            return true;
+        case GuiKeys::S:
+            // STOP (architect 2026-08-28, R36), the Stop button's own chord:
+            // the item rests at its start and the next Play replays it from
+            // there. One-shot like every other act key here, and bare-exact —
+            // Ctrl+S fell through to the save at the head of this router, and
+            // every other spelling of `s` is consumed above. (Outside the
+            // player bare `s` drops a marker; the mode's router IS the
+            // vocabulary while it stands, so the letter is free here.)
+            render_player.stop();
             return true;
         case GuiKeys::Apostrophe:
             render_player_load_in_place();

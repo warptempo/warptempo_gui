@@ -791,7 +791,9 @@ constexpr IconPath kMediaRepeatSinglePaths[] = {
 // precedent, each path against the subset below: the three media-skip /
 // playback-start strings are m/v/h/l with implicit lineto after m and
 // implicit repetition ("m2 8 10 8" is a moveto and a relative lineto);
-// media-playback-stop is m/h/v; dialog-cancel is m/c/l with long implicit
+// media-playback-stop is m/h/v and media-playback-pause (2026-08-28) is that
+// same subset twice, its second subpath opened by a relative `m`;
+// dialog-cancel is m/c/l with long implicit
 // cubic runs and chained leading-dot decimals (".22478-.375" splits on the
 // second dot — the parser's own rule, with committed producers since
 // edit-undo); go-down is m/l relative; go-up is absolute M/L with implicit
@@ -817,6 +819,16 @@ constexpr IconPath kMediaPlaybackStartPaths[] = {
 constexpr IconPath kMediaPlaybackStopPaths[] = {
     {kIconText,
      "m3 3h16v16h-16z"},
+};
+
+// THE PLAYER ROW'S PAUSE FACE (2026-08-28, R36). Same rules: the `d` verbatim
+// from the committed file, the fill the file's own `.ColorScheme-Text`
+// #fcfcfc. TWO SUBPATHS IN ONE STRING — m/v/h/z twice, the second `m`
+// relative — which the interpreter's oldest arms already cover (the two
+// media-skip strings carry three subpaths each).
+constexpr IconPath kMediaPlaybackPausePaths[] = {
+    {kIconText,
+     "m3 3v16h6v-16zm10 0v16h6v-16z"},
 };
 
 constexpr IconPath kMediaSkipForwardPaths[] = {
@@ -1138,6 +1150,7 @@ constexpr IconDef kMediaRepeatSingle  {22.0, kMediaRepeatSinglePaths,   3};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
+constexpr IconDef kMediaPlaybackPause {22.0, kMediaPlaybackPausePaths,  1};
 constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
 constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
@@ -1190,6 +1203,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;
+        case Icon::MediaPlaybackPause:  return kMediaPlaybackPause;
         case Icon::MediaSkipForward:    return kMediaSkipForward;
         case Icon::DialogCancel:        return kDialogCancel;
         case Icon::GoDown:              return kGoDown;

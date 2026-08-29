@@ -284,7 +284,17 @@ enum class Icon {
     // most recently as a radio pair; an Icon is a GLYPH rather than a button
     // and neither entry moved.
     MediaPlaybackStart,  // Play (bare Space, the face while stopped)
-    MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs)
+    MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs;
+                         // the render player's own Stop button, R36)
+    // THE RENDER PLAYER'S PAUSE FACE (2026-08-28, architect R36): its row
+    // carries Play/Pause AND Stop as two buttons — "one button that's either
+    // play or pause, and the other one is stop" — so the two-faced button
+    // needed a pause glyph of its own rather than the stop square it wore
+    // while live. Breeze actions/22/media-playback-pause, one fresh verbatim
+    // transcription. The ROSTER'S transport button is untouched: bare Space
+    // there is one toggle over the project's audio with no pause state, so it
+    // keeps Play/Stop.
+    MediaPlaybackPause,  // Pause (the player's row, the face while live)
     MediaSkipForward,    // Go to end (bare End)
     DialogCancel,        // Render's mid-render Cancel face (row 2)
     GoDown,              // The down arrow (bare Down)
@@ -386,6 +396,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 51 SINCE 2026-08-28, THE PLAYER ROW'S PAUSE FACE: 50 + media-playback-pause,
+// one fresh transcription for R36's Play/Pause + Stop pair — two `m` subpaths
+// of m/v/h/z in one `d`, the arms media-playback-stop and the two skips
+// already cover.
 // 50 SINCE 2026-08-28, THE PLAYER ROW'S REPEAT TOGGLE: 49 + media-repeat-
 // single, one fresh transcription — three `<path>` elements with verbatim
 // relative `d` strings, nothing new for the interpreter, and the file's one
@@ -457,7 +471,7 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
-inline constexpr int kIconCount = 50;
+inline constexpr int kIconCount = 51;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

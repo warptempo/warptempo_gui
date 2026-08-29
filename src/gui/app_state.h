@@ -3328,9 +3328,14 @@ inline int double_click_slack_px() {
 // redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
-// half of each shifted pair. Read at exactly one site, the lift's chord build
-// (finish_chrome_press_release, input_pointer.cpp), against the press stamp the
-// arm carries (AppState::ChromePress::press_ms).
+// half of each shifted pair. TWO READ SITES since 2026-08-28 (R37), each a
+// LIFT measuring the hold against its own arm's press stamp: the roster's
+// chord build (finish_chrome_press_release, input_pointer.cpp, against
+// AppState::ChromePress::press_ms) and the RENDER PLAYER'S MODAL ROW
+// (modal_dialog_press_shifted, the same file, against
+// AppState::modal_dialog_press_ms) — the player's two skips being the first
+// modal buttons to admit a modified press. Same beat, same term, same reason:
+// glass has no shift key.
 //
 // IT READS kHoldBeatMs (gui_input.h), THE PRODUCT'S ONE HOLD BEAT, matched by
 // convention with the compositor's key-repeat delay, so every deliberate hold
@@ -4921,8 +4926,9 @@ struct AppState {
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
-    // Previous / Play-Pause / Next, the play-scrub, the clock, the Repeat one
-    // lamp and the two word buttons Load in place / Close (R25's order) — is
+    // Previous / Play-Pause / Stop / Next, the play-scrub, the clock, the
+    // Repeat one lamp and the two word buttons Load in place / Close (R25's
+    // order, with R36's Stop after the two-faced button) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
@@ -4940,14 +4946,18 @@ struct AppState {
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free.
     enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
-    // THE PLAYER'S SIX BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
     // there). REPEAT ONE joined 2026-08-28 (architect R26) — the row's one
-    // LAMP, the only member here whose face carries a state.
+    // LAMP, the only member here whose face carries a state — and STOP the
+    // same evening (R36): the transport is PLAY/PAUSE PLUS STOP, "one button
+    // that's either play or pause, and the other one is stop", so a listener
+    // who wants the track from its beginning stops and plays instead of
+    // scrubbing back. The order below is the ROW's, which is Audacious's.
     enum class PlayerButtonAct {
-        None, Previous, PlayPause, Next, RepeatOne, LoadInPlace, Close
+        None, Previous, PlayPause, Stop, Next, RepeatOne, LoadInPlace, Close
     };
     // THE OK BIT SERVES TWO OWNERS (2026-08-28): an EDITOR dialog's OK /
     // Cancel is the session's own Enter / Esc, and the PICKER's OK / Cancel is
@@ -4961,6 +4971,12 @@ struct AppState {
         bool        editor_ok    = false;  // editor and picker dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         std::string tooltip;            // "<word> (<key>)"; never empty
+        // THE MODIFIER LINE, empty on every button that admits no modified
+        // press — the roster tooltip's `line2` over this surface (2026-08-28,
+        // R37). Its ONE producer is the player's two skips, and it says the
+        // same thing their shift-click and their long press do; the painter
+        // shows a second line exactly when this is non-empty.
+        std::string tooltip2;
     };
     struct ModalDialogGeometry {
         bool                           valid = false;
@@ -5186,6 +5202,19 @@ struct AppState {
     // `pressed >= 0 && press_inside`, and the held-away face is
     // `pressed >= 0 && !press_inside`.
     bool modal_dialog_press_inside = false;
+
+    // THE ARM'S SHIFT AND ITS CLOCK (2026-08-28, architect R37) — the roster
+    // arm's two fields over this surface, and they arrive together because the
+    // two roads to a shifted act are one term: a SHIFT HELD AT THE PRESS
+    // (modifiers are read at the press, never re-read at the lift) and a press
+    // HELD past kChromeShiftHoldMs, ORed at the lift. The stamp is taken for
+    // every armed button, a press having a time whatever it landed on; the
+    // shift bit can only stand where the press claim admitted it, which is the
+    // player's row and player_button_shift_admits' two buttons. Meaningless
+    // while `modal_dialog_pressed` is -1, like `press_inside`, and written by
+    // the same claim.
+    bool    modal_dialog_press_shift = false;
+    int64_t modal_dialog_press_ms    = 0;
 
     // THE KEYBOARD FOCUS RING (architect 2026-08-13, part D of the modal
     // button ruling — kdenlive-sampled face, the navigation his own
@@ -7186,21 +7215,29 @@ struct AppState {
     //   `item` / `item_folder` / `item_index` THE TRANSPORT'S ITEM — the wav
     //              decoded and bound (empty path: none yet), the WAV ROWS OF
     //              ITS FOLDER as listed when it was played (R2: auto-advance,
-    //              Previous and Next walk this folder and never another, and
-    //              the item keeps playing while the listing is navigated
-    //              elsewhere — the displayed listing and the item's folder are
-    //              two things), and the item's index in that list. A row
-    //              whose path is the item's wears the transport glyph;
+    //              Previous, Next and the folder's two ends walk this folder
+    //              and never another, and the item keeps playing while the
+    //              listing is navigated elsewhere — the displayed listing and
+    //              the item's folder are two things), and the item's index in
+    //              that list. A row whose path is the item's wears the
+    //              transport glyph, and since R38 the HIGHLIGHT FOLLOWS the
+    //              item at every change the transport makes on its own, where
+    //              its row is in the listing on screen;
     //   `buffer` / `frames` the decoded item bound to the one playback engine
     //              (interleaved float32 at the device's own channel count and
     //              rate — the decode refuses any other shape); freed at close
     //              only AFTER the view's buffer is rebound, the engine holding
     //              the pointer until then;
     //   `transport_live` the player's mirror of playhead_scanner_active's
-    //              role — set at play, cleared at pause, stop and the natural
-    //              end; the play/pause glyph and the tick's damage read it;
-    //   `resume_frame` where a pause left the cursor (0 after a fresh bind);
-    //              a seek while paused moves this alone;
+    //              role — set at play, cleared at pause, at R36's STOP, at the
+    //              close and at the natural end; the play/pause glyph and the
+    //              tick's damage read it;
+    //   `resume_frame` where a pause left the cursor (0 after a fresh bind,
+    //              a natural end or a STOP); a seek while paused moves this
+    //              alone. IT IS ALSO THE IDLE/PAUSED LINE (R36): a rest PAST
+    //              the start is a paused transport, a rest AT it is an idle
+    //              one — GuiRenderPlayer::transport_state, which the row's
+    //              Play/Pause reads before it reads the highlight;
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
     //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the
@@ -7228,8 +7265,10 @@ struct AppState {
     //              read by play_button_act alone, where it turns the next Play
     //              (the car's included) into "start the folder's FIRST file"
     //              rather than "replay this one". Cleared by every play,
-    //              resume, seek, open-a-row, open and close, so it names the
-    //              END OF THE FOLDER and no other resting state;
+    //              resume, seek, open-a-row, open, close and STOP (R36's act,
+    //              which names this item's start as where the transport is),
+    //              so it names the END OF THE FOLDER and no other resting
+    //              state;
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
     //              asks about; consumed by its OK, dropped by its Cancel.
     struct RenderPlayer {
@@ -7290,6 +7329,9 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::Previous:    return "Previous (Page Up)";
         case AppState::PlayerButtonAct::PlayPause:
             return transport_live ? "Pause (Space)" : "Play (Space)";
+        // STOP IS ITS OWN BUTTON (R36) and its chord is a bare letter, so the
+        // table's own accelerator rule spells it lowercase.
+        case AppState::PlayerButtonAct::Stop:        return "Stop (s)";
         case AppState::PlayerButtonAct::Next:        return "Next (Page Down)";
         // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
         // roster's own table states once (architect 2026-08-09): the key AS
@@ -7301,6 +7343,58 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
     }
     return std::string();
 }
+
+// THE PLAYER ROW'S SHIFT-ADMITTING BUTTONS (2026-08-28, architect R37) —
+// redesign_button_shift_admits one surface over, and for the same reason: a
+// button that admits a modified press gets its SHIFT-CLICK on plastic and,
+// through the one hold beat, its LONG PRESS on glass, so the shifted half of
+// the pair is reachable with no keyboard. THE TWO SKIPS ARE THE WHOLE SET —
+// their twins are Shift+Page Up / Shift+Page Down, the item folder's FIRST and
+// LAST wav — and every other button on the row keeps its plain act however
+// long it is held, exactly as a roster button with no twin does.
+//
+// THREE READERS, and they are three because they must not drift: the press
+// claim (a shift press on a non-admitting button is a consumed nothing, never
+// the unshifted act), the LIFT's shifted-twin dispatch, and the tooltip's
+// modifier line below — "which buttons admit shift" and "which buttons
+// advertise it" being one fact.
+inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) {
+    return act == AppState::PlayerButtonAct::Previous ||
+           act == AppState::PlayerButtonAct::Next;
+}
+
+// THE MODIFIER LINE, in the roster's own form ("Press Shift for ...", which
+// NAMES THE OTHER FUNCTION rather than saying "for more"): non-empty on
+// exactly the buttons player_button_shift_admits names, which the assert below
+// holds. It is the standing no-gesture-hints preference's same ruled
+// exception, scoped to the buttons that admit a modifier.
+inline std::string render_player_button_shift_hint(
+        AppState::PlayerButtonAct act) {
+    switch (act) {
+        case AppState::PlayerButtonAct::Previous:
+            return "Press Shift for the folder's first file.";
+        case AppState::PlayerButtonAct::Next:
+            return "Press Shift for the folder's last file.";
+        case AppState::PlayerButtonAct::PlayPause:
+        case AppState::PlayerButtonAct::Stop:
+        case AppState::PlayerButtonAct::RepeatOne:
+        case AppState::PlayerButtonAct::LoadInPlace:
+        case AppState::PlayerButtonAct::Close:
+        case AppState::PlayerButtonAct::None:
+            break;
+    }
+    return std::string();
+}
+static_assert(
+    player_button_shift_admits(AppState::PlayerButtonAct::Previous) &&
+    player_button_shift_admits(AppState::PlayerButtonAct::Next) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::PlayPause) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::Stop) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::Close),
+    "the player's shift-admitting set is the two skips, and the hint's second "
+    "line exists on exactly them");
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;

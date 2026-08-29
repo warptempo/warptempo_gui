@@ -3112,6 +3112,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
             dlg.buttons[static_cast<size_t>(owner.index)];
         if (b.tooltip.empty()) return;
         line1 = b.tooltip.c_str();
+        // THE MODIFIER LINE, on the buttons that have one (2026-08-28, R37 —
+        // the player's two skips): the roster branch's own two-line form,
+        // reached here through the published pair instead of a table, since a
+        // modal button's words are the painter's to compose.
+        if (!b.tooltip2.empty()) line2 = b.tooltip2.c_str();
         btn   = b.rect;
         // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
         // same flip the row's own tenants take, for the same reason (nothing
@@ -5508,6 +5513,8 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_hovered         = -1;
     app.modal_dialog_pressed         = -1;
     app.modal_dialog_press_inside    = false;
+    app.modal_dialog_press_shift     = false;
+    app.modal_dialog_press_ms        = 0;
     app.modal_dialog_focus           = -1;
     app.modal_dialog_focus_active    = false;
     app.modal_dialog_key_pressed     = -1;
@@ -5649,12 +5656,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         bool        lit          = false;
         icons::Icon icon         = icons::Icon::MediaPlaybackStart;
         std::string tooltip;     // the player's own; empty = the composer's
+        std::string tooltip2;    // the modifier line; empty = the one-line form
         int         w            = 0;
         // WHERE IT PAINTS. The single left-flushed cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
         // separator, the lamp — then the word buttons FLUSH RIGHT), so its own
-        // branch writes all six and the walk simply paints where it is told.
+        // branch writes all seven and the walk simply paints where it is told.
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
@@ -5667,13 +5675,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
-        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25): the
-        // TRANSPORT — Previous · Play/Pause · Next — then the separator, the
-        // scrub, the clock and the second separator (all three laid out in the
-        // player's own branch below), then the REPEAT ONE lamp, and the two
-        // WORD buttons FLUSH RIGHT: Load in place · Close. Close LAST, the
-        // escape sentinel by construction as every prompt has it. The plan's
-        // order is also the ring's, so Tab walks the row left to right.
+        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25 and
+        // R36): the TRANSPORT — Previous · Play/Pause · Stop · Next — then the
+        // separator, the scrub, the clock and the second separator (all three
+        // laid out in the player's own branch below), then the REPEAT ONE
+        // lamp, and the two WORD buttons FLUSH RIGHT: Load in place · Close.
+        // Close LAST, the escape sentinel by construction as every prompt has
+        // it. The plan's order is also the ring's, so Tab walks the row left to
+        // right. STOP SITS AFTER PLAY/PAUSE, Audacious's own order (R36).
         const bool live = app.render_player.transport_live;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {
@@ -5683,6 +5692,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.lit        = lit;
             b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, live);
+            b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
         };
         auto word_button = [&](AppState::PlayerButtonAct act,
@@ -5691,13 +5701,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.label      = word;
             b.tooltip    = render_player_button_hint(act, live);
+            b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
         };
         glyph_button(AppState::PlayerButtonAct::Previous,
                      icons::Icon::MediaSkipBackward);
+        // PLAY/PAUSE WEARS THE PAUSE GLYPH WHILE LIVE, not the stop square it
+        // wore until R36 gave the row a Stop button of its own: two buttons,
+        // two acts, two faces. The roster's transport button is untouched —
+        // bare Space over the project's audio is one toggle with no pause
+        // state, so it keeps Play/Stop.
         glyph_button(AppState::PlayerButtonAct::PlayPause,
-                     live ? icons::Icon::MediaPlaybackStop
+                     live ? icons::Icon::MediaPlaybackPause
                           : icons::Icon::MediaPlaybackStart);
+        glyph_button(AppState::PlayerButtonAct::Stop,
+                     icons::Icon::MediaPlaybackStop);
         glyph_button(AppState::PlayerButtonAct::Next,
                      icons::Icon::MediaSkipForward);
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
@@ -5931,14 +5949,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         int px = cx0;
         plan[0].x = px; px += btn_h + ggap;      // Previous
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
-        plan[2].x = px; px += btn_h;             // Next
+        plan[2].x = px; px += btn_h + ggap;      // Stop
+        plan[3].x = px; px += btn_h;             // Next
         const int sep1_x = px + sep_gap;
         px += sep_span;
         const int scrub_x0 = px;
 
         // The word cluster, right-flushed inside the reserved ring exactly as
         // the single cluster's cap is on every other owner.
-        const int words_w  = plan[4].w + bgap + plan[5].w;
+        const int words_w  = plan[5].w + bgap + plan[6].w;
         const int words_x0 = std::max(cx0, cx1 - ring - words_w);
         // What the row owes AFTER the scrub: a pad, the clock cell, the second
         // separator, the lamp with its reserved halo, and one pad of clearance
@@ -5953,9 +5972,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + pad : 0);
         const int clock_end = clock_x0 + clock_w;
         const int sep2_x    = clock_end + sep_gap;
-        plan[3].x = clock_end + sep_span;        // Repeat one
-        plan[4].x = words_x0;                    // Load in place
-        plan[5].x = words_x0 + plan[4].w + bgap; // Close
+        plan[4].x = clock_end + sep_span;        // Repeat one
+        plan[5].x = words_x0;                    // Load in place
+        plan[6].x = words_x0 + plan[5].w + bgap; // Close
 
         paint_separator(sep1_x);
         paint_separator(sep2_x);
@@ -6363,7 +6382,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
     //    player's relaid row): the single left-flushed cluster is laid out
     //    here, in the walk that has always laid it out, and the PLAYER's
-    //    branch above has already written all six of its own — one walk, two
+    //    branch above has already written all seven of its own — one walk, two
     //    arrangements, and no second painter. --
     const int lw = std::max(1, scaled_px(kIconOutlineStrokePx));
     if (!player_up) {
@@ -6497,6 +6516,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                      plan[i].response_key,
                                                      plan[i].editor_ok)
                           : plan[i].tooltip;
+        // THE MODIFIER LINE (R37), published beside it and empty on every
+        // button with no shifted twin — the roster hint's `line2` over this
+        // surface, and its one producer is the player's plan above.
+        out.tooltip2 = plan[i].tooltip2;
         dlg.buttons.push_back(out);
     }
 
