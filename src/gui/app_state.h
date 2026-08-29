@@ -7349,12 +7349,23 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // hovered outline, so what looks grabbable and what grabs are one answer.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
+//
+// THE BAND IS THE PAINTED BOX AND NOTHING MORE: a box-sized SQUARE centred on
+// that column at the track's vertical centre, the same centring the groove
+// takes, and HALF-OPEN on both axes like every other pixel-cell test in the
+// product (a pixel x covers [x, x+1), containing_pixel's rule). It used to
+// take the track's whole height and both x endpoints inclusive, which armed
+// the drag from an invisible extension above and below the circle — a press
+// meant for the track, whose act is the seek AT THE PRESS — and reported a
+// hover one column past where the press could grab. The track rect stays the
+// press router's OUTER gate; this test runs inside it.
 inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
                                            int x, int y) {
     if (track.w <= 0 || track.h <= 0) return false;
-    if (y < track.y || y >= track.y + track.h) return false;
-    const int half = scrub_handle_box_px() / 2;
-    return x >= handle_x - half && x <= handle_x + half;
+    const int box = scrub_handle_box_px();
+    const int bx  = handle_x - box / 2;
+    const int by  = track.y + (track.h - box) / 2;
+    return x >= bx && x < bx + box && y >= by && y < by + box;
 }
 inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
     const GuiRect track = a.modal_dialog.scrub;

@@ -61,9 +61,14 @@ struct GuiInputHandler;
 // the ONE item ("the user can just press play once the playlist finishes...
 // repeat one is much more useful", which is why there is no repeat-all), and
 // while it stands THE NATURAL END REPLAYS THE ITEM FROM ITS START through the
-// player's own play road instead of advancing. It is the whole of the
-// exception: nothing else in the product plays anything twice by itself, and
-// the state is session-only (false at every open, serialized nowhere).
+// player's own play road instead of advancing — AND IT OUTRANKS THE ADVANCE
+// WHETHER THE REPLAY SOUNDS OR REFUSES: a replay that cannot decode (the file
+// deleted or republished in another shape while it played) leaves its own
+// words on the status line and the transport resting on that item at its
+// start, never the folder's next wav and never the folder-end bit. It is the
+// whole of the exception: nothing else in the product plays anything twice by
+// itself, and the state is session-only (false at every open, serialized
+// nowhere).
 //
 // AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
 // item resting at its start — and THE NEXT PLAY STARTS THE FOLDER'S FIRST
@@ -346,6 +351,8 @@ private:
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the next wav of the item's
     // folder, else the rest at the item's start with the folder-end bit set.
+    // THE LAMP'S ARM IS TERMINAL: it returns on a REFUSED replay too, so a
+    // lit lamp never falls through to the advance.
     // A NATURAL
     // END IS THE CURSOR REACHING THE END, NOT THE ABSENCE OF A DEVICE
     // (2026-08-28): a Bluetooth drop, a headphone pull and an audio device

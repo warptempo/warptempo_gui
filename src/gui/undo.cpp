@@ -14,7 +14,9 @@
                                   // recompute_dirty's tail
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // singleton recenter and the group framing
+                                  // singleton recenter and the group framing,
+                                  // and active_domain_to_source_frame for the
+                                  // restore's map-change re-land
 
 #include <algorithm>
 #include <chrono>
@@ -573,57 +575,64 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // the S/T domain translation of playhead and viewport with its target-view
     // entry gate and its flag-editor teardown, the column's selection clear.
     //
-    // THE ORDER IS TAB, AUDIO VIEW, COLUMN, THEN THE DATA, and every step of it
-    // is decided rather than chosen:
+    // THE ORDER IS TAB, DATA, COLUMN, SELECTION, AUDIO VIEW, and every step of
+    // it is decided rather than chosen:
     //   * THE TAB FIRST, because the S/T switch treats the two tabs
     //     DIFFERENTLY: the ACTIVE tab's playhead is translated and re-anchored
     //     on its own painted column (and re-expressed onto a focused marker),
     //     while the parked tab's is translated and its viewport merely shifted
     //     by the same delta. Running the switch first would hand the careful
     //     half to the tab the restore is about to leave.
-    //   * THE AUDIO VIEW BEFORE THE DATA, because it is a TRANSLATION of the
-    //     live playhead out of the domain it is currently expressed in — the
-    //     live markers and the live engine block are what define that domain, so
-    //     the map it translates through must be read before the swap replaces
-    //     them. The tail's unconditional kick and target_render.trigger() own
-    //     the post-swap re-warp, exactly as they do for every other restore.
-    //   * THE COLUMN BEFORE THE DATA, because its selection clear damages the
-    //     LEAVING column's painted stems and flags — damage follows the basis of
-    //     the pixels it erases, and after the swap that basis is gone.
-    //   * THEN the settings and the marker pair, and then the post-restore
-    //     rules, which write the tab- and column-bound selection into the
-    //     finished combination.
+    //   * THE DATA BEFORE THE AUDIO VIEW: THE TRANSLATION MUST READ THE MAP THE
+    //     ENTRY RESTORES, NOT THE ONE IT REPLACES. The S/T switch builds its
+    //     warp frame map out of the LIVE markers and the LIVE engine block and
+    //     translates the playhead and both tabs' viewports through it, so a
+    //     switch run ahead of the swap mints the destination domain's numbers
+    //     under a map the restore is about to throw away: undoing a `scale`
+    //     edit typed in target view translated under the POST-edit scale and
+    //     the result was then read under the PRE-edit one, carrying the
+    //     playhead and the camera off the instant they stood on. While the
+    //     swap lands, the view standing over it sees a MAP CHANGE, which is a
+    //     shape the product already owns (the re-land below); the domain flip
+    //     is a separate act and runs after it, on the finished map.
+    //   * THE COLUMN AFTER THE DATA, its old reason having gone with the move:
+    //     it stood ahead of the swap so clear_selection's stem and flag damage
+    //     would resolve against the LEAVING column's painted pixels, and this
+    //     body's tail invalidates the whole waveform area and re-renders the
+    //     plate synchronously either way, so that damage was already subsumed.
+    //   * THE SELECTION SETTLED BEFORE THE AUDIO VIEW, because the switch
+    //     RE-EXPRESSES A SURVIVING FOCUS through the store — an INDEX into the
+    //     marker vector — so it has to read the selection the entry restores
+    //     against the vector the entry restores. The post-restore rules and
+    //     their sanitize are what settle it, so they move up with the column
+    //     they are mode-bound to; a 'W' or 'P' entry that shortens its column
+    //     would otherwise hand the switch an index naming another marker.
+    //   * THEN the audio view, and then the visual tail, which lands and frames
+    //     in the domain the restore ends in.
+    // ACCEPTED COST: the tab switch renders a plate of the pre-restore state
+    // that the data swap then re-renders, and the column and audio-view
+    // switches kick once more each — one keystroke's worth of synchronous plate
+    // work, the bill `t` and Ctrl+Tab already pay. What is NOT acceptable is a
+    // PREVIEW dispatched against a state this same restore replaces, and that
+    // is what the data-first order closes: the audio view's target readiness
+    // ask (GuiTargetRender::ensure_ready, at the tail of
+    // switch_active_audio_view_to) now reads the restored map, so the tail's
+    // own unconditional trigger() is a same-state re-derive rather than a
+    // correction of one.
     if (entry.tab != app.active_tab_view) {
         active_views.switch_active_tab_view_to(entry.tab);
     }
-    // THE S/T RESTORE, through the set-to spelling of the `t` chokepoint (the
-    // contract is at its declaration, input_handler.h). Unconditional like the
-    // tab restore above — a settings-only entry carries the view it was typed in
-    // just as it carries the tab — and the chokepoint's own same-view early
-    // return is what makes that free. It is BEST-EFFORT in exactly one direction:
-    // entering target view can refuse its validity gate (the error-notice class,
-    // unreachable from program-written input), and a refusal leaves the audio
-    // view where it stands while the rest of the restore proceeds — there is no
-    // aborting a restore whose entry is already popped.
-    //
-    // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
-    // recorded, a restore lands the combination the op was AUTHORED in; the
-    // keyless S+P now arrives when, and only when, the op was authored there
-    // (reachable by toggling `t` off T+P, where the marker MEASURE authors —
-    // the home-view binding's fourth ruled exception). Before this tag existed
-    // the restore MANUFACTURED S+P out of a T+P entry undone from S+W, which is
-    // the defect it closes.
-    if (input) input->switch_active_audio_view_to(entry.audio_view);
 
-    // THE W/P RESTORE, through the `p` chokepoint's own writer
-    // (GuiActiveViews::switch_active_markers_view_to, which Undo reaches like
-    // the tab's — the column switch's selection clear and the seated pinch's
-    // anchor clear are that helper's, not a hand-kept copy of it). Gated off 'S'
-    // because op_mode is that entry kind's MARKER rather than a column: a
-    // settings-only entry carries no authoring column to return to.
-    if (entry.op_mode != 'S') {
-        active_views.switch_active_markers_view_to(entry.op_mode);
-    }
+    // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
+    // OLD map still stands — the subject of the map-change re-land below. Read
+    // after the tab switch, which restores the entering tab's own cursor, and
+    // before the swap that rebuilds the map under it.
+    // active_domain_to_source_frame (warp_frame_map_view.h) is the product's
+    // one inverse for a bare frame — the identity in source view, the memoized
+    // target map's inverse in target view — so off target view it costs two
+    // compares and is read unconditionally.
+    const int64_t playhead_source_frame = active_domain_to_source_frame(
+        app, viewport.audio, app.playhead_cursor_sample);
 
     // Restore engine settings before the marker swap. Marker entries get their
     // settings field populated from app at push time (carry-everywhere), so the
@@ -642,16 +651,35 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
-    // (THE COLUMN SWAP IS NOT HERE ANY MORE — it moved UP, above the marker
-    // swap, and onto its own owner, GuiActiveViews::switch_active_markers_view_to,
-    // with the third view tag's landing on 2026-08-28. It stood here as a
-    // deliberate copy of that helper under the note "Undo does not hold that
-    // cluster", which had already stopped being true — the tab restore reaches
-    // active_views a few lines above it — so the copy was carrying the column
-    // switch's selection clear and the seated pinch's anchor clear by hand for
-    // nothing. Selection state is mode-bound and the post-restore rules below
-    // still need the column settled before they run, which the new site
-    // satisfies with room to spare.)
+    // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
+    // rebuilt under a STANDING view (the family contract is at the head of
+    // warpmarkers_ops.cpp; the writer is Viewport::reseat_playhead_to, and a
+    // TRANSLATION IS NOT A MOVEMENT — it hides no trim region overlay and ends
+    // no audition). TARGET VIEW ONLY: in source view the swap changes no domain
+    // and the cursor's number already names its own instant. It carries the
+    // cursor across the re-warp, so the audio-view switch below — and the
+    // visual tail after it — start from the instant the user stood on rather
+    // than from a number the replaced map minted. The subject is the PLAYHEAD's
+    // own instant rather than a focus's image, for the delete's reason: a
+    // restore may leave no focus at all (a removal empties the selection).
+    // NO KICK OF ITS OWN, unlike the family's other members: the target map
+    // cache rebuilds on demand for the conversion, and this body's tail already
+    // renders the plate synchronously once for the finished state.
+    if (app.active_audio_view == 'T') {
+        viewport.reseat_playhead_to(source_frame_to_active_domain(
+            app, viewport.audio, playhead_source_frame));
+    }
+
+    // THE W/P RESTORE, through the `p` chokepoint's own writer
+    // (GuiActiveViews::switch_active_markers_view_to, which Undo reaches like
+    // the tab's — the column switch's selection clear and the seated pinch's
+    // anchor clear are that helper's, not a hand-kept copy of it; the hand-kept
+    // copy that used to stand at this spot went with the move onto the owner).
+    // Gated off 'S' because op_mode is that entry kind's MARKER rather than a
+    // column: a settings-only entry carries no authoring column to return to.
+    if (entry.op_mode != 'S') {
+        active_views.switch_active_markers_view_to(entry.op_mode);
+    }
 
     // Settings-only entries carry no marker or focus post-restore work.
     if (entry.op_mode == 'P') {
@@ -663,6 +691,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.warpmarkers.markers().size()));
     }
+
+    // THE S/T RESTORE, through the set-to spelling of the `t` chokepoint (the
+    // contract is at its declaration, input_handler.h). Unconditional like the
+    // tab restore above — a settings-only entry carries the view it was typed in
+    // just as it carries the tab — and the chokepoint's own same-view early
+    // return is what makes that free. It is BEST-EFFORT in exactly one direction:
+    // entering target view can refuse its validity gate (the error-notice class,
+    // unreachable from program-written input), and a refusal leaves the audio
+    // view where it stands while the rest of the restore proceeds — there is no
+    // aborting a restore whose entry is already popped.
+    //
+    // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
+    // recorded, a restore lands the combination the op was AUTHORED in; the
+    // keyless S+P now arrives when, and only when, the op was authored there
+    // (reachable by toggling `t` off T+P, where the marker MEASURE authors —
+    // the home-view binding's fourth ruled exception). Before this tag existed
+    // the restore MANUFACTURED S+P out of a T+P entry undone from S+W, which is
+    // the defect it closes.
+    if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):

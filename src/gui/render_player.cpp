@@ -551,11 +551,23 @@ void GuiRenderPlayer::on_natural_end() {
     // stays the transport's, the head unit is published at the edge as any
     // play publishes, and there is no second launch here. It outranks the
     // advance: repeat ONE means this wav and not the folder.
+    // THE ARM RETURNS WHETHER THE REPLAY SOUNDED OR REFUSED, and that is what
+    // "outranks" means: a replay that cannot decode (the item deleted or
+    // republished in another shape while it played) has already put its own
+    // words on the status line and left the item untouched, and the rest
+    // written above leaves the transport on that item at its start. Falling
+    // through to the arms below would answer a refused REPEAT with the folder's
+    // next wav — or, on the last wav, with ended_at_folder_end standing under a
+    // lit lamp, so the next Play started the folder over. A lit lamp means this
+    // wav and nothing else, failure included.
     if (rp.repeat_one && !rp.item.empty() && rp.item_index >= 0 &&
         rp.item_index < static_cast<int>(rp.item_folder.size())) {
         const std::vector<Row> folder = rp.item_folder;
         const int i = rp.item_index;
-        if (play_wav(folder[static_cast<size_t>(i)].path, folder, i)) return;
+        const bool replayed =
+            play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+        if (!replayed) damage_row();
+        return;
     }
     // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (R2), never across folders
     // and never a wrap: the next wav of the list the item was played from, or

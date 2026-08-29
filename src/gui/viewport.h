@@ -346,7 +346,7 @@ struct Viewport {
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole). ITS CALLERS,
     // re-greped 2026-08-28, are the FOUR DIALOG EDITORS' repaint sites plus the
-    // RENDER PLAYER's two, the player being the row's third owner:
+    // RENDER PLAYER's three, the player being the row's third owner:
     //
     //   * TYPING and the autocompletes — route_modal_editor_key's `repaint`
     //     argument, passed by all four dialog editor key handlers
@@ -366,10 +366,13 @@ struct Viewport {
     //     (click-to-caret, the double-click word select, the drag's motion
     //     and its release).
     //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
-    //     lane and damages it through the same owner: GuiRenderPlayer::
-    //     damage_row for every transport, highlight and clock/scrub change
-    //     (render_player.cpp), and the one stop body's player fork for the
-    //     play/pause face (playback_lifecycle.cpp).
+    //     lane and damages it through the same owner — THREE sites:
+    //     GuiRenderPlayer::damage_row for every transport, highlight and
+    //     clock/scrub change (render_player.cpp), the one stop body's player
+    //     fork for the play/pause face (playback_lifecycle.cpp), and the
+    //     WINDOW-ACTIVATION hook, gated on the player standing (main.cpp),
+    //     the scrub's played part being the third surface that reads
+    //     AppState::window_activated.
     //
     // The PROMPTS are deliberately absent: every raise and every answer
     // damages the whole window (prompt.cpp), which is what a surface with no

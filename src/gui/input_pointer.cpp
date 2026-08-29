@@ -1281,12 +1281,14 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //     landed here, target view only, because the rebuilt map moved the focused
 //     marker's image out from under a resting cursor — and both now CLEAR THE
 //     SELECTION at their own tails instead, so there is no lane and no focus left
-//     to re-land. The map-change re-land SHAPE survives in exactly one place, the
-//     Up/Down cent step's target-view tail, which re-lands through
-//     Viewport::reseat_playhead_to rather than here — for the keep-visible
-//     scroll, and since 2026-08-19 for the second reason too: a re-land onto a
-//     marker whose IMAGE moved is a translation, not a movement, so it must not
-//     hide the overlay.)
+//     to re-land. The map-change re-land SHAPE lives entirely off this entry
+//     point — its whole membership is the caller list at
+//     Viewport::reseat_playhead_to (viewport.cpp), which is where it re-lands
+//     instead, for the keep-visible scroll and, since 2026-08-19, for the second
+//     reason too: a re-land onto a marker whose IMAGE moved is a translation,
+//     not a movement, so it must not hide the overlay. The undo/redo restore
+//     rejoined that family on 2026-08-28 — through the RESEAT, on the cursor's
+//     own instant rather than on a focus, so nothing about this list changes.)
 // The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the

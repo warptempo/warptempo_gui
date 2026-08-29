@@ -204,19 +204,24 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 //
 // THE WRITE ALONE, WITH NO HIDE IN IT, and the callers who want it that way are
 // the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP —
-// six, in two families:
+// seven, in two families:
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
 //     the Up/Down tempo cent step (warpmarkers_ops.cpp) and, since 2026-08-25,
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
-//     warpmarkers_ops.cpp. In five of the six the focus does not change and the
-//     playhead does not leave it — the marker's IMAGE moved out from under the
-//     cursor and the cursor follows it into the new domain. That is the `t`
-//     flip's translation in another spelling, and a translation is not a
-//     movement. THE DELETE IS THE SIXTH AND ITS SUBJECT DIFFERS: it leaves no
-//     focus at all, so what it follows into the new domain is the playhead's
-//     own musical instant, inverted to a source frame before the write.
+//     warpmarkers_ops.cpp; and, since 2026-08-28, THE UNDO/REDO RESTORE
+//     (undo.cpp), whose settings-and-marker swap rebuilds the map under a
+//     STANDING view, before the restore flips the audio view onto the finished
+//     one. In five of the seven the focus does not change and the playhead does
+//     not leave it — the marker's IMAGE moved out from under the cursor and the
+//     cursor follows it into the new domain. That is the `t` flip's translation
+//     in another spelling, and a translation is not a movement. THE DELETE AND
+//     THE RESTORE ARE THE OTHER TWO AND THEIR SUBJECT DIFFERS: either can leave
+//     no focus at all (the delete clears the selection, and a restore whose
+//     touched set comes up empty clears it too), so what they follow into the
+//     new domain is the playhead's own musical instant, inverted to a source
+//     frame before the write.
 //   * THE SWEEP'S OWN PER-MOTION CARRY is NOT here and never was: it writes
 //     app.playhead_cursor_sample direct, because a keep-visible edge-align would
 //     scroll the viewport out from under a live gesture (input_pointer.cpp). The
