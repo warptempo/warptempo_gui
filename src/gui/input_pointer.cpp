@@ -3979,11 +3979,28 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;
     if (!press.scrolling) {
-        // THE VERTICAL DRAG GATE, the product's one crossing threshold
-        // (drag_moved_threshold_px — 8 authored px through scaled_px, the
-        // touch slop's own number): past it the arm IS the band's scroll drag
-        // and its act is gone. Once a drag, always a drag.
-        if (std::abs(y - press.press_y) > drag_moved_threshold_px()) {
+        // THE DRAG GATE, the product's one crossing threshold, spelled here
+        // exactly as at every other pending press: CHEBYSHEV from the press
+        // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 8 authored px
+        // through scaled_px, the touch slop's own number — and the crossing is
+        // `>=`, not `>`, because the core resolves a touch into a drag at `>=`
+        // its slop and the two gates must not disagree by one pixel (the
+        // twin-gate invariant, input_core.h: a slop-crossing resolution
+        // delivers its crossing motion in the same burst as the press, and
+        // that motion has to clear this gate BY CONSTRUCTION).
+        //
+        // IT CROSSES ON EITHER AXIS even though the scroll reads dy alone. A
+        // sideways slide over a row is a drag, not a click: on glass a finger
+        // that has slid 20 px across a full-width row has been classified as a
+        // drag by the touch layer already, and on plastic a wobbling click is
+        // the same event. Past the gate the arm IS the band's scroll drag and
+        // its act is gone — once a drag, always a drag, on both axes — so a
+        // purely sideways crossing simply scrolls nothing and ends with no act,
+        // which is the answer Plasma's single-click and GNOME's touch both give
+        // (the ruling's own references, R39).
+        if (std::max(std::abs(x - press.press_x),
+                     std::abs(y - press.press_y)) >=
+                drag_moved_threshold_px()) {
             press.scrolling = true;
             press.inside    = false;
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
@@ -6489,8 +6506,9 @@ void GuiInputHandler::finalize_active_drags() {
     app.pending_click        = PendingClickAct{};
     // THE RENDER PLAYER'S TWO ARMS END HERE TOO, through the same clears the
     // pointer-leave hook and the button-lost edge call — the row press with NO
-    // act (its highlight and its double-click seed are the motionless LIFT's,
-    // and there is no lift here) and the scrub's marker drag with NO seek
+    // act (its highlight and its open are the motionless LIFT's, and there is
+    // no lift here; the row's double-click seed went with the surface itself
+    // when a click became the open act) and the scrub's marker drag with NO seek
     // beyond the motion already applied (the seek is the release's, and the
     // sound never followed the marker). Each clear damages the face its arm
     // painted: the armed row's rect and the published scrub track, which the

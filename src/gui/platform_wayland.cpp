@@ -93,6 +93,13 @@
 
 namespace {
 
+// The three buttons the seam names, decoded so the platform's vocabulary is
+// COMPLETE — but only Left is bound to anything: every router in the GUI tests
+// for it and drops the rest. THE RIGHT AND MIDDLE BUTTONS ARE UNBOUND, both of
+// them deliberately (CLAUDE.md's zoom digest carries the ruling): the right
+// button has no gesture in the redesign, and the middle button has none either
+// — no paste, no autoscroll, no close-tab. Decoding them costs nothing and
+// keeps the translation total; binding one would need a ruling first.
 bool translate_pointer_button(uint32_t button, GuiMouseButton& out) {
     switch (button) {
         case BTN_LEFT:   out = GuiMouseButton::Left;   return true;
@@ -669,6 +676,9 @@ std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume(
         // directory_iterator throws on it; a walk that stops part-way is a
         // fault like the open's and refuses the same way, since the entries
         // seen so far are not the answer to "which volumes are mounted".
+        // That refusal is also why this walk does not route through the walk
+        // owner (for_each_directory_entry, directory_walk.h): the owner's
+        // callback answers nothing, and every fault here is a sentence.
         //
         // The link refusal above is asked here, entry by entry. An entry that
         // is simply gone by the time it is read — the stick unmounted

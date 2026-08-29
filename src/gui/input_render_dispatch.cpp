@@ -1,5 +1,6 @@
 #include "input_handler.h"
 
+#include "directory_walk.h"     // the one non-throwing listing walk
 #include "phaseresetmarkers.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -28,9 +29,14 @@ GuiInputHandler::max_renders_batch_index(
     RendersBatchScan scan;
     std::error_code ec;
     if (!std::filesystem::is_directory(renders_dir, ec)) return scan;
-    for (const auto& de :
-         std::filesystem::directory_iterator(renders_dir, ec)) {
-        if (!de.is_directory()) continue;
+    // NON-THROWING (directory_walk.h): a batch root edited under the dispatch —
+    // the trash road, an external sync, a folder unmounted — answers what it
+    // saw, which is the same "highest index seen" this scan is, rather than
+    // terminating the process out of a range-for's increment.
+    for_each_directory_entry(renders_dir, ec, [&scan](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_directory(entry_ec) || entry_ec) return;
         const std::string name = de.path().filename().string();
         int v = 0;
         size_t i = 0;
@@ -38,12 +44,12 @@ GuiInputHandler::max_renders_batch_index(
             v = v * 10 + (name[i] - '0');
             ++i;
         }
-        if (i == 0 || i >= name.size() || name[i] != '_') continue;
+        if (i == 0 || i >= name.size() || name[i] != '_') return;
         if (v > scan.max_index) {
             scan.max_index             = v;
             scan.max_index_folder_name = name;
         }
-    }
+    });
     return scan;
 }
 
@@ -162,21 +168,22 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
     // starting at 1. Non-numeric wav names are ignored (misc cells are
     // authored only here, always bare-integer names).
     int max_cell = 0;
-    for (const auto& fe :
-         std::filesystem::directory_iterator(target_folder, ec)) {
-        if (!fe.is_regular_file()) continue;
-        if (fe.path().extension() != ".wav") continue;
+    for_each_directory_entry(target_folder, ec, [&max_cell](
+            const std::filesystem::directory_entry& fe) {
+        std::error_code entry_ec;
+        if (!fe.is_regular_file(entry_ec) || entry_ec) return;
+        if (fe.path().extension() != ".wav") return;
         const std::string stem = fe.path().stem().string();
-        if (stem.empty()) continue;
+        if (stem.empty()) return;
         bool all_digits = true;
         int  v          = 0;
         for (char c : stem) {
             if (c < '0' || c > '9') { all_digits = false; break; }
             v = v * 10 + (c - '0');
         }
-        if (!all_digits) continue;
+        if (!all_digits) return;
         if (v > max_cell) max_cell = v;
-    }
+    });
 
     out_folder   = target_folder.string();
     out_basename = std::to_string(max_cell + 1);

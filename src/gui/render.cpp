@@ -1960,6 +1960,7 @@ namespace {
 } // namespace
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
+int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }

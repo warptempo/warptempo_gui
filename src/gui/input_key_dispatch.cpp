@@ -5096,21 +5096,23 @@ void GuiInputHandler::build_project_picker_rows() {
     ov.owner = AppState::FolderOverlay::Owner::ProjectPicker;
     // ONE LIST, AND THIS BODY IS ITS ONE OWNER: the folder names under
     // projects_path are enumerated here (in the model's own order,
-    // project_model.h), filtered by BOTH of open_project_commit's own tests
-    // in its own order — the NAME grammar (is_last_project_name,
-    // device_config.h) and then the model (resolve_project) — and the
+    // project_model.h), filtered by the model (resolve_project), and the
     // survivors become the band's ROWS. A row that would refuse at the open
     // is not a row, so the band and the act AGREE BY CONSTRUCTION: an invalid
-    // folder simply does not show up (architect R8). The act's remaining arms
-    // are not filters: the same-project no-op is a legal answer and the dry
-    // run reads the disk, which this walk does not re-do per row. No `..` row
-    // and no folder inside a project: the picker's tree is one level deep.
-    // BUILT AT THE OPEN AND NEVER KEPT FRESH — a project that appears or
-    // vanishes while the picker stands shows at the next open.
+    // folder simply does not show up (architect R8). THE NAME GRAMMAR IS NOT
+    // ASKED HERE: is_last_project_name (device_config.h) is the ENUMERATION's
+    // own membership rule now — a folder the device config cannot name is not
+    // a project on any opening road — so the walk this loop reads has already
+    // dropped those names, and a second copy of the test here would be a
+    // duplicate predicate with no producer of its own. The act's remaining
+    // arms are not filters either: the same-project no-op is a legal answer
+    // and the dry run reads the disk, which this walk does not re-do per row.
+    // No `..` row and no folder inside a project: the picker's tree is one
+    // level deep. BUILT AT THE OPEN AND NEVER KEPT FRESH — a project that
+    // appears or vanishes while the picker stands shows at the next open.
     const std::filesystem::path root(app.device_config->projects_path);
     for (const std::string& name :
              enumerate_project_names(app.device_config->projects_path)) {
-        if (!is_last_project_name(name)) continue;
         const std::filesystem::path folder = root / name;
         if (!resolve_project(folder)) continue;
         AppState::FolderOverlayRow row;
@@ -5155,8 +5157,8 @@ void GuiInputHandler::open_project_commit(int index) {
         viewport.invalidate_status_chain_area();
     };
 
-    // The row's name is ONE folder name by construction (the list builder's
-    // filter), so the model is the first real test.
+    // The row's name is ONE folder name by construction (the enumeration's own
+    // membership rule, project_model.h), so the model is the first real test.
     const std::filesystem::path folder =
         std::filesystem::path(app.device_config->projects_path) / name;
     auto project = resolve_project(folder);
@@ -5943,7 +5945,8 @@ void GuiInputHandler::render_player_load_in_place() {
     // renders_dir.h), OK / Cancel — Cancel the Escape sentinel LAST like every
     // prompt's, so Esc's own answer is derived rather than declared; `o` is
     // OK's letter.
-    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, this prompt alone
+    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
+    // raised from its TWO subjects, and no other prompt in the product
     // (architect 2026-08-28): a bare ENTER here answers OK, because the load
     // is not a destructive answer — it lands ONE undo entry, which the
     // ordinary Ctrl+Z takes back — and it is this same prompt body that the

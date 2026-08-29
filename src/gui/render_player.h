@@ -394,14 +394,18 @@ struct GuiRenderPlayer {
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep (six call sites): open() — active, no item, stopped;
-    // play_wav's tail and toggle_pause's resume arm — the two writers of the
-    // LIVE state, playing; THE STOP BODY'S PLAYER FORK
+    // re-derived by grep (EIGHT call sites across SEVEN functions): open() —
+    // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
+    // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
     // covers the pause, the natural end's last-wav rest, the dead device and
-    // the rebind ahead of the next item; seek_to — both arms, so the head
-    // unit's clock stays honest; and close() — inactive. NO PER-TICK PUSH: a
+    // the rebind ahead of the next item; GuiRenderPlayer::stop()'s OWN push in
+    // its not-sounding arm (R36) — a transport that has already passed that
+    // fork moves its rest to frame 0, which the head unit's clock must see, and
+    // the arm that DOES sound needs no second push because the fork just made
+    // one; seek_to — both arms, so the head unit's clock stays honest; and
+    // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last
     // push at speed 1.0. Title = the item's path relative to the project
     // folder (`tmp/3_bpm/01.wav`, `render/<title>.wav`), artist = the

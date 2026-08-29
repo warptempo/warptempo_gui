@@ -129,24 +129,39 @@ inline bool is_projects_path(const std::string& v) {
 }
 
 // THE last_project GRAMMAR — the ONE owner: EMPTY, or exactly ONE path
-// component — no `/`, not `.`, not `..`, no leading or trailing ASCII
-// WHITESPACE (all six of it: space, tab, newline, carriage return, vertical
-// tab, form feed — spelled as a byte set here rather than asked of the locale,
-// which the rest of the grammar surface never consults either). The name is
-// otherwise verbatim, since a project folder may legitimately end in any other
-// character. A separator or a dot-name is the ADVERSARIAL class and
-// refuses at load like every other schema violation: the program writes this
-// key with one folder NAME, so a `/` or a `..` is a state its one producer
-// cannot make — and a name carrying a separator would compose a path that
-// LEAVES the folder it claims to name (`../other` resolves outside the
-// projects path entirely), after which the program would open and EDIT a piece
-// that was never a project here. So the composition happens only after the
-// name is known to be a single component, and anything else refuses the whole
-// config out loud.
+// component — no `/`, not `.`, not `..`, no LINE SEPARATOR anywhere in it
+// (`\n` or `\r`), and no leading or trailing ASCII WHITESPACE (all six of it:
+// space, tab, newline, carriage return, vertical tab, form feed — spelled as a
+// byte set here rather than asked of the locale, which the rest of the grammar
+// surface never consults either). The name is otherwise verbatim, since a
+// project folder may legitimately end in any other character. A separator or a
+// dot-name is the ADVERSARIAL class and refuses at load like every other schema
+// violation: the program writes this key with one folder NAME, so a `/` or a
+// `..` is a state its one producer cannot make — and a name carrying a
+// separator would compose a path that LEAVES the folder it claims to name
+// (`../other` resolves outside the projects path entirely), after which the
+// program would open and EDIT a piece that was never a project here. So the
+// composition happens only after the name is known to be a single component,
+// and anything else refuses the whole config out loud.
+//
+// THE LINE SEPARATOR IS REFUSED ANYWHERE, not just at the edges, because the
+// file is line-based `key=value` with NO ESCAPING: a name carrying a `\n` or a
+// `\r` cannot be serialized at all — the writer would emit more than one
+// physical line and the shared scanner would refuse the remainder as "not a
+// key=value line" on the next read. The edge-whitespace rule stays exactly as
+// it is (a trailing space is serializable but not canonical); this clause is
+// about what the FORMAT can carry.
+//
+// THE GRAMMAR IS ALSO A MEMBERSHIP TEST, not only a reader's: a folder whose
+// name this predicate refuses is not a project on any road, because every
+// successful open writes that name into this key (enumerate_project_names and
+// the argument road, project_model.{h,cpp}, are the other two callers).
 inline bool is_last_project_name(const std::string& v) {
     if (v.empty()) return true;
     if (v == "." || v == "..") return false;
     if (v.find('/') != std::string::npos) return false;
+    if (v.find('\n') != std::string::npos) return false;
+    if (v.find('\r') != std::string::npos) return false;
     auto is_ws = [](char c) {
         return c == ' ' || c == '\t' || c == '\n' ||
                c == '\v' || c == '\f' || c == '\r';

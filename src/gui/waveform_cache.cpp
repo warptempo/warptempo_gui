@@ -1016,6 +1016,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     const int surface_w = top_strip.w;
     const int surface_h = top_strip.h;
+    // THE SCALE THE FLAG PIXELS ARE LAID OUT AT, keyed by field (contract at
+    // FlagCache::fp_gui_scale_percent).
+    const int gui_scale = gui_scale_percent();
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
     // positioned at marker times only.
@@ -1103,6 +1106,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_vp_end                  == vp_end &&
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
+        flag_cache.fp_gui_scale_percent       == gui_scale &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
@@ -1280,6 +1284,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_vp_end                  = vp_end;
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
+    flag_cache.fp_gui_scale_percent       = gui_scale;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;

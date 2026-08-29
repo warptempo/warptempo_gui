@@ -211,8 +211,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (key == "waveform_magnification_level") {
-        // History-less and APPLIED LIVE, through the SAME chokepoint the three
-        // hotkeys and the three icon-row buttons use — a typed
+        // History-less and APPLIED LIVE, through the SAME chokepoint the TWO
+        // hotkeys (bare `=` and bare `-`), the TWO icon-row buttons that
+        // synthesize them and the PLAIN WHEEL use — the third of each retired
+        // 2026-08-27 with Ctrl+0 and the reset button, this editor line being
+        // the reset road that replaced them. A typed
         // `:waveform_magnification_level=4` is one more caller of
         // apply_waveform_magnification_level, never a parallel writer. The
         // RANGE was already enforced by validate_gui_setting above, so an

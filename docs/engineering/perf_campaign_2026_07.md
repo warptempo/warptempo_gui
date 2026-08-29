@@ -359,7 +359,8 @@ compiler's FMA-contraction choices shifts output by ulps, so renders do
 not cmp across machines (nor across a glibc upgrade on one machine).
 Run-to-run determinism holds per host+binary, exactly as the criterion is
 written. Deliberate gap to remember: `kFingerprintVersion` encodes DSP
-recipe identity, NOT host identity — a `renders/` entry migrated from
+recipe identity, NOT host identity — a `tmp/` batch entry (the folder was
+`renders/` when this was written; renamed 2026-08-27) migrated from
 another machine can pose as a current recipe; re-render instead of
 migrating artifacts. The producer/consumer contention balance (§5.5,
 §5.7) is a property of this laptop's core topology and bandwidth; nothing

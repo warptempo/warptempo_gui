@@ -52,6 +52,13 @@ std::string remove_failure(const std::filesystem::path& p,
 // range-for over a directory_iterator does not (its increment throws), so the
 // increment is spelled out here once.
 //
+// IT IS THE SIBLING OF for_each_directory_entry (directory_walk.h, the GUI's
+// one non-throwing walk owner) AND NOT A DUPLICATE OF IT: this one adds the
+// two things the mirror needs and the owner deliberately has not got — a
+// callback that REPORTS A FAULT STRING and stops the walk at once, and the
+// `optional_root` ENOENT carve-out on `dir` itself. The owner's header carries
+// the inventory of which walks route through it and which spell their own.
+//
 // It serves rule 1: the walk runs to the end of the listing or reports the
 // refusal line, the callback reports its own the same way (any non-empty answer
 // stops the walk at once), and `optional_root` true is the rule's ENOENT

@@ -2526,10 +2526,11 @@ private:
     //       is definitely opening, mints the session and builds the list.
     //     build_project_picker_rows: THE SESSION'S ONE LIST, built AT THE
     //       OPEN — the folder names under projects_path (the model's own
-    //       order, project_model.h) filtered by BOTH of the open act's tests,
-    //       the name grammar (is_last_project_name) and then the model
-    //       (resolve_project), so a row that would refuse at Enter is not a
-    //       row: an invalid folder simply does not show (architect R8). Never
+    //       order and its own membership, project_model.h: the enumeration
+    //       already drops every name the device config cannot carry) filtered
+    //       here by the model (resolve_project), so a row that would refuse at
+    //       Enter is not a row: an invalid folder simply does not show
+    //       (architect R8). Never
     //       kept fresh (a project that appears or vanishes while the picker
     //       stands shows at the next open), no `..` row and no folder inside
     //       a project — a project is a leaf here. The band opens on the
@@ -3618,7 +3619,8 @@ private:
     // since R37 being the row's, never a row of the list's), the release (A
     // MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click activates,
     // architect 2026-08-29; a scroll drag ends), the motion
-    // (past the vertical drag gate the arm is the band's scroll drag; inside
+    // (past the drag gate — the product's one Chebyshev crossing, on EITHER
+    // axis — the arm is the band's scroll drag; inside
     // it the feint's inside bit), the hover walk, and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the

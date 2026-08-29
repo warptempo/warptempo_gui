@@ -1,5 +1,7 @@
 #include "renders_dir.h"
 
+#include "directory_walk.h"   // the one non-throwing listing walk
+
 #include <algorithm>
 #include <cstddef>
 #include <string>
@@ -49,17 +51,23 @@ GuiRendersDir::enumerate_render_entries() {
         return v;
     };
 
+    // BOTH WALKS ARE NON-THROWING (directory_walk.h). A batch folder removed
+    // by the trash road, or the whole batch root swept away, while the player
+    // is listing or a dispatch is numbering answers WHAT IT SAW — a partial or
+    // empty entry list, which every caller already treats as "no cells" —
+    // instead of terminating the process out of a range-for's increment.
     struct BatchSlot { int idx; std::filesystem::path path; };
     std::vector<BatchSlot> batches;
-    for (const auto& de :
-         std::filesystem::directory_iterator(batch_root, ec)) {
-        if (!de.is_directory()) continue;
+    for_each_directory_entry(batch_root, ec, [&](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_directory(entry_ec) || entry_ec) return;
         const std::string name = de.path().filename().string();
         size_t end = 0;
         const int v = leading_int(name, end);
-        if (end == 0 || end >= name.size() || name[end] != '_') continue;
+        if (end == 0 || end >= name.size() || name[end] != '_') return;
         batches.push_back({v, de.path()});
-    }
+    });
     std::sort(batches.begin(), batches.end(),
               [](const BatchSlot& a, const BatchSlot& b) {
                   return a.idx < b.idx;
@@ -72,17 +80,18 @@ GuiRendersDir::enumerate_render_entries() {
             std::string basename;
         };
         std::vector<WavSlot> wavs;
-        for (const auto& fe :
-             std::filesystem::directory_iterator(b.path, ec)) {
-            if (!fe.is_regular_file()) continue;
-            if (fe.path().extension() != ".wav") continue;
+        for_each_directory_entry(b.path, ec, [&](
+                const std::filesystem::directory_entry& fe) {
+            std::error_code entry_ec;
+            if (!fe.is_regular_file(entry_ec) || entry_ec) return;
+            if (fe.path().extension() != ".wav") return;
             const std::string stem = fe.path().stem().string();
             size_t end = 0;
             const int v = leading_int(stem, end);
-            if (end == 0) continue;
-            if (end != stem.size() && stem[end] != '_') continue;
+            if (end == 0) return;
+            if (end != stem.size() && stem[end] != '_') return;
             wavs.push_back({v, fe.path(), stem});
-        }
+        });
         std::sort(wavs.begin(), wavs.end(),
                   [](const WavSlot& a, const WavSlot& b) {
                       return a.idx < b.idx;

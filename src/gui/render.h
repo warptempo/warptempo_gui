@@ -1164,6 +1164,15 @@ inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 // the authored constants, and every conversion rounds with std::nearbyint.
 void   set_gui_scale_percent(int percent);
 
+// THE LIVE PERCENT ITSELF, for the one thing a factor cannot serve: a CACHE
+// FINGERPRINT FIELD. The scale is an input to pixels the way an inset or a
+// magnification level is, and a fingerprint keys its inputs BY FIELD rather
+// than through whatever else happens to move with them — an integer percent is
+// what makes that compare exact, where the factor is a double and a derived
+// dimension is a coincidence. Nothing paints through this: every painted
+// dimension goes on reading gui_scale_factor / scaled_px.
+int    gui_scale_percent();
+
 // Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
 // 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();

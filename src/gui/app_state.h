@@ -3546,14 +3546,15 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All five raisers put
-//        '\x1b' last (re-grepped 2026-08-28): the unsaved-work prompt (Save /
+//        by construction rather than by convention. All SIX present() sites put
+//        '\x1b' last (re-grepped 2026-08-29): the unsaved-work prompt (Save /
 //        Discard / CANCEL), its save-failed restatement (Retry / Discard /
 //        CANCEL), the paste confirmation (Yes / CANCEL), the error notice (OK,
-//        whose one response IS the sentinel) and the render player's load
-//        confirmation (OK / CANCEL). So the key that answers without asking
-//        answers the way Esc already does, and no destructive response is ever
-//        one Enter away.
+//        whose one response IS the sentinel) and THE LOAD CONFIRMATION'S TWO
+//        RAISERS (OK / CANCEL — one prompt body, two subjects: the render
+//        player's highlighted entry and the `h` view's viewed walk member). So
+//        the key that answers without asking answers the way Esc already does,
+//        and no destructive response is ever one Enter away.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
 //        has been on screen, so an Enter queued behind a raise answers
 //        nothing — the exact hazard the old rule was reaching for, closed
@@ -4263,9 +4264,12 @@ struct AppState {
     // string for the picker's "already open" no-op and its opening highlight
     // to hold. ONE PRODUCER, GuiFileLoader::load_file, which is handed the
     // resolved project and assigns it here beside the window title; nothing
-    // else writes it. READ BY THE OPEN PROJECT PICKER (its "already open"
-    // no-op and the row its band opens on) and by the external-sync job,
-    // which names the mirror's folder on the volume with it.
+    // else writes it. THREE READERS, re-derived by grep: the OPEN PROJECT
+    // PICKER (its "already open" no-op and the row its band opens on), the
+    // EXTERNAL-SYNC job, which names the mirror's folder on the volume with
+    // it, and the RENDER PLAYER's media push, where it is the head unit's
+    // ARTIST beside the item's project-relative path as the title
+    // (GuiRenderPlayer::publish_media_state).
     std::string project_name;
 
     // THE REOPEN REQUEST: the project NAME the Open project picker chose, set
@@ -7355,14 +7359,17 @@ struct AppState {
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
-// Every site that asks reads this one answer — the waveform's paint gate
-// here, and through folder_overlay::stands (the panel's own name for it,
-// forwarding to this) the slot's paint dispatch and the panel's painter, the
-// row press claim, the hover walk, the press clear's damage, the touch pan
-// zone's carve-out and the run loop's slot reconcile; the wheel context, the
-// two-finger navigation body's refusal (apply_touch_nav_update — the band
-// takes no pan and no pinch under any content) and the roster's greying arm
-// call this directly. (The on-screen keyboard's standing predicate carried
+// Every site that asks reads this one answer, and THIS IS THE INVENTORY —
+// TWELVE READERS, re-grepped 2026-08-29; no other file states a count of its
+// own. Through folder_overlay::stands (the panel's own name for it, forwarding
+// to this): the waveform's paint gate (waveform_paint_area,
+// onscreen_keyboard.h), the slot's paint dispatch and the panel's painter
+// (paint_handler.cpp), the row press claim, the hover walk, the HOVER CLEAR's
+// damage, the press clear's damage (input_pointer.cpp), the touch pan zone's
+// carve-out and the run loop's slot reconcile (main.cpp). Directly: the wheel
+// context (input_handler.cpp), the two-finger navigation body's refusal
+// (apply_touch_nav_update — the band takes no pan and no pinch under any
+// content) and the roster's greying arm (redesign_button_enabled, below). (The on-screen keyboard's standing predicate carried
 // its negation as a third term until 2026-08-28, when the picker stopped
 // being an editor and the term lost its producer — the record is at
 // onscreen_keyboard::stands.) (It

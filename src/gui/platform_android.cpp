@@ -479,9 +479,7 @@ GuiPlatform::~GuiPlatform() {
 // on the waveform instead — and stepped back that evening: it was one step too
 // far for a ~3 authored px crop, and with the press-road thresholds now scaling
 // with gui_scale (and the double-click window on the product's one beat, same
-// evening) the double-tap holds together at 225 anyway. The BLANK player
-// beside it is the real answer for a device with nothing spawnable on it rather
-// than a placeholder.
+// evening) the double-tap holds together at 225 anyway.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into

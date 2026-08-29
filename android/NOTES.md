@@ -901,8 +901,11 @@ needed no edit at all: the split is entirely below the public API.
 ### 11.2 The rate: one multiply, and it was already there
 
 The render body already advanced its fractional source position by
-`speed * source_rate / device_rate` per output frame — the JACK graph rate had
+`source_rate / output_rate` per output frame — the JACK graph rate had
 been in that increment since the graph was allowed to differ from the source.
+(It carried a `speed *` factor on top of that ratio until `playback_speed`
+retired whole on 2026-08-27, varispeed and all; the ratio itself is what the
+extraction was about and is unchanged.)
 Extraction therefore renamed `jack_rate` to `output_rate` and changed no
 arithmetic: on JACK it is the graph's rate, on AAudio the rate the stream was
 GRANTED. The fractional read the body already performs IS the resampler; no
@@ -1012,12 +1015,15 @@ link. It is reasoned, not observed.
 ### 11.6 What was driven on the device
 
 APK installed over the §10 project (`/sdcard/Android/data/com.warptempo.gui/
-files/`, `active_audio_view=T`, `playback_speed=0.7`), the target preview
-rendered by the on-device engine at startup as before.
+files/`, `active_audio_view=T`), the target preview
+rendered by the on-device engine at startup as before. THE RUN PREDATED
+`playback_speed`'s RETIREMENT (2026-08-27): the sidecar of that day also
+carried `playback_speed=0.7`, which is why the clock readings below run slow.
+A `.settings` carrying the key today is unknown-key fatal in both products.
 
 - **The transport row's PLAY button, tapped by coordinate**, starts playback:
   the glyph swaps to STOP and the clock advances (03:48.278 → 03:50.681 across
-  a screenshot burst, ~0.7× wall clock as the speed setting asks).
+  a screenshot burst, ~0.7× wall clock as that day's speed setting asked).
 - **`dumpsys media.audio_flinger` shows the live stream**: `MMAP_PLAYBACK`
   thread, `Sample rate: 48000 Hz`, `Standby: no`, `Attributes: content type 2
   usage 1` (MUSIC/MEDIA, the two we asked for), `Track: com.warptempo.gui`.
@@ -1159,8 +1165,10 @@ exactly one entry, `playback_common.cpp.o`. `libaaudio.so` stays the only new
 > Two changes, one picture. **THE AIR**: "the clock and everything else looks
 > too close to the bottom — the distance between the top of the screen and the
 > battery icon is much greater than between the battery's bottom and our first
-> row; we have plenty of waveform, give some to the top." `kStatusBarAirPx` = 16
-> DEVICE pixels (the retune knob, and device pixels because it pairs with the
+> row; we have plenty of waveform, give some to the top." `kStatusBarAirPx` = 14
+> DEVICE pixels (16 at the ruling, retuned to 14 forty-five minutes later the
+> same evening as the mirror of One UI's own top gap; 14 is what stands — the
+> retune knob, and device pixels because it pairs with the
 > bar's own density-scaled geometry, not with `gui_scale`) is added to the
 > content rect's TOP inset inside `resolve_content_rect`, and only when the
 > framework reports a top inset at all — a fullscreen future gets no blank band.

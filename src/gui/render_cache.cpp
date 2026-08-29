@@ -1,5 +1,6 @@
 #include "render_cache.h"
 
+#include "directory_walk.h"   // the one non-throwing listing walk
 #include "wav_io.h"
 
 #include <algorithm>
@@ -516,32 +517,33 @@ void RenderCache::init() {
 }
 
 void RenderCache::sweep_orphans() {
+    // NON-THROWING (directory_walk.h): an unreadable or vanishing cache parent
+    // sweeps nothing rather than terminating the process, which is what a
+    // best-effort sweep at startup owes.
     std::error_code ec;
-    std::filesystem::directory_iterator it(parent_, ec), end;
-    if (ec) return;
-
     const long self = static_cast<long>(::getpid());
-    for (; it != end; it.increment(ec)) {
-        if (ec) break;
-        if (!it->is_directory(ec)) continue;
+    for_each_directory_entry(parent_, ec, [self](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_directory(entry_ec) || entry_ec) return;
 
-        const std::string name = it->path().filename().string();
+        const std::string name = de.path().filename().string();
         if (name.empty() ||
             name.find_first_not_of("0123456789") != std::string::npos) {
-            continue; // not a PID directory
+            return; // not a PID directory
         }
         long pid = 0;
-        try { pid = std::stol(name); } catch (...) { continue; }
-        if (pid == self) continue;
+        try { pid = std::stol(name); } catch (...) { return; }
+        if (pid == self) return;
 
         // kill(pid, 0): 0 or EPERM means the process is alive (leave it);
         // ESRCH means it is gone (sweep its directory).
-        if (::kill(static_cast<pid_t>(pid), 0) == 0) continue;
-        if (errno != ESRCH) continue;
+        if (::kill(static_cast<pid_t>(pid), 0) == 0) return;
+        if (errno != ESRCH) return;
 
         std::error_code rmec;
-        std::filesystem::remove_all(it->path(), rmec);
-    }
+        std::filesystem::remove_all(de.path(), rmec);
+    });
 }
 
 void RenderCache::shutdown() {

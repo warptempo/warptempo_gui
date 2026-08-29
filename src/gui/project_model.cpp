@@ -1,5 +1,7 @@
 #include "project_model.h"
 
+#include "directory_walk.h"   // the one non-throwing listing walk
+
 #include <algorithm>
 #include <system_error>
 #include <utility>
@@ -35,7 +37,10 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     // fact from "no wav in there", so every error code is read and the
     // system's own words are the diagnosis. The step is the loop's tail rather
     // than the increment expression so the code it sets is read before the end
-    // test can hide it.
+    // test can hide it. IT SPELLS ITS OWN increment rather than routing through
+    // the walk owner (for_each_directory_entry, directory_walk.h) for exactly
+    // that reason: this walk refuses MID-WALK with the offending entry's own
+    // sentence, which a void callback cannot return.
     std::vector<std::string> wav_stems;
     std::vector<std::string> sidecar_stems;
 
@@ -137,18 +142,26 @@ std::expected<GuiProjectSource, std::string> resolve_project(
 
 std::vector<std::string> enumerate_project_names(
         const std::filesystem::path& projects_path) {
+    // A MISSING OR UNREADABLE projects_path ANSWERS EMPTY, and a walk that
+    // fails mid-way answers what it saw — both the caller's "No project under
+    // <projects_path>" line, neither of them a throw (directory_walk.h owns
+    // the non-throwing walk; the entry query takes its error_code overload
+    // here for the same reason).
     std::vector<std::string> names;
     std::error_code ec;
-    std::filesystem::directory_iterator it(projects_path, ec);
-    if (ec) return names;   // missing or unreadable: empty, the caller's line
-    const std::filesystem::directory_iterator walk_end;
-    while (it != walk_end) {
+    for_each_directory_entry(projects_path, ec, [&names](
+            const std::filesystem::directory_entry& de) {
         std::error_code entry_ec;
-        const bool dir = it->is_directory(entry_ec);
-        if (!entry_ec && dir) names.push_back(it->path().filename().string());
-        it.increment(ec);
-        if (ec) break;      // a walk that fails mid-way answers what it saw
-    }
+        if (!de.is_directory(entry_ec) || entry_ec) return;
+        // A FOLDER THE DEVICE CONFIG CANNOT NAME IS NOT A PROJECT, whatever
+        // its shape, because every successful open writes that name into
+        // `last_project` (main.cpp) — so the ONE membership list every opening
+        // road walks yields only names the config can carry. The grammar's own
+        // owner answers (is_last_project_name, device_config.h); this walk
+        // spells no rule of its own.
+        std::string name = de.path().filename().string();
+        if (is_last_project_name(name)) names.push_back(std::move(name));
+    });
     std::sort(names.begin(), names.end());
     return names;
 }
@@ -211,6 +224,13 @@ std::expected<GuiProjectSource, std::string> startup_source(
         ec) {
         return refuse();
     }
+    // THE NAME MUST BE ONE THE DEVICE CONFIG CAN CARRY — the enumeration's
+    // own membership rule, asked here because this road never walks the
+    // enumeration. The open would write this name into `last_project`, so a
+    // folder the grammar refuses is not a project source on this road either,
+    // and it refuses with the road's own sentence rather than a second
+    // vocabulary.
+    if (!is_last_project_name(folder.filename().string())) return refuse();
     auto resolved = resolve_project(folder);
     if (!resolved) return std::unexpected(std::move(resolved.error()));
     if (!std::filesystem::equivalent(spelled, resolved->source, ec) || ec) {

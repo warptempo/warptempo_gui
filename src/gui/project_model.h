@@ -41,6 +41,19 @@
 // `render/`, `tmp/`, `peaks/`, `score/` — can never be a candidate and neither
 // folder needs an exclusion rule of its own.
 //
+// A PROJECT'S NAME MUST BE ONE THE DEVICE CONFIG CAN CARRY. Validity is folder
+// SHAPE (above) AND a config-nameable NAME: every successful open writes the
+// folder's name into `last_project` (main.cpp), and that key's grammar is
+// strict on the way back in, so a folder the grammar refuses would open once
+// and make the NEXT launch fatal on a file only the program writes. The rule
+// therefore lives at the MEMBERSHIP rather than at each opening road:
+// enumerate_project_names below yields only names is_last_project_name
+// (device_config.h) accepts, so the startup fallback and the Open project
+// picker inherit it, and the ARGUMENT road — which walks no enumeration —
+// asks the same predicate of the argument's own folder name and refuses with
+// its ordinary sentence. The remembered road needs no test: the config reader
+// already refused a name that fails the grammar.
+//
 // EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the three sidecar spellings
 // as written: the product's own writers and the sync convention name every
 // file this way, so a `.WAV` is simply not a source, and no case folding or
@@ -72,13 +85,15 @@ struct GuiProjectSource {
 std::expected<GuiProjectSource, std::string> resolve_project(
     const std::filesystem::path& folder);
 
-// EVERY DIRECTORY DIRECTLY UNDER `projects_path`, BY NAME, in PLAIN BYTE ORDER
-// (std::string's operator<) — the ONE order the product uses for folder names,
-// so the startup fallback's "first valid project" and the Open project
-// picker's row walk agree on what "first" means. No validity check here: validity
-// is asked where a name is CHOSEN (resolve_project). A missing or unreadable
-// `projects_path` answers EMPTY, and the caller's "no project under
-// <projects_path>" is the whole diagnostic.
+// EVERY DIRECTORY DIRECTLY UNDER `projects_path` WHOSE NAME THE DEVICE CONFIG
+// CAN CARRY, BY NAME, in PLAIN BYTE ORDER (std::string's operator<) — the ONE
+// order the product uses for folder names, so the startup fallback's "first
+// valid project" and the Open project picker's row walk agree on what "first"
+// means. THE NAME GRAMMAR IS THE ONE MEMBERSHIP TEST HERE
+// (is_last_project_name, device_config.h — see the head of this file); folder
+// SHAPE is not asked, because shape is asked where a name is CHOSEN
+// (resolve_project). A missing or unreadable `projects_path` answers EMPTY,
+// and the caller's "no project under <projects_path>" is the whole diagnostic.
 std::vector<std::string> enumerate_project_names(
     const std::filesystem::path& projects_path);
 
@@ -105,7 +120,9 @@ std::vector<std::string> enumerate_project_names(
 //     legitimately be a symlink, and identity is the only compare that accepts
 //     the same file the picker opens. A source symlinked from somewhere else
 //     is therefore a project; a spelling that reaches it from OUTSIDE the
-//     projects path is not that project's source road. Anything else refuses
+//     projects path is not that project's source road. The folder's NAME is
+//     asked the config grammar here too, this road walking no enumeration.
+//     Anything else refuses
 //     with the reason ("<path> is not a project source under
 //     <projects_path>", or the folder's own invalidity), exit 1. The
 //     launcher's "is this a source?" test lives here now, not in a shell

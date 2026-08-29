@@ -327,6 +327,18 @@ struct FlagCache {
     int       fp_area_h              = 0;
     bool      fp_target              = false;
     uint64_t  fp_warp_frame_map_hash        = 0;
+    // THE GUI SCALE THESE PIXELS WERE LAID OUT AT, as an integer PERCENT
+    // (gui_scale_percent(), render.h). Every dimension of a flag rides the
+    // scale — the box, the pole, the label's font size, the measure box's
+    // padding — so it is an input to this surface exactly as the viewport and
+    // the marker generations are, and it is keyed BY FIELD like the plate's own
+    // inset and magnification rather than through whatever else happens to move
+    // with it. (fp_area_h does move at every 1 % step on a 1080-px window,
+    // because the waveform's 500-px cap and the strip's lanes are all scaled —
+    // but that is arithmetic on one window size, not construction; a window
+    // geometry where the strip height sat on a floor would leave the whole
+    // fingerprint unchanged across a scale commit and blit the old flags.)
+    int       fp_gui_scale_percent   = -1;
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -336,7 +348,10 @@ struct FlagCache {
     // (THE MEASURED-FONT FIELD IS GONE — row 7. It said "the metrics these flag
     // pixels were laid out with", true while flag shapes were monospace-derived;
     // row 5 moved every flag dimension onto the gui_scale axis and left it a
-    // recorded vestige, and row 7 deleted the measurement it keyed.)
+    // recorded vestige, and row 7 deleted the measurement it keyed. What row 5
+    // moved those dimensions ONTO is keyed above since 2026-08-29:
+    // fp_gui_scale_percent is the axis itself, so the dependence the deleted
+    // field used to stand for is a field again, and by construction this time.)
     // ITERATION MODE joined the fingerprint with row 5 (2026-08-01): the flags
     // CARRY TEXT now, composed through flag_text_iter, which splices the
     // `+[lo, hi]` bracket exactly when this bit is on. Before row 5 the shapes
@@ -556,13 +571,17 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (21 fields, RE-DERIVED 2026-08-19 off the compare in
+    // (24 fields, RE-DERIVED 2026-08-29 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
     //   - GEOMETRY, two fields off the LIVE top strip rect (top_strip_area, not
     //     the plate — this surface mirrors the strip, not the waveform):
     //     fp_area_w, fp_area_h;
+    //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
+    //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
+    //     rather than left to ride whichever strip dimension happens to move
+    //     with it (2026-08-29);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash, fp_selection_hash,
     //     fp_active_markers_view;

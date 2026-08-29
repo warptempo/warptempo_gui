@@ -233,7 +233,7 @@ they say what they do. `onscreen_keyboard::cap_word` is the words' ONE owner,
 the painter's icon branch is gone, and the five glyphs that surface alone read
 (keyboard-caps-disabled / keyboard-caps-enabled / keyboard-enter /
 keyboard-spacebar / edit-clear-locationbar-rtl) went with it — enumerators,
-defs and committed assets, the roster 51 → 46. SHIFT'S ONE-SHOT ARM IS THE
+defs and committed assets, taking the roster from 51 to 46 AT THAT MOMENT (it stands at 51 again today, `kIconCount` in icons.h — the transport and player glyphs added since). SHIFT'S ONE-SHOT ARM IS THE
 FACE: the cap says "Shift" armed or resting, and what says the arm is the key's
 ARMED FACE — `kRedesignSelectedFill` under a `kRedesignLine` frame, the icon
 row's own lit-toggle face, which this key and the layer toggle already wore off
@@ -415,8 +415,9 @@ touches in practice. The startup line reports both:
 
 THE RECT IS THE FRAMEWORK'S MINUS THE AIR — the backend measures no bar and
 subtracts no inset of its own, which is why nothing here names a bar height as a
-constant. The one thing it does subtract is `kStatusBarAirPx` (16 DEVICE pixels,
-the retune knob), added to the rect's TOP inset inside `resolve_content_rect`
+constant. The one thing it does subtract is `kStatusBarAirPx` (14 DEVICE pixels,
+the retune knob — 16 for the forty-five minutes between the strip's landing and
+its retune on 2026-08-27, the mirror of One UI's own top gap), added to the rect's TOP inset inside `resolve_content_rect`
 and only when the framework reports a top inset at all, so that a fullscreen
 future gets no blank band: the clock sat closer to our first row than to the top
 of the panel (architect 2026-08-27), and the rows given up join the top band,

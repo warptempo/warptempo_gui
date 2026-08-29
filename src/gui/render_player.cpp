@@ -1,5 +1,6 @@
 #include "render_player.h"
 
+#include "directory_walk.h"         // the one non-throwing listing walk
 #include "folder_overlay.h"
 #include "input_handler.h"          // the ring clear's one owner
                                     // (clear_modal_dialog_key_press)
@@ -42,11 +43,17 @@ std::vector<std::filesystem::path> GuiRenderPlayer::deliverable_wavs() const {
         render_output_directory(app.source_audio_path);
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) return out;
-    for (const auto& de : std::filesystem::directory_iterator(dir, ec)) {
-        if (!de.is_regular_file()) continue;
-        if (de.path().extension() != ".wav") continue;
+    // THE WALK NEVER THROWS (directory_walk.h): a folder removed or made
+    // unreadable while the player is listing it answers what it saw — an empty
+    // or partial listing, which "No renders to play" and the row walk already
+    // handle — instead of terminating the process.
+    for_each_directory_entry(dir, ec, [&out](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_regular_file(entry_ec) || entry_ec) return;
+        if (de.path().extension() != ".wav") return;
         out.push_back(de.path());
-    }
+    });
     // BYTE ORDER of the file names — the listing's one order, and the folder's
     // play order with it.
     std::sort(out.begin(), out.end(),
