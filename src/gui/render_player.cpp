@@ -429,10 +429,12 @@ void GuiRenderPlayer::play_button_act() {
         play_wav(folder[0].path, folder, 0);
         return;
     }
-    // ELSE THE ITEM FROM WHERE IT RESTS — its start after a Stop, a natural
-    // end or a fresh bind, which is every rest the transport's own acts leave.
-    // toggle_pause's resume arm is that play, and it is a consumed no-op with
-    // no item.
+    // ELSE THE ITEM FROM ITS START, ALWAYS (architect 2026-08-29 ~01:40:
+    // "Play when idle should start literally"): `resume_frame` is 0 at every
+    // idle rest by construction — seek_to's own head refuses an idle seek, so
+    // nothing can have moved it since the last Stop, natural end or fresh
+    // bind — and toggle_pause's resume arm reads exactly that field, a
+    // consumed no-op with no item.
     toggle_pause();
 }
 
@@ -568,6 +570,17 @@ void GuiRenderPlayer::seek_by(int64_t delta_frames) {
 void GuiRenderPlayer::seek_to(int64_t frame) {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
+    // A SEEK WHILE IDLE IS A CONSUMED NO-OP (architect 2026-08-29 ~01:40,
+    // Audacious's own stopped slider): Play when idle starts the item from
+    // its start, so an idle transport must not be nudgeable to some other
+    // rest first. THE ONE OWNER — every road that can move the point (Left /
+    // Right, Home, the car's absolute SeekTo; the scrub's press already
+    // refuses to arm at its own gate for the same reason) shares this
+    // refusal, neither moving `resume_frame` nor damaging anything. LIVE and
+    // PAUSED are unchanged below, and this is why `resume_frame` is always 0
+    // at an idle rest, by construction (the field's own comment,
+    // app_state.h).
+    if (rp.transport == Transport::Idle) return;
     // A SEEK MOVES THE REST, so the folder-end rest is over (R27's bit): the
     // user has named a place in this item, and the next Play resumes there
     // rather than starting the folder over.
@@ -591,13 +604,9 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         publish_media_state();
         return;
     }
-    // A SEEK MOVES THE POINT, NOT THE STATE: the transport's state is written
-    // by its own acts (the field's writer set, app_state.h), so a paused
-    // transport stays paused at its new point and an idle one stays idle —
-    // where the next Play resumes this item from the moved point, the clock
-    // and the scrub already showing it. (No POINTER road reaches this arm:
-    // the scrub rests while the transport is idle. Left / Right, Home and the
-    // head unit's absolute seek do.)
+    // PAUSED (the only state left, Idle having returned above): a seek moves
+    // the point, not the state — the transport stays paused at its new
+    // point, where the next Play resumes it.
     if (rp.resume_frame != target) {
         rp.resume_frame = target;
         damage_row();

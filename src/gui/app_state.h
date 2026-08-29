@@ -7276,9 +7276,13 @@ struct AppState {
     //              ask for;
     //   `resume_frame` THE RESUME POINT AND NOTHING ELSE — where a pause left
     //              the cursor (0 after a fresh bind, a natural end or a STOP);
-    //              a seek moves it on a resting transport and the play moves
-    //              it on a live one, and it says nothing about which state the
-    //              transport is in;
+    //              a seek moves it on a PAUSED transport and the play moves it
+    //              on a live one. A SEEK WHILE IDLE IS A CONSUMED NO-OP
+    //              (architect 2026-08-29, seek_to's own head, the one owner),
+    //              so THIS FIELD IS ALWAYS 0 AT AN IDLE REST, BY
+    //              CONSTRUCTION — nothing else can move it there, which is
+    //              what lets play_button_act's IDLE arm read it as "the
+    //              item's start" without asking the state again;
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
     //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the

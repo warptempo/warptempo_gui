@@ -20,7 +20,7 @@ THE TRANSPORT HAS THREE STATES AND PLAY/PAUSE ANSWERS THEM, NEVER THE HIGHLIGHT 
 |---|---|
 | LIVE | PAUSE the item |
 | PAUSED | RESUME the item |
-| IDLE with an item | at the folder's END its folder's FIRST wav (R27), else the item from where it rests — its START in every rest the transport's own acts leave it in (a STOP, a natural end, a fresh bind); a seek while idle has deliberately moved that point and the clock is already showing it |
+| IDLE with an item | at the folder's END its folder's FIRST wav (R27), else the item from ITS START, ALWAYS — a seek while idle is a consumed no-op (`seek_to`'s own head, the one owner every road shares), so `resume_frame` is always 0 at an idle rest and every rest the transport's own acts leave it in (a STOP, a natural end, a fresh bind) plays from frame 0 |
 | IDLE with no item | nothing |
 
 R17 IS RETIRED WHOLE with this table: the highlighted-folder OPEN act the button carried (the car-stereo OK/Play convention) went with the highlight's other arms, because a tap opens a folder now.
@@ -93,8 +93,8 @@ THE ARM IS THE OVERLAY'S, NOT THE PLAYER'S (2026-08-28, with the picker): it rea
 | `Enter` | a ring-focused button's press; with none focused, the highlight's OPEN act — the keyboard's own click on the band |
 | `Space` | the Play button's act (the transport's, never the highlight's) |
 | `Up` / `Down` | move the highlight (scrolling to keep it visible) |
-| `Left` / `Right` | seek ∓5 s — NOT the ring's walk here: they are the car's rewind and fast-forward (R6) |
-| `Home` | the item's start |
+| `Left` / `Right` | seek ∓5 s — NOT the ring's walk here: they are the car's rewind and fast-forward (R6); a no-op while idle (`seek_to`'s own refusal) |
+| `Home` | the item's start; a no-op while idle (the transport is already resting there, `seek_to`'s own refusal) |
 | `Backspace` | up one folder (R13); a consumed no-op at the root |
 | `Page Up` / `Page Down` | Previous / Next within the ITEM's folder |
 | `Shift+Page Up` / `Shift+Page Down` | the ITEM folder's FIRST / LAST wav (R37) — the neighbours' road, never a wrap, and a consumed no-op with no item or at that end already |
@@ -141,7 +141,7 @@ THEN THE FENCE, THEN THE BIND: `stop_playback_if_playing` (the one stop body, wh
 
 THE SECOND LAUNCH BODY, recorded here and at its own head. `GuiPlaybackLifecycle::launch_playback_window` is the ONE launch body for THE PROJECT'S AUDIO and the player deliberately does not use it: everything that body seeds — the A/B audition clear, the playable gate against the project's domain, the scanner, the follow-scroll, the waveform damage — belongs to the WAVEFORM, which the player does not display. So `play_wav` / `toggle_pause` / `seek_to` call `playback.play` directly against the item's own `[0, frames)`; the project's resting playhead never moves, its scanner never runs, and `render_player.transport` in its LIVE value is the player's own mirror of `playhead_scanner_active`. THE STOP IS STILL THE ONE STOP BODY: every pause, natural end and close takes `stop_playback_if_playing`, which carries the player's fork inside it (the fence, then the transport moved to PAUSED and the modal row damaged instead of the scanner teardown), so the keyboard stop rule and the fence-before-rebind ordering hold by construction.
 
-A PAUSE reads the resume point from the engine BEFORE the stop; a RESUME at or past the item's end replays from the start (a user act, not a loop). A LIVE SEEK is the engine's keep-alive shape — `play()` over a live session, the window unchanged — stopping one frame short of the exclusive end so the natural end takes over rather than firing a one-frame impulse; a PAUSED seek moves the resume point alone. `render_player_position` is the ONE reader class for the clock, the scrub, the press router and the seeks: the engine's cursor while live, the resume point otherwise.
+A PAUSE reads the resume point from the engine BEFORE the stop; a RESUME at or past the item's end replays from the start (a user act, not a loop). A LIVE SEEK is the engine's keep-alive shape — `play()` over a live session, the window unchanged — stopping one frame short of the exclusive end so the natural end takes over rather than firing a one-frame impulse; a PAUSED seek moves the resume point alone. AN IDLE SEEK IS A CONSUMED NO-OP (architect 2026-08-29 ~01:40, Audacious's own stopped slider): `seek_to`'s head refuses before either branch, the one owner every road — Left/Right, Home, the car's absolute SeekTo, the scrub — shares, so `resume_frame` never leaves 0 while the transport rests. `render_player_position` is the ONE reader class for the clock, the scrub, the press router and the seeks: the engine's cursor while live, the resume point otherwise.
 
 NO RENDER IS DISPATCHED BY THE PLAYER, EVER. A running render continues in the background, and a target preview that completes meanwhile does NOT rebind under the player (`GuiTargetRender::complete_successful_buffer`'s guard) — the close's re-express binds it. The tick is forked at `on_tick`'s head: while the mode stands the player's tick takes the natural end (through the one stop body) and the per-position damage of the two published cells, and nothing below that line applies; the pre-paint scanner sampling returns for the same reason (the engine's cursor is the item's, not the project's).
 

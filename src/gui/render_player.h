@@ -249,11 +249,13 @@ struct GuiRenderPlayer {
     //   PAUSED  -> resume it.
     //   IDLE with an item -> at the folder's END the item folder's FIRST wav
     //                        (R27, the bit's one reader), else the item from
-    //                        where it rests — its START in every rest the
-    //                        transport's own acts leave it in (a STOP, a
-    //                        natural end, a fresh bind); a seek while idle has
-    //                        deliberately moved that point and the clock is
-    //                        already showing it.
+    //                        ITS START, ALWAYS (architect 2026-08-29 ~01:40,
+    //                        Audacious: Play when idle starts literally). A
+    //                        seek while idle is a consumed no-op (seek_to's
+    //                        own head, the one owner), so `resume_frame` is
+    //                        always 0 at an idle rest and every rest the
+    //                        transport's own acts leave it in — a STOP, a
+    //                        natural end, a fresh bind — plays from frame 0.
     //   IDLE with no item -> nothing.
     //
     // THE ROW ACTS ARE THE ROWS' OWN since the same ruling: a click on a
@@ -295,10 +297,12 @@ struct GuiRenderPlayer {
     void toggle_repeat_one();
     // Seek by `delta_frames` from the current position, clamped into the
     // item; a no-op with no item. A live transport reseeks in place, a paused
-    // one moves its resume point.
+    // one moves its resume point, and an IDLE one is a consumed no-op
+    // (seek_to's own head, architect 2026-08-29 ~01:40 — Audacious's stopped
+    // slider).
     void seek_by(int64_t delta_frames);
     void seek_to(int64_t frame);
-    // The item's start.
+    // The item's start; a no-op while idle, like every seek (seek_to's head).
     void home();
     // Left / Right's step: 5 s at the device's rate (R6).
     int64_t seek_step_frames() const;
