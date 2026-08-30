@@ -334,8 +334,9 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // PLAY button could read the launch's own refusal; the architect reversed
     // that face arm the same day and the predicate stayed with THIS as its one
     // reader until the A/B audition's press-time gate became the second on
-    // 2026-08-26 — a gate reader, not a face — so it is a hoist that outlived
-    // its first second consumer rather than a producer-less leftover). The
+    // 2026-08-26 — a gate reader, not a face — and the PLAY button's face
+    // became the third on 2026-08-30 under the truthful-buttons ruling,
+    // asking it about the resting cursor). The
     // per-arm reasoning moved to
     // the predicate whole: the target arm's
     // buffer-populated check (which must live on this shared path — the scrub

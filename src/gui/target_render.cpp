@@ -1,5 +1,14 @@
 #include "target_render.h"
 
+// THE TRAMPOLINE FOR THE ROSTER'S FACE (2026-08-30): redesign_button_enabled
+// is inline in app_state.h, which this class's header includes, so the face
+// can only forward-declare GuiTargetRender and asks the preview's readiness
+// through this forwarding call. It restates nothing — preview_ready is the
+// one owner, and this is its third reader's road to it.
+bool target_preview_ready(const GuiTargetRender& target_render) {
+    return target_render.preview_ready();
+}
+
 #include "app_state.h"
 #include "engine/engine_geometry.h"
 #include "phase_reset_frame_map_build.h"

@@ -74,19 +74,20 @@ int64_t Viewport::trim_begin_sample() const { return trim_range().first; }
 int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 
 // WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms and
-// the clamp's purpose are all at the declaration (app_state.h). ONE READER, the
-// shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
+// the clamp's purpose are all at the declaration (app_state.h). TWO READERS:
+// the shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
 // history view's own pair, so the live bare Home / End, their ctrl forms and
-// the mode's absolute jumps spell one bound once instead of once per route.
-// (The bottom row's two SKIP buttons dispatch bare Home / End like any other
-// chrome button and reach it that way.) A FACE
-// READER LIVED ONE REVISION and is gone by ruling: the skip buttons greyed
-// where the cursor already rested on the landing frame, and the architect took
-// that face back the same day because a Home / End press is not a pure jump
-// (each also stops a live audition, clears the selection and hides the trim
-// region overlay, no-op jump included), so the grey promised less than the key
-// delivers. Do not re-add a face reader here; the full record is at the skips'
-// case in redesign_button_enabled (app_state.h).
+// the mode's absolute jumps spell one bound once instead of once per route
+// (the bottom row's two SKIP buttons dispatch bare Home / End like any other
+// chrome button and reach it that way); and, since 2026-08-30, THOSE SKIPS'
+// FACE (redesign_button_enabled), which greys where the resting cursor
+// already sits on this answer. That face reader lived one revision of
+// 2026-08-15 and was taken back the same day — a Home / End press is not a
+// pure jump (each also stops a live audition, clears the selection and hides
+// the trim region overlay, no-op jump included), so the grey promised less
+// than the key delivers — and the truthful-buttons ruling, naming the skips
+// outright, put it back; the record is at the skips' case in
+// redesign_button_enabled (app_state.h).
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
                                     bool forward, bool whole_piece) {
     if (whole_piece || app.history_mode.active) {

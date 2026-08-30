@@ -1719,9 +1719,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // viewport.cpp), whose whole-piece arm this mode bit already selects —
         // which is why `whole_piece` is passed FALSE here and nothing is
         // duplicated: one spelling for every jump in the product. The bottom
-        // row's two SKIP buttons read it for one revision and no longer do
-        // (they are lit unconditionally, the ruling and its reason at their
-        // case in redesign_button_enabled). The owner's clamp is idempotent on
+        // row's two SKIP buttons read it too since 2026-08-30 — greying in
+        // this view where the cursor already rests on the piece's end the
+        // owner's `h` arm names (they read it for one revision of 2026-08-15
+        // and not again until the truthful-buttons ruling; the succession is
+        // at their case in redesign_button_enabled). The owner's clamp is idempotent on
         // a value move_playhead_to would clamp anyway, so this jump is
         // byte-identical to the hand-spelled one.
         viewport.move_playhead_to(
@@ -2094,14 +2096,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // the active walk carrying a member), and both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
-// decision rather than two spellings of one. ONE ADMISSION HAS NO FACE READER
-// SINCE 2026-08-15 and that is a scope, not a second spelling: the revert act's
-// subject term still decides the KEY here, but redesign_button_enabled lifts
-// the four history companions over the derived partition entirely, so Revert
-// stays lit on an empty subject and its click is a consumed no-op — the
-// architect's reversal of a grey that tracked the diff-flag selection and
-// blinked at interaction cadence, recorded at that arm in app_state.h. It took
-// the HistoryMode struct
+// decision rather than two spellings of one. THE REVERT ACT'S ADMISSION HAD
+// NO FACE READER from 2026-08-15 to 2026-08-30, a scope rather than a second
+// spelling: its subject term still decided the KEY here while
+// redesign_button_enabled lifted the four history companions over the derived
+// partition, so Revert stayed lit on an empty subject — the architect's
+// reversal of a grey that tracked the diff-flag selection and blinked at
+// interaction cadence; the truthful-buttons ruling deleted that lift, so the
+// face reads this admission through the partition again, recorded at the
+// companions' arm in app_state.h. It took the HistoryMode struct
 // alone until the in-flight bit arrived, which lives on AppState because the act
 // outlives the view it was launched from.
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -3015,8 +3018,8 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // took the four cardinal arrows always-on), and the truthful-buttons ruling
 // reversed that reversal, so the button greys with no subject and a click on
 // it is the dead face's consumed nothing. The record is at the history companions'
-// arm in redesign_button_enabled, app_state.h; that predicate must not gain a
-// face reader here again.
+// arm in redesign_button_enabled, app_state.h; the predicate keeps its one code
+// reader, the face reaching it through the partition's walk.
 //
 // IT IS FULLY MANUAL AND IT ALWAYS FORCES — the architect's explicit ruling, and
 // the reason there is not one coherence check in this body. The user may select
@@ -6555,10 +6558,15 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // before it writes, whatever the write turns out to be — the rule at
 // clear_region_highlight, input_handler.h); the trim it derives from is
 // untouched by any of this.
-// THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DO NOT GREY (architect 2026-08-15,
-// taking back the face that did): a grey would promise less than this body
-// delivers, and gating the three steps to make the grey honest would change
-// behaviour. The full record is at the skips' case in redesign_button_enabled.
+// THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DID NOT GREY from 2026-08-15 to
+// 2026-08-30 (the architect taking back the face that did: a grey promised
+// less than this body delivers, and gating the three steps to make the grey
+// honest would change behaviour). THE TRUTHFUL-BUTTONS RULING GREYS THEM
+// AGAIN where the landing equals the resting cursor and no transport session
+// is live, knowingly forgoing the selection clear and the overlay hide on the
+// dead face (the audition stop is moot, a live session keeping the face lit);
+// this body is untouched and the KEYS keep all three. The full record is at
+// the skips' case in redesign_button_enabled.
 void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
     playback_lifecycle.stop_playback_if_playing();
     if (!app.selected_markers.empty() || app.last_selected_marker != -1) {

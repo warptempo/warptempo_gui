@@ -6882,7 +6882,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // resolved in this single walk.
         const bool inside =
             under_pointer &&
-            redesign_button_enabled(app, audio.total_frames(), id);
+            redesign_button_enabled(app, audio, audio.total_frames(),
+                                    playback, target_render, id);
         if (f.hovered != inside) {
             f.hovered = inside;
             if (redesign_button_in_transport_row(id))
@@ -7165,7 +7166,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // consumes their press in both. THE BUTTON SEATED WITH THEM IS NOT ONE
         // OF THEM: the lock does not carry ADD TO
         // SELECTION, a selection being navigation.
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
+        if (!redesign_button_enabled(app, audio, audio.total_frames(),
+                                    playback, target_render, tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
         // TOGGLE — dispatching would switch AWAY from what the user just
@@ -7323,7 +7325,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // rule. Each held at the press; any that no longer does makes the
         // lift a consumed nothing.
         if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
+        if (!redesign_button_enabled(app, audio, audio.total_frames(),
+                                    playback, target_render, tc.id))
             return;
         if (tc.radio && redesign_button_selected(app, tc.id)) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
@@ -7500,7 +7503,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
             arm.repeat_due_ms = 0;
             return;
         }
-        if (!redesign_button_enabled(app, audio.total_frames(), tc.id)) return;
+        if (!redesign_button_enabled(app, audio, audio.total_frames(),
+                                    playback, target_render, tc.id)) return;
         // THE OPENER IS THE FIRST FIRE (the flip's statement is at this
         // function's head).
         chord.synthesized_repeat = arm.repeat_fired;

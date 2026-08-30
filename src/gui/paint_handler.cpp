@@ -1,4 +1,5 @@
 #include "paint_handler.h"
+#include "target_render.h"
 #include "notifications.h"
 
 #include "gui_font.h"
@@ -584,15 +585,21 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // bit; `glyph_swapped` is stashed here for exactly that reason and its whole
 // argument is at the predicate (app_state.h).
 //
-// IT TOOK A GuiPlayback WITH THAT POLICY AND GAVE IT BACK WITH IT: the PLAY
-// button's honest arm was the only reader of the object down this path
-// (redesign_button_enabled asked playback_launch_playable about the bound
-// preview buffer's domain), so the parameter left with its one producer rather
-// than resting unread — the same move the GuiAudio parameter of that predicate
-// made a revision earlier. `cr` stays because the clip test is the survivor.
+// IT TOOK A GuiPlayback WITH THAT POLICY, GAVE IT BACK WITH IT, AND TOOK IT
+// AGAIN WITH THE POLICY'S REVERSAL: the PLAY button's honest arm is the only
+// reader of the object down this path (redesign_button_enabled asks
+// playback_launch_playable about the bound preview buffer's domain), so the
+// parameter left with its one producer on 2026-08-15 rather than resting
+// unread — the same move the GuiAudio parameter of that predicate made a
+// revision earlier — and both returned on 2026-08-30 under the
+// truthful-buttons ruling, with a GuiTargetRender beside them for the target
+// preview's readiness (the painter's own member since that day). `cr` stays
+// because the clip test is the survivor of every move.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
-    const GuiAudio& audio, RedesignButton id, const GuiRect& rect) {
+    const GuiAudio& audio, const GuiPlayback& playback,
+    const GuiTargetRender& target_render,
+    RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
@@ -607,7 +614,8 @@ AppState::RedesignButtonFace& publish_button_face(
             static_cast<double>(rect.y + rect.h) <= cy2;
     }
     if (pixels_covered) {
-        face.enabled  = redesign_button_enabled(app, audio.total_frames(), id);
+        face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
+                                                playback, target_render, id);
         face.selected = redesign_button_selected(app, id);
         face.glyph_swapped = redesign_button_glyph_swapped(app, id);
     }
@@ -1228,7 +1236,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, def.id,
+            cr, app, audio, playback, target_render, def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
@@ -1415,7 +1423,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const int btn_w = widths[i];
 
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio,
+                cr, app, audio, playback, target_render,
                 kViewBarButtons[i].id, GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
@@ -1602,7 +1610,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         // predicate's own active_tab_view compare, so the painted face below
         // reads THE SAME fact the comparator replays, with no second spelling.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, def.id,
+            cr, app, audio, playback, target_render, def.id,
             GuiRect{x, content_y, tab_w, content_h});
         const bool selected = face.selected;
 
@@ -2075,7 +2083,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, def.id,
+            cr, app, audio, playback, target_render, def.id,
             GuiRect{x, btn_y, btn, btn});
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
@@ -2693,7 +2701,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // toggle relies on and now relies on up in row 4.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, def.id,
+            cr, app, audio, playback, target_render, def.id,
             GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
@@ -5563,7 +5571,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(cr, app, audio, def.id,
+            publish_button_face(cr, app, audio, playback, target_render, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // The RIGHT BLOCK's three groups stand down with them — the MARKER
@@ -5575,15 +5583,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         // of the two the mode would have painted), and those four are the icon
         // row's again.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
-            publish_button_face(cr, app, audio, def.id,
+            publish_button_face(cr, app, audio, playback, target_render, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportWalkGroup) {
-            publish_button_face(cr, app, audio, def.id,
+            publish_button_face(cr, app, audio, playback, target_render, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportArrowGroup) {
-            publish_button_face(cr, app, audio, def.id,
+            publish_button_face(cr, app, audio, playback, target_render, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

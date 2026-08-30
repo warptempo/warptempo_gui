@@ -1204,8 +1204,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // changes through its on_resize (the shared geometry-and-cache rebuild
     // path). The settings-editor gui_scale commit uses the input handler's own
     // paint_handler ref for the same rebuild.
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache,
-                                  flag_cache, waveform_worker, gui);
+    GuiPaintHandler paint_handler(app, audio, playback, target_render,
+                                  wf_cache, flag_cache, waveform_worker, gui);
     // file_loader holds a GuiTargetRender& (its end-of-load ensure_ready()
     // dispatches the eager target preview), so it must be constructed after
     // target_render.
@@ -2288,7 +2288,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
-                                      app, audio.total_frames(), id) ||
+                                      app, audio, audio.total_frames(),
+                                      playback, target_render, id) ||
                     f.selected != redesign_button_selected(app, id) ||
                     f.glyph_swapped !=
                         redesign_button_glyph_swapped(app, id);

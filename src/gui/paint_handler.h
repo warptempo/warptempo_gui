@@ -12,6 +12,7 @@
 #include <vector>
 
 class GuiWaveformWorker;
+class GuiTargetRender;
 
 // Paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, reaching shared state through the reference members below.
@@ -512,6 +513,12 @@ struct GuiPaintHandler {
     AppState&          app;
     const GuiAudio&    audio;
     GuiPlayback&       playback;
+    // THE TARGET RENDER DISPATCHER, read for ONE fact (2026-08-30): the
+    // preview's readiness, which the play/stop button's enabled face asks
+    // through the one publisher (publish_button_face) since the
+    // truthful-buttons ruling — the painter stashes what it paints and the
+    // predicate needs the object. Const here; nothing in the painter drives it.
+    const GuiTargetRender& target_render;
     WaveformCache&     wf_cache;
     FlagCache&         flag_cache;
     GuiWaveformWorker& waveform_worker;
@@ -520,6 +527,7 @@ struct GuiPaintHandler {
     GuiPaintHandler(AppState&          app_,
                     const GuiAudio&    audio_,
                     GuiPlayback&       playback_,
+                    const GuiTargetRender& target_render_,
                     WaveformCache&     wf_cache_,
                     FlagCache&         flag_cache_,
                     GuiWaveformWorker& waveform_worker_,
@@ -527,6 +535,7 @@ struct GuiPaintHandler {
         : app(app_),
           audio(audio_),
           playback(playback_),
+          target_render(target_render_),
           wf_cache(wf_cache_),
           flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),
