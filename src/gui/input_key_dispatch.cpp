@@ -216,13 +216,14 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // chord (Shift+S, 2026-08-28) rides that face rather than asking for a second
 // one: the button is greyed by the same arm, and a greyed button's shift press
 // is consumed with its plain one.
-// THE MIRROR IS NOT AN EQUIVALENCE, and both directions have a member: the
+// THE MIRROR IS NOT AN EQUIVALENCE, and one direction has a member: the
 // propagate copy/paste pair is BLOCKED here with no face left to grey (its two
-// buttons left with the 2026-08-20 relocation), and THE MARKER MEASURE is LIT
-// on a locked tab although bare `/` drops here (architect 2026-08-20) — its
-// SHIFT half is the score-video jump, admitted below, and a chrome face cannot
-// split, so the face keeps the legal half and this gate refuses the other. The
-// ruling is at that button's arm in redesign_button_enabled. THE MIRROR IS
+// buttons left with the 2026-08-20 relocation). The other direction is EMPTY
+// since the 2026-08-21 sunset: THE MARKER MEASURE was LIT on a locked tab for
+// one day although bare `/` dropped here (architect 2026-08-20) — its SHIFT
+// half was the score-video jump, admitted here then, and a chrome face cannot
+// split — and the jump left the product whole, so the Measure greys under the
+// lock with its four neighbours (its arm in redesign_button_enabled). THE MIRROR IS
 // HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
 // chord table through this predicate, and the two classes that walk gets wrong
@@ -1949,9 +1950,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             SESSION: with no diff flag selected and none
 //                             focused there is nothing to revert, so the chord
 //                             drops here as a consumed no-op
-//                             (history_mode_revert_subject_standing, app_state.h
-//                             — the KEY GATE, whose one code reader is this
-//                             line). THE FACE MIRRORS IT AGAIN SINCE
+//                             (history_revert_actionable, app_state.h — the
+//                             subject AND the lock since planner decision 58,
+//                             whose one code reader is this line). THE FACE
+//                             MIRRORS IT AGAIN SINCE
 //                             2026-08-30: the Revert button greys from this
 //                             same line — one decision for the chord and the
 //                             glyph, the cleanest shape the enabled predicate
@@ -1970,8 +1972,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             IT IS NOT DISPATCHED FROM HERE, and not from a
 //                             mode arm either: admitting it lets the press fall
 //                             through to on_key's ordinary body, which is what
-//                             puts it BELOW the read-only gate — a locked tab
-//                             refuses it exactly as it refuses `'` (the lock
+//                             puts it BELOW the read-only gate — a backstop
+//                             since decision 58, this admission refusing a
+//                             locked tab first (the lock
 //                             means hands off the piece's authored state, and
 //                             this act writes it; Save-and-Commit, which
 //                             authors nothing, is admitted by that gate
@@ -2174,15 +2177,18 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // took the four cardinal arrows always-on) and redesign_button_enabled
     // lifted the companions over the partition; the 2026-08-30 truthful-
     // buttons ruling deleted that lift, so the face reads this term again.
-    // history_mode_revert_subject_standing has exactly one CODE reader — this
-    // line; the face reaches it through the walk, restating nothing.
-    // Unlike
+    // THE TERM IS history_revert_actionable SINCE PLANNER DECISION 58 (the
+    // same day): the subject AND the lock composed once, so a locked tab's
+    // Revert greys from this line too — the admission used to ignore the lock
+    // and lit a button whose chord the read-only gate below then dropped. So
+    // on a locked tab this gate now refuses Ctrl+H ahead of that gate, and
+    // the card is this gate's (the view's), not the lock's. Unlike
     // the two mutators above it, this chord is NOT dispatched from a mode arm:
-    // it falls through to on_key's ordinary body, BELOW the read-only gate, so a
-    // locked tab refuses it exactly as it refuses `'`.
+    // it falls through to on_key's ordinary body, below the read-only gate,
+    // which is a backstop for it now rather than its first refusal.
     const bool is_revert_act =
         (ctrl && !shift && !alt && key == GuiKeys::H &&
-         history_mode_revert_subject_standing(mode));
+         history_revert_actionable(app));
     // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
     // — the act saves first, so it belongs on the save chord). It is admitted
     // while there is something TO DO and no checkpoint is already in flight
@@ -3019,8 +3025,9 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // close the view. The one caller is on_key's own Ctrl+H arm, which is reached
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
-// stands (history_mode_revert_subject_standing, app_state.h, whose ONE code
-// reader is that key gate). The Revert BUTTON'S grey reads the same decision
+// stands on a WRITABLE tab (history_revert_actionable, app_state.h, whose
+// ONE code reader is that key gate; the lock joined the subject there under
+// planner decision 58). The Revert BUTTON'S grey reads the same decision
 // through the derived `h` partition — again since 2026-08-30: the architect
 // reversed the face half alone on 2026-08-15, the grey having tracked the
 // diff-flag selection and blinked at interaction cadence (the argument that
@@ -6643,7 +6650,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
         // reached through move_playhead_pixels -> move_playhead_to (the rule at
         // clear_region_highlight, input_handler.h). The playhead is leaving the
-        // overlay, and hiding discards nothing.
+        // overlay, and hiding discards nothing. AT THE WALL the landing is the
+        // cursor itself (playhead_pixel_step_landing, the owner the Left
+        // button's face reads since planner decision 60): the key still runs
+        // the stop, the clear and the hide, the greyed button none of them.
         viewport.move_playhead_pixels(-1);
         break;
     case GuiKeys::Right:

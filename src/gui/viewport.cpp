@@ -345,11 +345,33 @@ void Viewport::clamp_display_state_to_live_domain() {
     // load and at every gesture, and are not this function's subject.)
 }
 
-void Viewport::move_playhead_pixels(int delta_px) {
-    if (audio.total_frames() <= 0) return;
+// WHERE ONE PIXEL STEP WOULD LAND — the contract is at the declaration
+// (app_state.h); the arithmetic is move_playhead_pixels' own, which reads this
+// for its landing since 2026-08-30 (planner decision 60), the Left / Right
+// buttons' face being the second reader. The two degenerate cases the act
+// used to return on — no audio, no painted grid — answer the resting cursor
+// itself, so a step there is the no-op it always was and the face greys.
+int64_t playhead_pixel_step_landing(const AppState& app, const GuiAudio& audio,
+                                    int delta_px) {
+    if (audio.total_frames() <= 0) return app.playhead_cursor_sample;
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);
-    if (q <= 0.0) return;
+    if (q <= 0.0) return app.playhead_cursor_sample;
+    const int64_t cur_col = static_cast<int64_t>(std::nearbyint(
+        static_cast<double>(app.playhead_cursor_sample - app.viewport_start_sample)
+        / q));
+    const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
+    // Pre-clamped into the live domain, the clamp move_playhead_to would apply
+    // anyway — a landing must be a frame the cursor can occupy, which is what
+    // makes the wall compare exact.
+    return clamp_playhead_to_live_domain(
+        static_cast<int64_t>(std::llrint(displayed_grid_position_at_column(
+            app.viewport_start_sample, target_col, q))),
+        app, audio);
+}
+
+void Viewport::move_playhead_pixels(int delta_px) {
+    if (audio.total_frames() <= 0) return;
     // Resolve the playhead's CURRENT painted column —
     // nearbyint((cursor - viewport_start)/q), the painters' own placement — and
     // land on the ADJACENT grid column's frame through the one column->frame
@@ -364,14 +386,13 @@ void Viewport::move_playhead_pixels(int delta_px) {
     // agree, but the painted grid is the principled input).
     // The recovery nearbyint is the column direction and is this walk's own; the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
-    // a playhead parked off-lattice re-snaps onto it at its first step.
-    const int64_t cur_col = static_cast<int64_t>(std::nearbyint(
-        static_cast<double>(app.playhead_cursor_sample - app.viewport_start_sample)
-        / q));
-    const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
-    move_playhead_to(static_cast<int64_t>(std::llrint(
-        displayed_grid_position_at_column(app.viewport_start_sample,
-                                          target_col, q))));
+    // a playhead parked off-lattice re-snaps onto it at its first step. THE
+    // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30
+    // (planner decision 60), the Left / Right buttons' face reading the same
+    // landing; a step at a wall still reaches move_playhead_to, whose
+    // unconditional overlay hide is the KEY's to keep (the greyed button
+    // forgoes it, the skips' own shape).
+    move_playhead_to(playhead_pixel_step_landing(app, audio, delta_px));
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper

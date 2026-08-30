@@ -356,6 +356,78 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 
 // Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.
+// THE MARKER WALK'S LANDING — contract at the declaration (app_state.h). This
+// body is Selection::cycle_selection's own scan, hoisted whole on 2026-08-30
+// (planner decision 59) so the act and the Walk previous / Walk next faces
+// read one landing; the act calls it and selects what it returns.
+int marker_walk_landing(const AppState& a, const GuiAudio& audio,
+                        bool forward) {
+    const bool phase_reset = (a.active_markers_view == 'P');
+    const std::vector<GuiWarpMarker>& warp_vec = a.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
+        a.phaseresetmarkers.markers();
+    const int n = phase_reset ? static_cast<int>(phase_reset_vec.size())
+                              : static_cast<int>(warp_vec.size());
+    // frame_of / is_disabled are only asked for indices in [0, n), so an
+    // empty store simply yields no candidate. Frames are read in the ACTIVE
+    // domain — source view is the identity, target view forward-translates
+    // through the live map — so they compare with the playhead's frame.
+    auto frame_of = [&](int i) -> int64_t {
+        const int64_t src_f = phase_reset ? phase_reset_vec[i].time_frame
+                                          : warp_vec[i].time_frame;
+        return source_frame_to_active_domain(a, audio, src_f);
+    };
+    // The warp side respects the label_ref cascade; a phase reset reads its
+    // own bit.
+    auto is_disabled = [&](int i) -> bool {
+        return phase_reset ? phase_reset_vec[i].disabled
+                           : effective_disabled(warp_vec, i);
+    };
+    // The playhead frame is the sole cycle anchor. Strict frame inequalities
+    // in the scan prevent re-landing on the stop being stood on; markers
+    // sharing one active-domain frame are traversed by the in-group step so
+    // every member is reachable (stacks are legal at rest). Disabled markers
+    // are skipped as if absent. Trim bounds are not stops.
+    const int64_t ph_f = a.playhead_cursor_sample;
+    // Current stop: the focused marker when it sits on the playhead frame (a
+    // playhead moved elsewhere breaks the equality and disables the in-group
+    // step naturally).
+    int cur_marker = -1;
+    {
+        const int last = a.last_selected_marker;
+        if (last >= 0 && last < n && frame_of(last) == ph_f) cur_marker = last;
+    }
+    // In-group step first: one place within the shared frame in the walk
+    // direction (ascending index forward, descending backward).
+    if (cur_marker >= 0) {
+        if (forward) {
+            for (int i = cur_marker + 1; i < n; ++i) {
+                if (frame_of(i) != ph_f) break;   // frame-sorted: group ends
+                if (is_disabled(i)) continue;
+                return i;
+            }
+        } else {
+            for (int i = cur_marker - 1; i >= 0; --i) {
+                if (frame_of(i) != ph_f) break;
+                if (is_disabled(i)) continue;
+                return i;
+            }
+        }
+    }
+    // Frame scan: the nearest enabled marker strictly past the playhead in
+    // the walk direction — frame-sorted, so the first in-direction hit is it.
+    if (forward) {
+        for (int i = 0; i < n; ++i) {
+            if (frame_of(i) > ph_f && !is_disabled(i)) return i;
+        }
+    } else {
+        for (int i = n - 1; i >= 0; --i) {
+            if (frame_of(i) < ph_f && !is_disabled(i)) return i;
+        }
+    }
+    return -1;   // nothing ahead
+}
+
 bool payload_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;
     if (app.active_markers_view != 'W') return false;

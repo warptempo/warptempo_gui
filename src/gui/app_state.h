@@ -8174,36 +8174,83 @@ inline bool tempo_cent_step_actionable(const AppState& app) {
            marker_selection_standing(app) && marker_focus_standing(app);
 }
 
-// THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, back with two
-// readers (architect 2026-08-30): bare Left / Right's lane fork is the
-// waveform-lane step — always live, the cursor stepping one painted column —
-// while a standing selection puts the press in the MARKER lane, where it
-// nudges the focused marker and refuses OFF THAT COLUMN'S HOME VIEW
+// IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
+// the playhead scanner is active, or the A/B audition sequence stands in any
+// phase (a REST between its plays is transport-live: the act is one session
+// from its first play to its last). FOUR READERS: the play/stop button's
+// GLYPH (redesign_button_glyph_swapped — Stop while this is true), and since
+// 2026-08-30 the SKIPS', PLAY'S and the LEFT / RIGHT pair's enabled arms (a
+// live session keeps all five lit: a press then stops, or stops and steps,
+// never nothing). The play/stop
+// FORK bare Space takes reads the same phase term with playback.is_playing()
+// as its other term — the audio callback's own flag, on a different clock
+// from the tick-cleared scanner bit — and the sub-tick disagreement that
+// buys is recorded at GuiPlaybackLifecycle::toggle_playback; it is not
+// folded in here because a face must read what the painter reads.
+inline bool transport_session_live(const AppState& a) {
+    return a.playhead_scanner_active ||
+           a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
+}
+
+// WHERE ONE BARE Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane
+// — the adjacent painted column's frame through the one column->frame owner,
+// pre-clamped into the live domain exactly as move_playhead_to would clamp
+// it. Defined in viewport.cpp beside the skip landing it is the twin of;
+// the arithmetic and its rationale are at Viewport::move_playhead_pixels,
+// which reads this for its landing. TWO READERS (planner decision 60,
+// 2026-08-30): that act, and horizontal_arrow_step_actionable below, whose
+// waveform-lane branch greys the Left / Right buttons where the landing IS
+// the resting cursor — frame 0 under Left, the domain's last frame under
+// Right, the walls — never a raw frame-bound compare, since the landing is
+// on the painted grid. A blank piece or a degenerate grid answers the cursor
+// itself (the act's own early return), so the face greys there too.
+int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
+                                    int delta_px);
+
+// THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, two readers
+// (architect 2026-08-30): bare Left / Right's lane fork is the waveform-lane
+// step — the cursor stepping one painted column, refused only AT THE WALLS,
+// where the adjacent column's frame is the frame it already rests on — while
+// a standing selection puts the press in the MARKER lane, where it nudges the
+// focused marker and refuses OFF THAT COLUMN'S HOME VIEW
 // (active_column_authoring_allowed) with no fallback to the waveform step.
-// READERS: the dispatch's marker-lane branch (input_handler.cpp, which
-// routed on its own fields and never called the 2026-08-15 predicate of this
-// name) and the bottom row's LEFT and RIGHT buttons' disabled face.
+// `direction` is the step's sign (-1 Left, +1 Right) and is consulted by the
+// waveform-lane branch alone. READERS: the dispatch's marker-lane branch
+// (input_handler.cpp, which reads the selection half) and the bottom row's
+// LEFT and RIGHT buttons' disabled face (both halves); the waveform-lane act
+// reads the landing owner itself through Viewport::move_playhead_pixels.
 //
-// IT IS A REVIVAL WITH ONE TERM FEWER. The first predicate of this name lived
+// WHILE A TRANSPORT SESSION IS LIVE THE PAIR STAYS LIT: the waveform-lane
+// arm STOPS playback and then steps the resting cursor (handle_plain_bare_
+// keys, input_key_dispatch.cpp), so a press then acts even at a wall — the
+// skips' own term, transport_session_live above, and it also keeps the face
+// from tracking the scanner, which never moves the resting cursor anyway.
+//
+// IT IS A REVIVAL THAT GREW A TERM. The first predicate of this name lived
 // here from the 2026-08-15 whole-row honesty ruling until the architect's
 // scoped-truth ruling the same day, and its face was its only reader — with
 // the face arm gone it went whole rather than resting as a definition nothing
 // asked. His reason then: "left and right were always on because the playhead
 // can always move", so a rarely-true refusal bought a per-selection blink.
-// The 2026-08-30 ruling withdraws the blink argument and the face reads it
-// again. THE LOCK'S TERM IS NOT IN HERE, and that is a split of OWNERS rather
-// than a term left out: the first predicate of this name also refused the
-// marker-lane nudge on a read-only tab, but that refusal is the GATE'S
-// (read_only_key_blocked, above the dispatch), not the lane branch's, so the
-// lock's answer for the arrows has its own owner just below
-// (horizontal_arrow_step_lock_admits) which the gate and the face both read
-// — the faces compose the two (planner decision 52, 2026-08-30). THE WALL IS
-// STILL NOT MIRRORED: at frame 0 the left step cannot move and the button
-// stays lit, the roster's standing treatment of walls
-// (redesign_button_enabled's arrow arm says why).
-inline bool horizontal_arrow_step_actionable(const AppState& app) {
-    return !marker_selection_standing(app) ||
-           active_column_authoring_allowed(app);
+// The 2026-08-30 ruling withdrew the blink argument and the face read it
+// again, at first WITHOUT the wall — "although I suppose at zero, it can't
+// move further left", the roster's standing treatment of walls — and planner
+// decision 60 the same day, under "any time a button would be a no-op, grey
+// it", put the wall in through the act's own landing owner, superseding the
+// "walls are never mirrored" clause wherever it stood. THE LOCK'S TERM IS
+// NOT IN HERE, and that is a split of OWNERS rather than a term left out: the
+// lock's refusal is the GATE'S (read_only_key_blocked, above the dispatch),
+// not the lane branch's, so the lock's answer for the arrows has its own
+// owner just below (horizontal_arrow_step_lock_admits) which the gate and
+// the face both read — the faces compose the two (planner decision 52).
+inline bool horizontal_arrow_step_actionable(const AppState& app,
+                                             const GuiAudio& audio,
+                                             int direction) {
+    if (marker_selection_standing(app))
+        return active_column_authoring_allowed(app);
+    return transport_session_live(app) ||
+           playhead_pixel_step_landing(app, audio, direction) !=
+               app.playhead_cursor_sample;
 }
 
 // THE LOCK'S ANSWER FOR THE BARE HORIZONTAL ARROWS, one owner (planner
@@ -8692,18 +8739,36 @@ inline int active_marker_count(const AppState& a) {
         : static_cast<int>(a.warpmarkers.markers().size());
 }
 
-// THE MARKER WALK'S STORE REFUSAL (architect 2026-08-30): bare Tab / Shift+Tab
-// cycle the focus through the ACTIVE store, and an EMPTY store has nothing to
-// land on. READERS: Selection::cycle_selection's leading return (the act) and
-// the Walk previous / Walk next buttons' disabled face. WHAT IT DOES NOT SAY,
-// deliberately: the cycle's other consumed nothings — no enabled marker past
-// the playhead in the walk direction, an all-disabled store — change with the
-// playhead's position and the markers' own flags, both of which the lane
-// shows; the ruling names the empty store and this predicate names exactly
-// that. (Walk both tabs is never a whole no-op: its tab switch acts whatever
-// the two stores hold.)
-inline bool marker_walk_actionable(const AppState& a) {
-    return active_marker_count(a) > 0;
+// WHERE ONE MARKER-WALK STEP WOULD LAND — the cycle's landing, ONE owner
+// (planner decision 59, 2026-08-30): the index of the ENABLED marker of the
+// ACTIVE store that a Tab (`forward`) or Shift+Tab step would focus from the
+// current seat, or -1 when the step would land nothing. The seat is the
+// playhead's frame (the sole cycle anchor): when the focused marker sits on
+// it the step first tries the in-group walk through markers sharing that
+// frame, then the nearest enabled marker strictly past the playhead in the
+// walk direction — exactly as the act seeds, a playhead resting on no marker
+// included. Frames compare in the ACTIVE domain (source_frame_to_active_
+// domain), disabled markers are skipped as if absent (the warp side through
+// effective_disabled's cascade), trim bounds are not stops. Defined in
+// app_state.cpp. TWO READERS: Selection::cycle_selection, whose whole
+// landing decision this IS, and marker_walk_actionable below, the Walk
+// previous / Walk next buttons' face — so an all-disabled store and "nothing
+// ahead in this direction" grey exactly where the step lands nothing. IT IS
+// AN O(n) SCAN PER TICK PER BUTTON in the face's hands, the class the
+// 2026-08-15 cost argument named; the planner ruled it in under the absolute
+// rule, the stores being tens of markers.
+int marker_walk_landing(const AppState& a, const GuiAudio& audio,
+                        bool forward);
+
+// WOULD A MARKER-WALK STEP THIS WAY ACT? The landing owner's answer in one
+// bit — the face's spelling of the act's own `land_marker < 0` return. Its
+// count-only form (an empty store alone, 2026-08-30 morning) was the audit's
+// false premise: with no focus the cycle seeds from the playhead and can land,
+// while a full store can still land nothing. (Walk both tabs is never a whole
+// no-op: its tab switch acts whatever the two stores hold.)
+inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
+                                   bool forward) {
+    return marker_walk_landing(a, audio, forward) >= 0;
 }
 
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
@@ -8764,13 +8829,14 @@ inline void clear_audition_sequence(AppState& a) {
 
 // IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
 // word (architect 2026-08-05): the selected diff flags, else the focused one
-// alone. Empty means Ctrl+H is a consumed no-op — history_mode_key_blocked's
-// admission is conditional on this, and that key gate is the ONE CODE READER.
-// The Revert BUTTON'S in-view face reads the same decision THROUGH that gate
-// rather than through a second call: history_mode_disables_button walks the
-// button's chord through the allowlist, and redesign_button_enabled greys on
-// its answer, so the chord's refusal and the glyph are one decision on the
-// head-delta precedent exactly — the cleanest shape this roster has had.
+// alone. Empty means Ctrl+H is a consumed no-op. ONE CODE READER:
+// history_revert_actionable just below, which composes it with the lock and
+// is what history_mode_key_blocked's admission reads. The Revert BUTTON'S
+// in-view face reads the same decision THROUGH that gate rather than through
+// a second call: history_mode_disables_button walks the button's chord
+// through the allowlist, and redesign_button_enabled greys on its answer, so
+// the chord's refusal and the glyph are one decision on the head-delta
+// precedent exactly — the cleanest shape this roster has had.
 //
 // THE FACE HALF WENT AND CAME BACK, and both rulings are kept: the derived
 // grey stood from 2026-08-05; THE ARCHITECT REVERSED IT 2026-08-15, for the
@@ -8788,6 +8854,21 @@ inline void clear_audition_sequence(AppState& a) {
 inline bool history_mode_revert_subject_standing(
         const AppState::HistoryMode& mode) {
     return !mode.selection.empty() || mode.focus >= 0;
+}
+
+// WOULD THE REVERT ACT ACT? — the ONE Revert-actionable answer (planner
+// decision 58, 2026-08-30): a subject standing AND the active tab writable.
+// The lock's term lives here rather than only at on_key's read-only gate
+// because the act's face is DERIVED from the `h` allowlist's admission, and
+// an admission that ignored the lock lit a button whose chord the gate below
+// it then dropped (codex, round B). TWO READERS: history_mode_key_blocked's
+// Ctrl+H term (the key — so on a locked tab the chord is refused at the
+// view's gate, ahead of the read-only gate it used to fall through to) and,
+// through that same walk, the Revert button's face. No enum arm spells the
+// lock a second time.
+inline bool history_revert_actionable(const AppState& a) {
+    return history_mode_revert_subject_standing(a.history_mode) &&
+           !active_view_state(a).read_only;
 }
 
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
@@ -8948,11 +9029,13 @@ inline bool playback_launch_playable(const AppState& a,
 // READS THE PREDICATE ITS ACT REFUSES ON — never a restatement — so a face
 // and its chord are one decision, the shape Undo/Redo always had. What stays
 // lit through a refusal is exactly what a per-tick face CANNOT know, and each
-// such case is named at its arm: the walls (frame 0 under Left, the marker
-// walk's "nothing ahead"), the value-shaped tails that need the act's own
-// resolution run (a label ref or a bracket wall under Up/Down, an empty
-// payload under Copy value, the lead-in offset under Play), the refusals that
-// live on disk (Play renders, the history opener). The ladder ends of the
+// such case is named at its arm: the value-shaped tails that need the act's
+// own resolution run (a label ref or a bracket wall under Up/Down, an empty
+// payload under Copy value, the lead-in offset under Play), and the refusals
+// that live on disk (Play renders, the history opener). The walls — frame 0
+// under Left and the last frame under Right, the walk's "nothing ahead" and
+// the history walk's ends — are NOT on that list: each reads its act's own
+// landing owner (planner decisions 59 and 60). The ladder ends of the
 // six magnifiers were the last to land (planner decision 53, the same day):
 // Zoom out at the per-file ceiling and the magnification pair at its two
 // rungs' ends grey; Zoom in, `0` and `c` stay lit because each always acts
@@ -9189,22 +9272,9 @@ bool payload_eligible_marker(const AppState& app, int idx);
 // the class is only forward-declared here. The contract is at the member.
 bool target_preview_ready(const GuiTargetRender& target_render);
 
-// IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
-// the playhead scanner is active, or the A/B audition sequence stands in any
-// phase (a REST between its plays is transport-live: the act is one session
-// from its first play to its last). THREE READERS: the play/stop button's
-// GLYPH (redesign_button_glyph_swapped — Stop while this is true), and since
-// 2026-08-30 the SKIPS' and PLAY'S enabled arms (a live session keeps all
-// three lit: a press then stops or restarts, never nothing). The play/stop
-// FORK bare Space takes reads the same phase term with playback.is_playing()
-// as its other term — the audio callback's own flag, on a different clock
-// from the tick-cleared scanner bit — and the sub-tick disagreement that
-// buys is recorded at GuiPlaybackLifecycle::toggle_playback; it is not
-// folded in here because a face must read what the painter reads.
-inline bool transport_session_live(const AppState& a) {
-    return a.playhead_scanner_active ||
-           a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
-}
+// (transport_session_live — the one owner of "a transport session is live" —
+// sits above with the arrow-step predicates since round B of the strictness
+// arc, where the horizontal arrows' waveform-lane wall term needed it too.)
 
 inline bool redesign_button_enabled(const AppState& a,
                                     const GuiAudio& audio,
@@ -9573,17 +9643,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // piece, which is what that switch is for.
         //
         // WHAT THE ROW DOES NOT GREY, and why, so nobody "completes" it:
-        //   * THE WALLS. At frame 0 the left step cannot move and the button
-        //     stays lit — "although I suppose at zero, it can't move further
-        //     left" — on the walk arrows' own standing precedent (a wall step
-        //     is a consumed no-op by key and by click alike). Walls are the
-        //     one refusal class this roster has never mirrored on this row
-        //     (the history walk's walls, INSIDE the view, are the 2026-08-30
-        //     ruling's one exception, at the companions' arm below).
-        //   * THE WALK'S "NOTHING AHEAD": a Tab past the last enabled marker in
-        //     its direction is a consumed no-op, and it changes with the
-        //     playhead's position, which the lane shows; the walk arm mirrors
-        //     the EMPTY STORE alone (marker_walk_actionable says so).
+        //   (THE WALLS AND THE WALK'S "NOTHING AHEAD" WERE ON THIS LIST for the
+        //   day of 2026-08-30 — "although I suppose at zero, it can't move
+        //   further left", the roster's standing treatment of walls, and the
+        //   walk arm mirroring the empty store alone — and planner decisions
+        //   59 and 60 that evening put both in under the absolute rule, each
+        //   through the ACT'S OWN LANDING OWNER: playhead_pixel_step_landing
+        //   for Left / Right at frame 0 and the last frame, marker_walk_landing
+        //   for the walk pair's all-disabled store and nothing-ahead. "Walls
+        //   are the one refusal class this roster has never mirrored" is
+        //   SUPERSEDED wherever it once stood.)
         //   * THE VALUE-SHAPED TAILS: a label ref, a pass in target view and
         //     the bracket wall under Up/Down; an empty payload under Copy
         //     value. Each needs the act's own resolution run, which a
@@ -9662,7 +9731,9 @@ inline bool redesign_button_enabled(const AppState& a,
         //     PAIR MIRRORS EXACTLY THAT REFUSAL: a selection standing with the
         //     column off home (horizontal_arrow_step_actionable, the dispatch's
         //     marker-lane refusal); with no selection the waveform-lane step
-        //     always acts and the pair is LIVE.
+        //     acts everywhere but AT THE WALLS, and since planner decision 60
+        //     the pair greys there too (the landing owner's compare, a live
+        //     transport session keeping it lit because the press then stops).
         //   * UP / DOWN are the pair he actually watched blink, and they were
         //     the concrete case the 2026-08-15 reversal existed for — "in warp
         //     markers they can nudge the tempo up and down, but in phase
@@ -9731,7 +9802,9 @@ inline bool redesign_button_enabled(const AppState& a,
             if (active_view_state(a).read_only &&
                 !horizontal_arrow_step_lock_admits(a))
                 return false;
-            if (!horizontal_arrow_step_actionable(a)) return false;
+            if (!horizontal_arrow_step_actionable(
+                    a, audio, b == RedesignButton::TransportLeft ? -1 : +1))
+                return false;
             break;
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
@@ -9743,12 +9816,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // three, all three chords being the mode's OWN vocabulary in there
         // (the diff-flag cycle on bare Tab / Shift+Tab, and the march over
         // that cycle on Ctrl+Shift+Tab since 2026-08-18). OUTSIDE THE VIEW THE
-        // TWO STEPS GREY ON AN EMPTY ACTIVE STORE since 2026-08-30
-        // (marker_walk_actionable, the cycle's own leading return); WALK BOTH
-        // TABS never greys, its tab switch acting whatever the stores hold.
+        // TWO STEPS GREY DIRECTIONALLY on the cycle's own landing
+        // (marker_walk_actionable over marker_walk_landing, planner decision
+        // 59 — an empty store, an all-disabled store, no enabled marker past
+        // the playhead this way; the morning's count-only face was the
+        // audit's false premise); WALK BOTH TABS never greys, its tab switch
+        // acting whatever the stores hold.
         case RedesignButton::TransportWalkPrev:
+            if (!marker_walk_actionable(a, audio, /*forward=*/false))
+                return false;
+            break;
         case RedesignButton::TransportWalkNext:
-            if (!marker_walk_actionable(a)) return false;
+            if (!marker_walk_actionable(a, audio, /*forward=*/true))
+                return false;
             break;
         case RedesignButton::TransportWalkBoth:
             break;

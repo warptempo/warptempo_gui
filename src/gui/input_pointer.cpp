@@ -1033,14 +1033,15 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // (AppState::HistoryMode::head_delta_empty) and again while the worker is
 // publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
 // second bit is why this now takes the whole AppState rather than the mode
-// struct); and it admits CTRL+H only while a diff flag is selected, so this
-// walk answers DEAD for REVERT with an empty subject — AN ANSWER NO FACE READS
-// SINCE 2026-08-15, redesign_button_enabled lifting the four history companions
-// over this partition entirely, so the chord still refuses while the button
-// stays lit and a click on it is a consumed no-op, the roster's standing shape
-// for a refusal (the record, with the architect's blink reasoning, is at that
-// arm in redesign_button_enabled, app_state.h; the note below on the revert act
-// says the same thing where the entry itself is spelled); and bare `'` only while
+// struct); and it admits CTRL+H only while a diff flag is selected on a
+// writable tab (history_revert_actionable), so this walk answers DEAD for
+// REVERT with an empty subject or a locked tab — AN ANSWER THE FACE READS
+// AGAIN SINCE 2026-08-30 (it read nothing from 2026-08-15 until then, when
+// redesign_button_enabled lifted the four history companions over this
+// partition for the architect's blink reasoning; the truthful-buttons ruling
+// deleted the lift, and decision 58 composed the lock in — the record is at
+// the companions' arm in redesign_button_enabled, app_state.h, and the note
+// below on the revert act says the same where the entry is spelled); and bare `'` only while
 // THE ACTIVE WALK CARRIES A MEMBER — one term for both walks since 2026-08-09,
 // when the empty Remote walk became a legal standing state — so the
 // load-in-place button greys over a blank lane, which the Remote tab reaches
@@ -1104,11 +1105,10 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   `true` of 2026-08-15..18 included). This walk's answers for them have never
 //   changed and this paragraph is still what says they ACT in here; what the
 //   companions' own arm does is answer the RESTING face this partition cannot
-//   reach, and lift the four over this partition INSIDE the view (see the note
-//   on Revert below). The
-//   arrows never greyed at a walk WALL either — a step past the oldest or
-//   newest member is a consumed no-op, which is the same nothing every other
-//   refusal in this partition is.
+//   reach and, since 2026-08-30, the walk's two WALLS for Older / Newer
+//   (which this partition cannot see either, both chords being the mode's own
+//   vocabulary) — the lift that kept the four over this partition INSIDE the
+//   view from 2026-08-15 is deleted (see the note on Revert below).
 //   and THE REVERT ACT since 2026-08-05 (Ctrl+H) — the SECOND session-dependent
 //   entry: the allowlist admits its chord only while a diff flag is selected
 //   (history_mode_revert_subject_standing), so this walk answers DEAD with an
@@ -7170,35 +7170,28 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // true there — EXCEPT while the `h` history view stands, which greys
         // every button whose act it consumes across all the rows and is
         // therefore the one state in which this line consumes a row-1, row-3 or
-        // row-4 press (history_mode_disables_button, above). THE BOTTOM ROW'S
-        // ELEVEN ALWAYS-ON MEMBERS HAVE NO RESTING CONSUMER HERE since
-        // 2026-08-15: they are lit outside the `h` view by the architect's
-        // scoped-truth ruling (the arrows for the per-selection blink, the two
-        // skips because their key acts even on a no-op jump, PLAY / STOP last —
-        // "the user is expected to know that with the playhead outside trim
-        // it's not going to play in target view" — the marker-walk three
-        // on the row's settled policy when they landed, and ADD TO SELECTION
-        // on the same policy when it landed 2026-08-18, its chord being
-        // navigation with no refusal to mirror), so this line fires
-        // for them only inside that view, where the derived partition greys
-        // the PLAY/STOP button, the FOUR ARROWS and ADD TO
-        // SELECTION (Space,
-        // the bare arrows and bare `k` are all consumed there; the
-        // two skips
-        // are the mode's absolute jumps and the marker-walk THREE its
-        // diff-flag cycle plus the march over it, so those five stay lit). The
-        // arrows joined that list on 2026-08-18 by being PAINTED in the view at
-        // all — the cluster swap that hid them went with the history
-        // companions. Everywhere else their chords do their
-        // own refusing and a refused click is a consumed no-op, which is the
-        // roster's standing shape. ITS FOUR MARKER VERBS AND THE MARKER
-        // MEASURE ARE THE EXCEPTION
-        // (2026-08-18 for the verbs; the measure since the 2026-08-21 sunset
-        // returned it to the lock's set, its jump half gone): they keep the
-        // BUTTONS' own two greys — the `h` view and a locked tab — so this line
-        // consumes their press in both. THE BUTTON SEATED WITH THEM IS NOT ONE
-        // OF THEM: the lock does not carry ADD TO
-        // SELECTION, a selection being navigation.
+        // row-4 press (history_mode_disables_button, above) — row 4's history
+        // group, Zoom out and the magnification pair aside, which carry
+        // resting greys of their own. THE BOTTOM ROW HAS A RESTING CONSUMER
+        // HERE FOR EVERY MEMBER BUT WALK BOTH TABS AND ADD TO SELECTION since
+        // 2026-08-30 (the truthful-buttons ruling, reversing the 2026-08-15
+        // scoped-truth ruling under which the row's members were lit outside
+        // the `h` view whatever their chord would do): each arm at
+        // redesign_button_enabled reads the predicate its act refuses on — the
+        // verbs on the selection and the lock, the arrows on the tempo step,
+        // the lane fork and the walls, the walk pair on the cycle's landing,
+        // the skips on the jump's landing, Play on the launch, Copy value on
+        // its eligibility — so this line consumes exactly the presses whose
+        // chord would be a consumed no-op. Inside the view the derived
+        // partition adds its own: the PLAY/STOP button, the FOUR ARROWS, the
+        // verbs and ADD TO SELECTION (Space, the bare arrows and bare `k` are
+        // consumed there), while the two skips — the mode's absolute jumps —
+        // and the marker-walk THREE — its diff-flag cycle plus the march over
+        // it — take no partition grey. The arrows joined the in-view list on
+        // 2026-08-18 by being PAINTED in the view at all — the cluster swap
+        // that hid them went with the history companions. ADD TO SELECTION
+        // has no refusal to mirror at all: the lock does not carry it, a
+        // selection being navigation.
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
                                     playback, target_render, tc.id))
             return true;

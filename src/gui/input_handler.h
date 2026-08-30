@@ -702,9 +702,10 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // on head_delta_empty (a view whose
 // newest checkpoint already carries the session's authoring content has nothing
 // to commit) and on history_checkpoint_in_flight (one checkpoint at a time), the
-// revert act's, on a subject standing
-// (history_mode_revert_subject_standing — a selected diff flag, else the focused
-// one), and the load-in-place's, on the active walk carrying a member. Both
+// revert act's, on a subject standing on a writable tab
+// (history_revert_actionable — a selected diff flag, else the focused one,
+// and the lock since planner decision 58, 2026-08-30), and the load-in-place's,
+// on the active walk carrying a member. Both
 // readers hand it the
 // same `app` and neither restates a term of it, which is what
 // keeps the key and the face one decision — FOR THE REVERT ACT TOO SINCE

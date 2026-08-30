@@ -1621,7 +1621,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // OFF HOME IS THE CONSUMED REFUSAL, through the ONE predicate
         // (horizontal_arrow_step_actionable, app_state.h — the lane fork's
         // composed refusal, which inside this branch reduces to
-        // active_column_authoring_allowed, the home-view rule itself; the
+        // active_column_authoring_allowed, the home-view rule itself, its
+        // waveform-lane wall term being asked only with no selection; the
         // bottom row's LEFT and RIGHT buttons read the same predicate for
         // their face since 2026-08-30, the truthful-buttons ruling) rather
         // than a second spelling of its arms: this site hand-wrote "P wants T,
@@ -1630,7 +1631,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // a rule waiting to drift. It covers BOTH refusals the routing above
         // describes — P+source and W+target, the latter having lost the
         // tempo-image step with the whole tempo drag family.
-        if (!horizontal_arrow_step_actionable(app)) return;
+        if (!horizontal_arrow_step_actionable(app, audio, direction)) return;
         if (app.active_markers_view == 'P')
             phase_resets.nudge_selected_phase_resets(direction, rpt);
         else
