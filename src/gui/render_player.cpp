@@ -321,7 +321,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     }
     if (info->channels != audio.channels() ||
         info->sample_rate != audio.sample_rate()) {
-        status("Not the source's rate and channel count");
+        status("This wav does not have the source's sample rate and channel "
+               "count");
         return false;
     }
     if (auto n = checked_audio_sample_count(info->frames, info->channels);
@@ -344,7 +345,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // construction, which is what the frame count below divides by.
     if (read_info.channels != audio.channels() ||
         read_info.sample_rate != audio.sample_rate()) {
-        status("Not the source's rate and channel count");
+        status("This wav does not have the source's sample rate and channel "
+               "count");
         return false;
     }
     const int64_t frames =
@@ -353,7 +355,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
                                    static_cast<size_t>(read_info.channels))
             : 0;
     if (frames <= 0) {
-        status("Empty wav");
+        status("This wav holds no samples");
         return false;
     }
 
@@ -726,7 +728,7 @@ void GuiRenderPlayer::tick() {
         // the next Space reopens the device by the backend's own rule.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
-        status("No audio device");
+        status("No audio device; the wav cannot be played");
         return;
     }
     if (!playback.is_playing()) {
@@ -754,7 +756,7 @@ bool GuiRenderPlayer::open() {
     if (rp.active) return false;
     if (app.source_audio_path.empty()) return false;
     if (!has_playable_render()) {
-        status("No renders to play");
+        status("Nothing to play: no renders under render/ or tmp/");
         return false;
     }
     // A modal surface is opening: the shared modal stop

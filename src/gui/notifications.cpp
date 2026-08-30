@@ -26,22 +26,25 @@ int notification_card_max_w_px(const AppState& a) {
 
 GuiRect notification_stack_bound(const AppState& a) {
     const GuiRect menu = top_menu_row_area(a);
-    // THE STACK'S TWO MARGINS ARE ONE NUMBER (architect 2026-08-29): the air
-    // to the window's right edge is the air to row 1 above it, both the
+    // THE STACK'S MARGINS ARE ONE NUMBER (architect 2026-08-29, and the foot
+    // joined them 2026-08-30): the air to the window's right edge, the air to
+    // row 1 above and the air to the bottom row's lane below are all the
     // panel's own kPanelPadPx. The right margin was the icon row's 8 px pad
     // for the cards' first day, which read wider than the 2 px above them.
     // The card's INTERNAL pad is a different number and a different concept —
     // notification_pad_px(), the chrome inside the box rather than the box's
     // placement.
-    const int pad   = folder_overlay::pad_px();
-    const int w     = notification_card_max_w_px(a);
-    const int h     = notification_card_h_px();
-    const int gap   = scaled_px(kIconBtnGapPx, 1);
-    const int x     = a.width - pad - w;
-    const int y     = menu.y + menu.h + pad;
-    return GuiRect{x, y,
-                   w, kNotificationVisibleMax * h +
-                          (kNotificationVisibleMax - 1) * gap};
+    //
+    // THE ANSWER IS THE ROOM, NOT A TIGHT BOUND (the whole reasoning at the
+    // declaration): a wrapped card is taller than a line and no window
+    // arithmetic can say how much taller, so this is the space the stack has
+    // to grow into and the painter clips to it.
+    const int pad     = folder_overlay::pad_px();
+    const int w       = notification_card_max_w_px(a);
+    const int x       = a.width - pad - w;
+    const int y       = menu.y + menu.h + pad;
+    const int floor_y = bottom_row_area(a).y - pad;
+    return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }
 
 bool notification_visible(const AppState& a, uint64_t id) {

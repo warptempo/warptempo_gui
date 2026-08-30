@@ -297,7 +297,7 @@ gates (a prompt or editor standing, a load in progress) and with nothing
 loaded; it is LEGAL ON A READ-ONLY TAB, ADMITTED IN THE `h` VIEW (2026-08-29)
 and STOPS NO PLAYBACK, since it authors nothing and writes outside the project
 entirely. A second dispatch while one is already running writes
-`Synchronization already running` to a notification card and stops there — the
+`A synchronization is already running` to a notification card and stops there — the
 checkpoint act's own single-in-flight shape, answered in words since a menu
 item never greys. Then the destination: an EMPTY `sync_path` is the device
 saying it has none and answers `sync_path is not set` on a card — THE KEY BY

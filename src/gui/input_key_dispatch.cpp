@@ -4368,27 +4368,44 @@ void GuiInputHandler::apply_recipe_in_place(
 // three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
 // validate. On ANY failure — the running-batch self-guard, a missing wav, or a
 // malformed / unreadable sidecar — return false with NO state mutation, so a
-// failure leaves authoring untouched. THE GENUINE-FAILURE ARMS NAME THEIR CAUSE
-// ON STDERR (architect 2026-08-02), one line each with the offending path, since
-// a trusted sidecar failing to read is a real fault the user cannot diagnose
-// from a one-line card; first-error-only holds by construction (each arm
-// returns). The caller says "Load refused" on a notification card and leaves
-// the cause to those stderr lines. Returns true after the recipe is applied and
-// tmp/ wiped.
+// failure leaves authoring untouched.
+//
+// THE ACT OWNS ITS REFUSALS, on BOTH surfaces (architect 2026-08-30, taking
+// the caller's useless "Load refused" out): every arm names its cause once
+// through the local `refuse` below, which writes the STDERR line (architect
+// 2026-08-02 — with the offending path, the debugging surface) AND the
+// NOTIFICATION CARD "Load in place refused: <reason>", which is the `h`
+// view's own load acts' form, so the product's load-in-place roads answer
+// alike. First-error-only holds by construction (each arm returns), and the
+// card names the file the BASENAME RULE's way (messaging.md) — the cell's own
+// id or a sidecar's file name, never a full path. Returns true after the
+// recipe is applied and tmp/ wiped, and the caller then says nothing at all.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
+    // THE ONE REFUSAL OWNER for both surfaces: the sentence is composed once
+    // and the full path rides along for stderr alone.
+    auto refuse = [&](const std::string& reason,
+                      const std::filesystem::path& full) {
+        if (full.empty())
+            std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
+                         reason.c_str());
+        else
+            std::fprintf(stderr,
+                         "warptempo_gui: Load in place refused: %s ('%s')\n",
+                         reason.c_str(), full.string().c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Load in place refused: " + reason);
+        return false;
+    };
+
     // Self-guard on the standalone mutator: a successful load-in-place wipes
     // tmp/,
     // which must never race a batch publishing into it. The player's load act
-    // already refuses on this same condition — saying "Render running" on a
-    // notification card — before it raises the confirmation, so the one caller
-    // never reaches here; this backstop protects any other caller and says its
-    // own cause on stderr like every arm below it.
+    // already refuses on this same condition — with its own sentence — before
+    // it raises the confirmation, so the one caller never reaches here; this
+    // backstop protects any other caller and answers like every arm below it.
     if (app.queue_running || app.pending_archival.armed) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: a render batch is running or an "
-            "archival is armed\n");
-        return false;
+        return refuse("a render batch is running or an archival is armed", {});
     }
 
     // NOT a modal open, so NOT the modal-open owner's business
@@ -4401,20 +4418,18 @@ bool GuiInputHandler::load_render_entry_in_place(
     // -- Read + validate every input BEFORE touching a store. --
     std::error_code ec;
     if (!std::filesystem::is_regular_file(e.wav_path, ec)) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: entry WAV missing or not "
-            "a regular file: '%s'\n",
-            e.wav_path.string().c_str());
-        return false;
+        return refuse("the wav for " + render_entry_id(e) +
+                          " is missing or is not a regular file",
+                      e.wav_path);
     }
 
     const std::filesystem::path sidecar = renders_dir.settings_path(e);
     const auto settings = read_settings_file(sidecar.string());
     if (!settings) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: invalid settings in '%s': %s\n",
-            sidecar.string().c_str(), settings.error().c_str());
-        return false;
+        return refuse("invalid settings in " +
+                          sidecar.filename().string() + ": " +
+                          settings.error(),
+                      sidecar);
     }
 
     std::vector<GuiWarpMarker>       src_warp;
@@ -4425,11 +4440,9 @@ bool GuiInputHandler::load_render_entry_in_place(
             e.batch_folder / (e.basename + ".warpmarkers");
         auto r = m.load(wm.string());
         if (!r) {
-            std::fprintf(stderr,
-                "warptempo_gui: Load in place refused: invalid warp markers in "
-                "'%s': %s\n",
-                wm.string().c_str(), r.error().c_str());
-            return false;
+            return refuse("invalid warp markers in " +
+                              wm.filename().string() + ": " + r.error(),
+                          wm);
         }
         src_warp = m.markers();
     }
@@ -4439,11 +4452,9 @@ bool GuiInputHandler::load_render_entry_in_place(
             e.batch_folder / (e.basename + ".phaseresetmarkers");
         auto r = t.load(tm.string());
         if (!r) {
-            std::fprintf(stderr,
-                "warptempo_gui: Load in place refused: invalid phase reset "
-                "markers in '%s': %s\n",
-                tm.string().c_str(), r.error().c_str());
-            return false;
+            return refuse("invalid phase reset markers in " +
+                              tm.filename().string() + ": " + r.error(),
+                          tm);
         }
         src_phase_resets = t.markers();
     }
@@ -4453,13 +4464,10 @@ bool GuiInputHandler::load_render_entry_in_place(
     // carries the whole reasoning). A cell authored against a longer take
     // would otherwise land markers past `total - 1` in the live store, Ctrl+S
     // would write them, and the next launch would refuse the file. The
-    // refusal is WHOLE — not a dropped marker — and names its cause on stderr
-    // like every other arm here; the caller's "Load refused" is the status
-    // line's half.
+    // refusal is WHOLE — not a dropped marker — and names its cause on both
+    // surfaces like every other arm here.
     if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
-        std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: %s\n", defect->c_str());
-        return false;
+        return refuse(*defect, {});
     }
 
     // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
@@ -5639,7 +5647,7 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // standing rule at kFilePopupItems), so a second row press while one act
     // runs is a consumed no-op that says which one it was.
     if (external_sync_worker.is_busy()) {
-        report("Synchronization already running");
+        report("A synchronization is already running");
         return;
     }
 
@@ -6326,19 +6334,28 @@ void GuiInputHandler::render_player_load_in_place() {
     // progress line was its explanation, and THAT LINE IS NOT ON SCREEN HERE:
     // the state cell is row 8's, the modal row takes that lane whole while
     // the player stands, so a refusal with nothing beside it would read as a
-    // dead button (validation_topology.md's row, and the "Only batch renders
-    // load in place" refusal one arm down is the same class).
+    // dead button (validation_topology.md's row, and the batch-cell refusal
+    // one arm down is the same class). THE SENTENCE NAMES THE ACT IT
+    // REFUSES (architect 2026-08-30, his own example): a bare "Render
+    // running" was a fact with no verb, and a card answers a press.
     if (app.queue_running || app.pending_archival.armed) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             "Render running");
+                             "Cannot load in place while a render is running");
         return;
     }
     const AppState::RenderEntry* entry = render_player.highlighted_entry();
     if (entry == nullptr) {
         // Said on a card because the button and `'` are live on every row
         // the band can hold, so a silent nothing would read as a broken
-        // button (validation_topology.md's row).
-        notifications.notify(AppState::NotificationClass::Normal, "Only batch renders load in place");
+        // button (validation_topology.md's row). THE SENTENCE NAMES THE
+        // EXCLUDED SET (2026-08-30): what has no entry to load is a folder
+        // row, the `..` row, and the DELIVERABLE under render/, which carries
+        // no sidecar recipe — the highlight is one of those whenever this
+        // arm fires.
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "Only a batch render under tmp/ can be loaded in place; folders "
+            "and the deliverable carry no recipe");
         return;
     }
     // A modal surface is opening over a possibly live transport: PAUSE it
@@ -6391,10 +6408,12 @@ void GuiInputHandler::confirm_load_in_place() {
             render_player.close();
             return;
         }
-        // The act's own cause is on stderr (its every refusal arm names it);
-        // the player has no field to red-flash, so a card says the one thing
-        // it can.
-        notifications.notify(AppState::NotificationClass::Normal, "Load refused");
+        // NOTHING IS SAID HERE (2026-08-30): the act names every refusal on
+        // its own route, on a card and on stderr alike — the same rule the
+        // `h` view's two arms below follow — so a sentence composed here
+        // could only be a vaguer copy of one already on screen. It said
+        // "Load refused" until that day, which told the user nothing the
+        // dead player did not.
         return;
     }
     if (app.history_mode.pending_load_member) {

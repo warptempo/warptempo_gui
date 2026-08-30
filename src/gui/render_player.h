@@ -146,8 +146,8 @@ struct GuiInputHandler;
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
 // `h` view and their two icon-row buttons all reach it through on_key — and
-// it refuses with "No renders to play" when neither `render/` holds the
-// current title's wav nor `tmp/` a cell; its callers refuse the modal
+// it refuses with "Nothing to play: no renders under render/ or tmp/" when
+// neither `render/` holds the current title's wav nor `tmp/` a cell; its callers refuse the modal
 // states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
@@ -482,9 +482,10 @@ private:
     // THE PLAYER'S ONE VOICE: a NORMAL notification card (2026-08-29; it was
     // the status chain's transient tier until then). Its callers are the
     // decode road's refusals (the probe's, the allocation ceiling's, the
-    // read's, the rate-and-channel equality twice, "Empty wav"), "No audio
-    // device" and the opener's "No renders to play" — every one a sentence
-    // answering an act, none a state. Kept as a thin call rather than
+    // read's, the rate-and-channel equality twice, "This wav holds no
+    // samples"), "No audio device; the wav cannot be played" and the opener's
+    // "Nothing to play: no renders under render/ or tmp/" — every one a
+    // sentence answering an act, none a state. Kept as a thin call rather than
     // deleted so the player's refusals stay one grep.
     void status(const std::string& line);
 };

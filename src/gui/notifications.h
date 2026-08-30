@@ -4,20 +4,24 @@
 // architecture/messaging.md) — the product's surface for EVENTS: something
 // happened that answers an act, or that the user was not watching. A small
 // dark card stacked top-right under row 1's view radios, newest on top, at
-// most kNotificationVisibleMax visible, one line of the one sans, a Breeze
-// glyph at the left naming the class, an X at the right, and ONE PAD around
-// all three (notification_pad_px below — the card's chrome reads one number
-// on all six of its distances). Two classes and nothing else — no
-// remaining-time bar, no actions, no title/body split, no sound (the
-// architect is "not a big fan of notifications": minimal):
+// most kNotificationVisibleMax visible, UP TO kNotificationMaxLines lines of
+// the one sans, a Breeze glyph at the left naming the class, an X at the
+// right, and ONE PAD around all three (notification_pad_px below — the
+// card's chrome reads one number on all six of its distances). A sentence
+// too long for one line WRAPS DOWNWARD UNDER THE TWO ICONS (architect
+// 2026-08-30): the card grows taller, the glyph and the X stay at the first
+// line's height, and nothing reflows beside them. Two classes and nothing
+// else — no remaining-time bar, no actions, no title/body split, no sound
+// (the architect is "not a big fan of notifications": minimal):
 //
-//   NORMAL   — every refusal that has a sentence and every act's report:
-//              the load-in-place refusals, "Only batch renders load in
-//              place", "No renders to play", the render player's decode
-//              refusals, the propagate pastes' "Stopped at …" reports, the
-//              measure paste's, the picker's three refusals, Synchronize's
-//              refusals and its count, "Target render failed", "History is
-//              unavailable". Leaves on its own kNotificationMs after it
+//   NORMAL   — every refusal that has a sentence and every act's report
+//              (the inventory is messaging.md's, re-greped there): the load
+//              act's own refusals and the player's two before them, the
+//              player's opener and decode refusals, the propagate pastes'
+//              "Stopped at …" reports, the measure paste's, the picker's
+//              three refusals, Synchronize's refusals, "Target render
+//              failed", "History is unavailable". Leaves on its own
+//              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock) or at its X.
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
@@ -49,8 +53,8 @@
 // guard and the playing-only guard — because a card is a message about
 // something that has already happened, so nothing the tick does below can be
 // a precondition for retiring one, while every one of those returns is a mode
-// a card can stand over (the render player's own "No audio device" card, the
-// blank window's). It reads monotonic_ms() — the one clock every software
+// a card can stand over (the render player's own "No audio device; the wav
+// cannot be played" card, the blank window's). It reads monotonic_ms() — the one clock every software
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
 // THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
@@ -72,8 +76,11 @@
 // AppState::Notifications::painted, and the router, the cursor map and the
 // hover walk read that publication and then ask the live stack whether the
 // id still stands (published geometry may only SELECT; live state decides).
-// The owners below that need no text width — the damage bound, the card
-// height — are pure functions of the window and the scale.
+// The owners below are pure functions of the window and the scale — the
+// damage ROOM and the ONE-LINE card height — and neither knows a sentence:
+// a card's real height needs its line count, the line count needs a shaped
+// run, and shaping needs the paint's own font, so the painter is the only
+// place that can answer it and the room is what the damage owner uses.
 
 #include "app_state.h"
 #include "viewport.h"
@@ -92,11 +99,24 @@ inline constexpr int kNotificationVisibleMax = 3;
 // than three of these the floor wins — a contrived window, not catered for.
 inline constexpr double kNotificationMinWidthPx = 240.0;
 
+// HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
+// whose sentence does not fit its room GROWS DOWNWARD to this many lines and
+// no further — the last permitted line takes the WHOLE remainder as one run
+// and clips at the right edge, so no word is ever silently dropped, only cut
+// where the eye can see the cut. A COUNT, not a length: it does not scale.
+inline constexpr int kNotificationMaxLines = 3;
+
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
-// A card's height: the icon row's content height (the 32 px button box plus
-// its 7 px margins, one source) — the X and the glyph sit in that box at the
-// row's own inset.
+// A ONE-LINE card's height, and the height every card's FIRST line occupies:
+// the icon row's content height (the 32 px button box plus its 7 px margins,
+// one source) — the glyph and the X sit in that box at the row's own inset,
+// AT THE FIRST LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30:
+// the text grows downward under the two icons, nothing reflows beside them).
+// A card of `lines` lines is this plus (lines - 1) line spacings, which only
+// the painter can know — a line count needs a shaped run, and shaping needs
+// the paint's own font — so no pure function of the window states a card's
+// real height and none is offered here.
 int notification_card_h_px();
 
 // THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph,
@@ -118,15 +138,28 @@ int notification_pad_px();
 // upper bound, or the floor where the window is narrower than three floors).
 int notification_card_max_w_px(const AppState& a);
 
-// THE STACK'S BOUND: the rect the visible stack can ever occupy — three
-// cards of the maximum width, right-aligned at kPanelPadPx from the window's
-// right edge, THE SAME kPanelPadPx of air below row 1 (architect 2026-08-29:
-// the two margins are one number; the right one was the icon row's 8 px pad
-// for the cards' first day). Every change to
-// the stack damages this rect (Viewport::invalidate_notification_stack): the
-// painted cards always lie inside it by construction, so it erases what
-// stood and admits what comes without shaping a single glyph off the paint
-// clock.
+// THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
+// right-aligned at kPanelPadPx from the window's right edge, from that same
+// kPanelPadPx of air below row 1 (architect 2026-08-29: the two margins are
+// one number; the right one was the icon row's 8 px pad for the cards' first
+// day) DOWN TO THE SAME AIR ABOVE THE BOTTOM ROW'S LANE.
+//
+// IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
+// was "three cards of one line each", which a wrapped card outgrows, and no
+// pure function of the window can know a card's line count — that needs a
+// shaped run. So the answer is the whole space the stack has to grow into,
+// and the painter CLIPS to it: a stack that outgrows the room paints on down
+// and is cut at the room's foot, so no card ever paints over the bottom row,
+// and the painter publishes its rects CLIPPED TO THE ROOM TOO, so nothing
+// under that foot is ever claimed by a card. (A stack that tall is the
+// contrived case messaging.md already declines to cater for.)
+//
+// Every change to the stack damages this rect
+// (Viewport::invalidate_notification_stack): the painted cards lie inside it
+// by construction, so it erases what stood and admits what comes without
+// shaping a single glyph off the paint clock. A window with no room between
+// row 1 and the bottom row answers a zero height and paints nothing — a
+// window with no waveform at all, in the contrived class.
 GuiRect notification_stack_bound(const AppState& a);
 
 // Whether `id` names a card that is VISIBLE RIGHT NOW — present in the live

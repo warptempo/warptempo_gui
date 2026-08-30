@@ -7190,7 +7190,8 @@ struct AppState {
     // (render_player.cpp), whose batch-folder listings carry one of these on
     // every wav row — the entry is what makes a row LOAD-IN-PLACE-CAPABLE, so
     // the deliverable's rows carry none and the Load in place button refuses
-    // "Only batch renders load in place" on one — and the act that button's
+    // "Only a batch render under tmp/ can be loaded in place" on one — and
+    // the act that button's
     // confirmation runs (load_render_entry_in_place, input_key_dispatch.cpp).
     // (The `l` external-player spawn and the typed load prompt's own resolve
     // were consumers until 2026-08-28, when the player replaced both.)
@@ -9104,8 +9105,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // nothing, so the lock admits the chord and this face follows the key
         // rather than greying under it — the read-only-legal set's own rule.
         // The opener's own refusals are the class this roster never mirrors: a
-        // project with no render at all answers "No renders to play" on the
-        // status line, and asking that per frame is a directory walk the
+        // project with no render at all answers "Nothing to play: no renders
+        // under render/ or tmp/" on a card, and asking that per frame is a
+        // directory walk the
         // painter has no business doing (the `h` button's own reasoning). The
         // `h` view greys it through the derived partition above, bare `l`
         // being consumed in there. THE LOAD is what the lock refuses, and that

@@ -3244,6 +3244,93 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+namespace {
+
+// THE CARD'S LINE SPACING: the sans face's OWN height at the redesign size,
+// asked of the same scaled font the lines are shaped and painted with, so a
+// wrapped card's rows sit exactly as the face intends them to. Read ONCE per
+// paint and handed down — it is the only thing that turns a line count into
+// a card height.
+int notification_line_h_px(cairo_scaled_font_t* font) {
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    return static_cast<int>(std::nearbyint(fe.height));
+}
+
+// THE WRAP, and the ONE place a card's text is broken into lines (architect
+// 2026-08-30). GREEDY WORD WRAP AT ASCII SPACES ON MEASURED ADVANCES: each
+// candidate line is re-shaped as ONE run through the shaping chokepoint and
+// its own width_px is what decides, so THE RUN THAT IS MEASURED IS THE RUN
+// THAT IS PAINTED — the painter paints exactly the runs this returns and
+// re-shapes nothing. A line closes before the first word that overflows the
+// room.
+//
+// THREE CASES BESIDES THE ORDINARY ONE:
+//   - the whole sentence FITS the room (or the room is gone in a contrived
+//     window): one line, and it is the run the caller already shaped to size
+//     the card — no second shaping pass for the common case;
+//   - A SINGLE WORD WIDER THAN THE ROOM stands alone on its line and clips at
+//     the run's right edge under the caller's cairo clip — there is nowhere
+//     to break it, and no hyphenation exists in the product;
+//   - THE LAST PERMITTED LINE (kNotificationMaxLines) TAKES THE WHOLE
+//     REMAINDER as one run and clips the same way, so no word is ever
+//     silently dropped — only cut where the eye can see the cut.
+//
+// The break's space is CONSUMED, and so is any run of leading spaces on a
+// line; every other byte is carried verbatim out of the sentence, which is
+// why the lines are substrings and never a rejoin (a rejoin would author
+// text the sentence never had). Shaping runs at paint on every frame, as the
+// folder overlay's rows already do: cards are at most a handful and their
+// sentences are short, so nothing here is memoized.
+std::vector<text_shape::ShapedRun> notification_text_lines(
+        cairo_scaled_font_t* font, const std::string& text,
+        const text_shape::ShapedRun& whole, double room_px) {
+    std::vector<text_shape::ShapedRun> lines;
+    if (room_px <= 0.0 || whole.width_px <= room_px) {
+        lines.push_back(whole);
+        return lines;
+    }
+    const std::string_view all(text);
+    const size_t n = all.size();
+    size_t pos = 0;
+    while (pos < n) {
+        while (pos < n && all[pos] == ' ') ++pos;
+        if (pos >= n) break;
+        if (lines.size() + 1 >= static_cast<size_t>(kNotificationMaxLines)) {
+            lines.push_back(
+                text_shape::shape_text_run(font, all.substr(pos)));
+            return lines;
+        }
+        size_t end = n;
+        text_shape::ShapedRun line;
+        bool fitted = false;
+        for (size_t probe = pos;;) {
+            const size_t sp = all.find(' ', probe);
+            const size_t cand_end = (sp == std::string_view::npos) ? n : sp;
+            text_shape::ShapedRun cand = text_shape::shape_text_run(
+                font, all.substr(pos, cand_end - pos));
+            if (cand.width_px > room_px) break;
+            line   = std::move(cand);
+            end    = cand_end;
+            fitted = true;
+            if (cand_end >= n) break;
+            probe = cand_end + 1;
+        }
+        if (!fitted) {
+            const size_t sp = all.find(' ', pos);
+            end  = (sp == std::string_view::npos) ? n : sp;
+            line = text_shape::shape_text_run(font, all.substr(pos, end - pos));
+        }
+        lines.push_back(std::move(line));
+        pos = end;
+    }
+    // A sentence of nothing but spaces breaks nowhere; it is its own run.
+    if (lines.empty()) lines.push_back(whole);
+    return lines;
+}
+
+} // namespace
+
 // -- GuiPaintHandler::paint_notifications ---------------------------------
 //
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
@@ -3251,15 +3338,14 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 // stack — the first kNotificationVisibleMax of AppState::Notifications::cards,
 // newest first — painted top-right under ROW 1's view radios, right-aligned
 // at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
-// (the stack's two OUTER margins are one number, notification_stack_bound),
-// growing DOWN over whatever lies there (the tab row's right stretch, the
-// icon row's empty right, the thin lanes, the waveform), the cards
-// kIconBtnGapPx apart.
+// (the stack's margins are one number, notification_stack_bound), growing
+// DOWN over whatever lies there (the tab row's right stretch, the icon row's
+// empty right, the thin lanes, the waveform), the cards kIconBtnGapPx apart.
 //
 // THE LOOK (his picked mockup, tmp/previous/messaging_mockups/cards_AB.png's
 // look 1; the chrome record at render.h's palette block): the player's dark
 // ground under the popup's 1 px border through the one popup box painter;
-// ONE ROW of the icon row's own height, holding — left to right, EVERY
+// a row of the icon row's own height, holding — left to right, EVERY
 // DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
 // declaration: the box's own vertical margin, read for all six) — a 32 px
 // button box with the CLASS GLYPH centred at the box's
@@ -3267,9 +3353,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 // critical one, each in its file's own colours: the roster paints every
 // path in the table's ink and colours nothing here — the two files are a
 // blue or red plate under a white glyph, and that plate is what tells the
-// classes apart at a glance), that pad, ONE LINE
-// of the one sans in the row's ink CLIPPED at the run's room (no wrap, no
-// ellipsis — the folder overlay rows' precedent), that pad again, and the
+// classes apart at a glance), that pad, THE SENTENCE
+// of the one sans in the row's ink, that pad again, and the
 // window-close X in a second button box at that pad from the right edge —
 // the boxes sitting that same pad below the card's top and above its foot.
 // The card's width
@@ -3279,26 +3364,49 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 // pointer rests in its box — the 1 px accent outline through the shared face
 // box, nothing else — and the card's body wears none.
 //
+// THE TEXT GROWS DOWNWARD UNDER THE TWO ICONS (architect 2026-08-30). The
+// width rule is unchanged — the WHOLE sentence's shaped width sets it, inside
+// the same clamp — so a sentence that fits its room is one line exactly as it
+// was; a longer one wraps through notification_text_lines above to at most
+// kNotificationMaxLines, the last of which clips at the run's right edge (no
+// ellipsis — the folder overlay rows' precedent). THE CARD GROWS, NOTHING
+// REFLOWS: the glyph box and the X box keep the one-line card's placement,
+// the first line keeps the one-line card's baseline, each further line sits
+// one face line-height lower, and the air under the last line is the first
+// line's own by construction — the one pad still rules every edge. The
+// stack's `y` then advances by each card's OWN height.
+//
 // IT PUBLISHES WHAT IT DREW: each card's rect and X box, and their union,
 // into AppState::Notifications (the owner-tag doctrine at
 // ModalDialogGeometry — published geometry may only SELECT; the press claim,
 // the cursor map and the hover walk read this and then ask the live stack).
-// It runs on every frame, cards or none, for the floating surfaces' reason:
-// a skipped run would strand a stale publication. Its damage is not its own —
-// every stack change damages the stack's BOUND through the viewport owner,
-// and the hover its X box.
+// EVERYTHING IS CLIPPED TO THE ROOM and PUBLISHED CLIPPED TO IT: a stack tall
+// enough to reach the bottom row is the contrived case nothing caters for,
+// and clipping is what keeps it from painting over that row or claiming a
+// press under it. It runs on every frame, cards or none, for the floating
+// surfaces' reason: a skipped run would strand a stale publication. Its
+// damage is not its own — every stack change damages the stack's ROOM through
+// the viewport owner, and the hover its X box.
 void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     AppState::Notifications& st = app.notifications;
     st.painted.clear();
     st.painted_rect = GuiRect{0, 0, 0, 0};
     if (st.cards.empty()) return;
 
+    // THE ROOM the stack grows into, and the clip for everything below. A
+    // window with none of it paints no card at all (notifications.h).
+    const GuiRect room = notification_stack_bound(app);
+    if (room.w <= 0 || room.h <= 0) return;
+
     cairo_save(cr);
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    cairo_rectangle(cr, room.x, room.y, room.w, room.h);
+    cairo_clip(cr);
 
-    const int card_h   = notification_card_h_px();
+    const int line1_h  = notification_card_h_px();
+    const int line_h   = notification_line_h_px(font);
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kIconBtnGapPx, 1);
@@ -3312,25 +3420,50 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
-    const GuiRect bound = notification_stack_bound(app);
-    const int right_x = bound.x + bound.w;
+    const int right_x = room.x + room.w;
     // The chrome every card carries besides its text: FOUR pads (the two
     // edges and the two sides of the text) and two boxes.
     const int chrome_w = 4 * pad + 2 * btn;
+    // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
+    // clips the publication too, or the hit would claim a press on pixels
+    // the bottom row owns. An empty answer is hit by nothing (rect_contains).
+    auto in_room = [&room](GuiRect r) {
+        const int x0 = std::max(r.x, room.x);
+        const int y0 = std::max(r.y, room.y);
+        const int x1 = std::min(r.x + r.w, room.x + room.w);
+        const int y1 = std::min(r.y + r.h, room.y + room.h);
+        return GuiRect{x0, y0, std::max(0, x1 - x0), std::max(0, y1 - y0)};
+    };
 
-    int y = bound.y;
+    int y = room.y;
     for (size_t i = 0; i < st.cards.size() &&
                        i < static_cast<size_t>(kNotificationVisibleMax); ++i) {
+        // Wholly under the room's foot: so is every card after it.
+        if (y >= room.y + room.h) break;
         const AppState::Notification& n = st.cards[i];
-        const text_shape::ShapedRun run =
+        // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
+        // not change — and the ROOM the wrap breaks against is what that
+        // width leaves between the two boxes.
+        const text_shape::ShapedRun whole =
             text_shape::shape_text_run(font, n.text);
-        int w = chrome_w + static_cast<int>(std::nearbyint(run.width_px));
+        int w = chrome_w + static_cast<int>(std::nearbyint(whole.width_px));
         w = std::clamp(w, min_w, std::max(min_w, max_w));
-        const GuiRect card{right_x - w, y, w, card_h};
+        const int card_x    = right_x - w;
+        const int glyph_x   = card_x + pad;
+        const int close_x   = card_x + w - pad - btn;
+        const int text_x    = glyph_x + btn + pad;
+        const int text_room = close_x - pad - text_x;
+        const std::vector<text_shape::ShapedRun> lines =
+            notification_text_lines(font, n.text, whole,
+                                    static_cast<double>(text_room));
+        // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
+        // one-line card and the boxes and the first baseline sit in it.
+        const GuiRect card{
+            card_x, y, w,
+            line1_h + (static_cast<int>(lines.size()) - 1) * line_h};
         paint_popup_chrome(cr, card, kModalFieldGround, kRedesignTabLine);
 
-        const int box_y   = card.y + pad;
-        const int glyph_x = card.x + pad;
+        const int box_y = card.y + pad;
         icons::draw(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
@@ -3339,19 +3472,24 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                     static_cast<double>(box_y + inset),
                     static_cast<double>(glyph_px));
 
-        const int close_x   = card.x + card.w - pad - btn;
-        const int text_x    = glyph_x + btn + pad;
-        const int text_room = close_x - pad - text_x;
         if (text_room > 0) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
-            text_shape::show_shaped_run(
-                cr, run, static_cast<double>(text_x),
+            // The FIRST line's baseline is the one-line card's, solved over
+            // the first line's own band; each further line is one face
+            // line-height lower.
+            const double base =
                 redesign_baseline(font, static_cast<double>(card.y),
-                                  static_cast<double>(card.h)));
+                                  static_cast<double>(line1_h));
+            for (size_t li = 0; li < lines.size(); ++li) {
+                text_shape::show_shaped_run(
+                    cr, lines[li], static_cast<double>(text_x),
+                    base + static_cast<double>(li) *
+                               static_cast<double>(line_h));
+            }
             cairo_restore(cr);
         }
 
@@ -3366,10 +3504,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                     static_cast<double>(close.y + inset),
                     static_cast<double>(glyph_px));
 
-        st.painted.push_back(AppState::NotificationPainted{n.id, card, close});
+        const GuiRect shown = in_room(card);
+        st.painted.push_back(
+            AppState::NotificationPainted{n.id, shown, in_room(close)});
         st.painted_rect = st.painted.size() == 1
-                              ? card : union_rect(st.painted_rect, card);
-        y += card_h + gap;
+                              ? shown : union_rect(st.painted_rect, shown);
+        y += card.h + gap;
     }
     cairo_restore(cr);
 }

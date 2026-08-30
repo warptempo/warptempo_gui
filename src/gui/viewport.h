@@ -483,10 +483,14 @@ struct Viewport {
     // passes bottom_row_area here where the top rows call
     // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
-    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's BOUND —
-    // notification_stack_bound, notifications.h — which is the rect the
-    // visible cards can ever occupy, so one call both erases what stood and
-    // admits what comes, and no caller shapes a glyph to size the damage.
+    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's ROOM —
+    // notification_stack_bound, notifications.h — the whole space between row
+    // 1 and the bottom row's lane that the cards may grow into, so one call
+    // both erases what stood and admits what comes, and no caller shapes a
+    // glyph to size the damage. It was three one-line cards' worth until
+    // 2026-08-30, when a card's text began to WRAP: a line count needs a
+    // shaped run and no window arithmetic has one, so the damage owner takes
+    // the room and the painter clips to it.
     // ITS CALLERS, re-derived by grep 2026-08-29, are GuiNotifications' three
     // stack changes and nothing else: notify (a push), dismiss (the X) and
     // fire_if_due (an expiry). The hover face is narrower and takes

@@ -3823,18 +3823,21 @@ private:
 
     // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
     // Load in place button's act and bare `'`'s inside the player — says
-    // "Render running" on a card over a running or parked render (silent for
-    // the one day a status bar stood at the window's foot to explain it) and
-    // refuses SILENTLY on a read-only tab (the lock's own), says "Only batch
-    // renders load in place" on any highlight that is
+    // "Cannot load in place while a render is running" on a card over a
+    // running or parked render (silent for the one day a status bar stood at
+    // the window's foot to explain it) and
+    // refuses SILENTLY on a read-only tab (the lock's own), says "Only a
+    // batch render under tmp/ can be loaded in place; folders and the
+    // deliverable carry no recipe" on any highlight that is
     // not a load-capable wav, and otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry — the one prompt raised with its FIRST button
     // focused, so a bare Enter answers OK (the reason is at the raise). The
     // prompt's OK runs confirm_load_in_place's player arm (the shared act
-    // load_render_entry_in_place, whose success closes the player and whose
-    // refusal says "Load refused" on a notification card — its own cause is
-    // on stderr); Cancel runs cancel_load_in_place.
+    // load_render_entry_in_place, WHICH SAYS ITS OWN REFUSAL on a card and on
+    // stderr since 2026-08-30 — the caller's vague "Load refused" is gone —
+    // and whose success closes the player); Cancel runs
+    // cancel_load_in_place.
     // THE TWO-ROAD SANCTION RETIRED with the typed renders road the same day;
     // the record is at load_render_entry_in_place, which has this one caller.
     void render_player_load_in_place();
