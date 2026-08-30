@@ -3569,10 +3569,12 @@ private:
     // lower half's motionless release, its one entry),
     // a pointer act that starts or stops a scanner and
     // never moves the resting cursor. "Scrub" names that and only that.
-    // TWO READERS, one owner: the on_key dispatch (which picks the lane) and
-    // read_only_key_blocked's is_playhead_step entry (which admits the bare
-    // horizontal arrows only while this is FALSE — in the marker lane they
-    // author, and this gate is their sole read-only defense). THE BODY
+    // ONE READER since 2026-08-30, the on_key dispatch (which picks the
+    // lane); read_only_key_blocked's is_playhead_step entry — which admits the
+    // bare horizontal arrows only in the waveform lane, this gate being their
+    // sole read-only defense — reads the lane through the lock's own owner
+    // horizontal_arrow_step_lock_admits (app_state.h) instead, so the Left /
+    // Right buttons' face can read the same answer. THE BODY
     // DELEGATES TO marker_selection_standing (app_state.h) since 2026-08-30:
     // the lane IS a standing selection, and that fact gained face readers on
     // the bottom row (the arrows' horizontal_arrow_step_actionable among

@@ -196,9 +196,13 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // rule with no site left to disagree with it.
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
 // 2026-08-15): the roster buttons wearing the disabled face while the active
-// tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N) on
-// the bottom row, and the BPM and iteration openers, listen and the
-// load-in-place in the icon row — are chords this allowlist drops, so the
+// tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N),
+// the Edit flag button and the Measure on the bottom row, the load-in-place
+// in the icon row, and since 2026-08-30 THE FOUR CARDINAL ARROWS (planner
+// decision 52: Up/Down, dropped outright here; Left/Right, dropped only in
+// the marker lane through the is_playhead_step entry, whose lane term is the
+// shared owner horizontal_arrow_step_lock_admits that the face reads too) —
+// are chords this allowlist drops, so the
 // toggle looks the way the `h` history view already looks. The drop's SHIFTED
 // chord (Shift+S, 2026-08-28) rides that face rather than asking for a second
 // one: the button is greyed by the same arm, and a greyed button's shift press
@@ -216,7 +220,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // are recorded there — chords claimed ABOVE this gate, whose "blocked" here is
 // vacuous, and the buttons the ruling deliberately leaves lit. SO A CHANGE TO
 // THE ADMISSIONS BELOW NEEDS A HAND EDIT THERE; nothing else in the product
-// reads this gate for a face.
+// reads this gate for a face — the one STATE-DEPENDENT admission a face
+// mirrors, the horizontal arrows' lane term, is read off its shared owner
+// rather than off this gate.
 bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -259,9 +265,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // (scrub_act_at — the lower half's motionless-release click act, its one
     // entry), a different act on a different surface, untouched here
     // and the sole owner of the "scrub" name.
+    // THE LANE TERM READS ITS ONE OWNER (horizontal_arrow_step_lock_admits,
+    // app_state.h — planner decision 52, 2026-08-30): the Left / Right
+    // buttons' disabled face reads the same owner, so the lock's refusal and
+    // the grey are one decision. (It read playhead_in_marker_lane() until
+    // then, the lane predicate whose body that owner now is.)
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !ctrl && !shift && !alt && !playhead_in_marker_lane());
+         !ctrl && !shift && !alt && horizontal_arrow_step_lock_admits(app));
     // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and CTRL (the
     // whole-piece jump, 2026-08-24). Both are pure navigation: they move the
     // cursor, stop an audition and clear a selection, and write no store at

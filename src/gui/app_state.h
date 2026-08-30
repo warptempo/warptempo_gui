@@ -8187,17 +8187,35 @@ inline bool tempo_cent_step_actionable(const AppState& app) {
 // asked. His reason then: "left and right were always on because the playhead
 // can always move", so a rarely-true refusal bought a per-selection blink.
 // The 2026-08-30 ruling withdraws the blink argument and the face reads it
-// again. THE TERM NOT REVIVED IS THE LOCK'S: the first predicate also refused
-// the marker-lane nudge on a read-only tab, which read_only_key_blocked still
-// does; this one asks the home view alone, so a locked tab holding a
-// selection keeps a LIT pair over a refused chord — recorded rather than
-// mirrored, the read-only arm of redesign_button_enabled owning the lock's
-// membership by hand. THE WALL IS STILL NOT MIRRORED: at frame 0 the left
-// step cannot move and the button stays lit, the roster's standing treatment
-// of walls (redesign_button_enabled's arrow arm says why).
+// again. THE LOCK'S TERM IS NOT IN HERE, and that is a split of OWNERS rather
+// than a term left out: the first predicate of this name also refused the
+// marker-lane nudge on a read-only tab, but that refusal is the GATE'S
+// (read_only_key_blocked, above the dispatch), not the lane branch's, so the
+// lock's answer for the arrows has its own owner just below
+// (horizontal_arrow_step_lock_admits) which the gate and the face both read
+// — the faces compose the two (planner decision 52, 2026-08-30). THE WALL IS
+// STILL NOT MIRRORED: at frame 0 the left step cannot move and the button
+// stays lit, the roster's standing treatment of walls
+// (redesign_button_enabled's arrow arm says why).
 inline bool horizontal_arrow_step_actionable(const AppState& app) {
     return !marker_selection_standing(app) ||
            active_column_authoring_allowed(app);
+}
+
+// THE LOCK'S ANSWER FOR THE BARE HORIZONTAL ARROWS, one owner (planner
+// decision 52 under the 2026-08-30 truthful-buttons ruling): a locked tab
+// ADMITS Left / Right only in the WAVEFORM lane, where the step is pure
+// navigation — in the MARKER lane (a standing selection) the same press
+// nudges the focused marker, which is authoring, and the lock drops it.
+// READERS: read_only_key_blocked's is_playhead_step entry (the gate — the
+// dispatch's sole read-only defense on the nudge, position_nudge_prologue
+// carrying none of its own) and the Left / Right buttons' disabled face,
+// which greys where the lock bit and this refusal meet. UP / DOWN NEED NO
+// OWNER OF THIS KIND: the lock drops them OUTRIGHT (bare Up / Down sit on no
+// allowlist entry), which is a plain membership, and their faces join the
+// read-only arm's hand-listed set exactly as the verbs did.
+inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
+    return !marker_selection_standing(app);
 }
 
 // THE BATCH VERBS' REFUSAL, composed (architect 2026-08-30): Delete and the
@@ -8964,10 +8982,14 @@ inline bool playback_launch_playable(const AppState& a,
 //     which is the truth the keys have — the term lives in the per-button
 //     switch below rather than as a blanket line, because it is no longer a
 //     blanket fact. (It was one until this ruling, when "a locked tab greys the
-//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES SEVEN
-//     MORE BUTTONS since 2026-08-15 — the authoring chords it blocks that
-//     still have a face to grey, spread across the icon row and the bottom one
-//     since the 2026-08-18 relayout — and its own entry is below.
+//     whole toolbar" was recorded here as code truth.) THE LOCK REACHES
+//     ELEVEN MORE BUTTONS — seven since 2026-08-15 (the authoring chords it
+//     blocks that still have a face to grey, spread across the icon row and
+//     the bottom one since the 2026-08-18 relayout) and the FOUR CARDINAL
+//     ARROWS since 2026-08-30 (planner decision 52 under the truthful-buttons
+//     ruling: Up/Down whenever the tab is locked, Left/Right only while a
+//     selection stands, the transport block's arrow arms) — and its own entry
+//     is below.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
@@ -9049,7 +9071,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     blocked outright, Left and Right blocked only while a selection stands —
 //     the per-selection blink the 2026-08-15 ruling removed; the 2026-08-30
 //     truthful-buttons ruling gave the pairs SELECTION terms of their own at
-//     the transport block and left the lock's term off them, recorded there),
+//     the transport block, and planner decision 52 the same day the LOCK'S
+//     term too — Up/Down as hand-listed members, Left/Right through the
+//     gate's own owner horizontal_arrow_step_lock_admits — so this class's
+//     first member is now mirrored and stays here as the record of why the
+//     walk was rejected),
 //     Revert, whose Ctrl+H
 //     the lock really does eat but whose face the `h` partition and the
 //     companions' own arm decide,
@@ -9329,7 +9355,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // refuses on — never a restatement — and each named at its case
         // below. Read-only stays the first term for all seven: a mode entered
         // on purpose, invisible chrome state otherwise, changing only when `o`
-        // is pressed.
+        // is pressed. THE LOCK'S SET IS ELEVEN BUTTONS since planner decision
+        // 52 the same day: these seven and the FOUR CARDINAL ARROWS, whose
+        // lock terms sit at the transport block below (Up/Down outright,
+        // Left/Right only while a selection stands, through the gate's own
+        // owner horizontal_arrow_step_lock_admits).
         //
         // WHY THEY SIT ABOVE THE LOADING/BLANK GUARD rather than below it with
         // the other mirrored arms: the 2026-08-15 arm added ONE term and was
@@ -9466,12 +9496,14 @@ inline bool redesign_button_enabled(const AppState& a,
         //     the bracket wall under Up/Down; an empty payload under Copy
         //     value. Each needs the act's own resolution run, which a
         //     per-tick face has no business doing.
-        //   * THE LOCK ON THE ARROWS: read_only_key_blocked drops Up/Down
-        //     outright and Left/Right while a selection stands, and the
-        //     read-only arm above mirrors neither (its membership is
-        //     hand-listed by ruling, and the arrows were the 2026-08-15
-        //     ruling's own exclusions from it); a locked tab keeps a lit pair
-        //     over a refused chord, recorded rather than mirrored.
+        //   (THE LOCK ON THE ARROWS WAS ON THIS LIST for the hours of
+        //   2026-08-30 between the ruling's first landing and planner decision
+        //   52: read_only_key_blocked drops Up/Down outright and Left/Right
+        //   while a selection stands, and both are MIRRORED now — Up/Down as
+        //   hand-listed members of the lock's set, Left/Right through the
+        //   gate's own owner horizontal_arrow_step_lock_admits — at the arrow
+        //   arms below. The arrows were the 2026-08-15 ruling's own exclusions
+        //   from that set.)
         //
         // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS under the 2026-08-15
         // reversal, and what they lost is the ENABLED split alone: no grey
@@ -9569,12 +9601,22 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportPlayStop:
             break;
+        // THE LOCK GREYS THE ARROWS TOO (planner decision 52, 2026-08-30):
+        // Up / Down join the read-only arm's hand-listed membership — the
+        // lock drops them outright — and Left / Right grey where the lock bit
+        // meets the marker lane, through the gate's own owner
+        // horizontal_arrow_step_lock_admits; with no selection the playhead
+        // still moves on a locked tab, so the pair stays live there.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
+            if (active_view_state(a).read_only &&
+                !horizontal_arrow_step_lock_admits(a))
+                return false;
             if (!horizontal_arrow_step_actionable(a)) return false;
             break;
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
+            if (active_view_state(a).read_only) return false;
             if (!tempo_cent_step_actionable(a)) return false;
             break;
         // THE MARKER-WALK GROUP (2026-08-15's always-on policy until
