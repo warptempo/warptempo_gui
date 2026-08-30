@@ -1518,9 +1518,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Tempo nudge, bare Up / Down (architect 2026-07-28). No view or selection
     // guard here — adjust_tempo_cents returns at once unless the warp view is
     // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
-    // it hands back the sentence for that refusal (and for its two target-view
-    // payload refusals and the group's wall) for this arm to card: the fact is
-    // the act's, the card is the dispatch's. `=` / `-` are the waveform magnification keys and
+    // it hands back the sentence for that refusal — and for its two target-view
+    // payload refusals, its two NO-CHANGE arms (a source-view label ref, an
+    // owner already resting on a tempo-bracket end) and the group's wall — for
+    // this arm to card: the fact is the act's, the card is the dispatch's. `=` / `-` are the waveform magnification keys and
     // Ctrl+`=` / Ctrl+`-` the zoom keys (see below). Modified Up / Down
     // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
     // the vertical arrows in any form.
@@ -1813,16 +1814,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 }
 
 void GuiInputHandler::cycle_marker_focus(bool forward) {
+    // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
+    // ruling), and the test is THE LANDING OWNER'S — marker_walk_actionable
+    // over marker_walk_landing (app_state.h), the very predicate the Walk
+    // previous / Walk next buttons wear as their face. A step with nothing
+    // ahead now writes NOTHING: no select, no playhead land, no recentre, and
+    // one card saying there is nowhere to step. It used to fall through to the
+    // jump below, which — with a focus standing — re-landed the playhead on
+    // that same focus and recentred on it, so a GREYED button sat over a key
+    // that moved the cursor; the face and the act ask one question now, so
+    // they cannot disagree. THE Ctrl+Shift+Tab MARCH takes this answer at each
+    // of its two cycles (the tab switch between them is its own act and still
+    // runs); two refusals in one press collapse to one card, the stack keeping
+    // a single card per sentence.
+    if (!marker_walk_actionable(app, audio, forward)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There is no marker to step to");
+        return;
+    }
+
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
-
-    // A WALK THAT LANDS NOTHING AND HAS NOTHING TO RE-LAND ON SAYS SO
-    // (architect 2026-08-30, the strictness ruling). The test is the jump's
-    // own false return below — a missing or out-of-range focus — which is
-    // exactly the state in which this press writes nothing at all: with a
-    // focus already standing the step still lands the playhead on it and
-    // recentres, so it is NOT a refusal and says nothing. The card is raised
-    // after the jump so the one test serves both.
 
     // The select above establishes the focused marker; the shared jump tail
     // moves the playhead onto it and recenters AT THE CURRENT ZOOM. Byte-
@@ -1841,10 +1853,11 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // untouched and remains the direct route to the working zoom; `0`'s second
     // arm reaches it through `c` whenever its tab has stamped no return level
     // (ViewState::zoom_recall_level).
-    if (!jump_playhead_to_focused_marker()) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "There is no marker to step to");
-    }
+    // The jump's own false return — a missing or out-of-range focus — cannot
+    // happen behind the gate above: the select just focused the landing that
+    // gate proved. Nothing here reads it; the return exists for the other
+    // caller (run_center_command).
+    jump_playhead_to_focused_marker();
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {

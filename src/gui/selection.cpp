@@ -339,7 +339,11 @@ void Selection::cycle_selection(bool forward) {
     // in the walk direction, an empty or all-disabled store yielding none.
     // Its contract, the domain rule and the disabled-skip are at the owner.
     const int land_marker = marker_walk_landing(app, audio, forward);
-    if (land_marker < 0) return;   // nothing ahead — the face is grey here
+    // Nothing ahead — the face is grey here, and since 2026-08-30 the sole
+    // caller asks this same owner BEFORE calling at all (cycle_marker_focus's
+    // gate, which cards the refusal), so this return is a belt rather than the
+    // walk's wall.
+    if (land_marker < 0) return;
 
     // Selection only. Viewport positioning is owned entirely by the sole
     // caller (cycle_marker_focus), which always centers the focused stop in

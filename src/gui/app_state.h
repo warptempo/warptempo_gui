@@ -8751,21 +8751,27 @@ inline int active_marker_count(const AppState& a) {
 // domain), disabled markers are skipped as if absent (the warp side through
 // effective_disabled's cascade), trim bounds are not stops. Defined in
 // app_state.cpp. TWO READERS: Selection::cycle_selection, whose whole
-// landing decision this IS, and marker_walk_actionable below, the Walk
-// previous / Walk next buttons' face — so an all-disabled store and "nothing
-// ahead in this direction" grey exactly where the step lands nothing. IT IS
-// AN O(n) SCAN PER TICK PER BUTTON in the face's hands, the class the
+// landing decision this IS, and marker_walk_actionable below — itself read by
+// the Walk previous / Walk next buttons' face AND, since 2026-08-30, by the
+// ACT's own leading gate (GuiInputHandler::cycle_marker_focus), so the face,
+// the refusal and the landing are one answer and an all-disabled store or
+// "nothing ahead in this direction" greys exactly where the step refuses. IT
+// IS AN O(n) SCAN PER TICK PER BUTTON in the face's hands, the class the
 // 2026-08-15 cost argument named; the planner ruled it in under the absolute
 // rule, the stores being tens of markers.
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward);
 
 // WOULD A MARKER-WALK STEP THIS WAY ACT? The landing owner's answer in one
-// bit — the face's spelling of the act's own `land_marker < 0` return. Its
-// count-only form (an empty store alone, 2026-08-30 morning) was the audit's
-// false premise: with no focus the cycle seeds from the playhead and can land,
-// while a full store can still land nothing. (Walk both tabs is never a whole
-// no-op: its tab switch acts whatever the two stores hold.)
+// bit. TWO READERS, and that is the point of it: the Walk previous / Walk next
+// buttons' disabled face, and the ACT's own leading gate since 2026-08-30
+// (GuiInputHandler::cycle_marker_focus, where the refusal's card and its
+// rationale sit) — a walk with nothing ahead writes nothing at all now, so the
+// greyed button and the dead key agree. Its count-only form (an empty store
+// alone, 2026-08-30 morning) was the audit's false premise: with no focus the
+// cycle seeds from the playhead and can land, while a full store can still
+// land nothing. (Walk both tabs is never a whole no-op: its tab switch acts
+// whatever the two stores hold.)
 inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
                                    bool forward) {
     return marker_walk_landing(a, audio, forward) >= 0;

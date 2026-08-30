@@ -36,6 +36,16 @@ namespace {
 // actions: copy_from_selection, paste_apply, and paste_state_apply.
 constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
+// THE TWO PASTES' SHARED "NOTHING HAPPENED" SENTENCE (architect 2026-08-30,
+// the strictness ruling). Both pastes end on the always-switch to target view
+// — a change of scene that looks exactly like a paste — so a run that paired
+// no block with any block must say that it wrote nothing, and both say it in
+// the same words. Its two readers are paste_apply's matched==0 arm (where the
+// destination produced no owned block) and paste_state_apply's pair_count==0
+// arm. A CLEAN PARTIAL WALK is not this: it pasted what it had, and a success
+// says nothing.
+constexpr const char* kNothingMatched = "Nothing matched, so nothing was pasted";
+
 // One named block resolved from a warp-marker walk. `label` is the
 // owning marker's label name (empty markers don't produce entries);
 // `start` is the owning marker's own absolute source frame and `end` is its
@@ -311,7 +321,7 @@ void PhaseResetPropagate::paste_apply() {
                                  std::move(stop_message));
         } else {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "Nothing matched, so nothing was pasted");
+                                 kNothingMatched);
         }
         // Nothing materialized: land in target view with no new selection.
         land_paste_in_target_view({});
@@ -608,9 +618,21 @@ void PhaseResetPropagate::paste_state_apply() {
         target_render.trigger();
     }
 
+    // ONE CARD FOR THE PRESS, and only where the run paired nothing at all:
+    // pair_count == 0 means one of the two sides produced no block, so the
+    // lockstep loop never ran, no flag could flip, and the switch to target
+    // view below is the only visible effect — the state a sentence exists for
+    // (architect 2026-08-30, the strictness ruling; the literal is its
+    // sibling's, kNothingMatched above). A DIVERGENCE or a count mismatch has
+    // its own `Stopped at …` report and wins here, and a run that paired
+    // blocks and flipped nothing stays silent: it walked what it had, and a
+    // clean walk says nothing.
     if (!stop_message.empty()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              std::move(stop_message));
+    } else if (pair_count == 0) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNothingMatched);
     }
 
     // Land in target view (phase reset's home) at the end of a completed

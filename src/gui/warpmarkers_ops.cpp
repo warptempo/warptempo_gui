@@ -521,10 +521,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // SELECTION fact and the pair blinked on every marker click. Naming the
     // block still earns itself — it is what makes this act's leading refusals
     // legible in one place — and the predicate's own header carries the
-    // supersession. The refusals below it stay unnamed: they are
-    // value-shaped per-marker facts — a label ref, a pass in target view, the
-    // bracket wall — and are consumed no-ops with a live face, as the whole
-    // row now is.
+    // supersession. The refusals below it are value-shaped per-marker facts
+    // — a label ref, a pass in target view, the bracket wall — and keep a LIVE
+    // face (the row greys on the block alone), but since 2026-08-30 each of
+    // them answers on a card of its own too: naming the block still earns
+    // itself, and what separates it from the rest is the FACE, not silence.
     //
     // THE BLOCK NOW ANSWERS ON A CARD (architect 2026-08-30, the strictness
     // ruling): this act composes the sentence and RETURNS it, the dispatch
@@ -672,12 +673,30 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         clamp_iter_bracket_to_tempo_bracket(m);
         changed = true;
     }
-    // NOTHING CHANGED: a label-ref focus (skipped above) or an owner already
-    // resting on its bracket edge. Still SILENT — these two are the "unnamed
-    // value-shaped refusals" this body's head describes, and the strictness
-    // arc's inventory does not carry them; they are candidates for a later
-    // step rather than an omission.
-    if (!changed) return std::nullopt;
+    // NOTHING CHANGED, AND IT SAYS WHICH OF THE TWO IT WAS (architect
+    // 2026-08-30, the strictness ruling; this act's reason channel is
+    // GuiOpRefusal, warpmarkers_ops.h). The loop has exactly ONE subject here
+    // — collapse_to_focused ran above, so the selection is the focus alone —
+    // and only two facts can leave it untouched:
+    //   a LABEL REF, skipped whole by the loop's first `continue` because it
+    //     has no tempo of its own to step. What reaches here is the SOURCE-view
+    //     ref: in target view the payload arm above already refused it in that
+    //     view's own words, so the two sentences never collide;
+    //   an OWNER AT A BRACKET END, whose clamped step lands the value it
+    //     already holds. A one-cent step can only do that AT an end, so the
+    //     marker rests ON kTempoMinCents or kTempoMaxCents (value_format.h) —
+    //     the bracket's own constants, which the clamp above reads and which
+    //     no number in this sentence restates.
+    // A pass reaches neither arm: it always freezes, so it always changes.
+    if (!changed) {
+        const int f = app.last_selected_marker;
+        // In range by tempo_cent_step_actionable, which proved it above and
+        // which nothing since has invalidated (no store resize on this path).
+        if (f >= 0 && f < static_cast<int>(mv_const.size()) &&
+            !mv_const[f].label_ref.empty())
+            return "A label reference has no tempo of its own";
+        return "The tempo is already at its limit";
+    }
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a held tempo step: the repeats skip the redundant push so one
