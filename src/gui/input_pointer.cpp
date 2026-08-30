@@ -7468,7 +7468,12 @@ void GuiInputHandler::finish_chrome_press_release(
 // off the button PAUSES (the scrollbar-button rule — sliding back on resumes,
 // the hold standing throughout; a leave that exits the WINDOW ends the hold
 // outright through the pointer-leave hook, and this body's first line sees the
-// arm gone), a dead enabled bit PAUSES (the disabled-press consume's mirror), a
+// arm gone), a dead enabled bit PAUSES (the disabled-press consume's mirror —
+// and since 2026-08-30 THE LADDER'S END for the magnification pair, whose
+// face greys at its top and bottom rung (planner decision 53): a burst that
+// walks the ladder to its end meets the dead bit on its next fire and rests
+// there under the held pointer, greyed, nothing un-pausing it while the hold
+// stands, and the lift that ends a fired burst is consumed), a
 // rate of 0 PAUSES (stated at its own line), and lost eligibility DISARMS — a
 // context that revoked the burst ends it
 // rather than parking it. One fire per due tick, the next scheduled from NOW

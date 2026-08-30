@@ -552,6 +552,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     kick_waveform_sync();
 }
 
+// ZOOM IN ALWAYS ACTS, which is why its button has no ladder-end face
+// (2026-08-30, planner decision 53): at the deepest level the press recentres
+// on the playhead instead of stepping, the second arm below.
 void Viewport::zoom_in() {
     if (app.zoom_level > kMinZoom) {
         // One whole level deeper from the current (possibly fractional) rung,
@@ -566,14 +569,15 @@ void Viewport::zoom_in() {
 }
 
 void Viewport::zoom_out() {
-    const double max_l = effective_max_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-    if (app.zoom_level >= max_l) return;  // already at the effective ceiling
+    // THE LEADING RETURN IS ONE OWNER (zoom_out_step_actionable, app_state.h —
+    // 2026-08-30, when the ZOOM OUT button's face began reading the same
+    // answer): already at the effective ceiling, the step is a consumed no-op.
+    if (!zoom_out_step_actionable(app, audio)) return;
     // One whole level shallower, saturating at the effective per-file ceiling
-    // (there is nothing beyond it — full zoom-out is whole-song-visible).
-    double target = app.zoom_level + 1.0;
-    if (target > max_l) target = max_l;
-    apply_zoom_change(target);
+    // (there is nothing beyond it — full zoom-out is whole-song-visible);
+    // clamp_zoom_level is the bounds' one owner, and past the return above it
+    // hands back a level strictly above the current one.
+    apply_zoom_change(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
 }
 
 void Viewport::zoom_steps(int in_steps) {
@@ -598,8 +602,10 @@ void Viewport::zoom_steps(int in_steps) {
     }
 
     // Zoom out by whole steps: add |in_steps| whole levels, saturating at the
-    // effective per-file ceiling.
-    if (app.zoom_level >= max_l) return;
+    // effective per-file ceiling. The at-the-ceiling refusal reads its one
+    // owner (zoom_out_step_actionable, app_state.h — the same compare
+    // zoom_out() and the ZOOM OUT button's face make since 2026-08-30).
+    if (!zoom_out_step_actionable(app, audio)) return;
     double target = app.zoom_level - static_cast<double>(in_steps);
     if (target > max_l) target = max_l;
     apply_zoom_change(target);

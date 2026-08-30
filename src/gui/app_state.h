@@ -1977,10 +1977,13 @@ enum class RedesignButton {
     // with the magnification pair below it: bare is vertical, ctrl is
     // horizontal, on the keys and on the wheel alike. The spelling is all that
     // moved — none of these four hold-repeats, then or now.
-    // Every one is a momentary navigation act, never-grey per the
-    // row's rule and LIVE in the `h` view (all four chords are on the mode's
-    // allowlist or its own vocabulary, so the derived partition answers live
-    // with nothing hand-listed). THE 2026-08-02 NO-DUPLICATE-COMMANDS RULING
+    // Every one is a momentary navigation act and LIVE in the `h` view (all
+    // four chords are on the mode's allowlist or its own vocabulary, so the
+    // derived partition answers live with nothing hand-listed). THREE NEVER
+    // GREY because each always acts — zoom in recentres at the deepest level,
+    // `0` runs `c` at the ceiling, `c` always frames — and ZOOM OUT GREYS AT
+    // THE PER-FILE CEILING since 2026-08-30 (planner decision 53 under the
+    // truthful-buttons ruling; the arm at redesign_button_enabled). THE 2026-08-02 NO-DUPLICATE-COMMANDS RULING
     // IS SUPERSEDED FOR THESE FOUR by the architect's relayout order — the
     // Navigation dropdown kept its zoom rows beside them, and the buttons are
     // the touch rig's pointer home for the same commands. THE DUPLICATION IS
@@ -2022,14 +2025,14 @@ enum class RedesignButton {
     // membership is the chord table's `repeats` column and lives nowhere
     // else.)
     //
-    // ALWAYS ENABLED AND NEVER GREY AT THE LADDER'S ENDS, the zoom group's own
-    // answer beside them (redesign_button_enabled): a press at either end is a
-    // consumed no-op exactly as a zoom-in at the ceiling is, and a face that
-    // tracked the rung would blink at interaction cadence — the 2026-08-15
-    // no-blink ruling, which the 2026-08-30 truthful-buttons ruling reversed
-    // for the bottom row and the history companions without ruling on either
-    // ladder's ends (the arm says so). NO LAMP either: each is an act that
-    // completes, momentary like the four magnifiers.
+    // GREYED AT THE LADDER'S ENDS since 2026-08-30 (planner decision 53 under
+    // the truthful-buttons ruling; the arm at redesign_button_enabled reads
+    // the applier's own bracket of the step's own target): a press at either
+    // end is a consumed no-op, and from 2026-08-26 until then the face stayed
+    // lit there as the zoom group's own answer — a face tracking the rung
+    // would blink at interaction cadence, the 2026-08-15 no-blink ruling,
+    // which the architect withdrew. NO LAMP: each is an act that completes,
+    // momentary like the four magnifiers.
     //
     // NO MODIFIER IS ADMITTED — neither redesign_button_shift_admits nor
     // redesign_button_ctrl_admits names them, so a shift or ctrl click is
@@ -8582,6 +8585,38 @@ double  effective_max_zoom_level(int waveform_width_px,
 // while loading (no live frames), so it cannot stomp a level the load path is
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
+
+// WOULD ONE ZOOM-OUT STEP MOVE THE LEVEL? (planner decision 53 under the
+// 2026-08-30 truthful-buttons ruling.) The step asks for one whole level
+// shallower and SATURATES at the per-file ceiling, so it moves nothing exactly
+// when the clamp hands the current level back — read off clamp_zoom_level,
+// the one owner of the level-bounds pair, never a restated number. The
+// live-frames term is that owner's own no-op branch made explicit: with no
+// live frames it returns the level untouched (so as not to stomp a load in
+// progress), and a step on a blank piece is the consumed no-op on_key's
+// loading guard already makes it. TWO READERS: Viewport::zoom_out (the act,
+// whose leading return this IS) and the icon row's ZOOM OUT button's face
+// (redesign_button_enabled); Viewport::zoom_steps' zoom-out branch reads it
+// too, its refusal being the same compare. ZOOM IN HAS NO TWIN OF THIS,
+// deliberately: at the deepest level its press RECENTRES on the playhead
+// (Viewport::zoom_in's floor arm), so the button always acts and stays lit —
+// the shape bare `0` has, whose ceiling arm runs the `c` command.
+inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
+    return live_total_frames(a, audio) > 0 &&
+           clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
+}
+
+// THE MAGNIFICATION STEP'S TARGET, one owner (planner decision 53): a step
+// asks for the current level plus or minus one, and the applier's bracket
+// (is_waveform_magnification_level, settings_file.h — the range shared with
+// the CLI) turns the step off either end into a consumed no-op. TWO READER
+// CLASSES of this target: the two key arms (bare `=` / `-`, input_handler.cpp,
+// which hand it to the applier) and the two icon-row buttons' faces
+// (redesign_button_enabled), which ask the SAME bracket of the SAME target so
+// the grey lands exactly where the applier would refuse.
+inline int waveform_magnification_step_target(const AppState& a, int direction) {
+    return a.waveform_magnification_level + direction;
+}
 // The rightmost on-grid viewport start (the flush-right rest). The single
 // right-wall owner, hoisted out of the clamp_viewport_start chokepoint when the
 // deleted strip drag's per-event pan clamp needed the same wall; that caller
@@ -8917,8 +8952,11 @@ inline bool playback_launch_playable(const AppState& a,
 // walk's "nothing ahead"), the value-shaped tails that need the act's own
 // resolution run (a label ref or a bracket wall under Up/Down, an empty
 // payload under Copy value, the lead-in offset under Play), the refusals that
-// live on disk (Play renders, the history opener), and — for the moment, by
-// planner decision 53 — the six magnifiers' ladder ends.
+// live on disk (Play renders, the history opener). The ladder ends of the
+// six magnifiers were the last to land (planner decision 53, the same day):
+// Zoom out at the per-file ceiling and the magnification pair at its two
+// rungs' ends grey; Zoom in, `0` and `c` stay lit because each always acts
+// (the first recentres at the floor, the second runs `c` at the ceiling).
 //
 // IT REVERSES THE 2026-08-15 SCOPED-TRUTH RULING, kept here in his words
 // because it stood for fifteen days and its reasoning is what the reversal
@@ -9282,31 +9320,56 @@ inline bool redesign_button_enabled(const AppState& a,
         // which is also where trim's freeze in that view is expressed for this
         // button.
         case RedesignButton::IconShowRegion:
-        // THE ZOOM GROUP MIRRORS NOTHING (2026-08-12): four navigation chords
-        // that always mean something on a loaded file, and the loading/blank
-        // guard is the family's shared answer below. LIVE in the `h` view —
-        // the derived partition finds all four on the mode's allowlist or its
-        // own vocabulary.
+        // THE ZOOM GROUP: three of the four MIRROR NOTHING (2026-08-12) because
+        // each always acts on a loaded file — ZOOM IN steps a level or, at the
+        // deepest level, RECENTRES on the playhead (Viewport::zoom_in's floor
+        // arm; the 2026-08-15 comment here called a zoom-in at the end a
+        // "harmless nothing", which it never was), FULL ZOOM OUT (bare `0`)
+        // runs the `c` command once it is there, and `c` always frames. ZOOM
+        // OUT is the one whose press CAN be a consumed no-op — at the per-file
+        // ceiling Viewport::zoom_out returns having moved nothing — and it
+        // GREYS THERE since 2026-08-30 (planner decision 53 under the
+        // truthful-buttons ruling; the 2026-08-15 no-blink ruling had kept the
+        // ladder's ends lit as the zoom group's own answer), reading
+        // zoom_out_step_actionable, the act's own leading return over
+        // clamp_zoom_level's bounds. It answers here, ABOVE the loading guard,
+        // like its three siblings — and greys during a load on its own
+        // live-frames term, where the other three stay lit; the chord drops at
+        // on_key's guard in that state, so the grey is the truthful one. All
+        // four are LIVE in the `h` view — the derived partition finds them on
+        // the mode's allowlist or its own vocabulary.
         case RedesignButton::IconZoomIn:
-        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
-        // AND NEITHER DOES THE MAGNIFICATION PAIR beside them (2026-08-26),
-        // which is the ZOOM GROUP'S ANSWER TAKEN VERBATIM at the one place it
-        // could have differed: a press at the ladder's end has nothing to step
-        // to, and that is a
-        // HARMLESS NOTHING rather than a refusal — exactly like a zoom-in at
-        // the ceiling, which this row has never greyed. A face that tracked the
-        // rung would blink every few presses, which was the 2026-08-15
-        // no-blink ruling's own case; the 2026-08-30 truthful-buttons ruling
-        // reached the bottom row's verbs and the history companions and did
-        // not rule on either ladder's ends, so this pair and the zoom four
-        // keep this answer. Both stay LIVE on a READ-ONLY tab (the
-        // picture's gain authors nothing the lock protects) and LIVE in the `h`
-        // VIEW, where the derived partition finds their chords on the mode's
-        // allowlist — nothing hand-listed either way.
+            return true;
+        case RedesignButton::IconZoomOut:
+            return zoom_out_step_actionable(a, audio);
+        // THE MAGNIFICATION PAIR GREYS AT ITS LADDER'S ENDS (planner decision
+        // 53, 2026-08-30): Magnify at the top rung, Reduce at the bottom, each
+        // asking the applier's own bracket (is_waveform_magnification_level,
+        // the range shared with the CLI) of the step's own target
+        // (waveform_magnification_step_target, the key arms' owner) — so the
+        // grey lands exactly where apply_waveform_magnification_level turns
+        // the step into a consumed no-op. From 2026-08-26 until then the pair
+        // took the zoom group's answer verbatim: a press at the end was a
+        // harmless nothing and a face tracking the rung would blink every few
+        // presses, the 2026-08-15 no-blink ruling's own case, which the
+        // 2026-08-30 ruling withdrew ("Any time a button would be a no-op,
+        // grey it"). BOTH HOLD-REPEAT, and the burst meets this face per fire
+        // (tick_chrome_press_repeat re-asks it ahead of every fire and PAUSES
+        // on a dead bit): a hold that walks the ladder to its end stops there
+        // with the face greyed under the held pointer, and the lift that ends
+        // a fired burst is consumed, so nothing steps past the end. Both stay
+        // LIVE on a READ-ONLY tab (the picture's gain authors nothing the lock
+        // protects) and LIVE in the `h` VIEW, where the derived partition
+        // finds their chords on the mode's allowlist — nothing hand-listed
+        // either way.
         case RedesignButton::IconWaveformMagnify:
+            return is_waveform_magnification_level(
+                waveform_magnification_step_target(a, +1));
         case RedesignButton::IconWaveformReduce:
+            return is_waveform_magnification_level(
+                waveform_magnification_step_target(a, -1));
         // FOLLOW MIRRORS NOTHING: bare `f` toggles the chase in either
         // direction on any loaded piece, and the lock admits it (follow is
         // navigation, not authored content). Its lamp reports the state.

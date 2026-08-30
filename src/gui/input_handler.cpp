@@ -1356,8 +1356,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Shift+= and the keypad KP_Add / KP_Subtract bind nothing here or
     // anywhere, one spelling per act. Both pairs are consumed no-ops where they
     // have nothing to do — the applier's own bracket answers for the ladder's
-    // ends, and the viewport clamp for the zoom's. They rest beside each other
-    // deliberately, so the four cannot drift apart.
+    // ends, and the viewport clamp for the zoom's — AND THEIR BUTTONS GREY
+    // THERE since 2026-08-30 (planner decision 53 under the truthful-buttons
+    // ruling): Magnify / Reduce read that same bracket of that same target
+    // (waveform_magnification_step_target, the owner these two arms hand to
+    // the applier), Zoom out reads zoom_out_step_actionable, and Zoom in
+    // stays lit because its floor arm recentres. The keys keep their consumed
+    // no-ops. They rest beside each other deliberately, so the four cannot
+    // drift apart.
     //
     // THE MAGNIFICATION MOVES THE PICTURE AND NOT THE SOUND: the level's gain
     // is multiplied into the peaks at the painter's tip mapping and reaches no
@@ -1370,12 +1376,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // undo entries to merge.
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
         apply_waveform_magnification_level(
-            app.waveform_magnification_level + 1);
+            waveform_magnification_step_target(app, +1));
         return;
     }
     if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
         apply_waveform_magnification_level(
-            app.waveform_magnification_level - 1);
+            waveform_magnification_step_target(app, -1));
         return;
     }
     if (key == GuiKeys::Equal && ctrl && !shift && !alt) {
@@ -2981,9 +2987,12 @@ void GuiInputHandler::apply_waveform_magnification_level(int level) {
     // The contract — sole writer, in-range-only, history-less, picture-only —
     // is at the declaration (input_handler.h). Two lines of body: the refusal,
     // and the rebuild every user-driven plate change takes. THE REFUSAL IS THE
-    // WHOLE END-OF-LADDER STORY: a step asks for cur ± 1 and this bracket check
-    // turns the step off the end into a consumed no-op, with no wrap and no
-    // clamp-to-self write.
+    // WHOLE END-OF-LADDER STORY: a step asks for cur ± 1
+    // (waveform_magnification_step_target) and this bracket check turns the
+    // step off the end into a consumed no-op, with no wrap and no
+    // clamp-to-self write — and since 2026-08-30 the two icon-row buttons'
+    // face asks this same bracket of that same target, so they grey exactly
+    // where this returns (planner decision 53).
     if (!is_waveform_magnification_level(level)) return;
     if (level == app.waveform_magnification_level) return;
     app.waveform_magnification_level = level;
