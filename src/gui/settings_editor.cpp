@@ -102,10 +102,13 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 void GuiSettingsEditor::open() {
     // THE LOCK SAYS SO (architect 2026-08-30, the strictness ruling), and the
     // card here answers the SETTINGS DROPDOWN alone: bare `;` is off the
-    // read-only allowlist and dies at the keyboard gate one level up, whose
-    // own card says these very words, so no press takes two. The dropdown's
-    // items never grey (the architect's standing rule for them), which is
-    // exactly why their commands owe an answer of their own.
+    // read-only allowlist and dies at the keyboard gate one level up, which
+    // says the same fact in its own voice ("; is not available on a read-only
+    // tab" — that gate cannot tell a bound chord from an unbound one and so
+    // names the press; this site knows its act and does not have to). No
+    // press takes two cards either way. The dropdown's items never grey (the
+    // architect's standing rule for them), which is exactly why their
+    // commands owe an answer of their own.
     if (active_view_state(app).read_only) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kTabReadOnlyCard);

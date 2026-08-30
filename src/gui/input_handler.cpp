@@ -29,10 +29,14 @@
 // live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
 // THE DRAG GATES' ONE SENTENCE (architect 2026-08-30): the keyboard is
-// swallowed while a gesture holds the pointer, and the two gates that swallow
-// it — the editor text-selection drag's, above the editor handlers, and the
-// pointer gestures' drag-modal gate below them — refuse for the SAME reason
-// and therefore say the same words. One literal, so a retune moves both.
+// swallowed while a gesture holds the pointer, and the FOUR sites that
+// swallow it refuse for the SAME reason and therefore say the same words —
+// the editor text-selection drag's gate, above the editor handlers; the
+// pointer gestures' drag-modal gate below them; and THE RENDER PLAYER'S AND
+// THE PICKER'S OWN ARMS above both, which outrank that gate and so ask its
+// question themselves rather than letting the band's row press or the scrub's
+// marker drag swallow a key in silence. One literal, so a retune moves all
+// four.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
 // THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
@@ -753,18 +757,37 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
     if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
-        // THE LOCK SAYS SO (architect 2026-08-30). THE STATE IS THE SENTENCE,
-        // not the chord: every chord this gate drops is dropped for the one
-        // reason, and the tab's lock is the fact the user has to be reminded
-        // of. IT IS THE KEY'S CARD ALONE — a GREYED button never reaches
-        // here, its press being consumed at arm_redesign_press's disabled
-        // line (nothing arms, so no chord dispatches at the lift), which is
-        // the truthful-buttons ruling's own division: the grey IS the message
-        // on the roster, and the card is the message on the keyboard. A LIT
+        // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
+        // 2026-08-30): "<chord> is not available on a read-only tab". THE
+        // SENTENCE IS BUILT FOR TWO CLASSES OF PRESS AT ONCE, because this
+        // gate cannot tell them apart — read_only_key_blocked is the
+        // COMPLEMENT OF AN ALLOWLIST, so it answers true both for a bound
+        // authoring chord the lock is holding back AND for a chord that is
+        // unbound everywhere (bare `4`, an unbound modifier decoration),
+        // which on a writable tab would have reached the strict-modifier
+        // tail or the bare default and been told it is not bound. A bare
+        // "This tab is read-only" therefore stated a WRONG CAUSE for the
+        // second class; "is not available on a read-only tab" is true of
+        // both — the key does nothing here, and the lock is the state that
+        // is on. The alternative, a membership list of the authoring chords
+        // to fork the sentence on, was rejected: it would be a second
+        // spelling of the bindings themselves, and its drift would lie. The
+        // accepted cost is that an unbound chord pressed on a locked tab is
+        // never told anywhere that it is unbound.
+        //
+        // IT IS THE KEY'S CARD ALONE — a GREYED button never reaches here,
+        // its press being consumed at arm_redesign_press's disabled line
+        // (nothing arms, so no chord dispatches at the lift), which is the
+        // truthful-buttons ruling's own division: the grey IS the message on
+        // the roster, and the card is the message on the keyboard. A LIT
         // button whose chord the lock drops does reach it, and is answered
-        // exactly as its key is.
+        // exactly as its key is. The bare literal kTabReadOnlyCard stays the
+        // word of the three sites that KNOW THEIR ACT and so need no chord in
+        // the sentence — the Settings dropdown's item click, the render
+        // player's Load in place, and the `h` view's Ctrl+H fork above.
         notifications.notify(AppState::NotificationClass::Normal,
-                             kTabReadOnlyCard);
+                             spell_chord(key, mods) +
+                                 " is not available on a read-only tab");
         return;
     }
 

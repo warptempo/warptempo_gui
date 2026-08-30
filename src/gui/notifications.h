@@ -22,26 +22,57 @@
 //              three refusals, Synchronize's refusals, "Target render
 //              failed", "History is unavailable", and — since 2026-08-30 —
 //              THE GATES' OWN CARDS, the swallowed press answered by the
-//              state that swallowed it (the editor gate, the two drag gates,
-//              the loading gate, the `h` allowlist, the read-only lock, the
+//              state that swallowed it (the editor gate, the FOUR drag gates
+//              — the editor text drag, the pointer gestures' drag-modal gate
+//              and the player's and the picker's own arms above it — the
+//              loading gate, the `h` allowlist, the read-only lock, the
 //              strict-modifier tail and the unbound bare default, the player's
 //              and the picker's catch-alls, and the two pointer refusals),
 //              each naming its chord through the one speller spell_chord
-//              (gui_input.h). Leaves on its own
+//              (gui_input.h), and THE ACTS' OWN REFUSALS beside them — the
+//              home-view binding's four sentences, the marker verbs' subject
+//              refusals, the walls and the value facts, the four clipboard
+//              chords, the value pair, undo and redo, the ten arms of the
+//              BPM gate, the marker walk's wall, the `h` walk's and the diff
+//              cycle's ends, the trim family's four, playback's and the
+//              audition's, and the render chords'. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock) or at its X.
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
 //              until its X; no clock.
 //
-// WHAT IS NOT A CARD, by ruling: a render's completion ("that would get
-// annoying"); the deliberately silent refusals that REMAIN (the off-home
-// drops, `m` on a bad run, and bare `h` with a checkpoint publishing — the
-// STRICT-MODIFIER NO-OPS left this list on 2026-08-30, every unbound chord
-// saying so now), plus the two silences the gates' ruling left standing:
-// TOP-LEVEL BARE ESC (a retraction with nothing to dismiss) and a MODIFIED
-// PRESS ON THE FOLDER OVERLAY'S PAD OR GAPS (not a press on a row); the
-// loader's fatal exits (adversarial class:
+// WHAT IS NOT A CARD, by ruling. EVERY SUCCESS: a render's completion ("that
+// would get annoying"), a Synchronize that mirrored the project, a propagate
+// walk that pasted what it had — an act that did what was asked says nothing,
+// its result being on screen. And THE SILENCES THE STRICTNESS RULING LEFT
+// STANDING, which are these and no others (2026-08-30, re-greped; the
+// off-home DROPS, `m` on a bad run and bare `h` with a checkpoint publishing
+// left this list that day with the strict-modifier no-ops, and every one of
+// them speaks now):
+//   * TOP-LEVEL BARE ESC — a retraction with nothing to dismiss. Esc inside a
+//     gate is NOT this case: the drag gates card it with every other key.
+//   * A MODIFIED PRESS ON THE FOLDER OVERLAY'S PAD OR GAPS (a press on a ROW
+//     cards), and the render player's modified press on the scrub track.
+//   * THE OFF-HOME FLAG DRAG — the one positional refusal that stayed silent
+//     when the keyboard's own gained sentences, because a pointer gesture
+//     that never begins is its own answer: the flag does not move.
+//   * A GREYED BUTTON'S LIFT — the grey IS the message (the truthful-buttons
+//     ruling's division: the roster answers the pointer, the card answers the
+//     keyboard), so the press dies at arm_redesign_press's disabled line.
+//   * THE TARGET-VIEW ENTRY GATE — the preview must never receive a map its
+//     builder refuses, and its refusals are unreachable from program-written
+//     input, so it prints one stderr line and shows nothing, exactly as the
+//     load road's own fallback always did.
+//   * THE NO-PRODUCER BELTS, where an error arm would exist without a
+//     producer (validation_topology.md): the drop's last-frame wall (both
+//     columns — every drop road authors at the playhead, which rests inside
+//     the domain), the position nudge's leading state guards (each either the
+//     loading gate's card one level up or a belt against a state the
+//     selection layer cannot be in), and
+//     enter_bpm_mode's five-bail recheck, whose every arm the `m` gate has
+//     already carded one level up.
+// Also not a card: the loader's fatal exits (adversarial class:
 // stderr and exit 1); every QUESTION (the prompts and the dialog editors); and
 // what is TRUE NOW rather than what happened — the render's progress line and
 // the `h` walk's line, the two STATE strings, which live in ROW 8'S STATE CELL
@@ -125,11 +156,17 @@
 // constant there (kKeysDuringDrag, kCheckpointPublishing, the two mode
 // routers' catch-all tails).
 //
-// THE LOCK'S SENTENCE — the read-only tab, said by the keyboard gate that
-// drops an authoring chord (on_key), by the Settings dropdown's own opener
+// THE LOCK'S SENTENCE — the read-only tab, said by the three sites that KNOW
+// THEIR ACT and so need no chord in it: the Settings dropdown's own opener
 // (the menu's items never grey, so their commands owe the answer themselves),
-// by the render player's Load in place, and by the `h` view's Ctrl+H, whose
-// admission composes the subject with this same lock.
+// the render player's Load in place, and the `h` view's Ctrl+H, whose
+// admission composes the subject with this same lock. THE KEYBOARD GATE IS
+// NOT A READER (since 2026-08-30): it drops an unbound chord and a bound
+// authoring one alike — its predicate is the complement of an allowlist —
+// so it says "<chord> is not available on a read-only tab" through the
+// speller instead, a sentence true of both classes where this one names a
+// cause the unbound press never had. The full reasoning is at that gate
+// (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 
 // THE TARGET PREVIEW'S SENTENCE — a launch asked for in target view before

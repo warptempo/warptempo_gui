@@ -222,9 +222,16 @@ struct GuiInputState {
 //
 // A KEY WITH NO SPELLING IS "That key", whole, modifiers and all: an unknown
 // keysym has no name to hang a prefix on, and "Ctrl+that key" reads as a
-// misspelling rather than as an answer. What reaches it is what the platform
-// boundary lets through and this table does not name — the keypad's own
-// keysyms, Insert, Menu, a dead key.
+// misspelling rather than as an answer. IT IS THE LAST RESORT AND NOT A
+// CATCH-ALL (architect 2026-08-30): the table below names every key the
+// PRODUCER CAN IDENTIFY, not merely every key this product BINDS, because a
+// press the platform could name and the card would not is an identity thrown
+// away. The Wayland boundary forwards the level-0 keysym of every key that is
+// not an F-key and not a modifier (GuiPlatform::key_from_keycode), so the
+// unbound half of a PC keyboard reaches this speller: the keypad whole, the
+// editing and system block, and a laptop's vendor strip. What is left for
+// "That key" is a value with no legend to read out — a dead key, a compose
+// sequence's intermediate, a keysym from a layout nobody here types.
 //
 // NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
 // before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
@@ -253,11 +260,101 @@ inline std::string spell_modifiers(GuiInputState mods) {
     return out;
 }
 
+// THE KEYSYMS THIS PRODUCT NAMES AND BINDS NOWHERE (2026-08-30). GuiKeys above
+// is the BOUND vocabulary — a value there exists because a predicate matches
+// it. These exist for the SPELLER ALONE, and for the one reason stated at the
+// speller's head: the Wayland boundary forwards every non-F, non-modifier
+// key's level-0 keysym, so a card that met one of these with "That key" would
+// be discarding an identity the platform had already handed it. Nothing may
+// bind one of these without moving it into GuiKeys first; the two namespaces
+// are the bound and the merely nameable, and the split is the point.
+// (Values are the universal keysym numbering GuiKey already mirrors.)
+namespace GuiSpellKeys {
+    // The editing and system block a PC keyboard carries beside the six
+    // navigation keys GuiKeys already names.
+    constexpr GuiKey Insert      = 0xff63;
+    constexpr GuiKey Menu        = 0xff67;
+    constexpr GuiKey Print       = 0xff61;
+    constexpr GuiKey SysReq      = 0xff15;
+    constexpr GuiKey ScrollLock  = 0xff14;
+    constexpr GuiKey Pause       = 0xff13;
+    constexpr GuiKey Break       = 0xff6b;
+    constexpr GuiKey NumLock     = 0xff7f;
+    constexpr GuiKey MultiKey    = 0xff20;   // the Compose key
+    constexpr GuiKey Clear       = 0xff0b;
+    constexpr GuiKey Linefeed    = 0xff0a;
+    constexpr GuiKey Begin       = 0xff58;
+    constexpr GuiKey Select      = 0xff60;
+    constexpr GuiKey Execute     = 0xff62;
+    constexpr GuiKey UndoKey     = 0xff65;
+    constexpr GuiKey RedoKey     = 0xff66;
+    constexpr GuiKey Find        = 0xff68;
+    constexpr GuiKey CancelKey   = 0xff69;
+    constexpr GuiKey Help        = 0xff6a;
+
+    // THE KEYPAD, whole. Its operators carry one level and always arrive as
+    // themselves; its ten dual-legend keys arrive as WHATEVER LEVEL 0 IS on
+    // the layout in force — the navigation keysym on the ordinary PC map
+    // (KP_End, not KP_1), the digit on a map that puts the digit first — and
+    // the table names both faces so the card reads out what was delivered
+    // rather than guessing at the cap.
+    constexpr GuiKey KpSpace     = 0xff80;
+    constexpr GuiKey KpTab       = 0xff89;
+    constexpr GuiKey KpMultiply  = 0xffaa;
+    constexpr GuiKey KpAdd       = 0xffab;
+    constexpr GuiKey KpSeparator = 0xffac;
+    constexpr GuiKey KpSubtract  = 0xffad;
+    constexpr GuiKey KpDecimal   = 0xffae;
+    constexpr GuiKey KpDivide    = 0xffaf;
+    constexpr GuiKey KpEqual     = 0xffbd;
+    constexpr GuiKey Kp0         = 0xffb0;   // .. Kp9 = 0xffb9, contiguous
+    constexpr GuiKey Kp9         = 0xffb9;
+    constexpr GuiKey KpHome      = 0xff95;
+    constexpr GuiKey KpLeft      = 0xff96;
+    constexpr GuiKey KpUp        = 0xff97;
+    constexpr GuiKey KpRight     = 0xff98;
+    constexpr GuiKey KpDown      = 0xff99;
+    constexpr GuiKey KpPageUp    = 0xff9a;   // KP_Prior
+    constexpr GuiKey KpPageDown  = 0xff9b;   // KP_Next
+    constexpr GuiKey KpEnd       = 0xff9c;
+    constexpr GuiKey KpBegin     = 0xff9d;
+    constexpr GuiKey KpInsert    = 0xff9e;
+    constexpr GuiKey KpDelete    = 0xff9f;
+
+    // THE LAPTOP'S VENDOR STRIP. These reach the program only where the
+    // compositor has NOT claimed one for itself, which is a per-desktop fact
+    // this program cannot know — so they are named here rather than assumed
+    // absent, on the same rule as the rest of the table.
+    constexpr GuiKey BrightnessUp   = 0x1008ff02;
+    constexpr GuiKey BrightnessDown = 0x1008ff03;
+    constexpr GuiKey VolumeDown     = 0x1008ff11;
+    constexpr GuiKey Mute           = 0x1008ff12;
+    constexpr GuiKey VolumeUp       = 0x1008ff13;
+    constexpr GuiKey MediaPlay      = 0x1008ff14;
+    constexpr GuiKey MediaStop      = 0x1008ff15;
+    constexpr GuiKey MediaPrev      = 0x1008ff16;
+    constexpr GuiKey MediaNext      = 0x1008ff17;
+    constexpr GuiKey MicMute        = 0x1008ffb2;
+}
+
 // The named keys, and the whole of them: every GuiKey that is not a printable
-// ASCII character, plus Space (a printable that reads as a blank). The two
-// pairs that share a name share it deliberately — Return / KpEnter are one
-// "Enter" to the hand, and IsoLeftTab IS the shifted Tab keysym.
+// ASCII character, plus Space (a printable that reads as a blank), plus every
+// keysym of GuiSpellKeys above — the unbound half of the keyboard, named
+// because the producer names it. The two pairs that share a name share it
+// deliberately — Return / KpEnter are one "Enter" to the hand, and IsoLeftTab
+// IS the shifted Tab keysym. THE KEYPAD IS SPELLED "Keypad <legend>" and the
+// keypad's Enter is NOT (it stays the hand's one "Enter", the pair above):
+// the prefix exists to separate a key from its twin on the main board, and
+// Enter has no twin the answer would confuse.
 inline const char* spell_key_name(GuiKey key) {
+    if (key >= GuiSpellKeys::Kp0 && key <= GuiSpellKeys::Kp9) {
+        // The ten digit faces, contiguous in the keysym table and spelled from
+        // it rather than as ten arms — "Keypad 0" .. "Keypad 9".
+        static const char* const kDigits[10] = {
+            "Keypad 0", "Keypad 1", "Keypad 2", "Keypad 3", "Keypad 4",
+            "Keypad 5", "Keypad 6", "Keypad 7", "Keypad 8", "Keypad 9"};
+        return kDigits[key - GuiSpellKeys::Kp0];
+    }
     switch (key) {
         case GuiKeys::Space:      return "Space";
         case GuiKeys::Return:
@@ -275,6 +372,59 @@ inline const char* spell_key_name(GuiKey key) {
         case GuiKeys::Down:       return "Down";
         case GuiKeys::Left:       return "Left";
         case GuiKeys::Right:      return "Right";
+
+        case GuiSpellKeys::Insert:      return "Insert";
+        case GuiSpellKeys::Menu:        return "Menu";
+        case GuiSpellKeys::Print:       return "Print Screen";
+        case GuiSpellKeys::SysReq:      return "Sys Req";
+        case GuiSpellKeys::ScrollLock:  return "Scroll Lock";
+        case GuiSpellKeys::Pause:       return "Pause";
+        case GuiSpellKeys::Break:       return "Break";
+        case GuiSpellKeys::NumLock:     return "Num Lock";
+        case GuiSpellKeys::MultiKey:    return "Compose";
+        case GuiSpellKeys::Clear:       return "Clear";
+        case GuiSpellKeys::Linefeed:    return "Linefeed";
+        case GuiSpellKeys::Begin:       return "Begin";
+        case GuiSpellKeys::Select:      return "Select";
+        case GuiSpellKeys::Execute:     return "Execute";
+        case GuiSpellKeys::UndoKey:     return "Undo";
+        case GuiSpellKeys::RedoKey:     return "Redo";
+        case GuiSpellKeys::Find:        return "Find";
+        case GuiSpellKeys::CancelKey:   return "Cancel";
+        case GuiSpellKeys::Help:        return "Help";
+
+        case GuiSpellKeys::KpSpace:     return "Keypad Space";
+        case GuiSpellKeys::KpTab:       return "Keypad Tab";
+        case GuiSpellKeys::KpMultiply:  return "Keypad *";
+        case GuiSpellKeys::KpAdd:       return "Keypad +";
+        case GuiSpellKeys::KpSeparator: return "Keypad ,";
+        case GuiSpellKeys::KpSubtract:  return "Keypad -";
+        case GuiSpellKeys::KpDecimal:   return "Keypad .";
+        case GuiSpellKeys::KpDivide:    return "Keypad /";
+        case GuiSpellKeys::KpEqual:     return "Keypad =";
+        case GuiSpellKeys::KpHome:      return "Keypad Home";
+        case GuiSpellKeys::KpLeft:      return "Keypad Left";
+        case GuiSpellKeys::KpUp:        return "Keypad Up";
+        case GuiSpellKeys::KpRight:     return "Keypad Right";
+        case GuiSpellKeys::KpDown:      return "Keypad Down";
+        case GuiSpellKeys::KpPageUp:    return "Keypad Page Up";
+        case GuiSpellKeys::KpPageDown:  return "Keypad Page Down";
+        case GuiSpellKeys::KpEnd:       return "Keypad End";
+        case GuiSpellKeys::KpBegin:     return "Keypad Begin";
+        case GuiSpellKeys::KpInsert:    return "Keypad Insert";
+        case GuiSpellKeys::KpDelete:    return "Keypad Delete";
+
+        case GuiSpellKeys::BrightnessUp:   return "Brightness Up";
+        case GuiSpellKeys::BrightnessDown: return "Brightness Down";
+        case GuiSpellKeys::VolumeDown:     return "Volume Down";
+        case GuiSpellKeys::Mute:           return "Mute";
+        case GuiSpellKeys::VolumeUp:       return "Volume Up";
+        case GuiSpellKeys::MediaPlay:      return "Media Play";
+        case GuiSpellKeys::MediaStop:      return "Media Stop";
+        case GuiSpellKeys::MediaPrev:      return "Media Previous";
+        case GuiSpellKeys::MediaNext:      return "Media Next";
+        case GuiSpellKeys::MicMute:        return "Mic Mute";
+
         default:                  return nullptr;
     }
 }

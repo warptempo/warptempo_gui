@@ -6750,9 +6750,13 @@ void GuiInputHandler::render_player_load_in_place() {
     // engine block, exactly what the read-only tab protects. The player's row
     // wears no disabled face by ruling — the whole roster is dead under it
     // and its own buttons are parked lit — so the refusal AND its sentence
-    // are the act's, on both roads (the button's lift and bare `'`). The
-    // words are the keyboard gate's own (kTabReadOnlyCard, notifications.h):
-    // one lock, one wording.
+    // are the act's, on both roads (the button's lift and bare `'`). It is
+    // one of the THREE readers of kTabReadOnlyCard (notifications.h) — the
+    // sites that KNOW THEIR ACT and so need no chord in the sentence. The
+    // keyboard gate is not among them: it drops an unbound chord and a bound
+    // authoring one alike, so it names the chord instead ("<chord> is not
+    // available on a read-only tab"). One lock; the wording differs exactly
+    // where what the site knows differs.
     if (active_view_state(app).read_only) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kTabReadOnlyCard);
