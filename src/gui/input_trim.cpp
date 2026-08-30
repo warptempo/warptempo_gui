@@ -193,10 +193,13 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // crossed/equal trim bounds cannot REST — committing one bound onto or across
 // the other RESETS BOTH bounds to the song edges, the trim sibling of the
 // marker normalizations (ambiguous states resolve instead of resting or
-// refusing). SILENT by design: the bar's endcaps visibly JUMP TO THE SONG
+// refusing). The bar's endcaps visibly JUMP TO THE SONG
 // EDGES, which
-// is the whole signal (it used to be the old chips vanishing; with the window
-// always set there is nothing to vanish into). The check is the exact integer
+// was held to be the whole signal until 2026-08-30 (it used to be the old
+// chips vanishing; with the window always set there is nothing to vanish
+// into) — SINCE THEN THE RESET ALSO SAYS SO, on one card raised at the owner
+// below, because a collapsed sweep takes its overlay down with it and the
+// jump is easy to miss. The check is the exact integer
 // compare end_frame <= begin_frame, run only at COMMIT — nothing pops
 // mid-gesture, and update_trim_drag never calls this.
 //

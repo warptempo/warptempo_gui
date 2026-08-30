@@ -223,15 +223,32 @@ struct GuiInputState {
 // A KEY WITH NO SPELLING IS "That key", whole, modifiers and all: an unknown
 // keysym has no name to hang a prefix on, and "Ctrl+that key" reads as a
 // misspelling rather than as an answer. IT IS THE LAST RESORT AND NOT A
-// CATCH-ALL (architect 2026-08-30): the table below names every key the
-// PRODUCER CAN IDENTIFY, not merely every key this product BINDS, because a
+// CATCH-ALL: the table below names far more than this product BINDS, because a
 // press the platform could name and the card would not is an identity thrown
 // away. The Wayland boundary forwards the level-0 keysym of every key that is
 // not an F-key and not a modifier (GuiPlatform::key_from_keycode), so the
-// unbound half of a PC keyboard reaches this speller: the keypad whole, the
-// editing and system block, and a laptop's vendor strip. What is left for
-// "That key" is a value with no legend to read out — a dead key, a compose
-// sequence's intermediate, a keysym from a layout nobody here types.
+// unbound half of a PC keyboard reaches this speller and the table answers for
+// THE BOARDS THIS PRODUCT IS TYPED ON, which is exactly three blocks: the
+// keypad whole, the editing and system block, and the laptop's own vendor
+// strip.
+//
+// AND THAT IS THE WHOLE OF THE CLAIM (narrowed 2026-08-30, closing codex round
+// D's MED-2, which found the earlier "every key the producer can identify" to
+// be a promise the table does not keep). The producer admits every named
+// keysym xkbcommon carries — XF86Calculator, browser Back/Forward, Power,
+// Sleep, WLAN, keyboard brightness, Touchpad Toggle and the rest of a vendor
+// space of hundreds — and each of those reads "That key is not bound" here.
+// THAT IS THE ACCEPTED COST, not an omission to be filled in: the table is
+// hand-written, one line per key, and a table that chased the vendor space
+// would be a second copy of somebody else's registry that nothing in this
+// product exercises. THE OTHER ROAD WAS REJECTED with it — deriving the name
+// from xkbcommon at the Wayland boundary (xkb_keysym_get_name) would put a
+// STRING on the key event and so widen the platform seam for a card the
+// Android backend, which produces GuiKeys only through synthesize_key, could
+// never spell the same way; the two hosts must answer one press one sentence.
+// So what is left for "That key" is a value with no legend this product reads
+// out — a dead key, a compose sequence's intermediate, a keysym from a layout
+// nobody here types, and any vendor key outside the strip below.
 //
 // NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
 // before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
@@ -268,6 +285,12 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // be discarding an identity the platform had already handed it. Nothing may
 // bind one of these without moving it into GuiKeys first; the two namespaces
 // are the bound and the merely nameable, and the split is the point.
+// THE TABLE IS THREE BLOCKS AND CLOSES THERE — the editing and system block,
+// the keypad, the laptop's vendor strip — and the speller's head owns the
+// reasoning: a producer-admitted keysym outside them (Calculator, browser
+// Back, Power, …) reads "That key is not bound", the accepted cost of not
+// keeping a copy of somebody else's vendor registry and of not widening the
+// platform seam with an xkbcommon-derived name Android could not match.
 // (Values are the universal keysym numbering GuiKey already mirrors.)
 namespace GuiSpellKeys {
     // The editing and system block a PC keyboard carries beside the six
@@ -339,8 +362,10 @@ namespace GuiSpellKeys {
 
 // The named keys, and the whole of them: every GuiKey that is not a printable
 // ASCII character, plus Space (a printable that reads as a blank), plus every
-// keysym of GuiSpellKeys above — the unbound half of the keyboard, named
-// because the producer names it. The two pairs that share a name share it
+// keysym of GuiSpellKeys above — the unbound half of the boards this product
+// is typed on, named because the producer names them and the table carries
+// them (its three blocks, and no further: the head owns the narrowing and the
+// cost). The two pairs that share a name share it
 // deliberately — Return / KpEnter are one "Enter" to the hand, and IsoLeftTab
 // IS the shifted Tab keysym. THE KEYPAD IS SPELLED "Keypad <legend>" and the
 // keypad's Enter is NOT (it stays the hand's one "Enter", the pair above):
@@ -524,8 +549,9 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // rule's consumed no-ops, and both are ONE-SHOT (repeat-ineligible: a copy
 // repeats onto itself and a jump has one destination). Their subject is the
 // SELECTION'S FOCUS, and an ineligible focus — an owner, a phase reset,
-// iteration mode, the `P` column, nothing focused — is a silent consumed
-// no-op at the act (payload_eligible_marker, app_state.h). Both are
+// iteration mode, the `P` column, nothing focused — is a consumed no-op at
+// the act that says so on a card since 2026-08-30, each chord in its own
+// words (payload_eligible_marker, app_state.h). Both are
 // READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits them)
 // and legal in both audio views, being navigation rather than positional
 // authoring; the `h` view refuses them at its own allowlist like every chord

@@ -2591,9 +2591,15 @@ private:
     //   through on_key at the lift like Quit's). It REOPENS IN PLACE:
     //   gui_main's loop rebuilds the object set around the chosen source (the
     //   contract is at main.cpp).
-    //     open_project_picker: the opener. Refuses silently, without touching
-    //       playback, while a prompt, any editor, the render player or a
-    //       picker stands, and during a load; stops playback through the
+    //     open_project_picker: the opener. Refuses without touching
+    //       playback while a prompt, any editor, the render player or a
+    //       picker stands, and during a load — SAYING SO on the two arms
+    //       where the user has a surface to leave (any editor: "Close the
+    //       editor first"; the player: "Close the render player first") and
+    //       SILENTLY on the other three, a prompt veiling everything and
+    //       being its own answer, a second picker being what is already on
+    //       screen (the reasoning is at the arms, 2026-08-30); stops playback
+    //       through the
     //       shared modal stop only once the picker is definitely opening,
     //       mints the session and builds the list. IT IS ADMITTED IN THE `h`
     //       HISTORY VIEW since 2026-08-29 (architect, "admit both"), on both
@@ -2715,9 +2721,13 @@ private:
     //
     // synchronize_to_external_storage: the opener. It refuses silently, without
     // touching playback, while a prompt or any editor stands and during a
-    // load — the Open project row's own gates, mirrored
-    // because a menu row's refusals are the menu's, not the act's — and it
-    // refuses with no source loaded, having nothing to mirror. IT IS ADMITTED
+    // load — the Open project row's own three gates, mirrored
+    // because a menu row's refusals are the menu's, not the act's, and
+    // silent here where the Open row's editor arm speaks, this row being
+    // unreachable under a pointer-transparent editor's own menu press — and
+    // it refuses with no source loaded, having nothing to mirror. ITS OWN
+    // refusals all card (the already-running answer and the unset key
+    // below). IT IS ADMITTED
     // IN THE `h` HISTORY VIEW since 2026-08-29 (architect, "admit both", with
     // the Open row): a viewer running it is a viewer copying files, and THE
     // VIEW COSTS IT NOTHING — its sentences are notification cards, which the
@@ -3055,8 +3065,9 @@ private:
 
     // Crossed/equal trim cannot REST (ruling comment at the definition): when
     // end_frame <= begin_frame — exact integer compare — at a trim COMMIT, RESET
-    // both bounds to the song edges, silently (the endcaps jumping there are
-    // the signal). Recognizes the already-full window first, so the one-frame
+    // both bounds to the song edges (the endcaps jump there, and since
+    // 2026-08-30 the reset also says so on one card raised here, this being
+    // the one owner every former reaches). Recognizes the already-full window first, so the one-frame
     // canonical pair [0, 0] is left alone rather than reset every commit. Called
     // by every trim commit site after its mutation and before its
     // invalidations, so the repaint shows the reset state.
@@ -3817,8 +3828,9 @@ private:
     // that value came from — the pass's owner or the ref's definition — ON THE
     // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
     // apart. One composer answers both (resolved_marker_payload, the value and
-    // its source index), one gate refuses both silently
-    // (payload_eligible_marker), and the jump's five acts are each somebody
+    // its source index), one gate refuses both — carding since 2026-08-30, in
+    // each chord's own words (payload_eligible_marker) — and the jump's five
+    // acts are each somebody
     // else's chokepoint IN A RULED ORDER — `c` ON THE TAB IT LEAVES FIRST
     // (architect 2026-08-29, the A/B audition's own shape: the origin tab is
     // framed on the reference before the act moves on, and `c`'s focused land
@@ -3839,7 +3851,9 @@ private:
     // "Cannot load in place while a render is running" on a card over a
     // running or parked render (silent for the one day a status bar stood at
     // the window's foot to explain it) and
-    // refuses SILENTLY on a read-only tab (the lock's own), says "Only a
+    // says "This tab is read-only" on a read-only tab (kTabReadOnlyCard, the
+    // lock's own literal and this one of its three readers — the arm was
+    // silent until 2026-08-30), says "Only a
     // batch render under tmp/ can be loaded in place; folders and the
     // deliverable carry no recipe" on any highlight that is
     // not a load-capable wav, and otherwise

@@ -18,7 +18,9 @@ int64_t GuiAbAudition::audition_span_frames() const {
 // (playback_launch_playable) asked ahead of time for a tab that is not active
 // yet — the switch itself takes no gate, so the other tab's frame must be
 // judged here or not at all. In source view the predicate has no preview term
-// and only the two-frame remainder gate answers.
+// and only the two-frame remainder gate answers. THE DEVICE IS NOT ASKED HERE:
+// it is not a per-tab fact, so start() asks it once for the pair, ahead of
+// this.
 bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
     if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
         return false;
@@ -43,6 +45,21 @@ void GuiAbAudition::start() {
                              "An audition is already running");
         return;
     }
+    // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), ahead of both
+    // tab gates and ahead of the first `c`: the act's four plays all end at the
+    // launch body's own device check, so a dead device refuses the whole act —
+    // but it would refuse it AFTER this body had zoomed one tab, switched to
+    // the other and zoomed that one too, which is exactly the "a refused act
+    // moves nothing" promise the gates below are here to keep. It is not a
+    // per-tab fact (nothing will sound on either), so it is asked once, before
+    // the pair is read at all. The sentence is the launch body's own literal,
+    // spelled once at playback_lifecycle.h; this arm returns, so the belt down
+    // there never adds a second card to the press.
+    if (playback.device_unavailable()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPlaybackDeviceUnavailableCard);
+        return;
+    }
     const char home  = app.active_tab_view;
     const char other = (home == 'A') ? 'B' : 'A';
     // THE OTHER TAB'S PLAYHEAD, read through its own ViewState and clamped
@@ -53,8 +70,12 @@ void GuiAbAudition::start() {
     const ViewState& other_tab = (other == 'A') ? app.tab_a : app.tab_b;
     const int64_t other_playhead = clamp_playhead_to_live_domain(
         other_tab.playhead_cursor_sample, app, audio);
-    // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH: an act that could only
-    // half-run must not move the user off his tab and then fall silent.
+    // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH — and, since 2026-08-30, so
+    // is the device above: an act that could only half-run must not move the
+    // user off his tab and then fall silent, and the promise holds only if
+    // EVERY reason the launch body can refuse for has been asked before the
+    // first camera write. Those reasons are the device and the playable
+    // predicate, which is what this pair and the check above are between them.
     // AND THE GATE SAYS SO, ONCE, FOR EITHER TAB (architect 2026-08-30): the
     // act is one act over a pair, so which half of the pair could not play is
     // not the answer — that it cannot run is. The Play button's shift-click

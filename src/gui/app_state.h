@@ -3168,10 +3168,12 @@ inline constexpr int kFilePopupItemCount =
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — wrong mode, wrong selection, an empty
-// clipboard, a locked tab — still dispatches, and its own arm answers with the
-// silent refusal the key gives. Every one of these five refuses silently by
-// construction, so there is nothing here that could lie the way the deleted
-// Navigation menu's one ruled exception could.
+// clipboard, a locked tab — still dispatches, and its own arm answers exactly
+// as the key does, which for all five of these is a notification card naming
+// the rule it failed (2026-08-30, the strictness ruling; they were silent
+// no-ops before it). So there is nothing here that could lie the way the
+// deleted Navigation menu's one ruled exception could — the row acts, and the
+// act says what it found.
 inline constexpr CommandPopupItem kEditPopupItems[] = {
     {"Copy phase resets",      "Ctrl+P",           GuiKeys::P,
      true,  false, false, false},
@@ -3211,8 +3213,9 @@ inline constexpr int kEditPopupItemCount =
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — the phase-reset marker view, a locked
 // tab, a selection the BPM gate refuses — still dispatches, and its own arm
-// answers with the silent refusal the key gives. Both of these refuse silently
-// by construction. THE PAIR'S TWO GATES CAME ACROSS WITH THE MOVE UNCHANGED
+// answers exactly as the key does, which for both of these is a notification
+// card naming the rule it failed (2026-08-30; `m`'s ladder cards the first
+// rule the selection broke and bare `i` cards the P view). THE PAIR'S TWO GATES CAME ACROSS WITH THE MOVE UNCHANGED
 // AND UNMIRRORED: the READ-ONLY LOCK blocked bare `m` and bare `i` and still
 // does — blocked, with no face left to grey, exactly as the propagate pair was
 // left in 2026-08-20 (the record is at redesign_button_enabled's read-only
@@ -4105,7 +4108,8 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         The ordering is stated at GuiAbAudition::apply_working_zoom.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
-// The act's REFUSALS (all silent, all at the press) are at GuiAbAudition::start.
+// The act's REFUSALS (all at the press, each on a card since 2026-08-30) are
+// at GuiAbAudition::start, whose header holds the inventory.
 struct GuiAuditionSequence {
     enum class Phase { Idle, OtherFirst, OtherSecond, HomeFirst, HomeSecond };
     // The act's ONE running bit: Idle means no act stands, in either half.
@@ -7996,8 +8000,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // non-home view a column is display/navigation-only (selection, Tab and the
 // selection-only readout all live — the retired hover popup and lane readouts
 // are recorded at the HoverPopupState deletion note above;
-// every placement/store mutation this predicate still gates refuses silently,
-// navigation-class, exactly the read-only-tab convention). WHAT IT GATES IS
+// every placement/store mutation this predicate still gates refuses without
+// authoring anything — silently where a POINTER gesture asked, on a card
+// naming the column's home view where a KEY did, the split the strictness
+// ruling drew on 2026-08-30). WHAT IT GATES IS
 // THE POSITIONAL FAMILY (architect 2026-08-24, with the fifth exception
 // below): the rationale above is about PLACEMENT — an edit that moves a marker
 // inside the very map the view is drawn from — and it says nothing about a
@@ -8064,8 +8070,15 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // Left/Right position nudge, and the `m` BPM open — which is omitted for a
 // reason of its own, rewriting tempo through a derivation over a SPAN rather
 // than editing one marker's value. Those four still consult this predicate and
-// still refuse silently off home — the NUDGE literally so since 2026-08-29,
-// its dispatch having hand-spelled this predicate's own two arms until then.
+// still refuse off home — the NUDGE through it literally since 2026-08-29, its
+// dispatch having hand-spelled this predicate's own two arms until then. WHAT
+// THE REFUSAL LOOKS LIKE SPLIT ON 2026-08-30: the three KEYBOARD routes
+// (bare `s`, the Left/Right nudge, `m`) each say so on a card forked on the
+// column — "Phase resets are placed/moved in target view" against "Markers
+// are placed/moved in source view", and `m`'s own "BPM mode works in source
+// view" — while the two POINTER routes (the empty-lane double-click drop and
+// the flag drag) stay SILENT, gesture-class, the unmoved marker being the
+// answer.
 // SIX CALL SITES, re-derived by grep 2026-08-30: the keyboard drop
 // (input_handler.cpp), the `m` bpm open (input_key_dispatch.cpp), the
 // empty-lane double-click drop and the flag drag (input_pointer.cpp), and TWO
@@ -8972,8 +8985,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
 // WOULD A PLAYBACK LAUNCH FROM `launch_pos` BE PLAYABLE? The launch body's
 // refusal set, hoisted whole (2026-08-15). THREE READERS:
-// GuiPlaybackLifecycle::launch_playback_window, whose every silent refusal
-// this IS and which CALLS IT — so this is a real producer's own predicate;
+// GuiPlaybackLifecycle::launch_playback_window, whose every POSITION refusal
+// this IS and which CALLS IT — so this is a real producer's own predicate
+// (the body's other refusal is the dead device, asked ahead of this one and
+// not a term of it; since 2026-08-30 both say so on a card);
 // since 2026-08-26 the A/B audition's PRESS-TIME GATE
 // (GuiAbAudition::tab_launch_ready), which asks it about the OTHER tab's
 // playhead before the act's first switch — a frame no launch body can be

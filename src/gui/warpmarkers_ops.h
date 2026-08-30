@@ -88,7 +88,8 @@ struct GuiWarpMarkersOps {
    private:
     // Group tempo step (architect 2026-07-23, 2+ selection): all-or-nothing.
     // Every selected marker must be a steppable OWNER not at the bracket edge in
-    // the step direction, or the whole press refuses silently; then each steps
+    // the step direction, or the whole press refuses on its own sentence
+    // (2026-08-30); then each steps
     // its own tempo_cents by delta_cents. See the definition for the wall set.
     GuiOpRefusal adjust_tempo_cents_group(int64_t delta_cents,
                                           bool synthesized_repeat);

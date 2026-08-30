@@ -109,7 +109,8 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // Space-bar: start/stop playback. Playback runs from the cursor to the active
 // view's end — the SONG's end in source view, the preview buffer's (which is the
 // trim window's) in target view; the split and its reasoning are at the launch
-// body. Pressing space with the cursor at or past that end is a silent no-op.
+// body. Pressing space with the cursor at or past that end is a no-op that
+// says "There is nothing left to play from here" (2026-08-30).
 // THE CURSOR IS ALWAYS THE START
 // (architect 2026-07-30): the region left-bound launch that used to divert
 // Space's play edge to scrub_launch_at is deleted with the SPAN FORM, so every
@@ -171,10 +172,23 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     }
     // Defensive: clear any stale override from an unhandled stop path so
     // it can't survive into the new playback session. Runs before any
-    // launch validation (the pre-sum gate below included), so a refused
-    // launch still leaves it cleared; the shared launch body assumes
+    // launch validation (the device and pre-sum gates below included), so a
+    // refused launch still leaves it cleared; the shared launch body assumes
     // its caller ran it (scrub_launch_at, the other caller, does too).
     app.follow_overridden_for_session = false;
+    // THE DEVICE IS ASKED HERE, AHEAD OF THE POSITION (2026-08-30). The launch
+    // body asks it first for the same reason and would answer this press
+    // correctly in source view — but the target arm below decides a POSITION
+    // refusal of its own before control could reach the body, so a dead device
+    // met at the domain's end would be told the wrong cause. Asked once for
+    // both views because the fact is neither view's: nothing will sound. The
+    // sentence is the launch body's own literal, and this arm returns, so the
+    // belt below never adds a second card to the press.
+    if (playback.device_unavailable()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPlaybackDeviceUnavailableCard);
+        return;
+    }
     int64_t launch_pos = app.playhead_cursor_sample;
     if (app.active_audio_view == 'T') {
         // Launch = cursor + launch_offset. The offset is 0 for plain Space and
@@ -201,9 +215,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // or +N/2, so a tiny buffer only drives the difference negative,
         // which merely makes the no-op FIRE (the safe direction). The
         // target-buffer populated check lives in the launch body; running
-        // this gate first is verdict-identical (both are pure silent refusals
-        // with no state written between them, and domain_end() is well-
-        // defined for whatever buffer is bound).
+        // this gate first is verdict-identical (both are pure refusals on
+        // the same one sentence, with no state written between them, and
+        // domain_end() is well-defined for whatever buffer is bound).
         if (app.playhead_cursor_sample >=
             playback.domain_end() - launch_offset - 1) {
             // THE LAUNCH BODY'S OWN VERDICT ASKED EARLIER, so it says the
@@ -299,8 +313,10 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 
 // THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
 // PAINT domain — against the active view's window, seed the scanner, and play
-// [start, end). Returns whether it launched; every refusal is a silent no-op
-// (the "nothing to audition" family). Two callers: the view-end launch above
+// [start, end). Returns whether it launched; its two refusals — the dead
+// device first, then the launch position — each say so on a notification card
+// (2026-08-30; the "nothing to audition" family, which said nothing until
+// then). Two callers: the view-end launch above
 // (Space's play edge and the scrub, `end` = the view's end) and the bounded
 // audition (`end` = start + span, clamped). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
@@ -376,10 +392,18 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // render player's tick forks on; no bit is added and nothing is latched
     // here. The load's own stderr line stays, but it is printed once at
     // startup and this is every press after it. Ahead of the playable gate
-    // so the sentence names the device rather than the position.
+    // so the sentence names the device rather than the position — and for the
+    // same reason THE TWO PRE-LAUNCH GATES ASK IT AHEAD OF THIS ONE (2026-08-30:
+    // toggle_playback's target pre-sum gate and GuiAbAudition::start's
+    // preflight, both of which decide something — a position card, a camera and
+    // a tab switch — before control could arrive here). This check is the BELT
+    // they leave standing: it is the only gate on the scrub's launch, which has
+    // no outer road at all, and each of the three returns, so exactly one card
+    // is raised per press. The sentence is kPlaybackDeviceUnavailableCard,
+    // spelled once at the header for all three.
     if (playback.device_unavailable()) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             "Playback is unavailable on this device");
+                             kPlaybackDeviceUnavailableCard);
         return false;
     }
     // AND A LAUNCH POSITION WITH NOTHING LEFT SAYS SO TOO (architect
@@ -497,7 +521,8 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     // ruling — source playback reads the source file directly, so nothing gates
     // it). In-range-only semantics as in the target arm above: a reseek to the
     // last frame (or past the domain) stops rather than playing a one-frame
-    // impulse, the same sane degradation as Space's silent no-op. This guard also
+    // impulse, the same sane degradation as Space's own no-op (which says so
+    // on a card at its gate; this reseek is not a press and says nothing). This guard also
     // means play() below can never be reached with an empty range from this site,
     // closing the play() early-return trap (end_sample <= start_sample returns
     // early WITHOUT clearing the playing flag) at its only reseek exposure.

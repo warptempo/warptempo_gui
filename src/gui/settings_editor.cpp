@@ -415,7 +415,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // The same commit tail trim gestures use, through their one owner
             // (GuiInputHandler::commit_trim_mutation, input_trim.cpp): the
             // crossed-commit reset first — a bound committed onto/across its
-            // partner resets the pair to the song edges, silently — then the
+            // partner resets the pair to the song edges, and says so on that
+            // owner's own card since 2026-08-30 — then the
             // waveform + status-chain repaints and the target-render trigger.
             // History-less, like all trim. The timestamp invalidate also rides
             // applied() below; raising it twice costs nothing — the damage list

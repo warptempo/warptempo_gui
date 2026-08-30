@@ -6052,12 +6052,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // Ctrl+Alt+P: paste clipboard phase resets onto the destination
-    // anchored at the single selected warp marker. W-mode only; phase
-    // reset mode is a silent no-op. Empty clipboard is a silent no-op, and so
-    // is a selection that is not exactly one marker (architect 2026-07-30):
-    // EVERY refusal in this family is silent, with no gesture-class stderr
-    // anywhere in the GUI. A wrong selection count is an ordinary "not ready
-    // yet" state the user can see on screen, not a fault worth a terminal line.
+    // anchored at the single selected warp marker. W-mode only; the three
+    // gates — the P view, an empty clipboard, and a selection that is not
+    // exactly one marker — EACH SAY SO ON A CARD since 2026-08-30 (the
+    // strictness ruling; the sentences are the family's shared literals, so
+    // the four clipboard chords answer one state in one wording). They were
+    // silent no-ops under the 2026-07-30 "every refusal in this family is
+    // silent" ruling, withdrawn with the rest of that convention. STILL NO
+    // GESTURE-CLASS STDERR: a wrong selection count is an ordinary "not ready
+    // yet" state the user can see on screen, not a fault worth a terminal
+    // line — the card is the whole answer.
     // Opens a confirmation prompt before any mutation.
     if (key == GuiKeys::P && ctrl && !shift && alt) {
         if (app.active_markers_view != 'W') {
@@ -6081,11 +6085,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Alt+Shift+P: propagate the enabled/disabled *state* of
     // clipboard placements onto the matching destination region's
-    // phase resets, in order. Positions are not modified. W-mode only;
-    // phase reset mode is a silent no-op. Empty clipboard is a silent
-    // no-op, and so is a selection that is not exactly one marker — the same
-    // all-refusals-are-silent rule as its Ctrl+Alt+P sibling above, where the
-    // rationale is stated. Unlike Ctrl+Alt+P, no confirmation prompt — applies
+    // phase resets, in order. Positions are not modified. W-mode only; its
+    // three gates are its Ctrl+Alt+P sibling's term for term and CARD in that
+    // sibling's own sentences since 2026-08-30, where the rationale is
+    // stated. Unlike Ctrl+Alt+P, no confirmation prompt — applies
     // directly. Divergence/mismatch is reported as a notification card
     // rather than a modal dialog.
     if (key == GuiKeys::P && ctrl && shift && alt) {
@@ -6159,9 +6162,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Alt+/: paste the clipboard's measures onto the destination run
     // anchored at the single selected warp marker. W-mode only; the gates are
-    // its Ctrl+Alt+P sibling's, term for term — empty clipboard and a selection
-    // that is not exactly one marker are both silent no-ops, every refusal in
-    // this family being silent.
+    // its Ctrl+Alt+P sibling's, term for term — the P view, an empty clipboard
+    // and a selection that is not exactly one marker — and each CARDS in the
+    // family's own sentences since 2026-08-30, the sibling owning the
+    // reasoning.
     //
     // IT OPENS A MODAL EDITOR BEFORE ANY MUTATION, where the phase paste opens
     // a confirmation prompt: the offset dialog IS this act's confirmation, and
@@ -6186,9 +6190,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `i` (no modifiers) toggles iteration mode in warp. Silent
-    // no-op in phase reset view (phase reset flags carry no tempo to
-    // iterate). The editor-active branch above already swallows any
+    // `i` (no modifiers) toggles iteration mode in warp. In phase reset view
+    // it is a no-op that SAYS SO on a card (the arm below, 2026-08-30 —
+    // phase reset flags carry no tempo to iterate). The editor-active branch
+    // above already swallows any
     // keystroke while a popup edit is in flight, so this code only
     // runs with no active editor. Toggling repaints the top strip
     // so iteration popups appear or vanish in one frame.

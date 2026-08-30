@@ -52,9 +52,11 @@
 // at all — exactly the cent step's own split, and the cent step's target-view
 // tail (adjust_tempo_cents, below) argues the re-land in full as the precedent
 // these four take.
-// THE POSITIONAL FAMILY IS NOT HERE and stays home-view-only, refusing
-// silently off home as it always did — each at its own DISPATCH site, through
-// the one predicate: the drop (drop_marker / drop_copy_previous_at_playhead),
+// THE POSITIONAL FAMILY IS NOT HERE and stays home-view-only, refusing off
+// home as it always did — each at its own DISPATCH site, through
+// the one predicate (and since 2026-08-30 the three KEYBOARD members say so on
+// a card forked on the column while the two POINTER members stay silent; the
+// split is recorded at the predicate): the drop (drop_marker / drop_copy_previous_at_playhead),
 // the flag drag (marker_drag.cpp), the bare Left/Right nudge
 // (nudge_selected_markers, whose dispatch joined the predicate's callers
 // 2026-08-29, having spelled its two arms by hand until then) and the `m` bpm
@@ -570,8 +572,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // W+target authors tempo only, never position. The tempo step there is
     // OWNER-ONLY: the
     // focus-collapse target must already own an adjustable tempo, so a pass
-    // (tempo_inherits) or a label ref refuses silently — no freeze conversion, no
-    // undo entry, no dirty. Source view is UNCHANGED (the pass/ref-to-owner freeze below
+    // (tempo_inherits) or a label ref refuses — on a card since 2026-08-30
+    // (the arm below names the view with the marker), with no freeze
+    // conversion, no undo entry, no dirty. Source view is UNCHANGED (the pass/ref-to-owner freeze below
     // still applies). The owner test reads the marker's own authored fields, not
     // the resolved projection: the question is whether this marker owns a tempo,
     // which is payload.
@@ -600,9 +603,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // payload-OWNER that remains, red-set membership is EXACTLY the
         // coincident-collapse condition (the same argument the GROUP step's wall
         // scan makes — the two cent-step arms are the red set's two consumers here
-        // since the tempo-drag predecessor walk was deleted). Silent, before any
+        // since the tempo-drag predecessor walk was deleted). Before any
         // mutation — no freeze, no undo, no dirty, the shape of the ref/pass
-        // refusals above.
+        // refusals above, and carded like them since 2026-08-30.
         const std::set<int>& red = warp_red_flag_set_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).red;
@@ -770,7 +773,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // Group tempo step (architect 2026-07-23): 2+ selected markers each step their
 // OWN tempo by one cent, ALL-OR-NOTHING. An ineligible member is "the wall being
 // hit before it starts to move" — if ANY selected marker is in the WALL SET the
-// whole press refuses silently (no partial stepping, no per-member pinning). THIS
+// whole press refuses, on its own sentence since 2026-08-30 (no partial
+// stepping, no per-member pinning). THIS
 // IS GROUP RIGIDITY, NOT A WALL POLICY (the unified wall policy, architect
 // 2026-07-30, is stated once at the head of position_nudge.h and rules that
 // SINGLETON steps clamp): per-member clamping would pool the walled members at the

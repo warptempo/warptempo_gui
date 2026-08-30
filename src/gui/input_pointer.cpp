@@ -1558,8 +1558,11 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // cannot migrate to the stopped case, whose scanner fields are stale by
 // contract (a stopped scanner is deactivated immediately; no non-playing
 // validity window exists). A refused launch (out-of-window frame; target
-// update in flight) leaves playback stopped, silently — the "nothing to
-// audition" family; a later click at a launchable frame launches.
+// update in flight; a dead device) leaves playback stopped AND SAYS WHY since
+// 2026-08-30 — the target gate's own kTargetPreviewNotReadyCard at this act,
+// and the launch body's two sentences under it, this scrub being the one
+// launch road with no outer gate of its own; a later click at a launchable
+// frame launches.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
     if (playback.is_playing()) {
         // The pure stop, through the standing stop machinery — side-effect-
@@ -3714,7 +3717,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // exactly like Enter on the focused marker (the fork above already
     // single-selected it). THE GATES ARE READ LIVE AT THIS PRESS, which IS
     // live state: read-only and the P view (phase resets have no per-flag
-    // editor) refuse SILENTLY, matching Enter's allowlist / view refusal, and
+    // editor) refuse SILENTLY — the gesture class's own answer, and the one
+    // place this road parts from bare Enter, whose two refusals card since
+    // 2026-08-30 (the lock at the key gate, the subject at the arm) — and
     // a refused consume stays a plain second select that seeds afresh at its
     // release. THE OFF-HOME COLUMN NO LONGER REFUSES (architect 2026-08-24):
     // the payload editor edits a marker's VALUES and never its position, so it

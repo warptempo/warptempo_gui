@@ -19,6 +19,20 @@
 // 2026-07-30; every damage this cluster emits now goes through Viewport.)
 struct GuiRenderPlayer;
 
+// THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND THREE SITES (2026-08-30): the
+// one launch body's own device gate — the BELT, which every road that plays
+// passes — and the TWO PRE-LAUNCH GATES that decide something before reaching
+// it and so must ask the same question first: toggle_playback's target-view
+// pre-sum position gate (which would otherwise answer a dead device with the
+// POSITION sentence) and GuiAbAudition::start's press-time preflight (which
+// would otherwise run `c` and switch tabs before the belt refused). Only one of
+// the three fires per press — each returns — so the shared literal is what
+// keeps one fact one sentence. It lives here rather than in notifications.h
+// because the fact is this cluster's: the reading is GuiPlayback::
+// device_unavailable's and every site that raises it is a launch road.
+inline constexpr const char* kPlaybackDeviceUnavailableCard =
+    "Playback is unavailable on this device";
+
 struct GuiPlaybackLifecycle {
     AppState&         app;
     const GuiAudio&   audio;
@@ -181,7 +195,8 @@ struct GuiPlaybackLifecycle {
     // the default 0 keeps plain Space and every other caller byte-identical.
     // The offset is applied only in the target-view branch; the offset launch
     // is re-validated against the target buffer's domain, so an offset landing
-    // at or past the buffer end is a silent no-op.
+    // at or past the buffer end is a no-op that says "There is nothing left to
+    // play from here" (the pre-sum gate's card, since 2026-08-30).
     // THE FORK IS "TRANSPORT-LIVE", NOT playback.is_playing(): a REST of the A/B
     // audition takes the stop arm too, the act being one transport session from
     // its first play to its last (the ruling and its face argument at the
@@ -202,8 +217,9 @@ struct GuiPlaybackLifecycle {
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the active view's range — the
     // SONG in source view, the target buffer's domain in target view — or one
-    // leaving fewer than two playable frames of remainder, is a silent no-op —
-    // exactly Space's conventions. A live session never
+    // leaving fewer than two playable frames of remainder, is a no-op that
+    // says so on the launch body's own card — exactly Space's conventions,
+    // this being the one launch road with no outer gate of its own. A live session never
     // launches (defensive; the caller reaches here only with
     // playback stopped — a scrub act over a live session STOPS it and returns).
     void scrub_launch_at(int64_t frame);
@@ -220,7 +236,10 @@ struct GuiPlaybackLifecycle {
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end
     // or leaving fewer than two frames refuses), the same follow behaviour,
-    // the same scanner. Returns whether it launched; every refusal is silent.
+    // the same scanner. Returns whether it launched; the refusals are the
+    // launch body's own two cards, which the audition's press-time preflight
+    // has already asked ahead of the act (so a refusal here is unreachable in
+    // practice and would merely end the act).
     // ONE CALLER: GuiAbAudition::launch_phase (ab_audition.cpp), which owns the
     // sequence this play is one step of and re-arms the sequence only on
     // true. A live session never launches (the caller always arrives stopped —

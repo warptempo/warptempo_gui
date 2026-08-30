@@ -123,17 +123,26 @@ struct GuiInputHandler;
 // are not, which is what lets the act's own two tab switches run inside it.
 // Bare Esc is NOT one of them — its five bindings are closed.
 //
-// REFUSALS, all silent, all at the press, all at start: a sequence already
-// running (a second Shift+Space is a consumed no-op; a held key meets the same
-// answer, though Space is one-shot in repeat_eligible and no repeat arrives) —
+// REFUSALS, all at the press, all at start, and EACH ONE CARDED since
+// 2026-08-30 (the strictness ruling: the whole act is silence and a camera
+// move, so a refusal that said nothing was indistinguishable from one): a
+// sequence already running (a second Shift+Space is a consumed no-op; a held
+// key meets the same answer, though Space is one-shot in repeat_eligible and
+// no repeat arrives) —
 // AND A REST COUNTS AS RUNNING, `phase` being the act's one running bit in
 // both halves, so the test is the same `phase != Idle` it always was (and the
 // same term the transport fork and the play/stop glyph read);
+// A DEAD OR ABSENT DEVICE, asked once for the pair ahead of everything below
+// it because nothing will sound on either tab (the launch body's own literal,
+// kPlaybackDeviceUnavailableCard);
 // in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or
 // EITHER tab's playhead outside the bound buffer's playable range — the other
 // tab's read through its own ViewState, clamped exactly as the switch would
 // clamp it, WITHOUT switching; in SOURCE VIEW, either playhead at or past the
-// two-frame remainder gate. The `h` view consumes the chord at its allowlist
+// two-frame remainder gate — the last two answering in ONE sentence, the act
+// being one act over a pair. THE ORDER IS THE PROMISE: every reason the launch
+// body could refuse for is asked here, before the first `c` and the switch, so
+// a refused act moves nothing. The `h` view consumes the chord at its allowlist
 // (playback is removed from the view whole); loading-or-absent audio consumes
 // it at on_key's head. A read-only tab admits it (it authors nothing). Undo:
 // none. Damage: the tab switch's and the scanner's, nothing new.

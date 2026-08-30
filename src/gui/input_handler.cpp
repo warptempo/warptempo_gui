@@ -1165,11 +1165,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the same span from this tab's playhead twice. A hotkey, so it acts at
     // the PRESS; shift-exact (is_ab_audition_key — no ctrl, no alt, the strict
     // rule's other decorations of Space staying consumed no-ops). Every
-    // refusal is the act's own and silent (GuiAbAudition::start): a sequence
+    // refusal is the act's own AND CARDED THERE since 2026-08-30
+    // (GuiAbAudition::start, whose header holds the inventory): a sequence
     // already running (which is also what a held key meets — Space is
     // one-shot in repeat_eligible, so no repeat ever arrives, and one that
-    // did would land on that refusal), a preview not ready on either tab in
-    // target view. The `h` view consumes the chord at history_mode_key_blocked
+    // did would land on that refusal), a dead or absent device, and either
+    // tab with nothing to play from — a preview not ready in target view
+    // among them. Nothing is spelled here; this site only routes. The `h` view consumes the chord at history_mode_key_blocked
     // (playback is removed from the view whole and Space in neither form is
     // on its allowlist); loading-or-absent audio consumed it at the head of
     // this function; a read-only tab ADMITS it (the allowlist's
