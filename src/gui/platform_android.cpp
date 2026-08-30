@@ -1,6 +1,5 @@
 #include "platform_android.h"
 
-#include "external_sync.h"   // sole_removable_volume, the volume rule's shared half
 #include "gui_font.h"
 #include "gui_main.h"
 #include "render.h"          // kRedesignContentGround, the band fill
@@ -18,7 +17,6 @@
 #include <arm_neon.h>
 #include <jni.h>
 
-#include <fcntl.h>
 #include <pthread.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
@@ -37,7 +35,6 @@
 #include <mutex>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -510,136 +507,16 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     }
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
+    // THE MIRROR'S DESTINATION IS EMPTY HERE TOO, and on this device it is
+    // empty for longer: no writable removable destination exists at all while
+    // this One UI build mounts the OTG stick with `mountFlags=0` (no
+    // `/storage/<uuid>` view for any app, measured 2026-08-28), so the
+    // Synchronize act says `sync_path is not set` until there is a folder to
+    // name. The grammar and the empty form's meaning are at is_sync_path
+    // (device_config.h).
+    cfg.sync_path     = "";
     cfg.last_project  = "";
     return cfg;
-}
-
-namespace {
-
-// THE MOUNT TABLE'S ESCAPES. `/proc/self/mounts` writes the four characters
-// that would otherwise break its own field grammar as `\NNN`, three octal
-// digits: space `\040`, tab `\011`, newline `\012` and backslash `\134`.
-// Exactly that form is decoded; a backslash followed by anything else is a
-// literal backslash in the path and passes through as itself.
-std::string unescape_mount_field(const std::string& field) {
-    const auto octal = [](char c) { return c >= '0' && c <= '7'; };
-    std::string out;
-    out.reserve(field.size());
-    for (size_t i = 0; i < field.size(); ++i) {
-        if (field[i] != '\\' || i + 3 >= field.size() || !octal(field[i + 1]) ||
-            !octal(field[i + 2]) || !octal(field[i + 3])) {
-            out.push_back(field[i]);
-            continue;
-        }
-        const int value = (field[i + 1] - '0') * 64 +
-                          (field[i + 2] - '0') * 8 +
-                          (field[i + 3] - '0');
-        out.push_back(static_cast<char>(value));
-        i += 3;
-    }
-    return out;
-}
-
-} // namespace
-
-// THE TABLET'S REMOVABLE VOLUME — THIS BACKEND'S DISCOVERY HALF (the counting
-// half and its two sentences are sole_removable_volume's, external_sync.h).
-// Android mounts every external volume under `/storage/`, one directory each,
-// beside exactly two entries that are not volumes: `emulated`, the app-visible
-// view of the device's own internal storage, and `self`, the per-process mount
-// namespace's own link. The candidates are therefore the `/storage/<name>`
-// mount points that are neither of those two — today the one
-// `/storage/067C-8690` — with no vold query, no JNI call into StorageManager
-// and no filesystem-type test.
-//
-// THEY ARE READ OUT OF THE PROCESS'S OWN MOUNT TABLE AND NOT OUT OF
-// `opendir("/storage")`, and that is a fact of this platform rather than a
-// preference: `/storage` is `drwx--x--x` to this app's uid — TRAVERSABLE but
-// NOT LISTABLE — so a directory listing there fails with EACCES, which is a
-// permission the app was denied and not an empty device. Measured on the
-// tablet 2026-08-28, where the stick was mounted and the listing road answered
-// "No removable volume mounted". The 2026-08-23 spike that did list `/storage`
-// is not contradicted by this: whatever posture it ran under, THE LISTING THIS
-// UID GETS TODAY IS EACCES, and the mount table is the road the platform does
-// grant. `/proc/self/mounts` is the process's own view, world-readable, and it
-// names the mount points the app can actually reach.
-//
-// A `/mnt/media_rw/<name>` LINE IS NOT A CANDIDATE. That is vold's own mount
-// of the volume and the app's uid cannot open it: All-files access is granted
-// through the `/storage/<uuid>` view alone. So a device where only the
-// `/mnt/media_rw` line appears has nothing this app can write, and the answer
-// stays "No removable volume mounted" rather than a path that would fail at
-// the first copy.
-//
-// AN UNREADABLE MOUNT TABLE REFUSES OUT LOUD, with its path and the system's
-// own words, for the reason the laptop's unreadable root does: not knowing is
-// not the same as knowing there is nothing.
-//
-// A CANDIDATE IS A REAL DIRECTORY BY CONSTRUCTION HERE, which is why this side
-// carries no symlink test of its own (rule 2, external_sync.h): every candidate
-// is a MOUNT POINT the kernel is reporting as mounted in this process's own
-// namespace, and a mount point is a directory. The laptop's road reads
-// directory entries and so has to ask.
-//
-// THE UUID IS NEVER CONSULTED: the architect's stick is `067C-8690` here and
-// `SANDISK` on the laptop, one physical stick with two names the product reads
-// neither of. The `<name>` below is matched for its SHAPE — one path component
-// under `/storage/`, not `emulated`, not `self` — never for its content.
-std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume() {
-    static constexpr const char* kMountTable = "/proc/self/mounts";
-    const auto unreadable = [](int err) {
-        return std::unexpected(
-            std::string("Cannot read '") + kMountTable + "': " +
-            std::error_code(err, std::generic_category()).message());
-    };
-
-    const int fd = ::open(kMountTable, O_RDONLY | O_CLOEXEC);
-    if (fd < 0) return unreadable(errno);
-    // Read to the end in one pass: a /proc file is generated at read time and
-    // has no size to stat, so the whole text is accumulated before it is
-    // parsed.
-    std::string text;
-    char        buf[4096];
-    int         read_errno = 0;
-    for (;;) {
-        const ssize_t n = ::read(fd, buf, sizeof(buf));
-        if (n == 0) break;
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            read_errno = errno;
-            break;
-        }
-        text.append(buf, static_cast<size_t>(n));
-    }
-    ::close(fd);
-    if (read_errno) return unreadable(read_errno);
-
-    // EVERY LINE IS `<device> <mountpoint> <fstype> <options> <dump> <pass>`,
-    // single-space separated; the second field is the one this wants.
-    std::vector<std::filesystem::path> candidates;
-    for (size_t start = 0; start < text.size();) {
-        size_t eol = text.find('\n', start);
-        if (eol == std::string::npos) eol = text.size();
-        const std::string line = text.substr(start, eol - start);
-        start = eol + 1;
-
-        const size_t device_end = line.find(' ');
-        if (device_end == std::string::npos) continue;
-        const size_t point_end = line.find(' ', device_end + 1);
-        if (point_end == std::string::npos) continue;
-        const std::string point = unescape_mount_field(
-            line.substr(device_end + 1, point_end - device_end - 1));
-
-        static constexpr std::string_view kStoragePrefix = "/storage/";
-        if (!point.starts_with(kStoragePrefix)) continue;
-        const std::string name = point.substr(kStoragePrefix.size());
-        // EXACTLY ONE COMPONENT under `/storage/`: a deeper path is something
-        // mounted inside a volume, not a volume.
-        if (name.empty() || name.find('/') != std::string::npos) continue;
-        if (name == "emulated" || name == "self") continue;
-        candidates.push_back(std::filesystem::path(point));
-    }
-    return sole_removable_volume(std::move(candidates));
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

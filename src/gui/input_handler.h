@@ -2681,10 +2681,12 @@ private:
     // from ONE place, the menu's own row
     // (finish_dropdown_release, the GuiPopupAct::SyncExternal item; NO KEYBOARD
     // CHORD BINDS IT and none is deferred — Ctrl+Alt+Shift+R keeps its current
-    // meaning). WHAT it mirrors onto the volume, and the mirror's own scope and
-    // order, are stated whole at external_sync.h; WHERE the volume is, is the
-    // seam's (GuiPlatform::removable_volume). What is here is the act's GUI
-    // half.
+    // meaning). WHAT it mirrors onto the stick, and the mirror's own scope and
+    // order, are stated whole at external_sync.h; WHERE it goes is the DEVICE
+    // CONFIG's `sync_path` since 2026-08-30 (device_config.h — it was the
+    // seam's own `GuiPlatform::removable_volume` answer until then, a
+    // discovery that could never work on the tablet). What is here is the
+    // act's GUI half.
     //
     // synchronize_to_external_storage: the opener. It refuses silently, without
     // touching playback, while a prompt or any editor stands and during a
@@ -2692,27 +2694,31 @@ private:
     // because a menu row's refusals are the menu's, not the act's — and it
     // refuses with no source loaded, having nothing to mirror. IT IS ADMITTED
     // IN THE `h` HISTORY VIEW since 2026-08-29 (architect, "admit both", with
-    // the Open row): a viewer running it is a viewer copying files. WHAT THE
-    // VIEW COSTS IT IS THE REPORT, not the act — the mode's line is the status
-    // chain's top tier, so every sentence this act writes is hidden until the
-    // view closes; the record and what survives on stderr are at the act's own
-    // report lambda. It is LEGAL ON A
+    // the Open row): a viewer running it is a viewer copying files, and THE
+    // VIEW COSTS IT NOTHING — its sentences are notification cards, which the
+    // mode cannot hide (they were the status chain's transient tier, invisible
+    // under the mode's own line, for the one day before the cards landed).
+    // It is LEGAL ON A
     // READ-ONLY TAB (it authors nothing: it reads two output folders and writes
     // outside the project entirely) and STOPS NO PLAYBACK (the act is silent
     // and changes no audio; nothing about the sound is different while it
     // runs). A SECOND ACT WHILE ONE RUNS is a consumed no-op that says so on
     // a notification card — the checkpoint act's single-in-flight shape,
     // answered in words rather than with a grey, since a menu item never
-    // greys. Then the volume: its refusal is a card too and the act ends
-    // there. Otherwise the job is captured whole by value — the volume, the
+    // greys. Then the DESTINATION: an EMPTY `sync_path` is the device saying
+    // it has none, answered `sync_path is not set` on a card — the key named
+    // by its own spelling — and the act ends there. Otherwise the job is
+    // captured whole by value — the sync root, the
     // project name, the project folder, the deliverable's composed path and
     // the batch root — and the worker takes it; nothing says the act has
     // started (a process line is state, and the verdict follows within
     // seconds).
     // on_external_sync_complete: the verdict, back on the main thread through
-    // main.cpp's eventfd wiring. It raises the worker's own sentence as a
-    // NORMAL notification card and nothing else. A FAILURE IS A NORMAL CARD
-    // and never the critical class: that class is the checkpoint act's, whose
+    // main.cpp's eventfd wiring. IT RAISES NOTHING ON SUCCESS (architect
+    // 2026-08-30, the render's precedent: a render served silently publishes
+    // silently), and a FAILURE takes the worker's own sentence onto a NORMAL
+    // notification card and nothing else — never the critical class: that
+    // class is the checkpoint act's, whose
     // failure leaves the repository in a state only the terminal can fix, while
     // a failed synchronization is retried by pressing the row again.
     void synchronize_to_external_storage();

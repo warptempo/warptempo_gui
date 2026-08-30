@@ -14,21 +14,23 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (76 declarations as of 2026-08-28 — 13 `using` aliases and 63
+  public API (75 declarations as of 2026-08-30 — 13 `using` aliases and 62
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
-  diffing those two stripped sections, which come out line-for-line equal;
+  diffing those two stripped sections, which come out line-for-line equal; the
+  count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
+  mirror's discovery — Synchronize is told its destination by the device
+  config's `sync_path` now, so neither backend goes looking for a volume;
   there is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
   exception, `device_config_defaults` is a third of the same kind,
-  `removable_volume` (Synchronize to external storage, below) is a fourth,
   and the car's two (`set_on_media_command`, stored and never fired on
   Wayland — the STORED-HOOK shape `set_on_close` carried on the Android side
   until BACK became its producer there on 2026-08-29, leaving this the seam's
   one hook a backend never fires — and `publish_media_state`, a no-op body
-  there — The car, below) are the fifth and sixth):
+  there — The car, below) are the fourth and fifth):
   `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
@@ -273,36 +275,53 @@ what the face replaced.
 
 `GuiPopupAct::SyncExternal`, the File menu's one chordless row (architect
 2026-08-27, landed 2026-08-28 in `b92ea097`/`95ea84d4`), mirrors the open
-project onto the one mounted removable volume, found and never configured.
+project onto the folder the DEVICE CONFIG names.
+
+**THE DESTINATION IS TOLD, NOT FOUND** (architect 2026-08-30). It is
+`sync_path`, the device config's fifth key (`settings.md`'s device-config
+section and `device_config.h` own its grammar: EMPTY, or an absolute path
+under the shared path-value rules), and the act composes
+`<sync_path>/<project name>/`. It was DISCOVERED for three days —
+`GuiPlatform::removable_volume()` per backend over the one counting rule
+`sole_removable_volume` — and that rule worked on the laptop and COULD NOT
+WORK ON THE TABLET AT ALL (the open device fact below). A per-device
+destination is a per-device fact, which is what the device config is for, and
+a configured path is what every desktop mirror does; the seam member, both
+discoveries, the counting rule and its two sentences (`No removable volume
+mounted`, `Several removable volumes mounted: a, b`) are DELETED, so the act
+has one road to its destination and no fallback chain.
+
 The lift runs `GuiInputHandler::synchronize_to_external_storage`
 (`input_key_dispatch.cpp`), which refuses silently through the Open row's own
-three gates (a prompt or editor standing, the `h` history view, a load in
-progress) and with nothing loaded; it is LEGAL ON A READ-ONLY TAB and STOPS
-NO PLAYBACK, since it authors nothing and writes outside the project
+gates (a prompt or editor standing, a load in progress) and with nothing
+loaded; it is LEGAL ON A READ-ONLY TAB, ADMITTED IN THE `h` VIEW (2026-08-29)
+and STOPS NO PLAYBACK, since it authors nothing and writes outside the project
 entirely. A second dispatch while one is already running writes
 `Synchronization already running` to a notification card and stops there — the
 checkpoint act's own single-in-flight shape, answered in words since a menu
-item never greys. Otherwise it asks `GuiPlatform::removable_volume()` for the
-destination; that call's own refusal (`No removable volume mounted` /
-`Several removable volumes mounted: a, b`) ends the act there too. Passing
-both, it composes the job — the render folder's deliverable wav, composed
-exactly as a render composes it, and the `tmp/` batch root — writes
-`Synchronizing to <volume>...` and dispatches to `GuiExternalSyncWorker`.
+item never greys. Then the destination: an EMPTY `sync_path` is the device
+saying it has none and answers `sync_path is not set` on a card — THE KEY BY
+ITS OWN SPELLING, a config key being named the way it is written in the file
+everywhere in the product — and nothing runs. Passing both, it composes the
+job — the sync root, the project name and folder, the render folder's
+deliverable wav composed exactly as a render composes it, and the `tmp/` batch
+root — and dispatches to `GuiExternalSyncWorker`; nothing says the act has
+started (a process line is state, and the verdict follows within seconds).
 
 THE MIRROR'S LAYOUT AND SCOPE are `external_sync.h`'s whole statement:
-`<volume>/<project name>/` holds the deliverable directly and each `tmp/`
+`<sync_path>/<project name>/` holds the deliverable directly and each `tmp/`
 batch folder AS ITSELF (folder name and NN numbering verbatim), wav files
-only — no sidecars, no `.fingerprint`, no `peaks/`, the volume being played
+only — no sidecars, no `.fingerprint`, no `peaks/`, the stick being played
 from and not authored in. Copies run first; afterward every file and folder
 under that one destination folder which is not in the set is deleted, so an
-act interrupted mid-way (a pulled stick, a killed process) leaves the volume
+act interrupted mid-way (a pulled stick, a killed process) leaves the stick
 with at most EXTRA files, never fewer. The scope is that destination folder
-alone, never the volume root or another project's folder on it, which is
+alone, never the sync path itself or another project's folder under it, which is
 what lets one stick carry several projects side by side. Nothing is skipped
 or retried on an mtime guess: the stick is carried between two clocks, so
 every file is copied on every act — each onto a staging sibling that is
 renamed onto the final name only once the copy is complete, so a failed or
-interrupted copy leaves the previous file on the volume whole.
+interrupted copy leaves the previous file on the stick whole.
 
 THE FOUR STRICTNESS RULES are `external_sync.h`'s head, stated there once and
 nowhere else: the mirror deletes only against a listing it finished (any
@@ -313,14 +332,17 @@ destination into kept, unkept link and unkept subtree, top level and then each
 kept batch folder, before its first removal, which is also why no
 `directory_iterator` is ever live while its own directory is being changed); no
 destination symlink is ever followed, which makes the scope claim above true by
-construction (THE VOLUME ITSELF IS THE FIRST NAME CHECKED, every path in the act
+construction (THE SYNC ROOT ITSELF IS THE FIRST NAME CHECKED, every path in the act
 being composed under it, and a link at one of the act's own names is a REFUSAL
-and not a deletion, an unkept link being removed as a link) — the checks run at
+and not a deletion, an unkept link being removed as a link; SINCE 2026-08-30
+that check is also where a destination that is simply NOT THERE answers — an
+unplugged stick or a mistyped `sync_path` refuses `'<name>' is not a
+directory`, the act never creating its own sync root) — the checks run at
 the act's start and not again at each use, that check-then-use window being an
-ACCEPTED COST, a hand on a mounted volume mid-act and so the adversarial class
+ACCEPTED COST, a hand on a mounted stick mid-act and so the adversarial class
 this product never backstops; every copy is staged; and what is kept is kept by
 filesystem identity (`std::filesystem::equivalent`) rather than by spelling, the
-volume being case-insensitive vfat.
+stick being case-insensitive vfat.
 
 WHAT A FAILURE LEAVES is `external_sync.h`'s (a)(b)(c) and nothing stronger:
 (a) no deletion runs at all unless every copy succeeded and the destination
@@ -338,59 +360,47 @@ one completion eventfd the platform polls. SINGLE JOB IN FLIGHT structurally,
 and NO CANCEL — `shutdown()` JOINS an act already running rather than
 interrupting it, a copy left half-written being worse than a mirror caught
 between its copies and its deletions. The worker's own verdict lands back on
-the main thread through `on_external_sync_complete`, which raises it as a
-NORMAL notification card and nothing else (2026-08-29; the status chain's
-transient tier for one day before that): `Synchronized <N> file(s) to
-<path>` on success, or, on the first failure of any kind, the path it was
+the main thread through `on_external_sync_complete`, which raises a NORMAL
+notification card and nothing else (2026-08-29; the status chain's transient
+tier for one day before that) — AND ONLY ON A FAILURE. **A SUCCESSFUL
+SYNCHRONIZATION SAYS NOTHING** (architect 2026-08-30: "if it succeeds, we
+don't necessarily need [a notice]"), the render's own precedent, a render
+served silently publishing silently; the count sentence `Synchronized <N>
+file(s) to <path>` that stood from 2026-08-28 is DELETED from the outcome, not
+merely unraised, so a successful verdict carries an empty message by
+construction. On the first failure of any kind the card names the path it was
 reading or writing and the system's own words (`Cannot read '<path>': <...>`
 / `Could not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or
 one of the symlink rule's own three lines (`'<path>' is a symbolic link` /
-`'<path>' is not a directory` / `'<path>' is not a regular file`) — every
-`<path>` named RELATIVE TO THE MIRROR'S TWO ROOTS (`<volume name>/…` on the
-stick, the path under the project folder in the project; the full path is on
+`'<path>' is not a directory` / `'<path>' is not a regular file` — the second
+of which is also the unplugged stick's and the mistyped path's answer) — every
+`<path>` named RELATIVE TO THE MIRROR'S TWO ROOTS (`<sync path's last
+component>/…` on the stick, the path under the project folder in the project;
+the full path is on
 stderr), the basename rule of the cards. A FAILURE IS A NORMAL CARD, never
 the critical class — that class is the checkpoint act's, whose failure needs
 the terminal; a failed synchronization is retried by pressing the row again.
 
-THE SEAM GREW TWO MEMBERS FOR IT, declared identically on both backends
-(contract at `platform_wayland.h`, which owns it) and each answered
-per-backend:
+THE SEAM GREW TWO MEMBERS FOR IT, and ONE OF THEM HAS SINCE LEFT.
+`GuiPlatform::removable_volume()` — static like `device_config_defaults`, each
+backend owning its discovery over the one shared counting rule — was the
+destination's answer from 2026-08-28 until 2026-08-30, when the destination
+became the device config's `sync_path` and the member, both discoveries and the
+counting rule were deleted whole (the ruling is at the head of this section).
+WHAT THE TWO DISCOVERIES MEASURED IS KEPT, because it is why the key exists:
+the laptop read the directory entries under `/run/media/<user>/`, the udisks
+mount root, which worked; ANDROID read the `/storage/<name>` mount points out
+of the process's own mount table (`/proc/self/mounts`) and NOT
+`opendir("/storage")`, because `/storage` is `drwx--x--x` to the app's uid —
+TRAVERSABLE BUT NOT LISTABLE — so a listing there answers EACCES, a permission
+the app was denied and not an empty device (measured on the tablet 2026-08-28
+with the stick mounted: the listing road answered `No removable volume mounted`
+where the mount-table road answered correctly). Even the working road found
+nothing there, for the open device fact below.
 
-- **`GuiPlatform::removable_volume()`** — static, needing no window, like
-  `device_config_defaults`. EACH BACKEND OWNS ITS DISCOVERY, the COUNTING is
-  shared (`sole_removable_volume`, `external_sync.h`): zero candidates
-  answers `No removable volume mounted`, several answers `Several removable
-  volumes mounted: a, b` naming them (sorted and de-duplicated once, so two
-  mount-table lines naming one mount point are one volume, not several).
-  LAPTOP: the directory entries under `/run/media/<user>/`, the udisks mount
-  root (`<user>` from `getpwuid(geteuid())`, `$USER` the fallback spelling),
-  each read with `symlink_status` so a LINK THERE REFUSES with the mirror's own
-  `'<path>' is a symbolic link` — udisks mounts a real directory for every
-  volume, so a link at that root is a hand's work, and neither counting it nor
-  passing over it in silence would be honest (rule 2 asked on the discovery
-  side; an entry simply gone by the time it is read is no volume and no fault);
-  ENOENT on the root itself is the ONE error that honestly means zero — udisks
-  creates the directory at the first mount and removes it with the last —
-  and any other read failure refuses out loud with the system's own words
-  rather than counting as empty. ANDROID: the `/storage/<name>` mount points
-  in the process's own mount table (`/proc/self/mounts`) whose `<name>` is
-  neither `emulated` (the app-visible view of the device's own internal
-  storage) nor `self` (the per-process mount namespace's own link). THIS IS
-  THE MOUNT TABLE AND NOT `opendir("/storage")`, and that is a fact of the
-  platform rather than a preference: `/storage` is `drwx--x--x` to the app's
-  uid — TRAVERSABLE BUT NOT LISTABLE — so a directory listing there answers
-  EACCES, a permission the app was denied and not an empty device, measured
-  on the tablet 2026-08-28 with the stick mounted (the listing road answered
-  `No removable volume mounted` where the mount-table road answers
-  correctly). Those candidates are mount points and so real directories by
-  construction, which is why that side carries no symlink test of its own. A
-  `/mnt/media_rw/<name>` line is NEVER A CANDIDATE: that is
-  vold's own mount and the app's uid cannot open it — All-files access
-  reaches the volume through the `/storage/<uuid>` view alone — so a device
-  where only that line appears has nothing this app can write and stays `No
-  removable volume mounted` rather than a path that would fail at the first
-  copy. An unreadable mount table refuses out loud too, for the laptop
-  root's own reason.
+THE ONE MEMBER THAT REMAINS, declared identically on both backends (contract at
+`platform_wayland.h`, which owns it):
+
 - **`set_sync_worker_completion_fd`** — the FIFTH worker completion eventfd,
   ordinary in shape (store the fd, store the callback) beside the async
   render, waveform, checkpoint and history-prefetch workers' own setters.
@@ -402,12 +412,19 @@ per-backend:
   `kIdentWorker0 .. kIdentWorker0+4`.
 
 THE OPEN DEVICE FACT: on this One UI build the OTG stick mounts with
-`mountFlags=0`, not VISIBLE, so no `/storage/<uuid>` view exists for ANY app
-and `removable_volume()` on Android finds nothing — the act refuses `No
-removable volume mounted` on the tablet until this is solved (2026-08-28).
-THE SAF ROAD THROUGH THE JAVA SLIVER — a Storage Access Framework picker
-(`ACTION_OPEN_DOCUMENT_TREE`) granting a scoped tree URI regardless of
-`mountFlags` — is the design's named contingency for this and IS NOT BUILT.
+`mountFlags=0`, not VISIBLE, so no `/storage/<uuid>` view exists for ANY app.
+That is what the discovery could not get around and it is what the key does
+not get around either — a path that does not exist cannot be configured, so
+THE TABLET'S `sync_path` STAYS EMPTY and the act answers `sync_path is not
+set` there until a writable destination exists (2026-08-28, unchanged by the
+2026-08-30 move; what the move bought is that the LAPTOP now names its stick
+instead of hunting for it, and that the tablet's refusal names the thing the
+user would have to set). THE SAF ROAD THROUGH THE JAVA SLIVER — a Storage
+Access Framework picker (`ACTION_OPEN_DOCUMENT_TREE`) granting a scoped tree
+URI regardless of `mountFlags` — is the design's named contingency for this,
+IS NOT BUILT and NEEDS AN ARCHITECT RULING; it would reach the stick through a
+tree URI rather than through a path, so it is not something `sync_path` can
+name.
 What the shell showed, 2026-08-28: `sm list-volumes` — `public:8,81 mounted
 067C-8690`; `dumpsys mount` — `mountFlags=0`, `path=/mnt/media_rw/067C-8690`.
 

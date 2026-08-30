@@ -59,11 +59,12 @@
 //                              offending entry's own sentence ("Cannot read
 //                              '<name>' in '<folder>'"), which a void callback
 //                              cannot return.
-//     platform_wayland.cpp     removable_volume — same shape: a per-entry
-//                              symlink or status fault refuses the whole
-//                              question with its own sentence, because a
-//                              partial listing is not an answer to "which
-//                              volumes are mounted".
+//
+// (A THIRD STOOD HERE UNTIL 2026-08-30: platform_wayland.cpp's
+// removable_volume, whose per-entry symlink or status fault refused the whole
+// question with its own sentence. It went with the discovery itself — the
+// mirror's destination is the device config's `sync_path` now, told and not
+// found — and no backend walks a directory any more.)
 //
 // This header is GUI-side and header-only on purpose: the frozen directories
 // walk no directories, and there is nothing here to link.

@@ -5,8 +5,6 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
-#include <expected>
-#include <filesystem>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -37,9 +35,11 @@
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). It
 // grew twice more on 2026-08-28, both on both sides: removable_volume(), the
-// Synchronize to external storage act's destination — a platform fact like the
-// config template, since where a machine mounts a stick is an answer only the
-// backend has — and set_sync_worker_completion_fd, that act's worker taking
+// Synchronize to external storage act's destination — WHICH LEFT AGAIN
+// 2026-08-30, the act's destination being told to it by the device config's
+// `sync_path` key now rather than found, so the seam is one member smaller
+// than it was and neither backend goes looking for a volume — and
+// set_sync_worker_completion_fd, that act's worker taking
 // the loop's fifth watched eventfd beside the other four. IT LAST GREW THE
 // SAME DAY, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the mechanism is platform-seam.md's car section): set_on_media_command, the
@@ -117,30 +117,18 @@ public:
     // the cache home it has always set.
     static DeviceConfig device_config_defaults();
 
-    // THE ONE MOUNTED REMOVABLE VOLUME, the seam's own member (contract at
-    // platform_wayland.h, which owns it): the Synchronize to external storage
-    // act's destination, FOUND AND NEVER CONFIGURED.
-    //
-    // THE WHOLE VOLUME RULE ON THIS BACKEND: the `/storage/<name>` MOUNT
-    // POINTS in the process's own mount table (`/proc/self/mounts`) whose
-    // `<name>` is one path component and is not `emulated` (the app-visible
-    // view of the device's own internal storage) or `self` (the per-process
-    // mount namespace's own link). What is left is exactly the mounted
-    // removable volumes — today `/storage/067C-8690`. THE MOUNT TABLE AND NOT
-    // A DIRECTORY LISTING, because `/storage` is traversable but not listable
-    // by this app's uid; the measurement and the `/mnt/media_rw` exclusion are
-    // stated at the definition. An unreadable mount table refuses with the
-    // system's own words, and zero and several take the shared half's own two
-    // sentences (sole_removable_volume, external_sync.h).
-    //
-    // THE UUID IS NEVER CONSULTED, as the laptop's label is not: the same
-    // physical stick is `067C-8690` here and `SANDISK` there, and "the one
-    // removable volume" is the whole identity the product has of it. Reading
-    // its contents needs the All-files permission (MANAGE_EXTERNAL_STORAGE);
-    // this discovery does not, and a volume the app may see but not write
-    // reports the refusal at the first copy, with the path and the system's
-    // own words.
-    static std::expected<std::filesystem::path, std::string> removable_volume();
+    // (THE ONE MOUNTED REMOVABLE VOLUME stood here from 2026-08-28 until
+    // 2026-08-30 as `removable_volume()`: this backend read the
+    // `/storage/<name>` mount points out of `/proc/self/mounts` — the MOUNT
+    // TABLE and not `opendir("/storage")`, that directory being traversable
+    // but not listable by this app's uid. THE DESTINATION IS CONFIGURED NOW,
+    // the device config's `sync_path` key, and the member is deleted on both
+    // sides. On THIS device it changes nothing yet and admits why: this One UI
+    // build mounts the OTG stick with `mountFlags=0`, so no `/storage/<uuid>`
+    // view exists for any app to find OR to be told about, and the tablet's
+    // `sync_path` stays empty until a writable destination exists there. The
+    // whole record, the measurement and the SAF contingency are in
+    // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-locked with no titlebar, so both setters store nothing and

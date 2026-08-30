@@ -2601,18 +2601,31 @@ constexpr double kClockCellOffsetYPx = 1.0;
 constexpr double kTransportSepToClockPx =
     kTransportSepGapPx + kClockCellOffsetXPx;
 
-// The clock's cell width, MEMOISED ON THE FONT SIZE — eleven tiny shaping
+// The clock's cell, MEMOISED ON THE FONT SIZE — eleven tiny shaping
 // passes (ten digits plus the specimen) that answer the same thing on every
 // frame, the face being fixed and the size the only variable. Single-threaded
 // paint state; the waveform worker never reaches this file's text tiers.
+//
+// THE CELL IS THE SPECIMEN'S, ADVANCE AND INK BOTH. `cell_w` is the reserved
+// WIDTH the digits are laid inside — an advance sum, so no digit ever walks —
+// and `ink_left` / `ink_right` are where that same specimen's PIXELS start and
+// stop inside it (text_shape::ink_extents_px). The state cell beside the clock
+// needs the ink pair to butt against the digits by eye rather than by advance
+// (its own block below); the cell's own width and damage box stay the advance's.
+// THE INK IS THE SPECIMEN'S AND NOT THE LIVE TIMESTAMP'S, deliberately: the
+// specimen is what DEFINES this cell, and reading the painted digits instead
+// would move the neighbour text by a pixel as the seconds ran.
 struct TransportClockMetrics {
-    double px     = -1.0;   // the size this was measured at
-    double cell_w = 0.0;    // the widest specimen's shaped width
+    double px        = -1.0;   // the size this was measured at
+    double cell_w    = 0.0;    // the widest specimen's shaped width (advances)
+    double ink_left  = 0.0;    // cell origin -> the specimen's first lit pixel
+    double ink_right = 0.0;    // cell origin -> past its last lit pixel
 };
 static TransportClockMetrics g_clock_metrics;
 
-static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
-    if (g_clock_metrics.px == size_px) return g_clock_metrics.cell_w;
+static const TransportClockMetrics& clock_cell_metrics(
+        cairo_scaled_font_t* font, double size_px) {
+    if (g_clock_metrics.px == size_px) return g_clock_metrics;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2622,9 +2635,18 @@ static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
     }
     std::string specimen(kClockShape);
     for (char& c : specimen) if (c == 'D') c = widest;
-    g_clock_metrics.cell_w = text_shape::shape_text_run(font, specimen).width_px;
-    g_clock_metrics.px     = size_px;
-    return g_clock_metrics.cell_w;
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, specimen);
+    const text_shape::InkExtents ink = text_shape::ink_extents_px(font, run);
+    g_clock_metrics.cell_w    = run.width_px;
+    g_clock_metrics.ink_left  = ink.left_px;
+    g_clock_metrics.ink_right = ink.right_px;
+    g_clock_metrics.px        = size_px;
+    return g_clock_metrics;
+}
+
+static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
+    return clock_cell_metrics(font, size_px).cell_w;
 }
 
 void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
@@ -2854,7 +2876,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double size_px = clock_font_size_px();
         cairo_set_font_size(cr, size_px);
         cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-        const double cell_w = clock_cell_width_px(font, size_px);
+        const TransportClockMetrics& clock_metrics =
+            clock_cell_metrics(font, size_px);
+        const double cell_w = clock_metrics.cell_w;
         // THE CELL STARTS AT THE LEFT BLOCK'S SEPARATOR PEN (architect
         // 2026-08-18, "move bottom row timestamp to left alignment"), PLUS THE
         // AUTHORED MARGIN-MIRROR OFFSET (the same day, at his live look; both
@@ -2927,6 +2951,26 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // three gaps around its scrub). No new number is authored for this
         // cell at all.
         //
+        // GAPS ARE INK TO INK HERE, THE ROW'S SEPARATOR -> CLOCK GAP BEING THE
+        // ONE DISTANCE (architect 2026-08-30, who saw this text standing about
+        // two pixels further from the digits than the separator stands from
+        // them). Both gaps are the same authored number and they read
+        // differently because the SIDE BEARINGS fall on opposite sides of it:
+        // to the clock's left the constant is followed by the specimen's own
+        // left bearing, while to its right the constant is preceded by the
+        // specimen's right bearing (the cell is an ADVANCE sum, whose last
+        // column is air) and then followed by the sans run's left bearing.
+        // MEASURED AT 100 % on this face: the specimen advances 79.17 px and
+        // its ink stops at 78.375, its left bearing is 0 and the sans run's is
+        // 1, and the old origin laid the constant off the CEILED advance — so
+        // the left gap read 9.0 px of ink and the right one 80 - 78.375 + 9 + 1
+        // = 11.625. That difference is the two-and-a-bit pixels he saw. So the
+        // origin below is placed so that
+        // (clock ink right -> text ink left) EQUALS (separator -> clock ink
+        // left): the clock's ink edges come from the memoised specimen and the
+        // text's left bearing from its own shaped run, and no correction is
+        // authored as a number.
+        //
         // THE CONTENT is the one-day status bar's LEFT cell exactly: the `h`
         // walk line, else the render / batch / loading progress line. The two
         // CAN COEXIST and THE WALK LINE WINS — nothing STARTS a render inside
@@ -2956,16 +3000,31 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.queue_progress_text;
         }
         if (!state.empty()) {
-            const double clock_right =
-                static_cast<double>(cell_x) + std::ceil(cell_w);
+            gui_select_font_face(cr, GuiFontFamily::Sans);
+            cairo_set_font_size(cr, redesign_font_size_px());
+            cairo_scaled_font_t* sans = cairo_get_scaled_font(cr);
+            // THE RUN IS SHAPED HERE rather than inside show_row_text,
+            // because this site needs the run's OWN ink geometry and the two
+            // must be the same run (the shaping chokepoint's rule said of ink:
+            // measure and paint the same glyphs). The paint below is
+            // show_row_text's two lines with that run already in hand.
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(sans, state);
+            const double text_ink_left =
+                text_shape::ink_extents_px(sans, run).left_px;
+            // THE ONE DISTANCE, ink to ink (the block above): the separator ->
+            // clock ink gap is the constant plus the specimen's left bearing,
+            // and the same gap is laid off the clock's ink RIGHT edge, the
+            // text's own left bearing taken back out so its first lit pixel —
+            // not its pen — lands where the air ends.
+            const double clock_ink_right =
+                static_cast<double>(cell_x) + clock_metrics.ink_right;
             const double x0 = std::nearbyint(
-                clock_right + scaled_px(kTransportSepToClockPx));
+                clock_ink_right + scaled_px(kTransportSepToClockPx) +
+                clock_metrics.ink_left - text_ink_left);
             const double x1 =
                 static_cast<double>(right_block_x - pad);
             if (x1 > x0) {
-                gui_select_font_face(cr, GuiFontFamily::Sans);
-                cairo_set_font_size(cr, redesign_font_size_px());
-                cairo_scaled_font_t* sans = cairo_get_scaled_font(cr);
                 // THE ROW'S OWN CENTRED BASELINE, the one every other lane's
                 // text takes — NOT the clock's, whose authored 1px nudge is a
                 // monospace-cell correction and belongs to that cell alone.
@@ -2976,8 +3035,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                 cairo_rectangle(cr, x0, static_cast<double>(content_y),
                                 x1 - x0, static_cast<double>(content_h));
                 cairo_clip(cr);
-                show_row_text(cr, sans, x0, sans_baseline, state,
-                              kRedesignLabel);
+                cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                     kRedesignLabel.b);
+                text_shape::show_shaped_run(cr, run, x0, sans_baseline);
                 cairo_restore(cr);
             }
         }

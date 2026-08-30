@@ -2,48 +2,59 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <expected>
 #include <filesystem>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
-#include <vector>
 
 // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — the File menu's
-// third act and this file is the one home of WHAT GOES ON THE VOLUME and of
-// the thread that puts it there. The volume itself is the platform's answer
-// (GuiPlatform::removable_volume, platform_wayland.h / platform_android.h:
-// the one mounted removable volume, found and never configured); the act
-// below is handed that path and never looks for one.
+// third act and this file is the one home of WHAT GOES ON THE STICK and of
+// the thread that puts it there.
+//
+// THE DESTINATION IS TOLD, NOT FOUND (architect 2026-08-30): it is the DEVICE
+// CONFIG's `sync_path` key (device_config.h), an absolute folder the architect
+// types once per machine, and the act below is handed that path and never
+// looks for one. IT WAS FOUND FOR THREE DAYS — `GuiPlatform::removable_volume`
+// answered with the one mounted removable volume per backend and
+// `sole_removable_volume` counted the candidates — and that rule worked on the
+// laptop and COULD NOT WORK ON THE TABLET AT ALL, this One UI build mounting
+// the OTG stick with `mountFlags=0` so that no `/storage/<uuid>` view exists
+// for any app to find (measured 2026-08-28). A per-device destination is a
+// per-device fact and the device config is where those live; the discovery,
+// its counting rule and its two sentences are DELETED, so the act has ONE road
+// to its destination and no fallback chain. The key may be EMPTY — "not set
+// up on this device" — and the GUI half says `sync_path is not set` and runs
+// nothing (synchronize_to_external_storage, input_key_dispatch.cpp).
 //
 // THE LAYOUT, and this is its whole statement — "the earliest unambiguous
-// path". `<volume>/<project name>/` holds:
+// path". `<sync_path>/<project name>/` holds:
 //
 //   * `<title>.wav`, the DELIVERABLE, taken straight out of the project's
 //     `render/` (the path composed exactly as a render composes it,
 //     render_output_naming.h). An ABSENT deliverable is nothing to copy for
 //     it and not a refusal: a project whose deliverable has not been rendered
-//     yet syncs its batch cells and says so with a count.
+//     yet simply syncs its batch cells (and says nothing, the act being
+//     silent on success since 2026-08-30 — the outcome type below).
 //   * each BATCH FOLDER out of the project's `tmp/` AS ITSELF —
-//     `<volume>/<project name>/1_bpm/01.wav` — the folder name and the NN
+//     `<sync_path>/<project name>/1_bpm/01.wav` — the folder name and the NN
 //     numbering verbatim, because `01.wav` only means something inside its
 //     batch folder.
 //
-// So `render/` and `tmp/` themselves do NOT appear on the volume: a folder
+// So `render/` and `tmp/` themselves do NOT appear on the stick: a folder
 // that exists only to hold other wav folders is not needed there. WAV FILES
-// ONLY — no sidecars, no `.fingerprint`, no `.peaks`, no `peaks/`: the volume
+// ONLY — no sidecars, no `.fingerprint`, no `.peaks`, no `peaks/`: the stick
 // is played from, not authored in.
 //
 // IT IS A MIRROR of exactly that set. After the copies, every file and folder
-// under `<volume>/<project name>/` that is not in the set is deleted (the
+// under `<sync_path>/<project name>/` that is not in the set is deleted (the
 // architect allowed wiping the stick). THE SCOPE IS THE PROJECT'S OWN FOLDER
-// ON THE VOLUME AND NOTHING OUTSIDE IT — never another project's folder,
-// never the volume root, which is what lets one stick carry several projects
-// and a car head unit's own files beside them. The ORDER is copies first and
-// deletions after, so an act interrupted part-way (a pulled stick, a killed
-// process) leaves the volume with at most EXTRA files and never fewer.
+// UNDER THE SYNC PATH AND NOTHING OUTSIDE IT — never another project's folder,
+// never the sync path itself, which is what lets one stick carry several
+// projects and a car head unit's own files beside them. The ORDER is copies
+// first and deletions after, so an act interrupted part-way (a pulled stick, a
+// killed process) leaves the stick with at most EXTRA files and never fewer.
 //
 // A MIRROR THAT IS UNSURE DELETES NOTHING. Four rules say what that means and
 // they are stated here once, for the whole act; the body below names the rule
@@ -59,12 +70,12 @@
 //      included, which therefore can never report success. EVERY PATH A
 //      SENTENCE NAMES IS RELATIVE TO THE MIRROR'S TWO ROOTS (architect
 //      2026-08-29, the basename rule — the sentence is one line on a
-//      notification card that clips, never a full path): `<volume
-//      name>/<path under the volume>` on the stick, the path under the
+//      notification card that clips, never a full path): `<sync path's last
+//      component>/<path under it>` on the stick, the path under the
 //      project folder in the project (the one composer is `shown`,
 //      external_sync.cpp; the full path is on stderr beside it). A directory that
 //      cannot be opened, an iterator that stops half way and a stat that is
-//      refused would each make good files on the volume look unwanted, and
+//      refused would each make good files on the stick look unwanted, and
 //      that is the one mistake a mirror must not make. SO THE DELETION IS TWO
 //      PASSES AND CLASSIFIES THE WHOLE DESTINATION BEFORE ITS FIRST REMOVAL:
 //      the first pass reads the top level and then each kept batch folder and
@@ -80,25 +91,27 @@
 //      `.fingerprint` and nothing else (prune_render_folder, renders_dir.h), so
 //      the deliverable this act copies and the deletions it makes on the stick
 //      are ONE definition with the prune's on disk — a previous title's
-//      deliverable is not a file the mirror sweeps off a volume while it still
+//      deliverable is not a file the mirror sweeps off the stick while it still
 //      sits in the project.
 //   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
 //      claim above true by construction rather than lexically. Before anything
-//      is created or written, THE VOLUME ITSELF, the project's folder on the
-//      volume, every kept batch folder and every kept destination file are read
+//      is created or written, THE SYNC ROOT ITSELF, the project's folder under
+//      it, every kept batch folder and every kept destination file are read
 //      with symlink_status: a name that exists and is not the real directory or
 //      real file it is about to be written into REFUSES — "'<path>' is a
 //      symbolic link", "'<path>' is not a directory", "'<path>' is not a
-//      regular file". THE VOLUME IS THE FIRST NAME ASKED, because every path in
-//      the act is composed under it and a link there would aim the whole mirror
-//      — its creates, its copies and its removals — at whatever it points to.
-//      It is asked on the DISCOVERY side too, where the same link means the
-//      same thing: udisks makes real mount points under `/run/media/<user>/`,
-//      so an entry there that is a link is a hand's work and REFUSES with the
-//      link sentence rather than being counted as a volume or quietly passed
-//      over (platform_wayland.cpp), while the tablet's candidates are the
-//      process's own mount table's mount points and are real directories by
-//      construction (platform_android.cpp). A refusal AND NOT A DELETION,
+//      regular file". THE SYNC ROOT IS THE FIRST NAME ASKED, because every path
+//      in the act is composed under it and a link there would aim the whole
+//      mirror — its creates, its copies and its removals — at whatever it
+//      points to. IT IS ALSO WHERE A DESTINATION THAT IS SIMPLY NOT THERE
+//      ANSWERS (2026-08-30, the configured path's own case, which a FOUND
+//      volume could never have had): an unplugged stick or a mistyped
+//      `sync_path` names nothing, and the root's claim refuses "'<path>' is
+//      not a directory" before a single name is created — THE ACT NEVER
+//      CREATES ITS OWN SYNC ROOT, only the project's folder under it, because
+//      a mirror that makes its own destination would silently fill a typo's
+//      folder on the internal disk instead of the stick that is not there. A
+//      refusal AND NOT A DELETION,
 //      deliberately: what a foreign link at one of our own names means is the
 //      user's to decide, not this act's. `create_directories` runs only after
 //      those checks pass, and an unkept link is removed AS A LINK and never
@@ -109,14 +122,14 @@
 //      COST IS ACCEPTED: a name swapped for a link in the seconds between its
 //      check and the create, copy or removal that follows would be followed,
 //      std::filesystem being path-based and this act having no fd-relative
-//      rewrite of it to offer. That swap is a hand on a mounted volume while
+//      rewrite of it to offer. That swap is a hand on a mounted stick while
 //      the act is running — the adversarial class this product never backstops.
 //   3. EVERY COPY IS STAGED, the render's own publish shape (the staging
 //      spelling is render_staging_path's, render_output_naming.h — the
 //      product has one): the bytes land on `<destination>.tmp` and only a
 //      COMPLETE copy is renamed onto the final name. A copy that fails, is
 //      refused or is interrupted therefore leaves the previous file on the
-//      volume whole — the file the act could not replace is the file the user
+//      stick whole — the file the act could not replace is the file the user
 //      still has. A stale staging file from an interrupted act is ours by name
 //      and is removed at the start of that file's copy; the staging names are
 //      never in the kept set, so any other one goes with the deletions.
@@ -124,7 +137,7 @@
 //      deletion pass keeps an entry when it IS one of the files the copies
 //      just wrote (std::filesystem::equivalent), because the stick is vfat and
 //      case-insensitive: a title changed from `My Title` to `my title` writes
-//      through the existing `My Title.wav` entry, whose spelling on the volume
+//      through the existing `My Title.wav` entry, whose spelling on the stick
 //      need not change, and a spelling comparison would then delete the very
 //      file this act had just copied.
 //
@@ -155,36 +168,18 @@
 // whole recovery, and a second act mirrors from wherever the first stopped.
 //
 // THE ACT AUTHORS NOTHING and touches no AppState: the job below is captured
-// whole by value on the GUI thread, and the worker reads only these four
+// whole by value on the GUI thread, and the worker reads only these five
 // fields and the filesystem.
-
-// THE VOLUME RULE'S SHARED HALF — THE COUNTING RULE AND NOTHING ELSE, called
-// by both backends' own GuiPlatform::removable_volume() with the candidate
-// volume roots that backend's discovery found. Exactly one candidate IS the
-// volume; ZERO answers "No removable volume mounted" and SEVERAL answers
-// "Several removable volumes mounted: a, b" — the candidates' own names
-// (each path's filename) in plain byte order, comma-separated, so the user
-// reads which ones to unmount. The list is sorted and de-duplicated HERE,
-// once, so neither backend does it: two mount-table lines naming one mount
-// point are one volume, not several.
-//
-// HOW A BACKEND DISCOVERS ITS CANDIDATES IS THE BACKEND'S OWN and is stated at
-// each definition (platform_wayland.cpp: the directory entries under the
-// udisks mount root; platform_android.cpp: the `/storage/<name>` mount points
-// in the process's own mount table). SO IS EVERY REFUSAL THAT IS NOT ABOUT
-// COUNTING: a root that cannot be read is a permission fault and NOT zero
-// volumes, and the backend refuses it out loud with the system's own words
-// before it ever reaches here — this half touches no filesystem and so can
-// never mistake a listing it was denied for an empty one.
-std::expected<std::filesystem::path, std::string> sole_removable_volume(
-    std::vector<std::filesystem::path> candidates);
 
 // One act's whole input, by value.
 struct GuiExternalSyncJob {
-    // The mounted removable volume's root (the platform's answer).
-    std::filesystem::path volume;
+    // THE DESTINATION ROOT — the device config's `sync_path`, verbatim
+    // (device_config.h owns the key and its grammar; the GUI half refuses an
+    // EMPTY one before ever composing a job). Never created by this act, never
+    // written outside the one folder it owns under it.
+    std::filesystem::path sync_root;
     // The project's name — the folder under `projects_path` (project_model.h),
-    // and the folder this act owns on the volume.
+    // and the folder this act owns under the sync root.
     std::string           project_name;
     // `<project>/render/<title>.wav`, composed by the caller through the
     // parser's one owner. May not exist; may be empty when no title resolves.
@@ -197,9 +192,20 @@ struct GuiExternalSyncJob {
     std::filesystem::path project_dir;
 };
 
-// The act's verdict, composed on the worker and raised verbatim as a NORMAL
-// notification card by the GUI thread (on_external_sync_complete). `ok` false means the act stopped where it stood and
-// `message` names the path that stopped it; WHAT IT LEFT BEHIND is the head's
+// The act's verdict, composed on the worker and answered by the GUI thread
+// (on_external_sync_complete).
+//
+// A SUCCESSFUL SYNCHRONIZATION SAYS NOTHING (architect 2026-08-30: "if it
+// succeeds, we don't necessarily need [a notice]") — the render's own
+// precedent, where a render served silently publishes silently. So `ok` true
+// carries an EMPTY `message` and raises no card; the count sentence
+// `Synchronized N file(s) to <path>` that stood here from 2026-08-28 is
+// deleted, not merely unraised.
+//
+// `ok` false means the act stopped where it stood and
+// `message` names the path that stopped it — the ONE thing this type still
+// says out loud, on a NORMAL notification card; WHAT IT LEFT BEHIND is the
+// head's
 // (a)(b)(c) — no deletion at all unless every copy and the whole destination
 // classification succeeded, a copy-phase failure leaving the replacements
 // completed before it standing and the failed file's previous contents whole,

@@ -25,9 +25,12 @@ namespace {
 // HOW A PATH IS NAMED IN A SENTENCE (the basename rule, architect 2026-08-29:
 // a message that carries a path names the file, never a full path — the
 // sentence is one line on a notification card that clips): RELATIVE TO THE
-// MIRROR'S TWO ROOTS. A path on the volume is `<volume name>/<its path under
-// the volume>` — the volume's own folder name leads so the reader knows which
-// side failed, the root itself being just that name; a path in the project
+// MIRROR'S TWO ROOTS. A path on the stick is `<sync root's last
+// component>/<its path under the root>` — that one component leads so the
+// reader knows which side failed, the root itself being just that name (it
+// was the found VOLUME's folder name until 2026-08-30 and reads exactly the
+// same, `sync_path` naming the mount folder the volume used to be:
+// `KINGSTON/550 - 1/render/x.wav`); a path in the project
 // is its path under the project folder (the folder itself its own name); and
 // anything under neither — nothing in the act composes one — falls back to
 // its filename. Lexical, like the paths themselves: every name in the act is
@@ -44,8 +47,18 @@ std::string shown(const GuiExternalSyncJob& job, const std::filesystem::path& p)
         return true;
     };
     std::string rel;
-    if (under(job.volume, rel)) {
-        const std::string name = job.volume.filename().string();
+    if (under(job.sync_root, rel)) {
+        // THE ROOT'S LAST COMPONENT, and a TRAILING SEPARATOR IS STRIPPED to
+        // find it: `sync_path` is typed by hand now, and a shell's own
+        // completion ends a folder in `/` — `/run/media/b/SANDISK/` has an
+        // EMPTY filename() and would leave every sentence naming
+        // `/550 - 1/render/x.wav` with no root at all. The discovered mount
+        // point this replaced could never carry one, so this case is the
+        // configured path's own (2026-08-30). The path itself is used
+        // verbatim; only the display name walks up.
+        const std::filesystem::path& root = job.sync_root;
+        std::string name = root.filename().string();
+        if (name.empty()) name = root.parent_path().filename().string();
         return rel.empty() ? name : name + "/" + rel;
     }
     if (under(job.project_dir, rel)) {
@@ -63,7 +76,7 @@ std::string shown(const GuiExternalSyncJob& job, const std::filesystem::path& p)
 // app was not granted — and on the tablet the first copy IS the plain-open()
 // probe under the All-files permission, whose whole diagnostic is the
 // `/storage/<uuid>/...` path it was refused (the full path is on stderr; the
-// card names it under the volume). A staged copy names the staging path it
+// card names it under the sync root). A staged copy names the staging path it
 // was writing and its rename names the final one, so the line names the path
 // the call itself failed on.
 std::string read_failure(const GuiExternalSyncJob&    job,
@@ -125,38 +138,9 @@ std::optional<std::string> walk_directory(const GuiExternalSyncJob&    job,
 
 } // namespace
 
-// The volume rule's shared half (the contract is at the declaration). IT
-// TOUCHES NO FILESYSTEM: the candidates are already the backend's answer, and
-// the counting below can only be wrong if the discovery that produced them
-// was.
-std::expected<std::filesystem::path, std::string> sole_removable_volume(
-        std::vector<std::filesystem::path> candidates) {
-    std::sort(candidates.begin(), candidates.end(),
-              [](const std::filesystem::path& a, const std::filesystem::path& b) {
-                  return a.filename().string() < b.filename().string();
-              });
-    // ONE MOUNT POINT IS ONE VOLUME however many times it was named: a mount
-    // table can carry the same path twice (a remount, an overmount), and
-    // counting those as several would refuse a stick that is plainly there.
-    candidates.erase(std::unique(candidates.begin(), candidates.end()),
-                     candidates.end());
-
-    if (candidates.empty())
-        return std::unexpected(std::string("No removable volume mounted"));
-    if (candidates.size() > 1) {
-        std::string list;
-        for (size_t i = 0; i < candidates.size(); ++i) {
-            if (i != 0) list += ", ";
-            list += candidates[i].filename().string();
-        }
-        return std::unexpected("Several removable volumes mounted: " + list);
-    }
-    return candidates.front();
-}
-
 GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     GuiExternalSyncOutcome out;
-    const std::filesystem::path dest = job.volume / job.project_name;
+    const std::filesystem::path dest = job.sync_root / job.project_name;
 
     // EVERY REFUSAL LEAVES THROUGH HERE: the line the act composed becomes the
     // notification card and the stderr line together, `ok` stays false, and
@@ -173,10 +157,10 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
 
     // -- WHAT THE ACT MAY TOUCH, ASKED BEFORE IT TOUCHES ANYTHING -----------
     //
-    // Rule 2. The claim below is every destination name's, and THE VOLUME is
-    // the one asked here at the act's head, before the set is even built: every
-    // path in the act is composed under it.
-    enum class DestKind { Volume, Directory, RegularFile };
+    // Rule 2. The claim below is every destination name's, and THE SYNC ROOT
+    // is the one asked here at the act's head, before the set is even built:
+    // every path in the act is composed under it.
+    enum class DestKind { SyncRoot, Directory, RegularFile };
     auto claim_destination = [&job](const std::filesystem::path& p,
                                     DestKind kind) -> std::optional<std::string> {
         std::error_code st_ec;
@@ -184,9 +168,14 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
             std::filesystem::symlink_status(p, st_ec);
         if (st.type() == std::filesystem::file_type::not_found) {
             // Nothing there is the ordinary case for a name the act creates
-            // below — and it is not one for the volume, which the platform has
-            // just answered is mounted.
-            if (kind != DestKind::Volume) return std::nullopt;
+            // below — and it is NOT one for the sync root, which this act
+            // never creates: `sync_path` is a folder the user names and this
+            // act writes into, so a name that is not there is an unplugged
+            // stick or a typo, and it refuses with the sentence a wrong KIND
+            // gets (2026-08-30; while the root was FOUND rather than
+            // configured this arm had no producer at all, the platform having
+            // just answered that the volume was mounted).
+            if (kind != DestKind::SyncRoot) return std::nullopt;
             return "'" + shown(job, p) + "' is not a directory";
         }
         if (st_ec) return read_failure(job, p, st_ec);
@@ -199,13 +188,13 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
             return "'" + shown(job, p) + "' is not a regular file";
         return std::nullopt;
     };
-    if (auto bad = claim_destination(job.volume, DestKind::Volume))
+    if (auto bad = claim_destination(job.sync_root, DestKind::SyncRoot))
         return refuse(*bad);
 
     // -- THE SET ------------------------------------------------------------
     //
     // Built first and whole, so the mirror's two halves read one description
-    // of what belongs on the volume: the copies drive the writes, and their
+    // of what belongs on the stick: the copies drive the writes, and their
     // destination paths ARE the kept set the deletions consult (rule 4 keeps
     // by identity, so the kept set is a list of real paths and never a list of
     // spellings).
@@ -273,7 +262,7 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
                 })) {
             return refuse(*fault);
         }
-        if (wavs.empty()) continue;   // an empty cell earns no folder on the volume
+        if (wavs.empty()) continue;   // an empty cell earns no folder on the stick
         std::sort(wavs.begin(), wavs.end(),
                   [](const std::filesystem::path& a,
                      const std::filesystem::path& b) {
@@ -292,8 +281,8 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
 
     // -- THE REST OF WHAT THE ACT MAY TOUCH ---------------------------------
     //
-    // Rule 2, the volume's own claim above having been the first of these: the
-    // rest run to completion before the first create_directories.
+    // Rule 2, the sync root's own claim above having been the first of these:
+    // the rest run to completion before the first create_directories.
     if (auto bad = claim_destination(dest, DestKind::Directory))
         return refuse(*bad);
     for (const std::filesystem::path& d : kept_dirs) {
@@ -312,7 +301,7 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // exists, and the checks above have just proved that each of these names
     // is a real directory or is free. A failure here is the same class as a
     // failed copy and reports the same way, since it is the same write to the
-    // same volume.
+    // same stick.
     std::filesystem::create_directories(dest, ec);
     if (ec) return refuse(copy_failure(job, dest, ec));
     for (const std::filesystem::path& batch_dest : kept_dirs) {
@@ -451,10 +440,15 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
         if (rm_ec) return refuse(remove_failure(job, d.path, rm_ec));
     }
 
+    // A SUCCESSFUL SYNCHRONIZATION SAYS NOTHING (architect 2026-08-30) — the
+    // render's own precedent: a render served silently publishes silently. The
+    // verdict leaves with `ok` true and an EMPTY message, and
+    // on_external_sync_complete raises no card for it; the count sentence that
+    // stood here from 2026-08-28 (`Synchronized N file(s) to <path>`) is
+    // deleted rather than left unraised, so nothing composes a line no surface
+    // shows. THE FAILURES ARE STILL LOUD, on the card and on stderr both
+    // (`refuse` above is their one owner).
     out.ok = true;
-    out.message = "Synchronized " + std::to_string(copies.size()) +
-                  (copies.size() == 1 ? " file to " : " files to ") +
-                  shown(job, dest);
     return out;
 }
 
@@ -487,7 +481,7 @@ void GuiExternalSyncWorker::shutdown() {
         // NO CANCEL, BY DESIGN — the loop below finishes the act it is running
         // and only then sees the stop flag, so the join waits it out. A
         // copy_file abandoned part-way would leave a truncated wav on the
-        // volume, which is the one thing the copies-then-deletions order does
+        // stick, which is the one thing the copies-then-deletions order does
         // not already make harmless.
         {
             std::lock_guard<std::mutex> lk(mtx_);

@@ -15,9 +15,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (four keys since
-// `audio_player` retired 2026-08-28; five from the project model 2026-08-27;
-// two before it). The scanner takes it as a
+// set the shared scanner enforces after the loop (FIVE keys since `sync_path`
+// arrived 2026-08-30 with the mirror's configured destination; four from
+// `audio_player`'s retirement 2026-08-28; five from the project model
+// 2026-08-27; two before it). THE ORDER IS THE ARCHITECT'S OWN, given with the
+// fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
+// last_project, sync_path. The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -26,9 +29,10 @@ namespace {
 // here both halves are in this file, so one list is the honest shape).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
-    "projects_path",
     "projects_repo",
+    "projects_path",
     "last_project",
+    "sync_path",
 };
 
 } // namespace
@@ -62,19 +66,25 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         s += key;
         s += '=';
         const std::string_view k(key);
+        // The arms are in the emitted order above, so this reads as the file
+        // reads.
         if (k == "gui_scale") {
             s += format_gui_scale_percent(cfg.gui_scale);
+        } else if (k == "projects_repo") {
+            // Free text, verbatim; blank is legal and never matches a remote.
+            s += cfg.projects_repo;
         } else if (k == "projects_path") {
             // Verbatim: the reader accepted it as an absolute path, and
             // nothing in the program rewrites it.
             s += cfg.projects_path;
-        } else if (k == "projects_repo") {
-            // Free text, verbatim; blank is legal and never matches a remote.
-            s += cfg.projects_repo;
-        } else {
-            // last_project: the folder name verbatim, blank until the first
-            // successful open.
+        } else if (k == "last_project") {
+            // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
+        } else {
+            // sync_path: verbatim, and blank on a device with no destination
+            // — the reader accepted it as empty or as an absolute path, and
+            // nothing in the program rewrites it.
+            s += cfg.sync_path;
         }
         s += '\n';
     }
@@ -95,6 +105,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
                   -> std::expected<void, std::string> {
         using warptempo_settings::bad_value;
 
+        // The arms are in the writer's order (kDeviceConfigKeys above); the
+        // scanner hands them over in the FILE's order, which is nobody's
+        // business but the file's.
         if (key == "gui_scale") {
             // One canonical spelling: plain digits through
             // parse_authored_frame (no sign, point, or leading zeros — exactly
@@ -109,16 +122,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.gui_scale = static_cast<int>(v);
             return {};
         }
-        if (key == "projects_path") {
-            // Non-empty and absolute, through the one owner in the header;
-            // existence is startup's question, not this reader's.
-            if (!is_projects_path(value)) {
-                return bad_value(ln, key, value,
-                    "must be an absolute path");
-            }
-            out.projects_path = value;
-            return {};
-        }
         if (key == "projects_repo") {
             // Free text, taken verbatim in UTF-8 with no host/path grammar
             // enforced here — the GitHub recheck normalizes it against the
@@ -130,6 +133,22 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.projects_repo = value;
             return {};
         }
+        if (key == "projects_path") {
+            // Absolute, under the shared path-value grammar — the one owner
+            // in the header; existence is startup's question, not this
+            // reader's. THE REASON NAMES THE EDGE RULE because that is the
+            // fault a hand actually makes here: an absolute path with a
+            // trailing space (or the `\r` a CRLF-saved file leaves on every
+            // value) is refused, and "must be an absolute path" alone would
+            // read as a lie against a value that plainly is one.
+            if (!is_projects_path(value)) {
+                return bad_value(ln, key, value,
+                    "must be an absolute path with no whitespace at either "
+                    "edge");
+            }
+            out.projects_path = value;
+            return {};
+        }
         if (key == "last_project") {
             // Empty, or one path component — the grammar and the reason a
             // separator is adversarial are at is_last_project_name.
@@ -138,6 +157,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                     "must be one folder name, not a path");
             }
             out.last_project = value;
+            return {};
+        }
+        if (key == "sync_path") {
+            // Empty, or an absolute path under the shared path grammar — the
+            // one owner in the header, where the empty form's meaning ("not
+            // set up on this device") is stated.
+            if (!is_sync_path(value)) {
+                return bad_value(ln, key, value,
+                    "must be empty or an absolute path with no whitespace at "
+                    "either edge");
+            }
+            out.sync_path = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

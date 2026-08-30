@@ -24,10 +24,16 @@
 // record of all four, with the consequence for a file still carrying one, is
 // at kCanonicalSettingsKeys in settings_file.cpp. `audio_player` DID NOT
 // SURVIVE THE MOVE: it retired whole on 2026-08-28 when the GUI grew its own
-// render player, so the device config is FOUR keys — `gui_scale`,
-// `projects_path`, `projects_repo`, `last_project` — and a config still
+// render player, and a config still
 // carrying an `audio_player=` line is unknown-key fatal there exactly as a
 // sidecar carrying one is here (architect approval 2026-08-28, comment-only).
+// THE DEVICE CONFIG IS FIVE KEYS — `gui_scale`, `projects_repo`,
+// `projects_path`, `last_project`, `sync_path`, in the writer's own order
+// (it was four between `audio_player`'s retirement and 2026-08-30, when
+// `sync_path` arrived to name where Synchronize to external storage mirrors,
+// retiring the discovery that had found that destination). None of the five
+// has ever been this schema's business (architect approval 2026-08-30,
+// comment only).
 //
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
@@ -217,8 +223,10 @@ struct SettingsFile {
     // config (src/gui/device_config.h, which owns their types, their grammars
     // and their semantics now), the fourth to retirement. `audio_player` then
     // RETIRED THERE TOO on 2026-08-28, with the in-app render player that
-    // replaced the spawn, leaving that config four keys (architect approval
-    // 2026-08-28, comment-only). Nothing in either
+    // replaced the spawn (architect approval 2026-08-28, comment-only), which
+    // left that config four keys until `sync_path` made it FIVE on 2026-08-30
+    // — no field of this struct's ever having been that one (architect
+    // approval 2026-08-30, comment only). Nothing in either
     // product sizes text from a setting, nothing in either product plays at a
     // speed other than the source's own, nothing in either product spawns a
     // player, and the repository that is the

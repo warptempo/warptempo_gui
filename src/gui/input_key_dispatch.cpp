@@ -5592,8 +5592,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
 // -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
 
-// The act's GUI half: the gates, the volume, the capture, the dispatch. It is
-// reached from the File menu's Synchronize row alone, whose release has
+// The act's GUI half: the gates, the destination, the capture, the dispatch.
+// It is reached from the File menu's Synchronize row alone, whose release has
 // already closed the popup.
 void GuiInputHandler::synchronize_to_external_storage() {
     // The Open project row's own gates, mirrored: a menu row's refusals belong
@@ -5610,14 +5610,16 @@ void GuiInputHandler::synchronize_to_external_storage() {
     if (app.source_audio_path.empty() || app.project_name.empty()) return;
 
     // EVERY SENTENCE THIS ACT WRITES IS A NOTIFICATION CARD (2026-08-29) —
-    // the volume's refusal, the already-running answer and the worker's
-    // verdict on the way back (on_external_sync_complete) — visible in the
+    // the unset-key refusal, the already-running answer and the worker's
+    // FAILURES on the way back (on_external_sync_complete) — visible in the
     // `h` view like anywhere else; they were the status chain's transient
     // tier for one day, invisible under the view's own line. THE DISPATCH
     // NOTICE IS DROPPED with the move: "Synchronizing to …" was a process
     // line, state rather than an event, and the design gives the mirror no
-    // bar cell — the act's own verdict follows within seconds and is the
-    // event. THE WORKER'S FAILURES ARE STILL LOUD on stderr too —
+    // bar cell. AND SINCE 2026-08-30 A SUCCESS SAYS NOTHING AT ALL (the
+    // architect's ruling, the render's precedent), so the only sentences left
+    // are refusals — which is why this act, when it works, is one menu press
+    // and silence. THE WORKER'S FAILURES ARE STILL LOUD on stderr too —
     // run_external_sync's one refusal owner writes every failing line there
     // beside the verdict (logcat on the tablet).
     auto report = [&](std::string line) {
@@ -5632,13 +5634,24 @@ void GuiInputHandler::synchronize_to_external_storage() {
         return;
     }
 
-    // THE VOLUME IS THE SEAM'S ANSWER and its refusal is the act's whole
-    // ending: zero mounted and several mounted each say so and nothing is
-    // written (GuiPlatform::removable_volume).
-    const std::expected<std::filesystem::path, std::string> volume =
-        GuiPlatform::removable_volume();
-    if (!volume) {
-        report(volume.error());
+    // THE DESTINATION IS THE DEVICE CONFIG'S, told and not found (architect
+    // 2026-08-30): `sync_path`, the loop's one DeviceConfig, read here and
+    // handed to the job whole — the act composes `<sync_path>/<project
+    // name>/` and looks for nothing. IT WAS THE SEAM'S ANSWER for three days
+    // (`GuiPlatform::removable_volume`, deleted with its two backends'
+    // discoveries): the finding rule worked on the laptop and could not work
+    // on the tablet at all, and where a machine's removable storage is
+    // mounted is exactly the kind of per-device fact that file is for
+    // (device_config.h).
+    //
+    // AN EMPTY KEY IS THE DEVICE SAYING IT HAS NO DESTINATION — "not set up
+    // on this device", the first-run template's own value — and the card
+    // names THE KEY BY ITS SPELLING (`sync_path is not set`): a config key is
+    // named the way it is written in the file everywhere in the product, so
+    // the sentence tells the reader exactly what to add. Nothing runs.
+    const std::string& sync_path = app.device_config->sync_path;
+    if (sync_path.empty()) {
+        report("sync_path is not set");
         return;
     }
 
@@ -5651,10 +5664,10 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // exactly this one file (prune_render_folder, renders_dir.h), so the
     // mirror's deletions on the stick and the prune's on disk are ONE
     // definition rather than two that happen to agree — a previous title's
-    // deliverable is gone from both sides, not swept off the volume while it
+    // deliverable is gone from both sides, not swept off the stick while it
     // sits on disk.
     GuiExternalSyncJob job;
-    job.volume       = *volume;
+    job.sync_root    = std::filesystem::path(sync_path);
     job.project_name = app.project_name;
     job.deliverable  = compose_render_output_path(
         render_output_directory(app.source_audio_path),
@@ -5674,12 +5687,20 @@ void GuiInputHandler::synchronize_to_external_storage() {
 }
 
 // The verdict, back on the main thread (the platform's completion eventfd,
-// main.cpp's wiring). The worker composed the sentence; this raises it as a
-// NORMAL notification card and does nothing else — a failed mirror is
-// retried by pressing the row again, so it is never the critical class,
-// which is the checkpoint act's alone (the reason at the declaration).
+// main.cpp's wiring).
+//
+// A SUCCESS SAYS NOTHING (architect 2026-08-30, "if it succeeds, we don't
+// necessarily need [a notice]") — the render's own precedent, a render served
+// silently publishing silently — so only a FAILURE raises, and the worker
+// composed that sentence. It is a NORMAL card and never the critical class: a
+// failed mirror is retried by pressing the row again, while the critical
+// class is the checkpoint act's alone (the reason at the declaration). A
+// successful act carries an empty message by construction
+// (GuiExternalSyncOutcome), so this fork and that emptiness are one statement
+// and neither invents the other.
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
+    if (outcome.ok) return;
     notifications.notify(AppState::NotificationClass::Normal, std::move(outcome.message));
 }
 

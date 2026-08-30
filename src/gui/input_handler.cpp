@@ -2925,8 +2925,8 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // so the only moment it can be written is the moment it changes. The write
     // is advisory — it prints its own line on failure and the live value stands
     // either way — and it goes through THE LIVE CONFIG (AppState::device_config,
-    // the loop's one struct): the file holds four keys and is rewritten whole,
-    // and that struct is the one place all four are live at once, across every
+    // the loop's one struct): the file holds five keys and is rewritten whole,
+    // and that struct is the one place all five are live at once, across every
     // reopen (the ownership rule is at write_device_config, device_config.h).
     app.gui_scale = percent;
     app.device_config->gui_scale = percent;

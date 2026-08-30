@@ -5,8 +5,6 @@
 #include "input_core.h"
 #include <cairo/cairo.h>
 #include <cstdint>
-#include <expected>
-#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
@@ -56,7 +54,7 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its four keys). It is a PLATFORM FACT and lives on the seam for
+    // schema and its five keys). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps
@@ -64,36 +62,18 @@ public:
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
 
-    // THE ONE MOUNTED REMOVABLE VOLUME (architect 2026-08-27) — the
-    // Synchronize to external storage act's destination, FOUND AND NEVER
-    // CONFIGURED. It is a PLATFORM FACT and lives on the seam for
-    // device_config_defaults()'s own reason: where a machine mounts a stick is
-    // an answer only the backend has. STATIC for symmetry with that one; it
-    // needs no window either.
-    //
-    // EACH BACKEND OWNS ITS DISCOVERY, the COUNTING is shared: the backend
-    // hands sole_removable_volume (external_sync.h) the candidate volume roots
-    // it found, and that half answers zero and several with their own two
-    // sentences. Nothing is ranked, remembered or preferred, and A ROOT THE
-    // BACKEND CANNOT READ REFUSES OUT LOUD with the system's own words instead
-    // of counting as zero — where a machine keeps its mount points and what a
-    // failure to read them means there is the backend's knowledge, stated at
-    // each definition.
-    //
-    // THE WHOLE VOLUME RULE ON THIS BACKEND: the DIRECTORY entries under
-    // `/run/media/<user>/`, the udisks mount point the desktop session uses,
-    // with `<user>` taken from getpwuid(geteuid()) and `$USER` as the fallback
-    // spelling; a missing root is the one error that means zero here, and an
-    // entry that is a SYMBOLIC LINK refuses with the mirror's own link sentence
-    // rather than becoming a candidate (rule 2 asked on the discovery side —
-    // udisks mounts a real directory for every volume; the reasoning is at the
-    // definition). THE
-    // LABEL IS NEVER CONSULTED — the architect's stick mounts as
-    // `/run/media/b/SANDISK` here and as `/storage/067C-8690` on the tablet,
-    // and it is the same physical stick: "the one removable volume" is the
-    // whole identity the product has of it, so neither the label nor the UUID
-    // is a fact this program reads.
-    static std::expected<std::filesystem::path, std::string> removable_volume();
+    // (THE ONE MOUNTED REMOVABLE VOLUME stood here from 2026-08-27 until
+    // 2026-08-30 as `removable_volume()`, the seam's fourth per-backend
+    // answer: Synchronize to external storage found its destination — the
+    // udisks mount points under `/run/media/<user>/` here, the
+    // `/storage/<name>` mount table lines on Android — rather than being told
+    // it. THE DESTINATION IS CONFIGURED NOW, the device config's `sync_path`
+    // key (device_config.h), so this member and both discoveries are DELETED:
+    // where a machine mounts a stick is still a per-device fact, and the
+    // per-device facts file is where it belongs. The finding rule worked here
+    // and could not work on the tablet at all, that build mounting the OTG
+    // stick invisibly to every app; the whole record is in
+    // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui" clean, "K551 * - warptempo_gui" with unsaved work.

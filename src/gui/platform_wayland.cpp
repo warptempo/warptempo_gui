@@ -1,6 +1,5 @@
 #include "platform_wayland.h"
 
-#include "external_sync.h"   // sole_removable_volume, the volume rule's shared half
 #include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -12,7 +11,6 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include <linux/input-event-codes.h>
-#include <pwd.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
 #include <fcntl.h>
@@ -616,94 +614,17 @@ DeviceConfig GuiPlatform::device_config_defaults() {
             std::string(home) + "/.warptempo/warptempo_gui/projects";
     }
     cfg.projects_repo = kDefaultProjectsRepo;
+    // THE MIRROR'S DESTINATION IS EMPTY ON A FIRST RUN — "not set up on this
+    // device" (the grammar and the reason are at is_sync_path,
+    // device_config.h). Where a stick lands is not guessable even here, where
+    // the answer usually looks like `/run/media/<user>/<label>`: udisks names
+    // the folder after the volume's own label, which is the stick's business
+    // and not this program's, and a wrong guess would aim the mirror's
+    // creates, copies and removals at a folder the architect never named. He
+    // types the path once, by hand, like the projects path above it.
+    cfg.sync_path     = "";
     cfg.last_project  = "";
     return cfg;
-}
-
-// THE LAPTOP'S REMOVABLE VOLUME — THIS BACKEND'S DISCOVERY HALF (the counting
-// half and its two sentences are sole_removable_volume's, external_sync.h).
-// The desktop session's udisks mounts every stick under `/run/media/<user>/`,
-// one directory per volume, so the candidates are simply the directories there
-// — no /proc/mounts parse, no filesystem-type test, no label. `<user>` is the
-// effective user's own name (getpwuid, the answer the mount point was built
-// from) with `$USER` as the fallback spelling; a machine that can name neither
-// has no `/run/media/<user>` to look in, which is the same nothing as an empty
-// one and gets the same sentence.
-//
-// A ROOT THAT CANNOT BE READ REFUSES OUT LOUD, with its path and the system's
-// own words: not knowing is not the same as knowing there is nothing, and a
-// permission or an I/O fault reported as "No removable volume mounted" would
-// send the user hunting for a stick that is plainly mounted. THE ONE ERROR
-// THAT HONESTLY MEANS ZERO is a missing root: udisks creates
-// `/run/media/<user>` at the first mount and removes it with the last, so
-// ENOENT says nothing is mounted, which is exactly the counting rule's own
-// answer for an empty listing.
-//
-// A CANDIDATE IS A REAL DIRECTORY AND NEVER A LINK: every entry is read with
-// symlink_status, and one that is a symbolic link ends the answer with the
-// mirror's own sentence, "'<path>' is a symbolic link" (rule 2, external_sync.h
-// — the act refuses the volume itself on the same terms). udisks puts a real
-// mount point here for every volume it mounts, so a link at this root is a
-// hand's work, and the two quiet answers — counting it, or passing over it —
-// would either aim the mirror through it or say nothing about it at all.
-//
-// THE LABEL IS NEVER CONSULTED. The architect's stick is `SANDISK` here and
-// `067C-8690` on the tablet — one physical stick, two names, and the product
-// reads neither: it is simply the one removable volume.
-std::expected<std::filesystem::path, std::string> GuiPlatform::removable_volume() {
-    std::string user;
-    if (const struct passwd* pw = ::getpwuid(::geteuid());
-        pw && pw->pw_name && pw->pw_name[0]) {
-        user = pw->pw_name;
-    } else if (const char* env = std::getenv("USER"); env && env[0]) {
-        user = env;
-    }
-    if (user.empty())
-        return std::unexpected(std::string("No removable volume mounted"));
-
-    const std::filesystem::path root = std::filesystem::path("/run/media") / user;
-    const auto unreadable = [&root](const std::error_code& ec) {
-        return std::unexpected("Cannot read '" + root.string() + "': " +
-                               ec.message());
-    };
-
-    std::vector<std::filesystem::path> candidates;
-    std::error_code ec;
-    std::filesystem::directory_iterator it(root, ec);
-    if (ec && ec != std::errc::no_such_file_or_directory) return unreadable(ec);
-    if (!ec) {
-        // The increment is spelled out because a range-for over a
-        // directory_iterator throws on it; a walk that stops part-way is a
-        // fault like the open's and refuses the same way, since the entries
-        // seen so far are not the answer to "which volumes are mounted".
-        // That refusal is also why this walk does not route through the walk
-        // owner (for_each_directory_entry, directory_walk.h): the owner's
-        // callback answers nothing, and every fault here is a sentence.
-        //
-        // The link refusal above is asked here, entry by entry. An entry that
-        // is simply gone by the time it is read — the stick unmounted
-        // mid-listing — is no volume and no fault; any other status error
-        // refuses like the listing's own.
-        const std::filesystem::directory_iterator end;
-        while (it != end) {
-            std::error_code de_ec;
-            const std::filesystem::file_status st = it->symlink_status(de_ec);
-            if (st.type() != std::filesystem::file_type::not_found) {
-                if (de_ec)
-                    return std::unexpected("Cannot read '" +
-                                           it->path().string() + "': " +
-                                           de_ec.message());
-                if (std::filesystem::is_symlink(st))
-                    return std::unexpected("'" + it->path().string() +
-                                           "' is a symbolic link");
-                if (std::filesystem::is_directory(st))
-                    candidates.push_back(it->path());
-            }
-            it.increment(ec);
-            if (ec) return unreadable(ec);
-        }
-    }
-    return sole_removable_volume(std::move(candidates));
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

@@ -80,11 +80,15 @@ using warptempo_parse::prefix_line_error;
 // machine's, the third because ONE user has ONE repository and the recheck
 // reads it from the device now. ONE OF THE THREE DID NOT SURVIVE THE MOVE:
 // `audio_player` RETIRED WHOLE from the device config on 2026-08-28, the GUI
-// having grown a render player of its own, so that config is now the four keys
-// `gui_scale`, `projects_path`, `projects_repo` and `last_project`, and a
+// having grown a render player of its own, and a
 // config still carrying an `audio_player=` line refuses there exactly as a
 // sidecar carrying one refuses here (architect approval 2026-08-28,
-// comment-only). A `.settings` still carrying any of the four
+// comment-only). THAT CONFIG IS NOW FIVE KEYS — `gui_scale`, `projects_repo`,
+// `projects_path`, `last_project`, `sync_path`, the writer's own order (four
+// between that retirement and 2026-08-30, when `sync_path` arrived with the
+// mirror's configured destination) — and none of them is readable from here
+// (architect approval 2026-08-30, comment only). A `.settings` still carrying
+// any of the four
 // is load-fatal in both products by the ordinary unknown-key refusal below —
 // hand-editing the lines out is the whole recovery, NO migration and no reader
 // leniency, exactly as for `font_size` and the four attestation keys before
@@ -315,8 +319,12 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // an in-app render player that decodes a wav and plays it through the
     // product's own engine on both devices, so there is no player binary to
     // name anywhere. The key, its blank opt-out, the settings editor's arm and
-    // the spawn itself are deleted, and the device config is four keys —
-    // `gui_scale`, `projects_path`, `projects_repo`, `last_project`. It was
+    // the spawn itself are deleted, and the device config is FIVE keys —
+    // `gui_scale`, `projects_repo`, `projects_path`, `last_project`,
+    // `sync_path` — in the writer's own order, having been four from that
+    // retirement until `sync_path` joined on 2026-08-30 to name the folder
+    // Synchronize to external storage mirrors into (architect approval
+    // 2026-08-30, comment only). It was
     // never the CLI's key in either home.
     //
     // `projects_repo` (architect approval 2026-08-27, the fifth grant on this

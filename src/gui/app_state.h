@@ -3048,8 +3048,8 @@ struct CommandPopupItem {
 // and the row raises the Open project picker — the folder overlay's list of
 // projects in the keyboard's band over a Cancel-alone row) and **Synchronize to external storage** under
 // it (architect
-// 2026-08-27, the deliverable and the batch cells mirrored onto the one
-// mounted removable volume — the act is external_sync.h's and this row is its
+// 2026-08-27, the deliverable and the batch cells mirrored onto the device
+// config's `sync_path` — the act is external_sync.h's and this row is its
 // ONLY road, on either platform), then **Quit** (architect 2026-08-13, the
 // standard home for it and where kdenlive keeps it). Save and Render stay the
 // icon row's, and the menu is deliberately minimal. The separator parts the

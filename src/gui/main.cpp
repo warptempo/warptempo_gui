@@ -1172,8 +1172,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         return {1, {}};
     }
     // THE SYNCHRONIZATION WORKER (2026-08-27): the File menu's Synchronize to
-    // external storage act mirrors the project's renders onto the mounted
-    // removable volume here instead of on the GUI thread, which a USB write
+    // external storage act mirrors the project's renders onto the device
+    // config's `sync_path` here instead of on the GUI thread, which a USB write
     // would freeze for seconds. Single act in flight, completion delivered
     // through its own eventfd below, and shutdown() JOINS an act in progress at
     // the session's tail (the copies are already the user's intent). Fatal on a
@@ -2904,7 +2904,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its four keys describe the MACHINE, not the piece, so they live in
+    // Its five keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
