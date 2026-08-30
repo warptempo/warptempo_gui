@@ -21,12 +21,13 @@ class GuiWaveformWorker;
 // operation structs (Undo, Selection, GuiActiveViews, etc.).
 //
 // Reference list notes:
-//   - Viewport& and std::function<bool(int)>& popup_eligible_marker are
+//   - Viewport& and std::function<bool(int)>& payload_eligible_marker are
 //     deliberately omitted: paint never calls a Viewport method (geometry
 //     queries go through free functions waveform_area / top_strip_area /
 //     current_samples_per_pixel declared in app_state.h) and never calls
-//     popup_eligible_marker directly through this reference (the status bar's
-//     readout calls the free function). Both omitted to avoid dead weight.
+//     payload_eligible_marker directly through this reference (the value
+//     pair's two acts call the free function, and paint reads it nowhere at
+//     all since the readout retired). Both omitted to avoid dead weight.
 //   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
 //     for gui.invalidate_region calls. It carries no cached paint surface of
 //     its own: the playhead triangle mask, the last thing it had ever held,
@@ -780,17 +781,19 @@ private:
     // (top lane 1, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom — the row
     // paints tabs and nothing else since 2026-08-29, when the STATUS CHAIN it
-    // had carried under them from 2026-08-13 was deleted for the status bar),
+    // had carried under them from 2026-08-13 was deleted for the one-day
+    // status bar whose state text is row 8's own cell now),
     // the
     // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout
     // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button
-    // cluster (bottom lane 1, the upper of the strip's two lanes since the
-    // status bar took the window's foot on 2026-08-29 — it was the strip's ONE
-    // lane, on that foot, from the relayout's commit B:
-    // the transport three and the clock left, then the marker verbs, the
+    // cluster (bottom lane 0, the strip's ONE lane, ON THE WINDOW'S FOOT since
+    // the relayout's commit B apart from the one day the STATUS BAR stood
+    // under it, 2026-08-29:
+    // the transport three, the clock and the STATE CELL left, then the marker
+    // verbs, the
     // marker-walk three and the arrow four flush
     // right behind their separators, declared
     // below).
@@ -816,27 +819,27 @@ private:
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the arrows flush right since the same day's relayout): the
     // transport three at the left pad, then the right margin's block — the
-    // four marker verbs with ADD TO SELECTION behind them + separator +
+    // four marker verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG
+    // button, the MEASURE and ADD TO SELECTION behind them + separator +
     // marker-walk three + separator + arrow four (2026-08-15 for the walk
     // group, 2026-08-18 for the verbs) — at
-    // the icon row's boxes, and the
+    // the icon row's boxes, the
     // monospace clock at its own left-anchored pen behind the transport's
-    // separator (centred in the lane until 2026-08-18), painted onto the lane paint_bottom_strip has
+    // separator (centred in the lane until 2026-08-18) and THE STATE CELL
+    // beside that clock (2026-08-29, the status bar's fold into this row: the
+    // `h` walk line or the render's progress line, at the clock's own
+    // separator-to-digits distance and clipped where the right block begins),
+    // painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row
     // painter separate only because the button cluster's tables and the
     // clock's metrics live beside it.
     void paint_bottom_row_buttons_and_clock(cairo_t* cr);
-    // THE STATUS BAR — the window's LAST ROW (architect 2026-08-29), and no
-    // part of the four-row group above: it carries no button, publishes no
-    // rect and owns no hit test. TWO CELLS of STATE, the three strings the tab
-    // row's status chain used to rank — the `h` walk line or the process line
-    // at the LEFT, the resolved readout at the RIGHT, both true at once
-    // whenever both are set. Called from on_redraw on its own lane exposure,
-    // beside paint_bottom_strip, and it grounds its own three bands. The full
-    // layout record, the no-separator ruling and the clip rule are at the
-    // definition.
-    void paint_status_bar(cairo_t* cr);
+    // (paint_status_bar IS DELETED — architect 2026-08-29, the evening of the
+    // day the bar landed. It painted the window's LAST ROW, three bands under
+    // two cells of state; the lane went whole and the STATE TEXT is the body
+    // above's own cell, right of the clock. The record is at that deletion's
+    // note in the .cpp.)
 
     // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
     // overlap the rows they hang over. They cannot coexist, and the claim rests

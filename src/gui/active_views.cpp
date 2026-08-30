@@ -180,7 +180,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // and not one, and the chain left the bottom row for the tab row on
     // 2026-08-13, which is why the two now name two rows.)
     viewport.kick_waveform_sync();
-    viewport.invalidate_status_bar_area();
     viewport.invalidate_clock_area();
 }
 
@@ -264,5 +263,4 @@ void GuiActiveViews::toggle_active_markers_view() {
     // auto-select only selects the marker the cursor already stands on — so the
     // clock cell has nothing to repaint.
     viewport.kick_waveform_sync();
-    viewport.invalidate_status_bar_area();
 }

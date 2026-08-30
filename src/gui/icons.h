@@ -413,6 +413,15 @@ enum class Icon {
     DialogError,         // a CRITICAL card's glyph
     WindowClose,         // the X on every card
 
+    // THE COPY VALUE BUTTON'S GLYPH (2026-08-29, the bottom row's verb group):
+    // Breeze's actions/22/edit-copy, the two stacked sheets — the same file
+    // this roster carried for the ICONCOPY button from 2026-08-12 until the
+    // 2026-08-20 propagate relocation deleted that button, transcribed FRESH
+    // here rather than recovered (the def and the asset had gone with the
+    // consumer). It says "take this value with you", which is what bare `j`
+    // does with the focused marker's resolved tempo.
+    EditCopy,            // Copy value (the bottom row's verb group)
+
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
@@ -493,11 +502,18 @@ enum class Icon {
 // zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
 // (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
 // (2026-08-11, the trim surface arc).
+// 55 SINCE 2026-08-29, THE COPY VALUE BUTTON: 54 + edit-copy, one fresh
+// verbatim transcription with no departure beside it — absolute M/L/Z over
+// three subpaths whose windings alternate, so cairo's default nonzero fill
+// (SVG's own default, the file naming no fill-rule) cuts the two sheets'
+// interiors out exactly as the file draws them. It is the same Breeze file
+// the deleted IconCopy button wore from 2026-08-12 to 2026-08-20, back for a
+// different act.
 // 54 since 2026-08-29, THE NOTIFICATION CARDS: 51 + dialog-information,
 // dialog-error and window-close — the card's two class glyphs and its X,
 // three fresh verbatim transcriptions with no departures beside them (the
 // two dialog files are two-colour, media-record's shape).
-inline constexpr int kIconCount = 54;
+inline constexpr int kIconCount = 55;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

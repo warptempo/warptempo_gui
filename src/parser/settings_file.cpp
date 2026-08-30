@@ -296,10 +296,14 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // rather than about the piece, and the two devices that run this product
     // want different values for the same project — so it lives in the GUI's own
     // per-device config now (`$XDG_CONFIG_HOME/warptempo_gui/config`,
-    // src/gui/device_config.h), which also took over the [50, 400] RANGE this
-    // schema used to own: the ONE owner is is_gui_scale_percent there, called
-    // by that file's reader and by the settings editor's red-flash alike. The
-    // CLI never read the key.
+    // src/gui/device_config.h), which also took over the RANGE this schema
+    // used to own — [50, 400] at the move, [50, 350] since 2026-08-29, when
+    // the architect brought the ceiling down (400 was never needed, and at
+    // eight lanes 350 keeps the stack inside a 1080-tall window). The ONE
+    // owner is is_gui_scale_percent there, called by that file's reader and
+    // by the settings editor's red-flash alike, so this sentence names no
+    // bracket of its own. The CLI never read the key.
+    // (architect approval 2026-08-29, comment only)
     //
     // `audio_player` (architect approval 2026-08-27): MOVED beside gui_scale
     // and for the same reason — which player binary exists is a fact about the

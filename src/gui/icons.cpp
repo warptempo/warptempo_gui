@@ -1170,6 +1170,28 @@ constexpr IconPath kWindowClosePaths[] = {
      "M 6,5.1523437 5.1523437,6 10.152344,11 5.1523437,16 6,16.847656 l 5,-5 5,5 L 16.847656,16 l -5,-5 5,-5 L 16,5.1523437 11,10.152344 Z"},
 };
 
+// EDIT-COPY (2026-08-29), the Copy value button's two stacked sheets: ONE
+// `.ColorScheme-Text` path under `fill:currentColor`, so it resolves to
+// kIconText like every other single-colour Breeze action here, and its `d` is
+// copied verbatim — absolute M/L/Z, the interpreter's oldest arms. THREE
+// SUBPATHS, and the two inner ones wind OPPOSITE the outline, which is how
+// the file cuts the sheets' interiors out: the file names no fill-rule, so
+// SVG's nonzero default applies, and cairo_fill's own default IS nonzero, so
+// the verbatim `d` fills identically with no field to carry (media-repeat-
+// single's evenodd note is the same decision from the other side).
+//
+// It is the file the RETIRED IconCopy button wore from 2026-08-12 until the
+// 2026-08-20 propagate relocation deleted button, def and asset together; the
+// def is written fresh here rather than recovered, and the act it serves is a
+// different one — the marker VALUE onto the system clipboard, not a propagate
+// copy.
+constexpr IconPath kEditCopyPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 17 L 7 17 L 7 19 L 17 19 L 17 10 L 13 6 L 12 6 L 9 3 L 3 3 Z "
+     "M 4 4 L 8 4 L 8 6 L 7 6 L 7 16 L 4 16 L 4 4 Z "
+     "M 8 7 L 12 7 L 12 11 L 16 11 L 16 18 L 8 18 L 8 7 Z"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -1224,6 +1246,7 @@ constexpr IconDef kBoost              {22.0, kBoostPaths,               4};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
+constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -1281,6 +1304,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;
         case Icon::WindowClose:         return kWindowClose;
+        case Icon::EditCopy:            return kEditCopy;
     }
     return kDialogOkApply;
 }

@@ -356,24 +356,25 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 
 // Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.
-bool popup_eligible_marker(const AppState& app, int idx) {
+bool payload_eligible_marker(const AppState& app, int idx) {
     if (idx < 0) return false;
     if (app.active_markers_view != 'W') return false;
     if (app.iteration_mode_enabled) return false;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
     const auto& m = mv[idx];
-    // This gates the STATUS BAR's resolved readout and the Ctrl+C copy — a
-    // marker's OWN value is written on its flag regardless of eligibility. Render
-    // resolution (resolve_warp_markers_for_render) drops disabled markers
-    // outright and drops label refs whose definition is disabled (the
-    // cascade). The readout must not report a tempo the render never applies,
-    // so eligibility mirrors both drops here: a disabled marker is
-    // ineligible, and a ref to a disabled definition is ineligible. A ref
-    // whose definition is missing entirely stays eligible —
-    // compute_hover_popup_text already yields an empty string for that case
-    // and the display sites suppress an empty readout, so it never surfaces a
-    // stale tempo.
+    // This gates the VALUE PAIR — bare `j`, which copies the focused marker's
+    // resolved value, and Shift+`j`, which jumps to the marker that value
+    // came from — a marker's OWN value being written on its flag regardless
+    // of eligibility. Render resolution
+    // (resolve_warp_markers_for_render) drops disabled markers outright and
+    // drops label refs whose definition is disabled (the cascade). Neither
+    // act may report a tempo the render never applies, so eligibility mirrors
+    // both drops here: a disabled marker is ineligible, and a ref to a
+    // disabled definition is ineligible. A ref whose definition is missing
+    // entirely stays eligible — resolved_marker_payload already yields an
+    // empty string for that case and both acts refuse an empty payload, so it
+    // never surfaces a stale tempo.
     if (m.disabled) return false;
     if (!m.label_ref.empty()) {
         for (const auto& def : mv) {

@@ -100,8 +100,10 @@ int notification_card_h_px();
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S BOUND: the rect the visible stack can ever occupy — three
-// cards of the maximum width, right-aligned at icon_row_pad_x() from the
-// window's right edge, kPanelPadPx-class air below row 1. Every change to
+// cards of the maximum width, right-aligned at kPanelPadPx from the window's
+// right edge, THE SAME kPanelPadPx of air below row 1 (architect 2026-08-29:
+// the two margins are one number; the right one was the icon row's 8 px pad
+// for the cards' first day). Every change to
 // the stack damages this rect (Viewport::invalidate_notification_stack): the
 // painted cards always lie inside it by construction, so it erases what
 // stood and admits what comes without shaping a single glyph off the paint

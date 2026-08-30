@@ -699,7 +699,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // render recipe) and lands on dispatch_render_now's reuse rungs.
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_bar_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the
     // disabled bit, the iter bracket — and never a placement one, so it is a
@@ -963,7 +962,6 @@ bool GuiFlagEditor::commit_bpm_edit() {
     // class the resolved readout has nothing to resolve for — so the bar's
     // right cell changes with it.
     viewport.invalidate_modal_dialog_area();
-    viewport.invalidate_status_bar_area();
     return true;
 }
 

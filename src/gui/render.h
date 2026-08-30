@@ -864,34 +864,31 @@ inline constexpr int      kWaveformBorderPx = 2;
 // docs/engineering/waveform_antialiasing_retired.md, and the deletion inventory
 // is at render_waveform's own header.
 
-// -- ROW 7: THE STATUS BAR'S CHROME ----------------------------------------
+// -- ROW 7's CROP: THE OLD STATUS LANE'S CHROME, AND ITS ONE CORRECTION -----
 //
 // Measured off row_7_text.png (407x33): a 1px #4c4e51 TOP border, 31 rows of
-// #202326 ground, and a 1px #17181a BOTTOM border on the window's LAST row.
-// THAT CROP IS THE STATUS BAR'S OWN BOX (architect 2026-08-29, the messaging
-// redesign's bar half): the window's last lane is 1 + 31 + 1 again, the same
-// three bands the crop measures, so this block is the bar's provenance rather
-// than a lane record. THE GROUND AND THE TOP LINE ARE THE ROW-3/4 CONSTANTS
-// REUSED, on the judgment those rows already set: #202326 is
-// kRedesignContentGround (the selected tab's interior, the icon row's ground,
-// row 5's lane grounds, the unified bottom row's — one Breeze Window fact seen
-// again, not a fifth sample of the same number; the TAB ROW's own ground left
-// that set on 2026-08-13 and neither the bottom row nor the bar followed it,
-// both being content, and the architect picked that ground for the bar off the
-// A/B mockup so bar and bottom strip read as ONE FOOT — kdenlive's own bar
-// samples #202326 too), and #4c4e51 is kRedesignTabLine (row 3's frame grey,
-// row 4's separators and border, and here the ONE line between the bottom row
-// and the bar: the bottom row's own border is drawn on its waveform side, so
-// this seam is the bar's border-top and nothing else draws it).
+// #202326 ground, and a 1px #17181a bottom row. THE GROUND AND THE TOP LINE
+// ARE THE ROW-3/4 CONSTANTS REUSED, on the judgment those rows already set:
+// #202326 is kRedesignContentGround (the selected tab's interior, the icon
+// row's ground, row 5's lane grounds, the unified bottom row's — one Breeze
+// Window fact seen again, not a fifth sample of the same number; the TAB ROW's
+// own ground left that set on 2026-08-13 and the bottom row did not follow it,
+// being content), and #4c4e51 is kRedesignTabLine (row 3's frame grey, row 4's
+// separators and border, and the bottom row's own border-top).
 //
-// THE WINDOW-FOOT SEAM, the crop's near-black last row. It was retired
-// 2026-08-12 at the row unification, when the lane it bordered left the
-// window's edge, and stayed retired through the relayout's commit B on the
-// stated rule that reinstating it would be a ruling rather than a consequence
-// of the restack. THAT RULING IS THE STATUS BAR (architect 2026-08-29): a lane
-// stands on the window's foot again AND he ruled its bottom border, kden3's
-// own foot. Its one consumer is paint_status_bar's last row.
-inline constexpr GuiColor kRedesignBottomLine = hex(0x17181A);
+// THE CROP'S LAST ROW WAS NEVER A KDENLIVE BORDER (architect 2026-08-29): "it
+// duplicates the xfce4-panel border and was never a kdenlive border" — the
+// near-black #17181a line under the crop is the xfce4-panel's TOP EDGE showing
+// under kdenlive's window, not kdenlive's own foot, so the provenance the
+// window-foot seam rested on was wrong from the start. THE SEAM IS RETIRED FOR
+// GOOD with that correction, and `kRedesignBottomLine` is deleted: it was
+// retired once already on 2026-08-12, when the lane it bordered left the
+// window's edge, stayed retired through the relayout's commit B on the rule
+// that reinstating it would be a ruling rather than a consequence of the
+// restack, was REINSTATED FOR ONE DAY on 2026-08-29 under the status bar that
+// briefly stood on the foot, and went with that bar the same evening on the
+// corrected provenance. The bottom row's ONE chrome line is its border-top,
+// which is where the crop's own top border belongs.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1156,7 +1153,7 @@ inline constexpr GuiColor kModalFocusLinePassive = hex(0x4882A1);
 //
 // THE PRODUCT'S ONE SCALE AXIS since row 7 (it was the redesign's own, beside a
 // font axis that is now deleted). The gui_scale setting is an integer PERCENT in
-// [50, 400] — the RANGE's one owner is is_gui_scale_percent (device_config.h),
+// [50, 350] — the RANGE's one owner is is_gui_scale_percent (device_config.h),
 // where the bracket and its four landmarks are spelled once. It is a PER-DEVICE
 // preference since 2026-08-27, read out of the device config rather than out of
 // a source's `.settings`; the current value lives as file-scope
@@ -1719,16 +1716,19 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // waveform, so the border facing it is the one drawn), and commit B's stack
 // names that same line "the thin border" above the row. IT IS THE ICON ROW'S
 // BORDER TOO, read from the same accessor and merely drawn on the opposite
-// edge: one chrome line, two lanes. THE ROW IS NOT THE WINDOW'S LAST LANE ANY
-// MORE (architect 2026-08-29, the messaging redesign): the STATUS BAR sits
-// below it on the window's foot, so this row keeps its ONE border-top and the
-// seam BETWEEN the two lanes is the bar's own border-top, drawn once by the
-// bar. (Row 9's second border — the near-black window-foot seam
+// edge: one chrome line, three lanes now, the folder overlay band's own top
+// border reading the same accessor since 2026-08-29. THE ROW IS THE WINDOW'S
+// LAST LANE AGAIN (architect 2026-08-29, the evening of the messaging
+// redesign's bar half): a STATUS BAR stood below it for that one day and
+// folded back into it, its state text becoming this row's own cell right of
+// the clock. (Row 9's second border — the near-black window-foot seam
 // kRedesignBottomLine — was retired at the 2026-08-12 unification when the lane
-// left the window's edge, and stayed retired through commit B's return to the
-// foot on the rule that a second line there would be a ruling; the bar IS that
-// ruling, and the constant is back in the row-7 palette block above as the
-// bar's own last row.)
+// left the window's edge, stayed retired through commit B's return to the
+// foot on the rule that a second line there would be a ruling, stood for that
+// one day under the bar, and is RETIRED FOR GOOD with it on the corrected
+// provenance: the crop's near-black last row is the xfce4-panel's top edge
+// under kdenlive's window, never a kdenlive border. The record is at the row-7
+// crop block above; this row's ONE line is its border-top.)
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
 // gui_scale_factor() like every redesigned row, through the icon row's own
@@ -1743,34 +1743,13 @@ inline int bottom_row_h_px() {
     return bottom_row_content_h_px() + bottom_row_border_h_px();
 }
 
-// -- THE STATUS BAR (architect 2026-08-29) ----------------------------------
-//
-// THE WINDOW'S LAST LANE, below the unified bottom row: "status bars are
-// generally the last row" — every DAW and KWave agree, and kdenlive's own is
-// the model. It carries STATE and nothing else — the process line or the `h`
-// walk line at the left, the resolved readout at the right, both replaced as
-// they change and neither ever timed out (events are the notification cards;
-// the ruling is docs/engineering/architecture/messaging.md).
-//
-// THE CSS BOX, THREE BANDS, the row-7 crop's own measure re-read as the bar's
-// (the palette block above): a 1px kRedesignTabLine BORDER-TOP — the ONE line
-// between the bottom row and the bar, the bottom row's own border being drawn
-// on its waveform side — then kStatusBarContentPx rows of
-// kRedesignContentGround, then a 1px kRedesignBottomLine as the window's LAST
-// ROW. 33 authored px at 100%, every band riding gui_scale_factor() like every
-// redesigned row: the border reads the icon row's own border accessor (one
-// chrome line, now three lanes) and the content scales like the icon row's.
-inline constexpr int kStatusBarContentPx = 31;
-inline int status_bar_border_h_px() {
-    return icon_row_border_h_px();
-}
-inline int status_bar_content_h_px() {
-    return scaled_px(kStatusBarContentPx, 5);
-}
-inline int status_bar_h_px() {
-    return status_bar_border_h_px() + status_bar_content_h_px() +
-           status_bar_border_h_px();
-}
+// (THE STATUS BAR'S GEOMETRY IS DELETED — architect 2026-08-29, the evening of
+// the day it landed. A tenth lane stood on the window's foot for one day, 1 +
+// 31 + 1 authored px on the row-7 crop's measure, carrying the state strings
+// in two cells; `kStatusBarContentPx` and its three accessors went with it,
+// and the STATE TEXT is row 8's own cell right of the clock. The reasoning is
+// at main.cpp's bottom lane table and in
+// docs/engineering/architecture/messaging.md.)
 
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels — and since row 7 the ONLY
 // text size in the product. Every row's text is 12pt through the existing
@@ -2129,7 +2108,7 @@ inline int popup_item_margin_y_px() {
 // so every pixel is identical at every gui_scale. 8 at 100%. The floor of 2 was
 // the triangle's own ("always a tip row below a top row") and survives only to
 // hold the value byte-for-byte; it cannot fire while gui_scale rests in
-// [50, 400] (8 px reaches 2 only below 19%).
+// [50, 350] (8 px reaches 2 only below 19%).
 inline int waveform_inset_px() {
     return scaled_px(kPlayheadUnitPx, 2);
 }

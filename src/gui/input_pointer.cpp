@@ -388,7 +388,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day; the MARKER MEASURE
     // joined the verb group 2026-08-19).
-    // SEVENTEEN
+    // EIGHTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -468,8 +468,35 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
+    // THE COPY VALUE BUTTON (architect 2026-08-29), the verb group's FIFTH and
+    // the value pair's pointer home: BARE `j`, which was free (greped at the
+    // landing). Its plain lift copies the focused marker's resolved value to
+    // the system clipboard, exactly as the key does — button-is-its-chord
+    // literally, the press dispatching bare `j` through on_key at the LIFT
+    // while the KEY acts at the press.
+    //
+    // AND IT ADMITS SHIFT: its twin is SHIFT+`j`, THE JUMP to the marker that
+    // value came from, on the other A/B tab — so a shift-click or a LONG PRESS
+    // at kChromeShiftHoldMs puts a reference and its definition one Ctrl+Tab
+    // apart with no keyboard, which is the whole reason the admission exists
+    // on glass. The row's own `shift` bit stays FALSE, the admission and the
+    // table bit being mutually exclusive by the shift term's construction
+    // (finish_chrome_press_release); the membership is
+    // redesign_button_shift_admits (app_state.h) and the tooltip's second line
+    // is bound to it by that predicate's static_assert.
+    //
+    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
+    // copy repeats onto itself and a jump has one destination, so the key is
+    // one-shot at repeat_eligible and the button carries no `repeats`. ITS
+    // GATES ARE NOT THE VERBS': the READ-ONLY lock ADMITS both chords (a
+    // clipboard write, a tab switch, a playhead move and a camera author
+    // nothing), so the button stays lit on a locked tab, while the `h` view
+    // consumes bare `j` and greys it with the group through the derived
+    // partition.
+    {RedesignButton::IconCopyValue,
+     GuiKeys::J,      false, false, false, false, true},                             // bare j
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
-    // FIFTH and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
+    // SIXTH since 2026-08-29 and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
     // has opened the editor with all along. It exists because the other two
     // roads are a double-click and a key, and glass has neither reliably — the
     // architect drove a taller flag hit rect for one evening chasing the missed
@@ -594,8 +621,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FOUR menu anchors carries a chord here — 48
-// rows against the roster's 52 since 2026-08-27'S EDIT FLAG BUTTON, one pure
+// every RedesignButton but the FOUR menu anchors carries a chord here — 49
+// rows against the roster's 53 since 2026-08-29'S COPY VALUE BUTTON, one pure
+// addition inside an existing group (a chord, so the pair moved together): the
+// bottom row's verb group gained a FIFTH box on bare `j`, the value pair's
+// pointer home, and no separator or group boundary moved. It was 48 against 52
+// from 2026-08-27'S EDIT FLAG BUTTON, one pure
 // addition inside an existing group (a chord, so the pair moved together): the
 // bottom row's verb group gained a fifth box on bare Enter, the flag editor's
 // third road, and no separator or group boundary moved. It was 47
@@ -4851,7 +4882,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             // THE ROW CARRIES NO TEXT BUT ITS TABS since 2026-08-29, when
             // the STATUS CHAIN that had painted here from 2026-08-13 was
-            // deleted for the status bar. It was pointer-inert the whole time
+            // deleted for the status bar (whose own state text folded onto
+            // row 8 that evening). It was pointer-inert the whole time
             // — it published no rect, so a press over its text was the band's
             // own consumed nothing — and the empty stretch it left answers the
             // same way the tail past the last tab always did.
@@ -6671,7 +6703,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's four menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// seventeen since 2026-08-27: 52, the enum's
+// eighteen since 2026-08-29: 53, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

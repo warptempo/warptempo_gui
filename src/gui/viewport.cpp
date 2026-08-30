@@ -133,12 +133,12 @@ void Viewport::invalidate_waveform_area() {
     gui.invalidate_region(0, y0, app.width, y1 - y0);
 }
 
-// THE STATUS BAR'S DAMAGE — the window's last lane whole (the bar took the
-// tab row's status chain 2026-08-29). The caller inventory and the reasoning
-// for taking the lane rather than a span of it are at the declaration,
-// viewport.h.
-void Viewport::invalidate_status_bar_area() {
-    const GuiRect t = status_bar_area(app);
+// THE STATE CELL'S DAMAGE — the BOTTOM ROW'S lane whole (the cell is the
+// clock's neighbour since 2026-08-29's fold). The caller inventory and the
+// reasoning for taking the lane rather than a span of it are at the
+// declaration, viewport.h.
+void Viewport::invalidate_status_cell_area() {
+    const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
@@ -410,7 +410,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     invalidate_clock_area();
     // Flags live in the top strip — rect positions change when the viewport
     // scale changes (the selected marker's lane text rides its flag there;
-    // the status bar's readout does not change on a zoom).
+    // row 8's state cell says nothing a zoom can move).
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     if (playback.is_playing()) playback.resync_predictor();

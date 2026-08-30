@@ -1407,8 +1407,9 @@ struct GuiInputHandler {
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
     // the four companions) and the bottom
-    // row's seventeen — the transport three, then the right block's four marker
-    // verbs with the EDIT FLAG button (2026-08-27), the MARKER MEASURE
+    // row's eighteen — the transport three, then the right block's four marker
+    // verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG button
+    // (2026-08-27), the MARKER MEASURE
     // (2026-08-19) and ADD TO SELECTION (2026-08-18) behind them, three walk
     // steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
@@ -2186,7 +2187,7 @@ private:
     // finalize_render_run and by nothing else.
     //
     // pending_status_text_ is the composed message ("Rendering..." for a single
-    // render, "Rendering N of M (label)..." for a sweep entry) waiting for
+    // render, "Rendering N of M <label>..." for a sweep entry) waiting for
     // permission to appear. Parked by park_render_status at the two archival
     // dispatch sites instead of being written to app.queue_progress_text, copied
     // into the slot by tick_promote_render_status, and cleared there and at
@@ -3766,11 +3767,28 @@ private:
     // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
     // for the same hook and the same finalizer.)
 
+    // THE VALUE PAIR (architect 2026-08-29), the two acts that took the
+    // retired resolved readout's place: bare `j` COPIES the focused marker's
+    // resolved value to the system clipboard, Shift+`j` JUMPS to the marker
+    // that value came from — the pass's owner or the ref's definition — ON THE
+    // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
+    // apart. One composer answers both (resolved_marker_payload, the value and
+    // its source index), one gate refuses both silently
+    // (payload_eligible_marker), and the jump's three acts are each somebody
+    // else's chokepoint — the tab switch, the marker land and `c`. Both are
+    // read-only-legal, both live in S and T, both refused in the `h` view at
+    // its allowlist; the bottom row's Copy value button is `j` at its lift and
+    // Shift+`j` at its shift-click or long press. Definitions and the whole
+    // reasoning are in input_key_dispatch.cpp.
+    void copy_focused_marker_value();
+    void jump_to_value_source();
+
     // THE LOAD ROAD (design R10 / R15, revised 2026-08-28 into a button): the
-    // Load in place button's act and bare `'`'s inside the player — refuses
-    // SILENTLY over a running or parked render (the standing progress line is
-    // that refusal's explanation) and SILENTLY on a read-only tab (the lock's
-    // own), says "Only batch renders load in place" on any highlight that is
+    // Load in place button's act and bare `'`'s inside the player — says
+    // "Render running" on a card over a running or parked render (silent for
+    // the one day a status bar stood at the window's foot to explain it) and
+    // refuses SILENTLY on a read-only tab (the lock's own), says "Only batch
+    // renders load in place" on any highlight that is
     // not a load-capable wav, and otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry — the one prompt raised with its FIRST button

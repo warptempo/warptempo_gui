@@ -295,61 +295,49 @@ struct Viewport {
 
     // Invalidation.
     void invalidate_waveform_area();
-    // THE STATUS BAR'S LANE — THE WINDOW'S LAST ROW (architect 2026-08-29:
-    // "status bars are generally the last row"; bottom lane 0,
-    // status_bar_area). The bar carries the three STATE strings the tab row's
-    // status chain used to rank, in TWO CELLS that can both be true at once —
-    // the `h` walk line or the queue / render / loading line at the LEFT, the
-    // selection readout at the RIGHT — so this is the owner for EVERY route
-    // that changes one of those three strings. (The chain lived on the tab row
-    // from 2026-08-13 and was deleted whole with the bar's landing, its
-    // transient tier and its critical chip having left for the notification
-    // cards the same day — notifications.h; the stack has its own owner below.)
+    // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
+    // evening the STATUS BAR folded back into this row). The cell carries what
+    // is TRUE RIGHT NOW: the `h` walk line, else the render / batch / loading
+    // progress line. So this is the owner for every route that changes one of
+    // THOSE TWO strings and nothing else. (The bar was the window's last lane
+    // for one day and carried a THIRD string, the resolved readout, in a right
+    // cell; that readout RETIRED WHOLE with the bar — bare `j` copies the
+    // value and Shift+`j` goes to the marker it came from — and every caller
+    // that served it alone went with it. The chain that ranked all three lived
+    // on the tab row from 2026-08-13 and was deleted at the bar's landing; its
+    // transient tier and its critical chip left for the notification cards the
+    // same day — notifications.h; the stack has its own owner below.)
     //
-    // THE RECT IS THE LANE WHOLE, not a span of it, and deliberately: the
-    // RIGHT cell right-aligns and the LEFT cell clips against it, so a shorter
-    // new string must erase a longer old one on either side, and the lane's own
-    // chrome repaints with it. It is 33 px tall at 100% across the window —
-    // cheaper than the arithmetic two narrower rects would need, and neither
-    // cell changes at the scanner's per-frame cadence (the product's per-frame
-    // changer, the clock, is the bottom row's, with its own cell owner below).
+    // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
+    // deliberately: the cell RESERVES NO WIDTH — it starts at the clock's own
+    // right edge and clips at the right block, so a shorter new string must
+    // erase a longer old one and there is no measured box to erase inside. The
+    // lane is 47 px tall at 100% across the window, cheaper than the
+    // arithmetic a fitted rect would need, and neither string changes at the
+    // scanner's per-frame cadence (the product's per-frame changer, the clock,
+    // is this row's too, with its own cell owner below — and this rect covers
+    // that one as a superset).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-08-29 —
-    // membership is "this route changes what the bar shows":
-    //
-    //   THE LEFT CELL'S WRITERS —
-    //   * the queue / render text: input_render_dispatch's THREE (the promote,
-    //     the park's retraction, finalize_render_run) and target_render's SIX
-    //     (the "Updating..." stamp, the run hold's late clear, the TWO
-    //     context-ending clears — the target view leaving and the T->S exit —
-    //     the render-done failure clear and the completion tail's guarded one).
-    //   * the history walk line: it rides the mode edges, which republish the
-    //     lane and invalidate more widely; no site here is its alone.
-    //   THE RIGHT CELL, THE SELECTION READOUT (any selection or marker value
-    //   change can move it) — Selection's mutators (SEVEN sites),
-    //   warpmarkers_ops' SIX and phaseresetmarkers_ops' THREE drop / delete /
-    //   toggle / tempo-step tails, marker_drag's commit, position_nudge's
-    //   shared tail, the flag editor's commit and its BPM commit, undo's
-    //   restore tail, active_views' two switches, input_trim's FIVE commit /
-    //   drag sites (the SWEEP's own per-motion write among them),
-    //   phase_reset_propagate's three tails (the two pastes' store-changed
-    //   damage and the target-view landing, whose selection moves the readout),
-    //   input_key_dispatch's ONE load-in-place tail (apply_recipe_in_place, the
-    //   whole family's shared body) and input_handler's ONE Shift+S drop tail.
-    //   (Bare `o`'s call left on 2026-08-29 with the chain: read-only writes
-    //   none of the bar's strings, and its icon-row face is repainted by the
-    //   top-strip damage that call already sat beside. The transient writers'
-    //   calls and the checkpoint completion's left with their strings the same
-    //   day.)
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-08-29 at the
+    // fold — membership is "this route changes what the cell shows", which is
+    // now the PROGRESS LINE'S WRITERS AND NOTHING ELSE:
+    //   * input_render_dispatch's THREE (the promote, the park's retraction,
+    //     finalize_render_run);
+    //   * target_render's SIX (the "Updating..." stamp, the run hold's late
+    //     clear, the TWO context-ending clears — the target view leaving and
+    //     the T->S exit — the render-done failure clear and the completion
+    //     tail's guarded one).
+    // The `h` WALK LINE has no site of its own here and never did: it rides
+    // the mode's edges, which invalidate the whole window. The file loader's
+    // "Loading..." likewise damages the window whole.
     //
     // Routes that damage the whole window (the loads, the resize path) cover
-    // this lane as a superset and are deliberately unlisted. THE TOP STRIP AND
-    // THE WAVEFORM NO LONGER DO — invalidate_top_strip stops at the waveform's
-    // top and invalidate_waveform_area's rect ends at the waveform's bottom,
-    // both far above the window's foot — so a route that moves the readout AND
-    // repaints markers spells BOTH, which is what every site in the readout
-    // list above already does.
-    void invalidate_status_bar_area();
+    // this lane as a superset and are deliberately unlisted; the TOP STRIP AND
+    // THE WAVEFORM do not (invalidate_top_strip stops at the waveform's top
+    // and invalidate_waveform_area's rect ends at the waveform's bottom, both
+    // above this row), so a route that changes the cell AND repaints markers
+    // spells both.
+    void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole). ITS CALLERS,
     // re-greped 2026-08-28, are the FOUR DIALOG EDITORS' repaint sites plus the
@@ -443,39 +431,23 @@ struct Viewport {
     //     sweep's own per-motion cursor write (apply_region_drag_motion, the
     //     drag carrying the playhead on its moving end).
     //
-    //   BOTH CELLS — the routes that land a playhead AND rewrite the readout,
-    //   each calling the two owners in turn: the A/B tab switch (active_views,
-    //   which restores the entering tab's own playhead), the undo/redo restore
-    //   (undo), the position nudges' shared tail (position_nudge), the
-    //   load-in-place tail (apply_recipe_in_place, the whole family's shared
-    //   body — since 2026-08-24 it applies no band at all, but it re-clamps the
-    //   LIVE cursor against the domain its own store replace may have moved, so
-    //   the clock half has a real producer; the HISTORY LOCAL member's load
-    //   joined that body the same day and stopped being a second entry here,
-    //   its clock half having been HARMLESS OVER-DAMAGE while it took no clamp
-    //   of its own), and the TRIM COMMIT
-    //   WRITERS (input_trim:
-    //   commit_trim_mutation and handle_trim_clear_both damage the waveform +
-    //   status bar at their own sites and reach the clock inside
-    //   park_playhead_at_trim_start — the trim family's one cursor writer,
-    //   where the damage sits beside the write rather than copied per
-    //   caller).
-    //
-    // The routes PAIRED with this one above are the only ones that name this
-    // cell beside another surface; their other half is the STATUS BAR, the
-    // window's last row since 2026-08-29 (invalidate_status_bar_area
-    // above, where that population's own inventory is). Routes that damage the
+    // (THE SECOND POPULATION — routes that landed a playhead AND rewrote the
+    // RESOLVED READOUT, each calling this owner and the readout's in turn — is
+    // GONE with the readout, 2026-08-29: the A/B tab switch, the undo/redo
+    // restore, the position nudges' shared tail, the load-in-place tail and
+    // the trim commit writers all kept their clock call above and dropped the
+    // other one. Nothing on this row pairs with a second surface any more —
+    // the STATE CELL that replaced the readout is damaged by the progress
+    // line's writers alone (invalidate_status_cell_area above), and its rect
+    // is this row's whole lane, which covers this cell as a superset where a
+    // route does spell both.) Routes that damage the
     // WHOLE window (the S/T audio-view toggle's full-window invalidate, the
     // loads, the resize path) cover this cell as a superset and are
     // deliberately unlisted; routes that funnel
     // through a listed owner (the settings editor's active-tab playhead
     // commit through move_playhead_to, every marker land through
     // seat_playhead_on_source_frame, the nudges through their shared tail)
-    // need no row of their own. THE `p` MARKER-VIEW TOGGLE IS THE NEAR MISS
-    // worth naming, since it sits beside the tab switch and answers
-    // differently: it damages the READOUT (its coincidence auto-select can
-    // change the selection) and moves no playhead at all, so it takes the
-    // bar's owner alone.
+    // need no row of their own.
     void invalidate_clock_area();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
     // COLUMNS' rects. The columns must be resolved on the PLATE basis — the

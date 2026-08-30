@@ -112,7 +112,6 @@ void finish_position_nudge(
     // the render-entry load-in-place and the undo restores — pays the same
     // full call).
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_bar_area();
     viewport.invalidate_clock_area();
     // (e) playhead follows the nudged marker's committed frame.
     viewport.move_playhead_to(

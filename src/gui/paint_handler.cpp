@@ -80,12 +80,12 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
-// THE STATUS BAR IS THE WINDOW'S LAST ROW (architect 2026-08-29: "status bars
-// are generally the last row" — every DAW and KWave agree, and kdenlive's own
-// is the model). It carries the three STATE strings and nothing else: the `h`
-// walk's line, the render's progress line, the selected marker's resolved
-// readout. The painter that draws it is paint_status_bar and its one caller is
-// on_redraw's row block; the ruling is
+// THE STATE TEXT IS ROW 8'S OWN CELL, right of the clock (architect
+// 2026-08-29, folding the STATUS BAR that had stood for that one day back into
+// the toolbar he already reads — "status bars are generally the last row" was
+// the bar's reasoning, and seeing it he preferred the text on the row and
+// found the bar a duplicate of that panel's own foot). The cell is painted by
+// paint_bottom_row_buttons_and_clock, laid out with the clock; the ruling is
 // docs/engineering/architecture/messaging.md.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
@@ -93,23 +93,23 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // class the transient tier suffered cannot exist here. EVENTS are the
 // NOTIFICATION CARDS (paint_notifications, notifications.h).
 //
-// TWO CELLS, NOT A LADDER OF TIERS — the DAW/KWave split: the LEFT cell is the
-// process line or the walk line, the RIGHT cell is the readout, and both can
-// be true at once, so they are cells rather than ranks. NO SEPARATOR between
-// them (architect: "I'd rather not have a separator, especially since we're
-// not going to be filling the full width — it'd look like a floating
-// separator"): kden2's way, two text runs with padding alone.
+// ONE CELL, TWO STRINGS THAT RANK: the `h` walk line wins while the view
+// stands, and the render's progress line is what it carries otherwise. THE
+// RESOLVED READOUT — the third state string, and the bar's right cell for its
+// one day — RETIRED WHOLE with the bar: nothing displays a resolved value any
+// more, bare `j` copies it and Shift+`j` goes to the marker it came from.
 //
-// THE THREE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
+// THE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
 // lead-in until the 2026-08-12 unification, the bottom row's right end after
-// it, and the TAB ROW's right-aligned STATUS CHAIN from 2026-08-13 — a
+// it, the TAB ROW's right-aligned STATUS CHAIN from 2026-08-13 — a
 // precedence ladder that ranked FOUR tiers, then three when its TRANSIENT tier
 // (the one-line refusals and reports, hidden under a progress line, revealed
 // stale when it cleared and wiped on the next key press) and its CRITICAL CHIP
-// (the checkpoint act's permanent red box) left for the cards on 2026-08-29.
-// The chain, its right-alignment, its tabs-win-by-paint-order collision rule
-// and its `h`-view overlap with the tabs all went with it hours later: the tab
-// row paints tabs over its whole width again.
+// (the checkpoint act's permanent red box) left for the cards on 2026-08-29 —
+// and the STATUS BAR's left cell for the rest of that day. The chain, its
+// right-alignment, its tabs-win-by-paint-order collision rule
+// and its `h`-view overlap with the tabs all went with the bar's landing: the
+// tab row paints tabs over its whole width again.
 //
 // THE DIRTY DOT is not a tenant: it rides the WINDOW TITLE beside the project
 // name, where labwc paints it (GuiPlatform::apply_window_title).
@@ -1777,8 +1777,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
 // -- history_walk_line ----------------------------------------------------
 //
-// THE `h` HISTORY MODE'S ONE LINE, composed for the status bar's LEFT cell.
-// While the mode stands this line is what that cell is for.
+// THE `h` HISTORY MODE'S ONE LINE, composed for ROW 8'S STATE CELL — the
+// clock's neighbour since 2026-08-29's fold, the one-day status bar's LEFT
+// cell before that. While the mode stands this line is what that cell is for.
 //
 // THE SHAPE: the commit's position in the walk and its short SHA, then the
 // scale — `Scale: [-]<then token> [+]<now token>`, in the lane's own sign
@@ -1786,7 +1787,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // so this line and the flags cannot come to bracket differently. (The
 // "bottom-left corner" of the mode's record read bottom-RIGHT from the
 // 2026-08-12 unification, TOP-RIGHT while the status chain sat in the tab row,
-// and reads bottom-LEFT again on the bar — the same line, another surface.)
+// bottom-LEFT on the one-day status bar, and reads BOTTOM-CENTRE now, beside
+// the clock — the same line, four surfaces.)
 //
 // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05,
 // superseding the arc's unchanged-token report): a value that both sides agree
@@ -1856,182 +1858,18 @@ static std::string history_walk_line(AppState& app) {
     return line;
 }
 
-// -- GuiPaintHandler::paint_status_bar ------------------------------------
-//
-// THE STATUS BAR — the window's LAST ROW (architect 2026-08-29; the ruling,
-// the two-cell split and the strings' earlier homes are at the status-bar
-// block near the head of this file, and the full record is
-// docs/engineering/architecture/messaging.md).
-//
-// THE CSS BOX, THREE BANDS, the row-7 crop's own measure (render.h's
-// status-bar geometry block): a 1px kRedesignTabLine BORDER-TOP — the ONE line
-// between the bottom row and the bar, since the bottom row draws its own
-// border on its waveform side — then 31 rows of kRedesignContentGround, the
-// bottom strip's own ground so bar and strip read as ONE FOOT (architect
-// 2026-08-29 off the A/B mockup; kdenlive's own bar samples the same value) —
-// then 1px of kRedesignBottomLine as the window's last row, the crop's
-// near-black foot seam, reinstated with this lane.
-//
-// TWO CELLS, NO SEPARATOR. The LEFT cell starts one icon-row pad in from the
-// window's left edge and carries the `h` walk line or the process line; the
-// RIGHT cell is right-anchored one pad in from the right edge at its own
-// content width and carries the resolved readout. The left cell CLIPS one pad
-// short of where the right cell's content begins — a cairo rectangle clip, no
-// ellipsis and no wrap (the folder overlay rows' precedent) — and an empty
-// right cell gives the left cell the whole width. The right cell clips to the
-// band too and left-anchors at the band's own edge if it ever overflows.
-//
-// THE TWO LEFT-CELL STRINGS CAN COEXIST, AND THE WALK LINE WINS. Nothing
-// STARTS a render from inside the `h` view — both render chords are off its
-// allowlist since 2026-08-08 (handle_history_mode_key's membership) and the
-// checkpoint act is Ctrl+S's — but a render or a target preview DISPATCHED
-// BEFORE the visit runs on through it: bare `h` refuses only for a checkpoint
-// in flight, cancels no render, and clears no progress text, and
-// GuiTargetRender gates on the 'T' AUDIO VIEW, which the mode does not move.
-// So "Rendering 3 of 8..." is live under a walk that arrived after it, and the
-// answer is the mode's own line: while the view stands its line is what the
-// cell is for, and the progress text is still on screen the moment the view
-// closes.
-//
-// IT IS PAINT-ONLY AND PUBLISHES NOTHING (the chain's contract, kept): no rect
-// reaches AppState, so the bar owns no hit test, no hover and no cursor cue,
-// and a press on the lane falls through the router to its consumed nothing.
-//
-// AND IT PAINTS THROUGH A MODAL. The bar is NOT a modal surface: while a
-// prompt, a dialog editor, the render player or the picker owns the BOTTOM
-// ROW, this lane keeps painting its state — the behaviour the chain gained
-// when it left that row on 2026-08-13, carried over intact, and the reason a
-// render's progress line stays readable under the close prompt it raised.
-void GuiPaintHandler::paint_status_bar(cairo_t* cr) {
-    const GuiRect lane    = status_bar_area(app);
-    const GuiRect content = status_bar_content_area(app);
-    if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
-
-    const int border = status_bar_border_h_px();
-
-    // THE THREE BANDS. Hard-coded per the redesign's color ruling, and the
-    // ground erases whatever chrome render_background laid down, so the lane
-    // does not depend on the kBackground constant happening to hold the same
-    // value.
-    {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                             kRedesignTabLine.b);
-        cairo_rectangle(cr, lane.x, lane.y, lane.w, border);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kRedesignContentGround.r,
-                             kRedesignContentGround.g,
-                             kRedesignContentGround.b);
-        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, kRedesignBottomLine.r, kRedesignBottomLine.g,
-                             kRedesignBottomLine.b);
-        cairo_rectangle(cr, lane.x, lane.y + lane.h - border, lane.w, border);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
-    // THE LEFT CELL'S TEXT.
-    std::string left;
-    if (app.history_mode.active) {
-        left = history_walk_line(app);
-    } else if (!app.queue_progress_text.empty()) {
-        // The render/batch/queue status AND the startup "Loading..." line —
-        // one cell, and one of the reasons this lane paints on every frame
-        // class (it is the only feedback on the loading frame).
-        left = app.queue_progress_text;
-    }
-
-    // THE RIGHT CELL'S TEXT — THE RESOLVED READOUT, SELECTION-ONLY (row 5,
-    // 2026-08-01). It used to be "hover wins, else the last-selected marker";
-    // the hover arm died with the whole hover-popup machinery, so what is left
-    // is the arm that was already here — the LAST-SELECTED marker's resolved
-    // tempo, computed live when it is an eligible pass/label_ref
-    // (popup_eligible_marker, itself 'W'-view + non-iteration only). Owners and
-    // phase resets have nothing to resolve, so their selection leaves this cell
-    // clean while their own value shows on their flag. It is RULED OFF ROW 8
-    // (architect 2026-08-29: "nothing should go there; notifications wouldn't
-    // go next to the time stamp in a DAW").
-    //
-    // compute_hover_popup_text — in the FROZEN parser, and untouched — keeps
-    // this one live caller; only the hover half of its name is now history. The
-    // out-param for the pasteable payload stays unused here: this site wants
-    // the notice-free display string, and Ctrl+C asks for the payload itself at
-    // its own site.
-    std::string right;
-    if (popup_eligible_marker(app, app.last_selected_marker)) {
-        right = compute_hover_popup_text(
-            slice_to_warp_markers(app.warpmarkers.markers()),
-            app.last_selected_marker, audio.sample_rate(),
-            audio.total_frames());
-    }
-
-    if (left.empty() && right.empty()) return;
-
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-
-    // THE CLIP IS THE CONTENT BAND in both cells, which is what keeps either of
-    // them out of the two border rows — the lane's partition, not each cell's
-    // care. The two cells share ONE baseline, the band's own.
-    const double pad      = static_cast<double>(icon_row_pad_x());
-    const double band_x0  = static_cast<double>(content.x);
-    const double band_x1  = static_cast<double>(content.x + content.w);
-    const double baseline = redesign_baseline(font,
-                                              static_cast<double>(content.y),
-                                              static_cast<double>(content.h));
-
-    cairo_save(cr);
-    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                         kRedesignLabel.b);
-
-    // THE RIGHT CELL FIRST, because the left cell's clip bound is where this
-    // one's content begins. `right_content_x0` is the band's right edge when
-    // there is no right cell — the left cell then takes the whole width — and
-    // that is also the answer when a right cell exists but the band is too
-    // narrow to hold its pad. A readout wide enough to fill the band anchors
-    // LEFT at the band's own edge, which puts `right_content_x0` at that edge
-    // and leaves the left cell a negative span: it is SUPPRESSED WHOLE rather
-    // than overpainted, which is the honest answer for a lane that cannot hold
-    // both.
-    double right_content_x0 = band_x1;
-    if (!right.empty()) {
-        const double x1 = std::nearbyint(band_x1 - pad);
-        if (x1 > band_x0) {
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, right);
-            const double x = std::nearbyint(
-                std::max(band_x0, x1 - run.width_px));
-            cairo_save(cr);
-            cairo_rectangle(cr, band_x0, static_cast<double>(content.y),
-                            x1 - band_x0, static_cast<double>(content.h));
-            cairo_clip(cr);
-            text_shape::show_shaped_run(cr, run, x, baseline);
-            cairo_restore(cr);
-            right_content_x0 = x;
-        }
-    }
-
-    if (!left.empty()) {
-        const double x0 = std::nearbyint(band_x0 + pad);
-        const double x1 = right.empty() ? std::nearbyint(band_x1 - pad)
-                                        : std::nearbyint(right_content_x0 - pad);
-        if (x1 > x0) {
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, left);
-            cairo_save(cr);
-            cairo_rectangle(cr, x0, static_cast<double>(content.y),
-                            x1 - x0, static_cast<double>(content.h));
-            cairo_clip(cr);
-            text_shape::show_shaped_run(cr, run, x0, baseline);
-            cairo_restore(cr);
-        }
-    }
-
-    cairo_restore(cr);
-}
+// (GuiPaintHandler::paint_status_bar IS DELETED — architect 2026-08-29, the
+// evening of the day the STATUS BAR landed. The bar was the window's last
+// lane, three bands on the row-7 crop's measure, carrying the process line or
+// the `h` walk line in a LEFT cell and the resolved readout in a RIGHT one.
+// The architect ruled it off after seeing it: the state text belongs on the
+// toolbar he already reads, and the bar duplicated that panel's own foot. The
+// LANE, its two rect accessors, its three height accessors and the window-foot
+// seam went with the painter; THE STATE TEXT is row 8's own cell, painted by
+// paint_bottom_row_buttons_and_clock right of the clock, and THE RESOLVED
+// READOUT retired whole — bare `j` copies the value and Shift+`j` goes to the
+// marker it came from. `history_walk_line` above is untouched: the composer
+// still stands beside its one caller, which is now that cell.)
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 2, row 4 of the redesign): the same #202326
@@ -2381,8 +2219,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // companions back up). That is the row's whole roster
 // since 2026-08-13, when the STATUS CHAIN — which right-aligned against the
 // arrows' left edge from the unification — moved into the TAB ROW (and was
-// deleted there on 2026-08-29 for the status bar, which took nothing from
-// this row):
+// deleted there on 2026-08-29 for the status bar, whose one day left this
+// row's roster untouched — and whose state text folded onto this row as the
+// clock's own neighbour that evening, one cell and no ladder):
 //
 //   THE TRANSPORT, from the row's pad in the standard order — skip-back (bare
 //   Home), THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap
@@ -2501,20 +2340,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — TWELVE of the seventeen, where it used to be one: in the `h` view
+// rulings — THIRTEEN of the eighteen, where it used to be one: in the `h` view
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
-// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, THE EDIT
+// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, COPY
+// VALUE, THE EDIT
 // FLAG BUTTON, THE MARKER
-// MEASURE and ADD TO SELECTION (bare Return, bare `/` and bare `k`, consumed
-// in there like
+// MEASURE and ADD TO SELECTION (bare `j`, bare Return, bare `/` and bare `k`,
+// consumed in there like
 // the verbs' chords); the two
 // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, Home/End being the mode's
 // own absolute jumps, Tab/Shift+Tab its diff-flag cycle (architect-confirmed
 // for the skips) and Ctrl+Shift+Tab the march composing that cycle with the A/B
-// switch. Outside the view the four VERBS grey on a locked tab, their own
-// gate, and nothing else on the row greys at all — which is the architect's
+// switch. Outside the view the four VERBS, the EDIT FLAG BUTTON and the
+// MARKER MEASURE grey on a locked tab, their own
+// gate — COPY VALUE, seated among them, does NOT, both its chords being
+// navigation the lock admits — and nothing else on the row greys at all — which is the architect's
 // 2026-08-15 always-on ruling, made about the RESTING face of the ten members
 // it then had. All at redesign_button_enabled; nothing decided here.
 // THE SELECTED FACE IS WORN BY ADD TO SELECTION AND NOTHING ELSE HERE
@@ -2632,11 +2474,22 @@ constexpr TransportRowDef kTransportGroup[] = {
 // `h` view. It is the flag editor's THIRD ROAD, added when the architect
 // retired the one-evening touch halo that had tried to rescue the double tap
 // instead.
+//
+// THE GROUP IS EIGHT since 2026-08-29, the COPY VALUE button seated
+// IMMEDIATELY AFTER TOGGLE INHERIT (bare `j`, edit-copy's two stacked sheets).
+// The side is the coder's, on the architect's "beside Toggle inherit": inherit
+// is what makes a marker a PASS, and a pass is what this button has a resolved
+// value to copy, so the two read as one pair — and the seat leaves Delete two
+// boxes away, the Edit flag button's own seating rule. It is the group's one
+// member the READ-ONLY LOCK does not grey (its two chords author nothing) and
+// the second on this row to admit SHIFT, whose twin is the jump to the marker
+// the value came from.
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
+    {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconMarkerEditFlag,   icons::Icon::TextField},
     {RedesignButton::IconMarkerMeasure,    icons::Icon::MinuetScales},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
@@ -2728,16 +2581,22 @@ constexpr const char* kClockShape = "DD:DD.DDD";
 constexpr double kClockCellOffsetXPx = 4.0;
 constexpr double kClockCellOffsetYPx = 1.0;
 
-// THE SEPARATOR → TIMESTAMP DISTANCE, this row's own and now the ONE OWNER of
+// THE SEPARATOR → TIMESTAMP DISTANCE, this row's own and the ONE OWNER of
 // that distance (architect 2026-08-29): the whole air between the divider's
 // line and the first digit, which this row spends in its two halves — the
 // separator's own trailing gap above, then the cell's authored margin mirror.
-// The RENDER PLAYER'S MODAL ROW reads it whole for every gap around its
-// play-scrub (left separator → scrub, scrub → clock, clock → right
-// separator), the architect's ruling being that those gaps ARE this one:
-// the modal row stands in row 8's lane and its clock is row 8's cell said
-// twice, so it takes this distance rather than authoring a second spec for
-// the same air in the same place.
+// IT HAS THREE READERS, all of them the same air said again:
+//   * the CLOCK CELL itself, above;
+//   * the STATE CELL right of the clock (the status bar's fold into this row,
+//     later the same day): the DIGITS-TO-TEXT distance is this
+//     separator-to-digits distance, so the row's two gaps around the clock
+//     match and no second number is authored for the cell;
+//   * the RENDER PLAYER'S MODAL ROW, which reads it whole for every gap around
+//     its play-scrub (left separator → scrub, scrub → clock, clock → right
+//     separator), the architect's ruling being that those gaps ARE this one:
+//     the modal row stands in row 8's lane and its clock is row 8's cell said
+//     twice, so it takes this distance rather than authoring a second spec for
+//     the same air in the same place.
 constexpr double kTransportSepToClockPx =
     kTransportSepGapPx + kClockCellOffsetXPx;
 
@@ -2885,10 +2744,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // VERBS with the MARKER MEASURE and ADD TO SELECTION behind them, the
     // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
     // architect's order since 2026-08-14). The span between the cell and the
-    // right block is BARE GROUND since 2026-08-13, the status
-    // chain that right-aligned in it having moved to the tab row. THE VERB
-    // GROUP IS SEVEN since 2026-08-27, the EDIT FLAG BUTTON joining it (it was
-    // six from 2026-08-19, the MARKER MEASURE's own arrival).
+    // right block is THE STATUS CELL since 2026-08-29 (the status bar's fold
+    // into this row) — the clock's neighbour, laid out with it below and
+    // clipped one lane pad short of the right block's own left edge. THE VERB
+    // GROUP IS EIGHT since 2026-08-29, the COPY VALUE button joining it after
+    // Toggle inherit (it was seven from 2026-08-27, the EDIT FLAG BUTTON's
+    // arrival, and six from 2026-08-19, the MARKER MEASURE's).
     //
     // THE TWO ENDS CANNOT CRAWL INTO EACH OTHER FROM THE CLOCK'S SIDE ANY MORE
     // (2026-08-18). The cell was CENTRED IN THE LANE until then, so it TRAVELLED
@@ -2897,32 +2758,37 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // fixed pen on every window, and only the RIGHT block moves. At 100% the
     // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
     // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
-    // seats it at 123 — and the right block is 492 wide
-    // (236 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
-    // starts at 140 on the 640px defensive floor, 524 on the Pi's 1024 and
-    // 1420 at 1920. The 9-glyph cell measures about 80px at 100% (it narrowed
-    // when the clock went to 11pt on 2026-08-14, so that is an upper bound),
-    // which leaves the PI's own 1024 some 321px of ground between the cell and
-    // the verbs. THE 640px DEFENSIVE FLOOR NOW CROPS INTO THE CLOCK — the
+    // seats it at 123 — and the right block is 526 wide
+    // (270 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
+    // starts at 106 on the 640px defensive floor, 490 on the retired rig's
+    // 1024 and 1386 at 1920. The 9-glyph cell measures about 80px at 100% (it
+    // narrowed when the clock went to 11pt on 2026-08-14, so that is an upper
+    // bound), which leaves the rig's own 1024 some 287px of ground between
+    // the cell and the verbs — the room THE STATUS CELL now takes, clipped
+    // one pad short of the block. THE 640px DEFENSIVE FLOOR NOW CROPS INTO
+    // THE CLOCK — the
     // block's origin lands left of the cell's ~203px right edge — and that is
     // ACCEPTED under the crop-at-the-floor allowance recorded at
     // kMinWindowWidthPx rather than answered: 640 is a floor no real host of
-    // this product uses (the rig is 1024, the laptop 1920). The Marker Measure
-    // button took 34 of the 40 that Add to Selection left on 2026-08-18, and
-    // the EDIT FLAG BUTTON took 34 more on 2026-08-27 — the block's ONE
+    // this product uses (the rig was 1024, the laptop 1920). The Marker Measure
+    // button took 34 of the 40 that Add to Selection left on 2026-08-18, the
+    // EDIT FLAG BUTTON took 34 more on 2026-08-27 and the COPY VALUE button
+    // another 34 on 2026-08-29 — the block's ONE
     // dimension that moves when this group gains a box, which is why the
     // numbers in this paragraph are re-derived at every such landing rather
     // than inherited. THE
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
-    // toward the 400 ceiling (2026-08-26). THE RIGHT BLOCK IS 492 AUTHORED PX
+    // toward the 350 ceiling (2026-08-29). THE RIGHT BLOCK IS 526 AUTHORED PX
     // WIDE and anchored one pad in from the right edge, so it reaches the
     // clock's own ~203px right edge once the LOGICAL width (device width over
-    // the factor) falls below about 703 — at 400% on a 2304px panel that is
-    // 576, where the verb group lands on the cell outright; the tablet's own
-    // 225% leaves 1024 logical px and 321 of clear ground. Still no collision
-    // rule, for the reason above: the row crops at its floor.
+    // the factor) falls below about 737 — at 350% on a 2304px panel that is
+    // 658, where the verb group lands on the cell outright; the tablet's own
+    // 225% leaves 1024 logical px and 287 of clear ground. Still no collision
+    // rule, for the reason above: the row crops at its floor. THE STATUS CELL
+    // TAKES THAT GROUND AND CANNOT PUSH ANYTHING: it CLIPS at the block's own
+    // left edge less one pad, so a long line is cut rather than colliding.
     int x = lane.x + pad;
     for (const TransportRowDef& def : kTransportGroup) {
         paint_button(def, x);
@@ -2946,14 +2812,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // the zero-rect publishes and the swap's whole-window damage note are
     // deleted rather than kept: every button on this row publishes a real rect
     // on every frame now, except under a modal, where the row yields whole.
+    int right_block_x = lane.x + lane.w - pad;
     {
-        const int verbs_w  = 7 * btn + 6 * btn_gap;
+        const int verbs_w  = 8 * btn + 7 * btn_gap;
         const int walk_w   = 3 * btn + 2 * btn_gap;
         const int arrows_w = 4 * btn + 3 * btn_gap;
         const int sep_span = sep_gap + sep_w + sep_gap;
         const int block_w  =
             verbs_w + sep_span + walk_w + sep_span + arrows_w;
         int ax = lane.x + lane.w - pad - block_w;
+        // THE STATE CELL'S CLIP BOUND (below) is this block's own left edge,
+        // published out of the scope so the cell cannot guess it.
+        right_block_x = ax;
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             paint_button(def, ax);
             ax += btn + btn_gap;
@@ -3040,6 +2910,76 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (seconds < 0.0) seconds = 0.0;
         show_row_text(cr, font, static_cast<double>(cell_x), baseline,
                       format_timestamp(seconds), kRedesignLabel);
+
+        // THE STATE CELL — the clock's neighbour (architect 2026-08-29, the
+        // evening the STATUS BAR folded into this row): what is TRUE RIGHT NOW,
+        // in the row's ordinary label ink at the row's own size, sans like
+        // every other string in the product.
+        //
+        //   | sep | kTransportSepToClockPx | 02:42.608 |
+        //   kTransportSepToClockPx | <state text> |
+        //
+        // NO SEPARATOR between the digits and the text, and the DIGITS-TO-TEXT
+        // distance is THE CLOCK'S OWN separator-to-digits distance said again
+        // — one constant read twice (kTransportSepToClockPx, this file's own
+        // owner, which the render player's modal row already reads for the
+        // three gaps around its scrub). No new number is authored for this
+        // cell at all.
+        //
+        // THE CONTENT is the one-day status bar's LEFT cell exactly: the `h`
+        // walk line, else the render / batch / loading progress line. The two
+        // CAN COEXIST and THE WALK LINE WINS — nothing STARTS a render inside
+        // the `h` view (both render chords are off its allowlist), but a
+        // render or a target preview dispatched BEFORE the visit runs on
+        // through it, so the mode's line is what the cell is for while the
+        // view stands and the progress line is back the moment it closes.
+        // (The bar's RIGHT cell, the resolved readout, retired with the bar.)
+        //
+        // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
+        // overlay rows' precedent — at the right block's own left edge less
+        // one lane pad, so a long line is cut rather than colliding with the
+        // marker verbs. THE ROW YIELDS WHOLE TO A MODAL, so this text is
+        // hidden while a prompt, a dialog editor, the render player or the
+        // picker stands (architect-accepted at the fold; the bar painted
+        // through a modal for its one day, that being what a separate lane
+        // buys). It is why the render player's load-under-a-running-render
+        // refusal says its sentence on a CARD: the explanation this cell would
+        // have carried is not on screen under that modal.
+        std::string state;
+        if (app.history_mode.active) {
+            state = history_walk_line(app);
+        } else if (!app.queue_progress_text.empty()) {
+            // The render/batch/queue status AND the startup "Loading..."
+            // line — one cell, and one of the reasons this body runs on every
+            // frame class (it is the only feedback on the loading frame).
+            state = app.queue_progress_text;
+        }
+        if (!state.empty()) {
+            const double clock_right =
+                static_cast<double>(cell_x) + std::ceil(cell_w);
+            const double x0 = std::nearbyint(
+                clock_right + scaled_px(kTransportSepToClockPx));
+            const double x1 =
+                static_cast<double>(right_block_x - pad);
+            if (x1 > x0) {
+                gui_select_font_face(cr, GuiFontFamily::Sans);
+                cairo_set_font_size(cr, redesign_font_size_px());
+                cairo_scaled_font_t* sans = cairo_get_scaled_font(cr);
+                // THE ROW'S OWN CENTRED BASELINE, the one every other lane's
+                // text takes — NOT the clock's, whose authored 1px nudge is a
+                // monospace-cell correction and belongs to that cell alone.
+                const double sans_baseline = redesign_baseline(
+                    sans, static_cast<double>(content_y),
+                    static_cast<double>(content_h));
+                cairo_save(cr);
+                cairo_rectangle(cr, x0, static_cast<double>(content_y),
+                                x1 - x0, static_cast<double>(content_h));
+                cairo_clip(cr);
+                show_row_text(cr, sans, x0, sans_baseline, state,
+                              kRedesignLabel);
+                cairo_restore(cr);
+            }
+        }
     }
 
     cairo_restore(cr);
@@ -3192,7 +3132,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // below them is the bar's 33 authored px and nothing else, which no hint
     // fits in, so the hint hangs upward there, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's seventeen roster buttons and, since 2026-08-13, the modal's own,
+    // the row's eighteen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -5243,7 +5183,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all SEVENTEEN buttons — the transport three, the four
+// YIELDS WHOLE: all EIGHTEEN buttons — the transport three, the four
 // single-marker verbs with the Edit flag button, the Marker Measure and Add to
 // Selection behind
 // them, the marker-walk three and the four arrows — plus the clock and the row's three separators stand
@@ -5354,7 +5294,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE ROW'S GROUND AND ITS ONE BORDER-TOP — the waveform-side seam, row
     // 8's box-model convention kept whole by the unification (row 9's second
     // border, the window-foot seam, died with the row's window-edge position;
-    // kRedesignBottomLine's retirement note is at render.h's row-7 block).
+    // the window-foot seam's final retirement note is at render.h's row-7
+    // crop block, on the corrected provenance).
     // Hard-coded per the redesign's color ruling; the ground erases whatever
     // chrome render_background laid down, so the strip does not depend on the
     // kBackground constant happening to hold the same value.
@@ -5380,7 +5321,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // here: paint_modal_dialog owns the lane from this frame until the
     // dialog's closer.
     //
-    // THE SEVENTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
+    // THE EIGHTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
     // point), so nothing can hit an unpainted button and no consumer of those
     // rects can read a phantom bound. Their THREE FACE BITS ARE
@@ -5446,7 +5387,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // left edge, with its degenerate-span early return; and the read of the
     // painter's own TransportLeft stash as the chain's right anchor. The chain
     // itself was deleted on 2026-08-29 and its three STATE strings are the
-    // STATUS BAR's, one lane below this one — paint_status_bar.)
+    // STATE CELL right of the clock since 2026-08-29's evening fold, painted
+    // by paint_bottom_row_buttons_and_clock — one string, not a ladder, and
+    // the resolved readout retired with the one-day bar that carried it.)
     paint_bottom_row_buttons_and_clock(cr);
 }
 
@@ -6938,8 +6881,16 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //                            list
 // Every row is drawn with redesign_face_box, the one path every button-like
 // surface in the product is filled and framed on, at the button's corner
-// radius. NO LINE AT THE BAND'S TOP EDGE, the keyboard's own rule: the band's
-// ground is the bottom row's, so the two lanes read as one block.
+// radius. THE BAND WEARS A 1 px TOP BORDER (architect 2026-08-29), the same
+// kRedesignTabLine line its BOTTOM edge already wears — that edge being row
+// 8's own border-top, drawn by paint_bottom_strip — so the panel reads as a
+// framed block with matching edges instead of a ground running up into the
+// waveform. It is painted INSIDE the band's rect as its first row and comes
+// out of the CONTENT's room (folder_overlay::border_h_px / content_rect own
+// the geometry), so the surface rect, the damage rect and the hit rect are
+// all unchanged by it. (The band opened 2026-08-28 with NO line at its top,
+// the keyboard's own rule — the two lanes reading as one block on a shared
+// ground — which this supersedes.)
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
 // list's keyboard focus — what Enter and Load in place act on, and nothing
@@ -6970,6 +6921,23 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                          kModalFieldGround.b);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
+    // THE TOP BORDER, the band's first row (the block above): the bottom
+    // row's own border colour and width, aliased like every chrome line, laid
+    // over the ground before the clip so the rows below it start under the
+    // line by construction (row_rect reads content_rect, which is this band
+    // less this row).
+    {
+        const int border = folder_overlay::border_h_px();
+        if (border > 0 && border < surf.h) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
+            cairo_rectangle(cr, surf.x, surf.y, surf.w, border);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+    }
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_clip(cr);
 
@@ -7281,8 +7249,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_menu_row(cr);
         }
         // THE TAB ROW PAINTS TABS AND NOTHING ELSE since 2026-08-29: it
-        // carried the STATUS CHAIN under them from 2026-08-13 until the three
-        // STATE strings took the status bar below.
+        // carried the STATUS CHAIN under them from 2026-08-13 until the state
+        // strings left for the one-day status bar, and they are row 8's own
+        // cell now.
         if (rects_intersect(exposed, top_tab_row_area(app))) {
             paint_tab_row(cr);
         }
@@ -7302,19 +7271,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // left to be spared.
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr);
-        }
-        // THE STATUS BAR (bottom lane 0, the window's last row since
-        // 2026-08-29), on its own exposure beside the bottom row's: it grounds
-        // its own three bands and shapes at most two runs, so a narrow clock
-        // or playhead damage must not pay for it. It paints on EVERY frame
-        // class for the bottom row's own reason — the loading line is one of
-        // the two strings its left cell carries — and nothing painted later
-        // overlaps it but the floating surfaces, which paint over everything by
-        // design. It is NOT a modal surface: the bottom row above yields whole
-        // to a prompt, an editor, the player or the picker, and this lane keeps
-        // painting its state under all four.
-        if (rects_intersect(exposed, status_bar_area(app))) {
-            paint_status_bar(cr);
         }
         // THE OVERVIEW STRIP (top lane 3 since the relayout's commit B — it was
         // bottom lane 0 for the afternoon it landed), on its own
@@ -7381,9 +7337,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      top/bottom borders (above, unconditional).
         //   3. the three redesigned top button rows (the TAB row painting tabs
         //      across its whole width since 2026-08-29), the unified bottom
-        //      row (its chrome, buttons and clock in one painter), THE STATUS
-        //      BAR (its three bands and its two state cells —
-        //      paint_status_bar) and
+        //      row (its chrome, buttons, clock AND state cell in one painter)
+        //      and
         //      the OVERVIEW STRIP (ground + its one border row, cached bars,
         //      viewport box, playhead tick — paint_overview_strip), each
         //      on its own

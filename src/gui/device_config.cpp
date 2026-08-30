@@ -103,7 +103,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
             int64_t v = 0;
             if (!parse_authored_frame(value, v) || !is_gui_scale_percent(v)) {
                 return bad_value(ln, key, value,
-                    "must be an integer in [50, 400] in canonical spelling");
+                    "must be an integer in [50, 350] in canonical spelling");
             }
             // Range-checked above, so the narrowing to int is exact.
             out.gui_scale = static_cast<int>(v);

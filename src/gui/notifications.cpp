@@ -1,7 +1,7 @@
 #include "notifications.h"
 
 #include "folder_overlay.h"   // kPanelPadPx, the panel's air (one constant read)
-#include "paint_handler.h"    // icon_row_pad_x
+#include "paint_handler.h"    // icon_row_content_h_px
 
 #include <algorithm>
 #include <utility>
@@ -17,12 +17,19 @@ int notification_card_max_w_px(const AppState& a) {
 
 GuiRect notification_stack_bound(const AppState& a) {
     const GuiRect menu = top_menu_row_area(a);
-    const int pad_x = icon_row_pad_x();
+    // THE STACK'S TWO MARGINS ARE ONE NUMBER (architect 2026-08-29): the air
+    // to the window's right edge is the air to row 1 above it, both the
+    // panel's own kPanelPadPx. The right margin was the icon row's 8 px pad
+    // for the cards' first day, which read wider than the 2 px above them; a
+    // card's INTERNAL horizontal pad is still icon_row_pad_x() (the painter's
+    // own), that being the chrome inside the box rather than the box's
+    // placement.
+    const int pad   = folder_overlay::pad_px();
     const int w     = notification_card_max_w_px(a);
     const int h     = notification_card_h_px();
     const int gap   = scaled_px(kIconBtnGapPx, 1);
-    const int x     = a.width - pad_x - w;
-    const int y     = menu.y + menu.h + folder_overlay::pad_px();
+    const int x     = a.width - pad - w;
+    const int y     = menu.y + menu.h + pad;
     return GuiRect{x, y,
                    w, kNotificationVisibleMax * h +
                           (kNotificationVisibleMax - 1) * gap};

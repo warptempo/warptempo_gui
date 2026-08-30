@@ -261,7 +261,7 @@ they say what they do. `onscreen_keyboard::cap_word` is the words' ONE owner,
 the painter's icon branch is gone, and the five glyphs that surface alone read
 (keyboard-caps-disabled / keyboard-caps-enabled / keyboard-enter /
 keyboard-spacebar / edit-clear-locationbar-rtl) went with it — enumerators,
-defs and committed assets, taking the roster from 51 to 46 AT THAT MOMENT (it stands at 51 again today, `kIconCount` in icons.h — the transport and player glyphs added since). SHIFT'S ONE-SHOT ARM IS THE
+defs and committed assets, taking the roster from 51 to 46 AT THAT MOMENT (it stands well above that today — `kIconCount` in icons.h is the one authority, the transport, player, card and value-copy glyphs having been added since). SHIFT'S ONE-SHOT ARM IS THE
 FACE: the cap says "Shift" armed or resting, and what says the arm is the key's
 ARMED FACE — `kRedesignSelectedFill` under a `kRedesignLine` frame, the icon
 row's own lit-toggle face, which this key and the layer toggle already wore off

@@ -176,7 +176,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
-            reject("must be an integer in [50, 400] in canonical spelling");
+            reject("must be an integer in [50, 350] in canonical spelling");
             return true;
         }
         // History-less, and APPLIED LIVE: the store write is no longer the

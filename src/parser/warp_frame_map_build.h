@@ -217,7 +217,7 @@ std::vector<char> warp_coincident_collapse_members(
 // Stages 1-3 live in one shared projection function
 // (normalized_surviving_markers, internal to warp_frame_map_build.cpp):
 // the resolver runs it with the stderr lines on, and the display side
-// (marker_effective / compute_hover_popup_text) runs the SAME function
+// (marker_effective / resolved_marker_payload) runs the SAME function
 // silently to resolve surviving passes and refs against what actually
 // renders — one implementation, so the two surfaces cannot drift. The
 // stage-5 band check likewise classifies through the same
@@ -254,9 +254,9 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // that signal; display callers pass nothing. Returns 100 cents (tempo
 // 1.00) / nullopt (scale) when no owner is reached. Inheritance is a pure
 // value copy — cents copy exactly. This is the single canonical
-// inheritance walk: resolve_warp_markers_for_render and the hover surfaces
-// (marker_effective / compute_hover_popup_text) both call it, so the popup
-// display always matches the tempo the engine resolves.
+// inheritance walk: resolve_warp_markers_for_render and the display surfaces
+// (marker_effective / resolved_marker_payload) both call it, so a copied
+// or jumped-to value always matches the tempo the engine resolves.
 //
 // (No `owner_index` out-parameter. It reported the index of the owner the walk
 // terminated on, for MarkerEffective::owner_idx — deleted 2026-07-29 with the
@@ -275,7 +275,7 @@ std::optional<double> resolve_inherited_tempo_scale(
 // Effective (base_cents, scale, source, reason) a marker resolves to, for
 // display/authoring callers in hover/popup and marker operation paths.
 // base_cents == 0 means "could not resolve" (mirrors
-// compute_hover_popup_text's "" guards). scale == nullopt means no typed
+// resolved_marker_payload's "" guards). scale == nullopt means no typed
 // scale (treated as 1.0 by callers). total_frames is the source length in
 // frames; it bounds the last projection segment (the resolver's own rule),
 // so a last-segment ref resolves and classifies exactly as it renders.
@@ -325,60 +325,59 @@ std::optional<double> resolve_inherited_tempo_scale(
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
                                  long total_frames);
 
-// Hover-popup text for a warp marker (the label-ref / pass tempo notice). Pure
-// parser-domain string/math — resolves through marker_effective above (the
-// silent projection for surviving un-collapsed passes/refs, the raw store
-// for the carve-outs), so the popup matches what will be rendered. Pass
-// markers emit "= TEMPO (from SOURCE @ TIME)" or "= TEMPO*SCALE (from SOURCE @
-// TIME)" (resolved tempo of the nearest prior owning marker; SOURCE is the
-// immediate prior marker's own resolved displayed tempo — matching what that
-// marker's own popup or flag shows, not its raw stored fields, which are
-// inert for a pass or a label_ref — followed by ":LABEL" when that prior
-// DEFINES a label, giving the authored "1.28:a.01" spelling and the same
-// provenance form the label_ref arm below uses; TIME its time_frame). If SOURCE's own
-// resolution is unresolvable (base 0.0), or the value's visible source is a
-// synthetic projection marker (source_idx -1), the suffix is dropped
-// entirely and the popup shows just the resolved tempo. A pass whose
-// inheritance walk terminated on a surviving enabled label ref reads
-// "= 1.00" — the render's fallback, with no provenance.
-// Label_ref markers emit
-// "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
-// tempo value via format_tempo_cents; COMBINED_SCALE = def_scale * multiplier
-// when the def has a typed scale, else multiplier, printed as a scale-like
-// value at min 4 decimals with no ceiling — the "~=" marks an implied,
-// geometry-dependent value, while a pass popup's "=" marks an exact
-// inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
-// marker). A label ref the render normalizes reads the exact literal it
-// renders as — "=" not "~=", nothing geometry-implied remains:
-// "= 1.00 (undefined label)" when its resolution basis has
-// no definition (MarkerEffective::NormalizedReason::UndefinedLabel — a def
-// that died in a coincidence collapse counts as undefined, the render's
-// verdict), "= 1.00 (extreme label ratio)" when its
-// implied effective tempo lies outside the [0.125, 8.0] envelope
-// (NormalizedReason::ExtremeRatio); both copy "1.00". The parenthetical
-// comes from the reason field, never a raw-store re-search. A projection-
-// path ref in the last segment measures to total_frames — the resolver's
-// own rule — so it reads out and classifies exactly as it renders. TIME is
-// formatted with format_timestamp
-// (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
-// The popup text carries the readout content only.
-// Returns "" when the marker does not qualify (owning, malformed, or a
-// carve-out ref — a group member or effectively-disabled ref — whose raw
-// walk finds no surviving successor to bound a segment). GUI callers slice
-// their GuiWarpMarker store to WarpMarker
-// (slice_to_warp_markers) before calling.
+// THE RESOLVED VALUE OF A PASS OR LABEL_REF WARP MARKER, as the pasteable
+// payload plus the index of the marker that value came FROM. (ARCHITECT
+// APPROVAL 2026-08-29 for the touch on this frozen unit.) Pure parser-domain
+// string/math — it resolves through marker_effective above (the silent
+// projection for surviving un-collapsed passes/refs, the raw store for the
+// carve-outs), so what it composes is what will be rendered.
 //
-// When `copy_payload_out` is non-null and the marker qualifies, it receives
-// the pasteable effective value in the exact text the flag editor accepts and
-// the serializer writes: format_tempo_cents(base_cents), plus
-// "*"+format_value_double(scale, 4) when a scale is present (omitted for a
-// pass whose scale is semantically 1, always included for a label ref). No
-// "= "/"~= " prefix, no provenance — just the value. It is the
-// popup text's own value substring, so the two cannot drift. Left untouched
-// when the marker does not qualify (the function returns "" first).
-std::string compute_hover_popup_text(
-    const std::vector<WarpMarker>& mv, int idx, int sample_rate,
-    long total_frames, std::string* copy_payload_out = nullptr);
+// THE PAYLOAD is the value form the flag editor accepts and the serializer
+// writes: format_tempo_cents(base_cents), plus "*" + format_value_double(
+// scale, 4) when a scale is present — omitted for a pass whose scale is
+// semantically 1, always included for a label ref, whose implied multiplier
+// always exists. No prefix, no provenance, no timestamp: just the value.
+//
+// `source_index_out`, when non-null, receives THE MARKER THE VALUE IS TAKEN
+// FROM, and only where such a marker exists:
+//   pass      -> the immediate prior surviving marker it inherits from (NOT
+//                necessarily the owning marker if there is a chain of
+//                passes);
+//   label_ref -> the label-definition marker.
+// It is LEFT UNTOUCHED in every case where no marker can honestly be named —
+// which is exactly where the retired display string dropped its parenthetical
+// provenance, so the two derivations cannot drift: a marker that does not
+// qualify at all (the "" return), a pass whose value is a normalization
+// FALLBACK (a first-marker or all-disabled-priors pass, a walk that
+// terminated on a surviving enabled label ref, a visible prior that is a
+// SYNTHETIC projection marker — a collapsed group's replacement 1.00 owner or
+// the frame-0 seed), a pass whose visible prior does not itself resolve, and a
+// ref the render normalizes (an undefined label, or an implied effective tempo
+// outside the [0.125, 8.0] envelope — both spell the 1.00 literal and have no
+// source).
+//
+// Returns "" when the marker does not qualify — owning, malformed, or a
+// carve-out ref (a group member or an effectively-disabled ref) whose raw walk
+// finds no surviving successor to bound a segment — and touches the index
+// then. total_frames is the source length in frames; it bounds the last
+// projection segment (the resolver's own rule), so a last-segment ref reads
+// out exactly as it renders. GUI callers slice their GuiWarpMarker store to
+// WarpMarker (slice_to_warp_markers) before calling.
+//
+// (IT WAS compute_hover_popup_text, whose product was a DISPLAY string —
+// "~= 1.28*1.0112 (from a.23 @ 00:19.208)": the value under a "= "/"~= "
+// prefix, a parenthetical naming the source marker's own resolved tempo, its
+// label and its format_timestamp'd position, and the payload on an
+// out-parameter beside it. The hover popup it was named for died with the
+// row-5 redesign; the STATUS BAR's right cell carried the string for the one
+// day that bar existed; and on 2026-08-29 the bar folded into row 8 and the
+// readout retired with it. Nothing displays a resolved value any more — bare
+// `j` copies the payload and Shift+`j` jumps to the source marker — so the
+// display half, its sample_rate parameter and its format_timestamp use are
+// deleted rather than left producer-less.)
+std::string resolved_marker_payload(const std::vector<WarpMarker>& mv, int idx,
+                                    long total_frames,
+                                    int* source_index_out = nullptr);
 
 // The framemap pair the render pipeline drops into the cache dir is always
 // the FULL map — trim is a render window, never an artifact shape — so no

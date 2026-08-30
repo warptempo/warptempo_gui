@@ -399,40 +399,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_measure_offset_editor_key(key, mods)) return;
     }
 
-    // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
-    // pasteable "base" / "base*scale" form the flag editor accepts — onto the
-    // SYSTEM clipboard, so the implied value of a pass or label ref pastes into
-    // a neighbour's flag editor and equally into any other application. The
-    // clipboard has ONE representation, the platform's; this composes the
-    // string and hands it straight over, holding no copy of its own.
-    //
-    // THE SELECTION TRANSLATION of the old hover copy (row 5, 2026-08-01). The
-    // payload used to be cached in hover_popup at each rect-entry and this
-    // binding fired only while a hover readout showed; the hover machinery is
-    // gone, so the subject is the LAST-SELECTED marker — the same subject the
-    // status bar's readout now names, resolved through the same eligibility gate
-    // and the same frozen composer, so what you see is what you copy. An EMPTY
-    // SELECTION (or an ineligible focus — an owner, a phase reset, iteration
-    // mode, the 'P' column) is a CONSUMED NO-OP: the payload comes back empty
-    // and nothing is written. Ctrl+C is otherwise unbound globally.
-    //
-    // LIVE-TEST FLAGGED, like the readout it follows.
-    //
-    // Placed below the prompt gate (the line above returns while a modal is up)
-    // and the two editor blocks (which return on their own Ctrl+C, keeping the
-    // editor's copy-selection working while an editor owns input), so reaching
-    // here means neither a modal nor an editor is active.
-    if (ctrl && !shift && !alt && key == GuiKeys::C) {
-        if (popup_eligible_marker(app, app.last_selected_marker)) {
-            std::string payload;
-            compute_hover_popup_text(
-                slice_to_warp_markers(app.warpmarkers.markers()),
-                app.last_selected_marker, audio.sample_rate(),
-                audio.total_frames(), &payload);
-            if (!payload.empty()) gui.clipboard_set_text(payload);
-        }
-        return;
-    }
+    // (CTRL+C IS UNBOUND GLOBALLY AGAIN — architect 2026-08-29. It copied the
+    // FOCUSED marker's resolved value here from row 5 (2026-08-01) until the
+    // messaging redesign folded the status bar into row 8 and retired the
+    // resolved readout with it: the copy was the readout's own companion —
+    // "what you see is what you copy" — and with nothing displayed it needed
+    // a name of its own. BARE `j` IS THAT NAME (is_copy_value_key, gui_input.h;
+    // the arm is in the ordinary dispatch below with the rest of the bare
+    // letters), and SHIFT+`j` is its twin, the jump to the marker the value
+    // came from. The editors' own ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are
+    // untouched — they are handled in the editor blocks above and were never
+    // this arm.)
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
@@ -924,6 +901,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // that.
     if (app.history_mode.active && ctrl && !shift && !alt && key == GuiKeys::H) {
         run_history_revert();
+        return;
+    }
+
+    // THE VALUE PAIR (architect 2026-08-29) — bare `j` copies the FOCUSED
+    // marker's resolved value to the system clipboard, Shift+`j` jumps to the
+    // marker that value came from on the OTHER A/B tab. They took the place of
+    // the retired resolved readout and its Ctrl+C, and they sit here, in the
+    // ordinary dispatch below the read-only gate and below the mode's own
+    // claim, because both are read-only-LEGAL (the allowlist admits them, so
+    // the gate above passes them through) and both are refused in the `h`
+    // view by that view's allowlist, which never names them. Bare- and
+    // shift-exact through the shared predicates (gui_input.h), so these arms
+    // and the allowlist cannot drift; every refusal is the act's own consumed
+    // no-op. The bottom row's Copy value button dispatches both spellings
+    // through here, its plain lift and its shift-click / long press.
+    if (is_copy_value_key(key, mods)) {
+        copy_focused_marker_value();
+        return;
+    }
+    if (is_jump_to_value_source_key(key, mods)) {
+        jump_to_value_source();
         return;
     }
 
@@ -2900,7 +2898,6 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // act asked for T+P and got there, which is honest even when the reset
     // could not be placed.
     phase_resets.drop_phase_reset_lead_in_at_playhead();
-    viewport.invalidate_status_bar_area();
     viewport.kick_waveform_sync();
 }
 

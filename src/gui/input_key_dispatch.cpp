@@ -425,6 +425,18 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Load in place button is still on it (app_state.h).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
+    // THE VALUE PAIR — bare `j` and Shift+`j` (2026-08-29) — is admitted on
+    // the header's own standard: neither authors anything. `j` composes the
+    // focused marker's resolved value and hands it to the compositor's
+    // clipboard; Shift+`j` switches the A/B tab, lands the playhead on the
+    // marker that value came from and centres it — a tab switch, a selection
+    // and a camera, every one of them navigation this gate has never blocked.
+    // Shift-exact through the shared predicates, so these two entries and the
+    // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: the Copy value
+    // button is NOT in redesign_button_enabled's read-only arm, so a locked
+    // tab leaves it lit exactly as it leaves both chords live.
+    const bool is_copy_value          = is_copy_value_key(key, mods);
+    const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
     // SHIFT+S IS BLOCKED, and it needs no term of its own to be: it drops a
     // phase reset from any view (2026-08-28) — authored content, exactly what
     // bare `s` drops and exactly what this gate refuses — and the is_save
@@ -462,7 +474,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
-             is_add_to_selection || is_play_renders);
+             is_add_to_selection || is_play_renders ||
+             is_copy_value || is_jump_to_value_source);
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------
@@ -590,7 +603,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and the status bar rewrites its `n/N shortsha` walk line.
+    // with it, and row 8's state cell rewrites its `n/N shortsha` walk line.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It
     // covers the restore's and the republication's own damage too, which is why
@@ -3991,26 +4004,29 @@ void GuiInputHandler::run_iteration_sweep_render() {
         }
     }
 
-    // The batch's DISPLAY label — the progress parenthetical and the
-    // stderr summary. It stays LOWERCASE because it is a shared
-    // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
-    // surface: it sits inside "Rendering N of M (...)..." in the GUI, and
-    // in the summary it fills the tag slot ahead of the message proper,
-    // whose own first word takes the capital ("warptempo_gui: render
-    // iterations: Rendered 3 of 8 entries"). Its position after the
-    // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02
-    // terminal pass looks past the program-name prefix when it locates
-    // that first prose word. Contrast the BPM batch's label, which
+    // The batch's DISPLAY label — the progress line's counted noun and the
+    // stderr summary's tag. "iterations" since 2026-08-29 (architect):
+    // the GUI line reads "Rendering 3 of 8 iterations...", the label
+    // naming what the two numerals count, and "render" fell out of it
+    // because the sentence already leads with "Rendering". It stays
+    // LOWERCASE because it is a shared ROUTING/CATEGORY LABEL rather than
+    // sentence-initial prose in either surface: the GUI sentence leads
+    // with its own "Rendering", and in the summary it fills the tag slot
+    // ahead of the message proper, whose own first word takes the capital
+    // ("warptempo_gui: iterations: Rendered 3 of 8 entries"). Its position
+    // after the "warptempo_gui: " prefix is NOT the reason — the
+    // 2026-08-02 terminal pass looks past the program-name prefix when it
+    // locates that first prose word. Contrast the BPM batch's label, which
     // capitalizes as an acronym everywhere.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully
         // built batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
-        cmd.batch_label = "render iterations";
+        cmd.batch_label = "iterations";
         kill_running_render_and_park(std::move(cmd));
     } else {
-        start_render_batch(std::move(reqs), "render iterations");
+        start_render_batch(std::move(reqs), "iterations");
     }
     // The sweep is committed to run either way (dispatched, or parked
     // behind the killed render's drain): iteration mode turns off after
@@ -4036,11 +4052,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
     viewport.invalidate_top_strip();
-    // AND THE STATUS BAR (2026-08-29): the mode bit is one of the resolved
-    // readout's own eligibility terms (popup_eligible_marker, app_state.cpp),
-    // so clearing it can bring the bar's right cell back — and the bar is the
-    // window's last lane, which the top-strip damage above does not reach.
-    viewport.invalidate_status_bar_area();
+    // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR did,
+    // 2026-08-29: the mode bit is one of the eligibility terms the resolved
+    // READOUT read, so clearing it could bring that cell back. The readout
+    // retired with the bar and nothing outside the top strip changes here.)
 }
 
 // Render-trigger chords. See the declaration for the chord list.
@@ -4318,7 +4333,6 @@ void GuiInputHandler::apply_recipe_in_place(
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_bar_area();
     viewport.invalidate_clock_area();
 
     // The trigger owns the rebind for a session standing in TARGET view: it
@@ -5833,11 +5847,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;
             viewport.invalidate_top_strip();
-            // AND THE STATUS BAR (2026-08-29): the mode bit is one of the
-            // resolved readout's eligibility terms (popup_eligible_marker),
-            // so the toggle hides or restores the bar's right cell, and the
-            // bar is the window's last lane — outside the top strip's rect.
-            viewport.invalidate_status_bar_area();
+            // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
+            // did, 2026-08-29: the mode bit is one of the eligibility terms
+            // the resolved READOUT read, so the toggle hid or restored that
+            // cell. The readout retired with the bar and nothing outside the
+            // top strip changes here.)
         }
         return true;
     }
@@ -6174,6 +6188,70 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     }
 }
 
+// -- THE VALUE PAIR: bare `j` copies, Shift+`j` jumps -----------------------
+//
+// (architect 2026-08-29, replacing the resolved readout and its Ctrl+C, which
+// retired with the status bar the same day.) BOTH ACT ON THE SELECTION'S
+// FOCUS, the subject Ctrl+C had, and both compose through the ONE parser
+// composer resolved_marker_payload (warp_frame_map_build.h), which returns the
+// pasteable value and — through its out-parameter — the marker that value came
+// FROM: a pass's immediate prior owner, a ref's definition. One resolve, two
+// answers, so the value copied and the marker jumped to can never name
+// different markers.
+//
+// THE ELIGIBILITY IS THE ONE GATE, payload_eligible_marker (app_state.h):
+// warp view, iteration mode off, an enabled pass or a ref to an enabled
+// definition. An ineligible focus — an owner, a phase reset, iteration mode,
+// the `P` column, nothing focused — and an empty payload alike are SILENT
+// CONSUMED NO-OPS, the roster's standing shape for a refusal that changes at
+// interaction cadence (which is also why the button never greys on the
+// selection's state).
+
+void GuiInputHandler::copy_focused_marker_value() {
+    if (!payload_eligible_marker(app, app.last_selected_marker)) return;
+    const std::string payload = resolved_marker_payload(
+        slice_to_warp_markers(app.warpmarkers.markers()),
+        app.last_selected_marker, audio.total_frames());
+    // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
+    // string and hands it straight over, holding no copy of its own
+    // (conventions.md's clipboard ruling).
+    if (!payload.empty()) gui.clipboard_set_text(payload);
+}
+
+// THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
+// focused value came from, so a reference and its definition can be read side
+// by side one Ctrl+Tab apart. Three acts, each through its own chokepoint and
+// none of them spelled twice:
+//   * the TAB SWITCH through switch_active_tab_view_to, the Ctrl+Tab road,
+//     which clears the selection as every tab switch does and re-lands the
+//     window's own state;
+//   * land_playhead_on_marker, which lands the playhead on the source AND
+//     auto-selects it (the never-parked rule) — and, being one of the two
+//     MOVEMENT owners, stops playback, ends a standing audition and hides the
+//     trim region overlay on its own, so this body writes none of that;
+//   * run_center_command, `c`'s one owner, which puts the working zoom on the
+//     landed marker — the A/B audition's own framing.
+// NO UNDO ENTRY: a tab switch and a playhead move record nothing anywhere in
+// the product, so there is nothing here to push.
+void GuiInputHandler::jump_to_value_source() {
+    if (!payload_eligible_marker(app, app.last_selected_marker)) return;
+    int source = -1;
+    const std::string payload = resolved_marker_payload(
+        slice_to_warp_markers(app.warpmarkers.markers()),
+        app.last_selected_marker, audio.total_frames(), &source);
+    // AN EMPTY PAYLOAD IS THE COPY'S OWN REFUSAL and the jump's too — an
+    // unresolvable ref or a carve-out with no successor — and a payload that
+    // names NO SOURCE is the value's own fallback (a first-marker pass, a walk
+    // that ended on a ref, a synthetic prior, a normalized ref): there is
+    // nothing to jump to, so the press is a consumed nothing.
+    if (payload.empty() || source < 0) return;
+    if (source >= static_cast<int>(app.warpmarkers.markers().size())) return;
+    active_views.switch_active_tab_view_to(
+        app.active_tab_view == 'A' ? 'B' : 'A');
+    land_playhead_on_marker(app, audio, viewport, source);
+    run_center_command();
+}
+
 void GuiInputHandler::render_player_load_in_place() {
     if (!app.render_player.active) return;
     if (app.prompt.active) return;
@@ -6181,13 +6259,20 @@ void GuiInputHandler::render_player_load_in_place() {
     // the engine block, exactly what the read-only tab protects. The button
     // wears no disabled face by ruling, so the refusal is the act's.
     if (active_view_state(app).read_only) return;
-    // THE RUNNING-RENDER REFUSAL IS SILENT (architect 2026-08-28, re-decided
-    // 2026-08-29 when refusals became cards): the load wipes tmp/, which must
-    // never race a batch publishing into it, so the refusal itself stays —
-    // and it says nothing because the progress line standing on the status
-    // chain ("Rendering...", the batch's "Rendering N of M (...)...") is
-    // already its explanation; a card would restate what the screen shows.
-    if (app.queue_running || app.pending_archival.armed) return;
+    // THE RUNNING-RENDER REFUSAL SAYS SO ON A CARD (architect 2026-08-29, the
+    // status bar's fold into row 8): the load wipes tmp/, which must never
+    // race a batch publishing into it, so the refusal itself stays — and it
+    // is no longer silent. It was silent for one day on the ground that the
+    // progress line was its explanation, and THAT LINE IS NOT ON SCREEN HERE:
+    // the state cell is row 8's, the modal row takes that lane whole while
+    // the player stands, so a refusal with nothing beside it would read as a
+    // dead button (validation_topology.md's row, and the "Only batch renders
+    // load in place" refusal one arm down is the same class).
+    if (app.queue_running || app.pending_archival.armed) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Render running");
+        return;
+    }
     const AppState::RenderEntry* entry = render_player.highlighted_entry();
     if (entry == nullptr) {
         // Said on a card because the button and `'` are live on every row

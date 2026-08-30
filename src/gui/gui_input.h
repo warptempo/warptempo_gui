@@ -248,6 +248,34 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
 }
 
+// THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the
+// retired resolved readout and its Ctrl+C: bare `j` COPIES the focused
+// marker's resolved value to the system clipboard, and SHIFT+`j` JUMPS to the
+// marker that value came from — the pass's owner or the ref's definition — on
+// the OTHER A/B tab, so the two tabs stand on the reference and its
+// definition at once. `j` was unbound (verified by grep at the landing), and
+// the two spellings are the roster's own shift-twin shape: one button, its
+// plain lift the copy and its shift-click or long press the jump.
+//
+// BOTH ARE BARE-/SHIFT-EXACT, so ctrl and alt decorations stay the strict
+// rule's consumed no-ops, and both are ONE-SHOT (repeat-ineligible: a copy
+// repeats onto itself and a jump has one destination). Their subject is the
+// SELECTION'S FOCUS, and an ineligible focus — an owner, a phase reset,
+// iteration mode, the `P` column, nothing focused — is a silent consumed
+// no-op at the act (payload_eligible_marker, app_state.h). Both are
+// READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits them)
+// and legal in both audio views, being navigation rather than positional
+// authoring; the `h` view refuses them at its own allowlist like every chord
+// it does not name. The same two readers as the pairs above — on_key's
+// dispatch arms (input_handler.cpp) and the read-only allowlist — and the
+// same one-owner reason.
+inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::J && !mods.ctrl && !mods.shift && !mods.alt;
+}
+inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::J && !mods.ctrl && mods.shift && !mods.alt;
+}
+
 enum class GuiMouseButton {
     Left,
     Middle,

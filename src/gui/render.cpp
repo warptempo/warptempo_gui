@@ -746,7 +746,7 @@ void render_trim_flags(cairo_t* cr,
         // centred by arithmetic. Byte-identical where the ring already closed:
         // 9 - 2*2 == 5 at 100%, 14 - 2*3 == 8 at 150%, 18 - 2*4 == 10 at 200%.
         // The >= 1 guard mirrors the height's below; measured, it never fires
-        // in [50, 400] (the tightest tile is 4 columns at 50%, giving 2).
+        // in [50, 350] (the tightest tile is 4 columns at 50%, giving 2).
         const int inner_w_raw = tile - 2 * inset;
         const int inner_w = inner_w_raw < 1 ? 1 : inner_w_raw;
         const TrimBridgeGap gap =
@@ -797,7 +797,7 @@ void render_trim_flags(cairo_t* cr,
             // face made this a pure backstop at every legal scale; the factor's
             // return to 100 restored the 50..74 binding band the clamp was
             // written for.) The
-            // degenerate arm below face_h <= 1 is unreachable in [50, 400] and
+            // degenerate arm below face_h <= 1 is unreachable in [50, 350] and
             // skips THE SQUARE ALONE — never the tile, whose own paint-or-not
             // verdict is the fit test above and is unchanged.
             // THE HEIGHT RIDES THE DERIVED WIDTH and keeps its own clamp, which
@@ -806,7 +806,7 @@ void render_trim_flags(cairo_t* cr,
             // mirror of the width's derivation — produces the IDENTICAL value
             // at all 351 legal scales, and this one needs no extra guard (a min
             // is bounded where a subtraction is not). Either way the top rim
-            // comes out exactly `inset` at every scale in [50, 400], so the
+            // comes out exactly `inset` at every scale in [50, 350], so the
             // crop's vertical relationship is now a consequence of the
             // partition rather than a coincidence of two roundings.
             const int inner_h = inner_w < face_h - 1 ? inner_w : face_h - 1;

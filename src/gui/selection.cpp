@@ -115,7 +115,6 @@ void Selection::set_single_selection(int idx) {
     // damages the STATUS BAR's lane as well — its right cell is that readout;
     // the flags' own selected/unselected colour swap rides the
     // top-strip damage (through the flag cache's selection fingerprint).
-    viewport.invalidate_status_bar_area();
     damage_overlay_on_subject_change(old_subject);
 }
 
@@ -131,7 +130,6 @@ void Selection::replace_selection(std::set<int> members, int focus) {
     app.last_selected_marker =
         app.selected_markers.count(focus) ? focus : -1;
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_bar_area();
     damage_overlay_on_subject_change(old_subject);
 }
 
@@ -150,7 +148,6 @@ void Selection::clear_selection() {
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_bar_area();
     // Clearing the focus erases any overlay it annotated (subject frame -> none).
     damage_overlay_on_subject_change(old_subject);
 }
@@ -196,7 +193,6 @@ void Selection::collapse_to_focused() {
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_bar_area();
     // The phase-reset overlay's own P+target repaint rides its subject owner,
     // which the 2+ -> 1 case here triggers. (A collapse used to owe the
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
@@ -228,7 +224,6 @@ bool Selection::toggle_selection_membership(int idx) {
         added = false;
     }
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_bar_area();
     // (When repair_last_selected fired above it double-fires its own overlay
     // damage, a benign damage-union.)
     damage_overlay_on_subject_change(old_subject);
@@ -284,7 +279,6 @@ void Selection::select_range_from_anchor(int idx) {
         app.last_selected_marker = idx;
         app.shift_range_anchor   = idx;
         viewport.invalidate_top_strip();
-        viewport.invalidate_status_bar_area();
         damage_overlay_on_subject_change(old_subject);
             return;
     }
@@ -304,7 +298,6 @@ void Selection::select_range_from_anchor(int idx) {
     for (int i = lo; i <= hi; ++i) app.selected_markers.insert(i);
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
-    viewport.invalidate_status_bar_area();
     damage_overlay_on_subject_change(old_subject);
 }
 

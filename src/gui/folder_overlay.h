@@ -135,6 +135,17 @@ inline int row_icon_gap_px() { return scaled_px(kRowIconGapPx); }
 // text pad, which belongs to a different surface.
 inline int row_icon_inset_px() { return (row_height_px() - row_icon_px()) / 2; }
 
+// THE BAND'S TOP BORDER, its one chrome line (architect 2026-08-29): the band
+// gets the border its BOTTOM edge already wears, which is row 8's own 1 px
+// kRedesignTabLine border-top, drawn by the bottom row. So the two edges read
+// alike and the panel is a framed block instead of a ground running into the
+// waveform. It is READ from the bottom row's accessor rather than respelled
+// (one chrome line, four lanes now), and it is drawn INSIDE the band's rect:
+// the surface rect, the damage rect and the hit rect are all unchanged, and
+// the line comes out of the CONTENT'S room — the band's height is the
+// ceiling's whole extent (R35), so there is no room outside it to take.
+inline int border_h_px() { return bottom_row_border_h_px(); }
+
 // -- Standing ----------------------------------------------------------------
 
 // DOES THE PANEL STAND? THE OWNER TAG DECIDES and this is the panel's own
@@ -183,12 +194,26 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
+// THE ROWS' BAND — the surface less its top border row (above). Every geometry
+// below reads THIS and not the surface: the rows, the scroll ceiling and the
+// keep-visible walk all live under the line. The surface rect stays what the
+// painter grounds, what a damage erases and what the hit test contains, so the
+// border costs those three nothing. A degenerate band (shorter than its own
+// border) passes through unshrunk rather than inverting — the overview lane's
+// own shape.
+inline GuiRect content_rect(const AppState& a) {
+    const GuiRect surf = surface_rect(a);
+    const int b = border_h_px();
+    if (surf.h <= b) return surf;
+    return GuiRect{surf.x, surf.y + b, surf.w, surf.h - b};
+}
+
 // -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect surf = surface_rect(a);
-    return std::max(0, content_height_px(a) - surf.h);
+    const GuiRect band = content_rect(a);
+    return std::max(0, content_height_px(a) - band.h);
 }
 
 // THE ONE CLAMP of the scroll offset onto [0, max_scroll_px]. Every writer
@@ -205,11 +230,11 @@ inline void clamp_scroll(AppState& a) {
 // less the pad on both sides, at the row pitch. It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
-    const GuiRect surf = surface_rect(a);
+    const GuiRect band = content_rect(a);
     const int h = row_height_px();
-    const int y = surf.y + pad_px() + index * (h + row_gap_px()) -
+    const int y = band.y + pad_px() + index * (h + row_gap_px()) -
                   a.folder_overlay.scroll_px;
-    return GuiRect{surf.x + pad_px(), y, surf.w - 2 * pad_px(), h};
+    return GuiRect{band.x + pad_px(), y, band.w - 2 * pad_px(), h};
 }
 
 // THE ONE WALK OVER THE ROWS, and the reason paint and hit cannot drift: both
@@ -244,10 +269,10 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect surf = surface_rect(a);
+    const GuiRect band = content_rect(a);
     const GuiRect r    = row_rect(a, index);
-    const int top      = surf.y + pad_px();
-    const int bottom   = surf.y + surf.h - pad_px();
+    const int top      = band.y + pad_px();
+    const int bottom   = band.y + band.h - pad_px();
     if (r.y < top) {
         a.folder_overlay.scroll_px -= (top - r.y);
     } else if (r.y + r.h > bottom) {

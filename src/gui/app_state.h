@@ -163,7 +163,7 @@ constexpr double kNavZoomPxPerLevel = 200.0;
 // double-domain readers deliberately stay out of it). The multiply is exact
 // at gui_scale 100, so the laptop's default is the authored 200 byte for byte.
 // The floor keeps the divisor away from zero at any factor the schema could
-// ever admit; inside the live [50, 400] bracket the value rests in
+// ever admit; inside the live [50, 350] bracket the value rests in
 // [100, 800] and the floor cannot fire.
 inline double nav_zoom_px_per_level() {
     const double rate = kNavZoomPxPerLevel * gui_scale_factor();
@@ -1754,8 +1754,9 @@ struct TrimBarPressSeed {
 // TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
-// FOUR COMPANIONS close them since 2026-08-18), then the bottom row's SEVENTEEN — the transport
-// three, the FOUR SINGLE-MARKER VERBS with the EDIT FLAG BUTTON (2026-08-27),
+// FOUR COMPANIONS close them since 2026-08-18), then the bottom row's EIGHTEEN — the transport
+// three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button (2026-08-29),
+// the EDIT FLAG BUTTON (2026-08-27),
 // the MARKER MEASURE (2026-08-19) and
 // ADD TO SELECTION (2026-08-18) behind them, the MARKER-WALK three
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
@@ -2165,7 +2166,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
+    // detection. EIGHTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2315,8 +2316,46 @@ enum class RedesignButton {
     // 2026-08-15). They keep their Icon* names: a roster id names the button,
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's FIFTH
+    // member, seated IMMEDIATELY AFTER TOGGLE INHERIT (the architect's ask was
+    // "beside Toggle inherit" and this is the side chosen: inherit is what
+    // MAKES a marker a pass, and a pass is exactly what this button has a
+    // value to copy, so the two acts read as one pair — and it stays as far
+    // from Delete as the Edit flag button's own seating rule wants).
+    //
+    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
+    // FOCUSED marker's resolved value to the system clipboard — while its
+    // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
+    // other A/B tab, so the reference and its definition stand one Ctrl+Tab
+    // apart. IT IS THE ROSTER'S SIXTH SHIFT-ADMITTING BUTTON
+    // (redesign_button_shift_admits owns the membership and the
+    // static_assert binds the tooltip's second line to it), which is what
+    // gives a keyboardless panel the jump through a LONG PRESS.
+    //
+    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
+    // (architect 2026-08-29). The readout was the status bar's right cell for
+    // one day and the bottom strip's before that; the bar folded into row 8
+    // and the readout retired with it, so the value is now something you TAKE
+    // rather than something you read, and the marker it came from is somewhere
+    // you GO.
+    //
+    // ITS ENABLED ARM HAS NO SELECTION TERM — the group's own rule, stated at
+    // the Edit flag button and the Measure beside it: an ineligible focus (an
+    // owner, a phase reset, iteration mode, the P column, nothing focused) is
+    // the ACT's consumed no-op, and a face tracking it would blink at every
+    // selection (the 2026-08-15 no-blink ruling). AND IT IS NOT IN THE
+    // READ-ONLY ARM either, which is where it parts from its four neighbours:
+    // both chords are on read_only_key_blocked's allowlist (they author
+    // nothing — a clipboard write, a tab switch, a playhead move and a
+    // camera), so a locked tab leaves the button lit exactly as it leaves the
+    // keys live. What greys it is the `h` VIEW through the DERIVED partition
+    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
+    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
+    IconCopyValue,
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
-    // fifth member, seated between Toggle inherit and the Measure and
+    // SIXTH member since 2026-08-29 (its fifth from its landing;
+    // the Copy value button took the slot after Toggle inherit that day),
+    // seated between Copy value and the Measure and
     // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
     // an editor open and its neighbour's is a destruction, and a fingertip
     // reaching for one must not be one box from the other.
@@ -2355,9 +2394,10 @@ enum class RedesignButton {
     // so a modified press is refused at the band gate and the long press —
     // glass's held shift — reaches nothing.
     IconMarkerEditFlag,
-    // THE MARKER MEASURE — the verb group's SIXTH member since 2026-08-27
-    // (its fifth from 2026-08-19 until the Edit flag button took that slot),
-    // seated after the Edit flag button and ahead of Add to Selection. Bare `/`,
+    // THE MARKER MEASURE — the verb group's SEVENTH member since 2026-08-29
+    // (its sixth from 2026-08-27, when the Edit flag button landed ahead of
+    // it, and its fifth from 2026-08-19 before that), seated after the Edit
+    // flag button and ahead of Add to Selection. Bare `/`,
     // minuet-scales (notes climbing a staff — the speech balloon it wore for
     // the field's one free-text day was swapped with the grammar on
     // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
@@ -2391,8 +2431,9 @@ enum class RedesignButton {
     // tab and in redesign_button_shift_admits; the jump left the product whole
     // and the button returned to the lock's set with it.)
     IconMarkerMeasure,
-    // ADD TO SELECTION — the verb group's SEVENTH member since 2026-08-27 (its
-    // sixth from 2026-08-18, the Edit flag button having landed ahead of it),
+    // ADD TO SELECTION — the verb group's EIGHTH member since 2026-08-29 (its
+    // seventh from 2026-08-27 and its sixth from 2026-08-18; the Edit flag
+    // button and then the Copy value button landed ahead of it),
     // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
@@ -2458,12 +2499,19 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SEVEN in row 1, two
-// in row 3, TWENTY-SIX in row 4 and SEVENTEEN in the bottom row — 52. Of those,
-// FORTY-EIGHT carry a chord in kToolbarChords and FOUR are the dropdown
+// in row 3, TWENTY-SIX in row 4 and EIGHTEEN in the bottom row — 53. Of those,
+// FORTY-NINE carry a chord in kToolbarChords and FOUR are the dropdown
 // anchors (File, Edit, Series and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 53 SINCE 2026-08-29'S COPY VALUE BUTTON: one pure chord addition inside an
+// existing group, the bottom row's verb group gaining a fifth box on bare `j`
+// (the group is EIGHT now) — 52 + 1, split 48 + 4 to 49 + 4, no separator and
+// no group boundary moved. It is the EDIT FLAG BUTTON'S SHAPE two days on (a
+// verb-group addition carrying a chord that was free rather than one the
+// keyboard already had), and it is what the retired resolved readout's Ctrl+C
+// became.
 // 52 SINCE 2026-08-27'S EDIT FLAG BUTTON: one pure chord addition inside an
 // existing group, the bottom row's verb group gaining a fifth box on bare
 // Enter — 51 + 1, split 47 + 4 to 48 + 4, no separator and no group boundary
@@ -2542,7 +2590,7 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 52;
+inline constexpr int kRedesignButtonCount = 53;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2636,6 +2684,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
@@ -2651,10 +2700,10 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-08-27: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-08-29: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION and (2026-08-27)
-// the EDIT FLAG BUTTON landing
+// row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION, (2026-08-27)
+// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing
 // behind them, the MARKER-WALK GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -2662,8 +2711,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
-// 2026-08-27 rather than inherited: the hover clear and the hover recompute
+// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
+// 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
 // per-tick staleness comparator (main.cpp) and the tooltip, which also
@@ -2686,6 +2735,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconAddToSelection:
@@ -3471,10 +3521,10 @@ inline int drag_moved_threshold_px() {
 // marker-text lane's one-run fallback tier and its spell-out expansion, the
 // resolved readout, and the Ctrl+C copy. All three are settled
 // without it — the lane and its resolver are gone (a marker's value is written
-// on its flag), and the readout and the copy both took the SELECTION
-// translation (their sites: paint_status_bar, the readout being the STATUS
-// BAR's right cell since 2026-08-29, and the Ctrl+C binding in
-// input_handler.cpp). The staleness machinery went with it: the three
+// on its flag), the readout took the SELECTION translation and then RETIRED
+// WHOLE on 2026-08-29 with the one-day status bar that carried it, and the
+// copy is bare `j` now (with Shift+`j`, the jump to the marker the value came
+// from; input_key_dispatch.cpp). The staleness machinery went with it: the three
 // generations, the convergence loop, the on_tick repair and the pointer-leave
 // clear all existed to keep a CACHE honest, and there is no cache left.
 
@@ -4176,7 +4226,7 @@ struct AppState {
     // the value any more — a sidecar still holding it is load-fatal as an
     // unknown key, by the architect's explicit no-legacy instruction.)
 
-    // GUI rendering scale in PERCENT (the gui_scale preference; [50, 400]).
+    // GUI rendering scale in PERCENT (the gui_scale preference; [50, 350]).
     // is_gui_scale_percent (device_config.h) is the domain's ONE owner and
     // spells the bracket's four landmarks; this is a retell.
     //
@@ -6251,7 +6301,7 @@ struct AppState {
         // PAIR, and four call sites spelling that fork is four places for a
         // Local tab to keep showing commit flags. Its readers, re-derived by
         // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
-        // and the status bar's walk line — it had two more until 2026-08-18,
+        // and the WALK LINE (row 8's state cell) — it had two more until 2026-08-18,
         // the mode's diff-span framing and paint_trim's diff-span substitution,
         // both deleted with the trim bar's return to the ordinary framing. The
         // ONE reader that deliberately does NOT is
@@ -6935,8 +6985,8 @@ struct AppState {
     //
     // EVENTS, not state: something happened that answers an act, or that the
     // user was not watching. What is TRUE right now (the render's progress
-    // line, the `h` walk's line, the selected marker's readout) lives on the
-    // STATUS BAR, the window's last row; what HAPPENED becomes a CARD here. The model,
+    // line, the `h` walk's line) lives in ROW 8'S STATE CELL, right of the
+    // clock; what HAPPENED becomes a CARD here. The model,
     // the ops and the whole inventory of what is and is not notified are at
     // notifications.h (GuiNotifications); docs/engineering/architecture/
     // messaging.md is the ruling. This is only what the product remembers.
@@ -7009,25 +7059,31 @@ struct AppState {
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
 
-    // Non-interactive status text — THE STATUS BAR'S LEFT CELL since
-    // 2026-08-29 (the tab row's status chain ranked it tier 2 from 2026-08-13,
-    // and the bottom row carried it before that) — giving the user visual
-    // feedback while no other UI is updating. Driven by the shared batch
+    // Non-interactive status text — ROW 8'S STATE CELL, right of the clock
+    // (2026-08-29's evening fold; it was the one-day STATUS BAR's left cell
+    // that morning, the tab row's status chain ranked it tier 2 from
+    // 2026-08-13, and the bottom row carried it before that) — giving the user
+    // visual feedback while no other UI is updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status".
-    // IT COEXISTS WITH prompt.active AS STATE, and since the string left the
-    // bottom row IT ALSO PAINTS THROUGH A MODAL: an archival render runs on,
-    // so dirtying the project and pressing Ctrl+Q raises the close prompt over
-    // a live run (the prompt cancels nothing), and the run's own completion can
-    // rewrite or clear this string while the prompt stands — the prompt owns
-    // the BOTTOM row and this cell is the STATUS BAR's, two lanes that cannot
-    // contend. (Until that move the row yielded whole to the
-    // modal and the string was simply not painted while one stood.) NO
+    // IT COEXISTS WITH prompt.active AS STATE and NEEDS NO MODAL TEST OF ITS
+    // OWN: an archival render runs on, so dirtying the project and pressing
+    // Ctrl+Q raises the close prompt over a live run (the prompt cancels
+    // nothing), and the run's own completion can rewrite or clear this string
+    // while the prompt stands — THE ROW YIELDS WHOLE TO THE MODAL, so the cell
+    // is simply not painted while one stands and the live string is back the
+    // moment it closes (architect-accepted at the fold; it is also why the
+    // render player's load refusal, which stands over that yield, says its
+    // sentence on a card). The bar carried the string THROUGH a modal for its
+    // one day, that being what a separate lane buys, and this is the state
+    // before and after it. NO
     // PRECEDENCE TIER IS INVOLVED either way: the old shared-cell ordering
-    // (the prompt as the chain's first tier) is superseded structurally, and
-    // no status write needs a modal test of its own. The bar's OTHER cell, the
-    // readout, is a cell beside this one and not a tier under it: both paint
-    // whenever both are set.
+    // (the prompt as the chain's first tier) is superseded structurally. The
+    // `h` WALK LINE is the cell's other string, and THAT pair does rank: the
+    // walk line wins while the view stands (the recorded coexistence — nothing
+    // starts a render in the view, but one dispatched before the visit runs on
+    // through it), and this string is back on screen the moment the view
+    // closes.
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch
@@ -7628,27 +7684,21 @@ GuiRect top_ruler_row_area(const AppState& a);
 // arc's merged trim-bar + ruler input band — lived between these accessors for
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the UPPER of the
-// bottom strip's two lanes (bottom lane 1), with GAP 2's blank ground between
-// it and the waveform and the STATUS BAR below it —
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
+// strip's ONE lane (bottom lane 0), ON THE WINDOW'S FOOT with GAP 2's blank
+// ground between it and the waveform —
 // the lane including its 1px
 // border-top, and the content band under that border. (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
 // stood, 2026-08-11..12, the strip's whole surface at the unification, one of
 // two again while the OVERVIEW STRIP sat below it that afternoon, the strip's
-// one lane resting on the WINDOW'S FOOT from commit B, and one of two again
-// since the status bar took that foot on 2026-08-29; each flexible gap is
+// one lane resting on the WINDOW'S FOOT from commit B, one of two for the one
+// day the STATUS BAR took that foot on 2026-08-29, and the strip's one lane
+// again since that evening's fold, which put the bar's STATE TEXT in this
+// row's own cell beside the clock; each flexible gap is
 // strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
-// THE STATUS BAR (architect 2026-08-29): the bottom strip's LOWER lane (bottom
-// lane 0), on the WINDOW'S FOOT — the lane including its two 1px border rows,
-// and the 31-px ground between them that the two STATE cells work in. Its
-// painter is GuiPaintHandler::paint_status_bar and its damage owner is
-// Viewport::invalidate_status_bar_area; the ruling is
-// docs/engineering/architecture/messaging.md.
-GuiRect status_bar_area(const AppState& a);
-GuiRect status_bar_content_area(const AppState& a);
 
 // -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
 //
@@ -7667,10 +7717,10 @@ GuiRect status_bar_content_area(const AppState& a);
 // from that lane rather than from a.width so the two rects are the same band
 // by construction (the lane accessors run on the CLAMPED window dimensions
 // and a raw a.width would disagree with them on a sub-minimum window). THE
-// FLOOR IS THE BOTTOM ROW'S TOP, NOT THE WINDOW'S: the STATUS BAR sits below
-// that row on the window's foot since 2026-08-29, and neither tenant ever
-// paints over it — reading the row's lane is what keeps that true with no term
-// of its own. It
+// FLOOR IS THE BOTTOM ROW'S TOP, NOT THE WINDOW'S, and the row rests on the
+// window's foot again since 2026-08-29's fold, so the two coincide today —
+// reading the ROW's lane is what kept the tenants off the STATUS BAR for the
+// one day a lane stood below it, with no term of its own. It
 // does not ask whether anything stands: a rect is a fact about geometry and
 // standing is a decision each caller makes for itself. The one zero rect is
 // the degenerate one — a bottom row with no width, or a height that scales to
@@ -8430,13 +8480,14 @@ std::pair<long long, long long> compute_trim_samples(
 // into the TAB ROW, from which the chain was deleted whole on 2026-08-29. Its
 // span ran from the clock's cell to the arrow cluster's
 // left edge and it was this row's high-traffic string owner; the three STATE
-// strings live on the STATUS BAR now, one lane below this one, under
-// Viewport::invalidate_status_bar_area, and the two families that
+// strings are BACK ON THIS ROW as the STATE CELL, right of the clock, under
+// Viewport::invalidate_status_cell_area — which takes the LANE WHOLE, the cell
+// reserving no width of its own to erase inside — after one day on a status
+// bar of their own; and the two families that
 // shared the old owner — the string writers and the dialog editors' repaint
 // sites — are two populations with two owners, each inventoried at its own
-// declaration in viewport.h. A route touching the clock AND the bar, as a
-// load-in-place or an undo restore does, still calls both, spelling the two
-// surfaces it dirties rather than widening to one rect over them.)
+// declaration in viewport.h. A route touching the clock AND the state cell
+// spells both, the cell's owner covering the clock's rect as a superset.)
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
@@ -9167,11 +9218,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
         // allowlist — an answer that reached no pixel while the cluster swap
         // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS, THE EDIT FLAG BUTTON, THE MARKER MEASURE
-        // and ADD TO SELECTION
-        // (bare Return, bare `k` and bare `/` are consumed in there like the
-        // verbs' four
-        // chords) — TWELVE of the seventeen. The two
+        // FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT FLAG BUTTON, THE
+        // MARKER MEASURE and ADD TO SELECTION
+        // (bare `j`, bare Return, bare `k` and bare `/` are consumed in there
+        // like the verbs' four
+        // chords) — THIRTEEN of the eighteen. The two
         // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, being the mode's
         // own absolute jumps, its diff-flag cycle and (since 2026-08-18) the
         // march that composes that cycle with the A/B switch.
@@ -9180,8 +9231,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // tab, their own gate, carried down from the icon row and stated at
         // their arm above (the measure rejoined them at the 2026-08-21 sunset,
         // its jump half gone; the edit flag button landed in that arm
-        // 2026-08-27) — while ADD TO SELECTION, seated in their group,
-        // is not with them there, its chord being navigation.
+        // 2026-08-27) — while ADD TO SELECTION and COPY VALUE, both seated in
+        // their group, are not with them there, both chords being navigation.
         // Nothing else on the row has a resting grey, which is what this ruling
         // is about — the set that breaks out below.
         //
@@ -9321,6 +9372,21 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
+        // COPY VALUE TAKES THE ROW'S POLICY (2026-08-29), and it is the VERB
+        // GROUP'S ONE MEMBER THAT DOES: both of its chords — bare `j`, the
+        // clipboard write, and Shift+`j`, the tab switch plus the land plus
+        // the camera — are on read_only_key_blocked's allowlist, authoring
+        // nothing the lock protects, so it must NOT join the read-only arm
+        // above. Greying a face whose key still works is the face promising
+        // less than the key delivers, which the read-only-legal set's own rule
+        // refuses (Play renders left that arm on exactly this ground the day
+        // before). AND NO SELECTION TERM, the group's standing rule: an
+        // ineligible focus is the act's consumed no-op and a face tracking it
+        // would blink at every selection. What greys it is the `h` VIEW,
+        // through the derived partition at the top of this body (bare `j` is
+        // neither the mode's vocabulary nor on its allowlist), and the folder
+        // overlay's first arm — nothing hand-listed either way.
+        case RedesignButton::IconCopyValue:
         // (THE MARKER MEASURE sat here — the row's always-on policy — from
         // 2026-08-20 to the 2026-08-21 sunset, lit under the lock because its
         // shift half was the lock-legal score-video jump and a chrome face
@@ -9635,6 +9701,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
+        // the jump its shifted twin runs. Nothing stays true afterwards for a
+        // lamp to report.
+        case RedesignButton::IconCopyValue:
         // THE MARKER MEASURE IS MOMENTARY TOO: it opens an editor and the
         // editor's own session is the state; there is no bit for a lamp. THE
         // EDIT FLAG BUTTON beside it answers for the same reason and on the
@@ -9838,13 +9908,21 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // this is the membership it is about. The drop's shifted twin drops a phase
 // reset from any view, so the button reaches both columns' drops the way the
 // letter does.)
+// (COPY VALUE JOINED 2026-08-29, with Shift+`j`: its plain act copies the
+// focused marker's resolved value and its shifted twin JUMPS to the marker
+// that value came from, on the other A/B tab — the same rule as the drop's
+// above, a shift-enabled gesture whose bare form has a button. The long press
+// is WANTED on glass here for the play button's reason: standing the two tabs
+// on a reference and its definition is a reading gesture as much as a desk
+// one, and the panel has no shift key.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
-           b == RedesignButton::IconMarkerDrop;
+           b == RedesignButton::IconMarkerDrop ||
+           b == RedesignButton::IconCopyValue;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over, and the ROSTER'S
@@ -10129,7 +10207,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // HELP's vocabulary. ONE OF THEM ADMITS SHIFT since 2026-08-28 — the
         // DROP, whose shifted chord drops a phase reset from any view — and it
         // carries the second line that says so; the other three take one line
-        // each. They are the bottom
+        // each. (COPY VALUE, seated among them since 2026-08-29, carries the
+        // group's second two-line form; its own row below says why.) They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
@@ -10153,6 +10232,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
+        // COPY VALUE (2026-08-29), the verb group's fifth and its SECOND
+        // two-line form: bare `j` copies the focused marker's resolved value,
+        // and the shifted twin JUMPS to the marker that value came from — so
+        // the second line names the act and the modifier and not a key, this
+        // table's rule for second lines, and the static_assert below keeps the
+        // line and the admission one fact. The accelerator is a bare letter
+        // and so lowercase. It is the group's one member the READ-ONLY LOCK
+        // leaves lit, both its chords being navigation, and it still explains
+        // itself in the `h` view, where the derived partition greys it — the
+        // tooltips-on-disabled ruling above.
+        case RedesignButton::IconCopyValue:
+            return {"Copy value (j)",
+                    "Press Shift to go to the marker it comes from."};
         // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
         // like its neighbours: the act named, no shift line, the button
         // admitting neither shift nor ctrl. THE ACCELERATOR IS "Enter" and not
@@ -10751,11 +10843,14 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
 
 // Promoted from a lambda in main(). True iff the warp marker at `idx` has a
-// RESOLVED value worth showing — i.e. its flag does not already display a
+// RESOLVED value worth reaching for — i.e. its flag does not already display a
 // numeric tempo (pass markers and label_ref markers qualify; owning markers
 // don't). Requires warp view with iteration mode off; always false in phase
-// reset view (no pass concept). Its two callers are the surfaces that took the
-// SELECTION translation in row 5: the STATUS BAR's right cell (the bottom
-// strip's readout when this was written, the tab row's chain in between) and
-// the Ctrl+C copy. The name is the hover popup's — the gate is not.
-bool popup_eligible_marker(const AppState& app, int idx);
+// reset view (no pass concept). ITS TWO CALLERS ARE THE VALUE PAIR (2026-08-29,
+// re-greped): bare `j`, which copies the focused marker's resolved value to
+// the system clipboard, and Shift+`j`, which jumps to the marker that value
+// came from. It was `popup_eligible_marker` — the hover popup's name, kept
+// through that popup's death in row 5, through the bottom strip's readout and
+// through the one-day status bar's right cell — and it is named for what it
+// gates now that no surface DISPLAYS a resolved value at all.
+bool payload_eligible_marker(const AppState& app, int idx);

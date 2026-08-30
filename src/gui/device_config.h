@@ -8,7 +8,7 @@
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
 // piece (architect 2026-08-27). Four keys live here and nowhere else:
 //
-//   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 400]
+//   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
 //                            projects (project_model.h owns the model)
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -98,11 +98,19 @@ inline constexpr const char* kDefaultProjectsRepo =
 // rule).
 //
 // 100 is the design baseline (1920x1080, the supported laptop resolution); 200
-// is the 4K case; 400 is the fine-panel ceiling — a 280 dpi tablet panel, where
+// is the 4K case; 350 is the fine-panel ceiling — a 280 dpi tablet panel, where
 // matching a coarser display's apparent size lands above 200 (225 % gives the
 // 1024 logical width of the retired rig, ~305 % matches an 82 PPI external);
 // 50 is the half-size floor, which is where every structural dimension in
 // render.h's scaled_px accessors still has a floor holding it above zero.
+//
+// THE CEILING IS 350 (architect 2026-08-29, taking it down from the 400 that
+// stood from 2026-08-26): 400 was never needed on either host, and 350 is
+// where the EIGHT-LANE stack still fits a 1080-tall window — the top strip's
+// 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
+// the laptop's own screen keeps 240 px of waveform and gaps under the
+// tallest scale the vocabulary admits. The tablet's 225 and its 249 fit
+// ceiling are untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
 // 925 px of LOGICAL width (device width divided by the factor) the icon row's
@@ -116,7 +124,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // VOCABULARY; which of its values lays out well is the architect's call on his
 // own panel, not a validator's.
 inline constexpr bool is_gui_scale_percent(int64_t v) {
-    return v >= 50 && v <= 400;
+    return v >= 50 && v <= 350;
 }
 
 // THE projects_path GRAMMAR — the ONE owner: non-empty and ABSOLUTE, taken

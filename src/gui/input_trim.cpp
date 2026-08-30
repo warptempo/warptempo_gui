@@ -247,8 +247,8 @@ void GuiInputHandler::park_playhead_at_trim_start() {
         app, audio);
     // THE CLOCK RIDES THE WRITE (2026-08-11, the row-8 cell): row 8's clock
     // shows this cursor whenever no scanner is active, and since the
-    // timestamp left the status line the two callers' own damage (waveform +
-    // status bar) no longer covers it. The call sits HERE, beside the one
+    // timestamp left the status line the two callers' own damage (the
+    // waveform's) no longer covers it. The call sits HERE, beside the one
     // cursor write, rather than copied per caller — this helper is the trim
     // family's single playhead writer (both trim-commit callers ride it),
     // the same damage-beside-the-write shape land_playhead_on_source_frame
@@ -272,7 +272,6 @@ void GuiInputHandler::park_playhead_at_trim_start() {
 void GuiInputHandler::commit_trim_mutation() {
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_bar_area();
     target_render.trigger();
     // THE PARK IS LAST, past the invalidations on purpose: both raised rects
     // are position-fixed and consumed at the next paint, so raising them ahead
@@ -301,7 +300,6 @@ void GuiInputHandler::handle_trim_clear_both() {
         playback_lifecycle.stop_playback_if_playing();
         reset_trim_to_full_window();
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_bar_area();
         target_render.trigger();
         // AND THE PLAYHEAD PARKS AT THE NEW TRIM START (architect 2026-08-05):
         // the maximizer writes the full window, whose start is frame 0, so this
@@ -411,7 +409,6 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
     // is this event's whole tail, and the release runs the shared commit tail
     // (the drag arms' own arrangement, update_trim_drag above).
     viewport.invalidate_waveform_area();
-    viewport.invalidate_status_bar_area();
     return true;
 }
 
@@ -459,7 +456,7 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
 // 2026-08-07, and the key is on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
 // makes a second Shift+[ a natural silent no-op and whose tail owns the repaint
-// (waveform + status bar) and the target_render trigger. IT TOUCHES NO REGION AND
+// (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
 // rule does not reach it, and the gated region re-sync it used to carry died
 // with the trim-window highlight itself (architect 2026-07-30). It writes NO
@@ -756,7 +753,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // cursor chase never fights the drag that is moving the bounds.
             // Motion updates the bounds and repaints; the playhead waits.
             viewport.invalidate_waveform_area();
-            viewport.invalidate_status_bar_area();
             // THE DRAG IS A SETTER, so it DESELECTS (architect 2026-07-29) —
             // past the moved-bounds gate above, so a drag event that changes
             // nothing deselects nothing, and idempotent across the gesture's
@@ -866,7 +862,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // marker): the park at the new trim start is the RELEASE's. Motion
         // updates the bound and repaints; the playhead waits.
         viewport.invalidate_waveform_area();
-        viewport.invalidate_status_bar_area();
         // THE DRAG IS A SETTER, so it DESELECTS (the pair arm's twin above) —
         // past the moved-bound gate, and idempotent across the gesture's later
         // events; it publishes nothing, the trim-window highlight having retired.

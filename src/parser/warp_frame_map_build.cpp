@@ -742,87 +742,58 @@ MarkerEffective marker_effective(
                                   def_idx);
 }
 
-std::string compute_hover_popup_text(
-    const std::vector<WarpMarker>& mv, int idx, int sample_rate,
-    long total_frames, std::string* copy_payload_out) {
-    // The value the Ctrl+C binding copies is copy_payload_out, set from the
-    // readout's own value substring below; the popup text carries the readout
-    // content only.
+// (ARCHITECT APPROVAL 2026-08-29 — the granted frozen touch on this unit, for
+// the messaging redesign's readout retirement.) THE FUNCTION WAS
+// compute_hover_popup_text, the hover popup's and then the status bar's
+// DISPLAY string: "~= 1.28*1.0112 (from a.23 @ 00:19.208)", a value with a
+// prefix and a parenthetical provenance, plus the pasteable payload on an
+// out-parameter. Nothing displays that string any more — the bar folded into
+// row 8 and its readout cell went with it — so what is left is the two things
+// the GUI still asks for, and this composes exactly them: THE PAYLOAD, and
+// THE INDEX OF THE MARKER THE VALUE CAME FROM.
+std::string resolved_marker_payload(
+    const std::vector<WarpMarker>& mv, int idx, long total_frames,
+    int* source_index_out) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
-    // sample_rate is display-only: it renders the provenance time as
-    // format_timestamp(frame / sample_rate).
-    const double sr_d = static_cast<double>(sample_rate);
-    if (sr_d <= 0.0) return "";
     const WarpMarker& m = mv[idx];
 
     if (m.tempo_inherits) {
         const MarkerEffective eff = marker_effective(mv, idx, total_frames);
         if (eff.base_cents == 0) return "";
 
-        std::string out = "= ";
-        out += format_tempo_cents(eff.base_cents);
+        // THE PAYLOAD: the value form the flag editor accepts and the
+        // serializer writes — base, plus "*scale" only where a scale is
+        // present.
+        std::string out = format_tempo_cents(eff.base_cents);
         if (eff.scale.has_value()) {
             out += "*";
             out += format_value_double(*eff.scale, 4);
         }
-        // Payload is the value form the flag editor accepts — the readout minus
-        // its "= " prefix (base, plus "*scale" only when a scale is present), so
-        // it can never drift from what the popup shows.
-        if (copy_payload_out) *copy_payload_out = out.substr(2);
 
+        // THE SOURCE INDEX IS DERIVED WHERE THE OLD PROVENANCE WAS, so the
+        // two can never disagree about which marker the value is taken from.
         // A first-marker pass resolves to the 1.00 default and has no prior
-        // marker to attribute, so source_idx stays negative; the popup shows
-        // just the resolved tempo ("= 1.00") without a provenance suffix. The
-        // same guard covers a pass whose priors are all disabled, a pass
-        // whose inheritance walk terminated on a surviving enabled label ref
-        // (the render's 1.00 fallback — a fallback has no source to name),
-        // and a pass whose visible prior is a synthetic projection marker —
-        // a collapsed group's replacement owner or the frame-0 seed — which
-        // no raw marker can honestly be named for.
+        // marker to attribute, so source_idx stays negative and the old text
+        // printed no suffix; the same guard covers a pass whose priors are
+        // all disabled, a pass whose inheritance walk terminated on a
+        // surviving enabled label ref (the render's 1.00 fallback — a
+        // fallback has no source to name), and a pass whose visible prior is
+        // a synthetic projection marker — a collapsed group's replacement
+        // owner or the frame-0 seed — which no raw marker can honestly be
+        // named for.
         if (eff.source_idx < 0) return out;
 
-        // Provenance: the immediate prior marker's own resolved displayed
-        // tempo (its base, or base*scale if it carries a typed scale) and its
-        // position. The prior marker can itself be a pass or a label_ref,
-        // whose stored tempo_cents/tempo_scale are inert placeholders, so the
-        // descriptor is built from that marker's own resolution rather than
-        // its raw fields.
-        const WarpMarker& src = mv[eff.source_idx];
+        // And the second guard the old provenance had: the prior marker's own
+        // resolution. The prior can itself be a pass or a label_ref, whose
+        // stored fields are inert placeholders, so the old descriptor was
+        // built from that marker's own resolution — and where THAT does not
+        // resolve, the suffix was dropped whole. It is dropped here the same
+        // way: no source is named.
         const MarkerEffective src_eff =
             marker_effective(mv, eff.source_idx, total_frames);
         if (src_eff.base_cents == 0) return out;
 
-        // The visible immediate prior is never an enabled label ref here:
-        // were the first surviving prior a ref, the inheritance walk would
-        // have terminated on it and the source_idx<0 return above fired. A
-        // prior pass's own resolution prints in full — values carry no
-        // display ceiling.
-        std::string descriptor = format_tempo_cents(src_eff.base_cents);
-        if (src_eff.scale.has_value()) {
-            descriptor += "*";
-            descriptor += format_value_double(*src_eff.scale, 4);
-        }
-        // A prior that DEFINES a label names it, in the authored sidecar
-        // spelling: "1.28:a.01", matching the label-ref arm's own provenance
-        // form below (architect approval 2026-08-02 — "should include label
-        // def ie 1.28:a.01 not just 1.28 @ ..."). The def side is independent
-        // of the tempo side in the grammar, so this fires for an owning def
-        // ("1.28:a.01") AND for an inheriting one ("pass:a.01"), where the
-        // resolved value stands in for the `pass` token exactly as it does
-        // without a label. label_def and label_ref are mutually exclusive per
-        // marker, and a visible prior is never an enabled ref anyway, so the
-        // two provenance forms can never collide. The copy payload was fixed
-        // above, before any provenance text — it is the value substring alone
-        // and this suffix cannot reach it.
-        if (!src.label_def.empty()) {
-            descriptor += ":";
-            descriptor += src.label_def;
-        }
-        out += " (from ";
-        out += descriptor;
-        out += " @ ";
-        out += format_timestamp(src.time_frame / sr_d);
-        out += ")";
+        if (source_index_out) *source_index_out = eff.source_idx;
         return out;
     }
 
@@ -830,48 +801,22 @@ std::string compute_hover_popup_text(
         const MarkerEffective eff = marker_effective(mv, idx, total_frames);
         if (eff.base_cents == 0) return "";
 
-        // A ref the render normalizes (marker_effective's dangling and
-        // extreme-ratio fallbacks, source_idx -1) reads the exact literal it
-        // renders as — a hard "=", not "~=": nothing geometry-implied
-        // remains once the value is the 1.00 owner. marker_effective's
-        // reason field distinguishes the parenthetical: it carries the
-        // verdict of the list marker_effective actually resolved against
-        // (a def that died in a coincidence collapse exists raw but is
-        // dangling in the projection, so a raw re-search here would name
-        // the wrong case).
-        if (eff.source_idx < 0) {
-            std::string out = "= ";
-            out += format_tempo_cents(eff.base_cents);
-            if (copy_payload_out) *copy_payload_out = out.substr(2);
-            out += (eff.reason ==
-                    MarkerEffective::NormalizedReason::UndefinedLabel)
-                       ? " (undefined label)"
-                       : " (extreme label ratio)";
-            return out;
-        }
+        // A ref the render NORMALIZES (marker_effective's dangling and
+        // extreme-ratio fallbacks, source_idx -1) copies the exact literal it
+        // renders as — the 1.00 owner, with no source: the old text spelled a
+        // reason there ("(undefined label)" / "(extreme label ratio)"), never
+        // a provenance, so no index is reported.
+        if (eff.source_idx < 0) return format_tempo_cents(eff.base_cents);
 
-        const std::string base_text = format_tempo_cents(eff.base_cents);
-        // "~=" marks an implied, geometry-dependent multiplier (contrast the
-        // pass popup's hard "=", an exact inherited literal). The value
-        // prints in full — no display ceiling at any magnitude.
-        std::string out = "~= ";
-        out += base_text;
+        // The label ref's implied multiplier is always present, so the scale
+        // is always included.
+        std::string out = format_tempo_cents(eff.base_cents);
         out += "*";
         out += format_value_double(eff.scale.value_or(1.0), 4);
-        // Payload is the readout minus its "~= " prefix — the label ref's
-        // implied multiplier is always present, so the scale is always
-        // included, matching the value the flag editor accepts.
-        if (copy_payload_out) *copy_payload_out = out.substr(3);
 
-        // Provenance: "<def_base>:<label>" and the def marker's position.
-        const WarpMarker& def = mv[eff.source_idx];
-        out += " (from ";
-        out += base_text;
-        out += ":";
-        out += m.label_ref;
-        out += " @ ";
-        out += format_timestamp(def.time_frame / sr_d);
-        out += ")";
+        // The source is the LABEL-DEFINITION marker — exactly what the old
+        // "(from <def_base>:<label> @ <time>)" named.
+        if (source_index_out) *source_index_out = eff.source_idx;
         return out;
     }
 

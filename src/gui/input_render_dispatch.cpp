@@ -193,12 +193,13 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the status bar before clearing queue_progress_text.
-    // invalidate_status_bar_area covers the window's LAST LANE — the label's
-    // home since 2026-08-29, the tab row's from 2026-08-13 — and the label
+    // Invalidate the state cell before clearing queue_progress_text.
+    // invalidate_status_cell_area covers THE BOTTOM ROW'S LANE WHOLE — the
+    // label's home since 2026-08-29's fold, the one-day status bar's that
+    // morning and the tab row's from 2026-08-13 — and the label
     // lives nowhere else; keep this
     // ordering consistent with the other status-clear paths.
-    viewport.invalidate_status_bar_area();
+    viewport.invalidate_status_cell_area();
     app.queue_progress_text.clear();
     // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
     // DIE HERE or a rung-served run — which never promoted, so this clear of the
@@ -234,7 +235,7 @@ void GuiInputHandler::park_render_status(std::string text) {
     if (status_promoted_) {
         // Invalidate before clearing, the ordering every status-clear path here
         // keeps.
-        viewport.invalidate_status_bar_area();
+        viewport.invalidate_status_cell_area();
         app.queue_progress_text.clear();
         status_promoted_ = false;
     }
@@ -310,7 +311,7 @@ void GuiInputHandler::tick_promote_render_status() {
     // the next park retract it and keeps that retraction from touching another
     // owner's message.
     status_promoted_ = true;
-    viewport.invalidate_status_bar_area();
+    viewport.invalidate_status_cell_area();
 }
 
 // THE FIELD REPORT OF 2026-08-13 AND WHAT IT ACTUALLY WAS, recorded here
@@ -509,25 +510,30 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         return;
     }
 
-    // THE BATCH LABEL RIDES IN A TRAILING PARENTHETICAL so the GUI sentence
-    // leads with a capital of its own ("Rendering 1 of 5 (BPM)...") whatever
-    // the label's case is. The label is one string shared with the stderr
-    // summary above, and the two labels take the case rule differently:
-    // "BPM" is CAPITALIZED ALWAYS (architect 2026-08-02 — the acronym caps in
-    // both surfaces, which deliberately released the 2026-08-01 GUI/stderr
-    // byte-identity hold for that one token), while "render iterations" stays
-    // lowercase because it is a shared ROUTING/CATEGORY LABEL rather than
-    // sentence-initial prose in either surface: in the GUI it sits inside this
-    // parenthetical, and in the summary it fills the tag slot ahead of the
-    // message proper, whose own first word takes the capital
-    // ("warptempo_gui: render iterations: Rendered 3 of 8 entries"). Its
-    // position after the "warptempo_gui: " prefix is NOT the reason — the
-    // 2026-08-02 terminal pass looks past the program-name prefix when it
-    // locates that first prose word. A future label that DOES lead a sentence
-    // capitalizes at its definition, not here.
+    // THE BATCH LABEL NAMES WHAT IS BEING COUNTED (architect 2026-08-29):
+    // "Rendering 3 of 8 iterations..." / "Rendering 3 of 8 BPM values...",
+    // the label reading as the plural noun the two numerals count rather than
+    // as a category in a trailing parenthetical ("Rendering 3 of 8 (BPM)...",
+    // which said neither what the 8 were nor what the render was doing to
+    // them). The label is one string shared with the stderr summary above,
+    // where it fills the TAG SLOT ahead of the message proper
+    // ("warptempo_gui: iterations: Rendered 3 of 8 entries") — the same words
+    // read as a tag there, which is what lets the two surfaces keep one
+    // string.
+    // THE CASE RULE, unchanged by the rewording: "BPM" is CAPITALIZED ALWAYS
+    // (architect 2026-08-02 — the acronym caps in both surfaces, which
+    // deliberately released the 2026-08-01 GUI/stderr byte-identity hold for
+    // that one token) while "iterations" stays lowercase, being a shared
+    // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
+    // surface: the GUI sentence leads with its own "Rendering", and the
+    // summary's first prose word is its "Rendered". Its position after the
+    // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02 terminal
+    // pass looks past the program-name prefix when it locates that first
+    // prose word. A future label that DOES lead a sentence capitalizes at its
+    // definition, not here.
     char buf[128];
     std::snprintf(buf, sizeof(buf),
-                  "Rendering %d of %d (%s)...",
+                  "Rendering %d of %d %s...",
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
     // PARKED, NOT SHOWN — same rule as the single render (rationale at
@@ -794,19 +800,22 @@ bool GuiInputHandler::render_bpm_sweep() {
         return false;
     }
 
-    // The batch's DISPLAY label — the progress parenthetical and the stderr
-    // summary, both fed from this one string. "BPM" is capitalized always
-    // (architect 2026-08-02): it is an acronym, not a sentence position, so
-    // both surfaces carry the caps. It is NOT the folder token above.
+    // The batch's DISPLAY label — the progress line's counted noun and the
+    // stderr summary's tag, both fed from this one string. "BPM values"
+    // since 2026-08-29 (architect): the line says what the numbers count, and
+    // "BPM" alone named a quantity rather than the cells. "BPM" is
+    // capitalized always (architect 2026-08-02): it is an acronym, not a
+    // sentence position, so both surfaces carry the caps. It is NOT the
+    // folder token above.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully built
         // batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
-        cmd.batch_label = "BPM";
+        cmd.batch_label = "BPM values";
         kill_running_render_and_park(std::move(cmd));
     } else {
-        start_render_batch(std::move(reqs), "BPM");
+        start_render_batch(std::move(reqs), "BPM values");
     }
     // Batch fully built and committed to run (dispatched, or parked behind
     // the killed render's drain): every request carries its own moved
