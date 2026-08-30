@@ -2452,6 +2452,11 @@ void GuiInputHandler::commit_title_editor_commit() {
     if (blank) {
         app.commit_title_editor.red = true;
         viewport.invalidate_modal_dialog_area();
+        // THE CARD IS THE WHOLE MESSAGE HERE (architect 2026-08-30): this
+        // refusal never had a stderr line and gains none — the red field says
+        // that it refused, the card says why.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Enter a title for the checkpoint");
         return;
     }
     text_editor::deactivate(app.commit_title_editor);
@@ -2573,10 +2578,12 @@ void GuiInputHandler::measure_offset_editor_exit_no_commit() {
 // paste.
 //
 // A REFUSAL LEAVES THE EDITOR STANDING with the text in place to be corrected —
-// the dialog editors' one refusal shape — and there are TWO producers of it:
-// this grammar, and the paste's own out-of-bracket refusal below, which returns
-// false having written nothing. The second is the more interesting one and it
-// is deliberately not a clamp: an offset that would carry a measure past the
+// the dialog editors' one refusal shape — AND SAYS WHY ON A CARD (architect
+// 2026-08-30). There are TWO producers of it: this grammar, whose card is the
+// only thing it says (there was never an stderr line here and none is added),
+// and the paste's own refusals below, which return their sentence having
+// written nothing. The second is the more interesting one and it is
+// deliberately not a clamp: an offset that would carry a measure past the
 // bracket is a mis-typed offset, and silently pinning a run of bar numbers to
 // 99999 would be a confident wrong answer.
 void GuiInputHandler::measure_offset_editor_commit() {
@@ -2607,12 +2614,23 @@ void GuiInputHandler::measure_offset_editor_commit() {
     if (!ok) {
         app.measure_offset_editor.red = true;
         viewport.invalidate_modal_dialog_area();
+        // The grammar's own card (architect 2026-08-30). Like the commit
+        // title's, this refusal never had a stderr line and gains none.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Enter a whole number with no leading zeros");
         return;
     }
 
-    if (!apply_measure_paste(negative ? -magnitude : magnitude)) {
+    // THE PASTE'S REASON TRAVELS OUT WITH ITS REFUSAL (GuiOpRefusal,
+    // warpmarkers_ops.h): the facts it refuses on are the clipboard's and the
+    // bracket's, so the sentence is composed where the fact lives and the card
+    // is raised here, at the layer that knows a press happened.
+    if (GuiOpRefusal refusal =
+            apply_measure_paste(negative ? -magnitude : magnitude)) {
         app.measure_offset_editor.red = true;
         viewport.invalidate_modal_dialog_area();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::move(*refusal));
         return;
     }
     text_editor::deactivate(app.measure_offset_editor);
@@ -2635,9 +2653,12 @@ bool GuiInputHandler::handle_measure_offset_editor_key(GuiKey        key,
 
 // THE PASTE ITSELF — the offset editor's Enter, and the only caller.
 //
-// Returns FALSE having written absolutely nothing when the paste cannot be
-// honored whole; TRUE on every path that completed, including the ones that
-// wrote nothing because there was nothing to write.
+// Returns A REFUSAL SENTENCE having written absolutely nothing when the paste
+// cannot be honored whole; std::nullopt on every path that completed, including
+// the ones that wrote nothing because there was nothing to write (GuiOpRefusal,
+// warpmarkers_ops.h). The sentence is composed HERE, where the fact is — the
+// clipboard entry that will not parse, or the measure number the offset would
+// carry out of the bracket — and the caller raises the card.
 //
 // TWO PASSES, AND THE SPLIT IS THE CONTRACT: pass one resolves every
 // destination's new measure text and can REFUSE; pass two writes them. A
@@ -2677,14 +2698,14 @@ bool GuiInputHandler::handle_measure_offset_editor_key(GuiKey        key,
 // nowhere to LAND the reader, a measure being editable wherever the flag paints
 // (the scoping note is at land_paste_in_target_view). No overlay-hide owner is
 // reached, because none is called.
-bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
+GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
     const auto& mv = app.warpmarkers.markers();
     const int   n  = static_cast<int>(mv.size());
     const int   anchor = app.measure_offset_editor.target;
     // The subject may have gone out from under the modal (an undo while it
     // stood). Nothing to paste onto: report nothing and let the editor close,
     // exactly as the flag editor's commit drops an edit whose target vanished.
-    if (anchor < 0 || anchor >= n) return true;
+    if (anchor < 0 || anchor >= n) return std::nullopt;
 
     std::vector<int> dest;
     for (int i = anchor; i < n; ++i) {
@@ -2727,7 +2748,8 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
         // canonical writer) — but it refuses here rather than copying the bytes
         // through, because a verbatim copy of an unparseable measure would
         // write a load-fatal file and say nothing.
-        if (!parse_marker_measure(e.measure_text, v, err)) return false;
+        if (!parse_marker_measure(e.measure_text, v, err))
+            return "Measure rejected: " + err;
         if (v.is_offset) {
             // Relative already: verbatim, and the offset must not reach it.
             resolved[k] = e.measure_text;
@@ -2740,7 +2762,8 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
         // retired section qualifier rode through this same shape until the
         // 2026-08-21 sunset removed it from the grammar.)
         const int64_t shifted = v.whole + offset_measures;
-        if (shifted < 1 || shifted > kMeasureMaxWhole) return false;
+        if (shifted < 1 || shifted > kMeasureMaxWhole)
+            return "That offset would put a measure outside the allowed range";
         v.whole     = shifted;
         resolved[k] = format_marker_measure(v);
     }
@@ -2772,7 +2795,7 @@ bool GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
     if (!stop_message.empty()) {
         notifications.notify(AppState::NotificationClass::Normal, std::move(stop_message));
     }
-    return true;
+    return std::nullopt;
 }
 
 // THEN DO IT — the commit-title editor's Enter, and the only caller.
@@ -5382,6 +5405,17 @@ bool GuiInputHandler::route_modal_editor_key(
     }
     if (action == text_editor::KeyAction::Consumed) {
         repaint();
+        return true;
+    }
+    // THE FIELD HAD NO ROOM FOR THE CHARACTER (architect 2026-08-30): consumed
+    // and repainted exactly as Consumed is — the editor has already set red and
+    // left the buffer alone — plus the card the red field cannot say. This is
+    // the ONE place every editor's keys pass through, which is why the sentence
+    // sits here and not once per editor.
+    if (action == text_editor::KeyAction::OverCapacity) {
+        repaint();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "This field is full");
         return true;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::S) {

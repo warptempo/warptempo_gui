@@ -1227,7 +1227,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                               playback_lifecycle, target_render);
     MarkerDragOps marker_drag(app, audio, viewport, undo, target_render);
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
-                              target_render);
+                              target_render, notifications);
     GuiRendersDir renders_dir(app);
     // THE RENDER PLAYER (2026-08-28): after renders_dir and target_render,
     // both of which it holds; before the input handler, which holds it. Its

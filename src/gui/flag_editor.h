@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "audio.h"
+#include "notifications.h"
 #include "selection.h"
 #include "text_editor.h"
 #include "undo.h"
@@ -22,19 +23,30 @@ struct GuiFlagEditor {
     Selection&            selection;
     Undo&                 undo;
     GuiTargetRender&   target_render;
+    // THE RED FLASH'S SECOND READER (architect 2026-08-30, the strictness
+    // ruling): every commit refusal in this cluster composes ONE sentence and
+    // feeds it to the stderr line AND to a normal card, because a field that
+    // turns red says only THAT it refused. The reference sits here rather than
+    // in the dispatcher because the reason is composed where the fact lives —
+    // the settings editor's own arrangement, and the mirror image of the
+    // freeze-adjacent ops clusters, which return their sentences instead
+    // (GuiOpRefusal, warpmarkers_ops.h).
+    GuiNotifications&     notifications;
 
     GuiFlagEditor(AppState&             app_,
                   GuiAudio&             audio_,
                   Viewport&             viewport_,
                   Selection&            selection_,
                   Undo&                 undo_,
-                  GuiTargetRender&   target_render_)
+                  GuiTargetRender&   target_render_,
+                  GuiNotifications&     notifications_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
-          target_render(target_render_) {}
+          target_render(target_render_),
+          notifications(notifications_) {}
 
     void exit_top_flag_edit_no_commit();
     void enter_top_flag_edit(int idx);
@@ -56,14 +68,16 @@ struct GuiFlagEditor {
     void enter_measure_edit(char column, int idx);
     // Commit the open measure session: an EMPTY buffer REMOVES the measure, a
     // non-empty one is JUDGED against the measure grammar (marker_measure.h)
-    // and either stored verbatim or REFUSED with the editor left standing and
-    // red. One undo entry when the field actually changed; the editor closes on
+    // and either stored verbatim or REFUSED with the editor left standing,
+    // red, and a card saying which rule the token broke. One undo entry when
+    // the field actually changed; the editor closes on
     // every path except the refusal.
     void commit_measure_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
-    // closed). False on parse failure (editor stays open, red) or an
-    // invalid target. The caller fires render_bpm_sweep() on true.
+    // closed). False on parse failure (editor stays open, red, and a card
+    // names which of the three bpm refusals it was) or an invalid target. The
+    // caller fires render_bpm_sweep() on true.
     bool commit_bpm_edit();
     void enter_bpm_mode();
     void exit_bpm_mode();

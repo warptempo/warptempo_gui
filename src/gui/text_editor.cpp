@@ -215,7 +215,7 @@ std::string selected_text(const State& s) {
                             static_cast<size_t>(b - a));
 }
 
-void replace_selection(State& s, const std::string& raw) {
+bool replace_selection(State& s, const std::string& raw) {
     // THE ONE INCOMING-TEXT FILTER (the acceptance rule is at the declaration):
     // printable ASCII and WELL-FORMED multi-byte UTF-8 pass through verbatim;
     // ASCII controls (0x00..0x1f and DEL) and MALFORMED bytes are dropped, the
@@ -291,13 +291,16 @@ void replace_selection(State& s, const std::string& raw) {
     if (new_size > cap && new_size > old_size) {
         s.red = true;
         touch_blink(s);
-        return;
+        // The one refusal this primitive has, reported so the caller can say
+        // why the field went red (the contract is at the declaration).
+        return false;
     }
     if (has_selection(s)) erase_selection(s);
     s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
     s.cursor_pos += ins;
     s.red = false;
     touch_blink(s);
+    return true;
 }
 
 void deactivate(State& s) {
@@ -646,7 +649,10 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (new_size > cap && new_size > old_size) {
             s.red = true;
             touch_blink(s);
-            return KeyAction::Consumed;
+            // CONSUMED, AND SAID SO (architect 2026-08-30): the key is eaten
+            // exactly as an accepted one is, and OverCapacity is what lets the
+            // dispatch layer raise the card this module cannot.
+            return KeyAction::OverCapacity;
         }
         if (has_selection(s)) {
             erase_selection(s);

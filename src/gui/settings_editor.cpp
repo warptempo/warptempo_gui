@@ -144,8 +144,10 @@ void GuiSettingsEditor::exit_no_commit() {
 
 // GUI-kind key router. It hands (key, value) to the single grammar owner
 // validate_gui_setting (src/parser/settings_file.cpp — the same check the load
-// schema runs), red-flashes with the returned reason on any malformed or
-// out-of-vocabulary value, and otherwise applies the typed value through the
+// schema runs), red-flashes AND CARDS with the returned reason on any
+// malformed or out-of-vocabulary value (2026-08-30: one composed sentence, the
+// stderr line and the card its two readers), and otherwise applies the typed
+// value through the
 // key's own gesture chokepoint — no parallel state writer, no grammar spelled
 // twice. ITS ONE ARM AHEAD OF THAT OWNER is `gui_scale`, which left the load
 // schema 2026-08-27 for the per-device config and reaches its grammar owner
@@ -157,11 +159,15 @@ void GuiSettingsEditor::exit_no_commit() {
 // GUI-kind key, so the caller falls through to the engine-key path.
 bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                            const std::string& value) {
+    // ONE COMPOSER, TWO READERS (architect 2026-08-30): the refusal sentence
+    // is built once and read by the stderr line and by the card, a red field
+    // saying only THAT it refused.
     auto reject = [&](const std::string& reason) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: Settings edit rejected: %s\n", reason.c_str());
+        const std::string refusal = "Settings edit rejected: " + reason;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
     };
     auto applied = [&]() {
         std::fprintf(stderr,
@@ -462,11 +468,15 @@ void GuiSettingsEditor::commit() {
     // commits intact. This matches the settings schema reader
     // (read_settings_file), which also splits on the first `=`.
     const size_t eq = pending.find('=');
+    // The shape's twin above (commit_gui_setting's own): one composed
+    // sentence, the stderr line and the card its two readers.
     auto reject = [&](const char* reason) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: Settings edit rejected: %s\n", reason);
+        const std::string refusal =
+            std::string("Settings edit rejected: ") + reason;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
     };
     if (eq == std::string::npos) { reject("missing '='"); return; }
     const std::string key   = trim_ws(pending.substr(0, eq));
@@ -525,9 +535,10 @@ void GuiSettingsEditor::commit() {
     if (!is_canonical_engine_key(key)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: Settings edit rejected: unknown engine key "
-            "'%s'\n", key.c_str());
+        const std::string refusal =
+            "Settings edit rejected: unknown engine key '" + key + "'";
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
     }
 
@@ -536,10 +547,11 @@ void GuiSettingsEditor::commit() {
     if (!validate_engine_setting(key, value, candidate, reason)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: Settings edit rejected: key '%s' has invalid "
-            "value '%s': %s\n",
-            key.c_str(), value.c_str(), reason.c_str());
+        const std::string refusal =
+            "Settings edit rejected: key '" + key + "' has invalid value '" +
+            value + "': " + reason;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
     }
 
@@ -555,12 +567,15 @@ void GuiSettingsEditor::commit() {
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: Settings edit rejected: this would make the "
-            "render output overwrite the source file (%s); choose a "
-            "different title\n",
-            std::filesystem::path(app.source_audio_path)
-                .filename().string().c_str());
+        // The path names its BASENAME on the card, the stack's own rule
+        // (messaging.md), and the stderr line has always named the same.
+        const std::string refusal =
+            "Settings edit rejected: this would make the render output "
+            "overwrite the source file (" +
+            std::filesystem::path(app.source_audio_path).filename().string() +
+            "); choose a different title";
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
     }
 
@@ -706,7 +721,15 @@ bool GuiSettingsEditor::autocomplete_value() {
     app.settings_editor.cursor_pos       =
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
-    text_editor::replace_selection(app.settings_editor, *cur);
+    // THE RECALL'S OWN OVER-CAPACITY REFUSAL IS SILENT, and it is the one
+    // replace_selection caller that says nothing (2026-08-30). The strictness
+    // ruling's two capacity sentences answer what the USER just supplied — a
+    // typed character, a pasted clipboard — while this text is the product's
+    // own recall of a value it already holds, so a field too short for it is a
+    // cap that needs widening, not a refusal to explain. It leaves the red the
+    // filter set, and Tab still walks (the buffer advanced, the prefix having
+    // been rewritten above).
+    (void)text_editor::replace_selection(app.settings_editor, *cur);
 
     viewport.invalidate_modal_dialog_area();
     // The literal answer, compared against the buffer this call started from:

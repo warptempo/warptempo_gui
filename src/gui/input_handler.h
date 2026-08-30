@@ -2813,14 +2813,17 @@ private:
     // walks the dialog's focus ring from the first press.
     //
     // apply_measure_paste: the act, called ONLY from the commit above. Returns
-    // false having written NOTHING when any pasted measure would leave the
-    // bracket; the contract is stated in full at the definition.
+    // A REFUSAL SENTENCE having written NOTHING when the paste cannot be
+    // honored whole (GuiOpRefusal, warpmarkers_ops.h — std::nullopt is every
+    // path that completed, the ones that wrote nothing included); the commit
+    // red-flashes and cards it. The contract is stated in full at the
+    // definition.
     void copy_measures_from_selection();
     void open_measure_paste_editor();
     void measure_offset_editor_commit();
     void measure_offset_editor_exit_no_commit();
     bool handle_measure_offset_editor_key(GuiKey key, GuiInputState mods);
-    bool apply_measure_paste(int64_t offset_measures);
+    GuiOpRefusal apply_measure_paste(int64_t offset_measures);
 
     // -- THE RECIPE APPLY, and the rule it exists to state once ----------
     //

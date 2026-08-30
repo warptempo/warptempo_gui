@@ -35,7 +35,14 @@
 //              chords, the value pair, undo and redo, the ten arms of the
 //              BPM gate, the marker walk's wall, the `h` walk's and the diff
 //              cycle's ends, the trim family's four, playback's and the
-//              audition's, and the render chords'. Leaves on its own
+//              audition's, and the render chords' — and, beside them, EVERY
+//              RED FLASH'S REASON (2026-08-30): the seven commit refusals of
+//              the flag-editor cluster, the settings editor's five, the
+//              commit title's blank, the offset editor's grammar, the measure
+//              paste's two and the text editor's two capacity refusals. Each
+//              is ONE SENTENCE WITH TWO READERS, the stderr line the site
+//              already printed and the card; the two that never had an stderr
+//              line have the card alone. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock) or at its X.

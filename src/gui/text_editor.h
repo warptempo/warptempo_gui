@@ -311,6 +311,14 @@ enum class KeyAction {
     CopyRequested,
     CutRequested,
     PasteRequested,
+    // A TYPED CHARACTER THE FIELD HAD NO ROOM FOR (architect 2026-08-30, the
+    // strictness ruling): consumed exactly as Consumed is — the buffer and the
+    // selection are untouched and the field is red — but told apart from it so
+    // the DISPATCH LAYER can say why. This module has no GuiNotifications and
+    // wants none (it is the pure editor over one buffer), so the refusal is
+    // REPORTED here and CARDED at route_modal_editor_key, the one place every
+    // editor's keys pass through.
+    OverCapacity,
 };
 
 // The editor's key-classification owner: the single truth of which
@@ -376,8 +384,15 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // refuses the whole operation and sets the red state (buffer and selection
 // untouched). Cut calls it with an empty string, an always-accepted shrink that
 // simply deletes the selection.
+//
+// IT ANSWERS FALSE ON EXACTLY THAT REFUSAL (architect 2026-08-30, the
+// strictness ruling; true on every applied path, the empty-insert shrink
+// included) so the caller can say WHY the field went red — the paste's card is
+// raised by the input handler, which knows a press happened, this module having
+// no notifications of its own. The keyboard's own over-capacity refusal
+// reports through KeyAction::OverCapacity instead.
 std::string selected_text(const State& s);
-void        replace_selection(State& s, const std::string& raw);
+bool        replace_selection(State& s, const std::string& raw);
 
 // Render-side helper: returns true if the cursor should be drawn this
 // frame. Period is 1000ms (~500ms on, ~500ms off) and resets at every

@@ -62,7 +62,7 @@ bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
 // all-zero blank (`+[+0.00, +0.00]`) and an absent bracket both yield
 // nullopt (clear). The FlagPayload tempo/scale/label vocabulary never
 // produces a `+`, so `+[` is an unambiguous marker. Returns false on a
-// malformed bracket (caller red-flashes); true otherwise.
+// malformed bracket (the caller red-flashes and cards); true otherwise.
 bool extract_iter_bracket(std::string& payload,
                           std::optional<int64_t>& lo_out,
                           std::optional<int64_t>& hi_out) {
@@ -328,7 +328,9 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
 // keystroke filter; typing stays free and the commit decides.
 //
 // THE REFUSAL IS THIS EDITOR'S OWN SHAPE, not a dialog's: `red = true`, a
-// top-strip repaint, one stderr line, and RETURN WITHOUT DEACTIVATING, so the
+// top-strip repaint, one stderr line, A NORMAL CARD carrying that same
+// composed sentence (2026-08-30 — a red field says only THAT it refused), and
+// RETURN WITHOUT DEACTIVATING, so the
 // session stands with the offending text in place for correction. The damage
 // is the top strip alone — the stem flash that the FlagPayload refusal drives
 // is gated on that Kind at the painter, so a MeasureText red never reaches a
@@ -349,9 +351,15 @@ void GuiFlagEditor::commit_measure_edit() {
         if (!validate_marker_measure(next, measure_err)) {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
-            std::fprintf(stderr,
-                "warptempo_gui: Measure rejected: %s: %s\n",
-                measure_err.c_str(), next.c_str());
+            // ONE COMPOSER, TWO READERS (architect 2026-08-30): the sentence is
+            // built once and read by the stderr line and by the card. The
+            // stderr line keeps the offending token after it; the card does
+            // not, that text being on screen in the red field the refusal
+            // leaves standing.
+            const std::string refusal = "Measure rejected: " + measure_err;
+            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                refusal.c_str(), next.c_str());
+            notifications.notify(AppState::NotificationClass::Normal, refusal);
             return;
         }
     }
@@ -438,9 +446,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
         if (!extract_iter_bracket(payload, iter_lo, iter_hi)) {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
-            std::fprintf(stderr,
-                "warptempo_gui: Edit rejected: malformed iteration "
-                "bracket: %s\n", app.top_flag_editor.pending.c_str());
+            const std::string refusal =
+                "Edit rejected: malformed iteration bracket";
+            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                refusal.c_str(), app.top_flag_editor.pending.c_str());
+            notifications.notify(AppState::NotificationClass::Normal, refusal);
             return;
         }
     }
@@ -490,8 +500,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     if (!ok) {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
-        std::fprintf(stderr,
-            "warptempo_gui: Edit rejected: %s\n", err.c_str());
+        const std::string refusal = "Edit rejected: " + err;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
     }
 
@@ -524,12 +535,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
             base_cents + *iter_hi > kTempoMaxCents) {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
-            std::fprintf(stderr,
-                "warptempo_gui: Edit rejected: iteration bracket cells "
-                "leave the tempo bracket [%s, %s]: %s\n",
-                format_tempo_cents(kTempoMinCents).c_str(),
-                format_tempo_cents(kTempoMaxCents).c_str(),
-                app.top_flag_editor.pending.c_str());
+            const std::string refusal =
+                "Edit rejected: iteration bracket cells leave the tempo "
+                "bracket [" + format_tempo_cents(kTempoMinCents) + ", " +
+                format_tempo_cents(kTempoMaxCents) + "]";
+            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                refusal.c_str(), app.top_flag_editor.pending.c_str());
+            notifications.notify(AppState::NotificationClass::Normal, refusal);
             return;
         }
     }
@@ -848,9 +860,10 @@ bool GuiFlagEditor::commit_bpm_edit() {
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         app.top_flag_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr,
-            "warptempo_gui: BPM edit rejected: invalid syntax: %s\n",
-            s.c_str());
+        const std::string refusal = "BPM edit rejected: invalid syntax";
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+            refusal.c_str(), s.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
         return false;
     }
     // Derived-value bracket gate. Every sweep cell carries a derived base
@@ -895,15 +908,17 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 if (!at_lo || !at_hi) {
                     app.top_flag_editor.red = true;
                     viewport.invalidate_modal_dialog_area();
-                    std::fprintf(stderr,
-                        "warptempo_gui: BPM edit rejected: derived tempo or "
-                        "scale outside its bracket (tempo [%s, %s], scale "
-                        "[%s, %s]): %s\n",
-                        format_tempo_cents(kTempoMinCents).c_str(),
-                        format_tempo_cents(kTempoMaxCents).c_str(),
-                        format_value_double(kScaleMin, 4).c_str(),
-                        format_value_double(kScaleMax, 4).c_str(),
-                        s.c_str());
+                    const std::string refusal =
+                        "BPM edit rejected: derived tempo or scale outside "
+                        "its bracket (tempo [" +
+                        format_tempo_cents(kTempoMinCents) + ", " +
+                        format_tempo_cents(kTempoMaxCents) + "], scale [" +
+                        format_value_double(kScaleMin, 4) + ", " +
+                        format_value_double(kScaleMax, 4) + "])";
+                    std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                        refusal.c_str(), s.c_str());
+                    notifications.notify(
+                        AppState::NotificationClass::Normal, refusal);
                     return false;
                 }
                 // The RESCALED MAP's arm of the same gate (2026-08-26): the
@@ -922,13 +937,16 @@ bool GuiFlagEditor::commit_bpm_edit() {
                                            at_hi->base_tempo_cents)) {
                     app.top_flag_editor.red = true;
                     viewport.invalidate_modal_dialog_area();
-                    std::fprintf(stderr,
-                        "warptempo_gui: BPM edit rejected: a marker outside "
-                        "the span would leave the tempo bracket [%s, %s] "
-                        "once rescaled: %s\n",
-                        format_tempo_cents(kTempoMinCents).c_str(),
-                        format_tempo_cents(kTempoMaxCents).c_str(),
-                        s.c_str());
+                    const std::string refusal =
+                        "BPM edit rejected: a marker outside the span would "
+                        "leave the tempo bracket [" +
+                        format_tempo_cents(kTempoMinCents) + ", " +
+                        format_tempo_cents(kTempoMaxCents) +
+                        "] once rescaled";
+                    std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                        refusal.c_str(), s.c_str());
+                    notifications.notify(
+                        AppState::NotificationClass::Normal, refusal);
                     return false;
                 }
             }

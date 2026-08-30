@@ -2752,7 +2752,9 @@ bool GuiInputHandler::apply_editor_clipboard(
             return true;
         case text_editor::KeyAction::CutRequested:
             gui.clipboard_set_text(text_editor::selected_text(s));
-            text_editor::replace_selection(s, std::string());
+            // An empty insert can only shrink the buffer, so this call has no
+            // refusal to report (the cap's rule is at replace_selection).
+            (void)text_editor::replace_selection(s, std::string());
             return true;
         case text_editor::KeyAction::PasteRequested: {
             // The bytes come from the SYSTEM clipboard, so a URL copied in a
@@ -2769,9 +2771,20 @@ bool GuiInputHandler::apply_editor_clipboard(
             // text filter (printable ASCII plus well-formed UTF-8, controls and
             // malformed bytes dropped a byte at a time), and an external
             // clipboard is precisely the boundary it was written for.
+            //
+            // AND A PASTE TOO LONG FOR THE FIELD SAYS SO (architect
+            // 2026-08-30): the filter refuses the operation whole and turns the
+            // field red, which says THAT it refused; the card says why. The
+            // sentence is here because this is the paste's one site — the
+            // keyboard's own over-capacity refusal reports through
+            // KeyAction::OverCapacity and cards at route_modal_editor_key.
             std::string text = gui.clipboard_get_text();
             if (text.empty()) return true;
-            text_editor::replace_selection(s, text);
+            if (!text_editor::replace_selection(s, text)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     "The pasted text is too long for this "
+                                     "field");
+            }
             return true;
         }
         default:
