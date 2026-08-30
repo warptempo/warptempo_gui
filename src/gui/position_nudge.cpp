@@ -24,6 +24,18 @@ PositionNudgePrologue position_nudge_prologue(
     Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, int store_size) {
     PositionNudgePrologue r;
+    // EVERY REFUSAL HERE IS SILENT, AND EACH FOR ITS OWN REASON (re-derived
+    // 2026-08-30 under the strictness ruling "a card for every silent
+    // refusal" — none of these is one): the loading / empty-audio pair is the
+    // on_key loading gate's card one level up; the empty selection is
+    // unreachable, the dispatcher routing an empty selection to the
+    // waveform-lane playhead step and never reaching here; the missing focus
+    // is a belt against the never-parked rule (the selection layer keeps the
+    // focus a member at every mutator); and the two geometry guards below are
+    // belts against degenerate state. An error arm exists iff a producer
+    // exists (validation_topology.md), so the reason channel this pair's
+    // callers use (GuiOpRefusal, warpmarkers_ops.h) carries nothing from
+    // here — what a press CAN meet is each twin's own wall, which cards.
     if (app.loading || audio.total_frames() <= 0) return r;
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;

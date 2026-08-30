@@ -2,6 +2,8 @@
 
 #include "app_state.h"
 #include "playback_lifecycle.h"
+#include "warpmarkers_ops.h"   // GuiOpRefusal, the shared refusal-reason
+                               // channel (its contract is stated there)
 #include "selection.h"
 #include "undo.h"
 #include "viewport.h"
@@ -41,5 +43,9 @@ struct GuiPhaseResetMarkersOps {
     void toggle_phase_reset_disabled();
     // `synthesized_repeat` is the dispatching key event's platform repeat bit,
     // read only by the undo-coalesce verdict (undo.h).
-    void nudge_selected_phase_resets(int direction, bool synthesized_repeat);
+    // Returns the refusal's own sentence for the dispatcher to card, or
+    // std::nullopt for "nothing to say" (GuiOpRefusal, warpmarkers_ops.h —
+    // the contract is stated once there).
+    GuiOpRefusal nudge_selected_phase_resets(int direction,
+                                             bool synthesized_repeat);
 };

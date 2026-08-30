@@ -101,6 +101,14 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // exactly on an existing marker; ordering degeneracy is the render
     // boundary's to collapse (exact-frame ties merge to one 1.00 owner),
     // not this drop's.
+    // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30 under the
+    // strictness ruling, which is why no card composes here): both drop roads
+    // author AT the playhead — the `s` key through
+    // drop_copy_previous_at_playhead and the empty-lane double-click through
+    // the same body — and the playhead rests in [0, total-1] by every writer's
+    // own clamp, warp's SOURCE home making that conversion the identity. So
+    // the wall is a structural belt, not a refusal a press can meet; an error
+    // arm exists iff a producer exists (validation_topology.md).
     if (drop_frame > audio.total_frames() - 1)
         return;
     const auto& mv = app.warpmarkers.markers();
@@ -229,7 +237,10 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
 void GuiWarpMarkersOps::delete_selected_marker() {
     // THE SUBJECT REFUSAL READS ITS ONE OWNER (marker_selection_standing,
     // app_state.h — 2026-08-30, when the Delete button's face began reading
-    // the same fact through marker_selection_verb_actionable).
+    // the same fact through marker_selection_verb_actionable). SILENT, and
+    // deliberately so: the Delete dispatch arm asks the composed predicate
+    // ahead of this call and CARDS the refusal there (input_handler.cpp), so
+    // this is the belt and a card here would be the second for one press.
     if (!marker_selection_standing(app)) return;
     const auto& mv = app.warpmarkers.markers();
 
@@ -322,9 +333,10 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // app_state.h — 2026-08-30): the P view, an empty selection, no focus.
     // The P-view return lived at the Ctrl+N dispatch arm until then and the
     // two subject returns here; the Toggle inherit button's face reads the
-    // same predicate, so the act and the glyph are one decision. This op is
-    // warp-only by class, so the view term is a belt here and the refusal at
-    // the dispatch — which has no test of its own now.
+    // same predicate, so the act and the glyph are one decision. SILENT: the
+    // dispatch arm asks the same predicate ahead of this call so it can NAME
+    // the refusal on a card (input_handler.cpp), and one press owes one card,
+    // so this stays the belt.
     if (!inherit_toggle_actionable(app)) return;
     // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
     // COUPLED members (the doctrine is at the head of position_nudge.h): the
@@ -440,7 +452,8 @@ void GuiWarpMarkersOps::toggle_inherits() {
 // label_def).
 void GuiWarpMarkersOps::toggle_disabled() {
     // The subject refusal reads its one owner (marker_selection_standing,
-    // app_state.h), the delete's shape.
+    // app_state.h), the delete's shape — and, like the delete's, it is SILENT
+    // because the Ctrl+D dispatch arm cards the composed refusal ahead of it.
     if (!marker_selection_standing(app)) return;
     const auto& mv_const = app.warpmarkers.markers();
     // Any marker may be disabled, including the one at time 0. A disabled
@@ -497,8 +510,8 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // The grid is structural now: authored tempo is integer cents by type, so
 // every stored value is on-grid and the step is plain integer addition —
 // the old off-grid outward snap has no input left to act on.
-void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
-                                           bool synthesized_repeat) {
+GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
+                                                   bool synthesized_repeat) {
     // THE LEADING REFUSAL BLOCK IS NAMED WHOLE (tempo_cent_step_actionable,
     // app_state.h — the column gate plus the empty-selection and invalid-focus
     // refusals), and THIS BODY IS ITS ONLY READER since 2026-08-15: the bottom
@@ -512,15 +525,23 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // value-shaped per-marker facts — a label ref, a pass in target view, the
     // bracket wall — and are consumed no-ops with a live face, as the whole
     // row now is.
-    if (!tempo_cent_step_actionable(app)) return;
+    //
+    // THE BLOCK NOW ANSWERS ON A CARD (architect 2026-08-30, the strictness
+    // ruling): this act composes the sentence and RETURNS it, the dispatch
+    // raising it — the reason channel's contract is at GuiOpRefusal
+    // (warpmarkers_ops.h). One sentence for all three terms: the P column, an
+    // empty selection and a missing focus are the same answer from the user's
+    // side — the step wants a focused warp marker and has none. The Up / Down
+    // buttons grey on the same predicate, so no lift reaches it.
+    if (!tempo_cent_step_actionable(app))
+        return "Select a warp marker to change its tempo";
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below is UNCHANGED
     // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,
     // the target-only collapsed refusal, the constructive per-marker clamp).
-    if (app.selected_markers.size() >= 2) {
-        adjust_tempo_cents_group(delta_cents, synthesized_repeat);
-        return;
-    }
+    // Its refusal is ITS OWN sentence, forwarded verbatim.
+    if (app.selected_markers.size() >= 2)
+        return adjust_tempo_cents_group(delta_cents, synthesized_repeat);
     // THE COALESCE VERDICT IS ASKED HERE, at this arm's entry and AHEAD OF EVERY
     // REFUSAL BELOW (moved up 2026-07-29): the call has a
     // side effect now — a PHYSICAL press INVALIDATES the coalescing stamp inside it
@@ -556,8 +577,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     if (app.active_audio_view == 'T') {
         const auto& mv = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
-        if (f < 0 || f >= static_cast<int>(mv.size())) return;
-        if (mv[f].tempo_inherits || !mv[f].label_ref.empty()) return;
+        // A stale focus is a belt against the selection layer's own
+        // invariant, so it says nothing (GuiOpRefusal's contract).
+        if (f < 0 || f >= static_cast<int>(mv.size())) return std::nullopt;
+        // THE TWO PAYLOAD REFUSALS SAY SO SINCE 2026-08-30, in one sentence
+        // that names the VIEW as well as the marker: in SOURCE view this very
+        // marker would be stepped (the freeze converts it), so a card that
+        // said only "it owns no tempo" would be false half the time.
+        if (mv[f].tempo_inherits || !mv[f].label_ref.empty())
+            return "In target view only a marker that owns its tempo can be "
+                   "stepped";
         // A coincident-collapsed owner refuses too (architect 2026-07-22): a
         // coincident group is treated as ONE marker in target view, and its
         // members' authored tempos are render-inert — the resolver replaces
@@ -576,7 +605,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         const std::set<int>& red = warp_red_flag_set_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).red;
-        if (red.count(f)) return;
+        // The coincident-collapse refusal SAYS SO SINCE 2026-08-30: the stack
+        // renders as one synthetic 1.00 owner, so this marker's authored
+        // tempo is render-inert and the step would be a lie.
+        if (red.count(f))
+            return "That marker shares its frame with another";
     }
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
@@ -639,7 +672,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         clamp_iter_bracket_to_tempo_bracket(m);
         changed = true;
     }
-    if (!changed) return;
+    // NOTHING CHANGED: a label-ref focus (skipped above) or an owner already
+    // resting on its bracket edge. Still SILENT — these two are the "unnamed
+    // value-shaped refusals" this body's head describes, and the strictness
+    // arc's inventory does not carry them; they are candidates for a later
+    // step rather than an omission.
+    if (!changed) return std::nullopt;
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a held tempo step: the repeats skip the redundant push so one
@@ -707,6 +745,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         }
     }
     target_render.trigger();
+    return std::nullopt;
 }
 
 // Group tempo step (architect 2026-07-23): 2+ selected markers each step their
@@ -733,8 +772,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // FREEZE CONVERSION stays a singleton-only act (a bulk payload conversion from
 // one keystroke is refused by design). No freeze conversion here: every stepped
 // member is already an owner, so a plain integer add is the whole mutation.
-void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
-                                                 bool synthesized_repeat) {
+GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
+        int64_t delta_cents, bool synthesized_repeat) {
     // THE COALESCE VERDICT IS ASKED FIRST, ahead of the wall scan below (moved up
     // 2026-07-29): the call INVALIDATES the coalescing
     // stamp when the arriving press is PHYSICAL (the derivation is at
@@ -771,7 +810,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         const GuiWarpMarker& m = mv[idx];
         if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
             red.count(idx) || m.tempo_cents == edge) {
-            return;   // walled -> silent all-or-nothing refuse
+            // WALLED -> ALL-OR-NOTHING REFUSE, AND IT SAYS SO SINCE
+            // 2026-08-30: one sentence for the whole wall set (a pass, a ref,
+            // a disabled marker, a coincident-collapse member, a marker at
+            // the bracket edge) because what the press needs to know is that
+            // the GROUP could not move as a group, not which member walled —
+            // naming the member would be a second act's worth of detail for a
+            // press that changed nothing.
+            return "One of the selected markers cannot take this tempo "
+                   "change";
         }
     }
     std::vector<GuiWarpMarker> pre_state = mv;
@@ -792,7 +839,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         clamp_iter_bracket_to_tempo_bracket(*m);
         touched.push_back(idx);
     }
-    if (touched.empty()) return;   // defensive (a fully-stale selection)
+    // Defensive (a fully-stale selection): a belt against an invariant the
+    // selection layer keeps, so it says nothing (GuiOpRefusal's contract).
+    if (touched.empty()) return std::nullopt;
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced repeat skips the push: THE BURST'S OPENER owns the
@@ -862,6 +911,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         // included.
     }
     target_render.trigger();
+    return std::nullopt;
 }
 
 // Nudge the FOCUSED warp marker by exactly one on-screen pixel column per press.
@@ -889,18 +939,22 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
 // position_nudge.h. Crossing a neighbor is legal and goes through the
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
-void GuiWarpMarkersOps::nudge_selected_markers(
+GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
         int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
     // refusals, the coalesce verdict, the geometry refusals, the focused-index
     // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
     // the collapse's own playback stop (the playhead-follows / lead-in rationale
-    // lives at the declaration). Refuses silently, navigation-class.
+    // lives at the declaration). ITS refusals say NOTHING and that is the
+    // reason channel's own rule (GuiOpRefusal, warpmarkers_ops.h): every one
+    // of them is either an OUTER gate's card already (the loading gate's, the
+    // dispatch's home-view card) or a belt against an invariant the selection
+    // layer keeps — the prologue's own declaration names each.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::WarpNudge, synthesized_repeat,
         static_cast<int>(app.warpmarkers.markers().size()));
-    if (!pro.ok) return;
+    if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.warpmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
@@ -945,7 +999,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    if (committed_f == orig_f) return;   // saturated / zero-step press
+    // AND IT SAYS SO SINCE 2026-08-30 (architect, the strictness ruling): the
+    // wall is what the press met, and the sentence names it. A zero-step press
+    // is the same words and cannot be told apart from a wall by the user — nor
+    // does it arise off a wall, the authored frame grid being finer than the
+    // pixel grid (the one-column-per-press guarantee at stepped_anchor_frame).
+    if (committed_f == orig_f)
+        return "The marker is already at the edge";
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
     // first write (the keyboard stop rule's refusal gating, at
     // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
@@ -1000,4 +1060,5 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, committed_f,
                                 target_render);
+    return std::nullopt;
 }

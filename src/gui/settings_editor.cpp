@@ -100,7 +100,19 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // `tab_B_trim_begin=` from an UNLOCKED active tab while B is locked stays legal
 // and is the case the relaxation still serves.
 void GuiSettingsEditor::open() {
-    if (active_view_state(app).read_only) return;
+    // THE LOCK SAYS SO (architect 2026-08-30, the strictness ruling), and the
+    // card here answers the SETTINGS DROPDOWN alone: bare `;` is off the
+    // read-only allowlist and dies at the keyboard gate one level up, whose
+    // own card says these very words, so no press takes two. The dropdown's
+    // items never grey (the architect's standing rule for them), which is
+    // exactly why their commands owe an answer of their own.
+    if (active_view_state(app).read_only) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "This tab is read-only");
+        return;
+    }
+    // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
+    // answer — a second `;` asks for what is already there.
     if (text_editor::is_active(app.settings_editor)) return;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past every refusal above — the
     // `h` view's own load raise takes the same shape ("playback halts only

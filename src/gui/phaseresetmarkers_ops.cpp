@@ -39,6 +39,11 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // reset in the last source frame has nothing left to re-ground, and
     // total-1 keeps every marker inside the playhead's [0, total-1] domain
     // so marker gestures and playhead syncs agree exactly.
+    // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30, the warp twin's
+    // finding): all three drop roads author at or BEFORE the playhead — the
+    // lead-in body subtracts N/2 output samples, and the playhead rests in
+    // [0, total-1] by every writer's clamp — so no press can reach this wall.
+    // An error arm exists iff a producer exists (validation_topology.md).
     if (drop_frame > audio.total_frames() - 1)
         return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
@@ -108,6 +113,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // The subject refusal reads its one owner (marker_selection_standing,
     // app_state.h — 2026-08-30, the warp delete's shape; the Delete button's
     // face reads the same fact through marker_selection_verb_actionable).
+    // SILENT: the Delete dispatch arm cards the composed refusal ahead of
+    // this call, and one press owes one card.
     if (!marker_selection_standing(app)) return;
     const auto& tv = app.phaseresetmarkers.markers();
     // THE STALE-INDEX BELT, one policy for every verb that iterates the selection
@@ -148,7 +155,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 // cosmetic mirror divergence, accepted.
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     // The subject refusal reads its one owner (marker_selection_standing,
-    // app_state.h).
+    // app_state.h) and is SILENT for the delete's reason: the Ctrl+D dispatch
+    // arm cards the composed refusal ahead of this call.
     if (!marker_selection_standing(app)) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     bool changed = false;
@@ -189,18 +197,20 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // clamped target equal to the current frame writes NOTHING (the silent no-op
 // below). Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below.
-void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
+GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
         int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
     // refusals, the coalesce verdict, the geometry refusals, the focused-index
     // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
     // the collapse's own playback stop (the playhead-follows / lead-in rationale
-    // lives at the declaration). Refuses silently, navigation-class.
+    // lives at the declaration). ITS refusals say NOTHING, the warp twin's
+    // rule and for its reason (GuiOpRefusal, warpmarkers_ops.h): each is an
+    // outer gate's card already or a belt against a kept invariant.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::PhaseResetNudge, synthesized_repeat,
         static_cast<int>(app.phaseresetmarkers.markers().size()));
-    if (!pro.ok) return;
+    if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     // Phase resets carry no tempo, so there is no inherit/tempo analog to the warp
     // twin's value gestures — this column's only nudge is positional.
@@ -248,7 +258,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    if (committed_f == orig_f) return;   // saturated / zero-step press
+    // AND IT SAYS SO SINCE 2026-08-30, the warp twin's sentence verbatim —
+    // one wall, one answer, whichever column met it.
+    if (committed_f == orig_f)
+        return "The marker is already at the edge";
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
     // first write (the keyboard stop rule's refusal gating, at
     // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
@@ -297,4 +310,5 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, committed_f,
                                 target_render);
+    return std::nullopt;
 }

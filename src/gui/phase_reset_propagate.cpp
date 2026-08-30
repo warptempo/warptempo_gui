@@ -223,6 +223,12 @@ void PhaseResetPropagate::copy_from_selection() {
 }
 
 void PhaseResetPropagate::open_paste_confirmation() {
+    // THE THREE GUARDS ARE SILENT AND STAY SILENT (re-verified 2026-08-30
+    // under the strictness ruling): the first two are the Ctrl+Alt+P dispatch
+    // arm's own gates, spelled there term for term and CARDED there, so a
+    // card here would be the second for one press; the third is a belt
+    // against a stale index the selection layer cannot produce. An error arm
+    // exists iff a producer exists (validation_topology.md).
     if (app.phase_reset_clipboard.empty()) return;
     if (app.selected_markers.size() != 1) return;
     const int anchor = *app.selected_markers.begin();
@@ -292,9 +298,20 @@ void PhaseResetPropagate::paste_apply() {
         // no undo
         // entry, no waveform / render flush, but the view-switch fires
         // per the always-switch rule.
+        //
+        // AND THE SECOND CASE SAYS SO SINCE 2026-08-30 (architect, the
+        // strictness ruling): a paste that produced no destination block at
+        // all wrote nothing, and the always-switch to target view is a change
+        // of scene that looks exactly like a paste — so without a sentence the
+        // act reads as having pasted. A CLEAN PARTIAL WALK (one side simply
+        // ran out, with blocks matched) stays silent: it pasted what it had,
+        // and a success says nothing.
         if (!stop_message.empty()) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(stop_message));
+        } else {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Nothing matched, so nothing was pasted");
         }
         // Nothing materialized: land in target view with no new selection.
         land_paste_in_target_view({});

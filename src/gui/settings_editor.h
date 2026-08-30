@@ -3,6 +3,7 @@
 #include "active_views.h"
 #include "app_state.h"
 #include "audio.h"
+#include "notifications.h"
 #include "playback_lifecycle.h"
 #include "viewport.h"
 
@@ -58,6 +59,13 @@ struct GuiSettingsEditor {
     Undo&                 undo;
     GuiTargetRender&   target_render;
     GuiPlaybackLifecycle& playback_lifecycle;
+    // The card surface, wired 2026-08-30 for the ONE refusal this unit can
+    // answer with a sentence: the read-only gate in open(), which the SETTINGS
+    // DROPDOWN's item clicks are the only road to (bare `;` is off the
+    // read-only allowlist and dies at the keyboard gate, whose own card says
+    // the same words). The dropdown items never grey by ruling, so their
+    // commands' refusals are what answer them.
+    GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
@@ -74,7 +82,8 @@ struct GuiSettingsEditor {
                       GuiActiveViews&       active_views_,
                       Undo&                 undo_,
                       GuiTargetRender&   target_render_,
-                      GuiPlaybackLifecycle& playback_lifecycle_)
+                      GuiPlaybackLifecycle& playback_lifecycle_,
+                      GuiNotifications&     notifications_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
@@ -82,7 +91,8 @@ struct GuiSettingsEditor {
           active_views(active_views_),
           undo(undo_),
           target_render(target_render_),
-          playback_lifecycle(playback_lifecycle_) {}
+          playback_lifecycle(playback_lifecycle_),
+          notifications(notifications_) {}
 
     void open();
     // Open the settings prompt PREFILLED with `<key>=<current value>`, the

@@ -964,6 +964,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     target_render.trigger();
 }
 
+// SILENT, BOTH OF THEM, AND DELIBERATELY (2026-08-30): the Ctrl+Z / Ctrl+
+// Shift+Z dispatch arm asks history_step_actionable ahead of these calls so
+// it can NAME which of its two terms refused — an empty stack, or a top entry
+// belonging to the locked other tab — and one press owes one card, so the
+// authoritative guard below stays the belt it always was.
 void Undo::do_undo() {
     if (!history_entry_actionable(app.history.undo_stack)) return;
     restore_history_entry(app.history.undo_stack, app.history.redo_stack, +1);

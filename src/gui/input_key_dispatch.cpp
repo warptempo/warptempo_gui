@@ -5433,6 +5433,13 @@ void GuiInputHandler::build_project_picker_rows() {
 // refusal a notification card with the picker still open; the project already
 // open is a consumed no-op that closes it; and a project that passes reaches
 // the reopen through the one close request, REOPEN-targeted.
+// THE PICKER'S CHECKPOINT SENTENCE, ONE LITERAL AND TWO READERS (2026-08-30):
+// this act's own refusal below, and the picker ROUTER's Ctrl+S arm, which
+// meets the identical bit at the identical moment (route_picker_key). One
+// mode, one fact, one wording.
+constexpr const char* kCheckpointPublishing =
+    "A checkpoint is still publishing; try again when it finishes";
+
 void GuiInputHandler::open_project_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -5461,7 +5468,7 @@ void GuiInputHandler::open_project_commit(int index) {
     // the bit falls by itself. THE PICKER STAYS OPEN, like its other two
     // refusals, so the answer is one line and another Enter.
     if (app.history_checkpoint_in_flight) {
-        refuse("A checkpoint is still publishing; try again when it finishes");
+        refuse(kCheckpointPublishing);
         return;
     }
 
@@ -5609,9 +5616,22 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
     // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner — the
     // contract the typed prompt this picker replaced carried
-    // (route_modal_editor_key's Ctrl+S arm). The save is a
-    // consumed no-op where the save owner refuses (a checkpoint in flight).
+    // (route_modal_editor_key's Ctrl+S arm). THE ONE REFUSAL THE SAVE OWNER
+    // CAN MEET HERE SAYS SO (architect 2026-08-30, the strictness ruling): a
+    // checkpoint in flight, asked ahead of the call so the sentence can be
+    // raised — and it is the PICKER'S OWN sentence, the literal it shares
+    // with open_project_commit's identical refusal. Elsewhere that same
+    // refusal is silent because the Save button reads "Committing..." and is
+    // the message; under the picker the whole roster is greyed and unreadable
+    // as state, so nothing else answers the press. The save owner's OTHER
+    // refusals (a corrupted numeric locale, no sidecar path) are adversarial
+    // and startup-class and keep their stderr line.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
+        if (app.history_checkpoint_in_flight) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kCheckpointPublishing);
+            return true;
+        }
         save_ops.save();
         return true;
     }
@@ -5781,6 +5801,21 @@ void GuiInputHandler::on_external_sync_complete(
 
 // P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash
 // chords. See the declaration for the chord list.
+// THE CLIPBOARD FAMILY'S SHARED SENTENCES (architect 2026-08-30, the
+// strictness ruling). Four chords — the phase-reset propagate's copy and its
+// two pastes, and the measure propagate's copy and paste — take the SAME
+// gates term for term, so where two of them refuse on the same fact they say
+// the same words and the literal lives once. What is NOT shared is each
+// chord's own first gate (what it copies from, what it pastes onto), which
+// names its own payload and is spelled at its arm.
+constexpr const char* kSelectOneRun =
+    "Select one consecutive run of markers";
+constexpr const char* kNothingCopiedYet = "Nothing has been copied yet";
+constexpr const char* kSelectOneAnchor =
+    "Select exactly one marker to paste onto";
+constexpr const char* kPastePhaseOntoWarp =
+    "Phase resets are pasted onto warp markers";
+
 bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -5802,18 +5837,29 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (extent == count). Unlabeled markers inside the run still contribute no
     // block, and the paste's destination walk skips unlabeled markers
     // identically, so the two label sequences stay aligned regardless.
-    // W-mode only; phase reset mode is a silent no-op. An empty or
-    // non-contiguous selection refuses SILENTLY (architect 2026-07-23 —
-    // gesture refusals are silent by convention, the read-only/home-view
-    // class; stderr stays the render/load signal channel).
+    // W-mode only. EVERY REFUSAL IN THE FOUR CLIPBOARD CHORDS SAYS SO ON A
+    // CARD since 2026-08-30 (architect, the strictness ruling), each naming
+    // the gate it failed: the 2026-07-23 "gesture refusals are silent by
+    // convention" ruling was withdrawn for this family with the rest.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') return true;
-        if (app.selected_markers.empty()) return true;
+        if (app.active_markers_view != 'W') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Phase resets are copied from warp markers");
+            return true;
+        }
+        if (app.selected_markers.empty()) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Select the markers whose phase resets to copy");
+            return true;
+        }
         // Contiguity gate, same spelling as the `m` sweep: std::set is
         // ascending, so a run [first .. last] is contiguous iff its extent
         // equals its count.
         if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
                 != static_cast<int>(app.selected_markers.size())) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectOneRun);
             return true;
         }
         phase_reset_propagate.copy_from_selection();
@@ -5829,9 +5875,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // yet" state the user can see on screen, not a fault worth a terminal line.
     // Opens a confirmation prompt before any mutation.
     if (key == GuiKeys::P && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') return true;
-        if (app.phase_reset_clipboard.empty()) return true;
-        if (app.selected_markers.size() != 1) return true;
+        if (app.active_markers_view != 'W') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kPastePhaseOntoWarp);
+            return true;
+        }
+        if (app.phase_reset_clipboard.empty()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingCopiedYet);
+            return true;
+        }
+        if (app.selected_markers.size() != 1) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectOneAnchor);
+            return true;
+        }
         phase_reset_propagate.open_paste_confirmation();
         return true;
     }
@@ -5846,9 +5904,26 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // directly. Divergence/mismatch is reported as a notification card
     // rather than a modal dialog.
     if (key == GuiKeys::P && ctrl && shift && alt) {
-        if (app.active_markers_view != 'W') return true;
-        if (app.phase_reset_clipboard.empty()) return true;
-        if (app.selected_markers.size() != 1) return true;
+        // THE THREE GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
+        // its sentences (2026-08-30). The strictness inventory listed the
+        // four other clipboard chords and not this one; it is the same family
+        // and a silent arm beside three that speak is the drift the arc is
+        // removing.
+        if (app.active_markers_view != 'W') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kPastePhaseOntoWarp);
+            return true;
+        }
+        if (app.phase_reset_clipboard.empty()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingCopiedYet);
+            return true;
+        }
+        if (app.selected_markers.size() != 1) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectOneAnchor);
+            return true;
+        }
         phase_reset_propagate.paste_state_apply();
         return true;
     }
@@ -5872,13 +5947,25 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     //
     // W-MODE ONLY, and the measure propagate has no phase-reset counterpart at
     // all — the ruling and its reasoning are at measure_clipboard.h.
-    // Non-mutating: no undo entry, no dirty bit. Every refusal is SILENT, the
-    // whole family's convention.
+    // Non-mutating: no undo entry, no dirty bit. Every refusal SAYS SO on a
+    // card since 2026-08-30, its Ctrl+P twin's three sentences in this
+    // clipboard's own words.
     if (key == GuiKeys::Slash && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') return true;
-        if (app.selected_markers.empty()) return true;
+        if (app.active_markers_view != 'W') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Measures are copied from warp markers");
+            return true;
+        }
+        if (app.selected_markers.empty()) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Select the markers whose measures to copy");
+            return true;
+        }
         if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
                 != static_cast<int>(app.selected_markers.size())) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectOneRun);
             return true;
         }
         copy_measures_from_selection();
@@ -5895,9 +5982,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // a confirmation prompt: the offset dialog IS this act's confirmation, and
     // a bare Enter over its `0` seed is that prompt's `y`.
     if (key == GuiKeys::Slash && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') return true;
-        if (app.measure_clipboard.empty()) return true;
-        if (app.selected_markers.size() != 1) return true;
+        if (app.active_markers_view != 'W') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Measures are pasted onto warp markers");
+            return true;
+        }
+        if (app.measure_clipboard.empty()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingCopiedYet);
+            return true;
+        }
+        if (app.selected_markers.size() != 1) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectOneAnchor);
+            return true;
+        }
         open_measure_paste_editor();
         return true;
     }
@@ -5951,6 +6050,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // the resolved READOUT read, so the toggle hid or restored that
             // cell. The readout retired with the bar and nothing outside the
             // top strip changes here.)
+        } else {
+            // AND THE P VIEW SAYS SO (architect 2026-08-30, the strictness
+            // ruling): iteration brackets are a WARP payload — a phase reset
+            // carries no tempo to iterate — so the card names the COLUMN and
+            // not a view, the bit being legal in both audio views of warp.
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Iteration mode works on warp markers");
         }
         return true;
     }
@@ -6315,22 +6421,39 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // THE ELIGIBILITY IS THE ONE GATE, payload_eligible_marker (app_state.h):
 // warp view, iteration mode off, an enabled pass or a ref to an enabled
 // definition. An ineligible focus — an owner, a phase reset, iteration mode,
-// the `P` column, nothing focused — and an empty payload alike are SILENT
-// CONSUMED NO-OPS. THE COPY VALUE BUTTON GREYS ON THE GATE'S ANSWER since
-// 2026-08-30 (redesign_button_enabled, the truthful-buttons ruling — for its
-// first day it never greyed on the selection's state, the refusal changing at
-// interaction cadence); the empty payload alone stays behind a lit face,
-// needing the composer run.
+// the `P` column, nothing focused — and an empty payload alike SAY SO ON A
+// CARD since 2026-08-30 (architect, the strictness ruling), and they say the
+// SAME words: from the user's side both are "this marker has no resolved
+// value", the difference between them being which layer discovered it. THE
+// COPY VALUE BUTTON GREYS ON THE GATE'S ANSWER since the same day
+// (redesign_button_enabled, the truthful-buttons ruling — for its first day
+// it never greyed on the selection's state, the refusal changing at
+// interaction cadence), so the gate's card is the KEY's; the empty payload
+// alone stays behind a lit face, needing the composer run, and is the one
+// refusal of the two a button lift can reach.
+
+// THE COPY'S ONE SENTENCE, said by BOTH of its refusals (2026-08-30).
+constexpr const char* kNoResolvedValueToCopy =
+    "The focused marker has no resolved value to copy";
 
 void GuiInputHandler::copy_focused_marker_value() {
-    if (!payload_eligible_marker(app, app.last_selected_marker)) return;
+    if (!payload_eligible_marker(app, app.last_selected_marker)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNoResolvedValueToCopy);
+        return;
+    }
     const std::string payload = resolved_marker_payload(
         slice_to_warp_markers(app.warpmarkers.markers()),
         app.last_selected_marker, audio.total_frames());
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
     // (conventions.md's clipboard ruling).
-    if (!payload.empty()) gui.clipboard_set_text(payload);
+    if (payload.empty()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNoResolvedValueToCopy);
+        return;
+    }
+    gui.clipboard_set_text(payload);
 }
 
 // THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
@@ -6374,7 +6497,15 @@ void GuiInputHandler::copy_focused_marker_value() {
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
 void GuiInputHandler::jump_to_value_source() {
-    if (!payload_eligible_marker(app, app.last_selected_marker)) return;
+    if (!payload_eligible_marker(app, app.last_selected_marker)) {
+        // THE COPY'S OWN GATE, in the JUMP's words: there is no resolved
+        // value here, so there is no marker the value came from either. It
+        // says "value" and not "value to copy" because this chord copies
+        // nothing (architect 2026-08-30).
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "The focused marker has no resolved value");
+        return;
+    }
     int source = -1;
     const std::string payload = resolved_marker_payload(
         slice_to_warp_markers(app.warpmarkers.markers()),
@@ -6384,8 +6515,17 @@ void GuiInputHandler::jump_to_value_source() {
     // names NO SOURCE is the value's own fallback (a first-marker pass, a walk
     // that ended on a ref, a synthetic prior, a normalized ref): there is
     // nothing to jump to, so the press is a consumed nothing.
-    if (payload.empty() || source < 0) return;
-    if (source >= static_cast<int>(app.warpmarkers.markers().size())) return;
+    // AND THEY SAY SO SINCE 2026-08-30, all three in ONE sentence: whichever
+    // of them answered, the fact the press needs is that this value names no
+    // marker to stand on. (The third is a belt — a source index past the
+    // store — and shares the sentence rather than earning one, since a
+    // separate wording would describe an invariant breach to the user.)
+    if (payload.empty() || source < 0 ||
+        source >= static_cast<int>(app.warpmarkers.markers().size())) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There is no source marker to jump to");
+        return;
+    }
     run_center_command();
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');

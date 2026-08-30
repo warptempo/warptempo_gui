@@ -7,6 +7,7 @@
 #include "viewport.h"
 
 #include <optional>
+#include <string>
 #include <vector>
 
 class GuiAudio;
@@ -27,6 +28,19 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 // stop_playback_if_playing is reached through playback_lifecycle. The
 // reposition drag is no longer here: it is the one cross-kind gesture and
 // lives in MarkerDragOps in marker_drag.{h,cpp}.
+// THE REFUSAL REASON, and why an authoring op returns a STRING (architect
+// 2026-08-30, the strictness ruling "a card for every silent refusal"): the
+// facts these acts refuse on are THEIRS — a marker that owns no tempo, a
+// coincident stack, a bracket edge, a wall — so the sentence is composed
+// where the fact lives, and the CARD is raised by the dispatcher, which is
+// the layer that knows a press happened. That split is what keeps this
+// freeze-adjacent cluster free of GuiNotifications while still saying what it
+// refused. std::nullopt means NOTHING TO SAY: the act ran, or it refused on a
+// fact an OUTER gate has already carded (one card per press, raised at the
+// outermost site that has the reason) or on a belt against an invariant the
+// selection layer keeps.
+using GuiOpRefusal = std::optional<std::string>;
+
 struct GuiWarpMarkersOps {
     AppState&             app;
     const GuiAudio&       audio;
@@ -66,13 +80,16 @@ struct GuiWarpMarkersOps {
     // the cent step is a GROUP-PRESERVING VALUE STEP, the class that plays on under
     // the edit (the keyboard stop rule, at stop_playback_if_playing's declaration in
     // playback_lifecycle.h).
-    void adjust_tempo_cents(int64_t delta_cents, bool synthesized_repeat);
-    void nudge_selected_markers(int direction, bool synthesized_repeat);
+    GuiOpRefusal adjust_tempo_cents(int64_t delta_cents,
+                                    bool synthesized_repeat);
+    GuiOpRefusal nudge_selected_markers(int direction,
+                                        bool synthesized_repeat);
 
    private:
     // Group tempo step (architect 2026-07-23, 2+ selection): all-or-nothing.
     // Every selected marker must be a steppable OWNER not at the bracket edge in
     // the step direction, or the whole press refuses silently; then each steps
     // its own tempo_cents by delta_cents. See the definition for the wall set.
-    void adjust_tempo_cents_group(int64_t delta_cents, bool synthesized_repeat);
+    GuiOpRefusal adjust_tempo_cents_group(int64_t delta_cents,
+                                          bool synthesized_repeat);
 };

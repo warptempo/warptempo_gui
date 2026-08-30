@@ -35,6 +35,19 @@
 // and therefore say the same words. One literal, so a retune moves both.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
+// THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
+// authoring ops compose their own refusal sentences and RETURN them
+// (GuiOpRefusal, warpmarkers_ops.h — the split's rationale is stated there),
+// and every dispatch arm that calls one raises whatever comes back. An empty
+// answer is the act having run, or having refused on something an outer gate
+// already carded; either way there is nothing to say.
+static void card_op_refusal(GuiNotifications& notifications,
+                            GuiOpRefusal reason) {
+    if (reason)
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::move(*reason));
+}
+
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
     // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
@@ -1118,9 +1131,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // allowlist gate above. THE TWO REFUSALS ARE ONE PREDICATE since
         // 2026-08-30 (flag_editor_open_actionable, app_state.h), which the
         // Edit flag button's face reads too — the truthful-buttons ruling.
-        if (flag_editor_open_actionable(app)) {
-            flag_editor.enter_top_flag_edit(app.last_selected_marker);
+        // AND THEY SHARE ONE SENTENCE (architect 2026-08-30): the P column
+        // and an unfocused selection are the same answer from the user's
+        // side — the editor wants a warp marker and does not have one — so
+        // the card names the subject it needs rather than forking on which
+        // half of the predicate said no. The greyed button never reaches it.
+        if (!flag_editor_open_actionable(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Select a warp marker to edit its line");
+            return;
         }
+        flag_editor.enter_top_flag_edit(app.last_selected_marker);
         return;
     }
 
@@ -1147,10 +1168,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // strict modifier validation makes it a consumed no-op, no arm anywhere.)
     if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        if (marker_focus_standing(app)) {
-            flag_editor.enter_measure_edit(app.active_markers_view,
-                                           app.last_selected_marker);
+        // NOTHING FOCUSED SAYS SO (architect 2026-08-30), in the Return
+        // arm's shape: one term, one sentence, naming the subject the editor
+        // needs. Measures are BOTH columns', so unlike its sibling this card
+        // says "marker" and not "warp marker". The greyed Measure button
+        // never reaches it.
+        if (!marker_focus_standing(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Select a marker to edit its measure");
+            return;
         }
+        flag_editor.enter_measure_edit(app.active_markers_view,
+                                       app.last_selected_marker);
         return;
     }
 
@@ -1174,13 +1203,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // meaningful bit (which is why this arm is one of strict modifier
     // validation's deliberately-untightened families, conventions.md). Placed
     // before the GuiKeys::S save handling so modifier dispatch reads
-    // left-to-right in the source. Both are silent no-ops when their respective
-    // stack is empty. ALT IS UNBOUND HERE and stays that way: the target
+    // left-to-right in the source. AN EMPTY STACK SAYS SO SINCE 2026-08-30.
+    // ALT IS UNBOUND HERE and stays that way: the target
     // compositor (labwc) grabs Ctrl+Alt+Z / Ctrl+Alt+Shift+Z, so the GUI never
     // receives them — the alt pair that briefly meant stay-put undo/redo was
     // rolled back for that collision (selection-model.md), and an alt-carrying
     // shape is again a plain no-op under strict modifier validation.
     if (ctrl && !alt && key == GuiKeys::Z) {
+        // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
+        // authoritative test is history_step_actionable (app_state.h), the
+        // one predicate do_undo / do_redo run and the Undo / Redo buttons
+        // grey on; asked here it can also NAME what it refused, forked on
+        // its own two terms — an empty stack (nothing recorded in that
+        // direction) and a top entry whose TARGET tab is locked, which is
+        // the cross-tab case the active tab's own lock cannot explain (the
+        // keyboard gate above already answers a locked ACTIVE tab). ONE CARD
+        // PER PRESS: the ops' own guard is the belt behind this and stays
+        // silent, and both buttons grey on the same predicate, so no lift
+        // reaches this line.
+        const std::vector<UndoEntry>& stack =
+            shift ? app.history.redo_stack : app.history.undo_stack;
+        if (!history_step_actionable(app, stack)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                stack.empty()
+                    ? (shift ? "There is nothing to redo"
+                             : "There is nothing to undo")
+                    : "That step belongs to the other tab, which is "
+                      "read-only");
+            return;
+        }
         if (shift) undo.do_redo();
         else       undo.do_undo();
         return;
@@ -1240,8 +1292,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S
         // saves, and Shift+S (2026-08-28) drops a phase reset from any view —
         // the same lead-in drop with the trip to T+P in front of it. Every
-        // other modifier combination on `s` is unbound and a consumed no-op
-        // here.
+        // other modifier combination on `s` is unbound and FALLS OUT OF THIS
+        // BLOCK (2026-08-30) to the strict-modifier tail, which says so on a
+        // card: this block claims the three spellings it binds and nothing
+        // else, so an unbound one is answered by the tail that answers every
+        // other unbound chord rather than dying here unremarked.
         //
         // THE HISTORY VIEW SELECTS THE OTHER COMMAND (architect 2026-08-08, the
         // iteration bit's own bit-selects-the-command precedent applied to this
@@ -1282,31 +1337,50 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             drop_phase_reset_in_target_view();
             return;
         }
-        // Both drops are home-view authoring, so off home refuses silently
-        // (consumed no-op). The lead-in arm needs no separate target-view test:
-        // P's home IS target, so this one gate already carries it. THE DROP
-        // BUTTON DOES NOT GREY ON THIS REFUSAL (planner's call under the
-        // 2026-08-30 truthful-buttons ruling, recorded at its arm in
-        // redesign_button_enabled): its shift twin above drops from any view
-        // and is the long press, glass's only road to it, so the button is
-        // never a no-op off home even though this plain press is.
-        if (!active_column_authoring_allowed(app)) return;
+        // THE BARE DROP, and the home-view gate lives INSIDE its arm since
+        // 2026-08-30 rather than above it: the gate is the ACT'S refusal, so
+        // it must not swallow a spelling that never meant to drop — an
+        // unbound Ctrl+Shift+S or Alt+S now falls past this block to the
+        // strict-modifier tail and is answered as the unbound chord it is.
+        // One press, one card, the right one.
         if (!ctrl && !shift && !alt) {
+            // OFF HOME SAYS SO (architect 2026-08-30, the strictness ruling),
+            // FORKED ON THE COLUMN exactly as the act below forks: what the
+            // press is told is where the column it stands in places its
+            // markers. The lead-in arm needs no separate target-view test:
+            // P's home IS target, so this one gate already carries it. THE
+            // DROP BUTTON DOES NOT GREY ON THIS REFUSAL (planner's call under
+            // the 2026-08-30 truthful-buttons ruling, recorded at its arm in
+            // redesign_button_enabled): its shift twin above drops from any
+            // view and is the long press, glass's only road to it, so the
+            // button is never a whole no-op off home. Its PLAIN lift does
+            // reach this card, synthesizing this very chord, and is answered
+            // exactly as the key is — the lit face promises the shift act,
+            // and the card explains the plain one.
+            if (!active_column_authoring_allowed(app)) {
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    app.active_markers_view == 'P'
+                        ? "Phase resets are placed in target view"
+                        : "Markers are placed in source view");
+                return;
+            }
             if (app.active_markers_view == 'P')
                 phase_resets.drop_phase_reset_lead_in_at_playhead();
             else
                 warpops.drop_copy_previous_at_playhead();
+            return;
         }
-        return;
     }
     // Ctrl+N: toggle pass (inherit) status on the focused warp marker,
     // symmetric with Ctrl+D below — pass, like disabled, is a status
     // toggled on an existing marker, never dropped directly. No
     // phase-reset equivalent (a reset has no tempo source to inherit
-    // from), so this no-ops in P view — THE P-VIEW RETURN LIVES IN THE OP'S
-    // ONE LEADING PREDICATE since 2026-08-30 (inherit_toggle_actionable,
-    // app_state.h, which the Toggle inherit button's face reads too); it sat
-    // here from the chord's landing until then. Plain `n` and Shift+N are
+    // from), so this refuses in P view — THE PREDICATE IS THE OP'S OWN
+    // (inherit_toggle_actionable, app_state.h, which the Toggle inherit
+    // button's face reads too), asked HERE AGAIN since 2026-08-30 so the
+    // refusal can be NAMED on a card: the fact lives in one owner, and the
+    // sentence lives where a press can be answered. Plain `n` and Shift+N are
     // unbound.
     if (key == GuiKeys::N && ctrl && !alt && !shift) {
         // NO HOME-VIEW GATE SINCE 2026-08-24: a pass/owner conversion is a
@@ -1314,6 +1388,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // exception (the inventory is at active_column_authoring_allowed,
         // app_state.h) and dispatches in W+target too. The op's own tail
         // carries the target-view re-warp and the playhead re-land.
+        //
+        // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30), forked on
+        // the predicate's own first term: the P column has no tempo source to
+        // inherit at all — a fact about the column — while a missing
+        // selection or focus is a subject the user can supply. ONE CARD PER
+        // PRESS: the op's identical leading return is the belt below it and
+        // stays silent, and the button greys on this same predicate, so no
+        // lift reaches this line.
+        if (!inherit_toggle_actionable(app)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                app.active_markers_view == 'P'
+                    ? "Phase resets carry no tempo to inherit"
+                    : "Select a marker to convert");
+            return;
+        }
         warpops.toggle_inherits();
         return;
     }
@@ -1332,7 +1422,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // in either column, the home view in P), which the Disable button's
         // face reads too — the truthful-buttons ruling; the P arm read
         // active_column_authoring_allowed directly until then.
-        if (!marker_selection_verb_actionable(app)) return;
+        // AND IT SAYS WHICH REFUSAL IT IS (architect 2026-08-30), forked on
+        // the predicate's own two terms: a STANDING selection past this gate
+        // can only be the P column off its home view, and an empty one is a
+        // subject the user can supply. ONE CARD PER PRESS — both ops' leading
+        // marker_selection_standing returns are the belts below and stay
+        // silent — and the Disable button greys on this same predicate, so
+        // its lift never reaches here.
+        if (!marker_selection_verb_actionable(app)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                marker_selection_standing(app)
+                    ? "Phase resets are edited in target view"
+                    : "Select a marker to enable or disable");
+            return;
+        }
         if (app.active_markers_view == 'P') {
             phase_resets.toggle_phase_reset_disabled();
             return;
@@ -1385,7 +1489,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // LEADING REFUSALS ARE ONE PREDICATE since 2026-08-30
         // (marker_selection_verb_actionable, app_state.h — the Ctrl+D arm's
         // twin), which the Delete button's face reads too.
-        if (!marker_selection_verb_actionable(app)) return;
+        // AND IT SAYS WHICH REFUSAL IT IS (architect 2026-08-30), the Ctrl+D
+        // arm's fork in this verb's own words: a standing selection past this
+        // gate is the P column off home, an empty one is a missing subject.
+        // ONE CARD PER PRESS, the ops' own leading returns staying silent
+        // below it, and the greyed Delete button never reaching it.
+        if (!marker_selection_verb_actionable(app)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                marker_selection_standing(app)
+                    ? "Phase resets are deleted in target view"
+                    : "Select a marker to delete");
+            return;
+        }
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
@@ -1401,17 +1517,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tempo nudge, bare Up / Down (architect 2026-07-28). No view or selection
     // guard here — adjust_tempo_cents returns at once unless the warp view is
-    // active with a non-empty selection and a valid focus, so the vertical
-    // arrows are an inert (still consumed) no-op everywhere else, phase-reset
-    // view included. `=` / `-` are the waveform magnification keys and
+    // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
+    // it hands back the sentence for that refusal (and for its two target-view
+    // payload refusals and the group's wall) for this arm to card: the fact is
+    // the act's, the card is the dispatch's. `=` / `-` are the waveform magnification keys and
     // Ctrl+`=` / Ctrl+`-` the zoom keys (see below). Modified Up / Down
     // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
     // the vertical arrows in any form.
     if (!alt && !shift && !ctrl && key == GuiKeys::Up) {
-        warpops.adjust_tempo_cents(+1, mods.synthesized_repeat); return;
+        card_op_refusal(notifications,
+                        warpops.adjust_tempo_cents(+1,
+                                                   mods.synthesized_repeat));
+        return;
     }
     if (!alt && !shift && !ctrl && key == GuiKeys::Down) {
-        warpops.adjust_tempo_cents(-1, mods.synthesized_repeat); return;
+        card_op_refusal(notifications,
+                        warpops.adjust_tempo_cents(-1,
+                                                   mods.synthesized_repeat));
+        return;
     }
     // THE FOUR STEP CHORDS ON `=` AND `-`, TWO AXES ONE MODIFIER APART: BARE
     // IS VERTICAL, CTRL IS HORIZONTAL (architect 2026-08-27). Bare `=` and
@@ -1631,11 +1754,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // a rule waiting to drift. It covers BOTH refusals the routing above
         // describes — P+source and W+target, the latter having lost the
         // tempo-image step with the whole tempo drag family.
-        if (!horizontal_arrow_step_actionable(app, audio, direction)) return;
-        if (app.active_markers_view == 'P')
-            phase_resets.nudge_selected_phase_resets(direction, rpt);
-        else
-            warpops.nudge_selected_markers(direction, rpt);
+        // OFF HOME SAYS SO (architect 2026-08-30), forked on the column like
+        // the drop's own card: inside this branch the predicate reduces to
+        // active_column_authoring_allowed, so the only refusal reachable
+        // here is the home-view one — the waveform-lane wall term is asked
+        // with no selection and never gets in. The Left / Right buttons grey
+        // on the same predicate, so a lift never reaches this line.
+        if (!horizontal_arrow_step_actionable(app, audio, direction)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                app.active_markers_view == 'P'
+                    ? "Phase resets are moved in target view"
+                    : "Markers are moved in source view");
+            return;
+        }
+        // THE WALL SAYS SO (architect 2026-08-30): each twin returns its own
+        // refusal sentence and this arm raises it, the reason channel's
+        // ordinary shape (GuiOpRefusal, warpmarkers_ops.h).
+        card_op_refusal(notifications,
+                        app.active_markers_view == 'P'
+                            ? phase_resets.nudge_selected_phase_resets(
+                                  direction, rpt)
+                            : warpops.nudge_selected_markers(direction, rpt));
         return;
     }
 
@@ -1676,6 +1816,14 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
+    // A WALK THAT LANDS NOTHING AND HAS NOTHING TO RE-LAND ON SAYS SO
+    // (architect 2026-08-30, the strictness ruling). The test is the jump's
+    // own false return below — a missing or out-of-range focus — which is
+    // exactly the state in which this press writes nothing at all: with a
+    // focus already standing the step still lands the playhead on it and
+    // recentres, so it is NOT a refusal and says nothing. The card is raised
+    // after the jump so the one test serves both.
+
     // The select above establishes the focused marker; the shared jump tail
     // moves the playhead onto it and recenters AT THE CURRENT ZOOM. Byte-
     // identical to the `c` gesture's marker jump — the zoom is what separates
@@ -1693,7 +1841,10 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // untouched and remains the direct route to the working zoom; `0`'s second
     // arm reaches it through `c` whenever its tab has stamped no return level
     // (ViewState::zoom_recall_level).
-    jump_playhead_to_focused_marker();
+    if (!jump_playhead_to_focused_marker()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There is no marker to step to");
+    }
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {

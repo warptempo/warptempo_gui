@@ -1250,7 +1250,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                      render_player);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,
                                       active_views, undo,
-                                      target_render, playback_lifecycle);
+                                      target_render, playback_lifecycle,
+                                      notifications);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),
