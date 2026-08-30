@@ -341,8 +341,8 @@ namespace {
 // exactly coincident markers is touched, the tie's moved member is still
 // identified. This resolves the touched set, writes it as the selection, and
 // picks the EARLIEST touched marker as focus (equal members; the tempo step's
-// re-land, Tab's start, and the lane/readout
-// fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
+// re-land and Tab's start both tolerate it, and a singleton's earliest IS the
+// touched marker).
 // THE TOUCHED SET WINS UNCONDITIONALLY, the empty case included — an empty set
 // EMPTIES the selection rather than leaving the prior one standing (the derivation
 // is at that branch below; it is what closes the tab-entry auto-select hole).

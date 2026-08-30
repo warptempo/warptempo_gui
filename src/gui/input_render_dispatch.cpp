@@ -339,9 +339,10 @@ void GuiInputHandler::tick_promote_render_status() {
 // What the relayout DID change is where a shown label lands: the chain went
 // from the bottom-LEFT lead-in to the gutter between the clock and the arrows.
 // The 2026-08-13 move to the tab row's top right addressed that and nothing
-// else. THE LABEL'S HOME TODAY IS THE STATUS BAR'S LEFT CELL, the window's
-// last row (2026-08-29, messaging.md) — the third surface it has had, and the
-// three causes above are untouched by every one of the moves.
+// else. THE LABEL'S HOME TODAY IS ROW 8'S STATE CELL, right of the clock
+// (2026-08-29's evening fold, after that morning's one-day status bar;
+// messaging.md) — the fourth surface it has had, and the three causes above
+// are untouched by every one of the moves.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
     if (app.active_audio_view == 'T' &&

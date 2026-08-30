@@ -428,9 +428,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // THE VALUE PAIR — bare `j` and Shift+`j` (2026-08-29) — is admitted on
     // the header's own standard: neither authors anything. `j` composes the
     // focused marker's resolved value and hands it to the compositor's
-    // clipboard; Shift+`j` switches the A/B tab, lands the playhead on the
-    // marker that value came from and centres it — a tab switch, a selection
-    // and a camera, every one of them navigation this gate has never blocked.
+    // clipboard; Shift+`j` switches the A/B tab, selects the marker that value
+    // came from, lands the playhead on it and centres it — a tab switch, a
+    // selection, a playhead and a camera, every one of them navigation this
+    // gate has never blocked.
     // Shift-exact through the shared predicates, so these two entries and the
     // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: the Copy value
     // button is NOT in redesign_button_enabled's read-only arm, so a locked
@@ -4369,9 +4370,10 @@ bool GuiInputHandler::load_render_entry_in_place(
     // Self-guard on the standalone mutator: a successful load-in-place wipes
     // tmp/,
     // which must never race a batch publishing into it. The player's load act
-    // already refuses SILENTLY on this same condition before it raises the
-    // confirmation, so the one caller never reaches here; this backstop
-    // protects any other caller.
+    // already refuses on this same condition — saying "Render running" on a
+    // notification card — before it raises the confirmation, so the one caller
+    // never reaches here; this backstop protects any other caller and says its
+    // own cause on stderr like every arm below it.
     if (app.queue_running || app.pending_archival.armed) {
         std::fprintf(stderr,
             "warptempo_gui: Load in place refused: a render batch is running or an "
@@ -6220,19 +6222,32 @@ void GuiInputHandler::copy_focused_marker_value() {
 
 // THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
 // focused value came from, so a reference and its definition can be read side
-// by side one Ctrl+Tab apart. Three acts, each through its own chokepoint and
-// none of them spelled twice:
+// by side one Ctrl+Tab apart. FOUR ACTS IN THIS ORDER, each through its own
+// chokepoint and none of them spelled twice — and the ORDER is the whole of
+// what makes the act land where it says it does:
 //   * the TAB SWITCH through switch_active_tab_view_to, the Ctrl+Tab road,
-//     which clears the selection as every tab switch does and re-lands the
-//     window's own state;
-//   * land_playhead_on_marker, which lands the playhead on the source AND
-//     auto-selects it (the never-parked rule) — and, being one of the two
-//     MOVEMENT owners, stops playback, ends a standing audition and hides the
-//     trim region overlay on its own, so this body writes none of that;
+//     which clears the selection as every tab switch does, re-lands the
+//     window's own state and runs the COINCIDENCE AUTO-SELECT at the entering
+//     tab's own parked cursor — which may seat a marker that has nothing to do
+//     with this value, and is exactly why the two steps below come AFTER it;
+//   * THE SINGLE-SELECT, Selection::set_single_selection on the returned
+//     index: the plain marker click's own road (run_marker_click_act's plain
+//     arm, input_pointer.cpp), so the source is the whole selection and the
+//     focus. BY INDEX, never by frame — with markers sharing the source's
+//     frame the selected member is the exact marker the value came from, which
+//     a coincidence scan cannot promise — and it overwrites whatever the
+//     switch's auto-select seated, so the act cannot end on the entering tab's
+//     previously parked marker;
+//   * land_playhead_on_marker on that same index — the landing owner the plain
+//     click uses, the selection road above landing nothing of its own — and,
+//     being one of the two MOVEMENT owners, it stops playback, ends a standing
+//     audition and hides the trim region overlay, so this body writes none of
+//     that;
 //   * run_center_command, `c`'s one owner, which puts the working zoom on the
-//     landed marker — the A/B audition's own framing.
-// NO UNDO ENTRY: a tab switch and a playhead move record nothing anywhere in
-// the product, so there is nothing here to push.
+//     FOCUSED marker — the source, by the single-select above, so the camera
+//     and the cursor cannot come to name two different markers.
+// NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
+// anywhere in the product, so there is nothing here to push.
 void GuiInputHandler::jump_to_value_source() {
     if (!payload_eligible_marker(app, app.last_selected_marker)) return;
     int source = -1;
@@ -6248,6 +6263,7 @@ void GuiInputHandler::jump_to_value_source() {
     if (source >= static_cast<int>(app.warpmarkers.markers().size())) return;
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');
+    selection.set_single_selection(source);
     land_playhead_on_marker(app, audio, viewport, source);
     run_center_command();
 }

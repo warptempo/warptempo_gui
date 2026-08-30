@@ -311,8 +311,9 @@ void GuiTargetRender::stamp_updating() {
 // its damage or its painter. Its three real causes, and the honest statement
 // that the chain's move into the tab row fixed none of them, are recorded once
 // at GuiInputHandler::tick_promote_render_status, this label's archival twin;
-// the label's home is the STATUS BAR's left cell since 2026-08-29 and the
-// three causes are untouched by that move too.
+// the label's home is ROW 8'S STATE CELL, right of the clock, since
+// 2026-08-29's evening fold, and the three causes are untouched by that move
+// too.
 // The half that belongs HERE: this stamp fires only where the update really
 // becomes a wait — the synthesis miss below and trigger()'s busy branch — so
 // an update served by either synchronous reuse rung is silent by the

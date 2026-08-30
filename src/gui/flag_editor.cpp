@@ -955,12 +955,12 @@ bool GuiFlagEditor::commit_bpm_edit() {
     proposed[idx].bpm_hi    = hi;
     app.warpmarkers.markers_mut() = std::move(proposed);
     text_editor::deactivate(app.top_flag_editor);
-    // TWO SURFACES, TWO OWNERS (2026-08-13, when the status strings left this
-    // row for the tab row; they are the STATUS BAR's since 2026-08-29): the
-    // dialog editor just came down, which is the
-    // BOTTOM row's damage, and the stamped marker is a bpm OWNER now — a
-    // class the resolved readout has nothing to resolve for — so the bar's
-    // right cell changes with it.
+    // ONE SURFACE, ONE OWNER since 2026-08-29: the dialog editor just came
+    // down, which is the BOTTOM row's damage, and that is all this commit
+    // moves. (It was TWO — the stamped marker becomes a bpm OWNER, a class the
+    // RESOLVED READOUT had nothing to resolve for, so the state lane changed
+    // with it; that readout retired whole with the one-day status bar and the
+    // second call went with it.)
     viewport.invalidate_modal_dialog_area();
     return true;
 }

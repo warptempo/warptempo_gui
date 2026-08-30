@@ -23,13 +23,15 @@
 //
 // WHAT IS NOT A CARD, by ruling: a render's completion ("that would get
 // annoying"); every deliberately silent refusal (the consumed no-ops — the
-// strict-modifier no-ops, the off-home drops, `m` on a bad run, the player's
-// load under a running render, whose explanation is the progress line
-// itself); the loader's fatal exits (adversarial class: stderr and exit 1);
-// every QUESTION (the prompts and the dialog editors); and what is TRUE NOW
-// rather than what happened — the render's progress line, the `h` walk's
-// line and the selected marker's readout, which are state and live on the
-// STATUS BAR, the window's last row.
+// strict-modifier no-ops, the off-home drops, `m` on a bad run, and bare `h`
+// with a checkpoint publishing); the loader's fatal exits (adversarial class:
+// stderr and exit 1); every QUESTION (the prompts and the dialog editors); and
+// what is TRUE NOW rather than what happened — the render's progress line and
+// the `h` walk's line, the two STATE strings, which live in ROW 8'S STATE CELL
+// right of the clock. (The player's LOAD UNDER A RUNNING RENDER was on this
+// list for the one day a status bar stood at the window's foot to explain it,
+// and is a card since the fold: the state cell is row 8's, whose lane the
+// player's own modal row takes whole, so that refusal has nothing beside it.)
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
 // it and nothing else writes a card. A text identical to a VISIBLE card's of

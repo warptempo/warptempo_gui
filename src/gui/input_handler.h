@@ -2357,8 +2357,10 @@ private:
     // when there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
-    // This and the readout's Ctrl+C (handle_key, input_handler.cpp) are the
-    // whole of the GUI's clipboard reach; no other site copies or pastes.
+    // This and bare `j`'s value copy (copy_focused_marker_value,
+    // input_key_dispatch.cpp) are the whole of the GUI's clipboard reach; no
+    // other site copies or pastes. (`j` took that reach from the retired
+    // readout's global Ctrl+C on 2026-08-29.)
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
@@ -3774,8 +3776,10 @@ private:
     // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
     // apart. One composer answers both (resolved_marker_payload, the value and
     // its source index), one gate refuses both silently
-    // (payload_eligible_marker), and the jump's three acts are each somebody
-    // else's chokepoint — the tab switch, the marker land and `c`. Both are
+    // (payload_eligible_marker), and the jump's four acts are each somebody
+    // else's chokepoint IN A RULED ORDER — the tab switch, then the plain
+    // click's single-select on the source's own index, then the marker land,
+    // then `c` (the order and what each step is for are at the body). Both are
     // read-only-legal, both live in S and T, both refused in the `h` view at
     // its allowlist; the bottom row's Copy value button is `j` at its lift and
     // Shift+`j` at its shift-click or long press. Definitions and the whole

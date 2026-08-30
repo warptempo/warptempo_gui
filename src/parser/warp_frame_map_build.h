@@ -358,9 +358,12 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 //
 // Returns "" when the marker does not qualify — owning, malformed, or a
 // carve-out ref (a group member or an effectively-disabled ref) whose raw walk
-// finds no surviving successor to bound a segment — and touches the index
-// then. total_frames is the source length in frames; it bounds the last
-// projection segment (the resolver's own rule), so a last-segment ref reads
+// finds no surviving successor to bound a segment — and LEAVES THE INDEX
+// UNTOUCHED then, like every other no-source case above: the two writes are on
+// the two success paths and nowhere else, so a caller seeds its own sentinel
+// and reads it back unchanged wherever no marker is named. (Architect approval
+// 2026-08-29, comment only.) total_frames is the source length in frames; it
+// bounds the last projection segment (the resolver's own rule), so a last-segment ref reads
 // out exactly as it renders. GUI callers slice their GuiWarpMarker store to
 // WarpMarker (slice_to_warp_markers) before calling.
 //

@@ -727,8 +727,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // TAB ROW's lane, where the status chain lived, on the reading that
         // the flag moved that row's own face — and the top-strip damage below
         // already covers that lane as a superset. The chain is gone and its
-        // three STATE strings are the STATUS BAR's; the read-only bit writes
-        // none of them, so the call had no producer left on either surface.
+        // two surviving STATE strings are ROW 8'S STATE CELL's; the read-only
+        // bit writes neither, so the call had no producer left on either
+        // surface.
         // The bottom row's own greyed faces ride the tick comparator, as they
         // always did.)
         // THE TOP STRIP: the read-only bit WEARS A FACE up there — the
@@ -1648,30 +1649,36 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
 void GuiInputHandler::run_center_command(double target_zoom_level) {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. FOUR CALLERS: the live `c` key arm (handle_plain_bare_keys),
-    // the history mode's own `c` arm (handle_history_mode_key, which must claim
-    // the key to keep it off the mode's allowlist), since 2026-08-05
-    // run_overview_command's SECOND ARM — `0` pressed with the zoom already at
-    // full out runs exactly what `c` runs — and, since 2026-08-28, the A/B
-    // audition's GuiAbAudition::apply_working_zoom, which opens each half of
-    // the act with this command on the tab that half plays, inside the tab
-    // switch's own frame (the rule and the ordering it owes the audition's
-    // sequence are at ab_audition.h).
+    // FORK LIVES. FIVE CALLERS, re-grepped 2026-08-29: the live `c` key arm
+    // (handle_plain_bare_keys), the history mode's own `c` arm
+    // (handle_history_mode_key, which must claim the key to keep it off the
+    // mode's allowlist), since 2026-08-05 run_overview_command's SECOND ARM —
+    // `0` pressed with the zoom already at full out runs exactly what `c` runs
+    // —, since 2026-08-28 the A/B audition's
+    // GuiAbAudition::apply_working_zoom, which opens each half of the act with
+    // this command on the tab that half plays, inside the tab switch's own
+    // frame (the rule and the ordering it owes the audition's sequence are at
+    // ab_audition.h), and, since 2026-08-29, SHIFT+`j`'s jump to the value's
+    // source (jump_to_value_source, input_key_dispatch.cpp), whose last act
+    // this is: the jump single-selects the source before it calls, so the
+    // focused arm below centers on exactly the marker the jump named.
     //
     // THE LEVEL IS THE CALLER'S, defaulting to kWorkingZoomLevel (the header
-    // carries the default; the two key arms pass nothing and so mean `c`
-    // exactly). The third caller is the one that substitutes: since 2026-08-18
-    // `0`'s already-full-out arm passes the level it STAMPED on the way out to
-    // full zoom-out, so the return trip is this recipe with one value changed —
-    // not a second path — and everything else about it, the mode fork and the
-    // land included, is decided here once for all three.
+    // carries the default; every caller but one passes nothing and so means
+    // `c` exactly). `0`'S ALREADY-FULL-OUT ARM IS THE ONE THAT SUBSTITUTES:
+    // since 2026-08-18 it passes the level it STAMPED on the way out to full
+    // zoom-out, so the return trip is this recipe with one value changed — not
+    // a second path — and everything else about it, the mode fork and the land
+    // included, is decided here once for every caller.
     //
     // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
-    // decision for all three: the two key arms are each reachable in one mode
-    // only (the mode claims `c` above the live dispatch, so the live arm below
-    // never runs in the mode), and `0` is reachable in both — putting the
-    // question at `0` alone would leave the mode's own `c` answering it a second
-    // time in another spelling. One owner, one answer.
+    // decision for all of them: every caller but `0` is reachable in one mode
+    // only — the two key arms because the mode claims `c` above the live
+    // dispatch, so the live arm below never runs in the mode, and the audition
+    // and Shift+`j` because both are refused inside the mode — while `0` is
+    // reachable in both. Putting the question at `0` alone would leave the
+    // mode's own `c` answering it a second time in another spelling. One owner,
+    // one answer.
     if (app.history_mode.active) {
         // THE MODE'S RE-EXPRESSION: the live recipe read against the mode's own
         // data. With a focus standing the playhead re-lands on that diff flag

@@ -4924,8 +4924,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is the bottom strip's UPPER lane, one
-    // in from the window's foot, and everything else is the shape above —
+    // on the block's own terms: the band is the bottom strip's ONE lane, on
+    // the window's foot, and everything else is the shape above —
     // below the modal gates (a prompt or a dialog editor swallows the
     // press; the pointer-transparent flag editor does not, and its KEYBOARD
     // modality then answers the dispatched chord exactly as it answers the
@@ -4934,13 +4934,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // since the unification includes the clock cell and the bare ground
     // beside it, the lane's pointer-inert span (the status chain that shared
     // that ground until 2026-08-13 took no clicks either, and took none away
-    // with it). The
-    // lane rested on the WINDOW'S FOOT
-    // from the relayout's commit B until 2026-08-29; BELOW it now lies THE
-    // STATUS BAR, which is paint-only and claims nothing, and ABOVE it lies GAP
-    // 2's blank window ground — both outside every band here and both falling
-    // through to the tail's consumed nothing (the bar by its own ruling, the
-    // gap as window ground by the vertical rule, main.cpp).
+    // with it) — and the STATE CELL right of the clock since 2026-08-29 is that
+    // same inert ground, a text cell with no rect of its own to test. THE LANE
+    // RESTS ON THE WINDOW'S FOOT (from the relayout's commit B, apart from the
+    // one day a STATUS BAR stood under it), so there is nothing below it at
+    // all, and ABOVE it lies GAP 2's blank window ground — outside every band
+    // here and falling through to the tail's consumed nothing, as window ground
+    // by the vertical rule (main.cpp).
     // (The OVERVIEW STRIP sat under this lane for the afternoon it landed and
     // is a top-strip lane now; its own claim is further down, past the gesture
     // guards — the endcap / teleport-pan / ctrl-zoom vocabulary.)

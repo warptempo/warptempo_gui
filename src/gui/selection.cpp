@@ -110,11 +110,14 @@ void Selection::set_single_selection(int idx) {
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
     viewport.invalidate_top_strip();
-    // The pass/ref readout shows for the last-selected marker
-    // (not only on hover, since the hover arm died), so a selection change
-    // damages the STATUS BAR's lane as well — its right cell is that readout;
-    // the flags' own selected/unselected colour swap rides the
-    // top-strip damage (through the flag cache's selection fingerprint).
+    // ONE DAMAGE OWNER, THE TOP STRIP, since 2026-08-29: a selection change
+    // moves nothing on the bottom row any more. It used to damage that row's
+    // state lane too, for the RESOLVED READOUT that showed the last-selected
+    // marker's value there, and that readout retired whole with the one-day
+    // status bar — the state cell carries only the two progress-class strings,
+    // which no selection writes. The flags' own selected/unselected colour swap
+    // rides the top-strip damage above (through the flag cache's selection
+    // fingerprint).
     damage_overlay_on_subject_change(old_subject);
 }
 

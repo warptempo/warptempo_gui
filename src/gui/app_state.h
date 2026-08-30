@@ -2327,7 +2327,7 @@ enum class RedesignButton {
     // FOCUSED marker's resolved value to the system clipboard — while its
     // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
     // other A/B tab, so the reference and its definition stand one Ctrl+Tab
-    // apart. IT IS THE ROSTER'S SIXTH SHIFT-ADMITTING BUTTON
+    // apart. IT IS THE ROSTER'S SEVENTH SHIFT-ADMITTING BUTTON
     // (redesign_button_shift_admits owns the membership and the
     // static_assert binds the tooltip's second line to it), which is what
     // gives a keyboardless panel the jump through a LONG PRESS.

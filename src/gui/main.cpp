@@ -206,7 +206,7 @@ namespace {
 // below offset each other" (the architect's own reasoning). The derivation, all
 // of it in the four functions below:
 //   leftover = win_h - (menu + block-above-the-waveform) - the bottom strip's
-//              two lanes = centered_leftover_h; the waveform's own borders are
+//              ONE lane = centered_leftover_h; the waveform's own borders are
 //                INSIDE its area, so the block's thick bottom border is not a
 //                term here (counting it would double it),
 //   W        = min(waveform_max_h_px(), max(0, leftover))  = waveform_clamped_h,
@@ -1012,10 +1012,12 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // fall outside the clip and cost nothing, which is what makes this affordable
 // at the pre-paint hook's per-frame cadence. THE MOVE MADE IT NO WIDER AND NO
 // NARROWER — the cell's width is the same shaped specimen and only its origin
-// changed — so nothing about this owner or its consumers moved with it. (The row's STATUS CHAIN was the third
-// such tenant until 2026-08-13, when it moved into the TAB ROW — see the
-// deleted status cell's record just above; the chain is gone entirely since
-// 2026-08-29 and this lane carries no status text at all.)
+// changed — so nothing about this owner or its consumers moved with it. (The
+// row's STATUS CHAIN was the third such tenant until 2026-08-13, when it moved
+// into the TAB ROW; the chain is gone entirely since 2026-08-29 and what stands
+// beside the clock now is THE STATE CELL, whose own owner is
+// Viewport::invalidate_status_cell_area and whose rect is the lane WHOLE —
+// see the record just above.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
@@ -2393,8 +2395,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // generation or the displayed-map generation moved past what the hover
         // cache had stamped — the backstop for a store mutation or a silent map
         // promotion under a stationary cursor. There is no hover cache to keep
-        // honest any more: a marker's value is painted on its own flag, and the
-        // readout and the copy both read the live store through the selection.
+        // honest any more: a marker's value is painted on its own flag, and
+        // bare `j`'s copy and Shift+`j`'s jump both read the live store through
+        // the selection.
 
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate

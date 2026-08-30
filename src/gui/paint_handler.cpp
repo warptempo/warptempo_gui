@@ -40,14 +40,14 @@
 // reversal is scoped to the clock and nothing else in the product may take
 // the face.
 //
-// EVERY STRING THE STATUS BAR CARRIES — the queue/render status, the history
-// walk line and the resolved readout — is the redesign's sans at the
-// redesign's size, shaped and painted through the ONE chokepoint like every
-// other redesigned row, and so is every NOTIFICATION CARD's line
-// (paint_notifications, 2026-08-29). The bar selects that face itself, exactly
-// as the bottom row does; the product has one text size, so neither of the two
-// moves those strings have made — the bottom row to the tab row on 2026-08-13,
-// the tab row to the bar on 2026-08-29 — changed a glyph. (The dirty mark used
+// EVERY STRING THE STATE CELL CARRIES — the queue/render status and the
+// history walk line — is the redesign's sans at the redesign's size, shaped
+// and painted through the ONE chokepoint like every other redesigned row, and
+// so is every NOTIFICATION CARD's line (paint_notifications, 2026-08-29). The
+// product has one text size, so none of the three moves those strings have
+// made — the bottom row to the tab row on 2026-08-13, the tab row to the
+// one-day status bar on 2026-08-29 and the bar back into row 8's own cell that
+// evening — changed a glyph. (The dirty mark used
 // to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which labwc
 // paints — see GuiPlatform::apply_window_title.)
 //
@@ -3048,9 +3048,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         if (!b.tooltip2.empty()) line2 = b.tooltip2.c_str();
         btn   = b.rect;
         // The modal is the BOTTOM ROW, so its hints always hang UPWARD — the
-        // same flip the row's own tenants take, for the same reason (what lies
-        // below that lane is the STATUS BAR's 33 authored px, which no hint
-        // fits in); their membership is
+        // same flip the row's own tenants take, for the same reason (the lane
+        // rests on the window's foot, so there is nothing below it for a hint
+        // to hang in); their membership is
         // redesign_button_in_transport_row, which the roster branch below
         // reads.
         flip_above = true;
@@ -3126,11 +3126,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                   2 * pad_y;
 
     // BELOW THE BUTTON, LEFT-ALIGNED WITH IT — or ABOVE it for every BOTTOM-ROW
-    // owner, whose lane sits at the foot of the window (on the foot itself from
-    // the relayout's commit B until the STATUS BAR took it 2026-08-29; the
-    // blank foot's own band, zero on a short window, before that): what lies
-    // below them is the bar's 33 authored px and nothing else, which no hint
-    // fits in, so the hint hangs upward there, the
+    // owner, whose lane rests ON the foot of the window (since the relayout's
+    // commit B, apart from the one day a STATUS BAR stood under it; the blank
+    // foot's own band, zero on a short window, before that): there is nothing
+    // below them at all, so a hint dropped there would fall off the window and
+    // it hangs upward instead, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
     // the row's eighteen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
@@ -5250,7 +5250,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
     // into ONE lane — under the waveform then, on the WINDOW'S FOOT from the
     // same day's relayout commit B, which also moved the arrows FLUSH RIGHT,
-    // and one lane in from that foot since the STATUS BAR took it 2026-08-29):
+    // apart from the one day a STATUS BAR stood under it, 2026-08-29):
     // the transport three
     // on the left at the icon row's boxes with the monospace clock behind their
     // separator (left-aligned since 2026-08-18, lane-centred before), and —
@@ -5259,8 +5259,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // separators. THAT IS THE WHOLE ROSTER since
     // 2026-08-13, when the architect moved the STATUS CHAIN — the critical
     // chip and section C's precedence ladder — up into the TAB ROW (the chain
-    // was deleted there on 2026-08-29 and its three STATE strings are the
-    // STATUS BAR's now, so nothing it carried can return here): this
+    // was deleted there on 2026-08-29; its critical chip became the cards and
+    // its two surviving STATE strings came back to this row that evening, not
+    // as a ladder but as the ONE STATE CELL right of the clock, which is the
+    // buttons-and-clock body's tenant and not a roster member): this
     // painter owns the lane's CHROME (ground + border-top) and nothing else;
     // the buttons and the clock are
     // paint_bottom_row_buttons_and_clock, called from here onto the grounded
@@ -5875,10 +5877,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // content — while a LIST's buttons sit FLUSH RIGHT, the picker's one
     // button being the whole of that case.
     //
-    // NOTHING OVERFLOWS THE LANE, and the primacy is THE STATUS BAR'S OWN
+    // NOTHING OVERFLOWS THE LANE, and the primacy is ROW 8'S STATE CELL'S OWN
     // (one collision discipline across the product — a text cell anchors at
-    // its own edge and clips when it overflows, the bar's left cell against
-    // its right cell): THE
+    // its own edge and clips when it overflows, that cell against the row's
+    // right button block): THE
     // BUTTONS STAY WHOLE AND THE CONTENT GIVES. A prompt with no reachable
     // button is a modal with no way out, while a clipped message is still
     // readable to its clip — so the cluster's left edge is capped at

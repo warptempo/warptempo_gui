@@ -49,12 +49,12 @@ class GuiWaveformWorker;
 // THE ICON ROW'S LEFT PAD — the row's 8px lead-in, and since 2026-08-14 THE
 // BOTTOM ROW'S PAD TOO, at both ends and for the modal that displaces its
 // tenants (architect: "make sure bottom row is same height and metrics
-// (padding, etc.) as main icon row"). SINCE 2026-08-29 IT IS THE STATUS BAR'S
-// TOO, at both ends and for the air between its two cells: the bar is a
-// redesigned row like the others and reads the same 8. It lives in this header
-// rather than in the painter's file because that unification gave it a reader
-// outside the row — one source, so a retune of the icon row carries to the
-// other two by construction.
+// (padding, etc.) as main icon row"). It lives in this header rather than in
+// the painter's file because that unification gave it a reader outside the row
+// — one source, so a retune of the icon row carries to the other by
+// construction. (The one-day STATUS BAR read it too, at both ends and for the
+// air between its two cells, and took no number of its own with it when it
+// folded back into row 8 on 2026-08-29.)
 //
 // TWO SEPARATELY-MEASURED PADS DIED INTO THIS ONE. bottom_row_pad_x, the
 // modal's own accessor, went at the 2026-08-14 ruling: it was a
@@ -63,8 +63,9 @@ class GuiWaveformWorker;
 // walked from this 8. status_chain_pad_x, that 13 itself (measured off
 // row_7_text.png: fitting the crop's own string offscreen at the row's 16px
 // size put the pen at x = 13), went on 2026-08-29 with the chain it aligned:
-// the STATUS BAR that took the chain's three strings reads this 8 like every
-// other redesigned row, so the product has one lane pad and no second number.
+// the row that took the chain's surviving strings — row 8, through its own
+// state cell — reads this 8 like every other redesigned row, so the product
+// has one lane pad and no second number.
 inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }
@@ -100,8 +101,8 @@ constexpr const char* kMeasureOffsetEditorPrefix = "Paste measures, offset: ";
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
 // original `[+] <payload>`). Defined in waveform_cache.cpp beside its first
-// caller and declared here for its SECOND (2026-08-05): the STATUS BAR's walk
-// line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
+// caller and declared here for its SECOND (2026-08-05): ROW 8'S STATE CELL's
+// walk line, whose `Scale: [-]<then> [+]<now>` is the same vocabulary at
 // another surface, so the two cannot spell the sign differently.
 //   * a WARP payload is the tempo token, so this reads `[+]1.05` live and
 //     `[+]#1.05` disabled;
