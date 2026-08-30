@@ -105,7 +105,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
 // that happens to sit at time 0 — frame-0 phase alignment is implicit
 // and needs no marker to assert it.
 void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
-    if (app.selected_markers.empty()) return;
+    // The subject refusal reads its one owner (marker_selection_standing,
+    // app_state.h — 2026-08-30, the warp delete's shape; the Delete button's
+    // face reads the same fact through marker_selection_verb_actionable).
+    if (!marker_selection_standing(app)) return;
     const auto& tv = app.phaseresetmarkers.markers();
     // THE STALE-INDEX BELT, one policy for every verb that iterates the selection
     // (architect 2026-07-30): a stale member is SILENTLY SKIPPED and the rest of
@@ -144,7 +147,9 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 // it in; the two are behaviorally equivalent and the style split is a
 // cosmetic mirror divergence, accepted.
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
-    if (app.selected_markers.empty()) return;
+    // The subject refusal reads its one owner (marker_selection_standing,
+    // app_state.h).
+    if (!marker_selection_standing(app)) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     bool changed = false;
     for (int idx : app.selected_markers) {

@@ -512,8 +512,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // consumes bare Return and greys it with the verbs, and so does the
     // READ-ONLY lock (the canonical line is serialized content). Where it
     // differs from the Measure is the P VIEW — phase resets have no per-flag
-    // editor, so the act refuses there — and that refusal is a consumed no-op
-    // with a live face, never a grey, the no-blink ruling's own class.
+    // editor, so the act refuses there — and that refusal GREYS the button
+    // since 2026-08-30 (flag_editor_open_actionable, the Return arm's own
+    // predicate, under the truthful-buttons ruling; it was a consumed no-op
+    // with a live face under the 2026-08-15 no-blink ruling until then).
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
     // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
@@ -1112,13 +1114,13 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   (history_mode_revert_subject_standing), so this walk answers DEAD with an
 //   empty subject and LIVE the moment a click selects one, from the same
 //   admission with nothing restated here, exactly as Save's head-delta grey
-//   does. ITS FACE DOES NOT READ THAT ANSWER (architect 2026-08-15): the
-//   button was the one place a per-SELECTION fact reached a chrome glyph, and
-//   redesign_button_enabled lifts the four companions over this partition
-//   entirely, so the chord still refuses on an empty subject while the button
-//   stays lit inside the view. The reasoning is the blink, not the logic, and
-//   it is recorded there; this answer is kept exact because the KEY still
-//   reads it.
+//   does. ITS FACE READS THAT ANSWER AGAIN SINCE 2026-08-30: from 2026-08-15
+//   the button was the one place a per-SELECTION fact reached a chrome glyph,
+//   and redesign_button_enabled lifted the four companions over this
+//   partition entirely for the blink rather than the logic; the
+//   truthful-buttons ruling ("Any time a button would be a no-op, grey it")
+//   deleted that lift, so the chord's refusal on an empty subject and the
+//   button's grey are one decision, this walk's.
 //   and THE FILE ANCHOR since 2026-08-13 — THE ONE LIVE ENTRY THAT IS NOT A
 //   CHORD'S ADMISSION, which is why it is spelled in the body rather than
 //   derived: an anchor has no chord to ask about, so the four anchor arms

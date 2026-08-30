@@ -2229,17 +2229,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   the reason this row's paint goes through redesign_button_icon; it was TWO
 //   buttons over that one chord until 2026-08-15, most recently as a radio
 //   pair) and skip-forward (bare
-//   End). THE ROW'S OTHER BUTTONS ARE LIT UNCONDITIONALLY, apart from what
-//   the `h`
-//   history view's derived partition greys and the four marker verbs' own lock
-//   grey (below), and that is a RULING rather than
-//   an unfinished sweep (architect 2026-08-15, reversing his own whole-row
-//   honesty ruling of that morning in three steps — the arrows, then the
-//   skips, then play and stop): "there's not a whole lot of value derived from
-//   the icon faces changing, and it is a little distracting. The whole premise
-//   of the GUI is that it expects strict user knowledge — the user is expected
-//   to know that with the playhead outside trim it's not going to play in
-//   target view." Every reasoning, per pair, is at redesign_button_enabled;
+//   End). THE ROW'S OTHER BUTTONS GREY WHERE THEIR PRESS WOULD BE A NO-OP
+//   since 2026-08-30 (architect: "Any time a button would be a no-op, grey
+//   it") — the selection's state on the verbs, the arrows, the walk steps and
+//   Copy value — on top of what the `h` history view's derived partition greys
+//   and the marker verbs' own lock grey (below). From 2026-08-15 until then
+//   they were LIT UNCONDITIONALLY apart from those two, by RULING rather than
+//   an unfinished sweep (the architect reversing his own whole-row honesty
+//   ruling of that morning in three steps — the arrows, then the skips, then
+//   play and stop): "there's not a whole lot of value derived from the icon
+//   faces changing, and it is a little distracting. The whole premise of the
+//   GUI is that it expects strict user knowledge — the user is expected to
+//   know that with the playhead outside trim it's not going to play in target
+//   view." Every reasoning, per pair and per reversal, is at
+//   redesign_button_enabled;
 //   THE FIRST SEPARATOR, the ruled row-8 divider, and then THE CLOCK at the
 //   pen it leaves behind — the timestamp, which moved here off the
 //   status line in MONOSPACE (the architect's ruling, the face, the size
@@ -2356,9 +2359,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // switch. Outside the view the four VERBS, the EDIT FLAG BUTTON and the
 // MARKER MEASURE grey on a locked tab, their own
 // gate — COPY VALUE, seated among them, does NOT, both its chords being
-// navigation the lock admits — and nothing else on the row greys at all — which is the architect's
-// 2026-08-15 always-on ruling, made about the RESTING face of the ten members
-// it then had. All at redesign_button_enabled; nothing decided here.
+// navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
+// TRANSPORT THREE, WALK BOTH TABS AND ADD TO SELECTION greys on the
+// selection's state where its press would be a consumed no-op (the
+// truthful-buttons ruling, reversing the architect's 2026-08-15 always-on
+// ruling, which was made about the RESTING face of the ten members the row
+// then had). All at redesign_button_enabled; nothing decided here.
 // THE SELECTED FACE IS WORN BY ADD TO SELECTION AND NOTHING ELSE HERE
 // (2026-08-18): the sticky-ctrl mode lights while it stands, which is the
 // roster's standing rule for a mode and the lamp iteration and follow already

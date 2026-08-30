@@ -2173,7 +2173,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE REDESIGNED BUTTONS' STATE-VECTOR STALENESS COMPARATOR — the ONE
         // site that repairs a stale DISABLED or SELECTED face, and the reason no
         // route that pushes/pops history, toggles read-only, flips follow or
-        // iteration mode, or finishes a load carries an invalidate of its own.
+        // iteration mode, finishes a load — or, since 2026-08-30, MUTATES THE
+        // SELECTION, switches a view or steps the history walk (the
+        // truthful-buttons ruling's face terms, redesign_button_enabled) —
+        // carries an invalidate of its own.
         // Those facts change with no top-strip damage whatsoever, so the strip
         // would keep showing yesterday's faces; here the LIVE bits are compared
         // against the ones the painter last painted

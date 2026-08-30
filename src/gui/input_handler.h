@@ -707,12 +707,14 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // one), and the load-in-place's, on the active walk carrying a member. Both
 // readers hand it the
 // same `app` and neither restates a term of it, which is what
-// keeps the key and the face one decision — WITH ONE SCOPE SINCE 2026-08-15:
-// the revert act's subject term decides the KEY alone, redesign_button_enabled
-// lifting the four history companions over the derived partition, so Revert
-// stays lit on an empty subject and its click is a consumed no-op (the
-// architect's reversal of a grey that tracked the diff-flag selection and
-// blinked at interaction cadence; the record is at that arm in app_state.h).
+// keeps the key and the face one decision — FOR THE REVERT ACT TOO SINCE
+// 2026-08-30: its subject term decided the KEY alone from 2026-08-15, when
+// redesign_button_enabled lifted the four history companions over the derived
+// partition so Revert stayed lit on an empty subject (the architect's
+// reversal of a grey that tracked the diff-flag selection and blinked at
+// interaction cadence), and the truthful-buttons ruling deleted that lift, so
+// the same admission greys the button again (the record is at the
+// companions' arm in app_state.h).
 // It took the HistoryMode struct alone
 // until the in-flight bit joined, that bit living on AppState because the act
 // outlives the view it was launched from.
@@ -3570,7 +3572,12 @@ private:
     // TWO READERS, one owner: the on_key dispatch (which picks the lane) and
     // read_only_key_blocked's is_playhead_step entry (which admits the bare
     // horizontal arrows only while this is FALSE — in the marker lane they
-    // author, and this gate is their sole read-only defense).
+    // author, and this gate is their sole read-only defense). THE BODY
+    // DELEGATES TO marker_selection_standing (app_state.h) since 2026-08-30:
+    // the lane IS a standing selection, and that fact gained face readers on
+    // the bottom row (the arrows' horizontal_arrow_step_actionable among
+    // them) which cannot call a handler member — so the expression lives
+    // once, out there, and this member keeps the lane's name and contract.
     bool playhead_in_marker_lane() const;
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the

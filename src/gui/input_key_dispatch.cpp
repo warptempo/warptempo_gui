@@ -137,9 +137,11 @@ bool trash_directory(const std::filesystem::path& dir) {
 
 // The lane model's one predicate — see the declaration for the two readers and
 // the rationale. A non-empty selection IS the marker lane: with a focus standing,
-// the bare horizontal arrows move that MARKER and the cursor rides along.
+// the bare horizontal arrows move that MARKER and the cursor rides along. The
+// expression lives at marker_selection_standing (app_state.h) since
+// 2026-08-30, where the bottom row's faces can read it too.
 bool GuiInputHandler::playhead_in_marker_lane() const {
-    return !app.selected_markers.empty();
+    return marker_selection_standing(app);
 }
 
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
@@ -1514,9 +1516,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // RedesignButton::HistoryOlder / HistoryNewer): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is —
-    // and since 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
+    // behind a DEAD FACE since 2026-08-30, the buttons greying at the wall
+    // they stand on through the same two predicates (the truthful-buttons
+    // ruling; redesign_button_enabled's companions arm) — and since
+    // 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
     // admits, app_state.h), so a shift-click reaches the jump through that same
-    // one route and their tooltips carry the shift line that names it.
+    // one route and their tooltips carry the shift line that names it; a
+    // greyed arrow loses no jump, the jump onto the wall it stands on moving
+    // nothing either.
     //
     // THE ACTIVE WALK'S POSITION, never a named one (2026-08-07): the step reads
     // walk_count / walk_index and writes through set_walk_index, so the same body
@@ -1529,23 +1536,27 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // is the same consumed nothing a wall is, as does the commit side's empty
     // window.
     if (key == GuiKeys::Comma || key == GuiKeys::Period) {
-        const std::size_t count = app.history_mode.walk_count();
-        const std::size_t here  = app.history_mode.walk_index();
-        // THE OLDEST INDEX, and the empty walk's answer with it: an empty walk
-        // has one address (0) and stands at it, so both keys resolve to `here`
-        // and fall out of the wall check below with nothing to do — no case of
-        // its own.
-        const std::size_t oldest = count == 0 ? 0 : count - 1;
-        std::size_t there;
-        if (key == GuiKeys::Comma)
-            there = mods.shift ? oldest : std::min(here + 1, oldest);
-        else
-            there = mods.shift ? 0 : (here == 0 ? 0 : here - 1);
-        // THE WALL IS ONE CHECK FOR BOTH SHAPES: a step that would run off the
-        // end and a jump made while already standing at that end are the same
-        // consumed no-op, with no edge and nothing moved. The walk has ends, and
-        // reaching one must not wrap or refuse loudly.
-        if (there == here) return true;
+        const bool older = (key == GuiKeys::Comma);
+        // THE WALL IS ONE PREDICATE PER DIRECTION FOR BOTH SHAPES
+        // (history_walk_older_actionable / history_walk_newer_actionable,
+        // app_state.h — 2026-08-30, when the Older / Newer buttons' face began
+        // reading the same walls under the truthful-buttons ruling): a step
+        // that would run off the end and a jump made while already standing
+        // at that end are the same consumed no-op, with no edge and nothing
+        // moved, and the EMPTY walk — one address (0), stood at — answers
+        // false in both directions with no case of its own. The walk has ends,
+        // and reaching one must not wrap or refuse loudly. (Until 2026-08-30
+        // this arm computed `there` and compared it to `here`; the predicate
+        // is that compare, named once for the act and the face.)
+        if (!(older ? history_walk_older_actionable(app.history_mode)
+                    : history_walk_newer_actionable(app.history_mode)))
+            return true;
+        const std::size_t count  = app.history_mode.walk_count();
+        const std::size_t here   = app.history_mode.walk_index();
+        const std::size_t oldest = count - 1;   // count > 0 past the wall
+        const std::size_t there =
+            older ? (mods.shift ? oldest : here + 1)
+                  : (mods.shift ? 0 : here - 1);
         app.history_mode.set_walk_index(there);
         // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
         // clearer that always takes them together: both index into the list the
@@ -1917,21 +1928,22 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             focused there is nothing to revert, so the chord
 //                             drops here as a consumed no-op
 //                             (history_mode_revert_subject_standing, app_state.h
-//                             — the KEY GATE, and since 2026-08-15 its ONE
-//                             reader; it must not gain a face reader again).
-//                             THE FACE NO LONGER MIRRORS IT: the Revert button
-//                             greyed from this same line — one decision for the
-//                             chord and the glyph, the cleanest shape the
-//                             enabled predicate had — and the architect
-//                             reversed that, because this bit MOVES DURING A
-//                             VISIT (every click that selects or clears changes
-//                             it) so the grey tracked the diff-flag SELECTION
-//                             and blinked at interaction cadence, which is the
-//                             same argument that took the four cardinal arrows
-//                             always-on. The button stays lit with an empty
-//                             subject and a click on it is a consumed no-op,
-//                             the roster's standing shape for a refusal; the
-//                             full record is at the four history companions'
+//                             — the KEY GATE, whose one code reader is this
+//                             line). THE FACE MIRRORS IT AGAIN SINCE
+//                             2026-08-30: the Revert button greys from this
+//                             same line — one decision for the chord and the
+//                             glyph, the cleanest shape the enabled predicate
+//                             has — as it did from 2026-08-05 until the
+//                             architect reversed the face half on 2026-08-15,
+//                             because this bit MOVES DURING A VISIT (every
+//                             click that selects or clears changes it) so the
+//                             grey tracked the diff-flag SELECTION and blinked
+//                             at interaction cadence, the argument that then
+//                             took the four cardinal arrows always-on. The
+//                             truthful-buttons ruling withdrew that argument
+//                             ("Any time a button would be a no-op, grey it")
+//                             and deleted the lift that kept the button lit;
+//                             the full record is at the history companions'
 //                             arm in redesign_button_enabled, app_state.h.
 //                             IT IS NOT DISPATCHED FROM HERE, and not from a
 //                             mode arm either: admitting it lets the press fall
@@ -2131,13 +2143,16 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // SECOND session-conditional admission: Ctrl+H is admitted only while there
     // is a subject to revert — a selected diff flag, or the focused one — so
     // with nothing selected the chord drops here as a consumed no-op. THE
-    // REVERT BUTTON TOOK ITS ROW'S DISABLED FACE FROM THIS SAME LINE UNTIL
-    // 2026-08-15 — one decision for the chord and the glyph — and the architect
-    // reversed the face half alone: the grey tracked the diff-flag SELECTION,
-    // so it blinked at interaction cadence, the same argument that took the
-    // four cardinal arrows always-on. The button is lit with an empty subject
-    // and the click is a consumed no-op; this term is the KEY GATE only, and
-    // history_mode_revert_subject_standing has exactly one reader — this line.
+    // REVERT BUTTON TAKES ITS ROW'S DISABLED FACE FROM THIS SAME LINE — one
+    // decision for the chord and the glyph, through history_mode_disables_
+    // button's walk of the chord — as it did until 2026-08-15, when the
+    // architect reversed the face half alone (the grey tracked the diff-flag
+    // SELECTION, so it blinked at interaction cadence, the same argument that
+    // took the four cardinal arrows always-on) and redesign_button_enabled
+    // lifted the companions over the partition; the 2026-08-30 truthful-
+    // buttons ruling deleted that lift, so the face reads this term again.
+    // history_mode_revert_subject_standing has exactly one CODE reader — this
+    // line; the face reaches it through the walk, restating nothing.
     // Unlike
     // the two mutators above it, this chord is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, BELOW the read-only gate, so a
@@ -2981,13 +2996,14 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // close the view. The one caller is on_key's own Ctrl+H arm, which is reached
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
-// stands (history_mode_revert_subject_standing, app_state.h, whose ONE reader
-// is that key gate). The Revert BUTTON'S grey read the same decision until
-// 2026-08-15 and no longer does: the architect reversed the face half alone,
-// the grey having tracked the diff-flag selection and blinked at interaction
-// cadence — the argument that took the four cardinal arrows always-on — so the
-// button is lit with no subject and the click is a consumed no-op, the roster's
-// standing shape for a refusal. The record is at the four history companions'
+// stands (history_mode_revert_subject_standing, app_state.h, whose ONE code
+// reader is that key gate). The Revert BUTTON'S grey reads the same decision
+// through the derived `h` partition — again since 2026-08-30: the architect
+// reversed the face half alone on 2026-08-15, the grey having tracked the
+// diff-flag selection and blinked at interaction cadence (the argument that
+// took the four cardinal arrows always-on), and the truthful-buttons ruling
+// reversed that reversal, so the button greys with no subject and a click on
+// it is the dead face's consumed nothing. The record is at the history companions'
 // arm in redesign_button_enabled, app_state.h; that predicate must not gain a
 // face reader here again.
 //
@@ -6244,9 +6260,11 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // warp view, iteration mode off, an enabled pass or a ref to an enabled
 // definition. An ineligible focus — an owner, a phase reset, iteration mode,
 // the `P` column, nothing focused — and an empty payload alike are SILENT
-// CONSUMED NO-OPS, the roster's standing shape for a refusal that changes at
-// interaction cadence (which is also why the button never greys on the
-// selection's state).
+// CONSUMED NO-OPS. THE COPY VALUE BUTTON GREYS ON THE GATE'S ANSWER since
+// 2026-08-30 (redesign_button_enabled, the truthful-buttons ruling — for its
+// first day it never greyed on the selection's state, the refusal changing at
+// interaction cadence); the empty payload alone stays behind a lit face,
+// needing the composer run.
 
 void GuiInputHandler::copy_focused_marker_value() {
     if (!payload_eligible_marker(app, app.last_selected_marker)) return;

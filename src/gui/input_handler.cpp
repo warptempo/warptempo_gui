@@ -1032,8 +1032,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // app_state.h; the commit's own tail carries the target-view re-warp
         // and playhead re-land). P view still refuses — phase resets have no
         // per-flag editor — and read-only already dropped Return at the
-        // allowlist gate above.
-        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P') {
+        // allowlist gate above. THE TWO REFUSALS ARE ONE PREDICATE since
+        // 2026-08-30 (flag_editor_open_actionable, app_state.h), which the
+        // Edit flag button's face reads too — the truthful-buttons ruling.
+        if (flag_editor_open_actionable(app)) {
             flag_editor.enter_top_flag_edit(app.last_selected_marker);
         }
         return;
@@ -1051,17 +1053,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // serialized content, and `/` is on no read_only_key_blocked entry, so a
     // locked tab drops this press before it reaches here. The
     // `h` view drops it at its own allowlist too.
-    // NOTHING FOCUSED IS A CONSUMED NO-OP, and the refusal lives HERE rather
-    // than in the button's face: the bottom-row button is lit whenever the tab
-    // is writable and its click simply does nothing when there is no focus (the
-    // 2026-08-15 no-blink ruling — a face that tracked the selection would
-    // blink at interaction cadence).
+    // NOTHING FOCUSED IS A CONSUMED NO-OP, read off the one owner
+    // (marker_focus_standing, app_state.h), AND THE MEASURE BUTTON'S FACE
+    // READS THE SAME FACT since 2026-08-30 — the truthful-buttons ruling. From
+    // 2026-08-19 until then the refusal lived here alone and the button was
+    // lit whenever the tab was writable, its click simply doing nothing with
+    // no focus (the 2026-08-15 no-blink ruling, which the architect withdrew).
     // Modifier-strict: only the plain, unmodified press binds. (Shift+`/` was
     // the score-video jump until the 2026-08-21 sunset; the chord is unbound —
     // strict modifier validation makes it a consumed no-op, no arm anywhere.)
     if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        if (app.last_selected_marker >= 0) {
+        if (marker_focus_standing(app)) {
             flag_editor.enter_measure_edit(app.active_markers_view,
                                            app.last_selected_marker);
         }
@@ -1198,7 +1201,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         // Both drops are home-view authoring, so off home refuses silently
         // (consumed no-op). The lead-in arm needs no separate target-view test:
-        // P's home IS target, so this one gate already carries it.
+        // P's home IS target, so this one gate already carries it. THE DROP
+        // BUTTON DOES NOT GREY ON THIS REFUSAL (planner's call under the
+        // 2026-08-30 truthful-buttons ruling, recorded at its arm in
+        // redesign_button_enabled): its shift twin above drops from any view
+        // and is the long press, glass's only road to it, so the button is
+        // never a no-op off home even though this plain press is.
         if (!active_column_authoring_allowed(app)) return;
         if (!ctrl && !shift && !alt) {
             if (app.active_markers_view == 'P')
@@ -1212,9 +1220,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // symmetric with Ctrl+D below — pass, like disabled, is a status
     // toggled on an existing marker, never dropped directly. No
     // phase-reset equivalent (a reset has no tempo source to inherit
-    // from), so this no-ops in P view. Plain `n` and Shift+N are unbound.
+    // from), so this no-ops in P view — THE P-VIEW RETURN LIVES IN THE OP'S
+    // ONE LEADING PREDICATE since 2026-08-30 (inherit_toggle_actionable,
+    // app_state.h, which the Toggle inherit button's face reads too); it sat
+    // here from the chord's landing until then. Plain `n` and Shift+N are
+    // unbound.
     if (key == GuiKeys::N && ctrl && !alt && !shift) {
-        if (app.active_markers_view == 'P') return;
         // NO HOME-VIEW GATE SINCE 2026-08-24: a pass/owner conversion is a
         // VALUE edit rather than a placement, so it joins the fifth ruled
         // exception (the inventory is at active_column_authoring_allowed,
@@ -1233,8 +1244,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // carries the target-view re-warp and playhead re-land. The
         // PHASE-RESET arm keeps the gate exactly as it was — nothing was ruled
         // about that column — where the predicate reads "not in source view".
+        // BOTH ARMS' LEADING REFUSALS ARE ONE PREDICATE since 2026-08-30
+        // (marker_selection_verb_actionable, app_state.h: the empty selection
+        // in either column, the home view in P), which the Disable button's
+        // face reads too — the truthful-buttons ruling; the P arm read
+        // active_column_authoring_allowed directly until then.
+        if (!marker_selection_verb_actionable(app)) return;
         if (app.active_markers_view == 'P') {
-            if (!active_column_authoring_allowed(app)) return;
             phase_resets.toggle_phase_reset_disabled();
             return;
         }
@@ -1282,9 +1298,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // to the home-view binding (the inventory is at
         // active_column_authoring_allowed, app_state.h) and takes no home-view
         // gate, its op's tail carrying the target-view re-warp and the
-        // playhead re-land. The PHASE-RESET arm keeps the gate.
+        // playhead re-land. The PHASE-RESET arm keeps the gate. BOTH ARMS'
+        // LEADING REFUSALS ARE ONE PREDICATE since 2026-08-30
+        // (marker_selection_verb_actionable, app_state.h — the Ctrl+D arm's
+        // twin), which the Delete button's face reads too.
+        if (!marker_selection_verb_actionable(app)) return;
         if (app.active_markers_view == 'P') {
-            if (!active_column_authoring_allowed(app)) return;
             phase_resets.delete_selected_phase_reset();
             return;
         }
@@ -1511,14 +1530,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
         // OFF HOME IS THE CONSUMED REFUSAL, through the ONE predicate
-        // (active_column_authoring_allowed, app_state.h) rather than a second
-        // spelling of its two arms: this site hand-wrote "P wants T, W wants
-        // S" until 2026-08-29, which is exactly that predicate's body, and a
-        // one-owner rule with a hand copy beside it is a rule waiting to
-        // drift. It covers BOTH refusals the routing above describes — P+source
-        // and W+target, the latter having lost the tempo-image step with the
-        // whole tempo drag family.
-        if (!active_column_authoring_allowed(app)) return;
+        // (horizontal_arrow_step_actionable, app_state.h — the lane fork's
+        // composed refusal, which inside this branch reduces to
+        // active_column_authoring_allowed, the home-view rule itself; the
+        // bottom row's LEFT and RIGHT buttons read the same predicate for
+        // their face since 2026-08-30, the truthful-buttons ruling) rather
+        // than a second spelling of its arms: this site hand-wrote "P wants T,
+        // W wants S" until 2026-08-29, which is exactly the home-view
+        // predicate's body, and a one-owner rule with a hand copy beside it is
+        // a rule waiting to drift. It covers BOTH refusals the routing above
+        // describes — P+source and W+target, the latter having lost the
+        // tempo-image step with the whole tempo drag family.
+        if (!horizontal_arrow_step_actionable(app)) return;
         if (app.active_markers_view == 'P')
             phase_resets.nudge_selected_phase_resets(direction, rpt);
         else

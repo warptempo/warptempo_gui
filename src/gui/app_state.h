@@ -2025,8 +2025,10 @@ enum class RedesignButton {
     // answer beside them (redesign_button_enabled): a press at either end is a
     // consumed no-op exactly as a zoom-in at the ceiling is, and a face that
     // tracked the rung would blink at interaction cadence — the 2026-08-15
-    // no-blink ruling. NO LAMP either: each is an act that completes, momentary
-    // like the four magnifiers.
+    // no-blink ruling, which the 2026-08-30 truthful-buttons ruling reversed
+    // for the bottom row and the history companions without ruling on either
+    // ladder's ends (the arm says so). NO LAMP either: each is an act that
+    // completes, momentary like the four magnifiers.
     //
     // NO MODIFIER IS ADMITTED — neither redesign_button_shift_admits nor
     // redesign_button_ctrl_admits names them, so a shift or ctrl click is
@@ -2160,14 +2162,20 @@ enum class RedesignButton {
     // face has to be honest again. The arm is at redesign_button_enabled and
     // says which owner it uses and why.
     //
-    // TWO 2026-08-15 REVERSALS SURVIVE THAT REVIVAL UNTOUCHED and must not be
-    // re-retired with it: REVERT keeps NO conditional in-view grey (the mode
-    // admits Ctrl+H only while a diff flag stands, and the architect reversed
-    // that face as a per-selection blink — redesign_button_is_history_companion
-    // is what still lifts the four over the derived partition), and the
-    // CUMULATIVE toggle keeps its unconditional lamp, which outside the view
-    // now composes disabled+selected — a combination the shared face
-    // expressions already handle.
+    // INSIDE THE VIEW THEY ARE TRUTHFUL SINCE 2026-08-30 (architect: "Any
+    // time a button would be a no-op, grey it"): REVERT greys with no subject
+    // — the mode admits Ctrl+H only while a diff flag stands, and the derived
+    // partition's answer reaches the face again now that the lift that kept
+    // the four over it is deleted — and OLDER / NEWER grey at the walk's two
+    // walls (history_walk_older_actionable / history_walk_newer_actionable,
+    // the `,` / `.` arm's own wall check). Both were 2026-08-15 reversals
+    // that survived the 2026-08-18 revival: Revert's grey had been reversed as
+    // a per-selection blink, the walls never mirrored because the n/N readout
+    // said where the walk stood — and the 2026-08-30 ruling withdrew the
+    // blink argument for the one user it was made for. The CUMULATIVE toggle
+    // keeps its unconditional lamp, which outside the view composes
+    // disabled+selected — a combination the shared face expressions already
+    // handle.
     HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer,
     // The BOTTOM ROW's transport cluster (row 8, architect-ratified
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
@@ -2313,15 +2321,22 @@ enum class RedesignButton {
     // consumes a shift press with its plain one, so the face and both chords
     // agree with no second edit.
     //
-    // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S, which is the one thing
-    // to read twice here: the bottom row is otherwise lit unconditionally, and
-    // these four are its exception in both directions. Authoring chords, so
-    // their HOME-VIEW, empty-selection and occupied-frame refusals stay the
-    // chords' own consumed no-ops (never-grey); the `h` view GREYS all four
-    // through the derived partition, and so does the READ-ONLY LOCK, the
+    // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S: the `h` view GREYS all
+    // four through the derived partition, so does the READ-ONLY LOCK, the
     // roster's second MODE statement (redesign_button_enabled's read-only arm,
-    // 2026-08-15). They keep their Icon* names: a roster id names the button,
-    // not the lane it sits in.
+    // 2026-08-15), AND SINCE 2026-08-30 SO DOES THE SELECTION'S STATE
+    // (architect: "Any time a button would be a no-op, grey it" — reversing
+    // the 2026-08-15 no-blink ruling under which their home-view and
+    // empty-selection refusals stayed consumed no-ops behind a lit face):
+    // DELETE and DISABLE grey on an empty selection in both columns and off
+    // home in the P column (marker_selection_verb_actionable, the arms' own
+    // refusal), TOGGLE INHERIT greys in the P view and with no selection or
+    // focus (inherit_toggle_actionable, the op's own leading return). THE
+    // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
+    // shift twin drops from ANY view, and that twin is the long press — glass's
+    // only road to it. The occupied-frame refusal stays a consumed no-op
+    // (a frame fact the lane shows). They keep their Icon* names: a roster id
+    // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
     // FIFTH member, seated between Toggle inherit and the Measure (it was the
@@ -2345,17 +2360,21 @@ enum class RedesignButton {
     // enter the editor". A keyboardless panel now has a door that cannot miss.
     // (Both older roads are untouched; this is a THIRD, not a replacement.)
     //
-    // ITS ENABLED ARM HAS NO FOCUS TERM AND NO VIEW TERM, exactly like the
-    // MEASURE beside it: the act refuses INTERNALLY with nothing focused and in
-    // the P view (phase resets have no per-flag editor), both consumed no-ops,
-    // and a face that tracked either would blink at interaction cadence — the
-    // 2026-08-15 no-blink ruling, which is why not one of this group's own
-    // refusals is mirrored. What DOES grey it is what greys the Measure: the
-    // READ-ONLY LOCK (bare Return is on no read_only_key_blocked allowlist
-    // entry — the editor writes serialized content) and the `h` VIEW through
-    // the DERIVED partition (Return is neither history_mode_owns_key's
-    // vocabulary nor on history_mode_key_blocked's allowlist). A standing MODAL
-    // needs no arm at all: the veil consumes the press, the roster's own rule.
+    // ITS ENABLED ARM READS THE ACT'S OWN REFUSAL SINCE 2026-08-30
+    // (flag_editor_open_actionable — nothing focused, or the P view, which
+    // has no per-flag editor): the button greys exactly where bare Return is
+    // a consumed no-op, the architect's truthful-buttons ruling ("Any time a
+    // button would be a no-op, grey it"). From its 2026-08-27 landing until
+    // then it had NO focus term and no view term, like the Measure beside it,
+    // under the 2026-08-15 no-blink ruling — a face tracking the selection
+    // would blink at interaction cadence — which he withdrew for himself: he
+    // is deliberate with his presses, and greying is a face the row already
+    // wears in the `h` view. What greyed it before still does: the READ-ONLY
+    // LOCK (bare Return is on no read_only_key_blocked allowlist entry — the
+    // editor writes serialized content) and the `h` VIEW through the DERIVED
+    // partition (Return is neither history_mode_owns_key's vocabulary nor on
+    // history_mode_key_blocked's allowlist). A standing MODAL needs no arm at
+    // all: the veil consumes the press, the roster's own rule.
     //
     // IT IS NOT HOME-VIEW GATED, and that is the flag editor's own ruling
     // rather than this button's: the payload editor is the FIFTH ruled
@@ -2377,12 +2396,15 @@ enum class RedesignButton {
     // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
     // active markers view.
     //
-    // ITS ENABLED ARM HAS NO FOCUS TERM, deliberately. The
-    // act refuses INTERNALLY when nothing is focused (a consumed no-op), and
-    // the face stays lit: a grey that tracked the selection would blink at
-    // interaction cadence, which is exactly the reasoning that took the four
-    // cardinal arrows and the revert button always-on (the 2026-08-15
-    // no-blink ruling). NO LAMP: it is an act, not a mode.
+    // ITS ENABLED ARM HAS A FOCUS TERM SINCE 2026-08-30 (marker_focus_standing,
+    // the `/` arm's own refusal): the button greys with nothing focused, where
+    // the act was always a consumed no-op. It had none from 2026-08-19 until
+    // then, under the 2026-08-15 no-blink ruling — a grey tracking the
+    // selection would blink at interaction cadence, the reasoning that took
+    // the four cardinal arrows and the revert button always-on — which the
+    // architect withdrew with "Any time a button would be a no-op, grey it".
+    // NO VIEW TERM, and rightly: measures are both columns', both views'. NO
+    // LAMP: it is an act, not a mode.
     //
     // IT IS NOT HOME-VIEW GATED: measures are
     // the FOURTH ruled exception to the home-view binding (the inventory is at
@@ -2430,11 +2452,17 @@ enum class RedesignButton {
     // rather than something you read, and the marker it came from is somewhere
     // you GO.
     //
-    // ITS ENABLED ARM HAS NO SELECTION TERM — the group's own rule, stated at
-    // the Edit flag button and the Measure beside it: an ineligible focus (an
-    // owner, a phase reset, iteration mode, the P column, nothing focused) is
-    // the ACT's consumed no-op, and a face tracking it would blink at every
-    // selection (the 2026-08-15 no-blink ruling). AND IT IS NOT IN THE
+    // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS SINCE
+    // 2026-08-30 — the ONE gate both of its chords run — so it greys on an
+    // ineligible focus (an owner, a phase reset, iteration mode, the P column,
+    // nothing focused), the architect's truthful-buttons ruling ("Any time a
+    // button would be a no-op, grey it"). For its first day it had NO selection
+    // term, the group's rule then, under the 2026-08-15 no-blink ruling (a
+    // face tracking the focus would blink at every selection), which he
+    // withdrew for himself. The one refusal past the gate — an EMPTY PAYLOAD,
+    // a ref whose definition is missing — stays a consumed no-op behind a lit
+    // face: it needs the composer run, which a per-tick face has no business
+    // doing. AND IT IS NOT IN THE
     // READ-ONLY ARM either, which is where it parts from its four neighbours:
     // both chords are on read_only_key_blocked's allowlist (they author
     // nothing — a clipboard write, a tab switch, a playhead move and a
@@ -2765,42 +2793,17 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
     }
 }
 
-// WHICH BUTTONS ARE THE HISTORY COMPANIONS — the four that close the icon
-// row's last group, behind the opener and the two WALK RADIOS that joined it
-// between them later on 2026-08-18 (they were the bottom row's right
-// cluster from 2026-08-14 until the 2026-08-18 relayout brought them back up;
-// the membership never moved with the row). THE WALK RADIOS ARE DELIBERATELY
-// NOT MEMBERS, and the reason is this predicate's one job: it lifts a button
-// over the DERIVED `h` partition, and the radios need no lift — bare `g` is the
-// mode's own vocabulary, so the partition already answers LIVE for them inside
-// the view. Their RESTING grey is the same arm the four take at
-// redesign_button_enabled, which is a different fact from this one. Named 2026-08-15
-// for its ONE consumer, and the consumer is what the name has to earn: REVERT
-// is the one member whose chord the mode admits CONDITIONALLY (on a diff flag
-// standing), so the derived `h` partition would grey it INSIDE the view. This
-// membership is what lifts the four over that partition at
-// redesign_button_enabled — a one-line exception
-// to a derived rule, named rather than spelled inline so the exception and the
-// cluster are one fact. It is deliberately the FOUR and not just Revert: the
-// ruling is about the cluster, and a future companion whose chord the mode
-// gates conditionally must inherit it without a second edit.
-//
-// IT SAYS NOTHING ABOUT THE FACE OUTSIDE THE VIEW, and that is worth stating
-// since 2026-08-18: the four grey out there again (the icon row's own mode
-// rule, revived when they came back to a row that hides nothing), and that
-// answer is the arm's own — this predicate only keeps the mode's conditional
-// grey off them while the view stands.
-inline constexpr bool redesign_button_is_history_companion(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::HistoryCumulative:
-        case RedesignButton::HistoryRevert:
-        case RedesignButton::HistoryOlder:
-        case RedesignButton::HistoryNewer:
-            return true;
-        default:
-            return false;
-    }
-}
+// (redesign_button_is_history_companion IS DELETED — architect 2026-08-30,
+// the truthful-buttons ruling. It named the four history companions for ONE
+// consumer, the line in redesign_button_enabled that lifted them over the
+// derived `h` partition INSIDE the view, and that lift existed for REVERT
+// alone: the only member whose chord the mode admits CONDITIONALLY (on a diff
+// flag standing), so the partition greyed it per selection and the architect
+// reversed that face 2026-08-15 for the blink. With the reversal reversed —
+// "Any time a button would be a no-op, grey it" — the partition's answer is
+// the wanted one again, the lift went, and the membership with it rather than
+// resting as a definition nothing asks. The four's RESTING grey outside the
+// view was never this predicate's; it is their own arm's.)
 
 // WHICH BUTTONS ARE ROW 3'S — the two tabs, which are the A/B pair in every
 // state since 2026-08-18. ONE consumer, re-greped rather than inherited: the
@@ -8059,11 +8062,18 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // than editing one marker's value. Those four still consult this predicate and
 // still refuse silently off home — the NUDGE literally so since 2026-08-29,
 // its dispatch having hand-spelled this predicate's own two arms until then.
-// SEVEN CALL SITES, re-derived by grep that day: the keyboard drop
-// (input_handler.cpp), the phase-reset arms of Ctrl+D and Delete (same file,
-// which is where the fifth exception's warp/phase split lands), the bare
-// Left/Right nudge (same file), the `m` bpm open (input_key_dispatch.cpp), the
-// empty-lane double-click drop and the flag drag (input_pointer.cpp). Nothing changes in P+source either.
+// SIX CALL SITES, re-derived by grep 2026-08-30: the keyboard drop
+// (input_handler.cpp), the `m` bpm open (input_key_dispatch.cpp), the
+// empty-lane double-click drop and the flag drag (input_pointer.cpp), and TWO
+// COMPOSED PREDICATES below that carry it to an act AND to that act's button
+// face alike — marker_selection_verb_actionable (the phase-reset arms of
+// Ctrl+D and Delete, which is where the fifth exception's warp/phase split
+// lands, and the Delete / Disable buttons) and horizontal_arrow_step_actionable
+// (the bare Left/Right nudge and the Left / Right buttons). The two arms and
+// the nudge read this predicate DIRECTLY until 2026-08-30, when the truthful-
+// buttons ruling gave their faces a reader and the composition moved into a
+// named owner so the act and the face ask one question. Nothing changes in
+// P+source either.
 // SHIFT+S IS NOT A SIXTH EXCEPTION and must not be read as one (2026-08-28):
 // the chord drops a phase reset "from any view", but it does not AUTHOR off
 // home — it runs the two view chokepoints first, so by the time the one drop
@@ -8092,6 +8102,32 @@ inline bool active_column_authoring_allowed(const AppState& app) {
                                             : (app.active_audio_view == 'S');
 }
 
+// THE SELECTION'S TWO STANDING FACTS, each named ONCE (architect 2026-08-30,
+// the truthful-buttons ruling: "Any time a button would be a no-op, grey it"
+// — which gave every verb on the bottom row a FACE reader of the same refusal
+// its ACT already ran, and so needed the refusal to have one owner):
+//   * DOES A SELECTION STAND — the batch verbs' subject (Delete, Ctrl+D), the
+//     first refusal of every op that iterates app.selected_markers, and THE
+//     MARKER LANE ITSELF: a non-empty selection IS the lane the bare
+//     horizontal arrows step in (GuiInputHandler::playhead_in_marker_lane
+//     delegates here, its own contract at its declaration).
+//   * DOES A FOCUS STAND — the single-marker acts' subject (the flag editor,
+//     the measure editor, the inherit toggle, the cent step), read off
+//     app.last_selected_marker. The dispatch arms run
+//     Selection::repair_last_selected ahead of asking; a face cannot repair
+//     (it reads const state per tick) and does not need to — the selection
+//     layer keeps the focus a member at every mutator, so the unrepaired read
+//     and the repaired one differ only under an invariant breach.
+// Every composed predicate below reads these two rather than the fields, and
+// the ops' own leading returns read them too, so a face and its act cannot
+// come to spell the subject two ways.
+inline bool marker_selection_standing(const AppState& app) {
+    return !app.selected_markers.empty();
+}
+inline bool marker_focus_standing(const AppState& app) {
+    return app.last_selected_marker >= 0;
+}
+
 // THE TEMPO CENT STEP'S COLUMN GATE — bare Up / Down author TEMPO, and tempo
 // is the WARP column's alone: a phase reset has no tempo to step. It is the
 // first refusal in GuiWarpMarkersOps::adjust_tempo_cents (which the singleton
@@ -8105,47 +8141,104 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 
 // THE TEMPO CENT STEP'S STABLE-STATE REFUSALS, composed: the column gate above
 // plus the two subject refusals adjust_tempo_cents runs next — an empty
-// selection and an invalid focus. ONE READER: the act's own leading refusal
-// block (GuiWarpMarkersOps::adjust_tempo_cents, whose first three returns this
-// predicate IS).
-//
-// IT HAD A SECOND READER FOR ONE EVENING — the bottom row's UP and DOWN arrow
-// buttons, which mirrored it into their disabled face under the 2026-08-15
-// whole-row honesty ruling ("the ENTIRE ROW should be accurate to the live
-// state"), itself widening the 2026-08-13 mirror of the column gate alone.
-// THE ARROWS DROPPED THE MIRROR THE SAME DAY (architect, ruling after the
-// full-truthfulness experiment for the icon row was reversed unbuilt — the
-// reasoning is recorded whole at redesign_button_enabled): every term this
-// predicate adds beyond the column gate is a SELECTION fact, and the Up/Down
-// pair is precisely where he watched that show — the pair nudges tempo in the
-// WARP view and cannot act at all in the PHASE RESET one, so "every time I
-// selected a marker, that pair would blink in and out, and it would be
-// distracting". The predicate is unchanged and STAYS — the
-// act's refusals are the same three returns they always were, and naming them
-// once is what makes the act legible; only the face stopped reading it. What
-// was already live-faced under the mirror, and still is, is the VALUE-shaped
+// selection and an invalid focus. TWO READERS SINCE 2026-08-30: the act's own
+// leading refusal block (GuiWarpMarkersOps::adjust_tempo_cents, whose first
+// three returns this predicate IS) and the bottom row's UP and DOWN arrow
+// buttons' disabled face (redesign_button_enabled), which is the succession's
+// third state:
+//   * it had that second reader for one evening, 2026-08-15 — the buttons
+//     mirrored it under the whole-row honesty ruling ("the ENTIRE ROW should
+//     be accurate to the live state"), itself widening the 2026-08-13 mirror
+//     of the column gate alone;
+//   * THE ARROWS DROPPED THE MIRROR THE SAME DAY (architect, ruling after the
+//     full-truthfulness experiment for the icon row was reversed unbuilt):
+//     every term this predicate adds beyond the column gate is a SELECTION
+//     fact, and the Up/Down pair is precisely where he watched that show —
+//     "every time I selected a marker, that pair would blink in and out, and
+//     it would be distracting" — so the face stopped reading it while the
+//     act's three returns stayed;
+//   * THE MIRROR IS BACK (architect 2026-08-30, "Make all the icons truthful
+//     — disabled when a key is not pressable... Any time a button would be a
+//     no-op, grey it"): the flicker argument is withdrawn by the one user it
+//     was made for — he is deliberate with his presses — and greying is a
+//     face the row already wears in the `h` view. The predicate is unchanged
+//     through all three states; only its reader count moved.
+// What was live-faced under both mirrors, and still is, is the VALUE-shaped
 // tail: a label ref, a pass marker in target view, the tempo bracket wall.
 inline bool tempo_cent_step_actionable(const AppState& app) {
     return tempo_cent_step_column_allowed(app) &&
-           !app.selected_markers.empty() && app.last_selected_marker >= 0;
+           marker_selection_standing(app) && marker_focus_standing(app);
 }
 
-// (THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE IS DELETED —
-// horizontal_arrow_step_actionable, which lived here from the 2026-08-15
-// whole-row honesty ruling until the architect's scoped-truth ruling the same
-// day. It mirrored bare Left / Right's lane fork — the waveform-lane step
-// always live, the marker-lane nudge refused off the focused column's home
-// view and on a locked tab — into the bottom row's LEFT and RIGHT buttons, and
-// the FACE was its only reader: the dispatch has always routed on its own
-// fields (input_handler.cpp's marker-lane branch) and never called it. With
-// the face arm gone it was producer-less, so it goes whole rather than resting
-// as a definition nothing asks. Its reasoning was correct for the policy that
-// then stood; what changed is the policy — every term it added past the empty
-// selection is a per-selection fact, on a pair that is otherwise nearly always
-// live ("left and right were always on because the playhead can always move"),
-// so a rarely-true refusal bought a per-selection blink. The wall it never
-// mirrored is still not mirrored: at frame 0 the left step cannot move and the
-// button stays lit, which is the roster's standing treatment of walls.)
+// THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, back with two
+// readers (architect 2026-08-30): bare Left / Right's lane fork is the
+// waveform-lane step — always live, the cursor stepping one painted column —
+// while a standing selection puts the press in the MARKER lane, where it
+// nudges the focused marker and refuses OFF THAT COLUMN'S HOME VIEW
+// (active_column_authoring_allowed) with no fallback to the waveform step.
+// READERS: the dispatch's marker-lane branch (input_handler.cpp, which
+// routed on its own fields and never called the 2026-08-15 predicate of this
+// name) and the bottom row's LEFT and RIGHT buttons' disabled face.
+//
+// IT IS A REVIVAL WITH ONE TERM FEWER. The first predicate of this name lived
+// here from the 2026-08-15 whole-row honesty ruling until the architect's
+// scoped-truth ruling the same day, and its face was its only reader — with
+// the face arm gone it went whole rather than resting as a definition nothing
+// asked. His reason then: "left and right were always on because the playhead
+// can always move", so a rarely-true refusal bought a per-selection blink.
+// The 2026-08-30 ruling withdraws the blink argument and the face reads it
+// again. THE TERM NOT REVIVED IS THE LOCK'S: the first predicate also refused
+// the marker-lane nudge on a read-only tab, which read_only_key_blocked still
+// does; this one asks the home view alone, so a locked tab holding a
+// selection keeps a LIT pair over a refused chord — recorded rather than
+// mirrored, the read-only arm of redesign_button_enabled owning the lock's
+// membership by hand. THE WALL IS STILL NOT MIRRORED: at frame 0 the left
+// step cannot move and the button stays lit, the roster's standing treatment
+// of walls (redesign_button_enabled's arrow arm says why).
+inline bool horizontal_arrow_step_actionable(const AppState& app) {
+    return !marker_selection_standing(app) ||
+           active_column_authoring_allowed(app);
+}
+
+// THE BATCH VERBS' REFUSAL, composed (architect 2026-08-30): Delete and the
+// DISABLE toggle (Ctrl+D) act on the whole selection, so an EMPTY one is
+// their first refusal in both columns, and the PHASE-RESET arms keep the
+// home-view binding (active_column_authoring_allowed — the warp arms are the
+// fifth ruled exception and take no home-view gate, the split recorded at the
+// dispatch). READERS: the two dispatch arms (input_handler.cpp, whose
+// phase-reset halves read active_column_authoring_allowed directly until this
+// predicate) and the Delete / Disable buttons' disabled face. The ops' own
+// leading returns read marker_selection_standing, the atom this composes.
+// NOT MIRRORED, because unreachable: the stale-index belt inside each op
+// (every member past the store) and the disable's "nothing changed" — belts
+// against an invariant the selection layer keeps.
+inline bool marker_selection_verb_actionable(const AppState& app) {
+    return marker_selection_standing(app) &&
+           (app.active_markers_view != 'P' ||
+            active_column_authoring_allowed(app));
+}
+
+// THE INHERIT TOGGLE'S REFUSAL, composed (architect 2026-08-30): Ctrl+N is
+// the WARP column's alone (a phase reset has no tempo source to inherit
+// from), collapses to the focus and so needs one, and takes no home-view gate
+// (a pass/owner conversion is a VALUE edit, the fifth ruled exception).
+// READERS: GuiWarpMarkersOps::toggle_inherits' leading return — the act, the
+// dispatch arm having no test of its own since the P-view return it carried
+// moved in here — and the Toggle inherit button's disabled face.
+inline bool inherit_toggle_actionable(const AppState& app) {
+    return app.active_markers_view == 'W' &&
+           marker_selection_standing(app) && marker_focus_standing(app);
+}
+
+// THE FLAG EDITOR'S OPEN REFUSAL, composed (architect 2026-08-30): bare
+// Return opens the editor on the FOCUSED marker, and the P view has no
+// per-flag editor. READERS: the Return arm (input_handler.cpp) and the Edit
+// flag button's disabled face. The MEASURE editor's open (bare `/`) asks
+// marker_focus_standing alone — measures are both columns' — and its button
+// reads that atom directly.
+inline bool flag_editor_open_actionable(const AppState& app) {
+    return marker_focus_standing(app) && app.active_markers_view != 'P';
+}
 
 // Restore ascending time_frame order after a mutation that may have
 // moved markers past their neighbors (shift, nudge, drag commit). The
@@ -8543,6 +8636,20 @@ inline int active_marker_count(const AppState& a) {
         : static_cast<int>(a.warpmarkers.markers().size());
 }
 
+// THE MARKER WALK'S STORE REFUSAL (architect 2026-08-30): bare Tab / Shift+Tab
+// cycle the focus through the ACTIVE store, and an EMPTY store has nothing to
+// land on. READERS: Selection::cycle_selection's leading return (the act) and
+// the Walk previous / Walk next buttons' disabled face. WHAT IT DOES NOT SAY,
+// deliberately: the cycle's other consumed nothings — no enabled marker past
+// the playhead in the walk direction, an all-disabled store — change with the
+// playhead's position and the markers' own flags, both of which the lane
+// shows; the ruling names the empty store and this predicate names exactly
+// that. (Walk both tabs is never a whole no-op: its tab switch acts whatever
+// the two stores hold.)
+inline bool marker_walk_actionable(const AppState& a) {
+    return active_marker_count(a) > 0;
+}
+
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
 // `stack` would actually act. Two ways a step is a silent no-op — an empty
 // source stack, or a top entry whose TARGET tab is currently read-only (a
@@ -8602,26 +8709,52 @@ inline void clear_audition_sequence(AppState& a) {
 // IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
 // word (architect 2026-08-05): the selected diff flags, else the focused one
 // alone. Empty means Ctrl+H is a consumed no-op — history_mode_key_blocked's
-// admission is conditional on this, and THAT KEY GATE IS THIS PREDICATE'S ONE
-// READER SINCE 2026-08-15.
+// admission is conditional on this, and that key gate is the ONE CODE READER.
+// The Revert BUTTON'S in-view face reads the same decision THROUGH that gate
+// rather than through a second call: history_mode_disables_button walks the
+// button's chord through the allowlist, and redesign_button_enabled greys on
+// its answer, so the chord's refusal and the glyph are one decision on the
+// head-delta precedent exactly — the cleanest shape this roster has had.
 //
-// IT HAD TWO, AND THE SUPERSEDED SHAPE IS KEPT BECAUSE IT WAS THE CLEANEST THIS
-// ROSTER HAS HAD: the Revert button's face was DERIVED from that same admission
-// rather than from a second spelling of it, so ONE decision both refused the
-// chord and greyed the button, on the head-delta precedent exactly. THE
-// ARCHITECT REVERSED THE FACE HALF ALONE, and his reason is the blink rather
-// than the logic: this is a PURE READ OF THE MODE, so it moves with every click
-// in the marker lane, and the glyph flipped on each one to report a selection
-// the lane is already showing — the same argument that took the four cardinal
-// arrows always-on. Revert is lit whatever this answers WHILE THE VIEW STANDS
-// (redesign_button_enabled lifts the four history companions over the derived
-// partition), a click on it with
-// no subject is a consumed no-op, and the full record with the reversal's
-// reasoning lives at that arm. OUTSIDE the view it is dead like its three
-// neighbours, which is the companions' own resting arm and not this term. DO NOT GIVE THIS PREDICATE A FACE READER AGAIN.
+// THE FACE HALF WENT AND CAME BACK, and both rulings are kept: the derived
+// grey stood from 2026-08-05; THE ARCHITECT REVERSED IT 2026-08-15, for the
+// blink rather than the logic — this is a PURE READ OF THE MODE, so it moves
+// with every click in the marker lane, and the glyph flipped on each one to
+// report a selection the lane is already showing, the same argument that took
+// the four cardinal arrows always-on — and redesign_button_enabled lifted the
+// four history companions over the derived partition to keep Revert lit while
+// the view stood; THE REVERSAL WAS ITSELF REVERSED 2026-08-30 ("Any time a
+// button would be a no-op, grey it" — he is deliberate with his presses and
+// the flicker argument does not apply to him), the lift and its membership
+// predicate deleted, so the partition's answer reaches the face again with
+// nothing restated. OUTSIDE the view the button is dead like its three
+// neighbours, which is the companions' own resting arm and not this term.
 inline bool history_mode_revert_subject_standing(
         const AppState::HistoryMode& mode) {
     return !mode.selection.empty() || mode.focus >= 0;
+}
+
+// THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
+// `,` steps OLDER (index + 1) and `.` NEWER (index − 1) through the ACTIVE
+// walk, and each clamps at its end as a consumed no-op. THE SHIFT JUMP TAKES
+// THE SAME ANSWER by construction — Shift+`,` goes to the OLDEST member and
+// Shift+`.` to the NEWEST, and standing at a wall is the one state in which
+// both the step toward it and the jump onto it move nothing — so one predicate
+// per direction covers both shapes, and a greyed Older / Newer button loses
+// no shift twin it could have used. The EMPTY walk has one address (0) and
+// stands at it, so both answer false there with no case of their own.
+// READERS: the `,` / `.` arm (handle_history_mode_key, input_key_dispatch.cpp
+// — the act's wall check IS this call) and the two buttons' disabled face,
+// which greys at the walls INSIDE the view since 2026-08-30 (they never did
+// before: the n/N corner readout said where the walk stood, and a face
+// tracking the index would have repainted the row per step — the argument
+// the ruling withdraws).
+inline bool history_walk_older_actionable(const AppState::HistoryMode& mode) {
+    const std::size_t count = mode.walk_count();
+    return count > 0 && mode.walk_index() + 1 < count;
+}
+inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
+    return mode.walk_index() > 0;
 }
 
 // (THE MENUS' ONE PER-ITEM DISABLED STATE IS DELETED — dropdown_item_enabled,
@@ -8914,8 +9047,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     holds. (2) THE REST ARE
 //     THE RULING'S OWN EXCLUSIONS: the four cardinal arrows (Up and Down are
 //     blocked outright, Left and Right blocked only while a selection stands —
-//     the exact per-selection blink this ruling removes), Revert, whose Ctrl+H
-//     the lock really does eat but whose face the companions' own arm decides,
+//     the per-selection blink the 2026-08-15 ruling removed; the 2026-08-30
+//     truthful-buttons ruling gave the pairs SELECTION terms of their own at
+//     the transport block and left the lock's term off them, recorded there),
+//     Revert, whose Ctrl+H
+//     the lock really does eat but whose face the `h` partition and the
+//     companions' own arm decide,
 //     and since 2026-08-20 THE MEASURE, whose base chord the lock eats while
 //     its shifted twin is admitted — one key, two answers, and a face that can
 //     only give one. A derivation would therefore need an override list on top
@@ -8977,6 +9114,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     left with the pair's enabled split. publish_button_face
 //     (paint_handler.cpp) gave up its own GuiPlayback parameter in the same
 //     move, this having been its only reader.
+// (payload_eligible_marker's declaration and contract sit with the hit-test
+// declarations below; it is named here ahead of them because the Copy value
+// arm reads it since 2026-08-30 and this predicate is inline in the header.)
+bool payload_eligible_marker(const AppState& app, int idx);
 inline bool redesign_button_enabled(const AppState& a,
                                     int64_t total_frames,
                                     RedesignButton b) {
@@ -9003,25 +9144,26 @@ inline bool redesign_button_enabled(const AppState& a,
     // mode's own gates (history_mode_disables_button, above), so this line
     // cannot fall out of step with the allowlist.
     //
-    // ITS ONE EXCEPTION IS THE HISTORY COMPANIONS (architect 2026-08-15), and
-    // it is scoped to what happens INSIDE the view: three of the four the
-    // partition already answers LIVE for free (the mode owns bare `u`, `,` and
-    // `.`), so the exception exists for REVERT alone, whose Ctrl+H the mode
-    // admits only while a diff flag stands — a per-selection blink, which the
-    // architect reversed as a face while leaving the chord's refusal exactly as
-    // it was. The membership is
-    // named once (redesign_button_is_history_companion) rather than spelled
-    // here, and it is the cluster rather than Revert because the ruling is
-    // about the cluster.
+    // IT HAS NO EXCEPTION SINCE 2026-08-30. From 2026-08-15 until then the
+    // four HISTORY COMPANIONS were lifted over it INSIDE the view
+    // (redesign_button_is_history_companion, deleted with the lift): three of
+    // the four the partition answers LIVE for free (the mode owns bare `u`,
+    // `,` and `.`), so the lift existed for REVERT alone, whose Ctrl+H the
+    // mode admits only while a diff flag stands — a per-selection grey the
+    // architect reversed as a face while leaving the chord's refusal exactly
+    // as it was. THE TRUTHFUL-BUTTONS RULING REVERSED THAT ("Any time a button
+    // would be a no-op, grey it"): Revert greys with no subject again, from
+    // this line and the allowlist's own admission, one decision for the chord
+    // and the glyph.
     //
     // THE FOUR ARE STILL GREY OUTSIDE THE VIEW and this line is not what says
     // so (2026-08-18, with their return to the icon row): this whole test is
     // inside `a.history_mode.active`, so it has no opinion about a button out
     // there at all. Their own arm below carries that answer and states why it
-    // owns it.
-    if (a.history_mode.active &&
-        !redesign_button_is_history_companion(b) &&
-        history_mode_disables_button(a, b)) {
+    // owns it — and since 2026-08-30 the walk's two WALLS with it, which the
+    // partition cannot see (bare `,` and `.` are the mode's own vocabulary and
+    // answer LIVE here whatever the index).
+    if (a.history_mode.active && history_mode_disables_button(a, b)) {
         return false;
     }
     switch (b) {
@@ -9102,8 +9244,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // to, and that is a
         // HARMLESS NOTHING rather than a refusal — exactly like a zoom-in at
         // the ceiling, which this row has never greyed. A face that tracked the
-        // rung would blink every few presses, which is the 2026-08-15 no-blink
-        // ruling's own case. Both stay LIVE on a READ-ONLY tab (the
+        // rung would blink every few presses, which was the 2026-08-15
+        // no-blink ruling's own case; the 2026-08-30 truthful-buttons ruling
+        // reached the bottom row's verbs and the history companions and did
+        // not rule on either ladder's ends, so this pair and the zoom four
+        // keep this answer. Both stay LIVE on a READ-ONLY tab (the
         // picture's gain authors nothing the lock protects) and LIVE in the `h`
         // VIEW, where the derived partition finds their chords on the mode's
         // allowlist — nothing hand-listed either way.
@@ -9117,7 +9262,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
         // nothing, so the lock admits the chord and this face follows the key
         // rather than greying under it — the read-only-legal set's own rule.
-        // The opener's own refusals are the class this roster never mirrors: a
+        // The opener's own refusals are the class this roster does not mirror
+        // even under the 2026-08-30 truthful-buttons ruling, being unknowable
+        // per frame: a
         // project with no render at all answers "Nothing to play: no renders
         // under render/ or tmp/" on a card, and asking that per frame is a
         // directory walk the
@@ -9168,42 +9315,78 @@ inline bool redesign_button_enabled(const AppState& a,
         // IT IS NO LONGER ONE ROW'S: since the
         // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — and
         // they carry this term with them: a button's gates are the BUTTON's,
-        // and the bottom row's always-on policy is what its other members take,
-        // not a property of the lane. THE TERM IS THE BIT AND NOTHING
-        // ELSE, deliberately: every one of these chords has further refusals of
-        // its own (home view, an empty selection, an occupied frame, an empty
-        // clipboard) and NONE of them is mirrored — those stay consumed no-ops
-        // with a live face, because they change at interaction cadence and the
-        // ruling at the head of this body is that a blinking glyph restates
-        // what the screen already shows. Read-only is the opposite kind of
-        // fact: a mode entered on purpose, invisible chrome state otherwise,
-        // changing only when `o` is pressed.
+        // not a property of the lane. THE TERM WAS THE BIT AND NOTHING ELSE
+        // from 2026-08-15 to 2026-08-30, deliberately: every one of these
+        // chords has further refusals of its own (home view, an empty
+        // selection, an occupied frame) and NONE was mirrored — they stayed
+        // consumed no-ops with a live face, because they change at interaction
+        // cadence and the ruling then at the head of this body was that a
+        // blinking glyph restates what the screen already shows. THE
+        // TRUTHFUL-BUTTONS RULING (architect 2026-08-30, "Make all the icons
+        // truthful — disabled when a key is not pressable... Any time a button
+        // would be a no-op, grey it") ADDED THE SELECTION'S STATE as a SECOND
+        // TERM on five of the seven, each reading the predicate its own act
+        // refuses on — never a restatement — and each named at its case
+        // below. Read-only stays the first term for all seven: a mode entered
+        // on purpose, invisible chrome state otherwise, changing only when `o`
+        // is pressed.
         //
         // WHY THEY SIT ABOVE THE LOADING/BLANK GUARD rather than below it with
-        // the other mirrored arms: this arm adds ONE term to what they already
-        // answered and must add no second one. Dropping them past the guard
-        // would also grey them during a load — arguably truthful, since their
-        // chords drop at on_key's own loading return, but it is a change this
-        // ruling did not make and would be the row's third policy.
+        // the other mirrored arms: the 2026-08-15 arm added ONE term and was
+        // to add no second one; the second term arrived by ruling, and the
+        // seat stayed because the guard would change nothing here — every
+        // selection term is false on a blank piece, and the two that carry
+        // none (Drop, Load in place) keep the seat's original argument.
+        // Dropping them past the guard would grey them during a load —
+        // arguably truthful, since their chords drop at on_key's own loading
+        // return, but a change no ruling has made.
         //
         // THE MEMBERSHIP IS HAND-LISTED AND ITS OWNER IS NAMED, not derived —
         // the walk that would derive it, and the buttons it gets wrong,
         // are recorded at the head of this body. A change to the allowlist must
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
+        //
+        // THE DROP CARRIES NO SELECTION TERM AND NO HOME-VIEW TERM (planner's
+        // call under the 2026-08-30 ruling, recorded here): bare `s` refuses
+        // off home, but the button is never a no-op there — its SHIFT twin is
+        // Shift+S, the phase-reset drop FROM ANY VIEW, and that twin is the
+        // LONG PRESS, glass's only road to it. A face greyed for the plain
+        // chord would take the shifted one with it (a greyed button consumes a
+        // shift press with its plain one), so the button stays lit off home
+        // and the plain press's refusal stays the chord's own. The
+        // occupied-frame refusal is a frame fact the lane shows.
         case RedesignButton::IconMarkerDrop:
+            return !active_view_state(a).read_only;
+        // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
+        // empty selection in either column, and off home in the P column —
+        // marker_selection_verb_actionable, which the two dispatch arms read.
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
+            return !active_view_state(a).read_only &&
+                   marker_selection_verb_actionable(a);
+        // TOGGLE INHERIT GREYS ON THE OP'S OWN LEADING RETURN (2026-08-30):
+        // the P view, an empty selection, no focus — inherit_toggle_actionable.
         case RedesignButton::IconMarkerInherit:
+            return !active_view_state(a).read_only &&
+                   inherit_toggle_actionable(a);
         // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
         // it is the MEASURE'S CLASS EXACTLY: bare Return opens an editor over
         // SERIALIZED CONTENT — the marker's canonical line — and sits on no
         // read_only_key_blocked allowlist entry, so the lock eats the chord and
-        // the face says so. Its OTHER refusals (nothing focused, the P view)
-        // stay consumed no-ops with a live face, the arm's own rule two
-        // paragraphs up.
+        // the face says so. ITS OTHER REFUSALS (nothing focused, the P view)
+        // GREY IT TOO SINCE 2026-08-30, through the Return arm's own predicate
+        // flag_editor_open_actionable; they were consumed no-ops behind a live
+        // face until then.
         case RedesignButton::IconMarkerEditFlag:
+            return !active_view_state(a).read_only &&
+                   flag_editor_open_actionable(a);
+        // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) — the `/` arm's
+        // one refusal past the lock, marker_focus_standing; no view term, the
+        // measure being both columns' in both views.
         case RedesignButton::IconMarkerMeasure:
+            return !active_view_state(a).read_only &&
+                   marker_focus_standing(a);
         // PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
@@ -9213,73 +9396,91 @@ inline bool redesign_button_enabled(const AppState& a,
         // is the Load in place button's, still here.
         case RedesignButton::IconLoadInPlace:
             return !active_view_state(a).read_only;
-        // THE BOTTOM ROW IS ALWAYS-ON EXCEPT FOR ITS OWN TWO GREYS (architect
-        // 2026-08-15, his final ruling on this row after it moved three times
-        // that day): its ALWAYS-ON MEMBERS break out of this switch
-        // to take the loading/blank guard — every chord on the row drops at
-        // on_key's `app.loading || total <= 0` return — and then answer a plain
-        // `true`. HIS REASONING, kept in his own words because it is the whole
-        // argument: "there's not a whole lot of value derived from the icon
-        // faces changing, and it is a little distracting. The whole premise of
-        // the GUI is that it expects strict user knowledge — the user is
-        // expected to know that with the playhead outside trim it's not going
-        // to play in target view."
+        // THE BOTTOM ROW IS TRUTHFUL SINCE 2026-08-30 (architect: "Make all the
+        // icons truthful — disabled when a key is not pressable — even the
+        // transport's back/forward when you're already at the home or the
+        // beginning of the trim. Any time a button would be a no-op, grey
+        // it."), and the arms below say which refusal each button now
+        // mirrors. THIS REVERSES THE 2026-08-15 ALWAYS-ON RULING, his final
+        // one on this row after it moved three times that day, kept in his
+        // own words because it was the whole argument for fifteen days:
+        // "there's not a whole lot of value derived from the icon faces
+        // changing, and it is a little distracting. The whole premise of the
+        // GUI is that it expects strict user knowledge — the user is expected
+        // to know that with the playhead outside trim it's not going to play
+        // in target view." That ruling had itself superseded the whole-row
+        // honesty ruling of that morning ("the ENTIRE ROW should be accurate
+        // to the live state and not lie by showing something enabled that's
+        // not enabled"), narrowed three times and reversed outright — first
+        // off the left cluster, then off the two SKIPS, and finally off PLAY
+        // and STOP. The 2026-08-30 ruling withdraws the flicker argument for
+        // the one user it was made for — he is deliberate with his presses —
+        // and notes that greying is a face this row already wears in the `h`
+        // view. The row's members still BREAK OUT of this switch to take the
+        // loading/blank guard (every chord on the row drops at on_key's
+        // `app.loading || total <= 0` return), each arm refusing ahead of the
+        // break where its own predicate says the press would be a no-op.
         //
-        // THIS SUPERSEDES THE WHOLE-ROW HONESTY RULING OF THAT MORNING ("the
-        // ENTIRE ROW should be accurate to the live state and not lie by
-        // showing something enabled that's not enabled"), which was narrowed
-        // three times and then reversed outright — first off the left cluster,
-        // then off the two SKIPS, and finally off PLAY and STOP, the last arms
-        // standing. So the row scopes' original rule — do not invent
-        // refusal-predicting grey states — is back in force here unbroken, and
-        // the head of this body carries what the roster still does tell the
-        // truth about.
+        // THE STRUCTURAL RULE EVERY NEW ARM KEEPS: a face never restates an
+        // act's condition. Each reads a predicate the act's own refusal reads
+        // — the two cardinal pairs, the walk pair and Copy value below name
+        // theirs — so the face and the chord are one decision with nothing to
+        // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW ACTUALLY GREYS, re-derived since 2026-08-18 rather than
-        // stated as "nothing but Play/Stop" (which was true while its roster
-        // was ten and half of it was unpainted in the view). IN THE `h` VIEW,
-        // all through the DERIVED partition at the top of this body: the
+        // WHAT THE ROW GREYS, re-derived 2026-08-30. IN THE `h` VIEW, all
+        // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
-        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on its
-        // allowlist — an answer that reached no pixel while the cluster swap
-        // hid them, and reaches one now that they paint in every state), THE
-        // FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT FLAG BUTTON, THE
-        // MARKER MEASURE and ADD TO SELECTION
-        // (bare `j`, bare Return, bare `k` and bare `/` are consumed in there
-        // like the verbs' four
-        // chords) — THIRTEEN of the eighteen. The two
-        // SKIPS and the MARKER-WALK GROUP'S THREE stay lit, being the mode's
-        // own absolute jumps, its diff-flag cycle and (since 2026-08-18) the
-        // march that composes that cycle with the A/B switch.
-        // OUTSIDE THE VIEW: the four VERBS, THE EDIT FLAG BUTTON and THE
-        // MARKER MEASURE on a locked
-        // tab, their own gate, carried down from the icon row and stated at
-        // their arm above (the measure rejoined them at the 2026-08-21 sunset,
-        // its jump half gone; the edit flag button landed in that arm
-        // 2026-08-27) — while ADD TO SELECTION and COPY VALUE, both seated in
-        // their group, are not with them there, both chords being navigation.
-        // Nothing else on the row has a resting grey, which is what this ruling
-        // is about — the set that breaks out below.
+        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
+        // its allowlist), THE FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT
+        // FLAG BUTTON, THE MARKER MEASURE and ADD TO SELECTION (bare `j`,
+        // bare Return, bare `k` and bare `/` are consumed in there like the
+        // verbs' four chords) — THIRTEEN of the eighteen. The two SKIPS and
+        // the MARKER-WALK GROUP'S THREE stay lit, being the mode's own
+        // absolute jumps, its diff-flag cycle and (since 2026-08-18) the march
+        // that composes that cycle with the A/B switch; the architect
+        // confirmed the split explicitly — "making play and stop disabled in h
+        // history view, but allowing home and end, that makes sense". OUTSIDE
+        // THE VIEW: the four VERBS, THE EDIT FLAG BUTTON and THE MARKER MEASURE
+        // on a locked tab, their own gate, stated at their arm above — and,
+        // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
+        // inherit, Edit flag and the Measure (that same arm), on UP / DOWN,
+        // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block). Play
+        // and the two SKIPS carry no arm of their own yet: the ruling names
+        // them ("even the transport's back/forward when you're already at the
+        // home or the beginning of the trim") and their reversal is recorded
+        // at their case below as the ruling's remaining reach on this row.
         //
-        // THE `h` HISTORY VIEW'S PARTITION AT THE TOP OF THIS BODY STILL
-        // OUTRANKS EVERY WORD OF THIS, and the architect confirmed its split
-        // explicitly — "making play and stop disabled in h history view, but
-        // allowing home and end, that makes sense": Space is consumed in the
-        // view, so THE PLAY/STOP BUTTON wears the dead face in there, while
-        // Home/End are the mode's own vocabulary (the absolute jump to 0 / the
-        // last frame), so the two skips stay LIT exactly as they are outside
-        // it — as do the MARKER-WALK THREE, whose chords are the mode's
-        // vocabulary too. All derived from the mode's gates, nothing
-        // hand-listed — and it is why the row's always-on members break
-        // DOWNWARD to a shared `true` instead of returning one here.
+        // WHAT THE ROW DOES NOT GREY, and why, so nobody "completes" it:
+        //   * THE WALLS. At frame 0 the left step cannot move and the button
+        //     stays lit — "although I suppose at zero, it can't move further
+        //     left" — on the walk arrows' own standing precedent (a wall step
+        //     is a consumed no-op by key and by click alike). Walls are the
+        //     one refusal class this roster has never mirrored on this row
+        //     (the history walk's walls, INSIDE the view, are the 2026-08-30
+        //     ruling's one exception, at the companions' arm below).
+        //   * THE WALK'S "NOTHING AHEAD": a Tab past the last enabled marker in
+        //     its direction is a consumed no-op, and it changes with the
+        //     playhead's position, which the lane shows; the walk arm mirrors
+        //     the EMPTY STORE alone (marker_walk_actionable says so).
+        //   * THE VALUE-SHAPED TAILS: a label ref, a pass in target view and
+        //     the bracket wall under Up/Down; an empty payload under Copy
+        //     value. Each needs the act's own resolution run, which a
+        //     per-tick face has no business doing.
+        //   * THE LOCK ON THE ARROWS: read_only_key_blocked drops Up/Down
+        //     outright and Left/Right while a selection stands, and the
+        //     read-only arm above mirrors neither (its membership is
+        //     hand-listed by ruling, and the arrows were the 2026-08-15
+        //     ruling's own exclusions from it); a locked tab keeps a lit pair
+        //     over a refused chord, recorded rather than mirrored.
         //
-        // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS, and what they lost
-        // is the ENABLED split alone: no grey while an audition runs, none
-        // where a launch would refuse, none while no audition runs. The
-        // strict-user-knowledge line settles the TRUTH half of it: a running
-        // audition is the moving scanner's own statement on screen.
+        // PLAY AND STOP WERE THE ROW'S LAST TRUTHFUL ARMS under the 2026-08-15
+        // reversal, and what they lost is the ENABLED split alone: no grey
+        // while an audition runs, none where a launch would refuse, none while
+        // no audition runs. The strict-user-knowledge line settled the TRUTH
+        // half of it: a running audition is the moving scanner's own statement
+        // on screen.
         //
-        // WHAT THE SPLIT ALSO CARRIED IS NOW MOOT RATHER THAN RELOCATED. The
+        // WHAT THE SPLIT ALSO CARRIED IS MOOT RATHER THAN RELOCATED. The
         // enabled bit had been the PAIR's DISAMBIGUATION as well as its truth
         // face — only the meaningful half was ever clickable — so with both
         // halves live a press on Stop while stopped would have started
@@ -9292,138 +9493,136 @@ inline bool redesign_button_enabled(const AppState& a,
         // (redesign_button_glyph_swapped, below), which is Render-is-Cancel's
         // own shape.
         //
-        // playback_launch_playable SURVIVES AND MUST NOT GAIN A FACE READER —
-        // it is the one launch body's own refusal set (launch_playback_window,
-        // under the view-end entry and the bounded audition alike) and that body
-        // calls it (playback_lifecycle.cpp), so it is not producer-less; the A/B
-        // audition's press-time gate is a second reader of the same kind, a gate
-        // and not a face. Only the FACE
-        // read went, the same shape tempo_cent_step_actionable kept hours
-        // earlier when the arrows were reversed.
+        // playback_launch_playable SURVIVES WITHOUT A FACE READER TODAY — it
+        // is the one launch body's own refusal set (launch_playback_window,
+        // under the view-end entry and the bounded audition alike) and that
+        // body calls it (playback_lifecycle.cpp), so it is not producer-less;
+        // the A/B audition's press-time gate is a second reader of the same
+        // kind, a gate and not a face. Its face read went with the 2026-08-15
+        // reversal, the same shape tempo_cent_step_actionable then kept and
+        // has since lost again.
         //
-        // THE ONE FACE-RELATED FIX FROM THIS ARC THAT STAYS is
+        // THE ONE FACE-RELATED FIX FROM THE 2026-08-15 ARC THAT NEVER MOVED is
         // publish_button_face's CLIP-COVERAGE TEST (paint_handler.cpp): the
         // stash means "last PAINTED", not "last computed", so a button whose
         // drawing the damage clip discarded must not refresh its cached face.
-        // That is not a policy choice and is no part of this reversal — it is
-        // what makes any face update at all reliable, and reverting it with the
-        // policy would bring back the stale-row bug the arc opened with.
+        // That is not a policy choice and no part of either reversal — it is
+        // what makes any face update at all reliable, and it is what lets
+        // every arm below cost nothing: main.cpp's per-tick drift comparator
+        // replays this predicate against the stash and damages the row on a
+        // difference, so a selection change reaches the pixels with no damage
+        // call at any mutator.
         //
-        // THE FOUR CARDINAL ARROWS WERE REVERSED FIRST, hours earlier: they
-        // had honest arms for one evening — the marker-lane fork and the cent
-        // step's leading refusals — and the architect took them back the same
-        // day. HIS REASONING, which is per-pair and worth keeping in his own
-        // terms:
+        // THE FOUR CARDINAL ARROWS' SUCCESSION, per pair, in his own terms:
         //   * LEFT / RIGHT were always-on for a REASON rather than by omission
         //     — "left and right were always on because the playhead can always
         //     move". The horizontal step almost always acts, so mirroring the
         //     marker-lane nudge's refusal on top of it made a nearly-always-
         //     live pair start blinking per selection: a large behavioural cost
-        //     for a rarely-true refusal.
-        //   * UP / DOWN are the pair he actually watched blink, and they are
-        //     the concrete case this reversal exists for — "in warp markers
-        //     they can nudge the tempo up and down, but in phase resets they
-        //     can't; in warp markers, every time I selected a marker, that pair
-        //     would blink in and out, and it would be distracting". One pair,
-        //     toggling on every selection in the W view and dead outright in
-        //     the P view.
-        // THE WALL IS DELIBERATELY NOT MIRRORED, and that is consistent rather
-        // than a gap left to finish: at frame 0 the left step genuinely cannot
-        // move — "although I suppose at zero, it can't move further left" — and
-        // the button stays lit anyway, on the walk arrows' own standing
-        // precedent (a wall step is a consumed no-op by key and by click
-        // alike). Walls are the one refusal class this roster has never
-        // mirrored anywhere; do not "complete" this arm with a wall term.
+        //     for a rarely-true refusal (2026-08-15). SINCE 2026-08-30 THE
+        //     PAIR MIRRORS EXACTLY THAT REFUSAL: a selection standing with the
+        //     column off home (horizontal_arrow_step_actionable, the dispatch's
+        //     marker-lane refusal); with no selection the waveform-lane step
+        //     always acts and the pair is LIVE.
+        //   * UP / DOWN are the pair he actually watched blink, and they were
+        //     the concrete case the 2026-08-15 reversal existed for — "in warp
+        //     markers they can nudge the tempo up and down, but in phase
+        //     resets they can't; in warp markers, every time I selected a
+        //     marker, that pair would blink in and out, and it would be
+        //     distracting". SINCE 2026-08-30 THEY MIRROR
+        //     tempo_cent_step_actionable — the P column, an empty selection,
+        //     no focus — the act's own first three returns.
         // Their chords refuse exactly as they did; a click on a refusing arrow
         // is a consumed no-op, the roster's standing shape.
         //
         // THEY ARE PAINTED IN THE `h` VIEW SINCE 2026-08-18 — the cluster swap
         // that replaced them with the history companions went when those four
         // returned to the icon row — AND THEY WEAR THE DEAD FACE IN THERE,
-        // which is a real face this arm never had to produce before. It is the
-        // DERIVED partition's answer and nothing hand-listed: bare Up / Down /
-        // Left / Right are neither the mode's own vocabulary
+        // which is the DERIVED partition's answer and nothing hand-listed:
+        // bare Up / Down / Left / Right are neither the mode's own vocabulary
         // (history_mode_owns_key) nor on its allowlist
         // (history_mode_key_blocked), so the view consumes all four and greys
         // them exactly as it greys every other button whose act it consumes.
-        // Truthful, and it costs no term here: the answer comes from the line
-        // at the top of this body, which the arrows fall under like everything
-        // else. (Under the swap it reached no pixel, which is why the arms
-        // above discuss their RESTING face alone.)
+        // The answer comes from the line at the top of this body, which the
+        // arrows fall under like everything else.
         //
         // THE TWO SKIPS (bare Home / End, and Ctrl+Home / Ctrl+End on a
-        // ctrl-click) ARE UNTRUTHFUL TOO AND DELIBERATELY
-        // SO (architect 2026-08-15), and they fall through to the same plain
-        // `return true`. They had an honest arm for one revision — greying
-        // where the playhead already rested on the frame the jump would land
-        // on, compared against playhead_skip_landing_frame — and THAT ARM WAS
-        // BUILT ON A FALSE PREMISE: a Home / End press is not a pure jump. Every
-        // form also STOPS A LIVE AUDITION, CLEARS THE MARKER SELECTION (the
-        // marker lane's exit repair) and HIDES THE TRIM REGION OVERLAY,
+        // ctrl-click) STILL FALL THROUGH TO THE PLAIN `true` HERE, and PLAY
+        // with them, under the 2026-08-15 reversal's own reasoning, which the
+        // 2026-08-30 ruling names for reversal. The skips had an honest arm
+        // for one revision — greying where the playhead already rested on the
+        // frame the jump would land on, compared against
+        // playhead_skip_landing_frame — and the 2026-08-15 reversal called
+        // that arm's premise false: a Home / End press is not a pure jump.
+        // Every form also STOPS A LIVE AUDITION, CLEARS THE MARKER SELECTION
+        // (the marker lane's exit repair) and HIDES THE TRIM REGION OVERLAY,
         // unconditionally and even when the jump itself moves nothing (the
         // shared body run_playhead_end_jump and the `h` arm,
-        // input_key_dispatch.cpp). So a greyed skip made the FACE
-        // PROMISE LESS THAN THE KEY DELIVERS — with the cursor parked on a trim
-        // bound the key still stopped the audition, cleared the selection and
-        // hid the overlay while the dead button could do none of it, which
-        // is the exact drift the 2026-08-07 read-only band ruling names and the
-        // one thing this predicate exists to prevent.
-        // THE ARCHITECT'S OWN SECOND REASON, the one that generalizes: whether
-        // the playhead sits on a trim bound is VISIBLE ON SCREEN, and the
-        // roster only mirrors what the screen does not already answer — the
-        // scoped rule at the head of this body, applied.
-        // DO NOT RE-ADD A FACE TERM HERE. Any landing compare put back on these
-        // two reintroduces exactly that divergence, and gating the ACT on a
-        // no-op jump to make the face true instead would change behaviour,
-        // which this predicate never does. playhead_skip_landing_frame SURVIVES
-        // for the ACT's sake alone — every jump sharing one arithmetic — and
-        // has no face reader by ruling; its own header says so.
+        // input_key_dispatch.cpp), so a greyed skip made the FACE PROMISE LESS
+        // THAN THE KEY DELIVERS. His second reason then: whether the playhead
+        // sits on a trim bound is VISIBLE ON SCREEN. The 2026-08-30 ruling
+        // answers both with "even the transport's back/forward when you're
+        // already at the home or the beginning of the trim"; until their arm
+        // lands, playhead_skip_landing_frame keeps its act-only reader and
+        // this line stays the skips' whole answer.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
+        case RedesignButton::TransportPlayStop:
+            break;
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
+            if (!horizontal_arrow_step_actionable(a)) return false;
+            break;
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
-        case RedesignButton::TransportPlayStop:
-        // THE MARKER-WALK GROUP TAKES THE ROW'S POLICY UNCHANGED (2026-08-15):
-        // always-on below the loading/blank guard, with the `h` view's derived
-        // partition the only thing that could grey any of them — and it greys
-        // NONE, all three chords being the mode's OWN vocabulary in there (the
-        // diff-flag cycle on bare Tab / Shift+Tab, and the march over that
-        // cycle on Ctrl+Shift+Tab since 2026-08-18).
-        // Their refusals outside the view are the keys' own consumed no-ops (an
-        // empty marker store, a cycle with nowhere to go), exactly the class
-        // the ruling at the head of this body refuses to mirror.
+            if (!tempo_cent_step_actionable(a)) return false;
+            break;
+        // THE MARKER-WALK GROUP (2026-08-15's always-on policy until
+        // 2026-08-30): the `h` view's derived partition greys NONE of the
+        // three, all three chords being the mode's OWN vocabulary in there
+        // (the diff-flag cycle on bare Tab / Shift+Tab, and the march over
+        // that cycle on Ctrl+Shift+Tab since 2026-08-18). OUTSIDE THE VIEW THE
+        // TWO STEPS GREY ON AN EMPTY ACTIVE STORE since 2026-08-30
+        // (marker_walk_actionable, the cycle's own leading return); WALK BOTH
+        // TABS never greys, its tab switch acting whatever the stores hold.
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
+            if (!marker_walk_actionable(a)) return false;
+            break;
         case RedesignButton::TransportWalkBoth:
-        // COPY VALUE TAKES THE ROW'S POLICY (2026-08-29), and it is the VERB
-        // GROUP'S ONE MEMBER THAT DOES: both of its chords — bare `j`, the
-        // clipboard write, and Shift+`j`, the two `c` frames around a tab
-        // switch, a select and a land — are on read_only_key_blocked's
-        // allowlist, authoring
-        // nothing the lock protects, so it must NOT join the read-only arm
-        // above. Greying a face whose key still works is the face promising
-        // less than the key delivers, which the read-only-legal set's own rule
-        // refuses (Play renders left that arm on exactly this ground the day
-        // before). AND NO SELECTION TERM, the group's standing rule: an
-        // ineligible focus is the act's consumed no-op and a face tracking it
-        // would blink at every selection. What greys it is the `h` VIEW,
-        // through the derived partition at the top of this body (bare `j` is
-        // neither the mode's vocabulary nor on its allowlist), and the folder
-        // overlay's first arm — nothing hand-listed either way.
+            break;
+        // COPY VALUE (2026-08-29) is the VERB GROUP'S ONE MEMBER OUTSIDE THE
+        // READ-ONLY ARM: both of its chords — bare `j`, the clipboard write,
+        // and Shift+`j`, the two `c` frames around a tab switch, a select and
+        // a land — are on read_only_key_blocked's allowlist, authoring nothing
+        // the lock protects, so it must NOT join that arm above. Greying a
+        // face whose key still works is the face promising less than the key
+        // delivers, which the read-only-legal set's own rule refuses (Play
+        // renders left that arm on exactly this ground the day before). ITS
+        // SELECTION TERM IS payload_eligible_marker ON THE FOCUS since
+        // 2026-08-30 — the ONE gate both chords run (input_key_dispatch.cpp),
+        // so an owner, a phase reset, iteration mode, the P column or nothing
+        // focused greys it exactly where the press would be a consumed no-op;
+        // for its first day it carried none, under the group's then-standing
+        // no-blink rule. The `h` VIEW greys it through the derived partition
+        // at the top of this body (bare `j` is neither the mode's vocabulary
+        // nor on its allowlist), and the folder overlay's first arm — nothing
+        // hand-listed either way.
         case RedesignButton::IconCopyValue:
+            if (!payload_eligible_marker(a, a.last_selected_marker))
+                return false;
+            break;
         // (THE MARKER MEASURE sat here — the row's always-on policy — from
         // 2026-08-20 to the 2026-08-21 sunset, lit under the lock because its
         // shift half was the lock-legal score-video jump and a chrome face
         // cannot split. The jump left the product whole and the button
         // returned to the read-only arm above with its four neighbours.)
-        // ADD TO SELECTION TAKES THE ROW'S POLICY TOO (2026-08-18): its chord
-        // authors nothing, so the READ-ONLY arm above deliberately does not
-        // carry it —
-        // a selection is navigation, the same ruling that keeps the trim
-        // gestures legal on a locked tab. There is no refusal to mirror
-        // either: bare `k` flips a session bit on any loaded piece, in either
+        // ADD TO SELECTION TAKES THE LOADING/BLANK GUARD AND NOTHING ELSE
+        // (2026-08-18, and still honest under the 2026-08-30 ruling): its
+        // chord authors nothing, so the READ-ONLY arm above deliberately does
+        // not carry it — a selection is navigation, the same ruling that keeps
+        // the trim gestures legal on a locked tab. And there is no refusal to
+        // mirror: bare `k` flips a session bit on any loaded piece, in either
         // column and either audio view. The `h` VIEW is the one thing that
         // greys it, through the DERIVED partition at the top of this body
         // (bare `k` is neither history_mode_owns_key's vocabulary nor on
@@ -9432,24 +9631,24 @@ inline bool redesign_button_enabled(const AppState& a,
         // bit, is what reports the mode (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
             break;
-        // THE FOUR HISTORY COMPANIONS GREY OUTSIDE THE `h` VIEW AND ARE LIVE
-        // INSIDE IT (2026-08-18) — the ICON ROW's own settled rule, which is
-        // where they live again since the roster relayout: what a mode refuses
-        // simply GREYS, and their four chords (bare `u`, Ctrl+H, bare `,` and
-        // bare `.`) are bound in exactly one place in the product and it is
-        // inside the view.
+        // THE SIX HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
+        // ICON ROW's own settled rule, which is where they live again since
+        // the roster relayout: what a mode refuses simply GREYS, and their
+        // chords (bare `g` for the two walk radios, bare `u`, Ctrl+H, bare `,`
+        // and bare `.` for the four companions) are bound in exactly one place
+        // in the product and it is inside the view.
         //
-        // THE OWNER IS THIS ARM AND NOT THE DERIVED PARTITION, deliberately,
-        // and the reason is that the partition CANNOT ANSWER IT: the mode line
-        // at the top of this body runs only while `a.history_mode.active`, so
-        // it has nothing at all to say about a button outside the view — and
-        // asked inside it, history_mode_owns_key claims three of these four as
-        // the mode's OWN vocabulary and answers LIVE, which is the reverse of
-        // the fact wanted here. One `a.history_mode.active` term states both
-        // halves at once and cannot fall out of step with itself.
+        // THE OWNER OF THAT RESTING GREY IS THIS ARM AND NOT THE DERIVED
+        // PARTITION, deliberately, and the reason is that the partition CANNOT
+        // ANSWER IT: the mode line at the top of this body runs only while
+        // `a.history_mode.active`, so it has nothing at all to say about a
+        // button outside the view — and asked inside it, history_mode_owns_key
+        // claims five of these six as the mode's OWN vocabulary and answers
+        // LIVE, which is the reverse of the fact wanted here. One
+        // `a.history_mode.active` term states the resting half for all six.
         //
         // IT IS A REVIVAL, and the ruling it revives is what a reader must not
-        // re-retire. The four ANSWERED PLAIN TRUE from 2026-08-15 to
+        // re-retire. The four companions ANSWERED PLAIN TRUE from 2026-08-15 to
         // 2026-08-18, and that was right for the row they were on: the
         // 2026-08-14 move to the BOTTOM row put them in the cardinal arrows'
         // own slots under a cluster swap, so outside the view they were not
@@ -9460,23 +9659,34 @@ inline bool redesign_button_enabled(const AppState& a,
         // one they held 2026-08-05..15 (2026-08-08 for the Cumulative toggle),
         // for this same reason, restored verbatim in effect.
         //
-        // REVERT'S IN-VIEW GREY IS NOT REVIVED WITH IT and the two are separate
-        // rulings. That one was the DERIVED partition's: the view admits Ctrl+H
-        // only while a diff flag stands (history_mode_revert_subject_standing),
-        // so one decision refused the chord and greyed the button. THE
-        // ARCHITECT REVERSED IT ON 2026-08-15 FOR THE BLINK, NOT THE LOGIC —
-        // that admission tracks the diff-flag SELECTION, so the glyph flipped
-        // on every click in the marker lane to report a selection the lane is
-        // already showing — and redesign_button_is_history_companion is what
-        // still lifts the four over that partition inside the view. The chord
-        // is untouched and still refuses on an empty subject; only the face
-        // stays quiet.
-        //
-        // THEY NEVER GREYED AT THE WALK'S WALLS EITHER, and that reasoning
-        // survives intact as the smaller case of the same rule: stepping past
-        // the oldest or newest member is a consumed no-op by key and by click
-        // alike, and a face tracking the walk index would repaint the row on
-        // every step to report what the `n/N` corner readout already shows.
+        // INSIDE THE VIEW THEY ARE TRUTHFUL TOO SINCE 2026-08-30 (architect:
+        // "Any time a button would be a no-op, grey it"), and the two in-view
+        // greys have TWO OWNERS because the partition can see one and not the
+        // other:
+        //   * REVERT'S is the DERIVED partition's, at the top of this body: the
+        //     view admits Ctrl+H only while a diff flag stands
+        //     (history_mode_revert_subject_standing), so one decision refuses
+        //     the chord and greys the button. THE ARCHITECT REVERSED THAT FACE
+        //     ON 2026-08-15 FOR THE BLINK, NOT THE LOGIC — the admission
+        //     tracks the diff-flag SELECTION, so the glyph flipped on every
+        //     click in the marker lane to report a selection the lane is
+        //     already showing — and redesign_button_is_history_companion
+        //     lifted the four over the partition inside the view for fifteen
+        //     days. The 2026-08-30 ruling withdrew the blink argument; the
+        //     lift and its membership predicate are deleted, and this arm has
+        //     no Revert term of its own to add.
+        //   * OLDER'S AND NEWER'S ARE THIS ARM'S: the walk's WALLS
+        //     (history_walk_older_actionable / history_walk_newer_actionable,
+        //     the `,` / `.` arm's own wall check), which the partition cannot
+        //     see because both chords are the mode's own vocabulary and answer
+        //     LIVE there whatever the index. They never greyed at the walls
+        //     before — stepping past the oldest or newest member was a
+        //     consumed no-op by key and by click alike, and a face tracking
+        //     the walk index would have repainted the row on every step to
+        //     report what the `n/N` corner readout already showed; the ruling
+        //     names exactly that kind of no-op. The SHIFT twins (oldest /
+        //     newest) lose nothing to the grey: at a wall the jump onto it
+        //     moves nothing either, the predicates' own argument.
         //
         // THE CUMULATIVE TOGGLE'S SELECTED FACE IS UNAFFECTED and was never
         // scoped this way: the reading is a session preference
@@ -9491,19 +9701,22 @@ inline bool redesign_button_enabled(const AppState& a,
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
         //
-        // THE TWO WALK RADIOS TAKE THIS SAME ARM (2026-08-18), for this same
+        // THE TWO WALK RADIOS TAKE THE RESTING TERM (2026-08-18), for this same
         // reason and with one difference worth naming: bare `g` IS the mode's
-        // own vocabulary, so the derived partition would answer LIVE for them
+        // own vocabulary, so the derived partition answers LIVE for them
         // inside the view all by itself — what it cannot answer is the RESTING
-        // grey out here, the partition running only while `active`. One term
-        // states both halves for all six.
+        // grey out here, the partition running only while `active`.
         case RedesignButton::HistoryWalkGit:
         case RedesignButton::HistoryWalkSession:
-        case RedesignButton::HistoryOlder:
-        case RedesignButton::HistoryNewer:
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryCumulative:
             return a.history_mode.active;
+        case RedesignButton::HistoryOlder:
+            return a.history_mode.active &&
+                   history_walk_older_actionable(a.history_mode);
+        case RedesignButton::HistoryNewer:
+            return a.history_mode.active &&
+                   history_walk_newer_actionable(a.history_mode);
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -9518,22 +9731,21 @@ inline bool redesign_button_enabled(const AppState& a,
     // promising less than the key delivers — the exact drift this predicate
     // exists to prevent. It stays a mirror of the gate, one arm per chord.
     switch (b) {
-        // THE BOTTOM ROW'S ALWAYS-ON MEMBERS HAVE NO ARM HERE AT ALL
-        // since
-        // 2026-08-15 — they return a plain `true` from the `default` below,
-        // which is where their enumeration and the only count of them live, and
-        // the ruling, the architect's reasoning and the three reversals that
-        // got there are at the first switch's transport block above. (Its four
-        // MARKER VERBS are not among them: their read-only term is in the arm
-        // above, carried down from the icon row with the buttons on
-        // 2026-08-18. THE MARKER MEASURE came down in that same group and IS
-        // among the always-on since 2026-08-20 — a chrome face cannot split and
-        // its shift half is lock-legal, the ruling at its own arm above.)
-        // Nothing
-        // on that row is to be given a face term again without a new ruling:
-        // the pattern each attempt fell into was mirroring a refusal that
-        // changes at INTERACTION cadence, which makes a glyph blink to restate
-        // what the screen already shows.
+        // THE BOTTOM ROW'S MEMBERS HAVE NO ARM HERE since 2026-08-15 — they
+        // return a plain `true` from the `default` below, which is where their
+        // enumeration and the only count of them live. WHAT THEY SAY, THEY SAY
+        // ABOVE THE GUARD: from 2026-08-15 to 2026-08-30 nothing on that row
+        // was to be given a face term again without a new ruling, the pattern
+        // each attempt had fallen into being a refusal that changes at
+        // INTERACTION cadence; THE TRUTHFUL-BUTTONS RULING IS THAT RULING
+        // (architect 2026-08-30, "Any time a button would be a no-op, grey
+        // it"), and the terms it added sit in the first switch's transport
+        // block, each refusing AHEAD of the break so the guard below is still
+        // every member's shared answer. (The four MARKER VERBS, the EDIT FLAG
+        // BUTTON and the MEASURE are not among the members here: their
+        // read-only term and, since 2026-08-30, their selection terms are in
+        // the arm above, carried down from the icon row with the buttons on
+        // 2026-08-18.)
         //
         // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
         // is GLOBAL rather than mode-scoped because the act outlives the view it
@@ -9556,21 +9768,24 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         default:
-            // REACHED BY EXACTLY ELEVEN IDS, re-derived 2026-08-21 after the
-            // sunset returned the MARKER MEASURE to the read-only arm — the
-            // bottom row's ALWAYS-ON members (the transport
-            // three, the marker-walk three, the four arrows
-            // and ADD TO SELECTION), which break
-            // out of the first switch to take the loading/blank guard and have
-            // nothing else to say (each of the four pairs held an honest arm
-            // for a revision or two; the ruling and the three separate reasons
-            // they were taken back are at that block). The row's remaining
-            // members are the four SINGLE-MARKER VERBS and the MARKER MEASURE,
-            // which return from the
-            // read-only arm above — that arm's own case list is the one
-            // authoritative statement of who takes the lock's grey, so no count
-            // of it is restated here. Every other id returned above, from one
-            // switch or the other.
+            // REACHED BY EXACTLY TWELVE IDS, re-derived 2026-08-30 (eleven
+            // until Copy value broke out with its 2026-08-29 landing, the
+            // count unrevised that day) — the
+            // bottom row's members that break out of the first switch to take
+            // the loading/blank guard: the transport three, the marker-walk
+            // three, the four arrows, COPY VALUE and ADD TO SELECTION. Seven of
+            // the twelve
+            // refuse ahead of that break on their own predicate since the
+            // truthful-buttons ruling (the two cardinal pairs, the two walk
+            // steps and Copy value); the ruling, the 2026-08-15 reversal it
+            // supersedes and the
+            // per-pair successions are at that block. The row's remaining
+            // members are the four SINGLE-MARKER VERBS, the EDIT FLAG BUTTON
+            // and the MARKER MEASURE, which return from the read-only arm
+            // above — that arm's own case list is the one authoritative
+            // statement of who takes the lock's grey, so no count of it is
+            // restated here. Every other id returned above, from one switch
+            // or the other.
             break;
     }
     return true;
@@ -9741,20 +9956,19 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconLoadInPlace:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
         // it is an ACT, not a mode — it runs once and closes the view — so
-        // there is no bit for a lamp to read. IT SAYS NOTHING WITH ITS ENABLED
-        // FACE EITHER since 2026-08-15: that face greyed when nothing was
-        // selected, and the architect reversed it because the grey tracked the
-        // diff-flag SELECTION and blinked at interaction cadence — the argument
-        // that took the four cardinal arrows always-on. The chord still refuses
-        // on an empty subject and the click is then a consumed no-op; the
-        // record is at the history companions' arm in redesign_button_enabled.
+        // there is no bit for a lamp to read. Its ENABLED face greys with no
+        // subject again since 2026-08-30 (the derived `h` partition's answer;
+        // the architect had reversed that grey 2026-08-15 as a per-selection
+        // blink and reversed the reversal with the truthful-buttons ruling —
+        // the record is at the history companions' arm in
+        // redesign_button_enabled).
         case RedesignButton::HistoryRevert:
         // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
         // like follow and iteration: each is a step that completes, with no
         // state to stay lit for. WHERE the walk stands is the corner readout's
-        // `n/N`, which says it in numbers; a lit arrow could only mean "you
-        // pressed this", which the click face already says for as long as it is
-        // true.
+        // `n/N`, which says it in numbers, and since 2026-08-30 the pair's
+        // ENABLED face at the walls; a lit arrow could only mean "you pressed
+        // this", which the click face already says for as long as it is true.
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
         // THE BOTTOM ROW IS MOMENTARY BUT FOR ITS ONE MODE (architect
@@ -10180,7 +10394,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // The tooltips-on-disabled ruling (architect 2026-08-07, kdenlive's own
         // behavior: a disabled icon still explains itself) governs these where
         // they rest disabled, which since 2026-08-18 is every frame outside the
-        // `h` view. They were painted inside the view alone from 2026-08-12
+        // `h` view and since 2026-08-30 the walk's two walls inside it — the
+        // shift line stays on a greyed arrow, the jump it names moving nothing
+        // there either. They were painted inside the view alone from 2026-08-12
         // (first as the icon row's collapsed four, then as the bottom row's
         // swapped cluster) until the relayout brought them back to a row that
         // hides nothing.
@@ -10188,14 +10404,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:
             return {"Newer (.)", "Press Shift for newest."};
-        // THE REVERT ACT, one line: the chord has no shifted twin. It was
-        // GREYED inside the view whenever nothing was selected and showed this
-        // hint there too, per the same ruling; since 2026-08-15 it is lit in
-        // every frame the view STANDS (the architect's reversal of a grey that
-        // tracked the diff-flag selection). The disabled ruling reaches it
-        // again OUTSIDE the view since 2026-08-18, on the companions' revived
-        // resting grey — a different fact from the one that was reversed, and
-        // the two do not meet.
+        // THE REVERT ACT, one line: the chord has no shifted twin. It is
+        // GREYED inside the view whenever nothing is selected and shows this
+        // hint there too, per the same ruling — from 2026-08-05, lit in every
+        // frame the view stood from 2026-08-15 (the architect's reversal of a
+        // grey that tracked the diff-flag selection) and greyed again since
+        // 2026-08-30 (the truthful-buttons ruling). The disabled ruling
+        // reaches it OUTSIDE the view too since 2026-08-18, on the companions'
+        // revived resting grey — a different fact, owned at a different arm.
         case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
@@ -10879,10 +11095,13 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // RESOLVED value worth reaching for — i.e. its flag does not already display a
 // numeric tempo (pass markers and label_ref markers qualify; owning markers
 // don't). Requires warp view with iteration mode off; always false in phase
-// reset view (no pass concept). ITS TWO CALLERS ARE THE VALUE PAIR (2026-08-29,
-// re-greped): bare `j`, which copies the focused marker's resolved value to
-// the system clipboard, and Shift+`j`, which jumps to the marker that value
-// came from. It was `popup_eligible_marker` — the hover popup's name, kept
+// reset view (no pass concept). ITS THREE CALLERS, re-greped 2026-08-30: the
+// VALUE PAIR (2026-08-29) — bare `j`, which copies the focused marker's
+// resolved value to the system clipboard, and Shift+`j`, which jumps to the
+// marker that value came from — and since 2026-08-30 the COPY VALUE BUTTON'S
+// disabled face (redesign_button_enabled, the truthful-buttons ruling), which
+// asks it of the focus so the button greys exactly where both chords refuse.
+// It was `popup_eligible_marker` — the hover popup's name, kept
 // through that popup's death in row 5, through the bottom strip's readout and
 // through the one-day status bar's right cell — and it is named for what it
 // gates now that no surface DISPLAYS a resolved value at all.

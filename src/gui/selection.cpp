@@ -332,6 +332,12 @@ void Selection::sanitize_selection_after_restore(int n) {
 }
 
 void Selection::cycle_selection(bool forward) {
+    // AN EMPTY ACTIVE STORE HAS NOTHING TO LAND ON, and the refusal reads its
+    // one owner (marker_walk_actionable, app_state.h — 2026-08-30, when the
+    // Walk previous / Walk next buttons' face began reading the same fact).
+    // The scans below yielded no candidate on n == 0 already; naming the
+    // return is what gives the face and the act one predicate.
+    if (!marker_walk_actionable(app)) return;
     const bool phase_reset = (app.active_markers_view == 'P');
 
     // Bind const refs once so the count, frame_of, and is_disabled reads below

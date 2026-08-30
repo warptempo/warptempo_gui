@@ -227,7 +227,10 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
 // next earlier owner, the same live re-resolution that disabling an owner
 // already produces; no values are frozen on delete.
 void GuiWarpMarkersOps::delete_selected_marker() {
-    if (app.selected_markers.empty()) return;
+    // THE SUBJECT REFUSAL READS ITS ONE OWNER (marker_selection_standing,
+    // app_state.h — 2026-08-30, when the Delete button's face began reading
+    // the same fact through marker_selection_verb_actionable).
+    if (!marker_selection_standing(app)) return;
     const auto& mv = app.warpmarkers.markers();
 
     // THE STALE-INDEX BELT, ONE POLICY FOR EVERY VERB THAT ITERATES THE SELECTION
@@ -315,8 +318,14 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 // inheritance walk falls back to tempo 1.00 when no owner precedes it) —
 // nothing gates this gesture.
 void GuiWarpMarkersOps::toggle_inherits() {
-    if (app.selected_markers.empty()) return;
-    if (app.last_selected_marker < 0) return;
+    // THE LEADING REFUSAL IS ONE PREDICATE (inherit_toggle_actionable,
+    // app_state.h — 2026-08-30): the P view, an empty selection, no focus.
+    // The P-view return lived at the Ctrl+N dispatch arm until then and the
+    // two subject returns here; the Toggle inherit button's face reads the
+    // same predicate, so the act and the glyph are one decision. This op is
+    // warp-only by class, so the view term is a belt here and the refusal at
+    // the dispatch — which has no test of its own now.
+    if (!inherit_toggle_actionable(app)) return;
     // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
     // COUPLED members (the doctrine is at the head of position_nudge.h): the
     // pass -> owner freeze below reads the RESOLVED inheritance walk, so what a
@@ -430,7 +439,9 @@ void GuiWarpMarkersOps::toggle_inherits() {
 // on any marker (cascade still applies only when the toggled marker is a
 // label_def).
 void GuiWarpMarkersOps::toggle_disabled() {
-    if (app.selected_markers.empty()) return;
+    // The subject refusal reads its one owner (marker_selection_standing,
+    // app_state.h), the delete's shape.
+    if (!marker_selection_standing(app)) return;
     const auto& mv_const = app.warpmarkers.markers();
     // Any marker may be disabled, including the one at time 0. A disabled
     // first marker leaves frame 0 ownerless, and the parser resolver
