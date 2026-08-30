@@ -3884,7 +3884,16 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // report "more than <cap>" rather than computing the full
         // product. Iteration mode and the brackets survive for
         // correction — the wipe-and-exit tail below does not run.
-        prompt.open_error_notice(
+        //
+        // A NORMAL CARD (architect 2026-08-30): a refusal that answers an act
+        // the user just gave is an EVENT, and events are cards
+        // (messaging.md's split). It wore the dismiss-only ERROR_NOTICE modal
+        // until the cards landed — the pre-split surface for a sentence the
+        // user had to be shown — and that prompt kind retired whole with this
+        // move, its other caller (the target-view entry gate) having become a
+        // silent one. The sentence is unchanged.
+        notifications.notify(
+            AppState::NotificationClass::Normal,
             "Iteration sweep refused: more than " +
             std::to_string(kMaxIterSweepCells) +
             " cells (cap " + std::to_string(kMaxIterSweepCells) +

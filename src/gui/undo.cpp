@@ -733,10 +733,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // tab restore above — a settings-only entry carries the view it was typed in
     // just as it carries the tab — and the chokepoint's own same-view early
     // return is what makes that free. It is BEST-EFFORT in exactly one direction:
-    // entering target view can refuse its validity gate (the error-notice class,
-    // unreachable from program-written input), and a refusal leaves the audio
-    // view where it stands while the rest of the restore proceeds — there is no
-    // aborting a restore whose entry is already popped.
+    // entering target view can refuse its validity gate (the tripwire class,
+    // unreachable from program-written input, silent on screen since
+    // 2026-08-30), and a refusal leaves the audio view where it stands while
+    // the rest of the restore proceeds — there is no aborting a restore whose
+    // entry is already popped.
     //
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
     // recorded, a restore lands the combination the op was AUTHORED in; the

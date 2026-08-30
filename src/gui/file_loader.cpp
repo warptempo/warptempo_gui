@@ -717,17 +717,23 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // whenever the map builds. Every input the walk consumes is in place by
     // this point: markers (parsed above, default zero-marker seeded) and
     // engine settings (strict block above). On failure — the tripwire-class
-    // build failures only — force source view SILENTLY (a load is not a
-    // user command; the next `t` entry surfaces the refusal through the
-    // popup). Forcing 'S' intentionally means a later save persists
-    // active_audio_view=S — the saved line reflects the view actually
-    // shown.
+    // build failures only — force source view SILENTLY, naming the cause on
+    // stderr and nowhere else. THE `t` ENTRY REFUSES IDENTICALLY SINCE
+    // 2026-08-30 (architect): one predicate, one answer, the same stderr
+    // sentence at both surfaces (the ruling is at the predicate's
+    // declaration, input_handler.h). Forcing 'S' intentionally means a later
+    // save persists active_audio_view=S — the saved line reflects the view
+    // actually shown.
     if (app.active_audio_view == 'T') {
-        if (!validate_target_view_entry(
-                app.warpmarkers.markers(),
-                app.engine_settings.scale,
-                audio.sample_rate(),
-                static_cast<long>(audio.total_frames()))) {
+        auto entry = validate_target_view_entry(
+            app.warpmarkers.markers(),
+            app.engine_settings.scale,
+            audio.sample_rate(),
+            static_cast<long>(audio.total_frames()));
+        if (!entry) {
+            std::fprintf(stderr,
+                         "warptempo_gui: Target view entry refused: %s\n",
+                         entry.error().c_str());
             app.active_audio_view = 'S';
             // The tab-activation and playhead clamps above ran against the
             // target-domain total (live_total_frames consults the target map

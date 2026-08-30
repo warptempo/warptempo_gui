@@ -269,6 +269,28 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
 // failures. On success the built map is returned so the toggle can reuse
 // it for its viewport/playhead translation (no second build); on failure
 // the first owner's error string is returned verbatim.
+//
+// A REFUSAL IS SILENT ON SCREEN, AND BOTH CALLERS REFUSE ALIKE (architect
+// 2026-08-30). The gate STAYS — it is a silent-wrong guard: the preview must
+// never receive a map the builder refuses. Its MESSAGE goes. The `t` road
+// (and the icon row's T radios, and every caller composing the set-to form)
+// stays in source view and prints ONE stderr line with the builder's own
+// words, `warptempo_gui: Target view entry refused: <error>`, which is
+// exactly what the load restore has always done bar the line itself — one
+// predicate, one answer, one sentence.
+//
+// WHY NO ON-SCREEN SURFACE EXISTS FOR IT, by ruling rather than by omission:
+// the refusals here are UNREACHABLE FROM PROGRAM-WRITTEN INPUT. Loads are
+// strict (an adversarial store hard-fails the load long before this walk),
+// the resolver normalizes every ambiguous marker arrangement to tempo 1.00
+// ahead of the build, and authored tempo is integer cents in [25, 400] — so
+// the engine-metadata / non-positive-tempo-product class the builder refuses
+// on cannot be authored. What would catch a builder/resolver disagreement is
+// not a message here but the PREVIEW's own `Target render failed` card: the
+// same map is rebuilt on the render road, where a failure is an event the
+// user was not watching. This wore the dismiss-only ERROR_NOTICE modal until
+// 2026-08-30; that prompt kind retired whole with the move (its other caller,
+// the iteration sweep's cell cap, became a normal card).
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames);
@@ -3426,8 +3448,9 @@ private:
     // Target translates app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level through the current warp_frame_map in place and enters target
     // view only when target view is available (a refusal leaves the view where
-    // it was and opens the error notice, so callers read the verdict off
-    // app.active_audio_view rather than a return value). Target-view playback
+    // it was and says one stderr line, nothing on screen — so callers read the
+    // verdict off app.active_audio_view rather than a return value; the ruling
+    // is at validate_target_view_entry above). Target-view playback
     // is allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere.
     //

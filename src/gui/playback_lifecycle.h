@@ -86,7 +86,7 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-28 — NINE
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-08-30 — EIGHT
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
@@ -96,8 +96,10 @@ struct GuiPlaybackLifecycle {
     // (open_measure_paste_editor, 2026-08-20) and the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
     // 2026-08-28) — the last two had joined without this list moving, which
-    // this re-grep corrects; the TWO prompt opens
-    // (prompt.cpp: unsaved, error notice); and THE RENDER PLAYER's open
+    // this re-grep corrects; the ONE prompt open
+    // (prompt.cpp: unsaved — the error notice's was the second until that
+    // prompt kind retired whole on 2026-08-30, which is what takes the count
+    // from nine to eight); and THE RENDER PLAYER's open
     // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
     // 2026-08-28; the project's audition ends where the player's transport
     // begins, and the player's own stops all take stop_playback_if_playing

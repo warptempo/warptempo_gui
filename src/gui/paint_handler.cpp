@@ -5482,7 +5482,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // layout block below:
 //   A PROMPT — the message at the row's left pad, one pad, then the answer
 //   buttons in painted order. Each button wears its response's PLAIN WORD
-//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK" on the error notice)
+//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK" on the load
+//   confirmation)
 //   and names its key on its TOOLTIP instead — the bracketed accelerators are
 //   retired for the second time and with their reason recorded at PromptState,
 //   which owns the label rule; the codepoint-exact lowercase match is

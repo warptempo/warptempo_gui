@@ -107,41 +107,37 @@ struct GuiPrompt {
     // confirmation, whose raise lives on the input handler beside the act it
     // confirms; the member above records its one reader.)
 
-    // Dismiss-only modal error notice (ERROR_NOTICE), painted in the CENTERED
-    // MODAL DIALOG like every other prompt since 2026-08-12.
-    // `text` is displayed verbatim — callers pass the owner's own error
-    // string, unmodified. While active it is modal exactly like the other
-    // prompts: the veil swallows every outside press, its one OK button and the
-    // keyboard answer, Esc acknowledges.
-    // Covers the environmental and tripwire-class refusals. TWO CALLERS
-    // (re-derived by grep 2026-08-09), and both are SYNCHRONOUS REFUSALS of a
-    // command the user just gave: the target-view entry gate (its resolve/build
-    // chain — the engine-metadata / non-positive-tempo-product class; marker
-    // arrangements always enter — the parser resolver normalizes them, and trim
-    // plays no part), and the iteration-sweep cell-cap refusal. Each rides a key
-    // whose own gate has already cleared the way for it — no popup, no editor
-    // and no live gesture can stand when either fires — so neither owes this
-    // surface anything on the way in.
+    // (THE DISMISS-ONLY ERROR NOTICE — ERROR_NOTICE, open_error_notice —
+    // RETIRED WHOLE 2026-08-30, architect. It was the pre-split surface for a
+    // sentence the user had to be shown: the environmental and tripwire-class
+    // refusals, painted in the modal like every other prompt, dismissed by its
+    // lone "OK" on Esc. The messaging split (messaging.md) left it with
+    // nothing to carry. A refusal that answers an act is an EVENT, so the
+    // ITERATION SWEEP'S CELL-CAP refusal is a NORMAL CARD now, with the same
+    // sentence; and the TARGET-VIEW ENTRY GATE refuses SILENTLY the way its
+    // twin the load restore always did — one stderr line, nothing on screen —
+    // because its refusals are unreachable from program-written input (the
+    // ruling and its reason are at validate_target_view_entry,
+    // input_handler.h). The CHECKPOINT ACT'S FAILURE REPORT was a third caller
+    // from 2026-08-07: it arrived on a worker's clock, past every gate, and
+    // had to make room for itself; on 2026-08-09 the architect replaced it
+    // with the bottom row's permanent paint-only critical slot, and since
+    // 2026-08-29 it is a CRITICAL NOTIFICATION CARD.
     //
-    // (THE CHECKPOINT ACT'S FAILURE REPORT WAS A THIRD CALLER from 2026-08-07:
-    // it arrived on a worker's clock, past every gate, and had to make room for
-    // itself — parking behind a prompt or an editor, closing an open dropdown,
-    // parking for a live pointer gesture whose release this prompt's own gate
-    // would have swallowed. On 2026-08-09 the architect replaced it with the
-    // bottom row's PERMANENT PAINT-ONLY CRITICAL SLOT — a critical failure must
-    // be impossible to miss and impossible to hijack with — and that whole
-    // family of guards went with it as producer-less; since 2026-08-29 the
-    // report is a CRITICAL NOTIFICATION CARD, which hijacks nothing either.)
+    // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
+    // question with its save-failed rung, the paste confirmation and the load
+    // confirmation — so EVERY PROMPT IN THE PRODUCT IS NOW A QUESTION, which
+    // is the messaging split's own rule read back into the type.
     //
-    // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it is not this
-    // one: the compositor's WM close raises the unsaved-work prompt
-    // (GuiPrompt::request_close from main.cpp's set_on_close) on the compositor's
-    // clock, with no key and no gesture behind it. It is safe because it CLEARS
-    // THE WAY IN ITS OWN BODY first — force-ending every live gesture through
-    // their release bodies, hiding the floating hint and closing the popup — so
-    // the honest rule is that nothing asynchronous raises a modal without doing
-    // that, rather than that nothing asynchronous raises one at all.
-    void open_error_notice(std::string text);
+    // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it never was
+    // this one: the compositor's WM close raises the unsaved-work prompt
+    // (GuiPrompt::request_close from main.cpp's set_on_close) on the
+    // compositor's clock, with no key and no gesture behind it. It is safe
+    // because it CLEARS THE WAY IN ITS OWN BODY first — force-ending every
+    // live gesture through their release bodies, hiding the floating hint and
+    // closing the popup — so the honest rule is that nothing asynchronous
+    // raises a modal without doing that, rather than that nothing
+    // asynchronous raises one at all.)
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor. Called from

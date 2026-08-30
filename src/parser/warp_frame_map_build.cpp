@@ -823,20 +823,24 @@ std::string resolved_marker_payload(
     return "";
 }
 
-// THIS BUILDER'S SIX REFUSAL STRINGS ARE GUI-FACING, so they carry
-// SENTENCE-INITIAL CAPITALS (architect approval 2026-08-02, the frozen
-// capitalization grant: "capitalize for correct english... but change nothing
-// else"). They are the ONLY frozen-tree strings the GUI ever PAINTS: the
-// target-view entry gate hands a refusal straight to the error-notice prompt
-// (GuiInputHandler::validate_target_view_entry -> prompt.open_error_notice,
-// input_handler.cpp), which shows the owner's string verbatim on the bottom
-// strip. Every other frozen refusal reaching the GUI ends at stderr or at an
-// editor's red flash; those now carry sentence-initial capitals too (the
-// 2026-08-02 terminal capitalization pass, same grant), so the distinction
-// recorded here is about WHICH strings the GUI paints, not about their case.
-// The CLI prints these same strings and its bytes move with them — accepted
-// under the grant, since one string cannot serve two cases. Wording,
-// punctuation and vocabulary are otherwise untouched.
+// THIS BUILDER'S SIX REFUSAL STRINGS REACH STDERR ONLY, and they are PAINTED
+// NOWHERE (architect approval 2026-08-30, comment only). Their one GUI reader
+// is the target-view entry gate, whose TWO callers —
+// GuiInputHandler::validate_target_view_entry's keyboard S -> T entry and
+// GuiFileLoader::load_file's active_audio_view=T restore — each print the
+// owner's string on one stderr line and stay in source view, saying nothing on
+// screen; the ERROR-NOTICE PROMPT that used to show a refusal verbatim on the
+// bottom row retired whole on 2026-08-30 with its DialogTrigger, so the
+// "only frozen-tree strings the GUI paints" claim recorded here has no subject
+// left. THEY STILL CARRY SENTENCE-INITIAL CAPITALS and nothing about them
+// moves: the capitalization is the 2026-08-02 frozen grant's ("capitalize for
+// correct english... but change nothing else"), which that day's terminal pass
+// extended to every other frozen refusal reaching the GUI — the ones ending at
+// stderr or at an editor's red flash — so the case is uniform across the tree
+// and no distinction rests on where a string lands. The CLI prints these same
+// strings and its bytes move with them — accepted under the grant, since one
+// string cannot serve two cases. Wording, punctuation and vocabulary are
+// otherwise untouched.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames) {

@@ -81,9 +81,9 @@ struct MarkerEffective {
 
 // Returns the built warp frame map on success, or std::unexpected carrying
 // the first violated condition (a concise sentence-capitalized reason —
-// these six strings are GUI-PAINTED through the target-view entry gate's
-// error notice, the rationale at the definition; callers add their own
-// context prefix). Does not log. Failure conditions, in check order:
+// these six strings reach STDERR ONLY, the rationale and its capitalization
+// clause at the definition; callers add their own context prefix). Does not
+// log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
 // src_frame > total_frames (the past-EOF wall — column-symmetric with
 // build_phase_reset_source_frames by ruling, and a loud breach backstop for

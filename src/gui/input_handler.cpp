@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -694,8 +695,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // would want the final column.
     //
     // A REFUSED AUDIO SWITCH STOPS THE WHOLE PRESS. Entering target view can
-    // fail its validation gate (the error-notice class, unreachable from
-    // program-written input), and half-applying an ABSOLUTE selector would leave
+    // fail its validation gate (the tripwire class, unreachable from
+    // program-written input, silent on screen), and half-applying an ABSOLUTE
+    // selector would leave
     // the user in a combination they did not ask for. The verdict is read off
     // the state the handler writes rather than through a new return value —
     // one owner, no signature change.
@@ -2473,10 +2475,12 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // entry validation and the translation map below are one build.
     // GuiFileLoader::load_file gates its active_audio_view=T restore on the
     // SAME predicate — a load restore and a keystroke entry block
-    // identically. A refusal — the engine-metadata /
-    // non-positive-tempo-product class, unreachable from program-written
-    // input — surfaces through the error-notice popup with the owner's
-    // error string.
+    // identically, AND SINCE 2026-08-30 THEY ALSO REFUSE ALIKE: a refusal
+    // leaves the view in source and says one stderr line with the builder's
+    // own words, and nothing appears on screen. The predicate's declaration
+    // (input_handler.h) owns the ruling and its reason — the refusals are
+    // unreachable from program-written input, so there is no on-screen
+    // surface for them by ruling.
     //
     // Leaving target view (T → S) never gates: a resolve/build failure is
     // ignored — the exit falls back to the empty map — identity translation
@@ -2490,7 +2494,12 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     if (entry) {
         warp_frame_map = std::move(*entry);
     } else if (entering_target) {
-        prompt.open_error_notice(std::move(entry.error()));
+        // THE SILENT REFUSAL, the load road's own (file_loader.cpp): stay in
+        // source view and name the cause on stderr, one line, the same
+        // sentence at both entry surfaces.
+        std::fprintf(stderr,
+                     "warptempo_gui: Target view entry refused: %s\n",
+                     entry.error().c_str());
         return;
     }
 
@@ -2869,8 +2878,9 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     construction.
 //   * A REFUSED ENTRY STOPS THE WHOLE PRESS, the absolute view selectors' own
 //     rule (bare 1/2/3, on_key): entering target view can fail its validity
-//     gate (the error-notice class, unreachable from program-written input),
-//     and dropping into the column while the audio view stayed behind would
+//     gate (the tripwire class, unreachable from program-written input, silent
+//     on screen), and dropping into the column while the audio view stayed
+//     behind would
 //     author in a combination the user did not ask for. The verdict is read
 //     off the state the chokepoint writes, never a new return value.
 //   * switch_active_markers_view_to('P') is the W/P WRITER rather than the `p`

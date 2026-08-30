@@ -18,9 +18,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
         else                                         gui.request_exit();
         break;
     case DialogTrigger::PASTE_CONFIRM:
-    case DialogTrigger::ERROR_NOTICE:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
-        // All three are dispatched directly by activate_response, outside
+        // Both are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -57,25 +56,17 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     viewport.invalidate_all();
 }
 
-// Dismiss-only error notice. The text is the caller's error string —
-// the parser's own message, verbatim. Single acknowledge response:
-// Esc (the '\x1b' sentinel; see open_unsaved's key-mapping note). Its
-// one button wears "OK" rather than "Cancel": nothing is being cancelled and
-// the act already refused. Its tooltip names Escape like every other Esc
-// button's does (modal_dialog_button_hint, app_state.h).
-// Modal like every other prompt while active: the pointer veil consumes
-// everything outside the dialog and on_key routes only the response key.
-void GuiPrompt::open_error_notice(std::string text) {
-    // A modal surface is opening: the shared modal stop, same rule as every
-    // other prompt open.
-    playback_lifecycle.stop_playback_for_modal_open();
-    // The one raise route (PromptState::present), so the painted gate holds
-    // here too.
-    app.prompt.present(std::move(text), {'\x1b'}, {"OK"},
-                       DialogTrigger::ERROR_NOTICE,
-                       PromptInitialFocus::LastButton);
-    viewport.invalidate_all();
-}
+// (THE DISMISS-ONLY ERROR NOTICE RETIRED WHOLE 2026-08-30, with its
+// ERROR_NOTICE trigger, its Esc-only response set and its lone "OK" button.
+// It was the pre-split surface for a sentence the user had to be shown, and
+// the messaging split (messaging.md) left it with nothing to carry: a refusal
+// that answers an act is an EVENT, so its ONE remaining loud caller — the
+// iteration sweep's cell-cap refusal — is a NORMAL CARD now, and its other,
+// the target-view entry gate, refuses SILENTLY the way the load road always
+// did, one stderr line and nothing on screen, because its refusals are
+// unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
+// QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
+// the paste confirmation and the load confirmation.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
@@ -87,15 +78,6 @@ void GuiPrompt::activate_response(char k) {
     const DialogTrigger trigger = app.prompt.trigger;
     // Sentinels: '\x7f' = Delete (discard), '\x1b' = Escape (cancel).
     // See open_unsaved above.
-
-    if (trigger == DialogTrigger::ERROR_NOTICE) {
-        // Acknowledge-and-dismiss; nothing proceeds and nothing mutates.
-        if (k == '\x1b') {
-            app.prompt.active = false;
-            viewport.invalidate_all();
-        }
-        return;
-    }
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         if (k == 'y') {

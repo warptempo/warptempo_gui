@@ -3537,14 +3537,17 @@ inline int drag_moved_threshold_px() {
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
 // applies to the unsaved-work prompt (CLOSE_WINDOW, the quit gesture).
-// ERROR_NOTICE is the dismiss-only error popup for the environmental,
-// settings-choice, and tripwire-class refusals (see
-// GuiPrompt::open_error_notice's caller list). Its text is the owner's own
-// error string, unmodified, and its sole response is acknowledge/dismiss.
+//
+// EVERY TRIGGER IS A QUESTION (architect 2026-08-30). ERROR_NOTICE — the
+// dismiss-only error popup for the environmental and tripwire-class refusals,
+// one "OK" on Esc over the owner's own error string — retired whole that day:
+// the messaging split (messaging.md) sends a refusal that answers an act to a
+// NORMAL CARD, which is what the iteration sweep's cell cap is now, and the
+// target-view entry gate refuses silently on stderr. The record is at
+// GuiPrompt, where the opener stood.
 enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
-    ERROR_NOTICE,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load `<id>` in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
     // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button or
@@ -3578,7 +3581,7 @@ enum class DialogTrigger {
 // on the GuiKey (Delete, Escape) instead.
 // `response_labels` are the BUTTONS' words, one per response, parallel to
 // response_keys, IN PLAIN WORDS — "Save", "Discard", "Cancel", "Retry",
-// "Yes", and "OK" on the dismiss-only error notice. The two key-named
+// "Yes", and "OK" on the load confirmation. The two key-named
 // sentinels take the word their MEANING spells rather than their key's name:
 // '\x7f' (Delete, the discard-and-proceed) is "Discard", '\x1b' (Escape) is
 // "Cancel".
@@ -3607,11 +3610,11 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All SIX present() sites put
-//        '\x1b' last (re-grepped 2026-08-29): the unsaved-work prompt (Save /
-//        Discard / CANCEL), its save-failed restatement (Retry / Discard /
-//        CANCEL), the paste confirmation (Yes / CANCEL), the error notice (OK,
-//        whose one response IS the sentinel) and THE LOAD CONFIRMATION'S TWO
+//        by construction rather than by convention. All FIVE present() sites
+//        put '\x1b' last (re-grepped 2026-08-30, the error notice's own raise
+//        retired with the kind): the unsaved-work prompt (Save / Discard /
+//        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), the
+//        paste confirmation (Yes / CANCEL) and THE LOAD CONFIRMATION'S TWO
 //        RAISERS (OK / CANCEL — one prompt body, two subjects: the render
 //        player's highlighted entry and the `h` view's viewed walk member). So
 //        the key that answers without asking answers the way Esc already does,
@@ -3698,12 +3701,13 @@ struct PromptState {
     // one assignment site.
     PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SIX call sites
-    // (re-grepped 2026-08-29: the unsaved-work prompt, the error notice, the
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — FIVE call sites
+    // (re-grepped 2026-08-30: the unsaved-work prompt, the
     // paste confirmation, and the LOAD CONFIRMATION at BOTH its subjects'
     // raisers since 2026-08-29 — the render player's entry and the `h`
     // view's viewed walk member, one prompt body forked at
-    // confirm_load_in_place) and the
+    // confirm_load_in_place; the error notice's raise retired with the kind
+    // on 2026-08-30) and the
     // save-failed rung's in-place restatement, which is a raise as far as
     // this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
