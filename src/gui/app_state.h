@@ -7001,24 +7001,30 @@ struct AppState {
     // notifications.h (GuiNotifications); docs/engineering/architecture/
     // messaging.md is the ruling. This is only what the product remembers.
     //
-    //   `cards`   newest FIRST. The first kNotificationVisibleMax are the
-    //             VISIBLE stack; the rest are QUEUED and surface as visible
-    //             ones leave. A card is one class, one line of text and a
-    //             clock:
-    //               NORMAL   leaves on its own kNotificationMs after it
-    //                        became VISIBLE (a queued card's clock has not
-    //                        started: `expiry_ms` 0), or at its X;
-    //               CRITICAL stands until its X — no clock, ever. The four
-    //                        checkpoint outcomes are its producers.
+    //   `cards`   newest FIRST, AND EVERY ONE OF THEM ON SCREEN (2026-08-30,
+    //             the queue's retirement): a card is visible from its push
+    //             until it expires, is dismissed, or is BUMPED by a later
+    //             push that put the stack past the room's capacity — the
+    //             oldest NORMAL card being what a bump takes, never a
+    //             critical one and never the card just pushed. A card is one
+    //             class, its sentence (up to kNotificationMaxLines lines) and
+    //             a clock:
+    //               NORMAL   leaves on its own kNotificationMs from its PUSH
+    //                        (there is no later surfacing to wait for), or at
+    //                        its X, or at a bump;
+    //               CRITICAL stands until its X — no clock, ever, and no
+    //                        bump. The four checkpoint outcomes are its
+    //                        producers.
     //             `paused` with `remaining_ms` is the HOVER BANK: while the
-    //             pointer rests on a visible normal card its clock stops, the
+    //             pointer rests on a normal card its clock stops, the
     //             remaining time banked at hover-enter and re-armed at
     //             hover-leave.
     //   `hovered_id` / `close_hovered` the card under the pointer and whether
     //             the pointer is inside its X box — the X wears the icon
     //             button's hover face; the body wears none.
-    //   `painted` / `painted_rect` THE LAST PAINT'S PUBLICATION: each visible
-    //             card's rect and its X box as drawn, and their union. The
+    //   `painted` / `painted_rect` THE LAST PAINT'S PUBLICATION: each
+    //             painted card's rect and its X box as drawn, CLIPPED TO THE
+    //             ROOM, and their union. The
     //             press router, the cursor map and the hover walk read THESE,
     //             never a re-derivation (published geometry may only SELECT;
     //             live state decides — the doctrine at ModalDialogGeometry):

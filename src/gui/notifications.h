@@ -3,8 +3,8 @@
 // THE NOTIFICATION CARDS (architect design 2026-08-29, docs/engineering/
 // architecture/messaging.md) — the product's surface for EVENTS: something
 // happened that answers an act, or that the user was not watching. A small
-// dark card stacked top-right under row 1's view radios, newest on top, at
-// most kNotificationVisibleMax visible, UP TO kNotificationMaxLines lines of
+// dark card stacked top-right under row 1's view radios, newest on top,
+// EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a Breeze glyph at the left naming the class, an X at the
 // right, and ONE PAD around all three (notification_pad_px below — the
 // card's chrome reads one number on all six of its distances). A sentence
@@ -40,12 +40,23 @@
 // player's own modal row takes whole, so that refusal has nothing beside it.)
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
-// it and nothing else writes a card. A text identical to a VISIBLE card's of
-// the same class does not stack a duplicate — it re-arms that card's clock (a
-// critical duplicate is a no-op). A queued (fourth or later) card surfaces
-// when a visible one leaves, and ITS CLOCK STARTS THEN, not at its push, so a
-// burst of sentences is read one screenful at a time and none of them
-// expires unseen.
+// it and nothing else writes a card. A text identical to a card already on
+// screen in the same class does not stack a duplicate — it re-arms that
+// card's clock (a critical duplicate is a no-op).
+//
+// THE STACK IS UNCAPPED AND THE QUEUE IS RETIRED (architect 2026-08-30,
+// "cards bump each other off the screen — newest on top, the oldest leaving;
+// critical cards keep standing"). EVERY CARD IS VISIBLE FROM THE MOMENT IT IS
+// PUSHED until it expires or is BUMPED — nothing waits unseen, so a normal
+// card's clock always starts at its push and never at some later surfacing,
+// and `notification_visible` is simply "the id is in the stack". What limits
+// the stack is the ROOM, counted in one-line cards (notification_capacity):
+// a push past that count removes THE OLDEST NORMAL CARD, walking from the
+// back and SKIPPING every critical one, which is what "critical cards keep
+// standing" means. A stack of criticals alone therefore keeps growing, and a
+// burst of MULTILINE cards can exceed the room in pixels while sitting inside
+// it in count; both overflow past the room's foot and the painter's clip is
+// the answer, not a second rule.
 //
 // THE CLOCK RIDES THE RUN LOOP'S OWN DEADLINE TICK, polled: fire_if_due is
 // called at the HEAD of main.cpp's on_tick, above every early return that
@@ -87,12 +98,6 @@
 
 #include <cstdint>
 #include <string>
-
-// At most this many cards are visible; older ones wait in the queue. A stack
-// that would reach the bottom strip is contrived and nothing clamps further
-// ("we don't cater to that"); on the tablet's 1024 logical px it is cramped,
-// as expected.
-inline constexpr int kNotificationVisibleMax = 3;
 
 // The card's width is its content's, clamped to [this, a third of the
 // window]. Authored px, scaled like every other length. On a window narrower
@@ -162,16 +167,38 @@ int notification_card_max_w_px(const AppState& a);
 // window with no waveform at all, in the contrived class.
 GuiRect notification_stack_bound(const AppState& a);
 
-// Whether `id` names a card that is VISIBLE RIGHT NOW — present in the live
-// stack and among its first kNotificationVisibleMax. THE ONE LIVE TEST every
-// act on a published hit asks, and the one dismiss() asks of its argument.
+// HOW MANY CARDS THE ROOM HOLDS, and so what a push bumps past (architect
+// 2026-08-30, the uncapped stack): the number of ONE-LINE cards that fit the
+// room above, `floor((room + gap) / (card + gap))`, at least one.
+//
+// IT IS A COUNT OF ONE-LINE CARDS AND NOT A PIXEL BUDGET, deliberately: no
+// pure function of the window can know a card's line count — that needs a
+// shaped run, and the model layer this serves has no font to shape with (the
+// same reason the damage owner takes the room rather than a tight bound). So
+// the cap counts the cards the room WOULD hold at one line each; a stack of
+// wrapped cards can pass the room's foot while inside this count, and the
+// painter's clip is what answers that, exactly as it answers a stack of
+// criticals that will not be bumped.
+//
+// A pure function of the window and the scale, like the room. At a 1080 px
+// window and 100 % it is 20 (a 998 px room over 46 + 2); on the tablet's
+// 1440 px panel at 225 % it is 11 (1256 over 104 + 4). Every window this
+// product runs in holds more cards than the architect will ever stack.
+int notification_capacity(const AppState& a);
+
+// Whether `id` names a card that is IN THE LIVE STACK — which is the same as
+// "on screen" since the queue retired (2026-08-30): a push makes a card
+// visible at once and only an expiry, an X or a bump removes it. THE ONE LIVE
+// TEST every act on a published hit asks, and the one dismiss() asks of its
+// argument — the publication is a paint old, and a card can expire or be
+// bumped between that paint and the press.
 bool notification_visible(const AppState& a, uint64_t id);
 
 // The card under (x, y), or 0. PUBLISHED GEOMETRY MAY ONLY SELECT, LIVE STATE
 // DECIDES (the owner-tag doctrine, recorded at ModalDialogGeometry): the walk
 // picks an id out of the painter's rects and then answers 0 unless
 // notification_visible still holds for it, so a card that expired or was
-// pushed into the queue between the paint and the event is hit by nothing,
+// bumped between the paint and the event is hit by nothing,
 // and a press on the stale rect falls through to whatever the NEXT paint will
 // put there, which is what the user is about to see. A card under the OPEN
 // DROPDOWN's box yields to it — the dropdown is the one pointer-owning
@@ -201,22 +228,22 @@ struct GuiNotifications {
     GuiNotifications(AppState& app_, Viewport& viewport_)
         : app(app_), viewport(viewport_) {}
 
-    // THE ONE PUSH. A duplicate of a visible card (same class, same text)
-    // re-arms that card instead of stacking; a critical duplicate is a
-    // no-op. A new card goes on TOP and is visible at once: the stack is
-    // newest-first and the first kNotificationVisibleMax are visible, so a
-    // push on a full stack demotes the third card into the queue, where its
-    // clock forgets what had run and starts afresh when it surfaces again.
+    // THE ONE PUSH. A duplicate of a card on screen (same class, same text)
+    // re-arms that card instead of stacking; a critical duplicate is a no-op.
+    // A new card goes on TOP and is visible at once, its clock started here;
+    // then THE BUMP brings the stack back inside notification_capacity by
+    // removing the oldest NORMAL card, never a critical one and never the
+    // card just pushed (the full argument is at the site).
     void notify(AppState::NotificationClass cls, std::string text);
 
-    // THE X's act: remove the card whatever its class and state, surface the
-    // queue, drop the hover if it was this card's.
+    // THE X's act: remove the card whatever its class and state, and drop the
+    // hover if it was this card's.
     void dismiss(uint64_t id);
 
-    // THE CLOCK, on the run loop's deadline tick: retire every visible normal
-    // card whose life has elapsed and is not paused, surface the queue, and
-    // re-derive the hover from the remembered pointer (a card that slid up
-    // under a motionless pointer pauses from this tick on).
+    // THE CLOCK, on the run loop's deadline tick: retire every normal card
+    // whose life has elapsed and is not paused, and re-derive the hover from
+    // the remembered pointer (a card that slid up under a motionless pointer
+    // pauses from this tick on).
     void fire_if_due();
 
     // The hover walk, from the motion handler and the tick: which card the
@@ -230,11 +257,10 @@ struct GuiNotifications {
     void clear_hover();
 
 private:
-    // A visible normal card whose clock has not started (a card that just
-    // surfaced, or that was pushed straight into the visible set) takes its
-    // full life from `now`.
-    void start_visible_clocks(int64_t now_ms);
+    // (start_visible_clocks and is_visible_index went with the QUEUE on
+    // 2026-08-30: no card waits unseen any more, so the only clock a push
+    // starts is its own card's, written where that card is built, and no
+    // index is "visible" or not.)
     void set_hover(uint64_t id, bool close);
     AppState::Notification* find(uint64_t id);
-    bool is_visible_index(size_t index) const;
 };

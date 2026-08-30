@@ -3334,9 +3334,10 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // -- GuiPaintHandler::paint_notifications ---------------------------------
 //
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
-// classes, the hit rule and the inventory at notifications.h). The visible
-// stack — the first kNotificationVisibleMax of AppState::Notifications::cards,
-// newest first — painted top-right under ROW 1's view radios, right-aligned
+// classes, the hit rule and the inventory at notifications.h). THE WHOLE
+// STACK — AppState::Notifications::cards, newest first, every one of them on
+// screen since the queue retired 2026-08-30 — painted top-right under ROW 1's
+// view radios, right-aligned
 // at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
 // (the stack's margins are one number, notification_stack_bound), growing
 // DOWN over whatever lies there (the tab row's right stretch, the icon row's
@@ -3436,8 +3437,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     };
 
     int y = room.y;
-    for (size_t i = 0; i < st.cards.size() &&
-                       i < static_cast<size_t>(kNotificationVisibleMax); ++i) {
+    // THE WALK IS THE WHOLE STACK (2026-08-30, the queue's retirement): what
+    // ends it is the ROOM, not a count. The bump keeps the stack inside the
+    // room's capacity in one-line cards, and the two overflows that count
+    // cannot see — wrapped cards, and criticals the bump will not touch —
+    // paint on down and are cut here.
+    for (size_t i = 0; i < st.cards.size(); ++i) {
         // Wholly under the room's foot: so is every card after it.
         if (y >= room.y + room.h) break;
         const AppState::Notification& n = st.cards[i];
