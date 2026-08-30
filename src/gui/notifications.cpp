@@ -10,6 +10,15 @@ int notification_card_h_px() {
     return icon_row_content_h_px();
 }
 
+int notification_pad_px() {
+    // THE BOX'S OWN VERTICAL MARGIN, and so the card's every pad (the ruling
+    // and the six distances at the declaration): the height already comes
+    // from the icon row, and this is that row's own centering of a 32 px box
+    // in its 46 px band. An ODD difference floors, putting the extra pixel
+    // below the boxes — the icon row's own arithmetic, not a second rule.
+    return (notification_card_h_px() - scaled_px(kIconBtnPx)) / 2;
+}
+
 int notification_card_max_w_px(const AppState& a) {
     const int floor_w = scaled_px(kNotificationMinWidthPx);
     return std::max(floor_w, a.width / 3);
@@ -20,9 +29,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     // THE STACK'S TWO MARGINS ARE ONE NUMBER (architect 2026-08-29): the air
     // to the window's right edge is the air to row 1 above it, both the
     // panel's own kPanelPadPx. The right margin was the icon row's 8 px pad
-    // for the cards' first day, which read wider than the 2 px above them; a
-    // card's INTERNAL horizontal pad is still icon_row_pad_x() (the painter's
-    // own), that being the chrome inside the box rather than the box's
+    // for the cards' first day, which read wider than the 2 px above them.
+    // The card's INTERNAL pad is a different number and a different concept —
+    // notification_pad_px(), the chrome inside the box rather than the box's
     // placement.
     const int pad   = folder_overlay::pad_px();
     const int w     = notification_card_max_w_px(a);

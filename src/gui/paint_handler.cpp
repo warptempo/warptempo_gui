@@ -3250,23 +3250,29 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 // classes, the hit rule and the inventory at notifications.h). The visible
 // stack — the first kNotificationVisibleMax of AppState::Notifications::cards,
 // newest first — painted top-right under ROW 1's view radios, right-aligned
-// at icon_row_pad_x() from the window's edge, growing DOWN over whatever
-// lies there (the tab row's right stretch, the icon row's empty right, the
-// thin lanes, the waveform), the cards kIconBtnGapPx apart.
+// at kPanelPadPx from the window's edge and the same kPanelPadPx below row 1
+// (the stack's two OUTER margins are one number, notification_stack_bound),
+// growing DOWN over whatever lies there (the tab row's right stretch, the
+// icon row's empty right, the thin lanes, the waveform), the cards
+// kIconBtnGapPx apart.
 //
 // THE LOOK (his picked mockup, tmp/previous/messaging_mockups/cards_AB.png's
 // look 1; the chrome record at render.h's palette block): the player's dark
 // ground under the popup's 1 px border through the one popup box painter;
-// ONE ROW of the icon row's own height, holding — left to right, at the
-// row's pad — a 32 px button box with the CLASS GLYPH centred at the box's
+// ONE ROW of the icon row's own height, holding — left to right, EVERY
+// DISTANCE THE CARD'S ONE PAD (notification_pad_px, the ruling at its
+// declaration: the box's own vertical margin, read for all six) — a 32 px
+// button box with the CLASS GLYPH centred at the box's
 // own inset (dialog-information for a normal card, dialog-error for a
 // critical one, each in its file's own colours: the roster paints every
 // path in the table's ink and colours nothing here — the two files are a
 // blue or red plate under a white glyph, and that plate is what tells the
-// classes apart at a glance), the overlay row's icon-to-name gap, ONE LINE
+// classes apart at a glance), that pad, ONE LINE
 // of the one sans in the row's ink CLIPPED at the run's room (no wrap, no
-// ellipsis — the folder overlay rows' precedent), the same gap, and the
-// window-close X in a second button box at the row's pad. The card's width
+// ellipsis — the folder overlay rows' precedent), that pad again, and the
+// window-close X in a second button box at that pad from the right edge —
+// the boxes sitting that same pad below the card's top and above its foot.
+// The card's width
 // is its content's, clamped to [kNotificationMinWidthPx, a third of the
 // window] (the floor wins on a window narrower than three floors — a
 // contrived window). THE X WEARS THE ICON BUTTON'S HOVER FACE while the
@@ -3299,17 +3305,18 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int btn      = scaled_px(kIconBtnPx);
     const int glyph_px = scaled_px(kIconGlyphPx);
     const int inset    = (btn - glyph_px) / 2;
-    const int box_dy   = (card_h - btn) / 2;
-    const int pad_x    = icon_row_pad_x();
-    const int text_gap = folder_overlay::row_icon_gap_px();
+    // ONE NUMBER FOR ALL SIX DISTANCES (architect 2026-08-30): the boxes'
+    // vertical margin is the card's every pad, so the horizontal placement
+    // cannot disagree with the vertical centering it is taken from.
+    const int pad      = notification_pad_px();
     const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
     const GuiRect bound = notification_stack_bound(app);
     const int right_x = bound.x + bound.w;
-    // The chrome every card carries besides its text: two pads, two boxes,
-    // two gaps.
-    const int chrome_w = 2 * pad_x + 2 * btn + 2 * text_gap;
+    // The chrome every card carries besides its text: FOUR pads (the two
+    // edges and the two sides of the text) and two boxes.
+    const int chrome_w = 4 * pad + 2 * btn;
 
     int y = bound.y;
     for (size_t i = 0; i < st.cards.size() &&
@@ -3322,8 +3329,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const GuiRect card{right_x - w, y, w, card_h};
         paint_popup_chrome(cr, card, kModalFieldGround, kRedesignTabLine);
 
-        const int box_y   = card.y + box_dy;
-        const int glyph_x = card.x + pad_x;
+        const int box_y   = card.y + pad;
+        const int glyph_x = card.x + pad;
         icons::draw(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
@@ -3332,9 +3339,9 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                     static_cast<double>(box_y + inset),
                     static_cast<double>(glyph_px));
 
-        const int close_x   = card.x + card.w - pad_x - btn;
-        const int text_x    = glyph_x + btn + text_gap;
-        const int text_room = close_x - text_gap - text_x;
+        const int close_x   = card.x + card.w - pad - btn;
+        const int text_x    = glyph_x + btn + pad;
+        const int text_room = close_x - pad - text_x;
         if (text_room > 0) {
             cairo_save(cr);
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);

@@ -5,9 +5,11 @@
 // happened that answers an act, or that the user was not watching. A small
 // dark card stacked top-right under row 1's view radios, newest on top, at
 // most kNotificationVisibleMax visible, one line of the one sans, a Breeze
-// glyph at the left naming the class, an X at the right. Two classes and
-// nothing else — no remaining-time bar, no actions, no title/body split, no
-// sound (the architect is "not a big fan of notifications": minimal):
+// glyph at the left naming the class, an X at the right, and ONE PAD around
+// all three (notification_pad_px below — the card's chrome reads one number
+// on all six of its distances). Two classes and nothing else — no
+// remaining-time bar, no actions, no title/body split, no sound (the
+// architect is "not a big fan of notifications": minimal):
 //
 //   NORMAL   — every refusal that has a sentence and every act's report:
 //              the load-in-place refusals, "Only batch renders load in
@@ -96,6 +98,21 @@ inline constexpr double kNotificationMinWidthPx = 240.0;
 // its 7 px margins, one source) — the X and the glyph sit in that box at the
 // row's own inset.
 int notification_card_h_px();
+
+// THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph,
+// the text and the X is ONE NUMBER, the box's own vertical margin — the
+// centering the card's height already derives from the icon row (46 = 32 +
+// 2 x 7). It is read for ALL SIX of the card's distances: left edge -> glyph
+// box, glyph box -> text, text -> X box, X box -> right edge, top -> boxes,
+// boxes -> bottom. Nothing is authored here: the number IS
+// (notification_card_h_px() - the button box) / 2, so a retune of either
+// moves all six together, and the painter reads no foreign constant (the
+// icon row's lane pad and the folder overlay's icon-to-name gap both left it
+// that day — the overlay's rows keep their gap, that being their surface).
+// PARITY: where card_h - btn is odd the integer floor puts the extra pixel
+// BELOW the boxes, exactly as the icon row's own centering does for its
+// buttons — the same floor, not a second rule.
+int notification_pad_px();
 
 // The card's largest possible width at this window and scale (the clamp's
 // upper bound, or the floor where the window is narrower than three floors).
