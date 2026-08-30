@@ -707,6 +707,13 @@ struct RegionDragState {
 // closes out from under an in-flight drag).
 struct EditorTextDragState {
     bool active = false;
+    // TRUE WHEN THE ARMING PRESS CARRIED SHIFT (architect 2026-08-30, the
+    // shift+click extend). The drag itself is identical either way — the
+    // motion moves `cursor_pos` alone and the anchor never moves — so this bit
+    // exists for ONE reader, the release's double-click SEED: a shift press is
+    // an extend and never the first half of a word select, so it seeds no
+    // candidate whatever the selection it leaves behind.
+    bool shift_extend = false;
 };
 
 // WHICH HALF OF A MARKER'S BOX A PRESS LANDED ON (2026-08-19). The flag and its

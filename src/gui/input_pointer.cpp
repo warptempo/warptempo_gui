@@ -1788,9 +1788,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // because that is where the press path puts the claim: the caret / text-drag
     // block in on_button_press tests this same published rect
     // (app.flag_editor_box.box, the painter's stash) for ANY left press,
-    // before any modifier is looked at, so ctrl or shift over the open box
-    // still places a caret and the cue must say so. The editor's
-    // pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
+    // before any modifier is looked at, so ctrl over the open box still places
+    // a caret and shift EXTENDS THE SELECTION to the clicked byte (architect
+    // 2026-08-30) — both of them caret work, and the cue must say so. The
+    // editor's pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
     // the box reaches, and outside is exactly where this arm stops. A cold or
     // closed editor publishes a zero rect, which contains no point. It covers
     // the MEASURE editor's field too, which publishes the same rect through the
@@ -4567,6 +4568,44 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 in_region = rect_contains(app.flag_editor_box.box, x, y);
             }
             if (in_region) {
+                // SHIFT+CLICK EXTENDS THE SELECTION (architect 2026-08-30) —
+                // the pointer's FIRST shift binding on an editor field, and
+                // exactly what Shift+Left/Right and Ctrl+Shift+Left/Right do
+                // from the keyboard: the standing anchor is kept (or the old
+                // caret becomes one, the keyboard's own rule for a shifted
+                // motion off a bare caret) and the CLICKED byte becomes the
+                // cursor. A plain click still places the caret and drops the
+                // selection, below.
+                // SHIFT-EXACT, so Ctrl+click and Ctrl+Shift+click stay the
+                // plain caret placement they have always been here — this
+                // claim carries no modifier gate of its own and never did,
+                // and nothing above it consumes a modified press over the
+                // FIELD (the dialog buttons' claim is plain-exact, but its
+                // rect is disjoint from the field's).
+                // IT IS AHEAD OF THE DOUBLE-CLICK TEST because a shifted
+                // second press is a shift-click, not a word select; and the
+                // arm below is the plain press's own, so a drag that follows
+                // keeps extending from the SAME anchor (the motion moves
+                // `cursor_pos` alone). The `shift_extend` bit rides the arm
+                // for the release's seed alone (EditorTextDragState).
+                // PLASTIC ONLY, recorded rather than fixed: the touch
+                // translation carries `current_mods()` like every other
+                // delivery (touch.md), and the on-screen keyboard's Shift is
+                // ONE-SHOT FOR THE NEXT CHARACTER KEY — it produces a capital
+                // codepoint through shifted_char and sets no modifier bit — so
+                // a tablet with no physical shift key has no road onto this
+                // act, and none is built. Glass extends a selection by
+                // dragging the field, which it already could.
+                if (mods.shift && !mods.ctrl && !mods.alt) {
+                    if (g.ed->selection_anchor < 0)
+                        g.ed->selection_anchor = g.ed->cursor_pos;
+                    g.ed->cursor_pos = editor_byte_index_at(g, x);
+                    app.editor_text_drag.active       = true;
+                    app.editor_text_drag.shift_extend = true;
+                    if (g.dialog) viewport.invalidate_modal_dialog_area();
+                    else          viewport.invalidate_top_strip();
+                    return;
+                }
                 // Double-click: a second click within the window on this
                 // editor's text selects the RUN of the clicked character class
                 // (word / punctuation / whitespace) under the click — select_
@@ -4590,7 +4629,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // Collapsed anchor — extends to a real selection only if the
                 // pointer then moves.
                 g.ed->selection_anchor = g.ed->cursor_pos;
-                app.editor_text_drag.active = true;
+                app.editor_text_drag.active       = true;
+                app.editor_text_drag.shift_extend = false;
                 if (g.dialog) viewport.invalidate_modal_dialog_area();
                 else          viewport.invalidate_top_strip();
                 return;
@@ -5859,13 +5899,17 @@ void GuiInputHandler::finalize_editor_text_drag() {
     const ActiveEditorText g = active_editor_text(app, audio);
     if (g.valid) {
         // A press that never moved leaves a plain caret and no selection,
-        // matching the existing click-to-caret.
+        // matching the existing click-to-caret. IT COVERS THE SHIFT+CLICK'S
+        // OWN degenerate case too (architect 2026-08-30): an extend that
+        // landed on the caret's own byte has nothing to add — has_selection
+        // is anchor != cursor by definition — so it collapses to a caret here
+        // like every other empty span.
         if (g.ed->selection_anchor == g.ed->cursor_pos)
             g.ed->selection_anchor = -1;
         if (g.dialog) viewport.invalidate_modal_dialog_area();
         else          viewport.invalidate_top_strip();
     }
-    app.editor_text_drag.active = false;
+    app.editor_text_drag = EditorTextDragState{};
 }
 
 void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
@@ -6322,12 +6366,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // selection (or collapses to a caret) before the modal swallow below.
     if (button == GuiMouseButton::Left && app.editor_text_drag.active) {
         const ActiveEditorText g = active_editor_text(app, audio);
+        // Read before the finalize, which clears the arm whole.
+        const bool shift_extend = app.editor_text_drag.shift_extend;
         finalize_editor_text_drag();
         // Double-click seeding: a MOTIONLESS release (a pure click that left a
         // caret, no selection) seeds an editor-text candidate so a second click
         // within the window selects the clicked character class's run (word /
         // punctuation / whitespace). A drag that made a selection seeds nothing.
-        if (g.valid && !text_editor::has_selection(*g.ed)) {
+        // NEITHER DOES A SHIFT+CLICK (architect 2026-08-30): it is the
+        // selection extend, not the first half of a word select, and a
+        // shift-click that landed on the caret's own byte would otherwise seed
+        // one by leaving no selection behind.
+        if (!shift_extend && g.valid && !text_editor::has_selection(*g.ed)) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::EditorText,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
@@ -9002,7 +9052,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
             // The anchor set at press stays put; moving cursor_pos extends
-            // the selection.
+            // the selection. IT IS THE SAME MOTION FOR BOTH ARMS — the plain
+            // press seats the anchor at the caret it just placed, the SHIFT
+            // press keeps the anchor that was already standing, and neither
+            // rewrites it from here — so a shift+click's drag goes on
+            // extending from the original anchor (architect 2026-08-30).
             set_editor_caret_from_x(g, mouse_x);
             if (g.dialog) viewport.invalidate_modal_dialog_area();
             else          viewport.invalidate_top_strip();
