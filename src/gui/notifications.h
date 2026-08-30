@@ -20,7 +20,14 @@
 //              player's opener and decode refusals, the propagate pastes'
 //              "Stopped at …" reports, the measure paste's, the picker's
 //              three refusals, Synchronize's refusals, "Target render
-//              failed", "History is unavailable". Leaves on its own
+//              failed", "History is unavailable", and — since 2026-08-30 —
+//              THE GATES' OWN CARDS, the swallowed press answered by the
+//              state that swallowed it (the editor gate, the two drag gates,
+//              the loading gate, the `h` allowlist, the read-only lock, the
+//              strict-modifier tail and the unbound bare default, the player's
+//              and the picker's catch-alls, and the two pointer refusals),
+//              each naming its chord through the one speller spell_chord
+//              (gui_input.h). Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock) or at its X.
@@ -28,9 +35,13 @@
 //              until its X; no clock.
 //
 // WHAT IS NOT A CARD, by ruling: a render's completion ("that would get
-// annoying"); every deliberately silent refusal (the consumed no-ops — the
-// strict-modifier no-ops, the off-home drops, `m` on a bad run, and bare `h`
-// with a checkpoint publishing); the loader's fatal exits (adversarial class:
+// annoying"); the deliberately silent refusals that REMAIN (the off-home
+// drops, `m` on a bad run, and bare `h` with a checkpoint publishing — the
+// STRICT-MODIFIER NO-OPS left this list on 2026-08-30, every unbound chord
+// saying so now), plus the two silences the gates' ruling left standing:
+// TOP-LEVEL BARE ESC (a retraction with nothing to dismiss) and a MODIFIED
+// PRESS ON THE FOLDER OVERLAY'S PAD OR GAPS (not a press on a row); the
+// loader's fatal exits (adversarial class:
 // stderr and exit 1); every QUESTION (the prompts and the dialog editors); and
 // what is TRUE NOW rather than what happened — the render's progress line and
 // the `h` walk's line, the two STATE strings, which live in ROW 8'S STATE CELL

@@ -87,7 +87,7 @@ THE ARM IS THE OVERLAY'S, NOT THE PLAYER'S (2026-08-28, with the picker): it rea
 
 ### The keys (the router is the whole vocabulary)
 
-`route_render_player_key` runs in `on_key` under the prompt gate and the dropdown gate and above everything else; while the mode stands it IS the vocabulary, and every chord it does not name is CONSUMED (strict modifier validation's no-op).
+`route_render_player_key` runs in `on_key` under the prompt gate and the dropdown gate and above everything else; while the mode stands it IS the vocabulary, and every chord it does not name is CONSUMED (strict modifier validation's no-op) AND ANSWERED since 2026-08-30 — its two catch-alls, the modified chord's and the bare key's, both say `<chord> is not bound in the render player` on a normal card, one sentence for the two arms because what happened is the same and only the mode differs (messaging.md; the chord comes from the one speller `spell_chord`).
 
 | Key | Act |
 |---|---|
@@ -113,7 +113,7 @@ Landing the ring on the LIST changes nothing visible — Up/Down walk the highli
 
 ### The picker's keys (the router is the whole vocabulary)
 
-`route_picker_key` runs in `on_key` beside the player's router — under the prompt gate and the dropdown gate, above everything else — and while a picker stands it IS the vocabulary; every chord it does not name is CONSUMED. The gesture clause is the player's: while the overlay's row press arm stands every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
+`route_picker_key` runs in `on_key` beside the player's router — under the prompt gate and the dropdown gate, above everything else — and while a picker stands it IS the vocabulary; every chord it does not name is CONSUMED and, since 2026-08-30, ANSWERED — the same two catch-alls in the picker's own words, `<chord> is not bound in the project list`. A MODIFIED PRESS ON A ROW is answered too, `Rows open on a plain click`, under either content and on the ROW alone: a modified press on the band's pad or on a gap between rows is not a press on a row and stays silent. The gesture clause is the player's: while the overlay's row press arm stands every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
 
 | Key | Act |
 |---|---|

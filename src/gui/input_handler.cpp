@@ -28,6 +28,13 @@
 // compute_base_tempo_scale + BaseTempoScale (and bpm_cell_warp_markers)
 // live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
+// THE DRAG GATES' ONE SENTENCE (architect 2026-08-30): the keyboard is
+// swallowed while a gesture holds the pointer, and the two gates that swallow
+// it — the editor text-selection drag's, above the editor handlers, and the
+// pointer gestures' drag-modal gate below them — refuse for the SAME reason
+// and therefore say the same words. One literal, so a retune moves both.
+constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
+
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
     // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
@@ -280,7 +287,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (app.loading || audio.total_frames() <= 0) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.request_close(GuiCloseTarget::Exit);
+            return;
         }
+        // THE SWALLOW SAYS WHY (architect 2026-08-30, the strictness ruling):
+        // a window with no waveform in it looks like a window that should
+        // answer keys, so the state is what the card names rather than the
+        // chord. The card outlives the gate — the load installs the audio and
+        // the sentence retires on its own clock — and fire_if_due is called
+        // above the tick's own loading return, so the clock runs here.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "No audio is loaded yet");
         return;
     }
 
@@ -319,7 +335,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const bool escape_hatch =
             (!ctrl && !shift && !alt && key == GuiKeys::Escape) ||
             (ctrl && !shift && !alt && key == GuiKeys::Q);
-        if (!escape_hatch) return;
+        if (!escape_hatch) {
+            // THE SWALLOW SAYS WHY (architect 2026-08-30), in the pointer
+            // drags' own sentence one gate below: what refuses the press is
+            // that a drag is in flight, which is one fact whichever surface
+            // holds the pointer, so the two sites say one thing. It names no
+            // chord for the same reason — the chord is not what was wrong.
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kKeysDuringDrag);
+            return;
+        }
         finalize_editor_text_drag();
         // THE HATCH IS A GESTURE END: this drag holds the cursor down to the
         // Arrow through any_pointer_gesture_active, so pressing Esc over the
@@ -358,6 +383,32 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // owning the keyboard exactly as before.
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
+        // THE SWALLOWED CHORD SAYS SO (architect 2026-08-30): "I won't make
+        // lots of errors like that — maybe once or twice, then I'll memorize
+        // not to do it." The card names the chord, because here the chord IS
+        // what was wrong: the state is one the user can see (an editor is
+        // painted), and what he cannot see is that this particular press died
+        // at a gate instead of running.
+        //
+        // TYPED CHARACTERS GET NOTHING, and the split needs no test of its
+        // own: what the gate blocks is exactly the NotEditorKey set less the
+        // ring's Tab family, Ctrl+S and Ctrl+Q, and printable insertion is an
+        // OWNED class (text_editor::classify_key), so a character the editor
+        // takes never reaches this line. What does reach it is chords — every
+        // ctrl or alt spelling the editor does not own (the render chords,
+        // undo/redo, the tab switches, the propagates), the bare and shifted
+        // keys that bear no character (Up, Down, Page Up, Page Down, and Tab /
+        // Shift+Tab under the ringless flag editor), and any key whose keysym
+        // resolves to no codepoint at all.
+        //
+        // ONE CARD PER PRESS, and a held one is still one card: no chord in
+        // that set is repeat-eligible under an editor (repeat_eligible's
+        // in-editor arm repeats MotionEditKey and PrintableKey alone), so the
+        // dedup is not even asked here.
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "Close the editor first: " + spell_chord(key, mods) +
+                " is ignored while it is open");
         return;
     }
 
@@ -506,6 +557,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // cannot get the ordering wrong.
             return;
         }
+        // THE SWALLOW SAYS WHY (architect 2026-08-30), in the editor text
+        // drag's own sentence: a gesture owns the keyboard, and that is the
+        // one fact worth a sentence — the chord is not what was wrong, so it
+        // is not what the card names. Bare Esc lands here with every other
+        // key and is carded like them: it is NOT the bare-Esc no-op the
+        // top-level default is, it is a press this gate deliberately refuses
+        // (POINTER GESTURES HAVE NO CANCEL, the rule stated above).
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kKeysDuringDrag);
         return;
     }
 
@@ -530,6 +590,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (handle_history_mode_key(key, mods)) return;
     if (app.history_mode.active &&
         history_mode_key_blocked(key, mods, app)) {
+        // THE SWALLOWED CHORD SAYS SO (architect 2026-08-30), naming the
+        // chord AND the mode: the view is a read-only lens over another
+        // state, most of its refusals have a lit-looking key behind them, and
+        // the roster's grey already says the same thing to the pointer
+        // (history_mode_disables_button reads this very predicate for the
+        // face). THE CARD IS THE CALL SITE'S, never the predicate's — that
+        // face walk asks the same function once per button per frame, and a
+        // card raised inside it would paint a stack every frame.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             spell_chord(key, mods) +
+                                 " is not available in the history view");
         return;
     }
 
@@ -622,6 +693,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
     if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
+        // THE LOCK SAYS SO (architect 2026-08-30). THE STATE IS THE SENTENCE,
+        // not the chord: every chord this gate drops is dropped for the one
+        // reason, and the tab's lock is the fact the user has to be reminded
+        // of. IT IS THE KEY'S CARD ALONE — a GREYED button never reaches
+        // here, its press being consumed at arm_redesign_press's disabled
+        // line (nothing arms, so no chord dispatches at the lift), which is
+        // the truthful-buttons ruling's own division: the grey IS the message
+        // on the roster, and the card is the message on the keyboard. A LIT
+        // button whose chord the lock drops does reach it, and is answered
+        // exactly as its key is.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "This tab is read-only");
         return;
     }
 
@@ -1574,7 +1657,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // must not toggle follow via GuiKeys::F).
     if (!ctrl && !shift && !alt) {
         handle_plain_bare_keys(key);
+        return;
     }
+    // THE STRICT-MODIFIER TAIL SAYS SO (architect 2026-08-30): every
+    // modifier-gated handler above returned on match, so a modified press that
+    // arrives here wears a combination nothing binds. The card names it — the
+    // whole point being to tell Ctrl+Shift+O apart from the Ctrl+O it was
+    // meant to be — and says only that it is not bound, never what to press
+    // instead (the no-hints rule). The bare half of the same answer is the
+    // default arm of handle_plain_bare_keys, which composes the identical
+    // sentence for an unbound bare key.
+    notifications.notify(AppState::NotificationClass::Normal,
+                         spell_chord(key, mods) + " is not bound");
 }
 
 void GuiInputHandler::cycle_marker_focus(bool forward) {

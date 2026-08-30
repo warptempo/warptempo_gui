@@ -54,6 +54,15 @@ namespace {
 // live here rather than twice in string literals that could drift apart.
 constexpr const char* kHistoryUnavailable = "History is unavailable";
 
+// THE TWO MODE ROUTERS' CATCH-ALL SUFFIXES (architect 2026-08-30, the
+// strictness ruling). Each router IS the whole keyboard vocabulary while its
+// mode stands, so each has TWO catch-alls — the modified chord and the bare
+// key — and both of a router's arms answer with one sentence: what happened
+// is the same, and only the mode differs. The chord in front of them is the
+// speller's (spell_chord, gui_input.h); these are the tails.
+constexpr const char* kNotBoundInPlayer = " is not bound in the render player";
+constexpr const char* kNotBoundInPicker = " is not bound in the project list";
+
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
 // disk afterwards.
@@ -5613,7 +5622,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // button means the key was not one of the ring's.
     if (route_modal_dialog_focus_key(key, mods)) return true;
 
-    if (!bare) return true;   // every other modified chord: consumed
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND IT SAYS SO (architect
+    // 2026-08-30), the player's own arm one mode over and for its reason: the
+    // router is the whole vocabulary while the picker stands.
+    if (!bare) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             spell_chord(key, mods) + kNotBoundInPicker);
+        return true;
+    }
 
     switch (key) {
         case GuiKeys::Escape:
@@ -5634,7 +5650,10 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
             return true;
         default:
             // Space with no button focused, Left / Right, and every other
-            // bare key: consumed. The picker has no bare act for them.
+            // bare key: consumed, in the modified arm's sentence. The picker
+            // has no bare act for them.
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 spell_chord(key, mods) + kNotBoundInPicker);
             return true;
     }
 }
@@ -6195,7 +6214,16 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    if (!bare) return true;   // every other modified chord: consumed
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND IT SAYS SO (architect
+    // 2026-08-30) — the mode's router IS the whole vocabulary while it
+    // stands, so a chord that means something outside it means nothing here
+    // and the card names both the chord and the mode. The two catch-alls
+    // share one sentence: modified or bare, what happened is the same.
+    if (!bare) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             spell_chord(key, mods) + kNotBoundInPlayer);
+        return true;
+    }
 
     const int highlight = app.folder_overlay.highlight_row;
     switch (key) {
@@ -6258,6 +6286,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.next();
             return true;
         default:
+            // The bare half of the catch-all above, in its sentence: every
+            // bare key the player binds is a case above this one.
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 spell_chord(key, mods) + kNotBoundInPlayer);
             return true;   // consumed
     }
 }
@@ -6579,7 +6611,16 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
-    case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
+    case GuiKeys::Escape:
+        // TOP-LEVEL ESCAPE IS A NO-OP AND SAYS NOTHING (architect 2026-08-30,
+        // the one silence the strictness ruling leaves on this dispatch): Esc
+        // is the product's dismissal, bound in seven places and reaching this
+        // arm only when there is nothing standing to dismiss — the render
+        // cancel above it having found no render — so the press means "never
+        // mind" and is ALREADY answered by the surface that did not close. A
+        // card would answer a retraction with a complaint. It is an arm of its
+        // own and not the default's for exactly that reason.
+        break;
     case GuiKeys::Left:
         // WAVEFORM-LANE playhead step: reached only with an EMPTY selection,
         // because the
@@ -6637,7 +6678,24 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // last frame INSIDE the window.
         run_playhead_end_jump(/*forward=*/true, /*whole_piece=*/false);
         break;
-    default: break;
+    default:
+        // THE UNBOUND BARE KEY SAYS SO (architect 2026-08-30), the strict-
+        // modifier tail's other half and its identical sentence — this
+        // dispatch is the end of the bare road, so a key reaching here binds
+        // nothing at all in this state (bare `u`, `g`, `,` and `.` outside the
+        // `h` view; the digits 4..9; a keysym with no spelling). The caller
+        // gates on no modifiers held, which is why the speller is handed a
+        // default GuiInputState: the chord IS the key.
+        //
+        // A HELD KEY IS STILL ONE CARD: bare Comma and Period are repeat-
+        // eligible everywhere (repeat_eligible's step-gesture arm) and fire
+        // this arm at the compositor's cadence outside the view, and the
+        // cards' dedup keeps one card for one sentence, re-pushed at the top
+        // with a fresh clock at each fire.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             spell_chord(key, GuiInputState{}) +
+                                 " is not bound");
+        break;
     }
 }
 

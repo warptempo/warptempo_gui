@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 // Platform-neutral keyboard / mouse input types. Backends translate native
 // events at their boundary into these so the rest of the GUI never sees
@@ -185,6 +186,118 @@ struct GuiInputState {
     // own consumed-edge sites read it so a burst never disarms itself.
     bool     synthesized_repeat  = false;
 };
+
+// -- THE CHORD SPELLER (architect 2026-08-30) --------------------------------
+//
+// THE ONE PLACE A PRESS IS TURNED INTO THE NAME THE USER READS. The strictness
+// ruling ("go very verbose — a card for every refusal that is silent today")
+// gave the gates sentences that must say WHICH press was refused, and every one
+// of them composes that name here: the keyboard-modal editor gate, the `h`
+// view's allowlist, the strict-modifier tail, the unbound bare default, the
+// render player's and the picker's two catch-alls each, and — through
+// spell_modifiers alone — the pointer's unbound modified press. NO OTHER SITE
+// COMPOSES A CHORD NAME FOR A CARD. The roster's TOOLTIPS carry chords too,
+// as hand-written literals in kToolbarChords, and they are a different job: a
+// tooltip advertises a BOUND chord in advance, this spells a press that just
+// happened.
+//
+// AND THE TWO DISAGREE ON ONE LETTER, deliberately. The tooltip table writes a
+// bare letter LOWERCASE — "(t)", "(m)" — because it is the key as typed and a
+// capital there would advertise a shifted press the product does not bind
+// (that rule and its reason live at redesign_button_tooltip, app_state.h). A
+// CARD UPPER-CASES IT (architect 2026-08-30): the chord stands alone inside a
+// sentence rather than in parentheses after a verb, where a lone lowercase
+// letter reads as prose instead of as a key, and no capital here can be
+// mistaken for a shifted press because THE SHIFT IS ALWAYS SPELLED — "Shift+F"
+// is the shifted one, "F" is the key.
+//
+// A CARD NAMING THE CHORD THE USER PRESSED IS NOT A GESTURE HINT (the standing
+// no-hints rule): it names what just happened, never what to press instead.
+//
+// THE SPELLING: modifiers first in the fixed order Ctrl, Alt, Shift, joined by
+// '+', then the key — a printable ASCII key by its own character upper-cased
+// ("F", "1", "/"), a named key by its name. THE ORDER IS THE PRODUCT'S OWN, the
+// one every chord in HELP and in the docs is written in (Ctrl+Alt+Shift+R), so
+// the card and the documentation spell one chord one way.
+//
+// A KEY WITH NO SPELLING IS "That key", whole, modifiers and all: an unknown
+// keysym has no name to hang a prefix on, and "Ctrl+that key" reads as a
+// misspelling rather than as an answer. What reaches it is what the platform
+// boundary lets through and this table does not name — the keypad's own
+// keysyms, Insert, Menu, a dead key.
+//
+// NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
+// before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
+// them") and the Android backend produces GuiKeys only through synthesize_key,
+// so no F-key can reach a card on either host. An arm exists iff a producer
+// does (validation_topology.md); if a backend ever delivers one it spells
+// "That key" until the arm is added with it.
+//
+// KEY REPEAT RIDES THE CARDS' OWN DEDUP: a held key whose repeats are eligible
+// (repeat_eligible, input_key_dispatch.cpp) re-fires its gate at the
+// compositor's cadence and each fire re-pushes the SAME sentence, which
+// GuiNotifications::notify keeps as ONE card moved back to the top with a fresh
+// clock — one card for a hold, exactly as for a single press. No gate counts
+// presses or reads mods.synthesized_repeat for this.
+inline std::string spell_modifiers(GuiInputState mods) {
+    std::string out;
+    if (mods.ctrl) out += "Ctrl";
+    if (mods.alt) {
+        if (!out.empty()) out += '+';
+        out += "Alt";
+    }
+    if (mods.shift) {
+        if (!out.empty()) out += '+';
+        out += "Shift";
+    }
+    return out;
+}
+
+// The named keys, and the whole of them: every GuiKey that is not a printable
+// ASCII character, plus Space (a printable that reads as a blank). The two
+// pairs that share a name share it deliberately — Return / KpEnter are one
+// "Enter" to the hand, and IsoLeftTab IS the shifted Tab keysym.
+inline const char* spell_key_name(GuiKey key) {
+    switch (key) {
+        case GuiKeys::Space:      return "Space";
+        case GuiKeys::Return:
+        case GuiKeys::KpEnter:    return "Enter";
+        case GuiKeys::Tab:
+        case GuiKeys::IsoLeftTab: return "Tab";
+        case GuiKeys::Escape:     return "Esc";
+        case GuiKeys::BackSpace:  return "Backspace";
+        case GuiKeys::Delete:     return "Delete";
+        case GuiKeys::Home:       return "Home";
+        case GuiKeys::End:        return "End";
+        case GuiKeys::PageUp:     return "Page Up";
+        case GuiKeys::PageDown:   return "Page Down";
+        case GuiKeys::Up:         return "Up";
+        case GuiKeys::Down:       return "Down";
+        case GuiKeys::Left:       return "Left";
+        case GuiKeys::Right:      return "Right";
+        default:                  return nullptr;
+    }
+}
+
+inline std::string spell_chord(GuiKey key, GuiInputState mods) {
+    std::string name;
+    if (const char* named = spell_key_name(key)) {
+        name = named;
+    } else if (key > 0x20 && key < 0x7f) {
+        // The GuiKey IS the character (the keysym table is ASCII here), and it
+        // is the KEY'S OWN character, never mods.codepoint: the shifted `1` is
+        // still the 1 key, and a card that called it "!" would name a press the
+        // user cannot find on the board. Letters arrive case-folded from the
+        // platform boundary, so this is the one place they are put back up.
+        char c = static_cast<char>(key);
+        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        name.assign(1, c);
+    }
+    if (name.empty()) return "That key";
+    const std::string prefix = spell_modifiers(mods);
+    if (prefix.empty()) return name;
+    return prefix + "+" + name;
+}
 
 // True for the chord that toggles playback: BARE Space only. Modifier-strict —
 // a Space carrying ctrl or alt has no binding, and the ONE shifted form is a
