@@ -468,35 +468,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
-    // THE COPY VALUE BUTTON (architect 2026-08-29), the verb group's FIFTH and
-    // the value pair's pointer home: BARE `j`, which was free (greped at the
-    // landing). Its plain lift copies the focused marker's resolved value to
-    // the system clipboard, exactly as the key does — button-is-its-chord
-    // literally, the press dispatching bare `j` through on_key at the LIFT
-    // while the KEY acts at the press.
-    //
-    // AND IT ADMITS SHIFT: its twin is SHIFT+`j`, THE JUMP to the marker that
-    // value came from, on the other A/B tab — so a shift-click or a LONG PRESS
-    // at kChromeShiftHoldMs puts a reference and its definition one Ctrl+Tab
-    // apart with no keyboard, which is the whole reason the admission exists
-    // on glass. The row's own `shift` bit stays FALSE, the admission and the
-    // table bit being mutually exclusive by the shift term's construction
-    // (finish_chrome_press_release); the membership is
-    // redesign_button_shift_admits (app_state.h) and the tooltip's second line
-    // is bound to it by that predicate's static_assert.
-    //
-    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
-    // copy repeats onto itself and a jump has one destination, so the key is
-    // one-shot at repeat_eligible and the button carries no `repeats`. ITS
-    // GATES ARE NOT THE VERBS': the READ-ONLY lock ADMITS both chords (a
-    // clipboard write, a tab switch, a playhead move and a camera author
-    // nothing), so the button stays lit on a locked tab, while the `h` view
-    // consumes bare `j` and greys it with the group through the derived
-    // partition.
-    {RedesignButton::IconCopyValue,
-     GuiKeys::J,      false, false, false, false, true},                             // bare j
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
-    // SIXTH since 2026-08-29 and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
+    // FIFTH and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
     // has opened the editor with all along. It exists because the other two
     // roads are a double-click and a key, and glass has neither reliably — the
     // architect drove a taller flag hit rect for one evening chasing the missed
@@ -544,7 +517,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
     // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
-    // 2026-08-27 and its fifth before that: BARE
+    // 2026-08-27 and its fifth before that, with the Copy resolved value
+    // button seated immediately behind it since 2026-08-29: BARE
     // `/`, which was free. It opens the measure editor on the focused marker,
     // and button-is-its-chord holds literally — the press dispatches bare `/`
     // through on_key at the LIFT like every other chrome button, while the KEY
@@ -560,8 +534,36 @@ constexpr ToolbarChord kToolbarChords[] = {
     // home-view binding — but that refusal was never a face anyway.
     {RedesignButton::IconMarkerMeasure,
      GuiKeys::Slash,  false, false, false, false, true},                             // bare /
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH since
-    // 2026-08-27 (its sixth before that): BARE `k`, which was free — he picked it over `n`
+    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
+    // SEVENTH and the value pair's pointer home: BARE `j`, which was free
+    // (greped at the landing). Its plain lift copies the focused marker's
+    // resolved value to the system clipboard, exactly as the key does —
+    // button-is-its-chord literally, the press dispatching bare `j` through
+    // on_key at the LIFT while the KEY acts at the press.
+    //
+    // AND IT ADMITS SHIFT: its twin is SHIFT+`j`, THE JUMP to the marker that
+    // value came from, on the other A/B tab — so a shift-click or a LONG PRESS
+    // at kChromeShiftHoldMs puts a reference and its definition one Ctrl+Tab
+    // apart with no keyboard, which is the whole reason the admission exists
+    // on glass. The row's own `shift` bit stays FALSE, the admission and the
+    // table bit being mutually exclusive by the shift term's construction
+    // (finish_chrome_press_release); the membership is
+    // redesign_button_shift_admits (app_state.h) and the tooltip's second line
+    // is bound to it by that predicate's static_assert.
+    //
+    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
+    // copy repeats onto itself and a jump has one destination, so the key is
+    // one-shot at repeat_eligible and the button carries no `repeats`. ITS
+    // GATES ARE NOT THE VERBS': the READ-ONLY lock ADMITS both chords (a
+    // clipboard write, a tab switch, a playhead move and two camera frames
+    // author nothing), so the button stays lit on a locked tab, while the `h`
+    // view consumes bare `j` and greys it with the group through the derived
+    // partition.
+    {RedesignButton::IconCopyValue,
+     GuiKeys::J,      false, false, false, false, true},                             // bare j
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's EIGHTH since
+    // 2026-08-29 (its seventh from 2026-08-27 and its sixth before that):
+    // BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key
     // flips and button-is-its-chord holds literally: the press dispatches bare

@@ -1170,8 +1170,9 @@ constexpr IconPath kWindowClosePaths[] = {
      "M 6,5.1523437 5.1523437,6 10.152344,11 5.1523437,16 6,16.847656 l 5,-5 5,5 L 16.847656,16 l -5,-5 5,-5 L 16,5.1523437 11,10.152344 Z"},
 };
 
-// EDIT-COPY (2026-08-29), the Copy value button's two stacked sheets: ONE
-// `.ColorScheme-Text` path under `fill:currentColor`, so it resolves to
+// EDIT-COPY (2026-08-29), the Copy resolved value button's two stacked
+// sheets: ONE `.ColorScheme-Text` path under `fill:currentColor`, so it
+// resolves to
 // kIconText like every other single-colour Breeze action here, and its `d` is
 // copied verbatim — absolute M/L/Z, the interpreter's oldest arms. THREE
 // SUBPATHS, and the two inner ones wind OPPOSITE the outline, which is how

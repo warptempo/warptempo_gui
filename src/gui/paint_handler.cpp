@@ -2475,23 +2475,24 @@ constexpr TransportRowDef kTransportGroup[] = {
 // retired the one-evening touch halo that had tried to rescue the double tap
 // instead.
 //
-// THE GROUP IS EIGHT since 2026-08-29, the COPY VALUE button seated
-// IMMEDIATELY AFTER TOGGLE INHERIT (bare `j`, edit-copy's two stacked sheets).
-// The side is the coder's, on the architect's "beside Toggle inherit": inherit
-// is what makes a marker a PASS, and a pass is what this button has a resolved
-// value to copy, so the two read as one pair — and the seat leaves Delete two
-// boxes away, the Edit flag button's own seating rule. It is the group's one
-// member the READ-ONLY LOCK does not grey (its two chords author nothing) and
-// the second on this row to admit SHIFT, whose twin is the jump to the marker
-// the value came from.
+// THE GROUP IS EIGHT since 2026-08-29, the COPY RESOLVED VALUE button seated
+// IMMEDIATELY AFTER THE MEASURE (bare `j`, edit-copy's two stacked sheets) —
+// THE ARCHITECT'S OWN SEAT, taken on his live pass that evening. It landed
+// that afternoon in the slot after Toggle inherit, on a coder's reading of his
+// first ask "beside Toggle inherit", and he moved it to the group's tail the
+// same day: the four verbs and the two editor openers keep their run, and this
+// button joins Add to Selection at the end, the two members that reach a
+// marker without authoring it. It is the group's one member the READ-ONLY LOCK
+// does not grey (its two chords author nothing) and the second on this row to
+// admit SHIFT, whose twin is the jump to the marker the value came from.
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,    icons::Icon::InsertLink},
-    {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconMarkerEditFlag,   icons::Icon::TextField},
     {RedesignButton::IconMarkerMeasure,    icons::Icon::MinuetScales},
+    {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three

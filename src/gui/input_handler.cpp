@@ -915,8 +915,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // view by that view's allowlist, which never names them. Bare- and
     // shift-exact through the shared predicates (gui_input.h), so these arms
     // and the allowlist cannot drift; every refusal is the act's own consumed
-    // no-op. The bottom row's Copy value button dispatches both spellings
-    // through here, its plain lift and its shift-click / long press.
+    // no-op. The bottom row's Copy resolved value button dispatches both
+    // spellings through here, its plain lift and its shift-click / long press.
     if (is_copy_value_key(key, mods)) {
         copy_focused_marker_value();
         return;
@@ -1659,9 +1659,12 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
     // ab_audition.h), and, since 2026-08-29, SHIFT+`j`'s jump to the value's
-    // source (jump_to_value_source, input_key_dispatch.cpp), whose last act
-    // this is: the jump single-selects the source before it calls, so the
-    // focused arm below centers on exactly the marker the jump named.
+    // source (jump_to_value_source, input_key_dispatch.cpp), WHICH CALLS THIS
+    // TWICE — it is still ONE caller, and the count above is five: once on the
+    // CURRENT tab before it leaves (the audition's own shape, so the origin
+    // tab is framed on the reference it was read from) and once as its last
+    // act, after the single-select, so the focused arm below centers on
+    // exactly the marker the jump named.
     //
     // THE LEVEL IS THE CALLER'S, defaulting to kWorkingZoomLevel (the header
     // carries the default; every caller but one passes nothing and so means

@@ -2316,46 +2316,10 @@ enum class RedesignButton {
     // 2026-08-15). They keep their Icon* names: a roster id names the button,
     // not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
-    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's FIFTH
-    // member, seated IMMEDIATELY AFTER TOGGLE INHERIT (the architect's ask was
-    // "beside Toggle inherit" and this is the side chosen: inherit is what
-    // MAKES a marker a pass, and a pass is exactly what this button has a
-    // value to copy, so the two acts read as one pair — and it stays as far
-    // from Delete as the Edit flag button's own seating rule wants).
-    //
-    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
-    // FOCUSED marker's resolved value to the system clipboard — while its
-    // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
-    // other A/B tab, so the reference and its definition stand one Ctrl+Tab
-    // apart. IT IS THE ROSTER'S SEVENTH SHIFT-ADMITTING BUTTON
-    // (redesign_button_shift_admits owns the membership and the
-    // static_assert binds the tooltip's second line to it), which is what
-    // gives a keyboardless panel the jump through a LONG PRESS.
-    //
-    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
-    // (architect 2026-08-29). The readout was the status bar's right cell for
-    // one day and the bottom strip's before that; the bar folded into row 8
-    // and the readout retired with it, so the value is now something you TAKE
-    // rather than something you read, and the marker it came from is somewhere
-    // you GO.
-    //
-    // ITS ENABLED ARM HAS NO SELECTION TERM — the group's own rule, stated at
-    // the Edit flag button and the Measure beside it: an ineligible focus (an
-    // owner, a phase reset, iteration mode, the P column, nothing focused) is
-    // the ACT's consumed no-op, and a face tracking it would blink at every
-    // selection (the 2026-08-15 no-blink ruling). AND IT IS NOT IN THE
-    // READ-ONLY ARM either, which is where it parts from its four neighbours:
-    // both chords are on read_only_key_blocked's allowlist (they author
-    // nothing — a clipboard write, a tab switch, a playhead move and a
-    // camera), so a locked tab leaves the button lit exactly as it leaves the
-    // keys live. What greys it is the `h` VIEW through the DERIVED partition
-    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
-    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
-    IconCopyValue,
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
-    // SIXTH member since 2026-08-29 (its fifth from its landing;
-    // the Copy value button took the slot after Toggle inherit that day),
-    // seated between Copy value and the Measure and
+    // FIFTH member, seated between Toggle inherit and the Measure (it was the
+    // SIXTH for the afternoon of 2026-08-29, when the Copy value button landed
+    // in the slot after Toggle inherit and left it again that evening),
     // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
     // an editor open and its neighbour's is a destruction, and a fingertip
     // reaching for one must not be one box from the other.
@@ -2394,10 +2358,13 @@ enum class RedesignButton {
     // so a modified press is refused at the band gate and the long press —
     // glass's held shift — reaches nothing.
     IconMarkerEditFlag,
-    // THE MARKER MEASURE — the verb group's SEVENTH member since 2026-08-29
-    // (its sixth from 2026-08-27, when the Edit flag button landed ahead of
-    // it, and its fifth from 2026-08-19 before that), seated after the Edit
-    // flag button and ahead of Add to Selection. Bare `/`,
+    // THE MARKER MEASURE — the verb group's SIXTH member since 2026-08-27,
+    // when the Edit flag button landed ahead of it (its fifth from 2026-08-19
+    // before that, and its seventh for the afternoon of 2026-08-29, while the
+    // Copy value button sat after Toggle inherit), seated after the Edit
+    // flag button and ahead of the COPY VALUE button, which took the slot
+    // between it and Add to Selection that evening (architect 2026-08-29).
+    // Bare `/`,
     // minuet-scales (notes climbing a staff — the speech balloon it wore for
     // the field's one free-text day was swapped with the grammar on
     // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
@@ -2431,9 +2398,48 @@ enum class RedesignButton {
     // tab and in redesign_button_shift_admits; the jump left the product whole
     // and the button returned to the lock's set with it.)
     IconMarkerMeasure,
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
+    // member, seated IMMEDIATELY AFTER THE MEASURE (architect 2026-08-29, his
+    // live pass that evening; it sat after Toggle inherit for the afternoon
+    // between its landing and the move, on the coder's reading of his first
+    // ask "beside Toggle inherit"). It sits between the Measure and Add to
+    // Selection now, at the group's tail with the two acts that reach a marker
+    // without authoring it.
+    //
+    // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
+    // FOCUSED marker's resolved value to the system clipboard — while its
+    // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
+    // other A/B tab, so the reference and its definition stand one Ctrl+Tab
+    // apart, each tab framed on its own half by the jump's two `c` calls. IT
+    // IS THE ROSTER'S SEVENTH SHIFT-ADMITTING BUTTON
+    // (redesign_button_shift_admits owns the membership and the
+    // static_assert binds the tooltip's second line to it), which is what
+    // gives a keyboardless panel the jump through a LONG PRESS.
+    //
+    // WHY IT EXISTS: it is what the RESOLVED READOUT and its Ctrl+C became
+    // (architect 2026-08-29). The readout was the status bar's right cell for
+    // one day and the bottom strip's before that; the bar folded into row 8
+    // and the readout retired with it, so the value is now something you TAKE
+    // rather than something you read, and the marker it came from is somewhere
+    // you GO.
+    //
+    // ITS ENABLED ARM HAS NO SELECTION TERM — the group's own rule, stated at
+    // the Edit flag button and the Measure beside it: an ineligible focus (an
+    // owner, a phase reset, iteration mode, the P column, nothing focused) is
+    // the ACT's consumed no-op, and a face tracking it would blink at every
+    // selection (the 2026-08-15 no-blink ruling). AND IT IS NOT IN THE
+    // READ-ONLY ARM either, which is where it parts from its four neighbours:
+    // both chords are on read_only_key_blocked's allowlist (they author
+    // nothing — a clipboard write, a tab switch, a playhead move and a
+    // camera), so a locked tab leaves the button lit exactly as it leaves the
+    // keys live. What greys it is the `h` VIEW through the DERIVED partition
+    // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
+    // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
+    IconCopyValue,
     // ADD TO SELECTION — the verb group's EIGHTH member since 2026-08-29 (its
     // seventh from 2026-08-27 and its sixth from 2026-08-18; the Edit flag
-    // button and then the Copy value button landed ahead of it),
+    // button and then the Copy value button landed ahead of it, the second of
+    // them immediately ahead of it since that evening's reseat),
     // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
@@ -2684,9 +2690,9 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconCopyValue:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
@@ -2735,9 +2741,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconCopyValue:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
@@ -9374,8 +9380,9 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportWalkBoth:
         // COPY VALUE TAKES THE ROW'S POLICY (2026-08-29), and it is the VERB
         // GROUP'S ONE MEMBER THAT DOES: both of its chords — bare `j`, the
-        // clipboard write, and Shift+`j`, the tab switch plus the land plus
-        // the camera — are on read_only_key_blocked's allowlist, authoring
+        // clipboard write, and Shift+`j`, the two `c` frames around a tab
+        // switch, a select and a land — are on read_only_key_blocked's
+        // allowlist, authoring
         // nothing the lock protects, so it must NOT join the read-only arm
         // above. Greying a face whose key still works is the face promising
         // less than the key delivers, which the read-only-legal set's own rule
@@ -9701,16 +9708,16 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
-        // the jump its shifted twin runs. Nothing stays true afterwards for a
-        // lamp to report.
-        case RedesignButton::IconCopyValue:
         // THE MARKER MEASURE IS MOMENTARY TOO: it opens an editor and the
         // editor's own session is the state; there is no bit for a lamp. THE
         // EDIT FLAG BUTTON beside it answers for the same reason and on the
         // same editor machinery (2026-08-27).
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
+        // the jump its shifted twin runs. Nothing stays true afterwards for a
+        // lamp to report.
+        case RedesignButton::IconCopyValue:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
@@ -9908,8 +9915,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // this is the membership it is about. The drop's shifted twin drops a phase
 // reset from any view, so the button reaches both columns' drops the way the
 // letter does.)
-// (COPY VALUE JOINED 2026-08-29, with Shift+`j`: its plain act copies the
-// focused marker's resolved value and its shifted twin JUMPS to the marker
+// (COPY RESOLVED VALUE JOINED 2026-08-29, with Shift+`j`: its plain act
+// copies the focused marker's resolved value and its shifted twin JUMPS to
+// the marker
 // that value came from, on the other A/B tab — the same rule as the drop's
 // above, a shift-enabled gesture whose bare form has a button. The long press
 // is WANTED on glass here for the play button's reason: standing the two tabs
@@ -10207,8 +10215,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // HELP's vocabulary. ONE OF THEM ADMITS SHIFT since 2026-08-28 — the
         // DROP, whose shifted chord drops a phase reset from any view — and it
         // carries the second line that says so; the other three take one line
-        // each. (COPY VALUE, seated among them since 2026-08-29, carries the
-        // group's second two-line form; its own row below says why.) They are the bottom
+        // each. (COPY RESOLVED VALUE, seated among them since 2026-08-29,
+        // carries the group's second two-line form; its own row below says
+        // why.) They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
@@ -10232,19 +10241,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
-        // COPY VALUE (2026-08-29), the verb group's fifth and its SECOND
-        // two-line form: bare `j` copies the focused marker's resolved value,
-        // and the shifted twin JUMPS to the marker that value came from — so
-        // the second line names the act and the modifier and not a key, this
-        // table's rule for second lines, and the static_assert below keeps the
-        // line and the admission one fact. The accelerator is a bare letter
-        // and so lowercase. It is the group's one member the READ-ONLY LOCK
-        // leaves lit, both its chords being navigation, and it still explains
-        // itself in the `h` view, where the derived partition greys it — the
-        // tooltips-on-disabled ruling above.
-        case RedesignButton::IconCopyValue:
-            return {"Copy value (j)",
-                    "Press Shift to go to the marker it comes from."};
         // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
         // like its neighbours: the act named, no shift line, the button
         // admitting neither shift nor ctrl. THE ACCELERATOR IS "Enter" and not
@@ -10265,6 +10261,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
             return {"Measure (/)", nullptr};
+        // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
+        // that evening's reseat and its SECOND two-line form: bare `j` copies
+        // the focused marker's resolved value, and the shifted twin JUMPS to
+        // the marker that value came from — so the second line names the act
+        // and the modifier and not a key, this table's rule for second lines,
+        // and the static_assert below keeps the line and the admission one
+        // fact. BOTH LINES ARE THE ARCHITECT'S OWN WORDS (2026-08-29): the
+        // first says RESOLVED because that is what the value is and the flag
+        // shows the unresolved one, and the second names the two things a
+        // source can be — the DEFINITION a `label_ref` points at, the
+        // PREVIOUS marker a pass inherits from. The
+        // accelerator is a bare letter and so lowercase. It is the group's one
+        // member the READ-ONLY LOCK leaves lit, both its chords being
+        // navigation, and it still explains itself in the `h` view, where the
+        // derived partition greys it — the tooltips-on-disabled ruling above.
+        case RedesignButton::IconCopyValue:
+            return {"Copy resolved value (j)",
+                    "Press Shift to jump to defining/previous marker."};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH since
         // 2026-08-27 and a MODE
         // rather than an act — the hint names it in the architect's own words

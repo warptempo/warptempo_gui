@@ -433,8 +433,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // selection, a playhead and a camera, every one of them navigation this
     // gate has never blocked.
     // Shift-exact through the shared predicates, so these two entries and the
-    // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: the Copy value
-    // button is NOT in redesign_button_enabled's read-only arm, so a locked
+    // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: the Copy resolved
+    // value button is NOT in redesign_button_enabled's read-only arm, so a
+    // locked
     // tab leaves it lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
@@ -6222,9 +6223,20 @@ void GuiInputHandler::copy_focused_marker_value() {
 
 // THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
 // focused value came from, so a reference and its definition can be read side
-// by side one Ctrl+Tab apart. FOUR ACTS IN THIS ORDER, each through its own
+// by side one Ctrl+Tab apart. FIVE ACTS IN THIS ORDER, each through its own
 // chokepoint and none of them spelled twice — and the ORDER is the whole of
 // what makes the act land where it says it does:
+//   * run_center_command ON THE CURRENT TAB FIRST (architect 2026-08-29, "with
+//     the c on the current tab first to ensure it gets done"): the working
+//     zoom centred on THIS tab's focused marker — the reference or the pass
+//     the value was read off — done BEFORE the tab is left, so the origin tab
+//     is framed on its own subject whether or not the user ever comes back to
+//     it. IT IS THE A/B AUDITION'S OWN SHAPE, each half of that act opening
+//     with `c` on the tab it plays (ab_audition.h). AND IT LANDS THE PLAYHEAD:
+//     `c` re-lands the cursor on the focused marker before it centres, so the
+//     origin tab's playhead comes to rest on the reference — the audition's
+//     behaviour too, and wanted here for the same reason: the tab you leave is
+//     left standing on the thing you were reading;
 //   * the TAB SWITCH through switch_active_tab_view_to, the Ctrl+Tab road,
 //     which clears the selection as every tab switch does, re-lands the
 //     window's own state and runs the COINCIDENCE AUTO-SELECT at the entering
@@ -6243,9 +6255,10 @@ void GuiInputHandler::copy_focused_marker_value() {
 //     being one of the two MOVEMENT owners, it stops playback, ends a standing
 //     audition and hides the trim region overlay, so this body writes none of
 //     that;
-//   * run_center_command, `c`'s one owner, which puts the working zoom on the
-//     FOCUSED marker — the source, by the single-select above, so the camera
-//     and the cursor cannot come to name two different markers.
+//   * run_center_command AGAIN, now on the tab that landed, which puts the
+//     working zoom on the FOCUSED marker — the source, by the single-select
+//     above, so the camera and the cursor cannot come to name two different
+//     markers. BOTH TABS END FRAMED, each on its own half of the pair.
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
 void GuiInputHandler::jump_to_value_source() {
@@ -6261,6 +6274,7 @@ void GuiInputHandler::jump_to_value_source() {
     // nothing to jump to, so the press is a consumed nothing.
     if (payload.empty() || source < 0) return;
     if (source >= static_cast<int>(app.warpmarkers.markers().size())) return;
+    run_center_command();
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');
     selection.set_single_selection(source);

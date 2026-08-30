@@ -166,9 +166,9 @@ namespace {
 // bottom_row_h_px() tall (architect-ruled 2026-08-12, rows
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
-// pad and, flush right, the four single-marker verbs with the Copy value
-// button, the Edit flag
-// button, the Marker Measure and Add to Selection behind them, the
+// pad and, flush right, the four single-marker verbs with the Edit flag
+// button, the Marker Measure, the Copy resolved value
+// button and Add to Selection behind them, the
 // marker-walk three and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
@@ -2209,8 +2209,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // one hangs ABOVE its lane, the painter's own flip — and that
             // second arm covers both of the row's surfaces, its eighteen
             // roster buttons (the transport three, and the right block's four
-            // marker verbs with the Copy value button, the Edit flag button,
-            // the Marker Measure and
+            // marker verbs with the Edit flag button, the Marker Measure, the
+            // Copy resolved value button and
             // Add to Selection behind them, three walk steps and four cardinal
             // arrows) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the

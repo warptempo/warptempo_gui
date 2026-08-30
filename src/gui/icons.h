@@ -420,7 +420,7 @@ enum class Icon {
     // here rather than recovered (the def and the asset had gone with the
     // consumer). It says "take this value with you", which is what bare `j`
     // does with the focused marker's resolved tempo.
-    EditCopy,            // Copy value (the bottom row's verb group)
+    EditCopy,            // Copy resolved value (the bottom row's verb group)
 
 };
 
