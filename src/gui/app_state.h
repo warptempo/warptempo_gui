@@ -29,7 +29,7 @@
 #include <vector>
 
 class GuiAudio;
-class GuiTargetRender;
+struct GuiTargetRender;
 
 // Zoom level numbering: the range constants (kMinZoom, kMaxZoom) live in
 // settings_file.h — the persisted zoom vocabulary the whole-settings schema

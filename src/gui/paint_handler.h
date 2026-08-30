@@ -12,7 +12,7 @@
 #include <vector>
 
 class GuiWaveformWorker;
-class GuiTargetRender;
+struct GuiTargetRender;
 
 // Paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, reaching shared state through the reference members below.
