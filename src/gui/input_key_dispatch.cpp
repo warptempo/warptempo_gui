@@ -4383,7 +4383,9 @@ void GuiInputHandler::apply_recipe_in_place(
 //
 // Load render entry `e`'s frozen sidecar recipe in place as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
-// takes an explicit entry, and the caller owns the visible refusal. ONE
+// takes an explicit entry, and THE ACT ITSELF OWNS THE VISIBLE REFUSAL — the
+// local `refuse` below, whose contract is stated further down; the caller
+// says nothing at either end. ONE
 // CALLER, re-greped: confirm_load_in_place's player arm, the Load in place
 // button through its confirmation, which acts on the HIGHLIGHTED batch cell
 // and so has no name to fail to resolve — its own refusals (the lock, a
@@ -6123,8 +6125,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // synthesizes exactly this bare chord. The modal / editor / `h` /
     // loading gates in on_key run before this handler, so `l` is inert while
     // any of them owns the keyboard; inside the player the key is the mode's
-    // own closer (route_render_player_key) and never reaches here. "No
-    // renders to play" is the opener's one status refusal.
+    // own closer (route_render_player_key) and never reaches here. "Nothing
+    // to play: no renders under render/ or tmp/" is the opener's one status
+    // refusal.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         toggle_render_player();
         return true;

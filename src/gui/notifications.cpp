@@ -104,17 +104,32 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
                               std::string text) {
     std::vector<AppState::Notification>& cards = app.notifications.cards;
     const int64_t now = monotonic_ms();
-    // THE DEDUP: the same sentence already on screen in the same class is
-    // that card again, not a second one. A normal duplicate takes a fresh
-    // full life — banked if the pointer is resting on it, armed otherwise —
-    // and a critical duplicate changes nothing.
-    for (AppState::Notification& n : cards) {
-        if (n.cls != cls || n.text != text) continue;
-        if (cls == AppState::NotificationClass::Normal) {
-            if (n.paused) n.remaining_ms = kNotificationMs;
-            else          n.expiry_ms    = now + kNotificationMs;
-        }
-        return;
+    // THE DEDUP: the same sentence already in the stack in the same class is
+    // that event again, not a second card — so the stack keeps ONE card for
+    // it, and THAT CARD IS RE-PUSHED AT THE TOP with a fresh clock rather
+    // than re-armed where it stands (architect 2026-08-30). The matching card
+    // is removed here, dropping its hover and its banked life exactly as
+    // dismiss() does, and the ordinary push below builds the new one; the
+    // bump then runs as it does for any push.
+    //
+    // WHY THE MOVE, and not a re-arm in place: "in the stack" and "on screen"
+    // are not the same thing. A stack that outgrows the room paints on past
+    // its foot and the painter clips there, so a card can be live and yet
+    // wholly invisible — and a re-arm in place would then answer the act the
+    // user has this moment performed with nothing visible at all. The top is
+    // the one place the answer is certain to be seen, and it is also what a
+    // repeated event means to the reader: the top says the last time it
+    // happened. ONE RULE FOR BOTH CLASSES — a critical duplicate moves to the
+    // top too, where it was a no-op before.
+    //
+    // A HELD KEY firing the same refusal at repeat cadence therefore
+    // re-pushes at each repeat: one card, on top, its life starting again at
+    // every fire — the same picture as a single press, held.
+    for (size_t i = 0; i < cards.size(); ++i) {
+        if (cards[i].cls != cls || cards[i].text != text) continue;
+        if (app.notifications.hovered_id == cards[i].id) set_hover(0, false);
+        cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(i));
+        break;
     }
     AppState::Notification card;
     card.id   = app.notifications.next_id++;
@@ -261,8 +276,10 @@ void GuiNotifications::set_hover(uint64_t id, bool close) {
 }
 
 void GuiNotifications::update_hover(int x, int y) {
-    // The hit owner has already asked the live stack (a departed or demoted
-    // card answers 0 there), so this walk owes only the X's own box.
+    // The hit owner has already asked the live stack (a card that has left it
+    // — by its expiry, by its X or by the bump — answers 0 there, while a
+    // live card is selected wherever it has a published rect), so this walk
+    // owes only the X's own box.
     const uint64_t id = notification_card_at(app, x, y);
     set_hover(id, id != 0 && notification_close_at(app, id, x, y));
 }

@@ -632,8 +632,8 @@ NO DEVICE PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback` gained
 sound: the AAudio disconnect latch and its refused reopen AND, on both, the
 device that never came up (an init that failed; JACK still records nothing for
 a server that vanishes mid-play) — and the render player's tick forks on it
-BEFORE its natural-end test, pausing in place with "No audio device" on a
-notification card and a "paused" push, where before a Bluetooth drop read as a
+BEFORE its natural-end test, pausing in place with "No audio device; the wav
+cannot be played" on a notification card and a "paused" push, where before a Bluetooth drop read as a
 natural end and auto-advanced, and a laptop without pipewire-jack raced
 through the folder a wav per tick.
 

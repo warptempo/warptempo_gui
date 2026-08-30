@@ -40,9 +40,14 @@
 // player's own modal row takes whole, so that refusal has nothing beside it.)
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
-// it and nothing else writes a card. A text identical to a card already on
-// screen in the same class does not stack a duplicate — it re-arms that
-// card's clock (a critical duplicate is a no-op).
+// it and nothing else writes a card. A text identical to a card already in
+// the stack in the same class does not stack a duplicate — the stack keeps
+// ONE card for that event and THAT CARD IS RE-PUSHED AT THE TOP with a fresh
+// clock, in both classes alike (architect 2026-08-30). It is not re-armed
+// where it stands, because "in the stack" is not "on screen": an overflowing
+// stack is clipped at the room's foot, so a live card can be wholly
+// invisible, and the answer to the act the user has just performed must be
+// visible. The top is also what a repeat means — the last time it happened.
 //
 // THE STACK IS UNCAPPED AND THE QUEUE IS RETIRED (architect 2026-08-30,
 // "cards bump each other off the screen — newest on top, the oldest leaving;
@@ -228,9 +233,11 @@ struct GuiNotifications {
     GuiNotifications(AppState& app_, Viewport& viewport_)
         : app(app_), viewport(viewport_) {}
 
-    // THE ONE PUSH. A duplicate of a card on screen (same class, same text)
-    // re-arms that card instead of stacking; a critical duplicate is a no-op.
-    // A new card goes on TOP and is visible at once, its clock started here;
+    // THE ONE PUSH. A duplicate of a card in the stack (same class, same
+    // text) removes that card and pushes it again at the top with a fresh
+    // clock, in both classes alike, instead of stacking a second one or
+    // re-arming it where it stands (the argument is at the site).
+    // A card goes on TOP and is visible at once, its clock started here;
     // then THE BUMP brings the stack back inside notification_capacity by
     // removing the oldest NORMAL card, never a critical one and never the
     // card just pushed (the full argument is at the site).

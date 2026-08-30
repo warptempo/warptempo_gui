@@ -4186,8 +4186,10 @@ void GuiInputHandler::clear_folder_overlay_hover() {
 bool GuiInputHandler::claim_notification_press(GuiMouseButton button, int x,
                                                int y) {
     // The hit owner has already asked the LIVE stack (notifications.h): a
-    // published rect whose card has expired or been demoted into the queue
-    // answers 0 here, so this press is claimed by NOTHING and falls through to
+    // published rect whose card has LEFT that stack — by its expiry, by its X
+    // or by the bump — answers 0 here (a live card that is merely clipped is
+    // selected wherever it has a published rect, and past the room's foot it
+    // has none), so this press is claimed by NOTHING and falls through to
     // the surface underneath — the pixels the user is about to see there at
     // the next paint, which is the honest place for it to land.
     const uint64_t id = notification_card_at(app, x, y);

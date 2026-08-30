@@ -187,9 +187,9 @@ inline int content_height_px(const AppState& a) {
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
-// rows in it — no content can stand empty anyway (the player refuses "No
-// renders to play" and the project picker always lists at least the project
-// that is open).
+// rows in it — no content can stand empty anyway (the player refuses with
+// "Nothing to play: no renders under render/ or tmp/" and the project picker
+// always lists at least the project that is open).
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
