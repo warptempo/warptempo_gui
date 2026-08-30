@@ -47,12 +47,18 @@
 
 namespace {
 
-// THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29). The failed-scan
-// arrival prints it on stderr with the store's own reason appended and raises
-// it as a notification card the same way, and run_history_commit's !active
-// arm raises it bare — the same fact reported to two surfaces, so the words
-// live here rather than twice in string literals that could drift apart.
-constexpr const char* kHistoryUnavailable = "History is unavailable";
+// (THE HISTORY-UNAVAILABLE SENTENCE moved to history_diff.h on 2026-08-30,
+// beside the module that composes the reason it prefixes: the mode's ENTRY
+// refusal became a card that day, which put a fourth reporter of the fact in
+// this file and a producer of it in another translation unit.)
+
+// THE CHECKPOINT-PUBLISHING SENTENCE, ONE LITERAL (2026-08-30). ONE MODE, ONE
+// FACT, ONE WORDING, and it now has THREE readers in this file: bare `h`'s
+// entry refusal (which also prints it on stderr — one composer, two
+// surfaces), the Open project picker's own open act, and that picker's
+// router's Ctrl+S arm, which meets the identical bit at the identical moment.
+constexpr const char* kCheckpointPublishing =
+    "A checkpoint is still publishing; try again when it finishes";
 
 // THE TWO MODE ROUTERS' CATCH-ALL SUFFIXES (architect 2026-08-30, the
 // strictness ruling). Each router IS the whole keyboard vocabulary while its
@@ -825,7 +831,23 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // the deferred one.
     kick_history_prefetch_if_stale();
     AppState::HistoryMode fresh;
-    if (!fresh.session.init(app, history_prefetch)) return false;
+    if (!fresh.session.init(app, history_prefetch)) {
+        // THE REFUSED ENTRY SAYS SO (architect 2026-08-30). init() already
+        // prints the line on stderr with the store's own reason appended;
+        // the card is that same composed sentence on screen — one composer
+        // (kHistoryUnavailable, history_diff.h), the stderr line unchanged —
+        // so a `h` that opens nothing is not a dead key on the tablet, where
+        // there is no terminal to read. THE CARD IS THIS OWNER'S, not
+        // init()'s: the module has no notifications and this is the ONE
+        // entry, so there is exactly one card per press by construction.
+        // (The OTHER reporter of the same fact — the prefetch arrival that
+        // closes a standing view — raises its own, an event the user was not
+        // watching rather than an answer to a press.)
+        notifications.notify(AppState::NotificationClass::Normal,
+                             std::string(kHistoryUnavailable) + ": " +
+                                 fresh.session.unavailable_reason());
+        return false;
+    }
     // THE SECOND WALK, BOUND TO THE SAME NOW SIDE (2026-08-07). It costs no git
     // and no formatting here — the undo stack's size, the settings writer's GUI
     // half and a copy of the three frozen strings — because every member text is
@@ -1333,9 +1355,29 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
 // arm that spells it, and this is the one body that runs them.
+// EVERY REFUSAL HERE IS A CARD (architect 2026-08-30), and the card is THIS
+// body's rather than its two callers': both callers refuse for exactly these
+// reasons and neither adds one, so a sentence at each spelling would be the
+// same sentence twice. THE MARCH COMPOSES THIS BODY TWICE and that stays ONE
+// card per press by the stack's own rule — a duplicate text is not stacked, it
+// is the standing card re-pushed at the top with a fresh clock (the argument
+// is at GuiNotifications::notify) — so a Ctrl+Shift+Tab at a wall answers once
+// even where both halves refuse.
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     const int n = static_cast<int>(app.history_mode.flags.size());
-    if (n == 0) return;
+    if (n == 0) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "There are no changed markers to step through");
+        return;
+    }
+    // THE WALLS' TWO SENTENCES, said from the three places this body can hit
+    // one: the unseated scan that finds nothing past the playhead, and the
+    // two seated ends.
+    const auto report_wall = [this](bool fwd) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             fwd ? "This is the last change"
+                                 : "This is the first change");
+    };
     const int here = app.history_mode.focus;
     int there = -1;
     if (here < 0 || here >= n) {
@@ -1386,12 +1428,21 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
         // live cycle's "nothing ahead" return and the no-wrap walls two lines
         // below in one shape. Forward with the playhead at or past the last
         // flag, backward at or before the first, and the view rests untouched.
-        if (there < 0) return;
+        // It takes the SAME sentence the seated walls below take, because it
+        // is the same wall reached from an unseated cursor: nothing ahead of
+        // the playhead is nothing ahead.
+        if (there < 0) { report_wall(forward); return; }
     } else if (forward) {
-        if (here + 1 >= n) return;   // last already
+        if (here + 1 >= n) {         // last already
+            report_wall(true);
+            return;
+        }
         there = here + 1;
     } else {
-        if (here == 0) return;       // first already
+        if (here == 0) {             // first already
+            report_wall(false);
+            return;
+        }
         there = here - 1;
     }
     playback_lifecycle.stop_playback_if_playing();
@@ -1438,10 +1489,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // mode's own unavailable shape — the wait is seconds and the bit falls
         // by itself. The CLOSE above is deliberately not gated: leaving a view
         // is always allowed.
+        //
+        // AND IT SAYS SO ON A CARD (architect 2026-08-30): the refusal was
+        // the last of the ruled silences and left `h` reading as a dead key
+        // for the seconds the worker takes. ONE COMPOSER FEEDS BOTH — the
+        // stderr line stays, and the words are the picker's own
+        // (kCheckpointPublishing, the head of this file), the same fact met
+        // one act over.
         if (app.history_checkpoint_in_flight) {
-            std::fprintf(stderr,
-                "warptempo_gui: history: A checkpoint is still publishing; "
-                "try again when it finishes\n");
+            std::fprintf(stderr, "warptempo_gui: history: %s\n",
+                         kCheckpointPublishing);
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kCheckpointPublishing);
             return true;
         }
         // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
@@ -1566,12 +1625,25 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // at that end are the same consumed no-op, with no edge and nothing
         // moved, and the EMPTY walk — one address (0), stood at — answers
         // false in both directions with no case of its own. The walk has ends,
-        // and reaching one must not wrap or refuse loudly. (Until 2026-08-30
+        // and reaching one must not wrap — it says which end it is on and
+        // moves nothing (the card below). (Until 2026-08-30
         // this arm computed `there` and compared it to `here`; the predicate
         // is that compare, named once for the act and the face.)
+        //
+        // AND THE WALL SAYS WHICH WALL IT IS (architect 2026-08-30): the
+        // buttons grey on these same two predicates, so no LIFT reaches this
+        // line — the grey is the message on the roster — and what is left is
+        // the KEY, which owes its own answer. The EMPTY walk answers false in
+        // both directions and takes whichever sentence the direction names,
+        // which is honest there too: one address, stood at, is both ends.
         if (!(older ? history_walk_older_actionable(app.history_mode)
-                    : history_walk_newer_actionable(app.history_mode)))
+                    : history_walk_newer_actionable(app.history_mode))) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                older ? "This is the oldest checkpoint"
+                      : "This is the newest state");
             return true;
+        }
         const std::size_t count  = app.history_mode.walk_count();
         const std::size_t here   = app.history_mode.walk_index();
         const std::size_t oldest = count - 1;   // count > 0 past the wall
@@ -3879,9 +3951,17 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // evidence; the bracket lifecycle owns wiping). Pre-mutation:
             // nothing above has touched app state or the queue.
             if (start_cents > end_cents) {
+                // ONE COMPOSER, TWO SURFACES (architect 2026-08-30): the
+                // stderr line keeps the marker's index, which is the
+                // evidence; the card says the fact, which is the answer to
+                // the press. The card names no index because the sweep's
+                // whole dispatch refused, not one cell of it.
                 std::fprintf(stderr,
                     "warptempo_gui: render-iterations refused: marker %d "
                     "iter bracket start exceeds end\n", i);
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "A marker's iteration bracket runs backwards");
                 return;
             }
             for (int64_t c = start_cents; c <= end_cents; ++c) {
@@ -3898,9 +3978,16 @@ void GuiInputHandler::run_iteration_sweep_render() {
         if (s) { any_swept = true; break; }
     }
     if (!any_swept) {
+        // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
+        // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
+        // must not look like a chord that rendered silently. The Render
+        // button wears the mode's own "Render Iterations" face here and
+        // dispatches this same chord, so the one card answers both roads.
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: No iter ranges "
             "authored; nothing to render\n");
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "No iteration ranges are authored");
         return;
     }
 
@@ -3968,10 +4055,18 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // avoid leaving an empty folder behind.
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
+        // ONE COMPOSER FOR THE CARD, shared with the two other batch folders
+        // a render chord can fail to create (render_folder_creation_card,
+        // renders_dir.h — the basename rule is its own). The stderr line
+        // keeps the WHOLE path, which is what a terminal is for.
+        const std::string why = ec.message();
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: Could not create "
             "'%s': %s\n",
-            batch_folder.string().c_str(), ec.message().c_str());
+            batch_folder.string().c_str(), why.c_str());
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            render_folder_creation_card(batch_folder, why));
         return;
     }
 
@@ -4243,7 +4338,19 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     if (ctrl && alt && shift &&
         key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
-        if (app.iteration_mode_enabled) return true;
+        if (app.iteration_mode_enabled) {
+            // AND THE REFUSAL SAYS SO (architect 2026-08-30). It stays where
+            // it is — inside the route, so the keyboard press and the Render
+            // button's shift press are one refusal — and the card rides with
+            // it for the same reason: one press, one answer, whichever
+            // surface asked. The button's hint already drops its shift line
+            // in this mode, so nothing advertises the press; what is left is
+            // the user who pressed it anyway.
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Turn off iteration mode to render one file");
+            return true;
+        }
 
         // Dispatch validates nothing (same as Ctrl+Alt+R): the render worker's
         // own resolve->build chain is the tripwire surface.
@@ -5339,7 +5446,20 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 // history_mode_key_blocked, and the modal and loading refusals, which the key
 // road meets earlier still.
 void GuiInputHandler::open_project_picker() {
-    if (app.prompt.active || keyboard_modal_editor_active()) return;
+    // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
+    // prompt VEILS everything and is itself the answer on screen — its
+    // question is what the press has to deal with — while an editor is
+    // pointer-transparent in one of its five kinds (the top flag editor), so
+    // the File menu's Open project row is reachable under it and owes a
+    // sentence. The KEY road never reaches either arm: Ctrl+O under any
+    // editor dies at on_key's editor gate, which says these very words with
+    // the chord named, and under a prompt at the prompt's own claim above it.
+    if (app.prompt.active) return;
+    if (keyboard_modal_editor_active()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Close the editor first");
+        return;
+    }
     // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
     // "admit both": the File menu's three rows are all live in the view now,
     // and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
@@ -5363,7 +5483,21 @@ void GuiInputHandler::open_project_picker() {
     // guards above it are: the gate lives with the act it refuses. A standing
     // picker refuses the same way (its router consumes Ctrl+O, its veil the
     // anchor).
-    if (render_player_active() || picker_active()) return;
+    //
+    // AND THE PLAYER SAYS SO WHILE THE PICKER DOES NOT (architect
+    // 2026-08-30): the player is a mode the user has to be told to leave,
+    // and the picker IS this act — a second Open project over a standing
+    // picker asks for what is already on screen, which is the settings
+    // editor's own already-open silence. Both key roads are answered
+    // earlier anyway (each router consumes Ctrl+O in its own catch-all
+    // sentence); what reaches here is the File menu's row under a
+    // pointer-transparent surface.
+    if (render_player_active()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Close the render player first");
+        return;
+    }
+    if (picker_active()) return;
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
@@ -5433,12 +5567,8 @@ void GuiInputHandler::build_project_picker_rows() {
 // refusal a notification card with the picker still open; the project already
 // open is a consumed no-op that closes it; and a project that passes reaches
 // the reopen through the one close request, REOPEN-targeted.
-// THE PICKER'S CHECKPOINT SENTENCE, ONE LITERAL AND TWO READERS (2026-08-30):
-// this act's own refusal below, and the picker ROUTER's Ctrl+S arm, which
-// meets the identical bit at the identical moment (route_picker_key). One
-// mode, one fact, one wording.
-constexpr const char* kCheckpointPublishing =
-    "A checkpoint is still publishing; try again when it finishes";
+// (THE CHECKPOINT SENTENCE lives at the head of this file since 2026-08-30 —
+// bare `h`'s own entry refusal became its third reader that day.)
 
 void GuiInputHandler::open_project_commit(int index) {
     if (!app.picker.active) return;
@@ -5487,6 +5617,14 @@ void GuiInputHandler::open_project_commit(int index) {
         // folder name here, and the same string assigned verbatim by the
         // field's one producer there (AppState::project_name) — so the no-op
         // cannot be missed by a link in the way of either spelling.
+        //
+        // AND IT SAYS SO (architect 2026-08-30) — the ONE arm of this act
+        // that is not a refusal, so the picker still CLOSES: the answer is
+        // "you are already there", not "try another row". Without it the row
+        // that is most likely to be pressed by accident (the band opens on
+        // it) reads as a picker that shut itself for no reason.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "That project is already open");
         close_picker();
         return;
     }
@@ -5573,7 +5711,17 @@ void GuiInputHandler::history_load_in_place() {
 void GuiInputHandler::picker_open_highlight() {
     if (!app.picker.active) return;
     const int highlight = app.folder_overlay.highlight_row;
-    if (highlight < 0) return;
+    if (highlight < 0) {
+        // NO HIGHLIGHT IS AN EMPTY BAND, and it says so (architect
+        // 2026-08-30): the builder seats the highlight on the current
+        // project, or on row 0, so the only way to reach here is a listing
+        // with no rows at all — every folder under projects_path refused by
+        // the model, or none there. Enter on an empty band would otherwise
+        // read as a dead key over a panel that is plainly standing.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Choose a project first");
+        return;
+    }
     folder_overlay_open_row(highlight);
 }
 
@@ -6597,10 +6745,19 @@ void GuiInputHandler::jump_to_value_source() {
 void GuiInputHandler::render_player_load_in_place() {
     if (!app.render_player.active) return;
     if (app.prompt.active) return;
-    // THE LOCK'S SILENT REFUSAL: a load in place writes the marker stores and
-    // the engine block, exactly what the read-only tab protects. The button
-    // wears no disabled face by ruling, so the refusal is the act's.
-    if (active_view_state(app).read_only) return;
+    // THE LOCK REFUSES AND SAYS SO (architect 2026-08-30, ending the silence
+    // it kept until then): a load in place writes the marker stores and the
+    // engine block, exactly what the read-only tab protects. The player's row
+    // wears no disabled face by ruling — the whole roster is dead under it
+    // and its own buttons are parked lit — so the refusal AND its sentence
+    // are the act's, on both roads (the button's lift and bare `'`). The
+    // words are the keyboard gate's own (kTabReadOnlyCard, notifications.h):
+    // one lock, one wording.
+    if (active_view_state(app).read_only) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kTabReadOnlyCard);
+        return;
+    }
     // THE RUNNING-RENDER REFUSAL SAYS SO ON A CARD (architect 2026-08-29, the
     // status bar's fold into row 8): the load wipes tmp/, which must never
     // race a batch publishing into it, so the refusal itself stays — and it

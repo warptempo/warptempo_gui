@@ -3,6 +3,7 @@
 #include "active_views.h"
 #include "app_state.h"
 #include "audio.h"
+#include "notifications.h"
 #include "playback.h"
 #include "playback_lifecycle.h"
 #include "target_render.h"
@@ -143,6 +144,11 @@ struct GuiAbAudition {
     GuiPlaybackLifecycle& playback_lifecycle;
     GuiActiveViews&       active_views;
     GuiTargetRender&      target_render;
+    // THE ACT'S TWO PRESS-TIME REFUSALS SPEAK (2026-08-30, the strictness
+    // ruling): a sequence already running, and a tab with nothing to play
+    // from. Both are start()'s, and start() is the only body here that
+    // refuses a PRESS — the advance and the fire answer no key.
+    GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // built (the handler holds this cluster by reference, so it cannot be a
     // constructor argument) — the prompt's own shape (GuiPrompt::input). Its
@@ -154,13 +160,15 @@ struct GuiAbAudition {
                   GuiPlayback&          playback_,
                   GuiPlaybackLifecycle& playback_lifecycle_,
                   GuiActiveViews&       active_views_,
-                  GuiTargetRender&      target_render_)
+                  GuiTargetRender&      target_render_,
+                  GuiNotifications&     notifications_)
         : app(app_),
           audio(audio_),
           playback(playback_),
           playback_lifecycle(playback_lifecycle_),
           active_views(active_views_),
-          target_render(target_render_) {}
+          target_render(target_render_),
+          notifications(notifications_) {}
 
     // THE PRESS-TIME ACT (the refusals at the head comment): gate both tabs,
     // run `c` on this tab, switch to the other one, run `c` there, launch the

@@ -228,6 +228,21 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     if (trim_is_full_window(app.trim, audio.total_frames())) return;
     if (app.trim.end_frame <= app.trim.begin_frame) {
         reset_trim_to_full_window();
+        // AND THE RESET SAYS SO (architect 2026-08-30). It is not a refusal
+        // but a REPORT: the gesture did land, and what it landed is the whole
+        // song rather than the sliver the stroke drew, which is a surprise
+        // worth a sentence — a sweep collapsed onto its anchor and an endcap
+        // dragged onto its twin both look like "nothing happened" otherwise,
+        // the overlay having collapsed with them. THE CARD IS THIS ONE
+        // OWNER'S, which is what makes it one card for every former: the
+        // endcap drag, the bridge, the sweep, the bound-set click and the
+        // settings editor's `trim_*=` commit all reach the reset here and
+        // none of them spells it a second time. Trim has no undo, so the
+        // sentence also names the recovery the user has (Shift+[ maximizes,
+        // and the window is already maximized).
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "The trim bounds crossed; the window was reset to the whole song");
     }
 }
 
@@ -287,10 +302,19 @@ void GuiInputHandler::commit_trim_mutation() {
 //
 // THE ALREADY-FULL IDENTITY GUARD replaces the old has-a-bound refusal gate: a
 // Shift+[ over an already-maximized window stops nothing, repaints nothing and
-// triggers nothing — a silent no-op, which keeps the refusal-gated stop rule
-// exactly as it was.
+// triggers nothing, which keeps the refusal-gated stop rule exactly as it was
+// — and SINCE 2026-08-30 it says so on a notification card, the guard's only
+// visible effect.
 void GuiInputHandler::handle_trim_clear_both() {
-    if (!trim_is_full_window(app.trim, audio.total_frames())) {
+    if (trim_is_full_window(app.trim, audio.total_frames())) {
+        // AND THE IDENTITY GUARD SAYS SO (architect 2026-08-30): Shift+[ is
+        // the RECOVERY, trim having no undo, so a press that finds nothing to
+        // recover must not read as a maximizer that failed. It answers on
+        // both roads — the key, and the Show trim region button's shift-click
+        // or long press, which dispatches this same chord.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "The trim already covers the whole song");
+    } else {
         // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
         // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).
         // Inside the identity guard, so an already-full Shift+[ stops nothing
@@ -455,7 +479,8 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
 // (this file's header block: read-only does not reach trim at all since
 // 2026-08-07, and the key is on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
-// makes a second Shift+[ a natural silent no-op and whose tail owns the repaint
+// makes a second Shift+[ a no-op that says so on a card (2026-08-30) and whose
+// tail owns the repaint
 // (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
 // rule does not reach it, and the gated region re-sync it used to carry died
@@ -559,6 +584,17 @@ void GuiInputHandler::handle_toggle_trim_region() {
         return;
     }
     app.region.shown = true;
+    // THE FULL WINDOW STILL SHOWS, AND SAYS WHAT IT IS SHOWING (architect
+    // 2026-08-30). This is NOT a refusal — the overlay goes up exactly as it
+    // does over a narrowed window, the standing ruling that the case is
+    // self-resolving is untouched, and no guard is added — but an overlay
+    // covering the whole song looks like an overlay that failed to find one,
+    // so the card names the span the user is looking at. Both roads reach it:
+    // bare `[` and the Show trim region button's plain lift.
+    if (trim_is_full_window(app.trim, audio.total_frames())) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "The trim covers the whole song");
+    }
     const TrimOverlaySpan span = trim_overlay_span(app, audio);
     bring_span_into_view(app, audio, viewport, span.lo, span.hi);
     viewport.invalidate_waveform_area();
@@ -1088,8 +1124,11 @@ void GuiInputHandler::commit_trim_drag() {
 // the trim there. The reset rule itself is UNTOUCHED everywhere else — the drag
 // release and the settings commit still reset a crossed pair to the song edges.
 // The refusal is where it is — past the clamps, ahead of every write — because
-// silently resetting the whole window on a mis-click is the outcome trim cannot
-// afford (trim has no undo).
+// resetting the whole window on a mis-click is the outcome trim cannot afford
+// (trim has no undo). SINCE 2026-08-30 THE REFUSAL SAYS SO on a notification
+// card, raised by the ACT and not by the decider this comment heads — the
+// cursor map asks that decider once per motion, and a card raised inside it
+// would stack while the pointer merely hovered the bar.
 //
 // READ-ONLY DOES NOT REFUSE (architect 2026-08-07): the clicks are trim, which
 // is band rather than authored content, so this route's first gate — the read-
@@ -1172,7 +1211,19 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // question cannot answer it differently.
     const std::optional<int64_t> decided = trim_bound_click_frame(is_begin,
                                                                  mouse_x);
-    if (!decided) return false;
+    if (!decided) {
+        // AND THE ACT SAYS SO (architect 2026-08-30). THE CARD IS THE ACT'S,
+        // NEVER THE DECIDER'S: trim_bound_click_frame is also the CURSOR
+        // map's question, asked once per pointer motion, and a card raised
+        // inside it would paint a stack while the pointer merely hovered the
+        // bar. The sentence names the strictly-inside guard, which is the one
+        // arm a press on a painted trim bar can reach — the decider's other
+        // refusals are degenerate audio and geometry states, in which there
+        // is no bar under the pointer to press.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "A trim bound must stay inside its partner");
+        return false;
+    }
     const int64_t frame = *decided;
     // The act commits from here on, so THIS is where it stops a live audition
     // (architect 2026-07-27): the trim window is about to change under it, and

@@ -108,7 +108,7 @@ void GuiSettingsEditor::open() {
     // exactly why their commands owe an answer of their own.
     if (active_view_state(app).read_only) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             "This tab is read-only");
+                             kTabReadOnlyCard);
         return;
     }
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole

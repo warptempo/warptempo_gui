@@ -18,6 +18,18 @@ struct AppState;
 struct UndoEntry;
 class GuiHistoryPrefetch;
 
+// THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29; moved here
+// 2026-08-30, when the mode's ENTRY refusal became a card too). The fact has
+// FOUR reporters across two translation units and each has always said the
+// same words: this module's own init(), which prints it on stderr with the
+// store's reason appended; the entry owner, which raises that same composed
+// line on a notification card when init() refuses (open_history_mode_fresh);
+// the prefetch arrival that closes a standing view, which does both; and
+// run_history_commit's !active arm, which raises it bare. It lives beside the
+// reason it prefixes rather than in one of the readers, so no reader can
+// drift from the producer.
+inline constexpr const char* kHistoryUnavailable = "History is unavailable";
+
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
 // The architect commits his working checkpoints of a piece into an

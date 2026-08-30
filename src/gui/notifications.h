@@ -115,6 +115,31 @@
 #include <cstdint>
 #include <string>
 
+// -- SENTENCES MORE THAN ONE TRANSLATION UNIT RAISES -------------------------
+//
+// A card's words live at the site that raises them. These two do not, because
+// SEVERAL sites raise each and they must not drift: a sentence spelled twice
+// is two sentences the moment one of them is edited. Everything else stays a
+// literal where it fires (a sentence with ONE producer has nothing to agree
+// with), and a family whose several sites share ONE translation unit keeps its
+// constant there (kKeysDuringDrag, kCheckpointPublishing, the two mode
+// routers' catch-all tails).
+//
+// THE LOCK'S SENTENCE — the read-only tab, said by the keyboard gate that
+// drops an authoring chord (on_key), by the Settings dropdown's own opener
+// (the menu's items never grey, so their commands owe the answer themselves),
+// by the render player's Load in place, and by the `h` view's Ctrl+H, whose
+// admission composes the subject with this same lock.
+inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
+
+// THE TARGET PREVIEW'S SENTENCE — a launch asked for in target view before
+// the preview it would play exists. Its two sites are Space's own play edge
+// (which reads GuiTargetRender::preview_ready) and the waveform scrub's
+// (which reads is_updating): two predicates, one fact to the user, so one
+// sentence.
+inline constexpr const char* kTargetPreviewNotReadyCard =
+    "Wait for the target preview to finish rendering";
+
 // The card's width is its content's, clamped to [this, a third of the
 // window]. Authored px, scaled like every other length. On a window narrower
 // than three of these the floor wins — a contrived window, not catered for.

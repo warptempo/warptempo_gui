@@ -27,6 +27,33 @@
 // keys differ and no car key can meet a painted one.
 inline constexpr uint32_t kCarStableCodeBase = 1000;
 
+// -- THE MODE'S SHARED REFUSAL SENTENCES ------------------------------------
+//
+// (architect 2026-08-30, the strictness ruling.) Each is said from SEVERAL
+// acts, and two of them from a POINTER site as well — the play-scrub's press,
+// which lives with the other pointer routers (input_pointer.cpp) — so they
+// are spelled here rather than inside the operations file. Every refusal with
+// a single site keeps its literal where it fires. The acts raise these
+// through GuiRenderPlayer::status, the thin road the decode refusals already
+// take; the scrub's press raises them on the ordinary notify, having no
+// status of its own.
+//
+// NOTHING IS LOADED: Play with no item, the four folder walks (Previous /
+// Next and the two ends, which walk the TRANSPORT ITEM's folder and so have
+// nothing to walk without one), and every seek road.
+inline constexpr const char* kNoPlayerItem = "No render is loaded to play";
+
+// THE ITEM FOLDER'S TWO ENDS: Previous and the first-jump at the first wav,
+// Next and the last-jump at the last. NOTHING LOOPS, so an end is an end.
+inline constexpr const char* kFirstInFolder =
+    "This is the first render in the folder";
+inline constexpr const char* kLastInFolder =
+    "This is the last render in the folder";
+
+// A SEEK WHILE THE TRANSPORT IS IDLE (R41's dead slider): the two seek keys,
+// bare Home, the car's absolute seek and the scrub's own press all meet it.
+inline constexpr const char* kSeekWhileIdle = "Start playback before seeking";
+
 // The input handler is reached through a back-pointer below (the ring clear
 // on_media_command owes), and it holds this cluster by reference, so the
 // include cannot run both ways: input_handler.h includes this header and

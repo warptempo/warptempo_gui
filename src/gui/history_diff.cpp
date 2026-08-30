@@ -2356,7 +2356,12 @@ bool GuiHistoryDiff::init(const AppState&           app,
         project_directory_.clear();
         store_            = nullptr;
         store_generation_ = 0;
-        std::fprintf(stderr, "warptempo_gui: History is unavailable: %s\n",
+        // ONE COMPOSER, TWO READERS (2026-08-30): this line and the card the
+        // entry owner raises when init() refuses both read
+        // kHistoryUnavailable (history_diff.h) with this same reason
+        // appended, so the terminal and the screen cannot come to say
+        // different things about one fact.
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n", kHistoryUnavailable,
                      unavailable_reason_.c_str());
         return false;
     };

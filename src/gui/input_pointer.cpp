@@ -1572,10 +1572,18 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     }
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target
-    // buffer, which Space refuses — so the scrub launch refuses it too,
-    // silently.
-    if (!(app.active_audio_view == 'T' && target_render.is_updating()))
-        playback_lifecycle.scrub_launch_at(frame);
+    // buffer, which Space refuses — so the scrub launch refuses it too, AND
+    // SAYS SO SINCE 2026-08-30, in Space's own sentence
+    // (kTargetPreviewNotReadyCard, notifications.h). The two gates read
+    // different predicates — preview_ready there, is_updating here — and
+    // report one fact, which is why the words are shared rather than
+    // spelled twice.
+    if (app.active_audio_view == 'T' && target_render.is_updating()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kTargetPreviewNotReadyCard);
+        return;
+    }
+    playback_lifecycle.scrub_launch_at(frame);
 }
 
 // The scanner scrub body. ONE CALLER, re-derived by grepping this
@@ -4271,16 +4279,31 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0 || track.h <= 0) return false;
     if (!rect_contains(track, x, y)) return false;
-    // Consumed from here; a modified press does nothing on the track.
+    // Consumed from here; a modified press does nothing on the track. That
+    // one stays SILENT (a modified press on the band's rows is silent too —
+    // the overlay's ruled pad-and-gap silence, messaging.md): the answer is
+    // that the plain press works, and a chord on a slider is not an act
+    // anyone spelled.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    if (app.render_player.frames <= 0 || app.render_player.item.empty())
+    // THE TWO STATE REFUSALS SAY WHAT THE ACTS SAY (architect 2026-08-30):
+    // they are the seek's own two, met here instead of at seek_to because the
+    // press must not ARM the handle drag either — so the words are the mode's
+    // shared ones (render_player.h) rather than a second wording of one fact.
+    if (app.render_player.frames <= 0 || app.render_player.item.empty()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNoPlayerItem);
         return true;
+    }
     // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
-    // Audacious's own slider — dead while stopped): the press is a consumed
-    // no-op, neither seeking nor arming the handle drag, and the painter keeps
-    // drawing the handle at the resting point. LIVE and PAUSED are unchanged.
-    if (app.render_player.transport == AppState::RenderPlayer::Transport::Idle)
+    // Audacious's own slider — dead while stopped): the press seeks nothing
+    // and arms no handle drag, and the painter keeps drawing the handle at
+    // the resting point. LIVE and PAUSED are unchanged.
+    if (app.render_player.transport ==
+        AppState::RenderPlayer::Transport::Idle) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kSeekWhileIdle);
         return true;
+    }
     const int marker_x =
         render_player_scrub_x_of(app, render_player_position(app, playback));
     if (render_player_scrub_handle_hit(track, marker_x, x, y)) {

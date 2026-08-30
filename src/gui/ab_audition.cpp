@@ -33,7 +33,16 @@ void GuiAbAudition::start() {
     // rest as it covers a live play and needs no second term. A running PLAIN
     // audition is not a refusal: the switch below stops it through the one stop
     // body, exactly as a Ctrl+Tab over it would.
-    if (app.audition_sequence.phase != Phase::Idle) return;
+    if (app.audition_sequence.phase != Phase::Idle) {
+        // AND IT SAYS SO (architect 2026-08-30): the act spans four plays and
+        // three rests, so most of its duration LOOKS idle — a rest is
+        // silence — and a second Shift+Space during one would otherwise read
+        // as a chord that does nothing. (Bare Space is the way OUT: a rest is
+        // transport-live, so the plain toggle stops the act.)
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "An audition is already running");
+        return;
+    }
     const char home  = app.active_tab_view;
     const char other = (home == 'A') ? 'B' : 'A';
     // THE OTHER TAB'S PLAYHEAD, read through its own ViewState and clamped
@@ -46,8 +55,20 @@ void GuiAbAudition::start() {
         other_tab.playhead_cursor_sample, app, audio);
     // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH: an act that could only
     // half-run must not move the user off his tab and then fall silent.
-    if (!tab_launch_ready(app.playhead_cursor_sample)) return;
-    if (!tab_launch_ready(other_playhead)) return;
+    // AND THE GATE SAYS SO, ONCE, FOR EITHER TAB (architect 2026-08-30): the
+    // act is one act over a pair, so which half of the pair could not play is
+    // not the answer — that it cannot run is. The Play button's shift-click
+    // and long press reach this same body, so the one card answers every
+    // road. (The sentence deliberately does not name the target preview: in
+    // target view the readiness gate is the preview's, and a Space pressed
+    // for itself already says that in its own words.)
+    if (!tab_launch_ready(app.playhead_cursor_sample) ||
+        !tab_launch_ready(other_playhead)) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "One of the two tabs has nothing to play from here");
+        return;
+    }
     // Step 0: THE `c` COMMAND ON THIS TAB, before the switch carries the band
     // away — refresh_active_tab_view_from_app pushes the live zoom into the
     // leaving tab's slot, so the level set here is the level this tab is

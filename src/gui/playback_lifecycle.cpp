@@ -7,6 +7,15 @@
 
 using RenderPlayerTransport = AppState::RenderPlayer::Transport;
 
+namespace {
+// THE LAUNCH'S POSITION REFUSAL, ONE SENTENCE AND TWO SITES (architect
+// 2026-08-30): the one launch body's own playable gate, and the target arm's
+// pre-sum twin in toggle_playback, which is verdict-identical for its caller
+// and merely asks earlier. Exactly one of them fires per press.
+constexpr const char* kNothingLeftToPlay =
+    "There is nothing left to play from here";
+}  // namespace
+
 // Gesture-stop: called by any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
 // the two keyboard TRIM MUTATIONS, which stop without touching the cursor at all.
@@ -196,7 +205,16 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // with no state written between them, and domain_end() is well-
         // defined for whatever buffer is bound).
         if (app.playhead_cursor_sample >=
-            playback.domain_end() - launch_offset - 1) return;
+            playback.domain_end() - launch_offset - 1) {
+            // THE LAUNCH BODY'S OWN VERDICT ASKED EARLIER, so it says the
+            // launch body's own sentence (2026-08-30): the two are
+            // verdict-identical for this caller (the comment above), and one
+            // fact refused in two places must not be two sentences. Only one
+            // of the pair can fire per press — this arm returns.
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingLeftToPlay);
+            return;
+        }
         launch_pos = app.playhead_cursor_sample + launch_offset;
     }
     launch_playback_from(launch_pos);
@@ -349,8 +367,32 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // no-lower-gate-but-the-domain's-own rule. A one-frame SOURCE FILE is
     // launch-inert by this gate (its render still works: the trimmer's
     // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
+    // A DEAD OR ABSENT DEVICE IS ASKED FIRST, AND SAYS SO (architect
+    // 2026-08-30): the launch below would "succeed" — the scanner would seed,
+    // the follow would scroll and play() would return — with nothing coming
+    // out of the machine, which is the one refusal the user cannot see for
+    // himself. The fact is GuiPlayback::device_unavailable's, the honest
+    // reading of "nothing will sound" on both backends and the same one the
+    // render player's tick forks on; no bit is added and nothing is latched
+    // here. The load's own stderr line stays, but it is printed once at
+    // startup and this is every press after it. Ahead of the playable gate
+    // so the sentence names the device rather than the position.
+    if (playback.device_unavailable()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Playback is unavailable on this device");
+        return false;
+    }
+    // AND A LAUNCH POSITION WITH NOTHING LEFT SAYS SO TOO (architect
+    // 2026-08-30). THE CARD IS THE ONE LAUNCH BODY'S, which is what makes it
+    // one card per press for every road that plays: Space, the scrub's
+    // audition and the A/B audition's bounded plays all pass through here and
+    // none of them spells the refusal a second time. The Play button greys on
+    // this very predicate, so no LIFT reaches the line — the grey is the
+    // message on the roster and this is the message on the keyboard.
     if (!playback_launch_playable(app, playback, audio.total_frames(),
                                   start)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kNothingLeftToPlay);
         return false;
     }
     // (`end` is the caller's: the view's end from active_view_play_end for

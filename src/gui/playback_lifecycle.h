@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "audio.h"
+#include "notifications.h"
 #include "playback.h"
 #include "viewport.h"
 
@@ -23,6 +24,13 @@ struct GuiPlaybackLifecycle {
     const GuiAudio&   audio;
     GuiPlayback&      playback;
     Viewport&         viewport;
+    // THE CARDS (2026-08-30, the strictness ruling): the ONE LAUNCH BODY is
+    // where a play that will not sound is discovered — a dead or absent
+    // device, and a launch position with nothing left to play from — so it is
+    // where those two sentences are raised. Both were stderr-or-nothing
+    // before: the device line was printed once at load and never again, and
+    // the position refusal said nothing at all.
+    GuiNotifications& notifications;
     // THE RENDER PLAYER'S BACK-POINTER (2026-08-28, the car's state push),
     // wired in main.cpp once both exist — the settings editor's and the
     // prompt's own shape, since the player holds this cluster and is built
@@ -36,11 +44,13 @@ struct GuiPlaybackLifecycle {
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,
                          GuiPlayback&      playback_,
-                         Viewport&         viewport_)
+                         Viewport&         viewport_,
+                         GuiNotifications& notifications_)
         : app(app_),
           audio(audio_),
           playback(playback_),
-          viewport(viewport_) {}
+          viewport(viewport_),
+          notifications(notifications_) {}
 
     // THE GESTURE STOP (teardown contract at the definition).
     // THE KEYBOARD STOP RULE (architect 2026-07-30) — the authoritative statement

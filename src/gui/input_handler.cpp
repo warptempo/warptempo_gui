@@ -259,7 +259,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // overlay and the scrub state — the force-end every other gesture takes.
     if (app.render_player.active) {
         if (any_pointer_gesture_active(app)) {
-            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) return;
+            // THE DRAG GATE'S QUESTION ASKED EARLIER SAYS THE DRAG GATE'S
+            // SENTENCE (architect 2026-08-30): this arm outranks that gate,
+            // so the press never reaches it — and one fact refused in two
+            // places must not be two sentences.
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
+                return;
+            }
         } else if (route_render_player_key(key, mods)) {
             return;
         }
@@ -278,7 +286,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
     if (app.picker.active) {
         if (any_pointer_gesture_active(app)) {
-            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) return;
+            // The player's arm above, verbatim — the same gate's question
+            // asked earlier, the same sentence.
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
+                return;
+            }
         } else if (route_picker_key(key, mods)) {
             return;
         }
@@ -611,6 +625,39 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // face). THE CARD IS THE CALL SITE'S, never the predicate's — that
         // face walk asks the same function once per button per frame, and a
         // card raised inside it would paint a stack every frame.
+        //
+        // TWO OF THE ALLOWLIST'S ADMISSIONS ARE CONDITIONAL ON STATE, and for
+        // those the chord is NOT what was wrong (architect 2026-08-30): bare
+        // `'` and Ctrl+H are the view's own vocabulary, admitted while the
+        // walk carries a member and while a revert has a subject on a
+        // writable tab. Answering either with the generic sentence would say
+        // the key means nothing in here, which is false — so each names the
+        // state that refused it, exactly as the greyed Load in place and
+        // Revert buttons say the same thing to the pointer. Every other
+        // refusal in the list is the chord's own and takes the sentence
+        // below. (The membership is the allowlist's, re-greped: the two
+        // remaining conditional admissions are Ctrl+S's, whose two arms —
+        // an empty head delta, a checkpoint in flight — are the commit act's
+        // and are answered by the picker's own publishing sentence one road
+        // over, and the walk's `,` / `.`, which the mode's own arm claims
+        // above this gate and never reaches it.)
+        const bool bare = !ctrl && !shift && !alt;
+        if (key == GuiKeys::Apostrophe && bare) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "There is nothing to load");
+            return;
+        }
+        if (key == GuiKeys::H && ctrl && !shift && !alt) {
+            // The admission composes the SUBJECT with the LOCK
+            // (history_revert_actionable), so the card forks on the same two
+            // terms rather than blaming the subject for a locked tab.
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                history_mode_revert_subject_standing(app.history_mode)
+                    ? kTabReadOnlyCard
+                    : "Select a change to revert");
+            return;
+        }
         notifications.notify(AppState::NotificationClass::Normal,
                              spell_chord(key, mods) +
                                  " is not available in the history view");
@@ -717,7 +764,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // button whose chord the lock drops does reach it, and is answered
         // exactly as its key is.
         notifications.notify(AppState::NotificationClass::Normal,
-                             "This tab is read-only");
+                             kTabReadOnlyCard);
         return;
     }
 
@@ -1048,6 +1095,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.active_audio_view == 'T' &&
             !playback.is_playing() &&
             !target_render.preview_ready()) {
+            // AND IT SAYS SO (architect 2026-08-30): a Space that plays
+            // nothing in target view is answered by the state that refused
+            // it, in the sentence the waveform scrub's own twin refusal
+            // raises (kTargetPreviewNotReadyCard, notifications.h — two
+            // predicates, one fact).
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kTargetPreviewNotReadyCard);
             return;
         }
         // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the

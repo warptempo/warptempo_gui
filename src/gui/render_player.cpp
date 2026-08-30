@@ -193,7 +193,12 @@ void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
 
 void GuiRenderPlayer::up() {
     switch (app.render_player.folder) {
-        case Folder::Root:        return;   // consumed at the root
+        case Folder::Root:
+            // THE ROOT SAYS IT IS THE ROOT (architect 2026-08-30): the root
+            // listing carries no `..` row, so a Backspace here has nothing on
+            // screen to explain itself against.
+            status("This is the top of the render folders");
+            return;
         case Folder::Deliverable: enter(Folder::Root, {});    return;
         case Folder::Batches:     enter(Folder::Root, {});    return;
         case Folder::Batch:       enter(Folder::Batches, {}); return;
@@ -453,8 +458,18 @@ void GuiRenderPlayer::play_button_act() {
     // "Play when idle should start literally"): `resume_frame` is 0 at every
     // idle rest by construction — seek_to's own head refuses an idle seek, so
     // nothing can have moved it since the last Stop, natural end or fresh
-    // bind — and toggle_pause's resume arm reads exactly that field, a
-    // consumed no-op with no item.
+    // bind — and toggle_pause's resume arm reads exactly that field.
+    //
+    // WITH NO ITEM THE ANSWER IS THIS BODY'S (architect 2026-08-30): the
+    // resume below is a consumed no-op there, and it is the OUTERMOST site
+    // with the reason — the button, bare Space and the car's Play all arrive
+    // here — so the sentence is raised once, in front of the call, and
+    // toggle_pause's own guard stays the silent belt behind it. (`frames <= 0`
+    // with an item is not reachable from a bound item and keeps that silence.)
+    if (app.render_player.item.empty()) {
+        status(kNoPlayerItem);
+        return;
+    }
     toggle_pause();
 }
 
@@ -539,11 +554,17 @@ void GuiRenderPlayer::stop() {
     publish_media_state();
 }
 
+// THE FOUR FOLDER WALKS ANSWER IN TWO SENTENCES (architect 2026-08-30): NO
+// ITEM — there is nothing whose folder to walk, the state a freshly opened
+// player rests in — and THE END ITSELF, which is a wall because nothing loops.
+// Each walk asks the two in that order, so an empty transport never reports a
+// wall it is not standing at. Both keys and both buttons reach these bodies,
+// so the card is one per press whichever surface asked.
 void GuiRenderPlayer::previous() {
     AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item_index <= 0 ||
-        rp.item_index >= static_cast<int>(rp.item_folder.size()))
-        return;
+    const int n = static_cast<int>(rp.item_folder.size());
+    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index == 0) { status(kFirstInFolder); return; }
     const std::vector<Row> folder = rp.item_folder;
     const int i = rp.item_index - 1;
     play_wav(folder[static_cast<size_t>(i)].path, folder, i);
@@ -551,9 +572,9 @@ void GuiRenderPlayer::previous() {
 
 void GuiRenderPlayer::next() {
     AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item_index < 0 ||
-        rp.item_index + 1 >= static_cast<int>(rp.item_folder.size()))
-        return;
+    const int n = static_cast<int>(rp.item_folder.size());
+    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index + 1 >= n) { status(kLastInFolder); return; }
     const std::vector<Row> folder = rp.item_folder;
     const int i = rp.item_index + 1;
     play_wav(folder[static_cast<size_t>(i)].path, folder, i);
@@ -566,30 +587,38 @@ void GuiRenderPlayer::next() {
 // a wav in place.
 void GuiRenderPlayer::first_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item_index <= 0 ||
-        rp.item_index >= static_cast<int>(rp.item_folder.size()))
-        return;
+    const int n = static_cast<int>(rp.item_folder.size());
+    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index == 0) { status(kFirstInFolder); return; }
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder.front().path, folder, 0);
 }
 
 void GuiRenderPlayer::last_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
-    const int last = static_cast<int>(rp.item_folder.size()) - 1;
-    if (last < 0 || rp.item_index < 0 || rp.item_index >= last) return;
+    const int n    = static_cast<int>(rp.item_folder.size());
+    const int last = n - 1;
+    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index >= last) { status(kLastInFolder); return; }
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder[static_cast<size_t>(last)].path, folder, last);
 }
 
 void GuiRenderPlayer::seek_by(int64_t delta_frames) {
-    const AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item.empty() || rp.frames <= 0) return;
+    // EVERY REFUSAL IS seek_to's, THE ONE OWNER (2026-08-30, with the cards):
+    // this body only composes the target, and its own copy of that guard
+    // would have made Left / Right silent where bare Home already spoke.
+    // position() answers 0 with nothing bound, so the sum is well-formed on
+    // the road to the refusal.
     seek_to(position() + delta_frames);
 }
 
 void GuiRenderPlayer::seek_to(int64_t frame) {
     AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item.empty() || rp.frames <= 0) return;
+    if (rp.item.empty() || rp.frames <= 0) {
+        status(kNoPlayerItem);
+        return;
+    }
     // A SEEK WHILE IDLE IS A CONSUMED NO-OP (architect 2026-08-29 ~01:40,
     // Audacious's own stopped slider): Play when idle starts the item from
     // its start, so an idle transport must not be nudgeable to some other
@@ -600,7 +629,13 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // PAUSED are unchanged below, and this is why `resume_frame` is always 0
     // at an idle rest, by construction (the field's own comment,
     // app_state.h).
-    if (rp.transport == Transport::Idle) return;
+    // AND IT SAYS SO (architect 2026-08-30): the slider is drawn at the
+    // resting point and the two keys look live, so a dead press owes the
+    // reason. The scrub's own gate says the same words one road over.
+    if (rp.transport == Transport::Idle) {
+        status(kSeekWhileIdle);
+        return;
+    }
     // A SEEK MOVES THE REST, so the folder-end rest is over (R27's bit): the
     // user has named a place in this item, and the next Play resumes there
     // rather than starting the folder over.

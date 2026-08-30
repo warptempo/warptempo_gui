@@ -157,10 +157,20 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
     std::error_code ec;
     std::filesystem::create_directories(target_folder, ec);
     if (ec) {
+        // THE CARD IS THIS BODY'S, not its callers' (architect 2026-08-30):
+        // TWO roads allocate a cell — the Ctrl+Alt+Shift+R arm and the
+        // worker-idle pump's late binding — and both refuse for exactly this
+        // reason and add none of their own, so one card here is one card per
+        // press on either. The sentence is the three dispatchers' one
+        // composer (render_folder_creation_card, renders_dir.h); the stderr
+        // line keeps the whole path and its tag.
+        const std::string why = ec.message();
         std::fprintf(stderr,
             "warptempo_gui: render-miscellaneous: Could not create "
             "'%s': %s\n",
-            target_folder.string().c_str(), ec.message().c_str());
+            target_folder.string().c_str(), why.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             render_folder_creation_card(target_folder, why));
         return false;
     }
 
@@ -794,10 +804,15 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
+        // The iteration sweep's own arm, in the same shared sentence: the
+        // two sweeps fail the same way and must not answer differently.
+        const std::string why = ec.message();
         std::fprintf(stderr,
             "warptempo_gui: render-bpm: Could not create "
             "'%s': %s\n",
-            batch_folder.string().c_str(), ec.message().c_str());
+            batch_folder.string().c_str(), why.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             render_folder_creation_card(batch_folder, why));
         return false;
     }
 

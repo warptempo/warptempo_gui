@@ -1129,7 +1129,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the on_tick fork below; its stack dies with this AppState (the chip's
     // own per-project scope, by construction).
     GuiNotifications notifications(app, viewport);
-    GuiPlaybackLifecycle playback_lifecycle(app, audio, playback, viewport);
+    GuiPlaybackLifecycle playback_lifecycle(app, audio, playback, viewport,
+                                            notifications);
     Selection selection(app, audio, viewport);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
@@ -1217,7 +1218,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // both of which it holds; before the input handler, which holds it. Its
     // advance is called from the tick's natural-end branch below.
     GuiAbAudition ab_audition(app, audio, playback, playback_lifecycle,
-                              active_views, target_render);
+                              active_views, target_render, notifications);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
