@@ -97,7 +97,7 @@ struct GuiInputHandler;
 // answers the transport (the table at play_button_act). THE TRANSPORT'S ITEM
 // is separate from the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
-// row, and AUTO-ADVANCE, Previous, Next and the two Shift+Page ENDS walk ITS
+// row, and AUTO-ADVANCE, Previous, Next and the two Shift+`,`/Shift+`.` ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
 // folder and never a wrap. Every listing is built when its folder is entered
 // and never kept fresh.

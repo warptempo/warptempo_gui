@@ -6752,10 +6752,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             return true;
         case GuiKeys::Comma:
             // PREVIOUS / NEXT WITHIN THE ITEM'S FOLDER (architect 2026-08-30,
-            // re-keyed off Page Up / Page Down, which now fall to the card
-            // below like every other unbound chord): the `h` history view's
-            // own walk keys, bare to step and shifted to reach the ends
-            // (the shift arm above).
+            // re-keyed off Page Up / Page Down, which now fall silent below
+            // like every other unbound chord — decision 72's deduction rule,
+            // not a card): the `h` history view's own walk keys, bare to
+            // step and shifted to reach the ends (the shift arm above).
             render_player.previous();
             return true;
         case GuiKeys::Period:
