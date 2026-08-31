@@ -3758,10 +3758,12 @@ private:
     // (press-at-press, commit-at-release, the modal's own) or, with none
     // focused, OPENS the highlight (a folder enters, `..` goes up, a wav
     // plays); Space is the Play button's act; Up / Down move the highlight;
-    // Left / Right seek ∓5 s; Home the item's start; Backspace up one folder
-    // (a consumed no-op at the root); Page Up / Page Down previous / next in
-    // the item's folder and SHIFT+Page Up / Shift+Page Down its FIRST / LAST
-    // wav (R37); bare `s` STOP (R36); `r` the Repeat one lamp; `'` the Load in
+    // Left / Right seek ∓5 s; Home the item's start and End the item's END
+    // (2026-08-30, the scrub's own right edge — not a walk); Backspace up one
+    // folder (a consumed no-op at the root); bare `,` / `.` previous / next in
+    // the item's folder and SHIFT+`,` / Shift+`.` its FIRST / LAST wav (R37,
+    // re-keyed off Page Up / Page Down 2026-08-30); bare `v` STOP (R36,
+    // re-keyed off bare `s` the same day); `r` the Repeat one lamp; `'` the Load in
     // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so

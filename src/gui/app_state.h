@@ -7512,13 +7512,15 @@ inline bool folder_overlay_stands(const AppState& a) {
 inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
                                              bool transport_live) {
     switch (act) {
-        case AppState::PlayerButtonAct::Previous:    return "Previous (Page Up)";
+        // THE ITEM WALK'S KEYS ARE `,` / `.` since 2026-08-30, and a bare
+        // punctuation key is spelled as it is typed, like a bare letter.
+        case AppState::PlayerButtonAct::Previous:    return "Previous (,)";
         case AppState::PlayerButtonAct::PlayPause:
             return transport_live ? "Pause (Space)" : "Play (Space)";
         // STOP IS ITS OWN BUTTON (R36) and its chord is a bare letter, so the
         // table's own accelerator rule spells it lowercase.
-        case AppState::PlayerButtonAct::Stop:        return "Stop (s)";
-        case AppState::PlayerButtonAct::Next:        return "Next (Page Down)";
+        case AppState::PlayerButtonAct::Stop:        return "Stop (v)";
+        case AppState::PlayerButtonAct::Next:        return "Next (.)";
         // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
         // roster's own table states once (architect 2026-08-09): the key AS
         // TYPED, a capital naming a shifted press this product does not bind.
@@ -7535,8 +7537,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // button that admits a modified press gets its SHIFT-CLICK on plastic and,
 // through the one hold beat, its LONG PRESS on glass, so the shifted half of
 // the pair is reachable with no keyboard. THE TWO SKIPS ARE THE WHOLE SET —
-// their twins are Shift+Page Up / Shift+Page Down, the item folder's FIRST and
-// LAST wav — and every other button on the row keeps its plain act however
+// their twins are Shift+`,` / Shift+`.` (2026-08-30), the item folder's FIRST
+// and LAST wav — and every other button on the row keeps its plain act however
 // long it is held, exactly as a roster button with no twin does.
 //
 // THREE READERS, and they are three because they must not drift: the press

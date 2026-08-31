@@ -322,8 +322,8 @@ struct GuiRenderPlayer {
     // The item's neighbours within ITS folder; a consumed no-op at either end.
     void previous();
     void next();
-    // THE ITEM FOLDER'S ENDS (R37, Shift+Page Up / Shift+Page Down and the two
-    // skip buttons' shift-click or long press): the first / last wav of
+    // THE ITEM FOLDER'S ENDS (R37, Shift+`,` / Shift+`.` since 2026-08-30 and
+    // the two skip buttons' shift-click or long press): the first / last wav of
     // `item_folder`, played from its start on the neighbours' own road — never
     // a wrap, and a consumed no-op with no item AND on an item already at that
     // end, exactly as the neighbours refuse there.
@@ -345,6 +345,16 @@ struct GuiRenderPlayer {
     void seek_to(int64_t frame);
     // The item's start; a no-op while idle, like every seek (seek_to's head).
     void home();
+    // THE ITEM'S END (architect 2026-08-30), Home's twin and NOT the folder's
+    // walk: it seeks to `frames`, the very position the scrub's right end
+    // writes, and does nothing else — the item and the folder are untouched.
+    // A LIVE transport therefore plays the last frames out and the NATURAL END
+    // takes it from there, unaltered (advance where a next entry exists,
+    // `ended_at_folder_end` at the folder's last, a replay under a lit Repeat
+    // one); a PAUSED one moves its rest, which the resume arm reads as at-or-
+    // past the end and replays from the start; an IDLE one meets seek_to's own
+    // carded refusal, exactly as Home does.
+    void end();
     // Left / Right's step: 5 s at the device's rate (R6).
     int64_t seek_step_frames() const;
 
@@ -405,7 +415,11 @@ struct GuiRenderPlayer {
     // KEY, unconditionally (R36 gave the player a real stop, so the head
     // unit's stop is no longer a pause; the key names an act rather than a
     // toggle, so no state gate belongs on it and the act's own idle refusal is
-    // the answer); Next / Previous -> PageDown / PageUp; FastForward / Rewind
+    // the answer) — the key being BARE `v` since 2026-08-30, which the one
+    // road simply follows: the table names the player's STOP KEY, whatever
+    // letter that is; Next / Previous -> Period / Comma (the item walk's keys
+    // since the same ruling, re-keyed off PageDown / PageUp);
+    // FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
     // posture; the user presses play). The state gate on the DIRECTIONAL
@@ -423,7 +437,7 @@ struct GuiRenderPlayer {
     //
     // EACH KEY IS A PRESS AND A RELEASE, synthesized back to back: the release
     // is what cancels the core's repeat arm for the repeat-eligible keys
-    // (Left / Right / Page Up / Page Down), exactly as the on-screen keyboard
+    // (Left / Right / `,` / `.`), exactly as the on-screen keyboard
     // owes its key-up. The stable code is kCarStableCodeBase + the GuiKey;
     // the codepoint is 0 for every transport key.
     void on_media_command(GuiMediaCommand cmd);

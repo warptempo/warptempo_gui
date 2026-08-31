@@ -3474,7 +3474,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
             // shifted twin — a Shift+click on plastic, a long press on glass,
             // ONE term either way — is the item folder's END rather than its
-            // neighbour, the keys' own Shift+Page Up / Shift+Page Down. THE
+            // neighbour, the keys' own Shift+`,` / Shift+`.`. THE
             // ARMS THAT READ `shifted` ARE THE ADMISSION'S OWN MEMBERS
             // (player_button_shift_admits, app_state.h): every other act below
             // ignores the bit, so a held Play or Close is its plain act — the

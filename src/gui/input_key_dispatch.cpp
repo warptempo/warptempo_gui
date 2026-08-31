@@ -3645,22 +3645,24 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return false;
     // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
     // highlight walk (Up/Down), the seeks (Left/Right), the item walk
-    // (Page Up/Down) and, since R37, the SHIFTED pair on those same two keys
-    // (the item folder's ends, which the architect ruled repeat-eligible with
-    // their neighbours) — and nothing else does: Enter and Space are the
-    // modal's one-shot press or the open/play acts, the closers, the stop
-    // chord and the load chord are one-shot commands, and the ring's Tab
-    // repeats through the arm below exactly as every ring's does. A prompt
-    // over the player is the prompt's own answer, which the arm above and the
-    // blanket below already give.
+    // (`,` / `.` since 2026-08-30, which took Page Up / Page Down's acts and
+    // their eligibility with them) and, since R37, the SHIFTED pair on those
+    // same two keys (the item folder's ends, which the architect ruled
+    // repeat-eligible with their neighbours) — and nothing else does: Enter
+    // and Space are the modal's one-shot press or the open/play acts, the
+    // closers, the stop chord and the load chord are one-shot commands, HOME
+    // AND END ARE ABSOLUTE SEEKS (a held one could only re-land where it
+    // already is), and the ring's Tab repeats through the arm below exactly as
+    // every ring's does. A prompt over the player is the prompt's own answer,
+    // which the arm above and the blanket below already give.
     if (app.render_player.active && !app.prompt.active) {
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
         if (mods.ctrl || mods.alt) return false;
         if (mods.shift)
-            return key == GuiKeys::PageUp || key == GuiKeys::PageDown;
+            return key == GuiKeys::Comma || key == GuiKeys::Period;
         return key == GuiKeys::Left || key == GuiKeys::Right ||
                key == GuiKeys::Up || key == GuiKeys::Down ||
-               key == GuiKeys::PageUp || key == GuiKeys::PageDown;
+               key == GuiKeys::Comma || key == GuiKeys::Period;
     }
     // THE PICKER (2026-08-28), the player's shape with the player's reason:
     // the highlight walk (Up/Down) repeats — a continuous step that decides
@@ -3709,11 +3711,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // eligibility inherited whole when the two acts swapped modifiers),
     // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
     // older/newer step, a continuous step gesture like the arrows and held for
-    // the same reason, to walk quickly; it is bound only inside that view, so a
-    // repeat outside it fires into an unbound key exactly as a held arrow with
-    // nothing to nudge fires into a refusal. Their SHIFT shapes — the walk's
-    // absolute wall jumps — are excluded by the no-shift term below and stay
-    // one-shot: a held jump could only flap against the wall it just reached),
+    // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
+    // inside that view, so a repeat outside it fires into an unbound key
+    // exactly as a held arrow with nothing to nudge fires into a refusal — the
+    // render player binds the same pair to its own item walk since 2026-08-30
+    // and answers for it in the player arm above, which returns before this
+    // one. Their SHIFT shapes — the walk's absolute wall jumps — are excluded
+    // by the no-shift term below and stay one-shot: a held jump could only
+    // flap against the wall it just reached),
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
     // repeating Ctrl chords — the Ctrl+Shift+Tab march, Ctrl+Z / Ctrl+Shift+Z
     // (undo / redo), and Ctrl+= / Ctrl+- (the horizontal ZOOM step, which is
@@ -6606,18 +6611,26 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // then, deliberately — the player's ring has no Left/Right walk, since
     // those keys are the car's rewind and fast-forward.
 
-    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37): Shift+Page Up and
-    // Shift+Page Down are the neighbours' keys with the modifier — the first
-    // and the last wav of the transport item's own folder, never a wrap and a
-    // consumed no-op with no item. Ahead of the blanket below because that
-    // blanket is what consumes every OTHER shifted spelling; these two are
-    // repeat-eligible with Page Up / Page Down (repeat_eligible's player arm).
+    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37; re-keyed 2026-08-30):
+    // Shift+`,` and Shift+`.` are the neighbours' keys with the modifier — the
+    // first and the last wav of the transport item's own folder, never a wrap
+    // and a consumed no-op with no item. Ahead of the blanket below because
+    // that blanket is what consumes every OTHER shifted spelling; these two
+    // are repeat-eligible with bare `,` / `.` (repeat_eligible's player arm).
+    //
+    // THE PAIR IS THE `h` HISTORY VIEW'S OWN VOCABULARY, WALLS AND ALL
+    // (architect 2026-08-30): there the bare pair STEPS the walk and the
+    // shifted pair JUMPS TO ITS ENDS, and here the bare pair steps the item's
+    // folder and the shifted pair jumps to its first and last wav — one
+    // step-and-ends idiom, two lists. The spelling is that view's too: xkb is
+    // read at level 0 (GuiPlatform::key_from_keycode), so the shifted press
+    // arrives as Comma / Period with the shift bit and never as `<` / `>`.
     if (shift && !ctrl && !alt) {
-        if (key == GuiKeys::PageUp) {
+        if (key == GuiKeys::Comma) {
             render_player.first_in_item_folder();
             return true;
         }
-        if (key == GuiKeys::PageDown) {
+        if (key == GuiKeys::Period) {
             render_player.last_in_item_folder();
             return true;
         }
@@ -6640,14 +6653,21 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::L:
             render_player.close();
             return true;
-        case GuiKeys::S:
-            // STOP (architect 2026-08-28, R36), the Stop button's own chord:
-            // the item rests at its start and the next Play replays it from
-            // there. One-shot like every other act key here, and bare-exact —
-            // Ctrl+S fell through to the save at the head of this router, and
-            // every other spelling of `s` is consumed above. (Outside the
-            // player bare `s` drops a marker; the mode's router IS the
-            // vocabulary while it stands, so the letter is free here.)
+        case GuiKeys::V:
+            // STOP (architect 2026-08-28, R36; RE-KEYED TO BARE `v`
+            // 2026-08-30) — the Stop button's own chord: the item rests at its
+            // start and the next Play replays it from there. One-shot like
+            // every other act key here, and bare-exact: every modified
+            // spelling of `v` is consumed above by the router's `if (!bare)`.
+            //
+            // WHY `v`: THE ROW IS AUDACIOUS'S BY RULING (R25's arrangement),
+            // and Audacious — Winamp before it — stops on V. It was bare `s`
+            // for two days, which was the one CROSS-MODAL DOUBLE MEANING left
+            // in the product: outside the player bare `s` drops a marker, so
+            // the same letter authored in one state and stopped a transport in
+            // another. `v` is bound nowhere else, in the player or out of it
+            // (the editors' paste is ctrl-exact), so the letter says one thing
+            // everywhere.
             render_player.stop();
             return true;
         case GuiKeys::Apostrophe:
@@ -6685,13 +6705,31 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::Home:
             render_player.home();
             return true;
+        case GuiKeys::End:
+            // THE TRACK'S OWN END (architect 2026-08-30), Home's twin and NOT
+            // "next": it writes the position the scrub's right end writes and
+            // nothing more — the item is unchanged and no folder is walked.
+            // What happens after is the NATURAL END's, unaltered: a live
+            // transport plays out the last frames and then advances to the
+            // next entry where one exists, sets `ended_at_folder_end` at the
+            // last, or replays under a lit Repeat one. A PAUSED one just moves
+            // its rest, which the resume arm reads as "at or past the end" and
+            // replays from the start (toggle_pause), and an IDLE one meets
+            // seek_to's own carded refusal exactly as Home does.
+            render_player.end();
+            return true;
         case GuiKeys::BackSpace:
             render_player.up();
             return true;
-        case GuiKeys::PageUp:
+        case GuiKeys::Comma:
+            // PREVIOUS / NEXT WITHIN THE ITEM'S FOLDER (architect 2026-08-30,
+            // re-keyed off Page Up / Page Down, which now fall to the card
+            // below like every other unbound chord): the `h` history view's
+            // own walk keys, bare to step and shifted to reach the ends
+            // (the shift arm above).
             render_player.previous();
             return true;
-        case GuiKeys::PageDown:
+        case GuiKeys::Period:
             render_player.next();
             return true;
         default:

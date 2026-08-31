@@ -723,6 +723,16 @@ void GuiRenderPlayer::home() {
     seek_to(0);
 }
 
+// THE ITEM'S END (architect 2026-08-30) — the contract is at the declaration.
+// `frames` is the scrub's own right-hand end (render_player_scrub_frame_at
+// clamps there), so the key writes exactly the position a press on the far
+// right of the slider writes, and every arm below it — the live seek's
+// one-frame-short landing into the natural end, the paused rest, the idle
+// refusal — is seek_to's, unchanged and unbranched.
+void GuiRenderPlayer::end() {
+    seek_to(app.render_player.frames);
+}
+
 void GuiRenderPlayer::on_natural_end() {
     AppState::RenderPlayer& rp = app.render_player;
     // THE REST IS AT THE ITEM'S START, written BEFORE the stop body so the
@@ -991,14 +1001,20 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // TOGGLE and Play and Pause name a direction, while this key names
             // an act that says the same thing whatever the transport is doing;
             // a stop said to a resting transport is the act's own consumed
-            // no-op.
-            press(GuiKeys::S);
+            // no-op. THE KEY IS BARE `v` since 2026-08-30 (the player's own
+            // re-keying, route_render_player_key) and this line follows it:
+            // one road, and the head unit's Stop keeps working because the
+            // table names the STOP KEY rather than a letter.
+            press(GuiKeys::V);
             return;
         case Kind::Next:
-            press(GuiKeys::PageDown);
+            // THE ITEM WALK'S KEYS ARE `,` / `.` since 2026-08-30 (re-keyed
+            // off Page Down / Page Up); the wheel's Next and Previous follow
+            // the keys, the road staying the one synthesis.
+            press(GuiKeys::Period);
             return;
         case Kind::Previous:
-            press(GuiKeys::PageUp);
+            press(GuiKeys::Comma);
             return;
         case Kind::FastForward:
             press(GuiKeys::Right);
