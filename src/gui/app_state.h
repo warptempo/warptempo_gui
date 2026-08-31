@@ -7288,10 +7288,15 @@ struct AppState {
     //                 opens, with no field beside it. The picker seats it on
     //                 the CURRENT project's row at the open;
     //   `list_focused` whether the modal ring's -1 means THE LIST (true) or
-    //                 nothing at all (false, the open state). It changes
-    //                 nothing visible — Up/Down walk the highlight either way
-    //                 — and only what a bare Enter means: on the list, the
-    //                 highlight's OPEN act; on a button, that button's press.
+    //                 nothing at all (false, the open state). IT PAINTS, on
+    //                 the HIGHLIGHTED ROW'S OUTLINE: the ring's active accent
+    //                 while the list holds the ring, the passive line while it
+    //                 does not (the painter's outline fork, paint_handler.cpp)
+    //                 — the two focus strengths a modal button wears, worn by
+    //                 the list here. The highlight itself is unmoved by it,
+    //                 Up/Down walking it either way, and it also decides what
+    //                 a bare Enter means: on the list, the highlight's OPEN
+    //                 act; on a button, that button's press.
     //                 Reset with the modal face state, being part of it;
     //   `hovered_row` the pointer's row (-1 none), the hover face — written
     //                 by the motion's own walk, cleared at every listing

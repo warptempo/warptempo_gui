@@ -52,10 +52,22 @@
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
 //              until its X; no clock.
 //
-// WHAT IS NOT A CARD, by ruling. EVERY SUCCESS: a render's completion ("that
-// would get annoying"), a Synchronize that mirrored the project, a propagate
-// walk that pasted what it had — an act that did what was asked says nothing,
-// its result being on screen. And THE SILENCES THE STRICTNESS RULING LEFT
+// WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
+// ("that would get annoying"), a Synchronize that mirrored the project, a
+// propagate walk that pasted what it had, and THE SAVE — an act that did what
+// was asked says nothing, its result being on screen, the save's being the
+// dirty mark leaving the window title (architect 2026-08-30: "the disc
+// writes — there is something that paints, the dirty dot goes away").
+// THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
+// invariant that an accepted press shows something): NOTHING PAINTS A
+// CLIPBOARD, and since the resolved readout retired nothing paints a resolved
+// value either, so the THREE COPIES — bare `j`'s resolved value, Ctrl+P's
+// phase resets and Ctrl+/'s measures, each with its button or menu row
+// inheriting the chord — say so on a normal card, which is the whole of what
+// those presses show. THE EDITORS' OWN Ctrl+C IS NOT ONE OF THE THREE: an
+// editor is its own world with that world's conventions, and its copy stays
+// silent (its Ctrl+V over an empty clipboard with it).
+// And THE SILENCES THE STRICTNESS RULING LEFT
 // STANDING, which are these and no others (2026-08-30, re-greped; the
 // off-home DROPS, `m` on a bad run and bare `h` with a checkpoint publishing
 // left this list that day, and every one of them speaks now):

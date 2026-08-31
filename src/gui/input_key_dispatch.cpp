@@ -5130,14 +5130,18 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // the folder overlay's list is one member, standing where an editor's
     // field stands (-1) with one difference — the player OPENS with the ring
     // NOWHERE (-1 and `list_focused` false), and the first Tab lands on the
-    // list. Landing there changes nothing visible (Up/Down walk the
-    // highlight either way) and only what a bare Enter means. Left/Right are
-    // NOT the ring's here: they are the seeks, the car's rewind and
-    // fast-forward, on a button or off it. THE PICKER'S RING IS THE SAME
-    // SHAPE, one member shorter (its row is Cancel alone since 2026-08-29):
-    // [list, Cancel], opening nowhere, and Left/Right are not its either —
-    // its router consumes them, the list's walk being Up/Down — so the two
-    // list-bearing owners share one arm.
+    // list. LANDING THERE SHOWS: the highlighted row's outline takes the
+    // ring's ACTIVE strength (the accent) where it wore the passive line while
+    // the ring stood elsewhere, and the band repaints for it at the bit's
+    // write below — the walk's own face, the same two lines a focused button
+    // wears. What it does NOT change is the highlight itself: Up/Down walk it
+    // either way, and what else the landing decides is what a bare Enter
+    // means. Left/Right are NOT the ring's here: they are the seeks, the car's
+    // rewind and fast-forward, on a button or off it. THE PICKER'S RING IS THE
+    // SAME SHAPE, one member shorter (its row is Cancel alone since
+    // 2026-08-29): [list, Cancel], opening nowhere, and Left/Right are not
+    // its either — its router consumes them, the list's walk being Up/Down —
+    // so the two list-bearing owners share one arm.
     const bool list_up = !prompt_up &&
                          (app.render_player.active || app.picker.active);
     const bool on_list = list_up && app.folder_overlay.list_focused;
@@ -6043,6 +6047,16 @@ constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
 constexpr const char* kPastePhaseOntoWarp =
     "Phase resets are pasted onto warp markers";
+// THE TWO COPIES' SHARED "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the
+// kNothingMatched twin on the copy side (phase_reset_propagate.cpp): both
+// copies take the SAME membership, warp_marker_propagates — labeled AND
+// effectively enabled — so a run of unlabeled or disabled markers passes every
+// gate and captures nothing, leaving an EMPTY clipboard that the matching
+// paste then refuses with "Nothing has been copied yet". One fact, one
+// wording, and it names the membership rather than the label alone because a
+// labeled but disabled marker propagates nothing either.
+constexpr const char* kNothingToCopy =
+    "No labeled, enabled markers are selected, so nothing was copied";
 
 bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -6091,6 +6105,23 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             return true;
         }
         phase_reset_propagate.copy_from_selection();
+        // THE COPY SAYS SO, and says WHICH of the two things it did: a
+        // clipboard write paints nothing (the reasoning is at bare `j`'s own
+        // card, copy_focused_marker_value), and the write here can come out
+        // EMPTY behind passed gates, which is a different fact and takes the
+        // family's own sentence for it. The card is the ARM'S, beside the
+        // gates it follows: both propagates' COPY bodies carry no sentence of
+        // their own (unlike the pastes beside them), and the arm is where the
+        // rest of this chord's answers already live.
+        // THE MENU ROW INHERITS IT: Edit -> Copy phase resets dispatches this
+        // chord.
+        if (app.phase_reset_clipboard.empty()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingToCopy);
+            return true;
+        }
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Copied the selected markers' phase resets");
         return true;
     }
 
@@ -6200,6 +6231,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             return true;
         }
         copy_measures_from_selection();
+        // Its Ctrl+P twin's two answers in this clipboard's words, for the
+        // twin's reasons (the card is the arm's; the empty capture is the
+        // shared sentence). Edit -> Copy measures dispatches this chord and
+        // inherits both.
+        if (app.measure_clipboard.empty()) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNothingToCopy);
+            return true;
+        }
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Copied the selected markers' measures");
         return true;
     }
 
@@ -6773,6 +6815,18 @@ void GuiInputHandler::copy_focused_marker_value() {
         return;
     }
     gui.clipboard_set_text(payload);
+    // AND THE SUCCESS SAYS SO (architect 2026-08-30, the strictness ruling's
+    // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
+    // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays
+    // a clipboard, and since the resolved readout retired with the status bar
+    // nothing displays a resolved value either — so this card is the whole of
+    // what the press shows. The save, a render and a Synchronize stay silent
+    // by ruling: each has its own visible answer (the title's dirty mark, the
+    // file on disk). THE BUTTON INHERITS IT: the bottom row's Copy resolved
+    // value dispatches this same bare `j` through on_key at its lift, so the
+    // sentence lives once and both roads say it.
+    notifications.notify(AppState::NotificationClass::Normal,
+                         "Copied the resolved value");
 }
 
 // THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's
