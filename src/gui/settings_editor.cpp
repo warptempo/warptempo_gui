@@ -97,7 +97,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // relaxation is now unreachable, the SURFACE being gone rather than the rule.
 // The arm's deleted guard stays deleted: this opener is the one owner, and a
 // second check there would be both unreachable and wrong. Typing
-// `tab_B_trim_begin=` from an UNLOCKED active tab while B is locked stays legal
+// `tab_b_trim_begin=` from an UNLOCKED active tab while B is locked stays legal
 // and is the case the relaxation still serves.
 void GuiSettingsEditor::open() {
     // THE LOCK SAYS SO (architect 2026-08-30, the strictness ruling), and the
