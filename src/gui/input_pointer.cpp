@@ -4093,20 +4093,16 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // shift-hold is elsewhere). A press on the pad or a gap between rows arms
     // nothing.
     //
-    // A MODIFIED PRESS ON A ROW SAYS SO (architect 2026-08-30): the ctrl-click
-    // and the shift-click a file manager teaches are exactly what a list
-    // invites, and the answer is the rule — a row opens on a plain click, one
-    // sentence for both contents, since the act is the same act under either
-    // owner. THE ROW TEST COMES FIRST so the pad and the gaps stay SILENT: a
-    // modified press on empty band is not a press on a row, and it is answered
-    // by the band doing nothing, exactly as a plain one there is.
+    // A MODIFIED PRESS ON A ROW IS SILENT LIKE ONE ANYWHERE ELSE ON THE BAND
+    // (architect 2026-08-30, the unbound-keys ruling read on the pointer:
+    // "bound keys either show an effect or a card, so an unbound key is
+    // identified by its silence" — a gesture nothing binds is answered the
+    // same way). It carded "Rows open on a plain click" for the one day of
+    // 2026-08-30, on the ROW alone; the row test the card needed is gone with
+    // it, the modified press claiming the band and arming nothing wherever it
+    // lands.
+    if (mods.ctrl || mods.shift || mods.alt) return true;
     const int hit = folder_overlay::row_at(app, x, y);
-    if (mods.ctrl || mods.shift || mods.alt) {
-        if (hit >= 0)
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Rows open on a plain click");
-        return true;
-    }
     if (hit < 0) return true;
     // THE PRESS ONLY ARMS — a click activates, but the act rides the
     // MOTIONLESS LIFT because this same press may still become the band's
@@ -5570,26 +5566,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing, so it stopped no playback on the way down either — the stops
         // live at the claims above and below, never on the route to this gate.
         //
-        // AND IT SAYS SO (architect 2026-08-30, the strictness ruling): the
-        // card names the MODIFIER COMBINATION rather than a chord, because on
-        // this surface that is the whole of what was pressed — the same
-        // spelling owner the keyboard's cards use, minus the key
-        // (spell_modifiers, gui_input.h). NO BOUND GESTURE PASSES THIS LINE,
-        // re-verified at this edit: the ctrl-EXACT branch above returns on
-        // every one of its paths (the marker toggle, the BEGIN bound set, the
-        // nav zoom arm, its own fall-through), Ctrl+Shift's one claim — the
-        // END bound set — returns inside the trim band above, and ALT SPELLS
-        // NO PRESS ANYWHERE. So what reaches here is Ctrl+Shift off the trim
-        // bar and every alt-carrying press, and nothing else. The reach is the
-        // waveform and the top strip alone (the lane test above returns for
-        // everything else) under a LEFT button (this whole block's gate), with
-        // every chrome, modal and overlay surface claimed far above.
-        if (ctrl || alt) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 spell_modifiers(mods) +
-                                     "+click is not bound here");
-            return;
-        }
+        // AND IT SAYS NOTHING (architect 2026-08-30, the unbound-keys ruling
+        // read on the pointer: "bound keys either show an effect or a card, so
+        // an unbound key is identified by its silence"). NO BOUND GESTURE
+        // PASSES THIS LINE, re-verified at this edit: the ctrl-EXACT branch
+        // above returns on every one of its paths (the marker toggle, the
+        // BEGIN bound set, the nav zoom arm, its own fall-through),
+        // Ctrl+Shift's one claim — the END bound set — returns inside the trim
+        // band above, and ALT SPELLS NO PRESS ANYWHERE. So what reaches here
+        // is Ctrl+Shift off the trim bar and every alt-carrying press, and
+        // nothing else — combinations this surface binds nowhere, answered by
+        // the silence that identifies them. The reach is the waveform and the
+        // top strip alone (the lane test above returns for everything else)
+        // under a LEFT button (this whole block's gate), with every chrome,
+        // modal and overlay surface claimed far above. It carded
+        // "<modifier>+click is not bound here" through spell_modifiers for the
+        // one day of 2026-08-30.
+        if (ctrl || alt) return;
 
         // Plain or Shift press, under the PAN-PRIMARY vocabulary (architect
         // 2026-08-12, the eighth glass ruling) as amended 2026-08-13 (THE

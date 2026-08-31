@@ -60,15 +60,6 @@ namespace {
 constexpr const char* kCheckpointPublishing =
     "A checkpoint is still publishing; try again when it finishes";
 
-// THE TWO MODE ROUTERS' CATCH-ALL SUFFIXES (architect 2026-08-30, the
-// strictness ruling). Each router IS the whole keyboard vocabulary while its
-// mode stands, so each has TWO catch-alls — the modified chord and the bare
-// key — and both of a router's arms answer with one sentence: what happened
-// is the same, and only the mode differs. The chord in front of them is the
-// speller's (spell_chord, gui_input.h); these are the tails.
-constexpr const char* kNotBoundInPlayer = " is not bound in the render player";
-constexpr const char* kNotBoundInPicker = " is not bound in the project list";
-
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
 // disk afterwards.
@@ -5885,14 +5876,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // button means the key was not one of the ring's.
     if (route_modal_dialog_focus_key(key, mods)) return true;
 
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND IT SAYS SO (architect
-    // 2026-08-30), the player's own arm one mode over and for its reason: the
-    // router is the whole vocabulary while the picker stands.
-    if (!bare) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             spell_chord(key, mods) + kNotBoundInPicker);
-        return true;
-    }
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
+    // 2026-08-30, the unbound-keys ruling — "bound keys either show an effect
+    // or a card, so an unbound key is identified by its silence"), the
+    // player's own arm one mode over and for its reason: the router is the
+    // whole vocabulary while the picker stands, and a chord it does not name
+    // is a chord that does nothing here. It carded "<chord> is not bound in
+    // the project list" for the one day of 2026-08-30.
+    if (!bare) return true;
 
     switch (key) {
         case GuiKeys::Escape:
@@ -5913,10 +5904,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
             return true;
         default:
             // Space with no button focused, Left / Right, and every other
-            // bare key: consumed, in the modified arm's sentence. The picker
-            // has no bare act for them.
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 spell_chord(key, mods) + kNotBoundInPicker);
+            // bare key: consumed, and silent with the modified arm above. The
+            // picker has no bare act for them.
             return true;
     }
 }
@@ -6636,16 +6625,14 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         }
     }
 
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND IT SAYS SO (architect
-    // 2026-08-30) — the mode's router IS the whole vocabulary while it
-    // stands, so a chord that means something outside it means nothing here
-    // and the card names both the chord and the mode. The two catch-alls
-    // share one sentence: modified or bare, what happened is the same.
-    if (!bare) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             spell_chord(key, mods) + kNotBoundInPlayer);
-        return true;
-    }
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
+    // 2026-08-30, the unbound-keys ruling) — the mode's router IS the whole
+    // vocabulary while it stands, so a chord that means something outside it
+    // means nothing in here, and a press that does nothing is answered by the
+    // silence that identifies it. Both catch-alls, the modified one and the
+    // bare one below, carded "<chord> is not bound in the render player" for
+    // the one day of 2026-08-30.
+    if (!bare) return true;
 
     const int highlight = app.folder_overlay.highlight_row;
     switch (key) {
@@ -6733,10 +6720,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.next();
             return true;
         default:
-            // The bare half of the catch-all above, in its sentence: every
+            // The bare half of the catch-all above, silent with it: every
             // bare key the player binds is a case above this one.
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 spell_chord(key, mods) + kNotBoundInPlayer);
             return true;   // consumed
     }
 }
@@ -7194,22 +7179,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         run_playhead_end_jump(/*forward=*/true, /*whole_piece=*/false);
         break;
     default:
-        // THE UNBOUND BARE KEY SAYS SO (architect 2026-08-30), the strict-
-        // modifier tail's other half and its identical sentence — this
-        // dispatch is the end of the bare road, so a key reaching here binds
-        // nothing at all in this state (bare `u`, `g`, `,` and `.` outside the
-        // `h` view; the digits 4..9; a keysym with no spelling). The caller
-        // gates on no modifiers held, which is why the speller is handed a
-        // default GuiInputState: the chord IS the key.
-        //
-        // A HELD KEY IS STILL ONE CARD: bare Comma and Period are repeat-
-        // eligible everywhere (repeat_eligible's step-gesture arm) and fire
-        // this arm at the compositor's cadence outside the view, and the
-        // cards' dedup keeps one card for one sentence, re-pushed at the top
-        // with a fresh clock at each fire.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             spell_chord(key, GuiInputState{}) +
-                                 " is not bound");
+        // THE UNBOUND BARE KEY IS SILENT (architect 2026-08-30, the
+        // unbound-keys ruling), the strict-modifier tail's other half and its
+        // identical answer — this dispatch is the end of the bare road, so a
+        // key reaching here binds nothing at all in this state (bare `u`, `g`,
+        // `,` and `.` outside the `h` view; the digits 4..9; a keysym with no
+        // spelling), and saying nothing is what identifies it as unbound. The
+        // rule and its consequences for the gates are at the tail this arm
+        // pairs with (the end of on_key, input_handler.cpp).
         break;
     }
 }

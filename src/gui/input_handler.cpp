@@ -37,6 +37,14 @@
 // question themselves rather than letting the band's row press or the scrub's
 // marker drag swallow a key in silence. One literal, so a retune moves all
 // four.
+//
+// THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last two speak for every
+// chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
+// below sit on the MAIN DISPATCH, where an unbound press is answered by
+// silence, while the player's and the picker's arms sit inside a mode whose
+// router is the whole vocabulary — bare `v` stops a track in there — and that
+// vocabulary is not what the inventory knows, so those two ask nothing and
+// answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
 // THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
@@ -326,8 +334,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // chord. The card outlives the gate — the load installs the audio and
         // the sentence retires on its own clock — and fire_if_due is called
         // above the tick's own loading return, so the clock runs here.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "No audio is loaded yet");
+        // AND ONLY FOR A CHORD THE PRODUCT BINDS (architect 2026-08-30: bound
+        // keys either show an effect or a card, so an unbound key is
+        // identified by its silence — the rule and its inventory are at
+        // chord_is_bound, gui_input.h). A key that does nothing with a piece
+        // loaded says nothing with none loaded either.
+        if (chord_is_bound(key, mods))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "No audio is loaded yet");
         return;
     }
 
@@ -372,8 +386,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // that a drag is in flight, which is one fact whichever surface
             // holds the pointer, so the two sites say one thing. It names no
             // chord for the same reason — the chord is not what was wrong.
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kKeysDuringDrag);
+            // FOR A BOUND CHORD ALONE, like every gate on the main dispatch
+            // (chord_is_bound, gui_input.h): a key that binds nothing is
+            // answered by silence whether a drag is in flight or not.
+            if (chord_is_bound(key, mods))
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
             return;
         }
         finalize_editor_text_drag();
@@ -436,10 +454,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // that set is repeat-eligible under an editor (repeat_eligible's
         // in-editor arm repeats MotionEditKey and PrintableKey alone), so the
         // dedup is not even asked here.
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            "Close the editor first: " + spell_chord(key, mods) +
-                " is ignored while it is open");
+        //
+        // AND ONLY FOR A CHORD THE PRODUCT BINDS (architect 2026-08-30, the
+        // unbound-keys ruling; the inventory is chord_is_bound, gui_input.h):
+        // "Close the editor first" says the press WOULD have done something,
+        // so a chord that does nothing with no editor open must not be told
+        // the editor is what stopped it. It is answered by the silence every
+        // unbound press gets.
+        if (chord_is_bound(key, mods))
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Close the editor first: " + spell_chord(key, mods) +
+                    " is ignored while it is open");
         return;
     }
 
@@ -592,11 +618,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // drag's own sentence: a gesture owns the keyboard, and that is the
         // one fact worth a sentence — the chord is not what was wrong, so it
         // is not what the card names. Bare Esc lands here with every other
-        // key and is carded like them: it is NOT the bare-Esc no-op the
+        // BOUND key and is carded like them: it is NOT the bare-Esc no-op the
         // top-level default is, it is a press this gate deliberately refuses
-        // (POINTER GESTURES HAVE NO CANCEL, the rule stated above).
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kKeysDuringDrag);
+        // (POINTER GESTURES HAVE NO CANCEL, the rule stated above), and Esc is
+        // a bound chord, so the test below admits it.
+        // THE TEST IS THE MAIN DISPATCH'S OWN (chord_is_bound, gui_input.h):
+        // an unbound press does nothing with no gesture in flight and says
+        // nothing with one.
+        if (chord_is_bound(key, mods))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kKeysDuringDrag);
         return;
     }
 
@@ -662,9 +693,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     : "Select a change to revert");
             return;
         }
-        notifications.notify(AppState::NotificationClass::Normal,
-                             spell_chord(key, mods) +
-                                 " is not available in the history view");
+        // AND THE GENERIC SENTENCE IS FOR A BOUND CHORD ALONE (architect
+        // 2026-08-30, the unbound-keys ruling; chord_is_bound, gui_input.h).
+        // "is not available in the history view" says the key means something
+        // outside it, which is exactly what the two arms above were carved out
+        // for; for a chord bound nowhere it would say the same false thing, so
+        // that press takes the silence every unbound press takes. The view's
+        // OWN vocabulary never reaches this line at all — bare `g`, `u`, the
+        // `,` / `.` pair and Ctrl+H are claimed by handle_history_mode_key and
+        // by the fork above — so admitting them to the inventory costs this
+        // gate nothing.
+        if (chord_is_bound(key, mods))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 spell_chord(key, mods) +
+                                     " is not available in the history view");
         return;
     }
 
@@ -758,22 +800,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
-        // 2026-08-30): "<chord> is not available on a read-only tab". THE
-        // SENTENCE IS BUILT FOR TWO CLASSES OF PRESS AT ONCE, because this
-        // gate cannot tell them apart — read_only_key_blocked is the
+        // 2026-08-30): "<chord> is not available on a read-only tab", said
+        // for a chord this product BINDS and for no other. The sentence is
+        // kept over a bare "This tab is read-only" because it names what was
+        // pressed, which is what the user is looking for after a press that
+        // did nothing.
+        //
+        // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT, and with it the
+        // cost the wording was chosen to cover. read_only_key_blocked is the
         // COMPLEMENT OF AN ALLOWLIST, so it answers true both for a bound
         // authoring chord the lock is holding back AND for a chord that is
-        // unbound everywhere (bare `4`, an unbound modifier decoration),
-        // which on a writable tab would have reached the strict-modifier
-        // tail or the bare default and been told it is not bound. A bare
-        // "This tab is read-only" therefore stated a WRONG CAUSE for the
-        // second class; "is not available on a read-only tab" is true of
-        // both — the key does nothing here, and the lock is the state that
-        // is on. The alternative, a membership list of the authoring chords
-        // to fork the sentence on, was rejected: it would be a second
-        // spelling of the bindings themselves, and its drift would lie. The
-        // accepted cost is that an unbound chord pressed on a locked tab is
-        // never told anywhere that it is unbound.
+        // unbound everywhere (bare `4`, an unbound modifier decoration); when
+        // every unbound press elsewhere was answered with "<chord> is not
+        // bound", saying nothing at all here would have been the one place
+        // that class went unanswered, and a bare "This tab is read-only"
+        // would have stated a WRONG CAUSE for it. THE UNBOUND-KEYS RULING
+        // (architect 2026-08-30, the same day: bound keys either show an
+        // effect or a card, so an unbound key is identified by its silence)
+        // dissolves both horns — chord_is_bound (gui_input.h) is the test,
+        // the second class takes the silence it now takes everywhere, and
+        // what remains is a sentence about a chord that really would have
+        // acted on a writable tab. The rejected alternative stays rejected on
+        // its own reasoning: a membership list of the authoring chords to
+        // fork the sentence on would be a second spelling of the bindings,
+        // and its drift would lie. (chord_is_bound is a spelling of the
+        // BINDINGS' EXISTENCE, not of the lock's allowlist — it decides
+        // whether a card is owed, never which cause is named, so its drift
+        // costs a missed card and never a wrong one.)
         //
         // IT IS THE KEY'S CARD ALONE — a GREYED button never reaches here,
         // its press being consumed at arm_redesign_press's disabled line
@@ -785,9 +838,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // word of the three sites that KNOW THEIR ACT and so need no chord in
         // the sentence — the Settings dropdown's item click, the render
         // player's Load in place, and the `h` view's Ctrl+H fork above.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             spell_chord(key, mods) +
-                                 " is not available on a read-only tab");
+        if (chord_is_bound(key, mods))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 spell_chord(key, mods) +
+                                     " is not available on a read-only tab");
         return;
     }
 
@@ -1871,16 +1925,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         handle_plain_bare_keys(key);
         return;
     }
-    // THE STRICT-MODIFIER TAIL SAYS SO (architect 2026-08-30): every
-    // modifier-gated handler above returned on match, so a modified press that
-    // arrives here wears a combination nothing binds. The card names it — the
-    // whole point being to tell Ctrl+Shift+O apart from the Ctrl+O it was
-    // meant to be — and says only that it is not bound, never what to press
-    // instead (the no-hints rule). The bare half of the same answer is the
-    // default arm of handle_plain_bare_keys, which composes the identical
-    // sentence for an unbound bare key.
-    notifications.notify(AppState::NotificationClass::Normal,
-                         spell_chord(key, mods) + " is not bound");
+    // THE STRICT-MODIFIER TAIL IS SILENT, AND THAT SILENCE IS THE ANSWER
+    // (architect 2026-08-30): "bound keys either show an effect or a card, so
+    // an unbound key is identified by its silence." Every modifier-gated
+    // handler above returned on match, so a modified press that arrives here
+    // wears a combination nothing binds, and the product says nothing at all.
+    //
+    // THIS IS THE RULE'S HOME on the key path, stated once here and pointed at
+    // from the gates: because every OTHER refusal now answers — an act's own
+    // reason, a gate's state, a wall — a press that produces no card and no
+    // visible change can only be a press with no binding, which is a stronger
+    // answer than a sentence saying so and costs no card for a mistyped
+    // modifier. THE GATES ABOVE ASK chord_is_bound (gui_input.h) FOR EXACTLY
+    // THIS REASON: a chord that would be silent here must not be given a
+    // sentence by a gate it happened to meet on the way down, or the same
+    // press would say two different things depending on the state it landed
+    // in. Strict modifier validation itself is untouched — the no-op it makes
+    // of an unbound combination is the same no-op it always was
+    // (conventions.md).
+    //
+    // THE BARE HALF is handle_plain_bare_keys' default arm, silent in the same
+    // words for the same reason. Both carded "<chord> is not bound" for the
+    // one day of 2026-08-30, with the render player's and the picker's
+    // catch-alls, the folder overlay's modified row press and the pointer's
+    // modified press on the waveform and the top strip; all six retired
+    // together that evening.
 }
 
 void GuiInputHandler::cycle_marker_focus(bool forward) {

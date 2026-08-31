@@ -25,11 +25,14 @@
 //              state that swallowed it (the editor gate, the FOUR drag gates
 //              — the editor text drag, the pointer gestures' drag-modal gate
 //              and the player's and the picker's own arms above it — the
-//              loading gate, the `h` allowlist, the read-only lock, the
-//              strict-modifier tail and the unbound bare default, the player's
-//              and the picker's catch-alls, and the two pointer refusals),
-//              each naming its chord through the one speller spell_chord
-//              (gui_input.h), and THE ACTS' OWN REFUSALS beside them — the
+//              loading gate, the `h` allowlist and the read-only lock). THREE
+//              OF THEM NAME THE CHORD through the one speller spell_chord
+//              (gui_input.h), and every gate ON THE MAIN DISPATCH speaks only
+//              for a chord this product BINDS (chord_is_bound, gui_input.h —
+//              the unbound-keys ruling below; the player's and the picker's
+//              own drag arms are the two that do not ask, each standing
+//              inside a mode whose router is its own vocabulary). And THE
+//              ACTS' OWN REFUSALS beside them — the
 //              home-view binding's four sentences, the marker verbs' subject
 //              refusals, the walls and the value facts, the four clipboard
 //              chords, the value pair, undo and redo, the ten arms of the
@@ -55,12 +58,26 @@
 // its result being on screen. And THE SILENCES THE STRICTNESS RULING LEFT
 // STANDING, which are these and no others (2026-08-30, re-greped; the
 // off-home DROPS, `m` on a bad run and bare `h` with a checkpoint publishing
-// left this list that day with the strict-modifier no-ops, and every one of
-// them speaks now):
+// left this list that day, and every one of them speaks now):
+//   * A CHORD THIS PRODUCT BINDS NOWHERE, wherever it is pressed and whatever
+//     swallowed it (architect 2026-08-30, the day's last ruling): "bound keys
+//     either show an effect or a card, so an unbound key is identified by its
+//     silence". THE DEDUCTION IS THE POINT — every other refusal answers now,
+//     so a press with no card and no visible change can only be a press with
+//     no binding — and it is why the "<chord> is not bound" class retired
+//     whole that evening (the strict-modifier tail, the unbound bare default,
+//     the render player's and the picker's two catch-alls each, the folder
+//     overlay's modified press on a row, and the pointer's own
+//     "<modifier>+click is not bound here"), and why every gate ON THE MAIN
+//     DISPATCH asks chord_is_bound (gui_input.h) before it speaks. THE
+//     UNBOUND POINTER PRESS goes with it: a modified press the waveform, the
+//     top strip or the overlay's band binds nothing for says nothing.
 //   * TOP-LEVEL BARE ESC — a retraction with nothing to dismiss. Esc inside a
-//     gate is NOT this case: the drag gates card it with every other key.
-//   * A MODIFIED PRESS ON THE FOLDER OVERLAY'S PAD OR GAPS (a press on a ROW
-//     cards), and the render player's modified press on the scrub track.
+//     gate is NOT this case: Esc is a BOUND chord, so the drag gates card it
+//     with every other bound key.
+//   * THE RENDER PLAYER'S MODIFIED PRESS ON THE SCRUB TRACK (the folder
+//     overlay's band, pad, gaps and rows joined the unbound-gesture silence
+//     above).
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
 //     DOUBLE-CLICK DROP (re-greped 2026-08-30; the WARP column's alone since
 //     the P column opened to both audio views that day, the four P-column
@@ -165,19 +182,21 @@
 // is two sentences the moment one of them is edited. Everything else stays a
 // literal where it fires (a sentence with ONE producer has nothing to agree
 // with), and a family whose several sites share ONE translation unit keeps its
-// constant there (kKeysDuringDrag, kCheckpointPublishing, the two mode
-// routers' catch-all tails).
+// constant there (kKeysDuringDrag, kCheckpointPublishing; the two mode
+// routers' catch-all tails were a third until their catch-alls went silent
+// with the unbound-keys ruling).
 //
 // THE LOCK'S SENTENCE — the read-only tab, said by the three sites that KNOW
 // THEIR ACT and so need no chord in it: the Settings dropdown's own opener
 // (the menu's items never grey, so their commands owe the answer themselves),
 // the render player's Load in place, and the `h` view's Ctrl+H, whose
 // admission composes the subject with this same lock. THE KEYBOARD GATE IS
-// NOT A READER (since 2026-08-30): it drops an unbound chord and a bound
-// authoring one alike — its predicate is the complement of an allowlist —
-// so it says "<chord> is not available on a read-only tab" through the
-// speller instead, a sentence true of both classes where this one names a
-// cause the unbound press never had. The full reasoning is at that gate
+// NOT A READER (since 2026-08-30): it says "<chord> is not available on a
+// read-only tab" through the speller instead, naming what was pressed, which
+// is what a user who just pressed it is looking for. Its predicate is the
+// complement of an allowlist and so drops an unbound chord with a bound
+// authoring one, which is why that gate asks chord_is_bound first and answers
+// the unbound half with silence. The full reasoning is at that gate
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 

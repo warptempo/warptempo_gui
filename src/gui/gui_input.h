@@ -191,15 +191,26 @@ struct GuiInputState {
 //
 // THE ONE PLACE A PRESS IS TURNED INTO THE NAME THE USER READS. The strictness
 // ruling ("go very verbose — a card for every refusal that is silent today")
-// gave the gates sentences that must say WHICH press was refused, and every one
-// of them composes that name here: the keyboard-modal editor gate, the `h`
-// view's allowlist, the strict-modifier tail, the unbound bare default, the
-// render player's and the picker's two catch-alls each, and — through
-// spell_modifiers alone — the pointer's unbound modified press. NO OTHER SITE
-// COMPOSES A CHORD NAME FOR A CARD. The roster's TOOLTIPS carry chords too,
-// as hand-written literals in kToolbarChords, and they are a different job: a
-// tooltip advertises a BOUND chord in advance, this spells a press that just
-// happened.
+// gave the gates sentences that must say WHICH press was refused, and THE
+// THREE THAT NAME ONE compose it here: the keyboard-modal editor gate, the `h`
+// view's allowlist and the read-only lock. NO OTHER SITE COMPOSES A CHORD NAME
+// FOR A CARD, and spell_modifiers below has no caller of its own — it is this
+// speller's prefix half and nothing else. The roster's TOOLTIPS carry chords
+// too, as hand-written literals in kToolbarChords, and they are a different
+// job: a tooltip advertises a BOUND chord in advance, this spells a press that
+// just happened.
+//
+// AND ALL THREE SPEAK ONLY FOR A CHORD THIS PRODUCT BINDS SOMEWHERE (architect
+// 2026-08-30: bound keys either show an effect or a card, so an unbound key is
+// identified by its silence). Each asks chord_is_bound — the inventory below
+// this speller — before it composes anything, and a press nothing binds dies
+// at its gate saying nothing at all. So every chord a card names is one the
+// user could have expected to do something.
+//
+// (WHAT THIS SPELLER SERVED UNTIL THAT RULING, all retired with the "<chord>
+// is not bound" class: the strict-modifier tail, the unbound bare default,
+// the render player's and the picker's two catch-alls each, and — through
+// spell_modifiers alone — the pointer's unbound modified press.)
 //
 // AND THE TWO DISAGREE ON ONE LETTER, deliberately. The tooltip table writes a
 // bare letter LOWERCASE — "(t)", "(m)" — because it is the key as typed and a
@@ -222,33 +233,38 @@ struct GuiInputState {
 //
 // A KEY WITH NO SPELLING IS "That key", whole, modifiers and all: an unknown
 // keysym has no name to hang a prefix on, and "Ctrl+that key" reads as a
-// misspelling rather than as an answer. IT IS THE LAST RESORT AND NOT A
-// CATCH-ALL: the table below names far more than this product BINDS, because a
-// press the platform could name and the card would not is an identity thrown
-// away. The Wayland boundary forwards the level-0 keysym of every key that is
-// not an F-key and not a modifier (GuiPlatform::key_from_keycode), so the
-// unbound half of a PC keyboard reaches this speller and the table answers for
-// THE BOARDS THIS PRODUCT IS TYPED ON, which is exactly three blocks: the
-// keypad whole, the editing and system block, and the laptop's own vendor
-// strip.
+// misspelling rather than as an answer.
 //
-// AND THAT IS THE WHOLE OF THE CLAIM (narrowed 2026-08-30, closing codex round
-// D's MED-2, which found the earlier "every key the producer can identify" to
-// be a promise the table does not keep). The producer admits every named
-// keysym xkbcommon carries — XF86Calculator, browser Back/Forward, Power,
-// Sleep, WLAN, keyboard brightness, Touchpad Toggle and the rest of a vendor
-// space of hundreds — and each of those reads "That key is not bound" here.
-// THAT IS THE ACCEPTED COST, not an omission to be filled in: the table is
-// hand-written, one line per key, and a table that chased the vendor space
-// would be a second copy of somebody else's registry that nothing in this
-// product exercises. THE OTHER ROAD WAS REJECTED with it — deriving the name
-// from xkbcommon at the Wayland boundary (xkb_keysym_get_name) would put a
-// STRING on the key event and so widen the platform seam for a card the
-// Android backend, which produces GuiKeys only through synthesize_key, could
-// never spell the same way; the two hosts must answer one press one sentence.
-// So what is left for "That key" is a value with no legend this product reads
-// out — a dead key, a compose sequence's intermediate, a keysym from a layout
-// nobody here types, and any vendor key outside the strip below.
+// THE TABLE NAMES FAR MORE THAN ANY CARD CAN NOW REACH, AND IT STAYS WHOLE.
+// It was written when a press the platform could name and the card would not
+// was an identity thrown away: the Wayland boundary forwards the level-0
+// keysym of every key that is not an F-key and not a modifier
+// (GuiPlatform::key_from_keycode), so the unbound half of a PC keyboard
+// reaches this speller, and the table answers for THE BOARDS THIS PRODUCT IS
+// TYPED ON in exactly three blocks — the keypad whole, the editing and system
+// block, and the laptop's own vendor strip. Since the unbound-keys ruling no
+// card composes a name for any of those three: every chord that reaches this
+// speller is one chord_is_bound admits, and no GuiSpellKeys value is in that
+// inventory, which leaves "That key" unreachable with them. THE TABLE IS NOT
+// PRUNED ARM BY ARM FOR THAT — it is ONE OWNER of what a key is CALLED,
+// complete by construction rather than by the current set of callers, and the
+// day any surface wants the name of a key this product does not bind it asks
+// here instead of starting a second table.
+//
+// WHAT THE RULING DISSOLVED IS THE COST THE CLAIM CARRIED. The claim was
+// narrowed 2026-08-30 closing codex round D's MED-2 (the earlier "every key
+// the producer can identify" being a promise the table does not keep), and
+// the narrowing's accepted cost was that a vendor keysym outside the three
+// blocks — XF86Calculator, browser Back/Forward, Power, Sleep, WLAN, keyboard
+// brightness, Touchpad Toggle, a space of hundreds — would read "That key is
+// not bound". There is no such sentence any more: an unbound key is answered
+// by the silence, whatever its name, so nothing is owed to the vendor space
+// and the table is not chased any wider. THE XKB ROAD STAYS REJECTED on its
+// own reasoning — deriving the name from xkbcommon at the Wayland boundary
+// (xkb_keysym_get_name) would put a STRING on the key event and so widen the
+// platform seam for a name the Android backend, which produces GuiKeys only
+// through synthesize_key, could never spell the same way; the two hosts must
+// answer one press one sentence.
 //
 // NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
 // before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
@@ -279,18 +295,20 @@ inline std::string spell_modifiers(GuiInputState mods) {
 
 // THE KEYSYMS THIS PRODUCT NAMES AND BINDS NOWHERE (2026-08-30). GuiKeys above
 // is the BOUND vocabulary — a value there exists because a predicate matches
-// it. These exist for the SPELLER ALONE, and for the one reason stated at the
-// speller's head: the Wayland boundary forwards every non-F, non-modifier
-// key's level-0 keysym, so a card that met one of these with "That key" would
-// be discarding an identity the platform had already handed it. Nothing may
-// bind one of these without moving it into GuiKeys first; the two namespaces
-// are the bound and the merely nameable, and the split is the point.
+// it. These exist for the SPELLER ALONE: the Wayland boundary forwards every
+// non-F, non-modifier key's level-0 keysym, so this is what the product can be
+// handed and what it can therefore CALL something. Nothing may bind one of
+// these without moving it into GuiKeys first; the two namespaces are the bound
+// and the merely nameable, and the split is the point — chord_is_bound's
+// inventory is drawn from GuiKeys alone, and no value below is in it.
+// NO CARD REACHES THIS BLOCK any more (the unbound-keys ruling: the three
+// gates that name a chord speak only for a chord chord_is_bound admits, and an
+// unbound press is answered by silence), and the block stays whole for the
+// reason stated at the speller's head — it is one owner of what a key is
+// called, complete rather than caller-shaped, and a per-arm prune would be a
+// table to rebuild the next time a surface wants a name.
 // THE TABLE IS THREE BLOCKS AND CLOSES THERE — the editing and system block,
-// the keypad, the laptop's vendor strip — and the speller's head owns the
-// reasoning: a producer-admitted keysym outside them (Calculator, browser
-// Back, Power, …) reads "That key is not bound", the accepted cost of not
-// keeping a copy of somebody else's vendor registry and of not widening the
-// platform seam with an xkbcommon-derived name Android could not match.
+// the keypad, the laptop's vendor strip.
 // (Values are the universal keysym numbering GuiKey already mirrors.)
 namespace GuiSpellKeys {
     // The editing and system block a PC keyboard carries beside the six
@@ -364,8 +382,8 @@ namespace GuiSpellKeys {
 // ASCII character, plus Space (a printable that reads as a blank), plus every
 // keysym of GuiSpellKeys above — the unbound half of the boards this product
 // is typed on, named because the producer names them and the table carries
-// them (its three blocks, and no further: the head owns the narrowing and the
-// cost). The two pairs that share a name share it
+// them (its three blocks, and no further; no card reaches those three, the
+// head owning that reasoning). The two pairs that share a name share it
 // deliberately — Return / KpEnter are one "Enter" to the hand, and IsoLeftTab
 // IS the shifted Tab keysym. THE KEYPAD IS SPELLED "Keypad <legend>" and the
 // keypad's Enter is NOT (it stays the hand's one "Enter", the pair above):
@@ -473,6 +491,156 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
     if (prefix.empty()) return name;
     return prefix + "+" + name;
 }
+
+// -- IS THIS CHORD BOUND ANYWHERE? (architect 2026-08-30) --------------------
+//
+// "Bound keys either show an effect or a card, so an unbound key is identified
+// by its silence." The gates that answer a swallowed press therefore ask this
+// first, and say nothing for a chord the product binds nowhere: the deduction
+// only works if the silence is reserved for it. SIX READERS, all of them gates
+// and all in on_key (re-greped at this edit): the keyboard-modal editor gate,
+// the editor TEXT DRAG's gate and the pointer gestures' DRAG-MODAL gate, the
+// loading gate, the `h` view's allowlist and the read-only lock — five
+// sentences between them, the two drag gates sharing one literal. THE
+// PLAYER'S AND THE PICKER'S OWN DRAG ARMS, which say that same literal one
+// rank higher, DO NOT ASK: while either mode stands its router is the whole
+// vocabulary, and this inventory does not know it — a bare `v` swallowed by
+// the player's scroll drag is a bound key there and must be answered.
+//
+// WHAT COUNTS AS BOUND IS WHAT THE MAIN DISPATCH OWNS — every chord on_key's
+// own road claims in some state, whether or not it would act in THIS one. The
+// five sub-handlers on that road are in it (handle_escape_cancels,
+// handle_render_dispatch_keys, handle_mode_keys, handle_tab_switch_keys and
+// handle_plain_bare_keys' switch), and so is handle_history_mode_key: the `h`
+// view ADDS its seven shapes to the dispatch rather than replacing it — the
+// allowlist below it still admits the ordinary vocabulary — so bare `g`, bare
+// `u`, the `,` / `.` pair with and without shift and Ctrl+H are bindings of
+// this product's keyboard like any other.
+//
+// THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER PLAYER
+// or the PICKER stands, its router IS the whole vocabulary and the dispatch
+// below it never runs, so its keys are its own world and not the product's —
+// bare `v` stops a track in the player and binds nothing anywhere else, and a
+// `v` pressed outside it must be as silent as any unbound letter. Neither
+// router can reach a gate below it either (both are ranked above all six), so
+// no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
+// WORLD: an editor's own keys (its motion arm, its ctrl-exact clipboard
+// chords, its printable insertion) are consumed by the editor itself and
+// never reach the gate that would ask this — what the gate blocks is the
+// chords the editor does NOT own, which is what this inventory is for.
+//
+// A NEW BINDING JOINS THIS LIST. That is the standing cost of spelling the
+// dispatch's membership twice, taken deliberately: the dispatch is an if-ladder
+// across three translation units with its modifier tests written inline, and
+// there is no shape to read it off. Drift here is a MISSED CARD (a bound chord
+// answered by silence at a gate), never a wrong act — nothing routes through
+// this predicate — and codex is the backstop that finds it. kToolbarChords
+// carries a fraction of the set (the chords the roster's buttons synthesize)
+// and is no substitute for reading the dispatch.
+//
+// WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
+// into the left mouse button before a key event exists (kLeftClickKey — it
+// reaches on_key only as a character inside an editor); the digits 4..9;
+// Backspace, and every letter the ladder never tests (A, B, E, V, W, X, Y);
+// every GuiSpellKeys value; and every modifier decoration no arm spells,
+// which is strict modifier validation's whole no-op class.
+constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
+    const bool ctrl = mods.ctrl, alt = mods.alt, shift = mods.shift;
+    const bool bare  = !ctrl && !alt && !shift;   // no modifier at all
+    const bool sh    = !ctrl && !alt &&  shift;   // Shift alone
+    const bool cl    =  ctrl && !alt && !shift;   // Ctrl alone
+    const bool cs    =  ctrl && !alt &&  shift;   // Ctrl+Shift
+    const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
+    const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
+    switch (key) {
+        // -- letters, bare only: the view toggles, the mode toggles and the
+        // `h` view's two radios (`c` centre, `f` follow, `g` walk source,
+        // `i` iteration, `k` add to selection, `l` the render player,
+        // `m` bpm mode, `t` the S/T flip, `u` the compare reading).
+        case GuiKeys::C: case GuiKeys::F: case GuiKeys::G: case GuiKeys::I:
+        case GuiKeys::K: case GuiKeys::L: case GuiKeys::M: case GuiKeys::T:
+        case GuiKeys::U:
+            return bare;
+        // The value pair: copy, and the jump to where the value came from.
+        case GuiKeys::J: return bare || sh;
+        // Drop a warp marker / drop a phase reset from the warp column / save.
+        case GuiKeys::S: return bare || sh || cl;
+        // The read-only toggle and Open project.
+        case GuiKeys::O: return bare || cl;
+        // The W/P flip and the three phase-reset propagate chords.
+        case GuiKeys::P: return bare || cl || ca || cas;
+        // The history view's toggle and its revert.
+        case GuiKeys::H: return bare || cl;
+        // Toggle disabled / toggle inherit / quit.
+        case GuiKeys::D: case GuiKeys::N: case GuiKeys::Q: return cl;
+        // Undo, and redo on the one meaningful shift bit.
+        case GuiKeys::Z: return cl || cs;
+        // The render pair: the dispatch and the archival one.
+        case GuiKeys::R: return ca || cas;
+
+        // The zoom-out and the three absolute view selectors.
+        case GuiKeys::Digit0: case GuiKeys::Digit1:
+        case GuiKeys::Digit2: case GuiKeys::Digit3:
+            return bare;
+
+        // The measure editor, the measure copy and the measure paste.
+        case GuiKeys::Slash: return bare || cl || ca;
+        // The settings editor, and the load in place / render player.
+        case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
+        // Show the trim region, and maximize it to the whole song.
+        case GuiKeys::BracketLeft: return bare || sh;
+        // Bare is the waveform magnification, ctrl the horizontal zoom.
+        case GuiKeys::Equal: case GuiKeys::Minus: return bare || cl;
+        // The `h` walk: bare steps, shift jumps to its ends.
+        case GuiKeys::Comma: case GuiKeys::Period: return bare || sh;
+
+        // Play from the playhead, and the A/B audition.
+        case GuiKeys::Space: return bare || sh;
+        // The render cancel, and the top-level no-op arm that is deliberately
+        // silent — an arm all the same, so Esc is a bound key.
+        case GuiKeys::Escape: return bare;
+        // Open the flag editor on the focused marker.
+        case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
+        case GuiKeys::Delete: return bare;
+        // The marker walk (bare forward, shift back), the A/B tab switch and
+        // the paired march.
+        case GuiKeys::Tab: return bare || sh || cl || cs;
+        // The shifted Tab's own keysym, admitted shift-agnostically as the
+        // live walk admits it.
+        case GuiKeys::IsoLeftTab: return bare || sh;
+        // The tempo cent step, and the playhead / marker position step.
+        case GuiKeys::Up: case GuiKeys::Down:
+        case GuiKeys::Left: case GuiKeys::Right:
+            return bare;
+        // The trim bounds, and the whole-piece ends under ctrl.
+        case GuiKeys::Home: case GuiKeys::End: return bare || cl;
+        // The viewport's stepped scroll.
+        case GuiKeys::PageUp: case GuiKeys::PageDown: return bare;
+
+        default: return false;
+    }
+}
+
+// ANCHORS, not a second copy of the inventory: each pins one rule the list
+// above must keep, so a careless widening trips at compile time.
+static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}),
+              "bare `e` is the left mouse button at the platform boundary and "
+              "must never become a key binding");
+static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}) &&
+                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}),
+              "digits 4..9 are unbound");
+static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}),
+              "bare Esc is bound; its top-level silence is that arm's own");
+static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}) &&
+                  chord_is_bound(GuiKeys::Space,
+                                 GuiInputState{false, true, false}) &&
+                  !chord_is_bound(GuiKeys::Space,
+                                  GuiInputState{true, false, false}),
+              "Space binds bare and shifted only — strict modifier validation");
+static_assert(!chord_is_bound(GuiSpellKeys::Insert, GuiInputState{}) &&
+                  !chord_is_bound(GuiSpellKeys::KpAdd, GuiInputState{}) &&
+                  !chord_is_bound(GuiSpellKeys::VolumeUp, GuiInputState{}),
+              "the speller's three name-only blocks bind nothing");
 
 // True for the chord that toggles playback: BARE Space only. Modifier-strict —
 // a Space carrying ctrl or alt has no binding, and the ONE shifted form is a

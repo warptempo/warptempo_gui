@@ -87,7 +87,7 @@ THE ARM IS THE OVERLAY'S, NOT THE PLAYER'S (2026-08-28, with the picker): it rea
 
 ### The keys (the router is the whole vocabulary)
 
-`route_render_player_key` runs in `on_key` under the prompt gate and the dropdown gate and above everything else; while the mode stands it IS the vocabulary, and every chord it does not name is CONSUMED (strict modifier validation's no-op) AND ANSWERED since 2026-08-30 — its two catch-alls, the modified chord's and the bare key's, both say `<chord> is not bound in the render player` on a normal card, one sentence for the two arms because what happened is the same and only the mode differs (messaging.md; the chord comes from the one speller `spell_chord`).
+`route_render_player_key` runs in `on_key` under the prompt gate and the dropdown gate and above everything else; while the mode stands it IS the vocabulary, and every chord it does not name is CONSUMED AND SILENT (strict modifier validation's no-op, and since the unbound-keys ruling of 2026-08-30 the silence is the answer: a chord that does nothing here is identified by it). Its two catch-alls, the modified chord's and the bare key's, carded `<chord> is not bound in the render player` for the one day of 2026-08-30 and were emptied that evening with the whole `is not bound` class (messaging.md). THE PLAYER'S OWN KEYS ARE NOT IN `chord_is_bound`'s INVENTORY, deliberately: that predicate is the MAIN DISPATCH's membership, asked by the gates below this router, and bare `v`, bare `r` and the rest are this mode's alone — which is also why THE PLAYER'S DRAG ARM (the `Keys are ignored during a drag` it says above the router) asks nothing before speaking, a bound key of this world being invisible to that inventory.
 
 | Key | Act |
 |---|---|
@@ -116,7 +116,7 @@ Landing the ring on the LIST changes nothing visible — Up/Down walk the highli
 
 ### The picker's keys (the router is the whole vocabulary)
 
-`route_picker_key` runs in `on_key` beside the player's router — under the prompt gate and the dropdown gate, above everything else — and while a picker stands it IS the vocabulary; every chord it does not name is CONSUMED and, since 2026-08-30, ANSWERED — the same two catch-alls in the picker's own words, `<chord> is not bound in the project list`. A MODIFIED PRESS ON A ROW is answered too, `Rows open on a plain click`, under either content and on the ROW alone: a modified press on the band's pad or on a gap between rows is not a press on a row and stays silent. The gesture clause is the player's: while the overlay's row press arm stands every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
+`route_picker_key` runs in `on_key` beside the player's router — under the prompt gate and the dropdown gate, above everything else — and while a picker stands it IS the vocabulary; every chord it does not name is CONSUMED AND SILENT — its two catch-alls carded `<chord> is not bound in the project list` for the one day of 2026-08-30 and went quiet that evening with the player's, on the unbound-keys ruling (messaging.md), and the picker's keys are outside `chord_is_bound`'s inventory for the player's own reason. A MODIFIED PRESS ON THE BAND is silent everywhere on it — the pad, a gap between rows and the ROW alike, nothing there binding a modifier; the row read `Rows open on a plain click` for that same one day, and the row test that card needed retired with it. The gesture clause is the player's: while the overlay's row press arm stands every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
 
 | Key | Act |
 |---|---|
