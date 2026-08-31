@@ -5975,7 +5975,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     } else if (player_up) {
         // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25 and
-        // R36): the TRANSPORT — Previous · Play/Pause · Stop · Next — then the
+        // R36): the TRANSPORT — the two SKIPS around Play/Pause and Stop, on
+        // Home and End since 2026-08-31 and wearing the skip glyphs still —
+        // then the
         // separator, the scrub, the clock and the second separator (all three
         // laid out in the player's own branch below), then the REPEAT ONE
         // lamp, and the two WORD buttons FLUSH RIGHT: Load in place · Close.
@@ -6006,7 +6008,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
         };
-        glyph_button(AppState::PlayerButtonAct::Previous,
+        // THE SKIP GLYPHS ARE UNTOUCHED BY THE 2026-08-31 REMAP: the acts
+        // are Home and End (the roster's own two transport skips wear the
+        // same pair over the same keys), so the icon says what it always
+        // said — skip to this track's start, skip to its end.
+        glyph_button(AppState::PlayerButtonAct::Home,
                      icons::Icon::MediaSkipBackward);
         // PLAY/PAUSE WEARS THE PAUSE GLYPH WHILE LIVE, not the stop square it
         // wore until R36 gave the row a Stop button of its own: two buttons,
@@ -6018,7 +6024,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           : icons::Icon::MediaPlaybackStart);
         glyph_button(AppState::PlayerButtonAct::Stop,
                      icons::Icon::MediaPlaybackStop);
-        glyph_button(AppState::PlayerButtonAct::Next,
+        glyph_button(AppState::PlayerButtonAct::End,
                      icons::Icon::MediaSkipForward);
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      icons::Icon::MediaRepeatSingle,
@@ -6259,10 +6265,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // -- The walk: the fixed left run, the right-flushed word cluster, and
         //    the scrub taking what is between them. --
         int px = cx0;
-        plan[0].x = px; px += btn_h + ggap;      // Previous
+        plan[0].x = px; px += btn_h + ggap;      // Home (skip back)
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
         plan[2].x = px; px += btn_h + ggap;      // Stop
-        plan[3].x = px; px += btn_h;             // Next
+        plan[3].x = px; px += btn_h;             // End (skip forward)
         // The separator keeps the spec's own 5px on its BUTTON side; the
         // scrub side takes the distance above, exactly as row 8's clock does.
         const int sep1_x   = px + sep_gap;

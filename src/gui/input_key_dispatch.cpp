@@ -3635,25 +3635,26 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         modal_dialog_focus_live() >= 0)
         return false;
     // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
-    // highlight walk (Up/Down), the seeks (Left/Right), the item walk
-    // (`,` / `.` since 2026-08-30, which took Page Up / Page Down's acts and
-    // their eligibility with them) and, since R37, the SHIFTED pair on those
-    // same two keys (the item folder's ends, which the architect ruled
-    // repeat-eligible with their neighbours) — and nothing else does: Enter
-    // and Space are the modal's one-shot press or the open/play acts, the
-    // closers, the stop chord and the load chord are one-shot commands, HOME
-    // AND END ARE ABSOLUTE SEEKS (a held one could only re-land where it
-    // already is), and the ring's Tab repeats through the arm below exactly as
-    // every ring's does. A prompt over the player is the prompt's own answer,
-    // which the arm above and the blanket below already give.
+    // highlight walk (Up/Down) and the seeks (Left/Right) — AND NOTHING ELSE
+    // DOES, on any modifier. Enter and Space are the modal's one-shot press or
+    // the open/play acts; the closers, the stop chord and the load chord are
+    // one-shot commands; HOME AND END ARE ABSOLUTE (architect 2026-08-31, and
+    // that is why the two skips' keys are one-shot on BOTH shapes: the plain
+    // pair lands the item's start or its end — or, inside Home's
+    // previous-track window, a whole file back, which a hold would then walk
+    // through the folder a file per repeat — and the SHIFTED pair lands the
+    // folder's first and last wav, where a hold could only re-reach the wall
+    // it just hit); and the ring's Tab repeats through this arm's own first
+    // line exactly as every ring's does. The item's two NEIGHBOURS were
+    // repeat-eligible on bare `,` / `.` with their shifted ends from
+    // 2026-08-30 to 2026-08-31 and left the mode with them. A prompt over the
+    // player is the prompt's own answer, which the arm above and the blanket
+    // below already give.
     if (app.render_player.active && !app.prompt.active) {
         if (modal_ring_tab_shape(key, mods) != ModalRingTab::None) return true;
-        if (mods.ctrl || mods.alt) return false;
-        if (mods.shift)
-            return key == GuiKeys::Comma || key == GuiKeys::Period;
+        if (mods.ctrl || mods.alt || mods.shift) return false;
         return key == GuiKeys::Left || key == GuiKeys::Right ||
-               key == GuiKeys::Up || key == GuiKeys::Down ||
-               key == GuiKeys::Comma || key == GuiKeys::Period;
+               key == GuiKeys::Up || key == GuiKeys::Down;
     }
     // THE PICKER (2026-08-28), the player's shape with the player's reason:
     // the highlight walk (Up/Down) repeats — a continuous step that decides
@@ -3705,9 +3706,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
     // inside that view, so a repeat outside it fires into an unbound key
     // exactly as a held arrow with nothing to nudge fires into a refusal — the
-    // render player binds the same pair to its own item walk since 2026-08-30
-    // and answers for it in the player arm above, which returns before this
-    // one. Their SHIFT shapes — the walk's absolute wall jumps — are excluded
+    // render player bound the same pair to its own item walk for the one day
+    // of 2026-08-30 and answered for it in the player arm above, which returns
+    // before this one whatever that mode binds. Their SHIFT shapes — the
+    // walk's absolute wall jumps — are excluded
     // by the no-shift term below and stay one-shot: a held jump could only
     // flap against the wall it just reached),
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
@@ -6642,26 +6644,23 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // then, deliberately — the player's ring has no Left/Right walk, since
     // those keys are the car's rewind and fast-forward.
 
-    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37; re-keyed 2026-08-30):
-    // Shift+`,` and Shift+`.` are the neighbours' keys with the modifier — the
+    // THE ITEM FOLDER'S ENDS (architect 2026-08-28, R37; re-keyed 2026-08-31):
+    // Shift+Home and Shift+End are the two skips' keys with the modifier — the
     // first and the last wav of the transport item's own folder, never a wrap
-    // and a consumed no-op with no item. Ahead of the blanket below because
-    // that blanket is what consumes every OTHER shifted spelling; these two
-    // are repeat-eligible with bare `,` / `.` (repeat_eligible's player arm).
+    // and a carded refusal with no item. Ahead of the blanket below because
+    // that blanket is what consumes every OTHER shifted spelling; they are
+    // ONE-SHOT with the plain pair (repeat_eligible's player arm — an absolute
+    // landing a hold could only re-reach).
     //
-    // THE PAIR IS THE `h` HISTORY VIEW'S OWN VOCABULARY, WALLS AND ALL
-    // (architect 2026-08-30): there the bare pair STEPS the walk and the
-    // shifted pair JUMPS TO ITS ENDS, and here the bare pair steps the item's
-    // folder and the shifted pair jumps to its first and last wav — one
-    // step-and-ends idiom, two lists. The spelling is that view's too: xkb is
-    // read at level 0 (GuiPlatform::key_from_keycode), so the shifted press
-    // arrives as Comma / Period with the shift bit and never as `<` / `>`.
+    // THE PAIR FOLLOWS ITS PLAIN ACTS off `,` / `.` — the skips are Home and
+    // End now, "just like the regular GUI", and a shifted twin lives on its
+    // own button's key or it is not a twin.
     if (shift && !ctrl && !alt) {
-        if (key == GuiKeys::Comma) {
+        if (key == GuiKeys::Home) {
             render_player.first_in_item_folder();
             return true;
         }
-        if (key == GuiKeys::Period) {
+        if (key == GuiKeys::End) {
             render_player.last_in_item_folder();
             return true;
         }
@@ -6732,6 +6731,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.seek_by(+render_player.seek_step_frames());
             return true;
         case GuiKeys::Home:
+            // THE LEFT SKIP'S KEY (architect 2026-08-31) — this track's start,
+            // or THE PREVIOUS ENTRY inside the item's first three seconds (the
+            // previous-track window at kPlayerPreviousThresholdMs, the act's
+            // own fork). One-shot: both arms are absolute landings.
             render_player.home();
             return true;
         case GuiKeys::End:
@@ -6744,26 +6747,23 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // last, or replays under a lit Repeat one. A PAUSED one just moves
             // its rest, which the resume arm reads as "at or past the end" and
             // replays from the start (toggle_pause), and an IDLE one meets
-            // seek_to's own carded refusal exactly as Home does.
+            // seek_to's own carded refusal — Home's twin here too, except
+            // that HOME'S PREVIOUS-TRACK WINDOW can carry an idle press to
+            // the previous entry before the seek is ever asked. End has no
+            // window of its own: "next" at a track's end is what the natural
+            // end already does.
             render_player.end();
             return true;
         case GuiKeys::BackSpace:
             render_player.up();
             return true;
-        case GuiKeys::Comma:
-            // PREVIOUS / NEXT WITHIN THE ITEM'S FOLDER (architect 2026-08-30,
-            // re-keyed off Page Up / Page Down, which now fall silent below
-            // like every other unbound chord — decision 72's deduction rule,
-            // not a card): the `h` history view's own walk keys, bare to
-            // step and shifted to reach the ends (the shift arm above).
-            render_player.previous();
-            return true;
-        case GuiKeys::Period:
-            render_player.next();
-            return true;
         default:
             // The bare half of the catch-all above, silent with it: every
-            // bare key the player binds is a case above this one.
+            // bare key the player binds is a case above this one — `,` and
+            // `.` among the keys it does NOT, since 2026-08-31: they stepped
+            // the item's folder for one day and fall here now, silent like
+            // every other unbound chord (decision 72's deduction rule, not a
+            // card), their acts having gone to the two skips as Home and End.
             return true;   // consumed
     }
 }

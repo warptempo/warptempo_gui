@@ -109,9 +109,9 @@ void GuiRenderPlayer::rebuild_rows() {
         case Folder::Deliverable: {
             ov.rows.push_back(up_row());
             // ONE ROW AT MOST, after the `..`: the folder is the current
-            // title's deliverable alone. Play order, Previous / Next and the
-            // two folder ends read this list like any other and are simply
-            // degenerate over it — no arm of their own.
+            // title's deliverable alone. Play order, the two folder ends and
+            // Home's previous-track window read this list like any other and
+            // are simply degenerate over it — no arm of their own.
             if (const std::optional<std::filesystem::path> p =
                     deliverable_wav()) {
                 Row r;
@@ -299,10 +299,28 @@ bool render_player_button_enabled(const AppState& a,
     const int n = static_cast<int>(rp.item_folder.size());
     const bool item_in_folder = rp.item_index >= 0 && rp.item_index < n;
     switch (act) {
-        case AppState::PlayerButtonAct::Previous:
+        // THE TWO SKIPS' FACES ARE HOME'S AND END'S (2026-08-31), each the
+        // act's own leading refusals ORed with its shifted twin's under the
+        // twin rule. NEITHER READS A POSITION: a LIVE transport always acts
+        // (the reseek re-lands its window), and off LIVE the position IS
+        // `resume_frame` — 0 at every idle rest by construction — so the
+        // previous-track window's test collapses into "is there a previous
+        // entry", which is also exactly when the shifted first-jump acts.
+        case AppState::PlayerButtonAct::Home:
+            if (rp.item.empty() || rp.frames <= 0) return false;
+            if (rp.transport == Transport::Live) return true;
+            if (rp.transport == Transport::Paused && rp.resume_frame != 0)
+                return true;
             return item_in_folder && rp.item_index > 0;
-        case AppState::PlayerButtonAct::Next:
-            return item_in_folder && rp.item_index + 1 < n;
+        case AppState::PlayerButtonAct::End:
+            // The twin DOES add a term here: at an idle rest with a next
+            // entry the seek to `frames` refuses while the jump to the
+            // folder's LAST wav acts, so the button stays live for it.
+            if (item_in_folder && rp.item_index + 1 < n) return true;
+            if (rp.item.empty() || rp.frames <= 0) return false;
+            if (rp.transport == Transport::Live) return true;
+            return rp.transport == Transport::Paused &&
+                   rp.resume_frame != rp.frames;
         case AppState::PlayerButtonAct::PlayPause:
             if (rp.transport != Transport::Idle) return true;
             if (rp.ended_at_folder_end && !rp.item_folder.empty()) return true;
@@ -446,8 +464,9 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // THE BAND FOLLOWS THE ITEM AT A CHANGE (R38, the contract at the head of
     // render_player.h): this is the ONE place the item changes, so seating the
     // highlight here covers every change the transport makes on its own —
-    // Previous, Next, the folder's ends, the auto-advance and the folder-end
-    // restart — with no membership list to keep. THE GATE IS WHAT KEEPS THE
+    // Home's previous-track window, the folder's ends, the auto-advance and
+    // the folder-end restart — with no membership list to keep. THE GATE IS
+    // WHAT KEEPS THE
     // OTHER HALF OF THE RULE: a user's own highlight moves are untouched, and
     // the road that would otherwise fight the band back onto the item is the
     // REPEAT ONE REPLAY, which re-enters this body on the item already
@@ -604,37 +623,19 @@ void GuiRenderPlayer::stop() {
     publish_media_state();
 }
 
-// THE FOUR FOLDER WALKS ANSWER IN TWO SENTENCES (architect 2026-08-30): NO
+// THE TWO FOLDER WALKS ANSWER IN TWO SENTENCES (architect 2026-08-30): NO
 // ITEM — there is nothing whose folder to walk, the state a freshly opened
 // player rests in — and THE END ITSELF, which is a wall because nothing loops.
 // Each walk asks the two in that order, so an empty transport never reports a
 // wall it is not standing at. Both keys and both buttons reach these bodies,
-// so the card is one per press whichever surface asked.
-void GuiRenderPlayer::previous() {
-    AppState::RenderPlayer& rp = app.render_player;
-    const int n = static_cast<int>(rp.item_folder.size());
-    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
-    if (rp.item_index == 0) { status(kFirstInFolder); return; }
-    const std::vector<Row> folder = rp.item_folder;
-    const int i = rp.item_index - 1;
-    play_wav(folder[static_cast<size_t>(i)].path, folder, i);
-}
-
-void GuiRenderPlayer::next() {
-    AppState::RenderPlayer& rp = app.render_player;
-    const int n = static_cast<int>(rp.item_folder.size());
-    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
-    if (rp.item_index + 1 >= n) { status(kLastInFolder); return; }
-    const std::vector<Row> folder = rp.item_folder;
-    const int i = rp.item_index + 1;
-    play_wav(folder[static_cast<size_t>(i)].path, folder, i);
-}
-
-// THE ITEM FOLDER'S ENDS (R37) — the neighbours' own road with the index
-// named outright instead of stepped. THE END ITSELF REFUSES, as Previous and
-// Next refuse at the ends: an item that is already the folder's first is
-// already where "go to the first" would put it, and bare Home is what restarts
-// a wav in place.
+// so the card is one per press whichever surface asked. (They were FOUR walks
+// until 2026-08-31 — the item's two neighbours took the same two sentences on
+// bare `,` / `.`; the step back lives inside home() now and says neither.)
+//
+// THE ITEM FOLDER'S ENDS (R37) — the play road with the index named outright
+// instead of stepped. THE END ITSELF REFUSES: an item that is already the
+// folder's first is already where "go to the first" would put it, and bare
+// Home is what restarts a wav in place.
 void GuiRenderPlayer::first_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
     const int n = static_cast<int>(rp.item_folder.size());
@@ -719,7 +720,47 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     }
 }
 
+// HOME — the contract is at the declaration. TWO ARMS OVER ONE POSITION TEST:
+// THE PREVIOUS-TRACK WINDOW (architect 2026-08-31, kPlayerPreviousThresholdMs)
+// and, everywhere else, the seek to the item's own start with every refusal
+// seek_to owns.
+//
+// THE WINDOW IS THE POSITION THE CLOCK AND THE SCRUB SHOW — position(), the
+// one reader, which is the engine's cursor while live and the resume point at
+// every rest — so the act reads exactly what the user sees, and a second Home
+// is "previous" at any press speed because the first one landed that position
+// at 0. NOTHING HERE IS PRESS-TIMED: the constant's own declaration carries
+// the reason (a head unit's buttons are slower than any double-press window).
+//
+// AN IDLE TRANSPORT TAKES THE WINDOW LIKE ANY OTHER, and that is deliberate
+// rather than an oversight of the idle rule: `resume_frame` is 0 at every idle
+// rest by construction, so an idle Home with a previous entry steps back and
+// PLAYS it — the car's own act at a folder-end rest — while the seek arm
+// underneath keeps R41's carded refusal for the first entry, where there is
+// nothing to step back to. The idle rule is about not NUDGING a resting
+// transport to some other point in the item it would not resume from; a track
+// change is not a nudge.
 void GuiRenderPlayer::home() {
+    AppState::RenderPlayer& rp = app.render_player;
+    const int n = static_cast<int>(rp.item_folder.size());
+    const bool has_previous =
+        rp.item_index > 0 && rp.item_index < n && !rp.item.empty() &&
+        rp.frames > 0;
+    if (has_previous) {
+        // The window in frames at the DEVICE's rate — the item's own rate by
+        // the decode's equality. A rate the engine cannot name closes the
+        // window rather than opening it wide.
+        const int64_t rate   = audio.sample_rate();
+        const int64_t window = rate > 0
+                                   ? kPlayerPreviousThresholdMs * rate / 1000
+                                   : 0;
+        if (position() < window) {
+            const std::vector<Row> folder = rp.item_folder;
+            const int i = rp.item_index - 1;
+            play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+            return;
+        }
+    }
     seek_to(0);
 }
 
@@ -1008,13 +1049,21 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             press(GuiKeys::V);
             return;
         case Kind::Next:
-            // THE ITEM WALK'S KEYS ARE `,` / `.` since 2026-08-30 (re-keyed
-            // off Page Down / Page Up); the wheel's Next and Previous follow
-            // the keys, the road staying the one synthesis.
-            press(GuiKeys::Period);
+            // THE WHEEL'S TWO SKIPS ARE THE PLAYER'S TWO SKIPS (architect
+            // 2026-08-31): End and Home, the keys the row's buttons carry and
+            // the main window's transport carries before them. The road is
+            // the one synthesis, so the head unit inherits whatever those
+            // keys mean — including HOME'S PREVIOUS-TRACK WINDOW, which is
+            // what gives the wheel a real previous-TRACK act again: inside
+            // the item's first kPlayerPreviousThresholdMs a Previous steps
+            // back a file and past them it restarts the file, the behaviour
+            // of the architect's own car. (Period / Comma from 2026-08-30,
+            // Page Down / Page Up before that.) NOTHING ON A WHEEL ASKS FOR
+            // THE FOLDER'S ENDS, so no command carries the shift.
+            press(GuiKeys::End);
             return;
         case Kind::Previous:
-            press(GuiKeys::Comma);
+            press(GuiKeys::Home);
             return;
         case Kind::FastForward:
             press(GuiKeys::Right);

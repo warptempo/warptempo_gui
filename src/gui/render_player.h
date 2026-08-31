@@ -38,21 +38,41 @@ inline constexpr uint32_t kCarStableCodeBase = 1000;
 // take; the scrub's press raises them on the ordinary notify, having no
 // status of its own.
 //
-// NOTHING IS LOADED: Play with no item, the four folder walks (Previous /
-// Next and the two ends, which walk the TRANSPORT ITEM's folder and so have
-// nothing to walk without one), and every seek road.
+// NOTHING IS LOADED: Play with no item, the two folder-end jumps (which walk
+// the TRANSPORT ITEM's folder and so have nothing to walk without one), and
+// every seek road — Home and End among them, both of which reach seek_to.
 inline constexpr const char* kNoPlayerItem = "No render is loaded to play";
 
-// THE ITEM FOLDER'S TWO ENDS: Previous and the first-jump at the first wav,
-// Next and the last-jump at the last. NOTHING LOOPS, so an end is an end.
+// THE ITEM FOLDER'S TWO ENDS: the first-jump at the first wav, the last-jump
+// at the last. NOTHING LOOPS, so an end is an end. (Their producers were the
+// two neighbour walks as well until 2026-08-31, when the skips became Home
+// and End and the neighbour steps left the product — Home's previous-track
+// window is the one step that remains, and it does not report a wall: at the
+// first entry it restarts the track instead.)
 inline constexpr const char* kFirstInFolder =
     "This is the first render in the folder";
 inline constexpr const char* kLastInFolder =
     "This is the last render in the folder";
 
 // A SEEK WHILE THE TRANSPORT IS IDLE (R41's dead slider): the two seek keys,
-// bare Home, the car's absolute seek and the scrub's own press all meet it.
+// bare Home, bare End, the car's absolute seek and the scrub's own press all
+// meet it.
 inline constexpr const char* kSeekWhileIdle = "Start playback before seeking";
+
+// THE PREVIOUS-TRACK WINDOW (architect 2026-08-31, decision 88 — "agree on
+// <3s"): bare Home, its skip button and the head unit's Previous all run ONE
+// act, and inside the item's first three seconds that act is THE PREVIOUS
+// ENTRY rather than this track's start. It is the iPod / car-head-unit
+// convention, and it is POSITION-BASED RATHER THAN PRESS-TIMED on purpose:
+// the wheel's buttons are slower than any double-press window (kHoldBeatMs
+// included), and a position window makes a SECOND Home "previous" at any
+// press speed at all, since the first one landed the cursor at 0.
+//
+// IT IS AN AUTHORED DURATION AND NEVER SCALES — gui_scale is a LENGTH axis
+// (the scaled_px family) and no duration in the product reads it. It is
+// converted to frames at the DEVICE's rate where it is used, the item being
+// at that rate by the decode's own equality.
+inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 
 // The input handler is reached through a back-pointer below (the ring clear
 // on_media_command owes), and it holds this cluster by reference, so the
@@ -67,8 +87,9 @@ struct GuiInputHandler;
 // with the deliverable, which is the CURRENT TITLE'S ONE WAV and nothing else
 // (the listing prunes the folder to it, prune_render_folder in renders_dir.h),
 // `tmp/` with its batch folders and their cells — and
-// the bottom row's modal carries the transport (Previous / Play-Pause / Stop /
-// Next, the play-scrub, the clock, the Repeat one lamp, and Load in place /
+// the bottom row's modal carries the transport (the two skips around
+// Play-Pause and Stop — Home / Play-Pause / Stop / End since 2026-08-31 —
+// the play-scrub, the clock, the Repeat one lamp, and Load in place /
 // Close flush right — the row's order and faces are the painter's, R25/R36).
 // The state it moves is AppState::render_player and AppState::folder_overlay
 // (app_state.h, where every field is described); this struct owns the acts.
@@ -97,15 +118,17 @@ struct GuiInputHandler;
 // answers the transport (the table at play_button_act). THE TRANSPORT'S ITEM
 // is separate from the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
-// row, and AUTO-ADVANCE, Previous, Next and the two Shift+`,`/Shift+`.` ENDS walk ITS
+// row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW and the two
+// Shift+Home / Shift+End ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
 // folder and never a wrap. Every listing is built when its folder is entered
 // and never kept fresh.
 //
 // THE HIGHLIGHT FOLLOWS THE TRANSPORT'S ITEM (architect 2026-08-28, R38,
 // superseding the design's "Previous and Next never move the highlight"): at
-// every item change THE TRANSPORT MAKES ON ITS OWN — Previous / Next / the
-// folder's ends / auto-advance / the folder-end restart — the band moves onto
+// every item change THE TRANSPORT MAKES ON ITS OWN — Home's previous-track
+// window / the folder's ends / auto-advance / the folder-end restart — the
+// band moves onto
 // the new item's row and scrolls it into view WHEN THAT ROW IS IN THE LIVE
 // LISTING, and stays where it is when the user has navigated elsewhere. Its
 // one owner is play_wav, which is the one place the item changes, so the rule
@@ -319,14 +342,16 @@ struct GuiRenderPlayer {
     // both. A consumed no-op with no item and on an item already resting at
     // its start.
     void stop();
-    // The item's neighbours within ITS folder; a consumed no-op at either end.
-    void previous();
-    void next();
-    // THE ITEM FOLDER'S ENDS (R37, Shift+`,` / Shift+`.` since 2026-08-30 and
+    // THE ITEM FOLDER'S ENDS (R37, Shift+Home / Shift+End since 2026-08-31 and
     // the two skip buttons' shift-click or long press): the first / last wav of
-    // `item_folder`, played from its start on the neighbours' own road — never
-    // a wrap, and a consumed no-op with no item AND on an item already at that
-    // end, exactly as the neighbours refuse there.
+    // `item_folder`, played from its start on the play road — never
+    // a wrap, and a CARDED refusal with no item AND on an item already at that
+    // end. They are the folder walk's whole surface now: the item's two
+    // NEIGHBOURS were `previous()` / `next()` on bare `,` / `.` and the two
+    // skips' plain acts until 2026-08-31, when the skips became Home and End
+    // and the step back moved inside Home as its previous-track window (the
+    // constant above) — the step FORWARD has no producer left and is gone, the
+    // natural end's own advance never having gone through it.
     void first_in_item_folder();
     void last_in_item_folder();
     // REPEAT ONE (architect 2026-08-28, R26) — the row's one lamp, flipped by
@@ -343,11 +368,24 @@ struct GuiRenderPlayer {
     // slider).
     void seek_by(int64_t delta_frames);
     void seek_to(int64_t frame);
-    // The item's start; a no-op while idle, like every seek (seek_to's head).
+    // HOME — the left skip's plain act, bare Home's, and the head unit's
+    // Previous (architect 2026-08-31). TWO ARMS OVER ONE POSITION TEST: with
+    // the item inside its first kPlayerPreviousThresholdMs AND a previous
+    // entry in `item_folder`, this plays THAT ENTRY from its start (the
+    // previous-track window at the constant); anywhere else — past the
+    // window, at the folder's first entry, with no folder — it seeks the
+    // item's own start and takes every refusal seek_to owns, the no-item card
+    // and the idle card alike. It never reports a folder wall: at the first
+    // entry the restart IS the act.
     void home();
-    // THE ITEM'S END (architect 2026-08-30), Home's twin and NOT the folder's
+    // THE ITEM'S END (architect 2026-08-30) — Home's twin, the RIGHT SKIP's
+    // plain act and the head unit's Next since 2026-08-31, and NOT the
+    // folder's
     // walk: it seeks to `frames`, the very position the scrub's right end
     // writes, and does nothing else — the item and the folder are untouched.
+    // IT TOOK NO WINDOW OF ITS OWN when Home took one: at the end of a track
+    // "next" is what the NATURAL END already does, and this act reaches it by
+    // playing the last frames out.
     // A LIVE transport therefore plays the last frames out and the NATURAL END
     // takes it from there, unaltered (advance where a next entry exists,
     // `ended_at_folder_end` at the folder's last, a replay under a lit Repeat
@@ -417,8 +455,14 @@ struct GuiRenderPlayer {
     // toggle, so no state gate belongs on it and the act's own idle refusal is
     // the answer) — the key being BARE `v` since 2026-08-30, which the one
     // road simply follows: the table names the player's STOP KEY, whatever
-    // letter that is; Next / Previous -> Period / Comma (the item walk's keys
-    // since the same ruling, re-keyed off PageDown / PageUp);
+    // letter that is; Previous / Next -> Home / End (architect 2026-08-31 —
+    // THE PLAYER'S OWN TRANSPORT PAIR, whatever the head unit calls its
+    // buttons: the road stays "the car button presses the player's key", and
+    // Home's PREVIOUS-TRACK WINDOW is what gives the wheel a real previous-
+    // track act, its first three seconds stepping back a file and everything
+    // past them restarting this one — the behaviour of the architect's own
+    // car. They were Period / Comma from 2026-08-30 and PageDown / PageUp
+    // before that);
     // FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
@@ -437,7 +481,8 @@ struct GuiRenderPlayer {
     //
     // EACH KEY IS A PRESS AND A RELEASE, synthesized back to back: the release
     // is what cancels the core's repeat arm for the repeat-eligible keys
-    // (Left / Right / `,` / `.`), exactly as the on-screen keyboard
+    // (Left / Right — the seeks alone since 2026-08-31, Home and End being
+    // absolute and one-shot), exactly as the on-screen keyboard
     // owes its key-up. The stable code is kCarStableCodeBase + the GuiKey;
     // the codepoint is 0 for every transport key.
     void on_media_command(GuiMediaCommand cmd);
@@ -504,7 +549,8 @@ private:
     // whose declaration carries the ruling and the refusals). So `render/` is
     // a ONE-FILE FOLDER in the player — the root row stands iff this answers,
     // the Deliverable listing is `..` plus at most that one row, and the
-    // folder's play order, Previous, Next and the two ends are the degenerate
+    // folder's play order, the two ends and Home's previous-track window are
+    // the degenerate
     // one-item case of the walks they already were, needing no arm of their
     // own (architect 2026-08-29: "player should only list a file if it matches
     // the current title, and delete the rest also").

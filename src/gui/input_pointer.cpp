@@ -3459,7 +3459,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // THE RENDER PLAYER'S BUTTONS (2026-08-28): the act the stash names,
     // decided against the live player — each act's own body re-asks its own
-    // state (an item to pause, a neighbour to skip to, a load-capable
+    // state (an item to pause, an item to seek inside, a load-capable
     // highlight), so a stale stash can select at worst a consumed nothing.
     if (app.render_player.active) {
         // THE LIVE ENABLED RE-ASK (architect 2026-08-30): a greyed button's
@@ -3472,17 +3472,19 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         if (!render_player_button_enabled(app, b.player_act)) return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
+            // plain act is HOME or END since 2026-08-31 — the main window's
+            // own transport pair, "just like the regular GUI" — and their
             // shifted twin — a Shift+click on plastic, a long press on glass,
-            // ONE term either way — is the item folder's END rather than its
-            // neighbour, the keys' own Shift+`,` / Shift+`.`. THE
+            // ONE term either way — is the item folder's END, the keys' own
+            // Shift+Home / Shift+End. THE
             // ARMS THAT READ `shifted` ARE THE ADMISSION'S OWN MEMBERS
             // (player_button_shift_admits, app_state.h): every other act below
             // ignores the bit, so a held Play or Close is its plain act — the
             // roster's rule that a button with no twin may be held for as long
             // as you like.
-            case AppState::PlayerButtonAct::Previous:
+            case AppState::PlayerButtonAct::Home:
                 if (shifted) render_player.first_in_item_folder();
-                else         render_player.previous();
+                else         render_player.home();
                 return true;
             case AppState::PlayerButtonAct::PlayPause:
                 render_player.play_button_act();
@@ -3490,9 +3492,9 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::Stop:
                 render_player.stop();
                 return true;
-            case AppState::PlayerButtonAct::Next:
+            case AppState::PlayerButtonAct::End:
                 if (shifted) render_player.last_in_item_folder();
-                else         render_player.next();
+                else         render_player.end();
                 return true;
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();

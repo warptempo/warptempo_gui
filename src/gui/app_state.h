@@ -5037,7 +5037,8 @@ struct AppState {
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
-    // Previous / Play-Pause / Stop / Next, the play-scrub, the clock, the
+    // the two skips around Play-Pause and Stop (Home / Play-Pause / Stop /
+    // End since 2026-08-31), the play-scrub, the clock, the
     // Repeat one lamp and the two word buttons Load in place / Close (R25's
     // order, with R36's Stop after the two-faced button) — is
     // the bottom row's modal while the player stands, with its own session id
@@ -5066,8 +5067,18 @@ struct AppState {
     // that's either play or pause, and the other one is stop", so a listener
     // who wants the track from its beginning stops and plays instead of
     // scrubbing back. The order below is the ROW's, which is Audacious's.
+    //
+    // THE TWO SKIPS ARE HOME AND END (architect 2026-08-31): "the transport
+    // keys are mapped to Home and End in the media player just like the
+    // regular GUI — more in keeping with our existing setup". They were
+    // `Previous` / `Next` — the item folder's neighbours — until then, and
+    // the members are named for the ACTS they dispatch, so the rename came
+    // with the remap; the row's GLYPHS are untouched (skip-backward and
+    // skip-forward, the roster's own two transport skips wearing the same
+    // pair over bare Home / bare End). The shifted twins are unchanged: the
+    // item folder's FIRST / LAST wav (player_button_shift_admits).
     enum class PlayerButtonAct {
-        None, Previous, PlayPause, Stop, Next, RepeatOne, LoadInPlace, Close
+        None, Home, PlayPause, Stop, End, RepeatOne, LoadInPlace, Close
     };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
@@ -7370,7 +7381,8 @@ struct AppState {
     //   `item` / `item_folder` / `item_index` THE TRANSPORT'S ITEM — the wav
     //              decoded and bound (empty path: none yet), the WAV ROWS OF
     //              ITS FOLDER as listed when it was played (R2: auto-advance,
-    //              Previous, Next and the folder's two ends walk this folder
+    //              the folder's two ends and Home's previous-track window walk
+    //              this folder
     //              and never another, and the item keeps playing while the
     //              listing is navigated elsewhere — the displayed listing and
     //              the item's folder are two things), and the item's index in
@@ -7415,7 +7427,10 @@ struct AppState {
     //              so THIS FIELD IS ALWAYS 0 AT AN IDLE REST, BY
     //              CONSTRUCTION — nothing else can move it there, which is
     //              what lets play_button_act's IDLE arm read it as "the
-    //              item's start" without asking the state again;
+    //              item's start" without asking the state again — and, since
+    //              2026-08-31, what lets the Home skip's FACE decide the
+    //              previous-track window with no position term at all
+    //              (render_player_button_enabled);
     //   `painted_cursor` the item position the last tick damaged for, the
     //              change-detection anchor of the clock/scrub damage;
     //   `scrub`    the play-scrub HANDLE DRAG's arm: armed by a press on the
@@ -7519,15 +7534,21 @@ inline bool folder_overlay_stands(const AppState& a) {
 inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
                                              bool transport_live) {
     switch (act) {
-        // THE ITEM WALK'S KEYS ARE `,` / `.` since 2026-08-30, and a bare
-        // punctuation key is spelled as it is typed, like a bare letter.
-        case AppState::PlayerButtonAct::Previous:    return "Previous (,)";
+        // THE TWO SKIPS ARE THE ROSTER'S OWN TRANSPORT PAIR (architect
+        // 2026-08-31): the same acts on the same keys as the main window's
+        // two skip buttons, so they wear the roster's own two labels
+        // verbatim rather than a second wording for one act. THE PREVIOUS-
+        // TRACK WINDOW LIVES UNDER "Go to start" and does not rename it: a
+        // Home inside the item's first kPlayerPreviousThresholdMs goes to the
+        // previous entry, which is what "go to the start" means twice over on
+        // every car head unit and every iPod before them.
+        case AppState::PlayerButtonAct::Home: return "Go to start (Home)";
         case AppState::PlayerButtonAct::PlayPause:
             return transport_live ? "Pause (Space)" : "Play (Space)";
         // STOP IS ITS OWN BUTTON (R36) and its chord is a bare letter, so the
         // table's own accelerator rule spells it lowercase.
         case AppState::PlayerButtonAct::Stop:        return "Stop (v)";
-        case AppState::PlayerButtonAct::Next:        return "Next (.)";
+        case AppState::PlayerButtonAct::End:  return "Go to end (End)";
         // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
         // roster's own table states once (architect 2026-08-09): the key AS
         // TYPED, a capital naming a shifted press this product does not bind.
@@ -7544,7 +7565,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // button that admits a modified press gets its SHIFT-CLICK on plastic and,
 // through the one hold beat, its LONG PRESS on glass, so the shifted half of
 // the pair is reachable with no keyboard. THE TWO SKIPS ARE THE WHOLE SET —
-// their twins are Shift+`,` / Shift+`.` (2026-08-30), the item folder's FIRST
+// their twins are Shift+Home / Shift+End (2026-08-31, the keys following the
+// plain acts off `,` / `.`), the item folder's FIRST
 // and LAST wav — and every other button on the row keeps its plain act however
 // long it is held, exactly as a roster button with no twin does.
 //
@@ -7554,8 +7576,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // modifier line below — "which buttons admit shift" and "which buttons
 // advertise it" being one fact.
 inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) {
-    return act == AppState::PlayerButtonAct::Previous ||
-           act == AppState::PlayerButtonAct::Next;
+    return act == AppState::PlayerButtonAct::Home ||
+           act == AppState::PlayerButtonAct::End;
 }
 
 // THE MODIFIER LINE, in the roster's own form ("Press Shift for ...", which
@@ -7566,9 +7588,9 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 inline std::string render_player_button_shift_hint(
         AppState::PlayerButtonAct act) {
     switch (act) {
-        case AppState::PlayerButtonAct::Previous:
+        case AppState::PlayerButtonAct::Home:
             return "Press Shift for the folder's first file.";
-        case AppState::PlayerButtonAct::Next:
+        case AppState::PlayerButtonAct::End:
             return "Press Shift for the folder's last file.";
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::Stop:
@@ -7581,8 +7603,8 @@ inline std::string render_player_button_shift_hint(
     return std::string();
 }
 static_assert(
-    player_button_shift_admits(AppState::PlayerButtonAct::Previous) &&
-    player_button_shift_admits(AppState::PlayerButtonAct::Next) &&
+    player_button_shift_admits(AppState::PlayerButtonAct::Home) &&
+    player_button_shift_admits(AppState::PlayerButtonAct::End) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::PlayPause) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Stop) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
@@ -7603,12 +7625,23 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 // transport keys are their own class) — the modal row's disabled face, one
 // arm per act MIRRORING that act's own leading refusals, never a
 // restatement (defined in render_player.cpp beside the acts):
-//   PREVIOUS / NEXT grey with no item to walk from and at the folder's own
-//   end — previous()/next()'s two returns — and the TWIN RULE adds nothing
-//   here because the shift twins (first_in_item_folder /
-//   last_in_item_folder) refuse on exactly those same two conditions: at
-//   the first file, the step back and the jump to the first both land
-//   nowhere.
+//   HOME and END (the two skips, remapped off Previous / Next 2026-08-31)
+//   grey with no item at all, and otherwise mirror their own seeks under
+//   the twin rule — grey iff the plain act AND the shifted twin would both
+//   change nothing.
+//     HOME acts on a LIVE transport always (the reseek re-lands the window),
+//     on a PAUSED one whose rest is not already frame 0 (the rest moves
+//     there), and — through THE PREVIOUS-TRACK WINDOW — wherever a previous
+//     entry exists: at every rest of frame 0 the window fires, and every
+//     IDLE rest is at frame 0 by construction (the invariant at
+//     RenderPlayer::resume_frame), so no position term is needed here and
+//     the face asks nothing of the engine's cursor. THE TWIN ADDS NOTHING:
+//     first_in_item_folder acts exactly where a previous entry exists,
+//     which is that third term itself.
+//     END acts on a LIVE transport and on a PAUSED one not already resting
+//     at `frames`; THE TWIN ADDS ITS OWN TERM here — at an IDLE rest with a
+//     next entry the seek refuses while the jump to the folder's last wav
+//     acts, so the button stays live for the shifted press.
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: a live
 //   or paused transport always acts, an idle one acts through R27's
 //   folder-end restart or on its resting item, and only an idle transport
