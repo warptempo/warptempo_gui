@@ -3075,8 +3075,11 @@ struct CommandPopupItem {
 // projects in the keyboard's band over a Cancel-alone row) and **Synchronize to external storage** under
 // it (architect
 // 2026-08-27, the deliverable and the batch cells mirrored onto the device
-// config's `sync_path` — the act is external_sync.h's and this row is its
-// ONLY road, on either platform), then **Quit** (architect 2026-08-13, the
+// config's `sync_path` — the act is external_sync.h's, and this row is one of
+// TWO ROADS TO THAT ONE BODY since bare `\` joined 2026-08-31 (the chord's arm
+// in input_handler.cpp's on_key, its predicate `is_sync_external_key` in
+// gui_input.h) — the row still calls the body directly, on either platform),
+// then **Quit** (architect 2026-08-13, the
 // standard home for it and where kdenlive keeps it). Save and Render stay the
 // icon row's, and the menu is deliberately minimal. The separator parts the
 // two categories, the two acts on the project from an exit, exactly as
@@ -3287,7 +3290,9 @@ inline constexpr int kSeriesPopupItemCount =
 // tabs" row inside the `h` view was that predicate's ONE producer — the full
 // record, and the argument that would bring it back, are at kFilePopupItems
 // above), and the two sampled disabled inks it drew with. WHAT DID NOT: the
-// accelerator column, whose producer is now File's "Ctrl+Q" alone; the command
+// accelerator column, which File's "Ctrl+Q" alone carried for a time and
+// whose producers are table-driven and have since widened (paint_handler.cpp's
+// paint site carries the current reach); the command
 // menu KIND and this row type; and the `h`-view lockout's menu scope, whose
 // reason is re-derived at toggle_dropdown.)
 

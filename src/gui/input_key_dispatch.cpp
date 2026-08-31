@@ -2095,8 +2095,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             combination, so no Esc reaches it. The
 //                             view's exits are unchanged, and `h` is still the
 //                             key that leaves. With no render running a bare
-//                             Esc is a consumed nothing, which is what it is
-//                             everywhere else too.
+//                             Esc falls to the card dismissal (the oldest
+//                             standing card, if one is standing) exactly as it
+//                             does everywhere else, and is a consumed nothing
+//                             only where that too finds nothing to dismiss.
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its

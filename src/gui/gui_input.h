@@ -503,7 +503,9 @@ static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}),
               "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}),
-              "bare Esc is bound; its top-level silence is that arm's own");
+              "bare Esc is bound; it is one of the eight-place contract's own "
+              "arms (the oldest card's dismissal), and its top-level silence "
+              "is that arm's own, reached only with no card standing");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}) &&

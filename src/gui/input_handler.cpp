@@ -745,10 +745,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → the render/batch cancel (and the editor /
-    //                              prompt closes); nothing else — the
+    //                              prompt closes), then the oldest notification
+    //                              card if none of those is standing — the
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
-    //                              running is a plain no-op
+    //                              running and no card standing is a plain
+    //                              no-op (the eight-place contract at its
+    //                              enumeration's home, input_handler.cpp's
+    //                              on_key)
     //   - Ctrl+Q                 → close-prompt routing
     //   - Ctrl+O                 → the Open project picker (2026-08-28). It
     //                              authors nothing: it lists the projects, and

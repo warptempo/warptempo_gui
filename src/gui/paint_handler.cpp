@@ -3778,11 +3778,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // than its own label exactly as the live pair does; both derivations are
         // recorded at render.h's palette block, where the retired pair lives.)
         //
-        // ITS ONE PRODUCER IS THE FILE MENU'S "Ctrl+Q" since 2026-08-15: the
-        // column was authored for the Navigation menu's seven rows and outlived
-        // it, so the optional term above is exercised by a live menu and is not
-        // producer-less — which is the whole reason the term was driven off the
-        // item TABLE rather than off the menu enumerator.
+        // ITS PRODUCERS ARE TABLE-DRIVEN, not one row: the column was authored
+        // for the Navigation menu's seven rows, and once that menu retired
+        // (2026-08-15) File's "Ctrl+Q" carried it alone for a time — the reach
+        // has widened since with every popup item table that sets a hotkey
+        // string (File's "Ctrl+O", 2026-08-28, and its chord-less "\\" for
+        // Synchronize, 2026-08-31; Edit's five propagate chords, 2026-08-20), so
+        // the optional term above is exercised by whichever live menu's rows
+        // carry one — which is the whole reason the term was driven off the
+        // item TABLE rather than off the menu enumerator or a single row.
         if (row.hotkey != nullptr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -

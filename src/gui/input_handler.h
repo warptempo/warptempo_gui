@@ -3762,11 +3762,15 @@ private:
     // (press-at-press, commit-at-release, the modal's own) or, with none
     // focused, OPENS the highlight (a folder enters, `..` goes up, a wav
     // plays); Space is the Play button's act; Up / Down move the highlight;
-    // Left / Right seek ∓5 s; Home the item's start and End the item's END
-    // (2026-08-30, the scrub's own right edge — not a walk); Backspace up one
-    // folder (a consumed no-op at the root); bare `,` / `.` previous / next in
-    // the item's folder and SHIFT+`,` / Shift+`.` its FIRST / LAST wav (R37,
-    // re-keyed off Page Up / Page Down 2026-08-30); bare `v` STOP (R36,
+    // Left / Right seek ∓5 s; bare Home the item's own start, or THE PREVIOUS
+    // ENTRY when the press lands inside the item's first three seconds
+    // (kPlayerPreviousThresholdMs, the previous-track window, 2026-08-31);
+    // bare End the item's own END (2026-08-30, the scrub's own right edge —
+    // not a walk, the natural end being what advances); Backspace up one
+    // folder (a consumed no-op at the root); SHIFT+Home / Shift+End the
+    // folder's FIRST / LAST wav (R37, re-keyed off Page Up / Page Down
+    // 2026-08-30 and off comma/period 2026-08-31 — bare `,` / `.` are unbound
+    // here and fall to the silent catch-all below); bare `v` STOP (R36,
     // re-keyed off bare `s` the same day); `r` the Repeat one lamp; `'` the Load in
     // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
