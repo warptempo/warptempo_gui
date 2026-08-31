@@ -5078,6 +5078,17 @@ struct AppState {
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
+        // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
+        // transport keys are their own class), published per frame exactly
+        // as the rects are and read under the owner-tag doctrine: the
+        // stash's bit may only SELECT (the press claim's consume, the ring
+        // walk's skip, the painter's disabled rung), while the release
+        // road's dispatch re-asks the LIVE predicate
+        // (render_player_button_enabled, whose declaration holds the arms
+        // and the reader inventory). Every other owner's builder leaves it
+        // true — a prompt's, a picker's and an editor's buttons are always
+        // live while their dialog stands.
+        bool        enabled      = true;
         std::string tooltip;            // "<word> (<key>)"; never empty
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28,
@@ -7570,6 +7581,64 @@ static_assert(
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
     "the player's shift-admitting set is the two skips, and the hint's second "
     "line exists on exactly them");
+
+// THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
+// the highlight is a tmp/ batch cell carrying a recipe (folder rows, `..`
+// and the deliverable carry none). ONE derivation, TWO readers: the Load in
+// place act (GuiRenderPlayer::highlighted_entry delegates here) and the
+// button's face term in render_player_button_enabled below. Defined in
+// render_player.cpp beside the member it feeds.
+const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
+
+// WOULD THIS PLAYER BUTTON'S PRESS DO ANYTHING (architect 2026-08-30: the
+// transport keys are their own class) — the modal row's disabled face, one
+// arm per act MIRRORING that act's own leading refusals, never a
+// restatement (defined in render_player.cpp beside the acts):
+//   PREVIOUS / NEXT grey with no item to walk from and at the folder's own
+//   end — previous()/next()'s two returns — and the TWIN RULE adds nothing
+//   here because the shift twins (first_in_item_folder /
+//   last_in_item_folder) refuse on exactly those same two conditions: at
+//   the first file, the step back and the jump to the first both land
+//   nowhere.
+//   PLAY/PAUSE mirrors play_button_act's forks in their own order: a live
+//   or paused transport always acts, an idle one acts through R27's
+//   folder-end restart or on its resting item, and only an idle transport
+//   with no item is the consumed no-op the act's card answers.
+//   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
+//   a bound item, that arm's own record.)
+//   STOP mirrors stop()'s WHOLE no-op set — the no-item belt and R36's
+//   already-resting return (Idle, the rest at frame 0, the folder-end bit
+//   clear); a transport PAUSED at frame 0 and a folder-end rest both keep
+//   it live, exactly as the act treats them. The key's own refusal there
+//   stays R36's ruled silence.
+//   LOAD IN PLACE greys on a read-only tab (the lock refuses the load) and
+//   on a highlight with no recipe (render_player_highlighted_entry, the
+//   act's own question). THE RUNNING-RENDER REFUSAL IS DELIBERATELY NOT A
+//   TERM: it is transient state the user is watching finish, and its card
+//   stays the answer on BOTH roads.
+//   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
+//   escape sentinel).
+// FOUR READER CLASSES: the plan builder (paint_modal_dialog, publishing the
+// bit per frame beside the rects), the press claim and the ring walk (which
+// read the PUBLISHED bit — selection only), and the release road's dispatch
+// (dispatch_modal_dialog_button), which re-asks THIS live predicate. THE
+// KEYS DO NOT READ IT: every act's own refusal cards (or keeps its ruled
+// silence), and the head unit's road — on_media_command replaying
+// GuiMediaCommand as the player's own keys through synthesize_key — arrives
+// as keys, so it bypasses the buttons and this face by construction. IT
+// BINDS TO ACTS (PlayerButtonAct), never to chords, so a re-binding of the
+// player's keys cannot touch it.
+// EVERY FACE EDGE REACHES A REPAINT through the row's one damage owner
+// (GuiRenderPlayer::damage_row): the transport writers all damage the row
+// (play_wav, toggle_pause's both arms, stop's both arms, seek_to,
+// on_natural_end through the stop body's player fork; open and close
+// repaint whole), and the HIGHLIGHT movers damage it since the Load face
+// reads the highlight (move_highlight, set_highlight, rebuild_rows). The
+// read-only bit cannot change while the player stands —
+// route_render_player_key consumes bare `o` and the Settings menu's opener
+// refuses — recorded rather than damaged.
+bool render_player_button_enabled(const AppState& a,
+                                  AppState::PlayerButtonAct act);
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;

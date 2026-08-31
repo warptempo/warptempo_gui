@@ -5188,6 +5188,12 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // keeps Enter's commit and Space's typed character, and both fall
         // through untouched.
         if (at < 0) return false;
+        // A GREYED BUTTON'S KEYBOARD PRESS IS A CONSUMED NOTHING (architect
+        // 2026-08-30) — the roster's rule on this surface: no arm, no
+        // pressed face, no card (the grey is the message). Reachable only
+        // when the face changed under a parked focus — the walk below skips
+        // greyed stops — and the dispatch's live re-ask is the second wall.
+        if (!dlg.buttons[static_cast<size_t>(at)].enabled) return true;
         // A SYNTHESIZED REPEAT IS CONSUMED AND CHANGES NOTHING — the act
         // happens once, at the physical release. repeat_eligible refuses to
         // ARM these two while the focus is on a button, so this arm should see
@@ -5205,6 +5211,34 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         return true;
     } else {
         return false;
+    }
+
+    // THE RING SKIPS A GREYED BUTTON (architect 2026-08-30: the transport
+    // keys are their own class; the router and the ring consume what the
+    // face refuses — there is no roster Tab behaviour to mirror, the icon
+    // rows taking no keyboard at all, so the modal ring's own rule is the
+    // one stated here): a Tab walk that lands on a disabled button advances
+    // again, in its own direction and by its own wrap rules, until an
+    // enabled stop. The LIST stop and an editor's field are always stops,
+    // and Close never greys, so the walk terminates; the guard bounds it
+    // against the impossible all-disabled ring anyway. The bit read is the
+    // STASH'S — the walk only SELECTS a focus, and the press it leads to
+    // re-asks the live predicate at dispatch. Left / Right are not gated:
+    // they walk the prompt ring alone, whose buttons carry no enabled
+    // split.
+    if (tab_shape != ModalRingTab::None) {
+        int guard = 0;
+        while (next >= 0 &&
+               !dlg.buttons[static_cast<size_t>(next)].enabled &&
+               guard++ <= n) {
+            if (tab_shape == ModalRingTab::Forward) {
+                if (next + 1 < n) ++next;
+                else { next = prompt_up ? 0 : -1; list_next = list_up; }
+            } else {
+                if (next > 0) --next;
+                else { next = prompt_up ? n - 1 : -1; list_next = list_up; }
+            }
+        }
     }
 
     // LEAVING THE BUTTON CANCELS A HELD ENTER OR SPACE (2026-08-14), the
@@ -6801,10 +6835,12 @@ void GuiInputHandler::render_player_load_in_place() {
     if (app.prompt.active) return;
     // THE LOCK REFUSES AND SAYS SO (architect 2026-08-30, ending the silence
     // it kept until then): a load in place writes the marker stores and the
-    // engine block, exactly what the read-only tab protects. The player's row
-    // wears no disabled face by ruling — the whole roster is dead under it
-    // and its own buttons are parked lit — so the refusal AND its sentence
-    // are the act's, on both roads (the button's lift and bare `'`). It is
+    // engine block, exactly what the read-only tab protects. SINCE THE SAME
+    // DAY THE BUTTON GREYS on this refusal and on a recipe-less highlight
+    // (render_player_button_enabled — its lift is consumed, the grey being
+    // the message), so this card and the highlight one below are the
+    // KEYBOARD's, bare `'`'s own; the running-render card stays both
+    // roads', that refusal being deliberately not a face term. It is
     // one of the THREE readers of kTabReadOnlyCard (notifications.h) — the
     // sites that KNOW THEIR ACT and so need no chord in the sentence. The
     // keyboard gate is not among them: it drops an unbound chord and a bound

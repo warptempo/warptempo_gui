@@ -181,8 +181,11 @@ void GuiRenderPlayer::rebuild_rows() {
         folder_overlay::scroll_row_into_view(app, ov.highlight_row);
     // THE BAND IS ONE RECT (R35): its height is the slot's ceiling whatever
     // this listing's length, so the rebuild's damage is the same band every
-    // other damage takes.
+    // other damage takes. THE ROW REPAINTS WITH IT since 2026-08-30: the
+    // rebuild reseats the highlight, which the Load in place button's face
+    // reads (render_player_button_enabled).
     damage_band();
+    damage_row();
 }
 
 void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
@@ -250,27 +253,74 @@ void GuiRenderPlayer::open_row(int index) {
 
 // The three below are the WIDGET'S mechanics (folder_overlay.h owns where the
 // band may sit and how far the offset may run, for every content alike); what
-// this cluster adds is the player's own damage.
+// this cluster adds is the player's own damage — THE ROW'S beside the band's
+// on the two highlight movers since 2026-08-30, because the Load in place
+// button's face reads the highlight (render_player_button_enabled) and a
+// face edge must reach a repaint through the row's one damage owner.
 void GuiRenderPlayer::move_highlight(int delta) {
-    if (folder_overlay::move_highlight(app, delta)) damage_band();
+    if (folder_overlay::move_highlight(app, delta)) {
+        damage_band();
+        damage_row();
+    }
 }
 
 void GuiRenderPlayer::set_highlight(int index) {
-    if (folder_overlay::set_highlight(app, index)) damage_band();
+    if (folder_overlay::set_highlight(app, index)) {
+        damage_band();
+        damage_row();
+    }
 }
 
 void GuiRenderPlayer::scroll_rows(int rows) {
     if (folder_overlay::scroll_rows(app, rows)) damage_band();
 }
 
-const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
-    const AppState::FolderOverlay& ov = app.folder_overlay;
+const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a) {
+    const AppState::FolderOverlay& ov = a.folder_overlay;
     if (ov.highlight_row < 0 ||
         ov.highlight_row >= static_cast<int>(ov.rows.size()))
         return nullptr;
     const Row& r = ov.rows[static_cast<size_t>(ov.highlight_row)];
     if (r.kind != Row::Kind::Wav || !r.entry) return nullptr;
     return &*r.entry;
+}
+
+const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
+    return render_player_highlighted_entry(app);
+}
+
+// THE MODAL ROW'S DISABLED FACE — the contract, the per-act arms' rationale
+// and the reader inventory are at the declaration (app_state.h). Each arm
+// below is the act's own leading refusals in the act's own order.
+bool render_player_button_enabled(const AppState& a,
+                                  AppState::PlayerButtonAct act) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    using Transport = AppState::RenderPlayer::Transport;
+    const int n = static_cast<int>(rp.item_folder.size());
+    const bool item_in_folder = rp.item_index >= 0 && rp.item_index < n;
+    switch (act) {
+        case AppState::PlayerButtonAct::Previous:
+            return item_in_folder && rp.item_index > 0;
+        case AppState::PlayerButtonAct::Next:
+            return item_in_folder && rp.item_index + 1 < n;
+        case AppState::PlayerButtonAct::PlayPause:
+            if (rp.transport != Transport::Idle) return true;
+            if (rp.ended_at_folder_end && !rp.item_folder.empty()) return true;
+            return !rp.item.empty();
+        case AppState::PlayerButtonAct::Stop:
+            if (rp.item.empty() || rp.frames <= 0) return false;
+            return !(rp.transport == Transport::Idle &&
+                     rp.resume_frame == 0 && !rp.ended_at_folder_end);
+        case AppState::PlayerButtonAct::LoadInPlace:
+            return !active_view_state(a).read_only &&
+                   render_player_highlighted_entry(a) != nullptr;
+        case AppState::PlayerButtonAct::RepeatOne:
+        case AppState::PlayerButtonAct::Close:
+            return true;
+        case AppState::PlayerButtonAct::None:
+            return false;
+    }
+    return true;
 }
 
 // -- The transport --------------------------------------------------------------

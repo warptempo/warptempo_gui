@@ -3318,6 +3318,15 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     const int hit = modal_dialog_button_hit(x, y);
     if (hit < 0) return false;
+    // A DISABLED PLAYER BUTTON'S PRESS IS A CONSUMED NOTHING (architect
+    // 2026-08-30: the transport keys are their own class) — the roster's
+    // arm_redesign_press rule on this surface: nothing arms, no face paints,
+    // no card (the grey is the message). The bit read is the STASH'S, which
+    // may only SELECT — a press that slipped through on a stale stash still
+    // dies at the dispatch's live re-ask. Every other owner's buttons
+    // publish enabled=true, so this line is inert off the player.
+    if (!app.modal_dialog.buttons[static_cast<size_t>(hit)].enabled)
+        return true;
     if (shift &&
         !player_button_shift_admits(
             app.modal_dialog.buttons[static_cast<size_t>(hit)].player_act))
@@ -3453,6 +3462,14 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // state (an item to pause, a neighbour to skip to, a load-capable
     // highlight), so a stale stash can select at worst a consumed nothing.
     if (app.render_player.active) {
+        // THE LIVE ENABLED RE-ASK (architect 2026-08-30): a greyed button's
+        // act is consumed with no card — the grey is the message — whichever
+        // road armed it (the pointer's lift, the ring's Enter/Space
+        // release). The KEYS never come through here, so their own cards and
+        // R36's ruled silence at Stop's rest are untouched, and the head
+        // unit's road (on_media_command -> synthesize_key) arrives as keys
+        // and bypasses this line by construction.
+        if (!render_player_button_enabled(app, b.player_act)) return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
             // shifted twin — a Shift+click on plastic, a long press on glass,

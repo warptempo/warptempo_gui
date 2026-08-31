@@ -5949,6 +5949,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
+        // The player row's disabled face (architect 2026-08-30) — the live
+        // predicate's answer at plan time, published on the record below;
+        // true on every other owner's buttons.
+        bool        enabled      = true;
         icons::Icon icon         = icons::Icon::MediaPlaybackStart;
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
@@ -5986,6 +5990,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.glyph      = true;
             b.lit        = lit;
+            b.enabled    = render_player_button_enabled(app, act);
             b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, live);
             b.tooltip2   = render_player_button_shift_hint(act);
@@ -5996,6 +6001,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             DialogButtonPlan b;
             b.player_act = act;
             b.label      = word;
+            b.enabled    = render_player_button_enabled(app, act);
             b.tooltip    = render_player_button_hint(act, live);
             b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
@@ -6748,10 +6754,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // roster's own SELECTED face, ranked under the press and over the
         // focus fill exactly as the icon row ranks them — the fill says the
         // STATE, so a focused lamp still reads as lit and its outline is what
-        // says the keyboard is there. There is still NO disabled state on this
-        // surface — a dialog button is always live while its dialog stands —
-        // so the icon row's kRedesignDisabledMix `keep` term has no
-        // counterpart here and is deliberately not invented.
+        // says the keyboard is there. THE DISABLED RUNG EXISTS SINCE
+        // 2026-08-30 (architect: the transport keys are their own class), on
+        // the PLAYER's buttons alone — every other owner's dialog buttons
+        // are always live while their dialog stands and publish
+        // enabled=true, so the `keep` term below is inert for them. The rung
+        // is the icon row's own kRedesignDisabledMix toward
+        // kRedesignContentGround, the row's ground (the derivation record is
+        // at the constant, render.h).
         // THE CLICK FACE IS REAL NOW: these buttons act at the RELEASE, so the
         // pressed interior is the standing statement that the act is armed and
         // the lift will run it (it was unpainted while they acted at the
@@ -6776,34 +6786,57 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // omissions: ACTIVE FOCUS PLUS HOVER IS IDENTICAL TO ACTIVE FOCUS (the
         // outline is already accent, so hover adds nothing), and PRESSED
         // outranks every fill above it, focus included.
-        const bool armed   = static_cast<int>(i) == app.modal_dialog_pressed;
-        const bool pressed =
-            (armed && app.modal_dialog_press_inside) ||
-            static_cast<int>(i) == app.modal_dialog_key_pressed;
-        const bool hovered = static_cast<int>(i) == app.modal_dialog_hovered;
+        const bool enabled = plan[i].enabled;
+        // THE DISABLED GATES mirror the roster's (paint_icon_row): the
+        // pointer and keyboard press faces are gated on the bit rather than
+        // trusted — the claim never arms a disabled button and the ring's
+        // walk skips one, but a button can go dead UNDER a hover, a hold or
+        // a parked focus with no event to refresh them (a pressed Stop greys
+        // Stop under its own focus). The FOCUS faces are deliberately NOT
+        // gated: a stale ring must stay visible where the keyboard is, so
+        // they DIM with the button instead — the roster's own
+        // disabled+selected composition, mixed by `keep` below.
+        const bool armed   = enabled &&
+                             static_cast<int>(i) == app.modal_dialog_pressed;
+        const bool pressed = enabled &&
+            ((armed && app.modal_dialog_press_inside) ||
+             static_cast<int>(i) == app.modal_dialog_key_pressed);
+        const bool hovered = enabled &&
+                             static_cast<int>(i) == app.modal_dialog_hovered;
         const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
         const bool active_focus = focused && app.modal_dialog_focus_active;
+        // THE DISABLED RUNG'S ONE KNOB: every ink below retains this
+        // fraction of itself over kRedesignContentGround — the bottom row's
+        // own ground — per the recorded derivation at the constant
+        // (render.h). 1.0 on every enabled button, leaving the ladder
+        // bit-identical there.
+        const double keep = enabled ? 1.0 : kRedesignDisabledMix;
         if (active_focus) {
             // THE HALO, drawn first so the button's own outline lands over its
             // inner edge: a `ring`-wide stroke whose centreline runs half a
             // ring outside the box, i.e. a band filling exactly the reserved
             // pixels from the box edge outward. The radius grows by the same
-            // ring so the corner stays concentric with the button's.
+            // ring so the corner stays concentric with the button's. It dims
+            // with a disabled button like the rest of the focus face.
+            const GuiColor halo =
+                mix_color(kModalFocusRing, kRedesignContentGround, keep);
             redesign_face_box(cr, r.x - ring, r.y - ring,
                               r.w + 2 * ring, r.h + 2 * ring,
-                              ring, rad + ring, nullptr, &kModalFocusRing);
+                              ring, rad + ring, nullptr, &halo);
         }
         const bool lit = plan[i].lit;
-        const GuiColor fill =
+        const GuiColor fill = mix_color(
             pressed ? mix_color(kRedesignAccent, kRedesignContentGround,
                                 kRedesignClickMix)
                     : lit ? kRedesignSelectedFill
-                          : kModalFocusFill;
-        const GuiColor line =
+                          : kModalFocusFill,
+            kRedesignContentGround, keep);
+        const GuiColor line = mix_color(
             (hovered || armed || pressed || active_focus)
                 ? kRedesignAccent
                 : focused ? kModalFocusLinePassive
-                          : kRedesignLine;
+                          : kRedesignLine,
+            kRedesignContentGround, keep);
         const bool has_fill = pressed || focused || lit;
         // The rest line is the word button's; a glyph button shows one only
         // while something claims it or its lamp stands (the ladder above).
@@ -6814,24 +6847,32 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           has_line ? &line : nullptr);
         if (plan[i].glyph) {
             // THE GLYPH, the icon row's own draw: the roster's 22 px icon box
-            // centred in the 32 px button, full ink (a modal button has no
-            // disabled face by ruling).
+            // centred in the 32 px button, each path in its own color,
+            // dimmed by the same `keep` toward what sits under it when the
+            // button is disabled — the icon row's own dimming term, inert
+            // (keep == 1, the table's colors bit-identical) on every enabled
+            // button.
             const int glyph_px = scaled_px(kIconGlyphPx);
             icons::draw(cr, plan[i].icon,
                         static_cast<double>(r.x + (r.w - glyph_px) / 2),
                         static_cast<double>(r.y + (r.h - glyph_px) / 2),
-                        static_cast<double>(glyph_px));
+                        static_cast<double>(glyph_px),
+                        keep,
+                        has_fill ? fill : kRedesignContentGround);
         } else {
             show_row_text(cr, font, static_cast<double>(r.x + btn_pad_l),
                           redesign_baseline(font, static_cast<double>(r.y),
                                             static_cast<double>(r.h)),
-                          plan[i].label, kRedesignLabel);
+                          plan[i].label,
+                          mix_color(kRedesignLabel, kRedesignContentGround,
+                                    keep));
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
+        out.enabled      = plan[i].enabled;
         // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
         // ruling that took the accelerators off the labels and put the key on
         // a tooltip): the composer is the one owner of the format and of the

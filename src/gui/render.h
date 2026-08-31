@@ -236,6 +236,15 @@ inline constexpr double kRedesignClickMix = 0.30;
 // face. The padlock is an icon-row button now and its open state is simply
 // UNLIT — in that row a dimmed glyph means disabled — so this factor is the
 // disabled face's alone again.)
+// THE RENDER PLAYER'S MODAL ROW IS A SECOND READER since 2026-08-30
+// (architect: the transport keys are their own class): its disabled rung is
+// this same keep factor toward kRedesignContentGround — the bottom row's
+// own content ground, the very constant row 2 dims toward — applied to the
+// row's two button kinds by DERIVATION, not by a new sample: the borderless
+// glyph buttons dim per-path through icons::draw's keep_own exactly as row
+// 2's glyphs do, and the word buttons' outline, label and focus faces mix
+// by the same factor (paint_modal_dialog's ladder). No new constant, so a
+// retune of this knob retunes both rows together.
 inline constexpr double kRedesignDisabledMix = 0.322;
 
 // -- Row 1's RIGHT-FLOATING VIEW BAR (HARD-CODED, kdenlive-sampled) ---------
