@@ -61,10 +61,11 @@
 //     gate is NOT this case: the drag gates card it with every other key.
 //   * A MODIFIED PRESS ON THE FOLDER OVERLAY'S PAD OR GAPS (a press on a ROW
 //     cards), and the render player's modified press on the scrub track.
-//   * THE OFF-HOME POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
-//     DOUBLE-CLICK DROP (re-greped 2026-08-30: the home-view predicate's six
-//     call sites are three keyboard routes, which all gained sentences, and
-//     these two) — because a pointer gesture that never begins is its own
+//   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
+//     DOUBLE-CLICK DROP (re-greped 2026-08-30; the WARP column's alone since
+//     the P column opened to both audio views that day, the four P-column
+//     cards retiring with their refusals) — because a pointer gesture that
+//     never begins is its own
 //     answer: the flag does not move and no marker appears. The double-click
 //     drop's READ-ONLY arm is silent on the same ground, the keyboard's own
 //     lock speaking for the chord.

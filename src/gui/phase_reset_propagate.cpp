@@ -480,7 +480,7 @@ void PhaseResetPropagate::paste_apply() {
                              std::move(stop_message));
     }
 
-    // Land in target view (phase reset's home) with exactly the newly pasted
+    // Land in target view (the lead-in overlay's view) with exactly the newly pasted
     // resets selected, so the architect can inspect the paste by eye. The set
     // was built with insert-time index adjustment above, so it names the final
     // post-insert indices.
@@ -635,7 +635,7 @@ void PhaseResetPropagate::paste_state_apply() {
                              kNothingMatched);
     }
 
-    // Land in target view (phase reset's home) at the end of a completed
+    // Land in target view (the lead-in overlay's view) at the end of a completed
     // paste-state run, including diverged/mismatched/no-change cases. State
     // paste creates no resets (it only flips disabled flags on existing ones),
     // so there is no selection to set and the tail leaves none: the column swap

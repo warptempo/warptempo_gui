@@ -3485,7 +3485,7 @@ private:
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, and drop_phase_reset_in_target_view,
-    // Shift+S's trip to phase reset's home ahead of its drop.
+    // Shift+S's trip to target view ahead of its lead-in drop.
     void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
 

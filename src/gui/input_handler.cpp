@@ -791,18 +791,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Keyboard authoring is HOME-VIEW gated, not view-blind: warp markers
-    // author in source view, phase resets in target view, via the one
+    // Keyboard authoring is HOME-VIEW gated in the WARP column, not
+    // view-blind: warp markers author in source view, while the phase-reset
+    // column authors in BOTH audio views since 2026-08-30, via the one
     // predicate active_column_authoring_allowed consulted at the individual
-    // handlers below beside the read-only check above — off home such a
-    // handler still dispatches here but refuses silently, navigation-class.
+    // handlers below beside the read-only check above.
     // WHAT IT GATES IS THE POSITIONAL FAMILY (architect 2026-08-24): the
     // binding's own rationale is that a PLACEMENT edit in target view mutates
     // the map the view is displayed in, which says nothing about a status, an
     // existence or a value edit — so the predicate's consumers on this
     // dispatch are the marker drop and the `m` bpm open (which rewrites tempo
-    // through a derivation over a SPAN), plus the phase-reset column's own
-    // Ctrl+D and Delete arms, whose home is target.
+    // through a derivation over a SPAN); the phase-reset Ctrl+D and Delete
+    // arms carried it until the P side opened.
     // THE RULED EXCEPTIONS ARE ENUMERATED AT ONE SITE,
     // active_column_authoring_allowed (app_state.h); the members that
     // dispatch from here are the bare UP/DOWN TEMPO CENT STEP in W+target
@@ -1431,24 +1431,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // strict-modifier tail and is answered as the unbound chord it is.
         // One press, one card, the right one.
         if (!ctrl && !shift && !alt) {
-            // OFF HOME SAYS SO (architect 2026-08-30, the strictness ruling),
-            // FORKED ON THE COLUMN exactly as the act below forks: what the
-            // press is told is where the column it stands in places its
-            // markers. The lead-in arm needs no separate target-view test:
-            // P's home IS target, so this one gate already carries it. THE
-            // DROP BUTTON GREYS ON THIS REFUSAL ONLY IN S+P (the twin rule,
-            // recorded at its arm in redesign_button_enabled): in the W
-            // column its shift twin above — the long press, glass's only
-            // road — still crosses and drops, so the button stays lit there
-            // and its PLAIN lift reaches this card, synthesizing this very
-            // chord; in S+P the twin refuses too ("Already in phase reset
-            // view") and the grey is the message.
+            // T+W SAYS SO (architect 2026-08-30, the strictness ruling; the
+            // P column dropped its half of this gate the same day — bare `s`
+            // in the phase column drops in BOTH audio views, the drop body's
+            // own fork seeding without the lead-in in source view — so the
+            // only refusal left here is the warp column's and the card
+            // needs no fork). THE DROP BUTTON NEVER GREYS ON THIS REFUSAL
+            // (the twin rule, recorded at its arm in
+            // redesign_button_enabled): in T+W its shift twin above — the
+            // long press, glass's only road — still crosses and drops, so
+            // the button stays lit and its PLAIN lift reaches this card,
+            // synthesizing this very chord.
             if (!active_column_authoring_allowed(app)) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
-                    app.active_markers_view == 'P'
-                        ? "Phase resets are placed in target view"
-                        : "Markers are placed in source view");
+                    "Markers are placed in source view");
                 return;
             }
             if (app.active_markers_view == 'P')
@@ -1501,26 +1498,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // home-view binding (the inventory is at
         // active_column_authoring_allowed, app_state.h) and its op's tail
         // carries the target-view re-warp and playhead re-land. The
-        // PHASE-RESET arm keeps the gate exactly as it was — nothing was ruled
-        // about that column — where the predicate reads "not in source view".
-        // BOTH ARMS' LEADING REFUSALS ARE ONE PREDICATE since 2026-08-30
-        // (marker_selection_verb_actionable, app_state.h: the empty selection
-        // in either column, the home view in P), which the Disable button's
-        // face reads too — the truthful-buttons ruling; the P arm read
-        // active_column_authoring_allowed directly until then.
-        // AND IT SAYS WHICH REFUSAL IT IS (architect 2026-08-30), forked on
-        // the predicate's own two terms: a STANDING selection past this gate
-        // can only be the P column off its home view, and an empty one is a
-        // subject the user can supply. ONE CARD PER PRESS — both ops' leading
+        // PHASE-RESET arm carried the home-view gate until the P column
+        // opened to both audio views (architect 2026-08-30), so BOTH ARMS'
+        // ONE LEADING REFUSAL is the empty selection
+        // (marker_selection_verb_actionable, app_state.h), which the Disable
+        // button's face reads too, and the one card names the missing
+        // subject — "Phase resets are edited in target view" retired with
+        // the gate. ONE CARD PER PRESS — both ops' leading
         // marker_selection_standing returns are the belts below and stay
         // silent — and the Disable button greys on this same predicate, so
         // its lift never reaches here.
         if (!marker_selection_verb_actionable(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                marker_selection_standing(app)
-                    ? "Phase resets are edited in target view"
-                    : "Select a marker to enable or disable");
+                "Select a marker to enable or disable");
             return;
         }
         if (app.active_markers_view == 'P') {
@@ -1571,21 +1562,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // to the home-view binding (the inventory is at
         // active_column_authoring_allowed, app_state.h) and takes no home-view
         // gate, its op's tail carrying the target-view re-warp and the
-        // playhead re-land. The PHASE-RESET arm keeps the gate. BOTH ARMS'
-        // LEADING REFUSALS ARE ONE PREDICATE since 2026-08-30
+        // playhead re-land. The PHASE-RESET arm carried the home-view gate
+        // until the P column opened to both audio views (architect
+        // 2026-08-30). BOTH ARMS' ONE LEADING REFUSAL is the empty selection
         // (marker_selection_verb_actionable, app_state.h — the Ctrl+D arm's
-        // twin), which the Delete button's face reads too.
-        // AND IT SAYS WHICH REFUSAL IT IS (architect 2026-08-30), the Ctrl+D
-        // arm's fork in this verb's own words: a standing selection past this
-        // gate is the P column off home, an empty one is a missing subject.
-        // ONE CARD PER PRESS, the ops' own leading returns staying silent
-        // below it, and the greyed Delete button never reaching it.
+        // twin), which the Delete button's face reads too; the card names
+        // the missing subject — "Phase resets are deleted in target view"
+        // retired with the gate. ONE CARD PER PRESS, the ops' own leading
+        // returns staying silent below it, and the greyed Delete button
+        // never reaching it.
         if (!marker_selection_verb_actionable(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                marker_selection_standing(app)
-                    ? "Phase resets are deleted in target view"
-                    : "Select a marker to delete");
+                "Select a marker to delete");
             return;
         }
         if (app.active_markers_view == 'P') {
@@ -1828,31 +1817,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
-        // OFF HOME IS THE CONSUMED REFUSAL, through the ONE predicate
+        // T+W IS THE CONSUMED REFUSAL, through the ONE predicate
         // (horizontal_arrow_step_actionable, app_state.h — the lane fork's
         // composed refusal, which inside this branch reduces to
         // active_column_authoring_allowed, the home-view rule itself, its
         // waveform-lane wall term being asked only with no selection; the
         // bottom row's LEFT and RIGHT buttons read the same predicate for
         // their face since 2026-08-30, the truthful-buttons ruling) rather
-        // than a second spelling of its arms: this site hand-wrote "P wants T,
-        // W wants S" until 2026-08-29, which is exactly the home-view
-        // predicate's body, and a one-owner rule with a hand copy beside it is
-        // a rule waiting to drift. It covers BOTH refusals the routing above
-        // describes — P+source and W+target, the latter having lost the
-        // tempo-image step with the whole tempo drag family.
-        // OFF HOME SAYS SO (architect 2026-08-30), forked on the column like
-        // the drop's own card: inside this branch the predicate reduces to
-        // active_column_authoring_allowed, so the only refusal reachable
-        // here is the home-view one — the waveform-lane wall term is asked
-        // with no selection and never gets in. The Left / Right buttons grey
-        // on the same predicate, so a lift never reaches this line.
+        // than a second spelling of its arms: this site hand-wrote the rule
+        // until 2026-08-29, and a one-owner rule with a hand copy beside it
+        // is a rule waiting to drift. ONE refusal is left since the P column
+        // opened to both audio views (architect 2026-08-30) — a WARP marker
+        // in target view, which lost the tempo-image step with the whole
+        // tempo drag family — so the card needs no column fork; "Phase
+        // resets are moved in target view" retired with the P gate.
+        // AND IT SAYS SO: the Left / Right buttons grey on the same
+        // predicate, so a lift never reaches this line.
         if (!horizontal_arrow_step_actionable(app, audio, direction)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                app.active_markers_view == 'P'
-                    ? "Phase resets are moved in target view"
-                    : "Markers are moved in source view");
+                "Markers are moved in source view");
             return;
         }
         // THE WALL SAYS SO (architect 2026-08-30): each twin returns its own
@@ -3242,12 +3226,12 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 // order and why each step is where it is.
 //
 // THE SWITCHES COME FIRST AND THE DROP LAST, and that is decided rather than
-// chosen. The one drop body reads the playhead in the ACTIVE domain and
-// offsets it by kN/2 OUTPUT samples before inverting to a source frame
-// (drop_phase_reset_lead_in_at_playhead, phaseresetmarkers_ops.cpp), so it is
-// only correct with target view already live: run in source view the same
-// subtraction would take kN/2 SOURCE frames off a source cursor and seat the
-// reset somewhere the lead-in does not reach. Going to target first hands the
+// chosen. This act means the TARGET-VIEW drop — the lead-in seed is its
+// point — and the one drop body forks on the audio view (its source arm,
+// since 2026-08-30, takes no lead-in at all:
+// drop_phase_reset_lead_in_at_playhead, phaseresetmarkers_ops.cpp), so the
+// switches must run first for the body to take the target arm, whose kN/2
+// OUTPUT-sample offset is only meaningful there. Going to target first hands the
 // body the instant the user stood on, already re-expressed — the S/T
 // chokepoint translates the playhead through the live warp frame map — so
 // there is nothing here to convert by hand and no second drop body to keep in

@@ -52,11 +52,11 @@
 // at all — exactly the cent step's own split, and the cent step's target-view
 // tail (adjust_tempo_cents, below) argues the re-land in full as the precedent
 // these four take.
-// THE POSITIONAL FAMILY IS NOT HERE and stays home-view-only, refusing off
-// home as it always did — each at its own DISPATCH site, through
-// the one predicate (and since 2026-08-30 the three KEYBOARD members say so on
-// a card forked on the column while the two POINTER members stay silent; the
-// split is recorded at the predicate): the drop (drop_marker / drop_copy_previous_at_playhead),
+// THE POSITIONAL FAMILY IS NOT HERE and stays source-only IN THE WARP
+// COLUMN — the one block left since the P column opened to both audio views
+// (architect 2026-08-30) — refusing in T+W at its own DISPATCH site, through
+// the one predicate (the keyboard members on a card, the two POINTER members
+// silent; the split is recorded at the predicate): the drop (drop_marker / drop_copy_previous_at_playhead),
 // the flag drag (marker_drag.cpp), the bare Left/Right nudge
 // (nudge_selected_markers, whose dispatch joined the predicate's callers
 // 2026-08-29, having spelled its two arms by hand until then) and the `m` bpm

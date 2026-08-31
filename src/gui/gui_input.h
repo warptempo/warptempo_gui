@@ -520,7 +520,7 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
 // VIEW (architect 2026-08-28, born "from any view"; the P column refuses it
 // whole since 2026-08-30 — the paragraph below): SHIFT+S exactly — no ctrl,
 // no alt. It lands the session in
-// T+P, phase reset's home, and drops the lead-in reset at the playhead's own
+// T+P, the lead-in's own view, and drops the lead-in reset at the playhead's own
 // musical instant there, so the reset the architect wants while he is looking
 // at the warp column costs one key instead of a view trip and back. Ctrl+S is
 // the save on this letter and Shift+S was the strict rule's consumed no-op

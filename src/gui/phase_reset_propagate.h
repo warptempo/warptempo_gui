@@ -123,7 +123,7 @@ struct PhaseResetPropagate {
     void paste_state_apply();
 
     // Shared end-of-paste tail for all three paste actions: land the completed
-    // paste in TARGET view (phase reset's home) with the newly created resets
+    // paste in TARGET view (where the lead-in overlay lives) with the newly created resets
     // selected. `created` is the exact post-insert index set of the resets this
     // paste materialized (empty for the no-materialize / state-only tails).
     void land_paste_in_target_view(const std::set<int>& created);

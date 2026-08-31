@@ -40,9 +40,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // total-1 keeps every marker inside the playhead's [0, total-1] domain
     // so marker gestures and playhead syncs agree exactly.
     // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30, the warp twin's
-    // finding): all three drop roads author at or BEFORE the playhead — the
-    // lead-in body subtracts N/2 output samples, and the playhead rests in
-    // [0, total-1] by every writer's clamp — so no press can reach this wall.
+    // finding): every drop road authors at or BEFORE the playhead — the
+    // target arm subtracts kN/2 output samples, the source arm authors at
+    // the cursor exactly, and the playhead rests in [0, total-1] by every
+    // writer's clamp — so no press can reach this wall.
     // An error arm exists iff a producer exists (validation_topology.md).
     if (drop_frame > audio.total_frames() - 1)
         return;
@@ -55,9 +56,11 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
-    // create path is the lead-in drop below (bare `s`, the empty-lane
-    // double-click and Shift+S all take it), which authors N/2 BEFORE the
-    // playhead, so the playhead lands back on the seeded reset. This is a drop
+    // create path is the drop below (bare `s`, the empty-lane double-click
+    // and Shift+S all take it), whose TARGET arm authors kN/2 BEFORE the
+    // playhead — this seat lands the playhead back on the seeded reset — and
+    // whose SOURCE arm authors at the cursor exactly, the seat then a
+    // same-value re-affirm. This is a drop
     // consequence (the
     // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
@@ -76,29 +79,50 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     target_render.trigger();
 }
 
-// Target-view lead-in drop: place a phase reset N/2 output samples BEFORE the
-// playhead. The OLA/Hann synthesis lead-in makes a reset's output ramp up over
-// ~N/2 samples, reaching full scale ~N/2 after its authored frame; offsetting
-// by -N/2 places the reset so its full-scale output lands on the playhead (the
-// perceived transient). N/2 is measured in the target/output paint domain,
-// matching the output-domain phase-reset overlay, then mapped to a source
-// frame. kN/2 is an exact integer and the playhead is an integer frame, so the
-// offset is plain integer arithmetic (no snap needed); clamped to 0. Reuses
-// drop_phase_reset_at_position so the created reset takes the full create path
-// — walls, undo, selection, the overlay hide the drop's own seat carries —
-// unchanged; only the
-// seed frame is offset. This is the phase column's ONLY drop, and its routes
-// are three: bare `s`, the empty-lane double-click, and — since 2026-08-28 —
-// SHIFT+S, the drop from any view. The first two gate on the home-view
-// predicate, whose P arm IS target view; the third does not consult it at all
-// and does not need to, because it SWITCHES the session into T+P first
+// The phase column's drop, FORKED ON THE AUDIO VIEW (architect 2026-08-30 —
+// the P column authors in BOTH views since that ruling, and the two arms
+// seed differently by its own clause: "no lead-in at all, just like no
+// offset overlay").
+//
+// TARGET VIEW — the LEAD-IN drop: place the reset kN/2 OUTPUT samples BEFORE
+// the playhead. The OLA/Hann synthesis lead-in makes a reset's output ramp
+// up over ~N/2 samples, reaching full scale ~N/2 after its authored frame;
+// offsetting by -N/2 places the reset so its full-scale output lands on the
+// playhead (the perceived transient). N/2 is measured in the target/output
+// paint domain, matching the output-domain phase-reset overlay, then mapped
+// to a source frame. kN/2 is an exact integer and the playhead is an integer
+// frame, so the offset is plain integer arithmetic (no snap needed); clamped
+// to 0.
+//
+// SOURCE VIEW — NO LEAD-IN AND NO MAP CONVERSION: the reset lands EXACTLY at
+// the playhead's source frame. The kN/2 is an OUTPUT-domain length the
+// source cursor is not in (subtracting it here would take kN/2 SOURCE frames
+// off a source cursor and seat the reset somewhere the lead-in does not
+// reach), and the offset's whole aim — the full-scale point on the playhead
+// — is only visible where the overlay is: the missing overlay and the
+// missing lead-in are the clues you are reading the wrong domain, and a
+// misplaced reset is harmless and adjusted in target view. The identity
+// domain needs no active_domain_to_source_frame call either — the cursor IS
+// a source frame there.
+//
+// BOTH ARMS reuse drop_phase_reset_at_position, so the created reset takes
+// the full create path — the EOF wall (whose no-producer record holds in
+// both arms: the source arm authors AT the playhead, inside [0, total-1] by
+// every writer's clamp), undo, the single-select, and the playhead seat
+// (whose source_frame_to_active_domain is the identity in the source arm,
+// making the seat a same-value re-affirm there) — unchanged; only the seed
+// frame differs. The routes are three: bare `s` and the empty-lane
+// double-click, both P-column routes in EITHER audio view, and SHIFT+S,
+// which SWITCHES the session into T+P first
 // (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp) and
-// then calls this. Either way the body runs with target view live, which is
-// what it requires: the kN/2 below is an OUTPUT-domain offset read off an
-// active-domain cursor, and the overlay and the lead-in it aims at exist
-// nowhere else.
+// so always takes the target arm.
 void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return;
+    if (app.active_audio_view != 'T') {
+        drop_phase_reset_at_position(
+            static_cast<double>(app.playhead_cursor_sample));
+        return;
+    }
     const int64_t ph =
         std::max<int64_t>(0, app.playhead_cursor_sample - kN / 2);
     const int64_t src_frame = active_domain_to_source_frame(app, audio, ph);

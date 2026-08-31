@@ -290,10 +290,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // motion events over a swept zoom range. Rounding here first makes the two
     // one expression; it also matches the COMMIT below, which maps an integer
     // frame by construction, so the ride and its landing now agree too.
-    // Reachable through the PHASE-RESET column, whose home view is the target one
-    // (a warp drag is source-home because the THRESHOLD CROSSING applies
-    // active_column_authoring_allowed before it begins the drag — the gate lives
-    // there, not at the arming press, which is unconditional).
+    // Reachable through the PHASE-RESET column in either audio view (both
+    // are that column's authoring views since 2026-08-30; in source view the
+    // map below is the identity) — a warp drag is source-home because the
+    // THRESHOLD CROSSING applies active_column_authoring_allowed before it
+    // begins the drag; the gate lives there, not at the arming press, which
+    // is unconditional.
     // A marker drag can never run under live playback — the THRESHOLD
     // CROSSING stops playback (the click act's own stop, run there since
     // 2026-08-15) — so the scanner is always

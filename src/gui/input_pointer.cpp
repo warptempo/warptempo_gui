@@ -5236,8 +5236,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // guard-free close is the LEFT press's, below.
 
     // Mouse authoring is home-view gated like the keyboard: the marker DRAG is
-    // gated by active_column_authoring_allowed, off-home selecting and landing but
-    // MOVING NOTHING — with no exception anywhere, since 2026-07-29. W+target used
+    // gated by active_column_authoring_allowed — T+W selecting and landing but
+    // MOVING NOTHING, the one off-home state left since the P column opened
+    // to both audio views (2026-08-30) — with no exception anywhere, since
+    // 2026-07-29. W+target used
     // to arm the TEMPO drag on an eligible marker instead of the reposition drag
     // (the pointer half of the home-view binding's tempo exception); that whole
     // gesture is deleted (see marker_drag.h), so a W+target flag click now selects
@@ -6289,8 +6291,9 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // undone in between. The standing _at_playhead drops then author at that
     // playhead, taking the full create path (walls, undo, selection, and the
     // overlay hide the drop's own playhead seat carries) — the
-    // phase-reset lead-in additionally offset N/2 before the playhead and landing
-    // the playhead per that drop's rule.
+    // phase-reset drop seeding per its own view fork (kN/2 before the
+    // playhead in target view, at the playhead exactly in source view) and
+    // landing the playhead per that drop's rule.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     if (active_view_state(app).read_only) return;
@@ -6298,10 +6301,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
-    // active_column_authoring_allowed guarantees the column is in its HOME audio
-    // view: W -> source (warp drops legal), P -> target (phase-reset drops legal,
-    // the lead-in's target requirement satisfied), so the view dispatch below
-    // needs no extra audio-view guard.
+    // active_column_authoring_allowed admits W only in source view (warp
+    // drops legal there alone) and P in EITHER audio view (architect
+    // 2026-08-30 — the drop body's own fork seeds with the lead-in in target
+    // view and exactly at the playhead in source view), so the view dispatch
+    // below needs no extra audio-view guard.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
     else
@@ -9493,8 +9497,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // home-view split that used to arm the TEMPO drag instead in W+target
         // exactly — the pointer half of the home-view binding's tempo
         // exception, with its predecessor-eligibility walk — is DELETED with
-        // that whole gesture (see marker_drag.h), so EVERY off-home flag drag
-        // (W+target and P+source alike) is the silent navigation-class refusal.
+        // that whole gesture (see marker_drag.h), so the one off-home flag
+        // drag left — a WARP flag in target view, the P column dragging in
+        // both audio views since 2026-08-30 — is the silent
+        // navigation-class refusal.
         if (active_view_state(app).read_only ||
             !active_column_authoring_allowed(app))
             return;
