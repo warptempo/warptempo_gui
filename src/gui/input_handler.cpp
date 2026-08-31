@@ -987,12 +987,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
-    // SEVEN PLACES AND NOWHERE ELSE (re-derived 2026-08-28 — the drag-modal
-    // gate above tests only Ctrl+Q, so Esc is UNBOUND there and falls through
-    // with every other key while a gesture is in flight; it is NOT one of the
-    // seven), each of the seven earlier in this function than this point, so
-    // reaching here means the press has nothing left to do. THEY ARE LISTED IN
-    // RANK ORDER, outermost modal first:
+    // EIGHT PLACES AND NOWHERE ELSE (re-greped 2026-08-31, when the CARD
+    // DISMISSAL joined as (e) — the drag-modal gate above tests only Ctrl+Q,
+    // so Esc is UNBOUND there and falls through with every other key while a
+    // gesture is in flight; it is NOT one of the eight), the first seven
+    // earlier in this function than this point, so reaching here means the
+    // press has nothing left to do BUT the stack. THEY ARE LISTED IN RANK
+    // ORDER, outermost modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
     //       since it can only fire while one of the editors owns the
@@ -1036,13 +1037,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       replaced were members of (b), so the count grew by one place, and
     //       it did not move again when the `h` view's own picker retired
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
-    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
+    //   (e) THE NOTIFICATION STACK'S OLDEST CARD (architect 2026-08-31) — the
+    //       LAST rung, at the bare-key tail (handle_plain_bare_keys' Escape
+    //       arm, input_key_dispatch.cpp, where the reasoning lives): a press
+    //       none of the seven above claims dismisses the card at the BOTTOM of
+    //       the stack, whatever its class, and with no card standing the arm
+    //       is the ruled silence it has always been. It is the X's keyboard
+    //       twin and it is RANKED rather than privileged — the X's own pointer
+    //       claim sits above every veil, this key under all of them.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
     // onto and off the overlay; the retirement is argued at the site it stood at,
     // just above the cancel).
     // THE `h` HISTORY VIEW ADMITTED BARE ESC ON 2026-08-04 AND THE COUNT DID NOT
-    // MOVE: its allowlist stopped dropping the key, which lets (d) run
+    // MOVE: its allowlist stopped dropping the key, which lets (d) — and,
+    // since 2026-08-31, (e), the mode's own cards being ordinary cards — run
     // inside the view. That rung is what the ADMISSION buys, not the only rung
     // reachable in there (re-derived 2026-08-28): the view also opens the
     // load confirmation on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a),
@@ -1066,7 +1076,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the music, a marker touched, a sweep ended (the rule is at
     // clear_region_highlight, input_handler.h).
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
-    // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
+    // is place (e) — the oldest card's dismissal, and an explicit no-op with no
+    // card standing (handle_plain_bare_keys) — the one place the press ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
@@ -1098,6 +1109,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // picker once.
     if (is_open_project_key(key, mods)) {
         open_project_picker();
+        return;
+    }
+
+    // BARE BACKSLASH — SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-31).
+    // The File menu's one CHORD-LESS row joins the keyboard: its binding was
+    // REFUSED in 2026-08-27 rather than deferred (Ctrl+Alt+Shift+R keeping its
+    // meaning), and `\` costs that family nothing, being a key the product
+    // bound nowhere. IT SITS BESIDE OPEN AND QUIT for the same reason they sit
+    // together — the acts on the session as a whole — and the placement is
+    // otherwise free: every state that must refuse the act refuses it ABOVE
+    // this line (a standing prompt, the player's and the picker's routers, an
+    // open dropdown, the editor text drag, any keyboard-modal editor) or
+    // INSIDE THE ACT'S OWN BODY, which is where the menu row's road has always
+    // met them (the modal refusals, the loading state, no source loaded, the
+    // single act in flight, and every sentence the act says). Nothing is
+    // restated here, and the row keeps calling that body directly — the key
+    // and the row are two roads to ONE act, not two acts.
+    // THE `h` VIEW ADMITS IT (the mode's allowlist, on the 2026-08-29 "admit
+    // both" ruling that seated Ctrl+O beside Ctrl+Q there): the row already
+    // ran in the view, so the key had to. Bare-exact through the shared
+    // predicate the two allowlists read, so the arm and the gates cannot
+    // drift. Not repeat-eligible: that gate is an allowlist of the stepping
+    // keys and this one is not on it, so a held `\` mirrors once.
+    if (is_sync_external_key(key, mods)) {
+        synchronize_to_external_storage();
         return;
     }
 

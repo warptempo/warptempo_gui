@@ -1128,8 +1128,9 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   is dead — and File is the one that answers it the other way. ITS MENU IS
 //   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
 //   "admit both"): Ctrl+Q always was, Ctrl+O joined the mode's allowlist that
-//   day, and Synchronize is the menu's one CHORDLESS row, which meets that
-//   allowlist nowhere and answers inside its own act. Two of the three were
+//   day, and Synchronize's act carries no history-mode refusal at all — its
+//   own bare `\` joining that allowlist 2026-08-31, so the row and its chord
+//   answer the view alike. Two of the three were
 //   consumed nothings from their 2026-08-28 landing until that ruling, the state
 //   this arm's own criterion would have greyed the anchor for had an anchor
 //   been derivable at all. (THE NAVIGATION ANCHOR was the
@@ -1205,8 +1206,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // toggle_dropdown, which refuses to open it at all.
     if (b == RedesignButton::Series) return true;
     // FILE IS THE ANCHOR THE CRITERION ANSWERS LIVE (2026-08-29): all three of
-    // its rows act in the view — Ctrl+Q and Ctrl+O through the allowlist,
-    // Synchronize being chordless — so the menu opens onto three working rows
+    // its rows act in the view — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
+    // `\` all on the allowlist — so the menu opens onto three working rows
     // and a dead face would be a lie. Hand-named for the anchors' shared
     // reason (no chord for the walk below to ask about), and kept as its own
     // arm rather than left to the walk's unlisted default so that the tail's
@@ -7751,12 +7752,16 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // Nothing greys now: that menu and its predicate are deleted.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
-        // THE ONE ROW WITH NO CHORD (the File menu's Synchronize to external
-        // storage): no key binds it — the binding was refused rather than
-        // deferred — so the release calls the act directly, and the act carries
-        // the gates a chord would have met in its own body: the modal refusals,
-        // the `h` view, the loading state (synchronize_to_external_storage's
-        // declaration). Still CLOSE FIRST, THEN ACT, for the reason above.
+        // THE ONE ROW THAT DOES NOT DISPATCH ITS KEY (the File menu's
+        // Synchronize to external storage): its binding was REFUSED rather
+        // than deferred, so this release was written to call the act directly
+        // and the act carries the gates a chord would have met in its own
+        // body — the modal refusals, the `h` view, the loading state
+        // (synchronize_to_external_storage's declaration). THE ACT HAS A KEY
+        // SINCE 2026-08-31 (bare `\`) AND THIS FORK STAYS: both roads reach
+        // that one body, so the row keeps the shorter one and the row's `key`
+        // field stays unread (the record is at GuiPopupAct, app_state.h).
+        // Still CLOSE FIRST, THEN ACT, for the reason above.
         // (THE FILE MENU'S OPEN ROW LEFT THIS FORK on 2026-08-28, when the
         // architect bound the prompt to Ctrl+O: it is an ordinary chord row now
         // and rides the dispatch below like Quit, which is the standing model.)

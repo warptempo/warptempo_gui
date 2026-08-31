@@ -2711,12 +2711,16 @@ private:
     // what they mean, exactly as render_player_active below does.
     bool picker_active() const { return app.picker.active; }
 
-    // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — the File menu's
-    // ONE chordless act since 2026-08-28 (Open took Ctrl+O that day), reached
-    // from ONE place, the menu's own row
-    // (finish_dropdown_release, the GuiPopupAct::SyncExternal item; NO KEYBOARD
-    // CHORD BINDS IT and none is deferred — Ctrl+Alt+Shift+R keeps its current
-    // meaning). WHAT it mirrors onto the stick, and the mirror's own scope and
+    // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — reached from TWO
+    // places, both landing in this one body: the File menu's own row
+    // (finish_dropdown_release, the GuiPopupAct::SyncExternal item, which calls
+    // this directly rather than dispatching a chord) and BARE BACKSLASH since
+    // 2026-08-31 (architect; is_sync_external_key, gui_input.h — on_key's arm
+    // sits beside Ctrl+O's, and both allowlists admit it). It was the File
+    // menu's ONE CHORD-LESS act from 2026-08-28, when Open took Ctrl+O, until
+    // that date: the binding had been REFUSED rather than deferred
+    // (Ctrl+Alt+Shift+R keeping its current meaning), and `\` is the spelling
+    // that costs the render family nothing. WHAT it mirrors onto the stick, and the mirror's own scope and
     // order, are stated whole at external_sync.h; WHERE it goes is the DEVICE
     // CONFIG's `sync_path` since 2026-08-30 (device_config.h — it was the
     // seam's own `GuiPlatform::removable_volume` answer until then, a

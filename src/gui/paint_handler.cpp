@@ -1032,8 +1032,9 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //
 // FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
 // when the table above was written and asked 168; it carries THREE rows now —
-// "Open project" | "Ctrl+O", "Synchronize to external storage" (the one
-// chord-less row) and "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
+// "Open project" | "Ctrl+O", "Synchronize to external storage" | "\\" (its
+// accelerator since 2026-08-31; the row was chord-less before it) and
+// "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
 // run puts its content past the 242, so that popup is DERIVED at every scale
 // now like Settings and Edit. NO NUMBER IS STATED FOR IT HERE: the ink is the
 // shaper's and the rows are app_state.h's (kFilePopupItems), so a figure
@@ -3373,9 +3374,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // window-close X in a second button box at that pad from the right edge —
 // the boxes sitting that same pad below the card's top and above its foot.
 // The card's width
-// is its content's, clamped to [kNotificationMinWidthPx, a third of the
-// window] (the floor wins on a window narrower than three floors — a
-// contrived window). THE X WEARS THE ICON BUTTON'S HOVER FACE while the
+// is its content's, clamped to [kNotificationMinWidthPx,
+// notification_card_max_w_px] — the authored ceiling since 2026-08-31, scaled
+// like every other length, with the window itself as a safety under it. THE X WEARS THE ICON BUTTON'S HOVER FACE while the
 // pointer rests in its box — the 1 px accent outline through the shared face
 // box, nothing else — and the card's body wears none.
 //
@@ -3466,6 +3467,9 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const text_shape::ShapedRun whole =
             text_shape::shape_text_run(font, n.text);
         int w = chrome_w + static_cast<int>(std::nearbyint(whole.width_px));
+        // max_w never answers under min_w (the owner floors it there, so the
+        // room this paints into cannot be narrower than the card), and the
+        // std::max keeps the clamp's own precondition stated at the call.
         w = std::clamp(w, min_w, std::max(min_w, max_w));
         const int card_x    = right_x - w;
         const int glyph_x   = card_x + pad;

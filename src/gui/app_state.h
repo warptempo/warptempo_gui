@@ -3029,13 +3029,23 @@ inline constexpr int kSettingsPopupItemCount =
 // WHAT A COMMAND ROW DISPATCHES. `Chord` is the standing model — THE ITEM IS
 // ITS KEY, dispatched through on_key so every keyboard gate applies (the rule
 // is stated at kFilePopupItems and at the release body,
-// finish_dropdown_release). THE OTHER ONE IS THE ROW WITH NO CHORD, the File
-// menu's `SyncExternal` (File → Synchronize to external storage): its keyboard
-// binding was REFUSED outright (architect 2026-08-27: Ctrl+Alt+Shift+R keeps
-// its current meaning, and the act gets a menu row instead of a chord), so its
-// release calls the act directly, and the act carries the gates a chord would
-// have met — the modal refusals, the `h` view's allowlist, the loading state —
-// in its own body.
+// finish_dropdown_release). THE OTHER ONE IS `SyncExternal`, the File menu's
+// Synchronize row, whose RELEASE CALLS THE ACT DIRECTLY: that act carries the
+// gates a chord would have met — the modal refusals, the `h` view, the loading
+// state — in its own body, which is what made a chord-less row possible in the
+// first place (architect 2026-08-27: the binding was REFUSED outright,
+// Ctrl+Alt+Shift+R keeping its meaning).
+//
+// IT KEPT THIS SHAPE WHEN THE ACT GAINED A KEY (architect 2026-08-31, bare
+// `\`), and the difference from Open's 2026-08-28 case is why. Open's chord was
+// merely DEFERRED, so its row had never been anything but a chord row waiting
+// for its chord, and the enumerator went with the wait; this act's binding was
+// REFUSED, and its body was BUILT to answer for itself. Both roads reach that
+// one body — the row calling it, the key reaching it from on_key — so they are
+// two callers of one act rather than two acts, the `key` field below stays
+// unread on this row (the fork is above the chord composition), and the
+// enumerator keeps its producer. A future act that genuinely cannot have a
+// chord takes this same shape.
 //
 // IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open project) sat beside it while
 // Open's chord was merely DEFERRED rather than refused, and the architect then
@@ -3080,18 +3090,20 @@ struct CommandPopupItem {
 // read-only toggle; the two are neighbours on one letter, not partners). Open's
 // row was the `OpenProject` GuiPopupAct until that date, calling the opener
 // directly because no key bound it, and the enumerator died with the binding.
-// ONLY SYNCHRONIZE HAS NO CHORD now — its binding was REFUSED rather than
-// deferred, the architect keeping Ctrl+Alt+Shift+R's current meaning and giving
-// the act a menu row instead, so there is no chord to add later without taking
-// one from the render family — and its release calls
+// ALL THREE HAVE A CHORD SINCE 2026-08-31, when the architect gave Synchronize
+// BARE BACKSLASH — a spelling the product bound nowhere, so the render family
+// keeps Ctrl+Alt+Shift+R exactly as his 2026-08-27 refusal intended. ITS ROW IS
+// STILL THE ONE THAT DOES NOT DISPATCH ITS KEY: the release calls
 // GuiInputHandler::synchronize_to_external_storage directly, that act carrying
-// in its own body the gates a chord would have met.
-// EACH ROW ANSWERS THE `h` HISTORY VIEW IN ITS OWN WAY, and all three answers
-// are the keyboard's: Ctrl+Q is on the view's allowlist, so Quit works in there
-// exactly as it does outside; Ctrl+O is not, so the Open project row is a consumed
-// no-op in the view — the same refusal the opener's own history-mode guard
-// gives, which is the allowlist's standing answer for a dialog open — and the
-// Synchronize act refuses in its body for the same reason.
+// in its own body the gates a chord would have met, and the key reaches the
+// same body from on_key — two roads to one act (the shape's record is at
+// GuiPopupAct).
+// ALL THREE ROWS RUN IN THE `h` HISTORY VIEW (architect 2026-08-29, "admit
+// both"): Ctrl+Q always did, Ctrl+O joined the mode's allowlist that day, and
+// the Synchronize act has carried no history-mode refusal since the same
+// ruling — its bare `\` joining that allowlist beside the other two on
+// 2026-08-31, so the row and its chord answer the view alike. The menu has no
+// dead row in there.
 //
 // IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
 // no-gesture-hints-in-UI preference is about hint PROSE inside labels, and the
@@ -3104,9 +3116,11 @@ struct CommandPopupItem {
 // both are; the convention's OTHER half — a bare letter written UPPERCASE — is
 // the SERIES table's two rows ("M", "I") and is recorded at
 // RedesignTooltipText, where it is contrasted with the tooltips' lowercase
-// rule. The Synchronize row carries no hotkey text, which the painter reads per
-// row (a null hotkey paints no accelerator on that row alone) — it was the
-// second such row until Open took its chord on 2026-08-28.
+// rule. The Synchronize row's accelerator is `\` since 2026-08-31, the bare-letter
+// convention one punctuation key over. NO ROW IN THIS TABLE CARRIES A NULL
+// HOTKEY NOW, though the painter still reads the field per row (a null hotkey
+// paints no accelerator on that row alone) — there were two such rows until
+// Open took its chord on 2026-08-28 and one until Synchronize took its.
 //
 // AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE, with NO EXCEPTION since
 // 2026-08-15: a command that cannot act right now still dispatches and its own
@@ -3129,7 +3143,11 @@ struct CommandPopupItem {
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
-    {"Synchronize to external storage", nullptr, 0, false, false, false, false,
+    // The `key` field stays 0 on this row and is never read: the release
+    // forks on `act` above the chord composition and calls the act itself
+    // (the record is at GuiPopupAct). Its chord, bare `\`, lives on the
+    // keyboard's own road and is advertised here by the accelerator alone.
+    {"Synchronize to external storage", "\\", 0, false, false, false, false,
      GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
@@ -5983,11 +6001,13 @@ struct AppState {
     // BARE ESC IS ADMITTED (architect 2026-08-04) AND ADDS NO ESC PLACE OF ITS
     // OWN. The bare-Esc inventory is the one enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
-    // so the binding that can be live in here runs — the RENDER / BATCH CANCEL
-    // (a render launched before `h`). The REGION HIDE was the other one until
-    // 2026-08-21, when it retired.
-    // It touches no authored state, which is why admitting it costs the frozen
-    // now side nothing. With no render standing, Esc is a consumed nothing.
+    // so the bindings that can be live in here run — the RENDER / BATCH CANCEL
+    // (a render launched before `h`) and, since 2026-08-31, THE OLDEST CARD'S
+    // DISMISSAL, the mode's own refusals being ordinary cards. The REGION HIDE
+    // was another until 2026-08-21, when it retired.
+    // Neither touches authored state, which is why admitting the key costs the
+    // frozen now side nothing. With no render and no card standing, Esc is a
+    // consumed nothing.
     //
     // WHAT IT REFUSES, and where: every state-mutating route is a consumed no-op
     // while it stands, through TWO gates and no scattered ifs — history_mode_-

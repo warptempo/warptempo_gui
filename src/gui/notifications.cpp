@@ -20,8 +20,21 @@ int notification_pad_px() {
 }
 
 int notification_card_max_w_px(const AppState& a) {
-    const int floor_w = scaled_px(kNotificationMinWidthPx);
-    return std::max(floor_w, a.width / 3);
+    // THE CEILING IS AUTHORED AND SCALED, NOT A FRACTION OF THE WINDOW
+    // (architect 2026-08-31, the reasoning at the declaration): 640 authored
+    // px is what `a.width / 3` gave on the 1920 px laptop, so the card the
+    // laptop already had is now the card every device gets, in millimetres
+    // rather than in device pixels.
+    const int floor_w   = scaled_px(kNotificationMinWidthPx);
+    const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
+    // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:
+    // the stack sits inside the panel's two margins, so a window that cannot
+    // hold the ceiling gets what it has; a window that cannot hold the FLOOR
+    // keeps the floor and lets the card overhang, because this number is also
+    // the ROOM the painter clips and the damage owner erases (a bound under
+    // the floor would strand pixels outside it).
+    const int room_w = a.width - 2 * folder_overlay::pad_px();
+    return std::max(floor_w, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {

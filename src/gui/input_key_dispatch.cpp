@@ -246,6 +246,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // to protect. Ctrl-exact, through the shared predicate the dispatch arm
     // reads, so the key and this gate cannot drift.
     const bool is_open_project = is_open_project_key(key, mods);
+    // SYNCHRONIZE TO EXTERNAL STORAGE, bare `\` since 2026-08-31. It is
+    // admitted on the header's own standard and was already read-only-legal
+    // through its menu row, which carries no gate of this kind: the act
+    // AUTHORS NOTHING — it reads two output folders and writes OUTSIDE the
+    // project entirely, onto the folder `sync_path` names — so the lock has
+    // nothing to protect from it. Bare-exact through the shared predicate the
+    // dispatch arm reads, so the key and this gate cannot drift. NO FACE
+    // FOLLOWS IT: the act's one button is a MENU ROW, and a menu item never
+    // greys (kFilePopupItems).
+    const bool is_sync_external = is_sync_external_key(key, mods);
     const bool is_play_pause = is_play_pause_key(key, mods);
     // THE A/B AUDITION (2026-08-26) is admitted on the header's own standard:
     // it plays and switches tabs — playback and navigation, both already on
@@ -350,8 +360,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     // Bare Escape only: a modified Escape carries no binding anywhere, so it has
     // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the RENDER /
-    // BATCH CANCEL, which is what reaches this gate. It mutates nothing
-    // persistent, so it is read-only-safe like every one of Esc's bindings (the
+    // BATCH CANCEL and, since 2026-08-31, THE OLDEST NOTIFICATION CARD'S
+    // DISMISSAL at the bare tail — the two of Esc's places that reach this
+    // gate. Neither mutates anything
+    // persistent, so both are read-only-safe like every one of Esc's bindings (the
     // authoritative enumeration is at its dispatch point in on_key,
     // input_handler.cpp; no count belongs here), and dropping Esc at this gate
     // would break it. THE REGION HIDE WAS THE OTHER ADMISSION UNTIL 2026-08-21
@@ -486,7 +498,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
     // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
     // see is_trim_region_toggle above.
-    return !(is_o || is_open_project || is_play_pause || is_ab_audition ||
+    return !(is_o || is_open_project || is_sync_external ||
+             is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
@@ -2155,8 +2168,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate is what admits File's Ctrl+Q — and, since 2026-08-29, its
 // Ctrl+O — in there. THE FILE MENU HAS NO DEAD ROW IN THE VIEW as of that day
 // (architect, "admit both"): Open project rides this admission, Quit always
-// did, and Synchronize is the menu's one CHORDLESS row, which meets no gate
-// here at all and refuses or runs inside its own act.
+// did, and Synchronize's act carries no history-mode refusal at all — its own
+// bare `\` riding this admission too since 2026-08-31, so the row and its
+// chord answer the view alike.
 // (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
 // the same way, refusing nothing else on it — its remaining four were claimed
 // one line above as the mode's own vocabulary — while the row whose chord means
@@ -2313,9 +2327,18 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // the strict rule's consumed no-op here as everywhere), which is also what
     // keeps this admission and the read-only allowlist's answering the same
     // question the same way. THE FILE ANCHOR'S FACE READS THIS LINE by the
-    // derived partition: with Synchronize chordless and Quit and Open both
-    // admitted, every row of that menu is live in the view.
+    // derived partition: with Quit, Open and — since 2026-08-31 — Synchronize
+    // all admitted, every row of that menu is live in the view.
     const bool is_open_project = is_open_project_key(key, mods);
+    // SYNCHRONIZE IS ADMITTED TOO, bare `\` since 2026-08-31, and it needs no
+    // argument of its own: the ACT has run in the view since 2026-08-29
+    // (architect, "admit both") through the File menu's row, whose road meets
+    // no gate here at all, so refusing the key would make the row and its
+    // chord disagree — the one thing an allowlist may not do. The act's own
+    // reasoning is the easy one: it authors nothing, stops no playback, writes
+    // outside the project entirely, and its sentences are notification cards,
+    // which this mode cannot hide.
+    const bool is_sync_external = is_sync_external_key(key, mods);
     // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
     // all three bare-exact, read off their own arms in on_key (the `t` toggle,
     // the `p` toggle, and the 1/2/3 absolute selectors, which compose those two
@@ -2358,7 +2381,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_ctrl_q || is_open_project);
+             is_save || is_ctrl_q || is_open_project || is_sync_external);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -5919,8 +5942,12 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 // -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
 
 // The act's GUI half: the gates, the destination, the capture, the dispatch.
-// It is reached from the File menu's Synchronize row alone, whose release has
-// already closed the popup.
+// TWO ROADS REACH IT and neither restates anything: the File menu's
+// Synchronize row, whose release has already closed the popup and calls this
+// directly, and BARE BACKSLASH on the ordinary dispatch since 2026-08-31
+// (is_sync_external_key, gui_input.h). The gates below are what let the row
+// have no chord of its own for four days and what the key needs none of its
+// own beyond its place in on_key.
 void GuiInputHandler::synchronize_to_external_storage() {
     // The Open project row's own gates, mirrored: a menu row's refusals belong
     // to the menu, not to the act. Each returns without touching playback —
@@ -7163,14 +7190,31 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape:
-        // TOP-LEVEL ESCAPE IS A NO-OP AND SAYS NOTHING (architect 2026-08-30,
-        // the one silence the strictness ruling leaves on this dispatch): Esc
-        // is the product's dismissal, bound in seven places and reaching this
-        // arm only when there is nothing standing to dismiss — the render
-        // cancel above it having found no render — so the press means "never
-        // mind" and is ALREADY answered by the surface that did not close. A
-        // card would answer a retraction with a complaint. It is an arm of its
-        // own and not the default's for exactly that reason.
+        // ESC CLEARS THE OLDEST CARD (architect 2026-08-31), at the tail of
+        // its own ranking and nowhere else: every one of Esc's other places
+        // is EARLIER in on_key, so reaching this arm means nothing modal is
+        // standing and no render is in flight, and the last thing the press
+        // can be aimed at is the stack. THE OLDEST, not the newest — his
+        // reasoning: clearing the top would let the bottom card stick around
+        // preferentially, so the key empties the stack the way the clock
+        // does, from the back. A CRITICAL CARD IS DISMISSED LIKE ANY OTHER:
+        // Esc is the X's keyboard twin and the X takes any class, so this arm
+        // reads no class either (the bump is the act that skips criticals,
+        // and it is not this one).
+        //
+        // WITH NO CARDS THE ARM IS THE RULED SILENCE (architect 2026-08-30):
+        // a press that finds nothing to dismiss means "never mind" and is
+        // already answered by the surface that did not close — a card would
+        // answer a retraction with a complaint. It is an arm of its own and
+        // not the bare default's for exactly that reason.
+        //
+        // IT IS RANKED, NOT PRIVILEGED: the X's own claim sits above every
+        // veil because a card must be dismissable under any modal, while this
+        // key sits UNDER all of them — a standing prompt, editor, player or
+        // picker takes the press for its own close, and the card waits for
+        // its clock, its X, or an Esc once that surface is down.
+        if (!app.notifications.cards.empty())
+            notifications.dismiss(app.notifications.cards.back().id);
         break;
     case GuiKeys::Left:
         // WAVEFORM-LANE playhead step: reached only with an EMPTY selection,

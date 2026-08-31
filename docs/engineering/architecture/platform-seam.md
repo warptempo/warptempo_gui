@@ -273,9 +273,15 @@ what the face replaced.
 
 ## Synchronize to external storage
 
-`GuiPopupAct::SyncExternal`, the File menu's one chordless row (architect
-2026-08-27, landed 2026-08-28 in `b92ea097`/`95ea84d4`), mirrors the open
-project onto the folder the DEVICE CONFIG names.
+`GuiPopupAct::SyncExternal`, the File menu's row (architect 2026-08-27, landed
+2026-08-28 in `b92ea097`/`95ea84d4`), mirrors the open project onto the folder
+the DEVICE CONFIG names. It was the menu's ONE CHORD-LESS ROW until 2026-08-31,
+when the architect gave the act BARE BACKSLASH — a spelling the product bound
+nowhere, so the render family keeps `Ctrl+Alt+Shift+R` exactly as his refusal
+of a binding in 2026-08-27 intended. The row still calls the act directly
+rather than dispatching that chord (the act's body carries the gates), so the
+two are roads to one body, and both allowlists — read-only and the `h` view's —
+admit the key.
 
 **THE DESTINATION IS TOLD, NOT FOUND** (architect 2026-08-30). It is
 `sync_path`, the device config's fifth key (`settings.md`'s device-config

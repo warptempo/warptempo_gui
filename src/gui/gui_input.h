@@ -47,6 +47,7 @@ namespace GuiKeys {
     constexpr GuiKey Equal        = 0x003d;
     constexpr GuiKey At           = 0x0040;
     constexpr GuiKey BracketLeft  = 0x005b;
+    constexpr GuiKey Backslash    = 0x005c;
     constexpr GuiKey BracketRight = 0x005d;
 
     // Navigation, editing, control.
@@ -231,47 +232,53 @@ struct GuiInputState {
 // one every chord in HELP and in the docs is written in (Ctrl+Alt+Shift+R), so
 // the card and the documentation spell one chord one way.
 //
-// A KEY WITH NO SPELLING IS "That key", whole, modifiers and all: an unknown
-// keysym has no name to hang a prefix on, and "Ctrl+that key" reads as a
-// misspelling rather than as an answer.
+// EVERY CHORD THIS SPELLER IS ASKED FOR HAS A NAME, BY CONSTRUCTION, and there
+// is no fallback for one that does not (architect 2026-08-31): the three
+// readers ask chord_is_bound first, and every key that inventory admits is
+// either named in the table below or a printable ASCII character spell_chord
+// upper-cases. every_bound_key_is_spellable, beside chord_is_bound's own
+// anchors, PINS the implication at compile time, so a binding added on a key
+// with no name breaks the build rather than reaching a card.
 //
-// THE TABLE NAMES FAR MORE THAN ANY CARD CAN NOW REACH, AND IT STAYS WHOLE.
-// It was written when a press the platform could name and the card would not
-// was an identity thrown away: the Wayland boundary forwards the level-0
-// keysym of every key that is not an F-key and not a modifier
+// THE TABLE IS THE BOUND SET'S AND NOTHING WIDER (architect 2026-08-31, his
+// DELETE). It carried THREE MORE BLOCKS — the keypad whole, the editing and
+// system block, and the laptop's own vendor strip, in a GuiSpellKeys namespace
+// of their own — written when a press the platform could name and the card
+// would not was an identity thrown away: the Wayland boundary forwards the
+// level-0 keysym of every key that is not an F-key and not a modifier
 // (GuiPlatform::key_from_keycode), so the unbound half of a PC keyboard
-// reaches this speller, and the table answers for THE BOARDS THIS PRODUCT IS
-// TYPED ON in exactly three blocks — the keypad whole, the editing and system
-// block, and the laptop's own vendor strip. Since the unbound-keys ruling no
-// card composes a name for any of those three: every chord that reaches this
-// speller is one chord_is_bound admits, and no GuiSpellKeys value is in that
-// inventory, which leaves "That key" unreachable with them. THE TABLE IS NOT
-// PRUNED ARM BY ARM FOR THAT — it is ONE OWNER of what a key is CALLED,
-// complete by construction rather than by the current set of callers, and the
-// day any surface wants the name of a key this product does not bind it asks
-// here instead of starting a second table.
+// reaches this speller. THE UNBOUND-KEYS RULING TOOK THEIR LAST PRODUCER on
+// 2026-08-30 — every gate that names a chord speaks only for a chord
+// chord_is_bound admits, and no value in those blocks was in that inventory —
+// and they stood one more day as "one owner of what a key is called, complete
+// rather than caller-shaped". THE ARCHITECT RULED THAT KEEPING OUT: an arm
+// exists iff a producer exists (validation_topology.md), and there is no
+// FUNCTIONAL side to the deletion at all — the ignoring of a keypad or a
+// vendor press never lived in this speller, it lives in the dispatch, which
+// binds none of them and answers them with the silence either way. A future
+// binding on one of those keys brings its name with it.
 //
-// WHAT THE RULING DISSOLVED IS THE COST THE CLAIM CARRIED. The claim was
-// narrowed 2026-08-30 closing codex round D's MED-2 (the earlier "every key
-// the producer can identify" being a promise the table does not keep), and
-// the narrowing's accepted cost was that a vendor keysym outside the three
-// blocks — XF86Calculator, browser Back/Forward, Power, Sleep, WLAN, keyboard
-// brightness, Touchpad Toggle, a space of hundreds — would read "That key is
-// not bound". There is no such sentence any more: an unbound key is answered
-// by the silence, whatever its name, so nothing is owed to the vendor space
-// and the table is not chased any wider. THE XKB ROAD STAYS REJECTED on its
-// own reasoning — deriving the name from xkbcommon at the Wayland boundary
-// (xkb_keysym_get_name) would put a STRING on the key event and so widen the
-// platform seam for a name the Android backend, which produces GuiKeys only
-// through synthesize_key, could never spell the same way; the two hosts must
-// answer one press one sentence.
+// WHAT WENT WITH THE BLOCKS: the "That key" fallback ("A KEY WITH NO SPELLING
+// IS 'That key', whole, modifiers and all" — an unknown keysym having no name
+// to hang a prefix on), which those blocks were the last thing standing
+// between and unreachability; and the vendor space the 2026-08-30 narrowing
+// had accepted as unnamed (XF86Calculator, browser Back/Forward, Power, Sleep,
+// WLAN, keyboard brightness, Touchpad Toggle, a space of hundreds), which that
+// day's ruling had already stopped owing a sentence to. THE XKB ROAD STAYS
+// REJECTED on its own reasoning — deriving the name from xkbcommon at the
+// Wayland boundary (xkb_keysym_get_name) would put a STRING on the key event
+// and so widen the platform seam for a name the Android backend, which
+// produces GuiKeys only through synthesize_key, could never spell the same
+// way; the two hosts must answer one press one sentence.
 //
 // NO F-KEY ARM, deliberately: F1..F35 are dropped at the Wayland boundary
 // before delivery (GuiPlatform::key_from_keycode, "this GUI binds none of
 // them") and the Android backend produces GuiKeys only through synthesize_key,
-// so no F-key can reach a card on either host. An arm exists iff a producer
-// does (validation_topology.md); if a backend ever delivers one it spells
-// "That key" until the arm is added with it.
+// so no F-key can reach a card on either host — and none is bound, so none
+// could reach this speller in any case. An arm exists iff a producer does
+// (validation_topology.md): a backend that delivered one would have to BIND it
+// before a card could name it, and the compile-time pin above is what would
+// then ask for the name.
 //
 // KEY REPEAT RIDES THE CARDS' OWN DEDUP: a held key whose repeats are eligible
 // (repeat_eligible, input_key_dispatch.cpp) re-fires its gate at the
@@ -293,111 +300,22 @@ inline std::string spell_modifiers(GuiInputState mods) {
     return out;
 }
 
-// THE KEYSYMS THIS PRODUCT NAMES AND BINDS NOWHERE (2026-08-30). GuiKeys above
-// is the BOUND vocabulary — a value there exists because a predicate matches
-// it. These exist for the SPELLER ALONE: the Wayland boundary forwards every
-// non-F, non-modifier key's level-0 keysym, so this is what the product can be
-// handed and what it can therefore CALL something. Nothing may bind one of
-// these without moving it into GuiKeys first; the two namespaces are the bound
-// and the merely nameable, and the split is the point — chord_is_bound's
-// inventory is drawn from GuiKeys alone, and no value below is in it.
-// NO CARD REACHES THIS BLOCK any more (the unbound-keys ruling: the three
-// gates that name a chord speak only for a chord chord_is_bound admits, and an
-// unbound press is answered by silence), and the block stays whole for the
-// reason stated at the speller's head — it is one owner of what a key is
-// called, complete rather than caller-shaped, and a per-arm prune would be a
-// table to rebuild the next time a surface wants a name.
-// THE TABLE IS THREE BLOCKS AND CLOSES THERE — the editing and system block,
-// the keypad, the laptop's vendor strip.
-// (Values are the universal keysym numbering GuiKey already mirrors.)
-namespace GuiSpellKeys {
-    // The editing and system block a PC keyboard carries beside the six
-    // navigation keys GuiKeys already names.
-    constexpr GuiKey Insert      = 0xff63;
-    constexpr GuiKey Menu        = 0xff67;
-    constexpr GuiKey Print       = 0xff61;
-    constexpr GuiKey SysReq      = 0xff15;
-    constexpr GuiKey ScrollLock  = 0xff14;
-    constexpr GuiKey Pause       = 0xff13;
-    constexpr GuiKey Break       = 0xff6b;
-    constexpr GuiKey NumLock     = 0xff7f;
-    constexpr GuiKey MultiKey    = 0xff20;   // the Compose key
-    constexpr GuiKey Clear       = 0xff0b;
-    constexpr GuiKey Linefeed    = 0xff0a;
-    constexpr GuiKey Begin       = 0xff58;
-    constexpr GuiKey Select      = 0xff60;
-    constexpr GuiKey Execute     = 0xff62;
-    constexpr GuiKey UndoKey     = 0xff65;
-    constexpr GuiKey RedoKey     = 0xff66;
-    constexpr GuiKey Find        = 0xff68;
-    constexpr GuiKey CancelKey   = 0xff69;
-    constexpr GuiKey Help        = 0xff6a;
-
-    // THE KEYPAD, whole. Its operators carry one level and always arrive as
-    // themselves; its ten dual-legend keys arrive as WHATEVER LEVEL 0 IS on
-    // the layout in force — the navigation keysym on the ordinary PC map
-    // (KP_End, not KP_1), the digit on a map that puts the digit first — and
-    // the table names both faces so the card reads out what was delivered
-    // rather than guessing at the cap.
-    constexpr GuiKey KpSpace     = 0xff80;
-    constexpr GuiKey KpTab       = 0xff89;
-    constexpr GuiKey KpMultiply  = 0xffaa;
-    constexpr GuiKey KpAdd       = 0xffab;
-    constexpr GuiKey KpSeparator = 0xffac;
-    constexpr GuiKey KpSubtract  = 0xffad;
-    constexpr GuiKey KpDecimal   = 0xffae;
-    constexpr GuiKey KpDivide    = 0xffaf;
-    constexpr GuiKey KpEqual     = 0xffbd;
-    constexpr GuiKey Kp0         = 0xffb0;   // .. Kp9 = 0xffb9, contiguous
-    constexpr GuiKey Kp9         = 0xffb9;
-    constexpr GuiKey KpHome      = 0xff95;
-    constexpr GuiKey KpLeft      = 0xff96;
-    constexpr GuiKey KpUp        = 0xff97;
-    constexpr GuiKey KpRight     = 0xff98;
-    constexpr GuiKey KpDown      = 0xff99;
-    constexpr GuiKey KpPageUp    = 0xff9a;   // KP_Prior
-    constexpr GuiKey KpPageDown  = 0xff9b;   // KP_Next
-    constexpr GuiKey KpEnd       = 0xff9c;
-    constexpr GuiKey KpBegin     = 0xff9d;
-    constexpr GuiKey KpInsert    = 0xff9e;
-    constexpr GuiKey KpDelete    = 0xff9f;
-
-    // THE LAPTOP'S VENDOR STRIP. These reach the program only where the
-    // compositor has NOT claimed one for itself, which is a per-desktop fact
-    // this program cannot know — so they are named here rather than assumed
-    // absent, on the same rule as the rest of the table.
-    constexpr GuiKey BrightnessUp   = 0x1008ff02;
-    constexpr GuiKey BrightnessDown = 0x1008ff03;
-    constexpr GuiKey VolumeDown     = 0x1008ff11;
-    constexpr GuiKey Mute           = 0x1008ff12;
-    constexpr GuiKey VolumeUp       = 0x1008ff13;
-    constexpr GuiKey MediaPlay      = 0x1008ff14;
-    constexpr GuiKey MediaStop      = 0x1008ff15;
-    constexpr GuiKey MediaPrev      = 0x1008ff16;
-    constexpr GuiKey MediaNext      = 0x1008ff17;
-    constexpr GuiKey MicMute        = 0x1008ffb2;
-}
-
-// The named keys, and the whole of them: every GuiKey that is not a printable
-// ASCII character, plus Space (a printable that reads as a blank), plus every
-// keysym of GuiSpellKeys above — the unbound half of the boards this product
-// is typed on, named because the producer names them and the table carries
-// them (its three blocks, and no further; no card reaches those three, the
-// head owning that reasoning). The two pairs that share a name share it
-// deliberately — Return / KpEnter are one "Enter" to the hand, and IsoLeftTab
-// IS the shifted Tab keysym. THE KEYPAD IS SPELLED "Keypad <legend>" and the
-// keypad's Enter is NOT (it stays the hand's one "Enter", the pair above):
-// the prefix exists to separate a key from its twin on the main board, and
-// Enter has no twin the answer would confuse.
-inline const char* spell_key_name(GuiKey key) {
-    if (key >= GuiSpellKeys::Kp0 && key <= GuiSpellKeys::Kp9) {
-        // The ten digit faces, contiguous in the keysym table and spelled from
-        // it rather than as ten arms — "Keypad 0" .. "Keypad 9".
-        static const char* const kDigits[10] = {
-            "Keypad 0", "Keypad 1", "Keypad 2", "Keypad 3", "Keypad 4",
-            "Keypad 5", "Keypad 6", "Keypad 7", "Keypad 8", "Keypad 9"};
-        return kDigits[key - GuiSpellKeys::Kp0];
-    }
+// The named keys, and the whole of them: every key chord_is_bound admits that
+// is not a printable ASCII character, plus Space (a printable that reads as a
+// blank). THE MEMBERSHIP IS THE BOUND SET'S (architect 2026-08-31, the head's
+// ruling) and it is closed in both directions: nothing can ask for the name of
+// a key this product binds nowhere, every reader gating on chord_is_bound
+// first, and every_bound_key_is_spellable pins the other way round — no bound
+// key is left without a name here, which is what lets spell_chord carry no
+// unnamed fallback. The two pairs that share a name share it deliberately —
+// Return / KpEnter are one "Enter" to the hand, and IsoLeftTab IS the shifted
+// Tab keysym.
+//
+// BACKSPACE LEFT WITH THE THREE NAME-ONLY BLOCKS on 2026-08-31: it is one of
+// the keys chord_is_bound lists as deliberately absent — the editors consume
+// it themselves and no gate on the main dispatch can name it — so its arm had
+// no producer either.
+constexpr const char* spell_key_name(GuiKey key) {
     switch (key) {
         case GuiKeys::Space:      return "Space";
         case GuiKeys::Return:
@@ -405,7 +323,6 @@ inline const char* spell_key_name(GuiKey key) {
         case GuiKeys::Tab:
         case GuiKeys::IsoLeftTab: return "Tab";
         case GuiKeys::Escape:     return "Esc";
-        case GuiKeys::BackSpace:  return "Backspace";
         case GuiKeys::Delete:     return "Delete";
         case GuiKeys::Home:       return "Home";
         case GuiKeys::End:        return "End";
@@ -415,59 +332,6 @@ inline const char* spell_key_name(GuiKey key) {
         case GuiKeys::Down:       return "Down";
         case GuiKeys::Left:       return "Left";
         case GuiKeys::Right:      return "Right";
-
-        case GuiSpellKeys::Insert:      return "Insert";
-        case GuiSpellKeys::Menu:        return "Menu";
-        case GuiSpellKeys::Print:       return "Print Screen";
-        case GuiSpellKeys::SysReq:      return "Sys Req";
-        case GuiSpellKeys::ScrollLock:  return "Scroll Lock";
-        case GuiSpellKeys::Pause:       return "Pause";
-        case GuiSpellKeys::Break:       return "Break";
-        case GuiSpellKeys::NumLock:     return "Num Lock";
-        case GuiSpellKeys::MultiKey:    return "Compose";
-        case GuiSpellKeys::Clear:       return "Clear";
-        case GuiSpellKeys::Linefeed:    return "Linefeed";
-        case GuiSpellKeys::Begin:       return "Begin";
-        case GuiSpellKeys::Select:      return "Select";
-        case GuiSpellKeys::Execute:     return "Execute";
-        case GuiSpellKeys::UndoKey:     return "Undo";
-        case GuiSpellKeys::RedoKey:     return "Redo";
-        case GuiSpellKeys::Find:        return "Find";
-        case GuiSpellKeys::CancelKey:   return "Cancel";
-        case GuiSpellKeys::Help:        return "Help";
-
-        case GuiSpellKeys::KpSpace:     return "Keypad Space";
-        case GuiSpellKeys::KpTab:       return "Keypad Tab";
-        case GuiSpellKeys::KpMultiply:  return "Keypad *";
-        case GuiSpellKeys::KpAdd:       return "Keypad +";
-        case GuiSpellKeys::KpSeparator: return "Keypad ,";
-        case GuiSpellKeys::KpSubtract:  return "Keypad -";
-        case GuiSpellKeys::KpDecimal:   return "Keypad .";
-        case GuiSpellKeys::KpDivide:    return "Keypad /";
-        case GuiSpellKeys::KpEqual:     return "Keypad =";
-        case GuiSpellKeys::KpHome:      return "Keypad Home";
-        case GuiSpellKeys::KpLeft:      return "Keypad Left";
-        case GuiSpellKeys::KpUp:        return "Keypad Up";
-        case GuiSpellKeys::KpRight:     return "Keypad Right";
-        case GuiSpellKeys::KpDown:      return "Keypad Down";
-        case GuiSpellKeys::KpPageUp:    return "Keypad Page Up";
-        case GuiSpellKeys::KpPageDown:  return "Keypad Page Down";
-        case GuiSpellKeys::KpEnd:       return "Keypad End";
-        case GuiSpellKeys::KpBegin:     return "Keypad Begin";
-        case GuiSpellKeys::KpInsert:    return "Keypad Insert";
-        case GuiSpellKeys::KpDelete:    return "Keypad Delete";
-
-        case GuiSpellKeys::BrightnessUp:   return "Brightness Up";
-        case GuiSpellKeys::BrightnessDown: return "Brightness Down";
-        case GuiSpellKeys::VolumeDown:     return "Volume Down";
-        case GuiSpellKeys::Mute:           return "Mute";
-        case GuiSpellKeys::VolumeUp:       return "Volume Up";
-        case GuiSpellKeys::MediaPlay:      return "Media Play";
-        case GuiSpellKeys::MediaStop:      return "Media Stop";
-        case GuiSpellKeys::MediaPrev:      return "Media Previous";
-        case GuiSpellKeys::MediaNext:      return "Media Next";
-        case GuiSpellKeys::MicMute:        return "Mic Mute";
-
         default:                  return nullptr;
     }
 }
@@ -476,9 +340,14 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
     std::string name;
     if (const char* named = spell_key_name(key)) {
         name = named;
-    } else if (key > 0x20 && key < 0x7f) {
-        // The GuiKey IS the character (the keysym table is ASCII here), and it
-        // is the KEY'S OWN character, never mods.codepoint: the shifted `1` is
+    } else {
+        // EVERY OTHER BOUND KEY IS A PRINTABLE ASCII CHARACTER, and the GuiKey
+        // IS that character (the keysym table is ASCII here) — the guarantee
+        // at spell_key_name, pinned by every_bound_key_is_spellable — so this
+        // is the second and last arm and there is no unnamed third (the "That
+        // key" fallback retired 2026-08-31 with the speller's three name-only
+        // blocks, which were the only thing that could reach it). It is the
+        // KEY'S OWN character, never mods.codepoint: the shifted `1` is
         // still the 1 key, and a card that called it "!" would name a press the
         // user cannot find on the board. Letters arrive case-folded from the
         // platform boundary, so this is the one place they are put back up.
@@ -486,7 +355,6 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
         if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
         name.assign(1, c);
     }
-    if (name.empty()) return "That key";
     const std::string prefix = spell_modifiers(mods);
     if (prefix.empty()) return name;
     return prefix + "+" + name;
@@ -542,8 +410,11 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
 // Backspace, and every letter the ladder never tests (A, B, E, V, W, X, Y);
-// every GuiSpellKeys value; and every modifier decoration no arm spells,
-// which is strict modifier validation's whole no-op class.
+// every key the boards carry that this switch names nowhere (the keypad, the
+// editing and system block, the vendor strip — the speller named them too
+// until 2026-08-31, when the blocks were deleted for want of a producer); and
+// every modifier decoration no arm spells, which is strict modifier
+// validation's whole no-op class.
 constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
     const bool ctrl = mods.ctrl, alt = mods.alt, shift = mods.shift;
     const bool bare  = !ctrl && !alt && !shift;   // no modifier at all
@@ -593,6 +464,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         case GuiKeys::Equal: case GuiKeys::Minus: return bare || cl;
         // The `h` walk: bare steps, shift jumps to its ends.
         case GuiKeys::Comma: case GuiKeys::Period: return bare || sh;
+        // Synchronize to external storage (2026-08-31).
+        case GuiKeys::Backslash: return bare;
 
         // Play from the playhead, and the A/B audition.
         case GuiKeys::Space: return bare || sh;
@@ -637,10 +510,46 @@ static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}) &&
                   !chord_is_bound(GuiKeys::Space,
                                   GuiInputState{true, false, false}),
               "Space binds bare and shifted only — strict modifier validation");
-static_assert(!chord_is_bound(GuiSpellKeys::Insert, GuiInputState{}) &&
-                  !chord_is_bound(GuiSpellKeys::KpAdd, GuiInputState{}) &&
-                  !chord_is_bound(GuiSpellKeys::VolumeUp, GuiInputState{}),
-              "the speller's three name-only blocks bind nothing");
+static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}) &&
+                  !chord_is_bound(GuiKeys::Backslash,
+                                  GuiInputState{true, false, false}),
+              "Synchronize is bare backslash and no decoration of it");
+
+// THE SPELLER'S GUARANTEE, PINNED (2026-08-31, the day its three name-only
+// blocks and its "That key" fallback were deleted): EVERY CHORD THIS
+// PREDICATE ADMITS HAS A NAME — its key is either in spell_key_name's table or
+// a printable ASCII character spell_chord upper-cases — which is exactly what
+// lets that speller carry no unnamed arm. A binding added on a key with
+// neither breaks the build here instead of putting a control byte on a card.
+//
+// THE WALK'S RANGE IS THE TWO HOMES GuiKey LIVES IN, and it is a claim about
+// the switch above rather than about keysym space: every GuiKeys value is
+// either an ASCII keysym (0x20..0x7e) or one of the function-key blocks'
+// (0xfe20 for the shifted Tab, 0xff00..0xffff for the rest), so a case label
+// outside these ranges would need a GuiKeys value outside them — the day this
+// range grows with it. Eight modifier combinations per key, the whole space
+// strict modifier validation can present.
+consteval bool every_bound_key_is_spellable() {
+    auto spellable = [](GuiKey k) {
+        return spell_key_name(k) != nullptr || (k > 0x20 && k < 0x7f);
+    };
+    auto scan = [&](uint32_t lo, uint32_t hi) {
+        for (uint32_t k = lo; k <= hi; ++k) {
+            const GuiKey key = static_cast<GuiKey>(k);
+            if (spellable(key)) continue;
+            for (int bits = 0; bits < 8; ++bits) {
+                const GuiInputState mods{(bits & 1) != 0, (bits & 2) != 0,
+                                         (bits & 4) != 0};
+                if (chord_is_bound(key, mods)) return false;
+            }
+        }
+        return true;
+    };
+    return scan(0x0020, 0x007f) && scan(0xfe00, 0xffff);
+}
+static_assert(every_bound_key_is_spellable(),
+              "a bound chord with no name: give the key an arm in "
+              "spell_key_name");
 
 // True for the chord that toggles playback: BARE Space only. Modifier-strict —
 // a Space carrying ctrl or alt has no binding, and the ONE shifted form is a
@@ -682,6 +591,27 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 // row dispatches this very chord through on_key like every other command row.
 inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that runs SYNCHRONIZE TO EXTERNAL STORAGE (architect
+// 2026-08-31): BARE BACKSLASH exactly — no ctrl, no shift, no alt. Synchronize
+// was the File menu's ONE CHORD-LESS ROW from its 2026-08-27 landing (the
+// architect refusing a binding then rather than deferring one, Ctrl+Alt+Shift+R
+// keeping its meaning), and this is the row joining the keyboard: `\` is a key
+// the product bound nowhere and carries no convention to honour, so it costs
+// no chord from the render family. The act is
+// GuiInputHandler::synchronize_to_external_storage, whose own body carries
+// every gate (the modal refusals, the loading state, no source loaded, the
+// single act in flight) — which is why the key needs none of its own beyond
+// its place in the dispatch. THREE READERS, the shape shared so none can
+// drift: on_key's dispatch arm (input_handler.cpp), the read-only allowlist
+// (read_only_key_blocked — ADMITTED, the act authoring nothing and writing
+// outside the project entirely) and the `h` view's allowlist
+// (history_mode_key_blocked — ADMITTED, on the 2026-08-29 "admit both" ruling
+// that put Ctrl+O beside Ctrl+Q there; the menu's row already ran in the view
+// through its own body).
+inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 // True for the chord that DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER

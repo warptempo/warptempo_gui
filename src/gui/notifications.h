@@ -48,9 +48,9 @@
 //              line have the card alone. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
-//              the clock) or at its X.
+//              the clock), at its X, or at a bare Esc that reaches the stack.
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
-//              until its X; no clock.
+//              until its X or that same Esc; no clock.
 //
 // WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
 // ("that would get annoying"), a Synchronize that mirrored the project, a
@@ -84,7 +84,11 @@
 //     DISPATCH asks chord_is_bound (gui_input.h) before it speaks. THE
 //     UNBOUND POINTER PRESS goes with it: a modified press the waveform, the
 //     top strip or the overlay's band binds nothing for says nothing.
-//   * TOP-LEVEL BARE ESC — a retraction with nothing to dismiss. Esc inside a
+//   * TOP-LEVEL BARE ESC WITH AN EMPTY STACK — a retraction with nothing to
+//     dismiss. That arm's other half is an ACT since 2026-08-31: Esc dismisses
+//     the OLDEST card when one stands (the key is the X's keyboard twin, the
+//     hit section below), and the silence is what is left when there is none.
+//     Esc inside a
 //     gate is NOT this case: Esc is a BOUND chord, so the drag gates card it
 //     with every other bound key.
 //   * THE RENDER PLAYER'S MODIFIED PRESS ON THE SCRUB TRACK (the folder
@@ -157,7 +161,23 @@
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
 // THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
-// THE X, AND ONLY THE X, DISMISSES A CARD, on both backends. A press on the
+// THE X, AND ONLY THE X, DISMISSES A CARD ON THE POINTER — and since
+// 2026-08-31 THAT X HAS A KEYBOARD TWIN, bare Esc at the tail of its own
+// ranking, which dismisses the stack's OLDEST card. The succession is exact
+// and the 2026-08-29 ruling is untouched: it says where a PRESS may land on a
+// card (the X's box and nothing else, one rule for finger and mouse), and the
+// key lands on no card at all. THE TWO DIFFER IN RANK, deliberately: the X's
+// claim sits ABOVE EVERY VEIL because a card must be dismissable under any
+// modal, while Esc sits UNDER all of them — every other Esc place is earlier
+// in the dispatch, so the key reaches the stack only when nothing modal
+// stands and no render is in flight (the EIGHT places are enumerated at
+// on_key, input_handler.cpp; the arm itself is handle_plain_bare_keys').
+// OLDEST, NOT NEWEST, in his own reasoning: clearing the top would let the
+// bottom card stick around preferentially, so the key empties the stack from
+// the back the way the clock does. It reads no class — a critical card is
+// dismissed like any other, exactly as the X takes any class.
+//
+// The pointer's own rule, unchanged: on both backends, a press on the
 // card's BODY is consumed whole — arms nothing, moves nothing, lands no
 // playhead, reaches nothing underneath — and dismisses nothing. The router
 // cannot fork on tap versus click (no origin bit rides a press;
@@ -220,10 +240,22 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 inline constexpr const char* kTargetPreviewNotReadyCard =
     "Wait for the target preview to finish rendering";
 
-// The card's width is its content's, clamped to [this, a third of the
-// window]. Authored px, scaled like every other length. On a window narrower
-// than three of these the floor wins — a contrived window, not catered for.
+// The card's width is its content's, clamped to [this, kNotificationMaxWidthPx
+// below]. Authored px, scaled like every other length.
 inline constexpr double kNotificationMinWidthPx = 240.0;
+
+// THE CARD'S CEILING IS THE LAPTOP'S OWN WIDTH, AUTHORED AND SCALED (architect
+// 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
+// 1920 px laptop, so this constant is that width made CANONICAL — the same
+// card at every window and, through `scaled_px`, the same card in millimetres
+// at every gui_scale. The window fraction was DEVICE PIXELS and so starved the
+// tablet: at 225 % its 1440 px panel gave a 480 px card for text shaped half
+// again as large, three words to a line. IT MAY NOW COVER BUTTONS ON THE
+// TABLET and that is accepted in his own words — "it's okay if it covers up
+// some buttons": a card is a sentence to read and it leaves on its own.
+// A length, so it scales; the life beside it (kNotificationMs) is a duration
+// and does not.
+inline constexpr double kNotificationMaxWidthPx = 640.0;
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
 // whose sentence does not fit its room GROWS DOWNWARD to this many lines and
@@ -260,8 +292,18 @@ int notification_card_h_px();
 // buttons — the same floor, not a second rule.
 int notification_pad_px();
 
-// The card's largest possible width at this window and scale (the clamp's
-// upper bound, or the floor where the window is narrower than three floors).
+// The card's largest possible width at this window and scale: the scaled
+// ceiling above, and — where the window cannot even hold that — the window
+// itself less the stack's two side margins. THE WINDOW TERM IS A SAFETY AND
+// NOT A DESIGN (architect 2026-08-31, retiring `window / 3`): the ceiling is
+// what the design says a card is wide, and the clamp only keeps a card inside
+// a window too narrow for it (the tablet's portrait panel, a contrived
+// window). IT NEVER ANSWERS BELOW THE FLOOR: the painter clamps a card's
+// content width into [floor, this] and THE ROOM BELOW IS THIS SAME NUMBER, so
+// a bound under the floor would put painted pixels outside the rect that
+// damages and publishes them. A window narrower than the floor itself
+// therefore keeps the floor and lets a card overhang, exactly as the retired
+// fraction did — the contrived window this file declines to cater for.
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
@@ -359,8 +401,11 @@ struct GuiNotifications {
     // card just pushed (the full argument is at the site).
     void notify(AppState::NotificationClass cls, std::string text);
 
-    // THE X's act: remove the card whatever its class and state, and drop the
-    // hover if it was this card's.
+    // THE X's ACT, AND BARE ESC's ON THE OLDEST CARD (2026-08-31): remove the
+    // card whatever its class and state, and drop the hover if it was this
+    // card's. The two roads differ only in how they name the card — the X by
+    // the published rect under the pointer, Esc by the stack's back — and the
+    // live test below is asked of the argument either way.
     void dismiss(uint64_t id);
 
     // THE CLOCK, on the run loop's deadline tick: retire every normal card
