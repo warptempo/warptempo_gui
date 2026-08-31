@@ -79,15 +79,14 @@ int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 // history view's own pair, so the live bare Home / End, their ctrl forms and
 // the mode's absolute jumps spell one bound once instead of once per route
 // (the bottom row's two SKIP buttons dispatch bare Home / End like any other
-// chrome button and reach it that way); and, since 2026-08-30, THOSE SKIPS'
-// FACE (redesign_button_enabled), which greys where the resting cursor
-// already sits on this answer. That face reader lived one revision of
-// 2026-08-15 and was taken back the same day — a Home / End press is not a
-// pure jump (each also stops a live audition, clears the selection and hides
-// the trim region overlay, no-op jump included), so the grey promised less
-// than the key delivers — and the truthful-buttons ruling, naming the skips
-// outright, put it back; the record is at the skips' case in
-// redesign_button_enabled (app_state.h).
+// chrome button and reach it that way); and, since 2026-08-30,
+// playhead_end_jump_actionable just below, the jump acts' "would this form
+// change anything" owner, through which the SKIPS' FACE and the acts' own
+// no-op refusals read this landing (the succession — the one-revision face
+// of 2026-08-15, its reversal over the jump's side acts, the
+// truthful-buttons return and the twin rule folding those side acts into
+// the owner — is at the skips' case in redesign_button_enabled,
+// app_state.h).
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
                                     bool forward, bool whole_piece) {
     if (whole_piece || app.history_mode.active) {
@@ -106,6 +105,27 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
         navigation_trim_range(app, audio);
     return clamp_playhead_to_live_domain(
         forward ? range.second - 1 : range.first, app, audio);
+}
+
+// WOULD THIS FORM OF THE JUMP CHANGE ANYTHING — the contract and the reader
+// inventory are at the declaration (app_state.h). Each term is an act write
+// read from that write's own owner: the stop's (transport_session_live), the
+// selection clear's (the live arms' selection-or-focus pair, or the mode
+// arm's diff-flag pair through history_mode_revert_subject_standing — the
+// same two fields clear_history_mode_focus tests), the trim overlay hide's
+// (RegionState::shown, which Viewport::move_playhead_to hides
+// unconditionally), and the landing compare against the resting cursor.
+bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
+                                  bool forward, bool whole_piece) {
+    if (transport_session_live(app)) return true;
+    const bool clear_would_act =
+        app.history_mode.active
+            ? history_mode_revert_subject_standing(app.history_mode)
+            : (marker_selection_standing(app) || marker_focus_standing(app));
+    if (clear_would_act) return true;
+    if (app.region.shown) return true;
+    return playhead_skip_landing_frame(app, audio, forward, whole_piece) !=
+           app.playhead_cursor_sample;
 }
 
 // Viewport changes repaint the waveform area and the top strip together:

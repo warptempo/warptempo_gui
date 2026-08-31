@@ -1,6 +1,7 @@
 #include "selection.h"
 
 #include "audio.h"
+#include "engine/engine_geometry.h"  // kN — the lead-in offset's half-window
 #include "warp_frame_map_view.h"
 
 #include <cstdint>
@@ -8,7 +9,11 @@
 #include <set>
 #include <vector>
 
-std::optional<int64_t> Selection::phase_overlay_subject() const {
+namespace {
+// THE ONE SUBJECT DERIVATION, file-static so the member below and the lead-in
+// launch offset owner read one spelling (the contract is at the member's
+// declaration, selection.h).
+std::optional<int64_t> overlay_subject(const AppState& app) {
     // Mirror phase_reset_overlay_band's SELECTION-STATE visibility guards
     // (paint_handler.cpp) exactly: P view + target view, selection under the
     // 2-member suppression, and the focused marker a valid ENABLED phase reset.
@@ -41,6 +46,22 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return std::nullopt;
     if (markers[idx].disabled) return std::nullopt;
     return markers[idx].time_frame;
+}
+}  // namespace
+
+std::optional<int64_t> Selection::phase_overlay_subject() const {
+    return overlay_subject(app);
+}
+
+// THE LEAD-IN LAUNCH OFFSET (architect 2026-08-30) — the contract and the
+// reader inventory are at the declaration (app_state.h). It lives here
+// beside the one subject derivation it reads; kN/2 output samples is the
+// lead-in the overlay depicts, exact arithmetic and never the painted band.
+int64_t phase_reset_lead_in_launch_offset(const AppState& app,
+                                          const GuiPlayback& playback) {
+    return (!playback.is_playing() && overlay_subject(app).has_value())
+               ? kN / 2
+               : 0;
 }
 
 void Selection::damage_overlay_on_subject_change(

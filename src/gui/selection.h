@@ -69,9 +69,14 @@ struct Selection {
     // THREE READERS. Two are the damage owner just below (called at every
     // selection mutator): the overlay lives in the WAVEFORM but the selection
     // mutators damage only the top strip, so a change of subject
-    // needs waveform damage to paint/erase the overlay's forward span. The third is SPACE
-    // (input_handler.cpp, architect 2026-07-28): a start-edge Space with a
-    // subject launches the lead-in audition at cursor + kN/2. That reader is why
+    // needs waveform damage to paint/erase the overlay's forward span. The
+    // third is the LEAD-IN LAUNCH OFFSET OWNER
+    // (phase_reset_lead_in_launch_offset, defined beside this in
+    // selection.cpp since 2026-08-30): a start-edge Space with a subject
+    // launches the lead-in audition at cursor + kN/2 (input_handler.cpp,
+    // architect 2026-07-28), and the PLAY button's face reads the same
+    // offset ahead of time (space_launch_would_play), so the key and the
+    // glyph read ONE launch position. That reader is why
     // this is public, and why the STATE-ONLY spelling is load-bearing — keying
     // Space on the painted band instead would let a scroll or a zoom silently
     // change what Space does.

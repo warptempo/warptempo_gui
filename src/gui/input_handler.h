@@ -2506,9 +2506,13 @@ private:
     // an empty selection (playhead_in_marker_lane false).
     void handle_plain_bare_keys(GuiKey key);
 
-    // THE Home / End JUMP, one body for every route that spells it. Its three
-    // acts are UNCONDITIONAL and deliberately not gated on the jump moving
-    // anything: stop a live audition, clear the marker selection (the marker
+    // THE Home / End JUMP, one body for every route that spells it. A form
+    // that would change NOTHING — no live transport to stop, no selection to
+    // clear, no shown overlay to hide, a landing the cursor already rests on
+    // (playhead_end_jump_actionable, the acts' one owner) — refuses at the
+    // head with a card naming its own rest; past that, its three acts are
+    // UNCONDITIONAL and deliberately not gated on the jump moving anything:
+    // stop a live audition, clear the marker selection (the marker
     // lane's exit — the rule is at land_playhead_on_marker, input_pointer.cpp)
     // and land through Viewport::move_playhead_to, which owns the trim region
     // overlay's hide. `forward` picks End over Home; `whole_piece` asks the

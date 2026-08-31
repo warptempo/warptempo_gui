@@ -1784,6 +1784,22 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // piece's ends, and in here that is what a jump already means, so the chord
     // means one thing in every state and this arm needs no fork.
     if (key == GuiKeys::Home || key == GuiKeys::End) {
+        // A JUMP THAT WOULD CHANGE NOTHING SAYS SO here too (architect
+        // 2026-08-30, the live body's card): the actionability owner's mode
+        // arm reads the diff-flag focus this body clears and the
+        // piece's-ends landing its mode bit already selects, so the refusal
+        // is exactly "no write below would move anything". The sentences are
+        // the whole-piece pair's — in this view a jump means the piece's
+        // ends whichever spelling arrived.
+        if (!playhead_end_jump_actionable(app, audio, key == GuiKeys::End,
+                                          /*whole_piece=*/false)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                key == GuiKeys::End
+                    ? "The playhead is already at the end of the song"
+                    : "The playhead is already at the start of the song");
+            return true;
+        }
         playback_lifecycle.stop_playback_if_playing();
         // THE MODE ANALOG OF THE LIVE ARMS' SELECTION CLEAR: the playhead is
         // leaving the focused flag for a spot nothing marks, so the focus — and
@@ -1801,11 +1817,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // viewport.cpp), whose whole-piece arm this mode bit already selects —
         // which is why `whole_piece` is passed FALSE here and nothing is
         // duplicated: one spelling for every jump in the product. The bottom
-        // row's two SKIP buttons read it too since 2026-08-30 — greying in
-        // this view where the cursor already rests on the piece's end the
-        // owner's `h` arm names (they read it for one revision of 2026-08-15
-        // and not again until the truthful-buttons ruling; the succession is
-        // at their case in redesign_button_enabled). The owner's clamp is idempotent on
+        // row's two SKIP buttons grey in this view through
+        // playhead_end_jump_actionable, whose `h` arm reads this same
+        // landing and the mode's diff-flag clear (the succession is at their
+        // case in redesign_button_enabled). The owner's clamp is idempotent on
         // a value move_playhead_to would clamp anyway, so this jump is
         // byte-identical to the hand-spelled one.
         viewport.move_playhead_to(
@@ -6990,23 +7005,39 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // architect 2026-08-24). Both come back pre-clamped, and the clamp is idempotent
 // on what move_playhead_to would clamp anyway.
 //
-// THE THREE STEPS RUN ON A NO-OP JUMP TOO and are deliberately not gated on it:
-// the audition stop, the lane exit's selection clear and the overlay hide are
-// unconditional, so the key ACTS even when the cursor already rests on the
-// landing frame. The hide is unconditional AT ITS OWNER (move_playhead_to hides
-// before it writes, whatever the write turns out to be — the rule at
-// clear_region_highlight, input_handler.h); the trim it derives from is
-// untouched by any of this.
-// THAT IS WHY THE BOTTOM ROW'S SKIP BUTTONS DID NOT GREY from 2026-08-15 to
-// 2026-08-30 (the architect taking back the face that did: a grey promised
-// less than this body delivers, and gating the three steps to make the grey
-// honest would change behaviour). THE TRUTHFUL-BUTTONS RULING GREYS THEM
-// AGAIN where the landing equals the resting cursor and no transport session
-// is live, knowingly forgoing the selection clear and the overlay hide on the
-// dead face (the audition stop is moot, a live session keeping the face lit);
-// this body is untouched and the KEYS keep all three. The full record is at
-// the skips' case in redesign_button_enabled.
+// THE THREE STEPS STILL RUN UNGATED past the head refusal: the audition stop,
+// the lane exit's selection clear and the overlay hide are unconditional
+// wherever the body runs, and the head refusal fires only when all three
+// WOULD do nothing and the jump would not move — the actionability owner's
+// terms are this body's own writes, so the two cannot disagree. The hide is
+// unconditional AT ITS OWNER (move_playhead_to hides before it writes,
+// whatever the write turns out to be — the rule at clear_region_highlight,
+// input_handler.h); the trim it derives from is untouched by any of this.
+// THE SUCCESSION: the skips did not grey from 2026-08-15 to 2026-08-30 (a
+// landing-only grey promised less than this body delivers, and gating the
+// three steps to make it honest would change behaviour); the truthful-buttons
+// ruling greyed them again that morning, knowingly forgoing the side acts on
+// the dead face; the twin rule that evening folded the side acts into
+// playhead_end_jump_actionable, so the grey, this card and the body are one
+// decision — the full record is at the skips' case in
+// redesign_button_enabled.
 void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
+    // A FORM THAT WOULD CHANGE NOTHING SAYS SO (architect 2026-08-30, the
+    // twin rule's card): the owner's terms are exactly this body's writes —
+    // the stop, the clear, the mover's overlay hide and the landing — so
+    // past this return at least one act below does real work or the jump
+    // moves, and the card fires only for a press that would have been a
+    // whole no-op. Each form names its own rest.
+    if (!playhead_end_jump_actionable(app, audio, forward, whole_piece)) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            whole_piece
+                ? (forward ? "The playhead is already at the end of the song"
+                           : "The playhead is already at the start of the song")
+                : (forward ? "The playhead is already at the trim end"
+                           : "The playhead is already at the trim start"));
+        return;
+    }
     playback_lifecycle.stop_playback_if_playing();
     if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
         selection.clear_selection();

@@ -8145,6 +8145,19 @@ inline bool marker_focus_standing(const AppState& app) {
     return app.last_selected_marker >= 0;
 }
 
+// SHIFT+S'S OWN LEADING REFUSAL (architect 2026-08-30): the chord IS the
+// crossing from the warp column into phase reset's home, so with the P
+// column already standing there is nothing to cross and the act refuses
+// WHOLE — "Already in phase reset view", before any view switch, T+P and
+// S+P alike; bare `s` is untouched. TWO READERS: the act's head
+// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp) and
+// the Drop marker button's face (redesign_button_enabled), whose S+P grey
+// is this refusal meeting bare `s`'s off-home one — the twin rule's arm
+// there.
+inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
+    return a.active_markers_view != 'P';
+}
+
 // THE TEMPO CENT STEP'S COLUMN GATE — bare Up / Down author TEMPO, and tempo
 // is the WARP column's alone: a phase reset has no tempo to step. It is the
 // first refusal in GuiWarpMarkersOps::adjust_tempo_cents (which the singleton
@@ -8192,9 +8205,10 @@ inline bool tempo_cent_step_actionable(const AppState& app) {
 // phase (a REST between its plays is transport-live: the act is one session
 // from its first play to its last). FOUR READERS: the play/stop button's
 // GLYPH (redesign_button_glyph_swapped — Stop while this is true), and since
-// 2026-08-30 the SKIPS', PLAY'S and the LEFT / RIGHT pair's enabled arms (a
-// live session keeps all five lit: a press then stops, or stops and steps,
-// never nothing). The play/stop
+// 2026-08-30 PLAY'S and the LEFT / RIGHT pair's enabled arms plus the SKIPS'
+// actionability owner playhead_end_jump_actionable, which their face and the
+// jump acts' refusals read (a live session keeps all five buttons lit: a
+// press then stops, or stops and steps, never nothing). The play/stop
 // FORK bare Space takes reads the same phase term with playback.is_playing()
 // as its other term — the audio callback's own flag, on a different clock
 // from the tick-cleared scanner bit — and the sub-tick disagreement that
@@ -8601,19 +8615,22 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 //
 // TWO READERS SINCE 2026-08-30: the shared jump body run_playhead_end_jump
 // (input_key_dispatch.cpp), which every Home / End route funnels through, and
-// the bottom row's two SKIP buttons' FACE (redesign_button_enabled), which
-// greys where the resting cursor already sits on this answer and no transport
-// session is live. THE FACE READER IS THE ONE THIS WAS HOISTED FOR, and it
-// went and came back: the buttons read it for one revision of 2026-08-15 and
-// the architect ruled that half out the same day — a Home / End press is not
-// a pure jump (each also stops a live audition, clears the marker selection
-// and hides the trim region overlay, even when the jump moves nothing), so a
-// greyed skip promised less than its key delivers — leaving the owner on the
-// ACT's account alone; the truthful-buttons ruling names the skips outright
-// ("even the transport's back/forward when you're already at the home or the
-// beginning of the trim") and the face reads it again, the two forgone acts
-// recorded at the skips' case in redesign_button_enabled. The header stays
-// here, beside the predicate that reads it, rather than in viewport.h.
+// playhead_end_jump_actionable (below), the jump acts' one "would this form
+// change anything" owner, through which the two SKIP buttons' FACE and the
+// acts' own no-op refusals read this compare rather than reading it bare.
+// THE FACE READER IS THE ONE THIS WAS HOISTED FOR, and its shape moved three
+// times: the buttons read the bare compare for one revision of 2026-08-15
+// and the architect ruled that half out the same day — a Home / End press is
+// not a pure jump (each also stops a live audition, clears the marker
+// selection and hides the trim region overlay, even when the jump moves
+// nothing), so a greyed skip promised less than its key delivers; the
+// truthful-buttons ruling of 2026-08-30 named the skips outright ("even the
+// transport's back/forward when you're already at the home or the beginning
+// of the trim") and the compare came back for the morning, knowingly
+// forgoing those side acts; the twin rule that evening folded the side acts
+// into the actionability owner, so the grey forgoes nothing again — the full
+// succession is at the skips' case in redesign_button_enabled. The header
+// stays here, beside the predicate that reads it, rather than in viewport.h.
 //
 // IT HAS TWO ARMS, which is the whole reason it is a function rather than a
 // pair of expressions. THE TRIM ARM is the ordinary one: bare Home / End land
@@ -8635,6 +8652,25 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // identically, so the arithmetic they adopted stayed byte-identical.
 int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
                                     bool forward, bool whole_piece);
+
+// WOULD THIS FORM OF THE Home / End JUMP CHANGE ANYTHING (architect
+// 2026-08-30, the twin rule) — the jump acts' one refusal owner and the two
+// SKIP buttons' face term, defined in viewport.cpp beside the landing
+// arithmetic it composes. TRUE iff the press would do something: a live
+// transport session (the press stops it — transport_session_live), a
+// standing selection for the act's unconditional clear (the live arms'
+// selection-or-focus pair; inside the `h` view the MODE's diff-flag
+// focus/selection, the mode arm's own clear, read through
+// history_mode_revert_subject_standing — the same two fields
+// clear_history_mode_focus tests), a SHOWN trim region overlay for the
+// mover's unconditional hide (RegionState::shown), or a landing that
+// differs from the resting cursor. Every term is an act write read from the
+// act's own owner, never a restatement. FOUR READERS: run_playhead_end_jump
+// and the `h` view's own jump arm (each refusing WITH A CARD when its form
+// would change nothing) and the two skip faces (redesign_button_enabled,
+// asking both forms and greying only when neither would act).
+bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
+                                  bool forward, bool whole_piece);
 
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
@@ -9052,7 +9088,9 @@ inline bool playback_launch_playable(const AppState& a,
 // lit through a refusal is exactly what a per-tick face CANNOT know, and each
 // such case is named at its arm: the value-shaped tails that need the act's
 // own resolution run (a label ref or a bracket wall under Up/Down, an empty
-// payload under Copy value, the lead-in offset under Play), and the refusals
+// payload under Copy value — the LEAD-IN OFFSET left this list on 2026-08-30,
+// the architect reversing its recorded seam: Play's face reads the REAL
+// launch position through space_launch_would_play below), and the refusals
 // that live on disk (Play renders, the history opener). The walls — frame 0
 // under Left and the last frame under Right, the walk's "nothing ahead" and
 // the history walk's ends — are NOT on that list: each reads its act's own
@@ -9061,6 +9099,21 @@ inline bool playback_launch_playable(const AppState& a,
 // Zoom out at the per-file ceiling and the magnification pair at its two
 // rungs' ends grey; Zoom in, `0` and `c` stay lit because each always acts
 // (the first recentres at the floor, the second runs `c` at the ceiling).
+//
+// THE TWIN RULE (architect 2026-08-30, reversing the same day's
+// shift-admission precedent — the tablet relies on buttons): a button with
+// an ADMITTED MODIFIED TWIN greys only when EVERY variant — the plain press
+// AND its shift or ctrl twin — would change nothing. With any variant live
+// the button stays lit, the plain lift reaches the act, and the act's own
+// refusal answers on a card; the dead face therefore means no press of any
+// spelling would do anything, so the grey forgoes nothing. Three arms carry
+// it: the two SKIPS (playhead_end_jump_actionable asked of the bare and the
+// whole-piece form alike), PLAY (the A/B audition's press-time preflight,
+// ab_audition_preflight_ok, as the arm's third term) and DROP MARKER (lit
+// wherever bare `s` or Shift+S would act, grey exactly in S+P). The members
+// whose twin already refuses exactly where the plain form does — Copy value
+// on its one shared gate, the history walk pair at its walls, Render on a
+// blank piece — satisfy it with nothing added.
 //
 // IT REVERSES THE 2026-08-15 SCOPED-TRUTH RULING, kept here in his words
 // because it stood for fifteen days and its reasoning is what the reversal
@@ -9265,11 +9318,12 @@ inline bool playback_launch_playable(const AppState& a,
 // the arm, and THE PARAMETER LEFT WITH ITS ONE PRODUCER RATHER THAN RESTING
 // UNREAD; on 2026-08-30 the truthful-buttons ruling put both arms back and
 // the objects returned with them, plus a third.
-//   * GuiAudio is the skips' — they call playhead_skip_landing_frame, which
-//     needs the object rather than the frame count (this header only
-//     FORWARD-DECLARES GuiAudio, so `total_frames` stays a separate parameter
-//     for the inline arms that want the count alone) — gone 2026-08-15 with
-//     the skips' plain `true`, back with their landing compare.
+//   * GuiAudio is the skips' — they call playhead_end_jump_actionable,
+//     which composes playhead_skip_landing_frame and needs the object rather
+//     than the frame count (this header only FORWARD-DECLARES GuiAudio, so
+//     `total_frames` stays a separate parameter for the inline arms that
+//     want the count alone) — gone 2026-08-15 with the skips' plain `true`,
+//     back with their landing compare; the audition preflight reads it too.
 //   * GuiPlayback is PLAY'S — it reads the bound preview buffer's domain
 //     through playback_launch_playable, state that deliberately lives on
 //     GuiPlayback rather than AppState (the domain anchor travels with the
@@ -9292,6 +9346,38 @@ bool payload_eligible_marker(const AppState& app, int idx);
 // GuiTargetRender::preview_ready, reachable from this inline body although
 // the class is only forward-declared here. The contract is at the member.
 bool target_preview_ready(const GuiTargetRender& target_render);
+
+// THE LEAD-IN LAUNCH OFFSET, one owner (architect 2026-08-30, lifting the
+// Space arm's inline derivation): kN/2 output samples when the phase-reset
+// lead-in overlay has a SUBJECT and nothing is playing, else 0 — the offset
+// Space's launch adds to the resting cursor. Defined in selection.cpp beside
+// the one subject derivation it reads (Selection::phase_overlay_subject's
+// own spelling). TWO READERS: the Space dispatch arm (input_handler.cpp) and
+// space_launch_would_play below, which is how the PLAY face reads the REAL
+// launch position instead of the resting cursor alone.
+int64_t phase_reset_lead_in_launch_offset(const AppState& a,
+                                          const GuiPlayback& playback);
+
+// WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR — the ask-ahead
+// composition of the plain launch's own gates in the act's own order (the
+// device, the dispatch arm's target-preview gate, toggle_playback's
+// overflow-ordered end gate, playback_launch_playable on the offset launch
+// position), defined in playback_lifecycle.cpp beside toggle_playback so the
+// composition and the act read as one. ONE READER: the PLAY button's face
+// (redesign_button_enabled), its plain term under the twin rule.
+bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
+                             const GuiTargetRender& target_render,
+                             int64_t total_frames);
+
+// WOULD THE A/B AUDITION'S PRESS-TIME PREFLIGHT PASS — the same gates
+// GuiAbAudition::start cards on (the device, then both tabs' launch
+// readiness), composed in ab_audition.cpp beside that body so the two read
+// as one; the running-sequence refusal is deliberately absent (a standing
+// sequence is transport_session_live, which the face reads first). ONE
+// READER: the PLAY button's face, its shift-twin term under the twin rule.
+bool ab_audition_preflight_ok(const AppState& a, const GuiAudio& audio,
+                              const GuiPlayback& playback,
+                              const GuiTargetRender& target_render);
 
 // (transport_session_live — the one owner of "a transport session is live" —
 // sits above with the arrow-step predicates since round B of the strictness
@@ -9546,8 +9632,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // the other mirrored arms: the 2026-08-15 arm added ONE term and was
         // to add no second one; the second term arrived by ruling, and the
         // seat stayed because the guard would change nothing here — every
-        // selection term is false on a blank piece, and the two that carry
-        // none (Drop, Load in place) keep the seat's original argument.
+        // selection term is false on a blank piece, the Drop's column-pair
+        // term reads view state a blank piece still has (harmless: its
+        // chords drop at on_key's loading return either way), and Load in
+        // place, carrying none, keeps the seat's original argument.
         // Dropping them past the guard would grey them during a load —
         // arguably truthful, since their chords drop at on_key's own loading
         // return, but a change no ruling has made.
@@ -9558,17 +9646,24 @@ inline bool redesign_button_enabled(const AppState& a,
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
         //
-        // THE DROP CARRIES NO SELECTION TERM AND NO HOME-VIEW TERM (planner's
-        // call under the 2026-08-30 ruling, recorded here): bare `s` refuses
-        // off home, but the button is never a no-op there — its SHIFT twin is
-        // Shift+S, the phase-reset drop FROM ANY VIEW, and that twin is the
-        // LONG PRESS, glass's only road to it. A face greyed for the plain
-        // chord would take the shifted one with it (a greyed button consumes a
-        // shift press with its plain one), so the button stays lit off home
-        // and the plain press's refusal stays the chord's own. The
-        // occupied-frame refusal is a frame fact the lane shows.
+        // THE DROP GREYS EXACTLY IN S+P (architect 2026-08-30) and nowhere
+        // else past the lock — the twin rule's own arm: bare `s` refuses off
+        // home (active_column_authoring_allowed) and Shift+S, the phase-reset
+        // drop that CROSSES from the warp column, refuses once the P column
+        // already stands (phase_reset_drop_crossing_actionable, the act's own
+        // leading refusal — "Already in phase reset view"), and S+P is the
+        // one state where both are true. Everywhere else at least one form
+        // acts, so the button stays lit — the shift twin is the LONG PRESS,
+        // glass's only road to it — and the plain press's refusal stays the
+        // chord's own card. It carried no home-view term at all from the
+        // ruling's morning landing (the planner's call: the twin then dropped
+        // from ANY view) until the crossing refusal made S+P a whole no-op
+        // that evening. The occupied-frame refusal is a frame fact the lane
+        // shows.
         case RedesignButton::IconMarkerDrop:
-            return !active_view_state(a).read_only;
+            return !active_view_state(a).read_only &&
+                   (active_column_authoring_allowed(a) ||
+                    phase_reset_drop_crossing_actionable(a));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
         // empty selection in either column, and off home in the P column —
         // marker_selection_verb_actionable, which the two dispatch arms read.
@@ -9657,11 +9752,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // inherit, Edit flag and the Measure (that same arm), on UP / DOWN,
         // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block), and
         // THE TRANSPORT THREE at the second switch below the loading guard —
-        // the two SKIPS where the resting cursor already sits on the landing
-        // frame ("even the transport's back/forward when you're already at
-        // the home or the beginning of the trim"), PLAY where the launch from
-        // the resting cursor would refuse — their predicates needing a loaded
-        // piece, which is what that switch is for.
+        // the two SKIPS where neither the bare nor the whole-piece jump
+        // would change anything ("even the transport's back/forward when
+        // you're already at the home or the beginning of the trim", read
+        // through the acts' own actionability owner), PLAY where the plain
+        // launch AND the A/B audition would both refuse — their predicates
+        // needing a loaded piece, which is what that switch is for.
         //
         // WHAT THE ROW DOES NOT GREY, and why, so nobody "completes" it:
         //   (THE WALLS AND THE WALK'S "NOTHING AHEAD" WERE ON THIS LIST for the
@@ -9689,21 +9785,27 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // PLAY'S FACE READS THE LAUNCH'S OWN REFUSALS AGAIN (2026-08-30, at the
         // second switch): while a transport session is live it is STOP and
-        // always live; at rest it greys in target view with no preview to play
-        // (GuiTargetRender::preview_ready, Space's own first refusal) and
-        // wherever a launch from the RESTING CURSOR would refuse
-        // (playback_launch_playable, the launch body's own — the two-frame
-        // remainder gate against the song's or the bound buffer's end, the
-        // bound domain's lower edge, an empty target buffer). WHAT IT DOES NOT
-        // SEE: the LEAD-IN OFFSET — with a phase-reset overlay subject standing
-        // Space launches kN/2 ahead of the cursor, so in the last kN/2 frames
-        // of the target domain the key refuses while this face stays lit;
-        // the subject is Selection's (phase_overlay_subject) and a per-tick
-        // face asks about the plain launch alone, recorded rather than
-        // restated. A GREYED PLAY LOSES SHIFT+SPACE, the A/B audition — the
-        // shift-admission precedent (a greyed Drop marker loses Shift+S): the
-        // audition plays the OTHER tab first and could have run, and the
-        // tooltip's shift line still names it on the dead face.
+        // always live; at rest it greys only where NOTHING it can do would
+        // play (the twin rule at the head of this body). Its plain term is
+        // space_launch_would_play — the ask-ahead composition of Space's own
+        // gates in the act's own order (the device, the target preview's
+        // readiness, playback_launch_playable), defined beside toggle_playback
+        // — and SINCE THE SAME EVENING IT SEES THE LEAD-IN OFFSET (the
+        // architect reversing the seam recorded here that morning): with a
+        // phase-reset overlay subject standing Space launches kN/2 ahead of
+        // the cursor, and the face reads that REAL launch position through
+        // the one offset owner phase_reset_lead_in_launch_offset
+        // (selection.cpp, the Space arm's own derivation lifted whole), so in
+        // the last kN/2 frames of the target domain the face now greys with
+        // the key instead of standing lit over a refusal. A GREYED PLAY NO
+        // LONGER FORGOES A LIVE SHIFT+SPACE (the twin rule, superseding the
+        // shift-admission precedent recorded here that morning): the A/B
+        // audition is the button's admitted twin, so its press-time preflight
+        // — ab_audition_preflight_ok, the same gates start() cards on,
+        // composed beside it in ab_audition.cpp — is the arm's third term,
+        // and the face greys only when the plain launch AND the audition
+        // would both refuse. The tooltip's shift line stays on the dead face,
+        // naming an act that is dead too (tooltips-on-disabled).
         //
         // WHAT PLAY LOST ON 2026-08-15 was the ENABLED split alone — no grey
         // while an audition ran, none where a launch would refuse — on the
@@ -9728,8 +9830,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // launch body's own refusal set (launch_playback_window, under the
         // view-end entry and the bounded audition alike) and that body calls
         // it (playback_lifecycle.cpp); the A/B audition's press-time gate is
-        // its second reader, a gate; Play's arm is the third, the face it was
-        // first hoisted for on 2026-08-15 and lost the same day.
+        // its second reader, a gate; the face it was first hoisted for on
+        // 2026-08-15 and lost the same day is the third again, reaching it
+        // through this arm's two composed owners (space_launch_would_play
+        // and ab_audition_preflight_ok) rather than bare.
         //
         // THE ONE FACE-RELATED FIX FROM THE 2026-08-15 ARC THAT NEVER MOVED is
         // publish_button_face's CLIP-COVERAGE TEST (paint_handler.cpp): the
@@ -9777,37 +9881,45 @@ inline bool redesign_button_enabled(const AppState& a,
         // The answer comes from the line at the top of this body, which the
         // arrows fall under like everything else.
         //
-        // THE TWO SKIPS GREY WHERE THE JUMP WOULD LAND NOWHERE (2026-08-30, at
-        // the second switch): no transport session live, and the resting
-        // cursor already on playhead_skip_landing_frame's answer — the trim
-        // bound outside the `h` view, the piece's end inside it (the owner's
-        // own arm, so the view needs nothing hand-listed and stays exactly as
-        // architect-confirmed: "allowing home and end, that makes sense"). A
-        // live session keeps them lit — the press then stops it — and PLAY,
-        // in the case list below, takes its own arm beside them; all three
-        // BREAK here to reach that switch.
+        // THE TWO SKIPS GREY WHERE NO FORM OF THE JUMP WOULD CHANGE ANYTHING
+        // (2026-08-30, at the second switch): the one owner
+        // playhead_end_jump_actionable (viewport.cpp, beside the landing
+        // arithmetic) answers "would this form change anything" — a live
+        // transport session (the press stops it), a standing selection (the
+        // act clears it; the mode's diff-flag focus inside the `h` view), a
+        // shown trim region overlay (the mover hides it), or a landing that
+        // differs from the resting cursor — and the face asks it of the BARE
+        // form AND the WHOLE-PIECE form, greying only when both answer no
+        // (the twin rule at the head of this body). The `h` view needs
+        // nothing hand-listed: the landing owner's own mode arm makes both
+        // forms the piece's ends in there, exactly as architect-confirmed
+        // ("allowing home and end, that makes sense"). PLAY, in the case
+        // list below, takes its own arm beside them; all three BREAK here to
+        // reach that switch.
         //
-        // THE SUCCESSION, because the 2026-08-15 reversal's premise is real
-        // and the ruling overrides it knowingly: the skips had this arm for
-        // one revision that day and the architect took it back because a
-        // Home / End press is not a pure jump — every form also STOPS A LIVE
-        // AUDITION, CLEARS THE MARKER SELECTION (the marker lane's exit
-        // repair) and HIDES THE TRIM REGION OVERLAY, unconditionally and even
-        // when the jump moves nothing (run_playhead_end_jump and the `h` arm,
-        // input_key_dispatch.cpp) — so a greyed skip promised LESS than the
-        // key delivered; his second reason was that the cursor's rest on a
-        // trim bound is VISIBLE ON SCREEN. The 2026-08-30 ruling names the
-        // skips explicitly ("even the transport's back/forward when you're
-        // already at the home or the beginning of the trim"), so the grey
-        // wins: a greyed skip's press does none of the three, the selection
-        // clear and the overlay hide being the two it forgoes (the audition
-        // stop is moot — a live session keeps the face lit). THE CTRL-CLICK
-        // IS LOST WITH IT, the shift-admission precedent (a greyed Drop marker
-        // loses Shift+S): the whole-piece jump would still move a cursor
-        // resting on a trim bound short of the piece's end, but the face
-        // reads the BARE chord's landing, the button's own, and a greyed
-        // button consumes a ctrl press with its plain one; the tooltip's ctrl
-        // line still names the act on the dead face. The keys keep all of it.
+        // THE SUCCESSION, in three moves, each premise kept: the skips wore
+        // a landing-only grey for one revision of 2026-08-15 and the
+        // architect took it back because a Home / End press is not a pure
+        // jump — every form also STOPS A LIVE AUDITION, CLEARS THE MARKER
+        // SELECTION (the marker lane's exit repair) and HIDES THE TRIM
+        // REGION OVERLAY, even when the jump moves nothing
+        // (run_playhead_end_jump and the `h` arm, input_key_dispatch.cpp) —
+        // so that grey promised LESS than the key delivered; his second
+        // reason was that the cursor's rest on a trim bound is VISIBLE ON
+        // SCREEN. The 2026-08-30 truthful-buttons ruling named the skips
+        // outright ("even the transport's back/forward when you're already
+        // at the home or the beginning of the trim") and the landing-only
+        // grey returned for the morning, knowingly forgoing the side acts on
+        // the dead face and taking the ctrl-click with it (the
+        // shift-admission precedent). THE TWIN RULE THAT EVENING superseded
+        // both costs at once: the side acts are TERMS of the actionability
+        // owner now, so a greyed skip forgoes nothing — the press would do
+        // none of the three and move nothing, in either form — and a live
+        // whole-piece jump keeps the face lit with the ctrl-click reachable.
+        // A PLAIN press whose own form changes nothing is no longer a silent
+        // no-op: the act cards which rest it is already at
+        // (run_playhead_end_jump; the tooltip's ctrl line stays on the dead
+        // face, naming an act that is dead too). The keys keep all of it.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportPlayStop:
@@ -10030,30 +10142,32 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         // THE TWO SKIPS (2026-08-30; the succession is at their case in the
-        // first switch): lit while a transport session is live, else lit iff
-        // the bare jump would move the cursor — the landing owner asked with
-        // whole_piece=false, whose own `h` arm makes the view's answer the
-        // piece's ends. The compare is on the RESTING cursor, which is what a
-        // press at rest jumps from.
+        // first switch): lit iff EITHER admitted form — the bare trim-bound
+        // jump or the ctrl whole-piece jump — would change anything, through
+        // the acts' one actionability owner (whose terms are a live transport
+        // session, the jump's own side acts and the landing compare).
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward:
-            return transport_session_live(a) ||
-                   playhead_skip_landing_frame(
+            return playhead_end_jump_actionable(
                        a, audio,
                        b == RedesignButton::TransportSkipForward,
-                       /*whole_piece=*/false) != a.playhead_cursor_sample;
-        // PLAY (2026-08-30; the succession and the two recorded seams — the
-        // lead-in offset, the lost A/B audition — are at its case in the
-        // first switch): STOP and live while a session is live; at rest,
-        // Space's own two refusals in order — the target preview's readiness,
-        // then the launch from the resting cursor.
+                       /*whole_piece=*/false) ||
+                   playhead_end_jump_actionable(
+                       a, audio,
+                       b == RedesignButton::TransportSkipForward,
+                       /*whole_piece=*/true);
+        // PLAY (2026-08-30; the succession and the twin rule's reach are at
+        // its case in the first switch): STOP and live while a session is
+        // live; at rest, lit iff the plain Space launch would play — the
+        // act's own gates asked ahead, the lead-in offset included — or the
+        // A/B audition's press-time preflight would let the shift twin run.
         case RedesignButton::TransportPlayStop:
             if (transport_session_live(a)) return true;
-            if (a.active_audio_view == 'T' &&
-                !target_preview_ready(target_render))
-                return false;
-            return playback_launch_playable(a, playback, total_frames,
-                                            a.playhead_cursor_sample);
+            if (space_launch_would_play(a, playback, target_render,
+                                        total_frames))
+                return true;
+            return ab_audition_preflight_ok(a, audio, playback,
+                                            target_render);
         default:
             // REACHED BY EXACTLY NINE IDS, re-derived 2026-08-30 (twelve
             // earlier that day, before the transport three took arms of their
@@ -10475,11 +10589,13 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // no-op it is everywhere else, and the lift's CHORD BUILD, which moves the
 // carried bit into the dispatched chord. CTRL+SHIFT together spell no roster
 // chord on any button and are refused at that gate, so the build never sees the
-// pair. A GREYED SKIP LOSES ITS CTRL-CLICK (2026-08-30): the skips grey where
-// the BARE jump would move nothing, and the disabled press is consumed ahead
-// of this admission, so the whole-piece jump is unreachable from the dead
-// face — the shift-admission precedent, recorded at the skips' case in
-// redesign_button_enabled and at their tooltip entry.
+// pair. A GREYED SKIP LOSES NOTHING (2026-08-30, the twin rule superseding
+// that morning's greyed-skip-loses-its-ctrl-click cost the same day): the
+// face asks the acts' actionability owner about the BARE form AND the
+// whole-piece form, so a live ctrl twin keeps the button lit and the
+// ctrl-click reachable, and the dead face — its press consumed ahead of this
+// admission — means neither form would change anything. The succession is at
+// the skips' case in redesign_button_enabled and at their tooltip entry.
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportSkipForward;
@@ -10716,14 +10832,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // themselves, and a CHORD keeps its capital and its spelled-out
         // modifiers). THE MODIFIER LINE NAMES THE ACT AND THE MODIFIER AND NOT
         // A KEY, this table's rule for second lines.
-        // THE CTRL LINE STAYS ON A GREYED SKIP (2026-08-30): the button greys
-        // where the bare jump would land on the resting cursor, and a greyed
-        // button consumes its ctrl press with its plain one, so the whole-
-        // piece jump the line names is unreachable from the dead face even
-        // where it would have moved the cursor — the tooltips-on-disabled
-        // ruling (a disabled icon still explains itself) and the shift-
-        // admission precedent (a greyed Drop marker's line still names
-        // Shift+S) both say the line stays; the keys keep the act.
+        // THE CTRL LINE STAYS ON A GREYED SKIP (2026-08-30): under the twin
+        // rule the button greys only when the bare jump AND the whole-piece
+        // jump would both change nothing, so the act this line names is dead
+        // on every dead face — a live ctrl twin keeps the button lit and the
+        // ctrl-click reachable instead — and the tooltips-on-disabled ruling
+        // (a disabled icon still explains itself) says the line stays; the
+        // keys keep the act.
         case RedesignButton::TransportSkipBack:
             return {"Go to start (Home)",
                     "Press Ctrl to ignore the trim window."};
@@ -10738,11 +10853,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and the admission one fact. The live form carries the same line —
         // see the overload — because a shift press starts the sequence in
         // both states, so it does something different from the plain press in
-        // both. THE LINE STAYS ON A GREYED PLAY (2026-08-30): the button greys
-        // at rest where the plain launch would refuse, and the audition the
-        // line names — which plays the other tab first and could have run —
-        // is unreachable from the dead face, the shift-admission precedent
-        // (a greyed Drop marker loses Shift+S; the skips' ctrl line above).
+        // both. THE LINE STAYS ON A GREYED PLAY (2026-08-30): under the twin
+        // rule the button greys only where the plain launch AND the
+        // audition's own preflight would refuse, so the act the line names
+        // is dead on every dead face — a runnable audition keeps the button
+        // lit instead (the skips' ctrl line above tells the same story).
         case RedesignButton::TransportPlayStop:
             return {"Play (Space)", "Press Shift for the A/B audition."};
         case RedesignButton::TransportSkipForward:
@@ -10750,7 +10865,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
                     "Press Ctrl to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
         // HELP's vocabulary. ONE OF THEM ADMITS SHIFT since 2026-08-28 — the
-        // DROP, whose shifted chord drops a phase reset from any view — and it
+        // DROP, whose shifted chord crosses from the warp column and drops a
+        // phase reset (refusing as already crossed in the P column since
+        // 2026-08-30) — and it
         // carries the second line that says so; the other three take one line
         // each. (COPY RESOLVED VALUE, seated among them since 2026-08-29,
         // carries the group's second two-line form; its own row below says

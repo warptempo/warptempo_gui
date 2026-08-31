@@ -144,7 +144,11 @@ struct GuiInputHandler;
 // body could refuse for is asked here, before the first `c` and the switch, so
 // a refused act moves nothing. The `h` view consumes the chord at its allowlist
 // (playback is removed from the view whole); loading-or-absent audio consumes
-// it at on_key's head. A read-only tab admits it (it authors nothing). Undo:
+// it at on_key's head. A read-only tab admits it (it authors nothing). SINCE
+// THE SAME EVENING the same press-time gates are composed for the PLAY
+// button's face by ab_audition_preflight_ok (ab_audition.cpp, beside start)
+// — the face's shift-twin term under the twin rule, so a runnable audition
+// keeps a refused plain Play lit. Undo:
 // none. Damage: the tab switch's and the scanner's, nothing new.
 struct GuiAbAudition {
     AppState&             app;

@@ -13,6 +13,7 @@ int64_t GuiAbAudition::audition_span_frames() const {
         static_cast<double>(audio.sample_rate()) * kAuditionMs / 1000.0));
 }
 
+namespace {
 // The preview gate is the SAME predicate Space's play edge reads
 // (GuiTargetRender::preview_ready), and the frame gate is the launch body's own
 // (playback_launch_playable) asked ahead of time for a tab that is not active
@@ -20,12 +21,49 @@ int64_t GuiAbAudition::audition_span_frames() const {
 // judged here or not at all. In source view the predicate has no preview term
 // and only the two-frame remainder gate answers. THE DEVICE IS NOT ASKED HERE:
 // it is not a per-tab fact, so start() asks it once for the pair, ahead of
-// this.
-bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
+// this. File-static so the member gate, start()'s carded preflight and the
+// PLAY face's ask-ahead (ab_audition_preflight_ok below) read one spelling.
+bool tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
+                           const GuiPlayback& playback,
+                           const GuiTargetRender& target_render,
+                           int64_t frame) {
     if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
         return false;
     }
     return playback_launch_playable(app, playback, audio.total_frames(), frame);
+}
+
+// THE OTHER TAB'S PLAYHEAD, read through its own ViewState and clamped
+// exactly as switch_active_tab_view_to will clamp it on entry
+// (clamp_playhead_to_live_domain reads the live domain, which both tabs
+// share), so the verdict here is the verdict the launch would reach there.
+int64_t other_tab_playhead(const AppState& app, const GuiAudio& audio) {
+    const char other = (app.active_tab_view == 'A') ? 'B' : 'A';
+    const ViewState& other_tab = (other == 'A') ? app.tab_a : app.tab_b;
+    return clamp_playhead_to_live_domain(other_tab.playhead_cursor_sample,
+                                         app, audio);
+}
+}  // namespace
+
+bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
+    return tab_launch_ready_impl(app, audio, playback, target_render, frame);
+}
+
+// THE PLAY FACE'S ASK-AHEAD (architect 2026-08-30, the twin rule; the
+// contract and the one reader are at the declaration, app_state.h): start()'s
+// press-time gates asked without acting, in start()'s own order — the device
+// once for the pair, then both tabs' launch readiness. The running-sequence
+// refusal is deliberately not here: a standing sequence is
+// transport_session_live, which the face reads ahead of this. It sits beside
+// start() so the two read as one; a gate added there must be added here.
+bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
+                              const GuiPlayback& playback,
+                              const GuiTargetRender& target_render) {
+    if (playback.device_unavailable()) return false;
+    return tab_launch_ready_impl(app, audio, playback, target_render,
+                                 app.playhead_cursor_sample) &&
+           tab_launch_ready_impl(app, audio, playback, target_render,
+                                 other_tab_playhead(app, audio));
 }
 
 void GuiAbAudition::start() {
@@ -62,14 +100,11 @@ void GuiAbAudition::start() {
     }
     const char home  = app.active_tab_view;
     const char other = (home == 'A') ? 'B' : 'A';
-    // THE OTHER TAB'S PLAYHEAD, read through its own ViewState and clamped
-    // exactly as switch_active_tab_view_to will clamp it on entry
-    // (clamp_playhead_to_live_domain reads the live domain, which both tabs
-    // share), so the verdict here is the verdict the launch would reach
-    // there. The active tab's is the live cursor.
-    const ViewState& other_tab = (other == 'A') ? app.tab_a : app.tab_b;
-    const int64_t other_playhead = clamp_playhead_to_live_domain(
-        other_tab.playhead_cursor_sample, app, audio);
+    // THE OTHER TAB'S PLAYHEAD comes from the file's one spelling above
+    // (other_tab_playhead — the clamp is the switch's own, so the verdict
+    // here is the verdict the launch would reach there); the active tab's is
+    // the live cursor.
+    const int64_t other_playhead = other_tab_playhead(app, audio);
     // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH — and, since 2026-08-30, so
     // is the device above: an act that could only half-run must not move the
     // user off his tab and then fall silent, and the promise holds only if

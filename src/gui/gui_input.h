@@ -516,18 +516,26 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
 }
 
-// True for the chord that DROPS A PHASE RESET FROM ANY VIEW (architect
-// 2026-08-28): SHIFT+S exactly — no ctrl, no alt. It lands the session in
+// True for the chord that DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER
+// VIEW (architect 2026-08-28, born "from any view"; the P column refuses it
+// whole since 2026-08-30 — the paragraph below): SHIFT+S exactly — no ctrl,
+// no alt. It lands the session in
 // T+P, phase reset's home, and drops the lead-in reset at the playhead's own
 // musical instant there, so the reset the architect wants while he is looking
 // at the warp column costs one key instead of a view trip and back. Ctrl+S is
 // the save on this letter and Shift+S was the strict rule's consumed no-op
 // until this date; the shifted `s` is the only decoration on it that binds.
 //
-// IT IS BARE `s`'s ACT WITH THE VIEW TRIP IN FRONT, not a second one: in T+P
-// the two chords reach the same one drop body, and everywhere else the
-// difference is exactly the two view chokepoints Shift+S runs first (the act
-// is GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp).
+// IT IS BARE `s`'s ACT WITH THE VIEW TRIP IN FRONT, not a second one: from
+// the W column the difference is exactly the two view chokepoints Shift+S
+// runs first, and then the same one drop body (the act is
+// GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp). IN
+// THE P COLUMN THE CHORD REFUSES WHOLE since 2026-08-30 (architect): the
+// command IS the crossing from warp view, so with phase resets already
+// showing there is nothing to cross and the act answers "Already in phase
+// reset view" before any switch — T+P and S+P alike, bare `s` untouched
+// (the leading refusal is phase_reset_drop_crossing_actionable,
+// app_state.h).
 // The same two readers as the Space pair above — on_key's dispatch arm
 // (input_handler.cpp) and the read-only allowlist (read_only_key_blocked,
 // input_key_dispatch.cpp, which DROPS the chord: the drop is authored

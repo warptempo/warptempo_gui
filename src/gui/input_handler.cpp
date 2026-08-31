@@ -1141,9 +1141,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // scroll or a zoom silently change what Space does.
         // The kN/2 is EXACT output-sample arithmetic. The painted band is a ±1px
         // approximation for jitter reasons and must never enter this number.
+        // THE DERIVATION IS THE ONE OFFSET OWNER since 2026-08-30
+        // (phase_reset_lead_in_launch_offset, selection.cpp — lifted so the
+        // PLAY button's face can read the REAL launch position through
+        // space_launch_would_play instead of the resting cursor alone).
         const int64_t launch_offset =
-            (!playback.is_playing() &&
-             selection.phase_overlay_subject().has_value()) ? kN / 2 : 0;
+            phase_reset_lead_in_launch_offset(app, playback);
         // SPACE ALWAYS PLAYS FROM THE PLAYHEAD (architect 2026-07-30, Q2: "drop
         // the left edge launch - play issues from playhead OR scrub - user can
         // click scrub region to preview"). The region arm that stood here — a
@@ -1369,8 +1372,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // audition — drop then Space cancels the two N/2 offsets and auditions
         // from exactly where the cursor was.
         // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S
-        // saves, and Shift+S (2026-08-28) drops a phase reset from any view —
-        // the same lead-in drop with the trip to T+P in front of it. Every
+        // saves, and Shift+S (2026-08-28) drops a phase reset from the warp
+        // column's either view — the same lead-in drop with the trip to T+P
+        // in front of it (in the P column it refuses whole since 2026-08-30
+        // as already crossed; the act's head). Every
         // other modifier combination on `s` is unbound and FALLS OUT OF THIS
         // BLOCK (2026-08-30) to the strict-modifier tail, which says so on a
         // card: this block claims the three spellings it binds and nothing
@@ -1402,10 +1407,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             save_ops.save();
             return;
         }
-        // SHIFT+S DROPS A PHASE RESET FROM ANY VIEW (architect 2026-08-28):
-        // "Shift+S should set a phase reset marker in T+P from S+W at the
-        // current playhead frame, switch to T+P, and highlight the marker that
-        // was just created." It sits ABOVE the home-view gate below because it
+        // SHIFT+S DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER VIEW
+        // (architect 2026-08-28, born "from any view": "Shift+S should set a
+        // phase reset marker in T+P from S+W at the current playhead frame,
+        // switch to T+P, and highlight the marker that was just created";
+        // since 2026-08-30 the P column refuses it whole as already crossed —
+        // the act's leading refusal). It sits ABOVE the home-view gate below
+        // because it
         // does not need the gate's permission — it GOES to the home view first
         // and then drops there, which is why it is not a sixth ruled exception
         // to the binding (the note is at active_column_authoring_allowed,
@@ -1428,14 +1436,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // press is told is where the column it stands in places its
             // markers. The lead-in arm needs no separate target-view test:
             // P's home IS target, so this one gate already carries it. THE
-            // DROP BUTTON DOES NOT GREY ON THIS REFUSAL (planner's call under
-            // the 2026-08-30 truthful-buttons ruling, recorded at its arm in
-            // redesign_button_enabled): its shift twin above drops from any
-            // view and is the long press, glass's only road to it, so the
-            // button is never a whole no-op off home. Its PLAIN lift does
-            // reach this card, synthesizing this very chord, and is answered
-            // exactly as the key is — the lit face promises the shift act,
-            // and the card explains the plain one.
+            // DROP BUTTON GREYS ON THIS REFUSAL ONLY IN S+P (the twin rule,
+            // recorded at its arm in redesign_button_enabled): in the W
+            // column its shift twin above — the long press, glass's only
+            // road — still crosses and drops, so the button stays lit there
+            // and its PLAIN lift reaches this card, synthesizing this very
+            // chord; in S+P the twin refuses too ("Already in phase reset
+            // view") and the grey is the message.
             if (!active_column_authoring_allowed(app)) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
@@ -3290,6 +3297,19 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // helper is defensive for the same reason the S/T chokepoint's own copy is
     // — nothing below it should run against an empty session.
     if (app.loading || audio.total_frames() <= 0) return;
+    // ALREADY CROSSED, NOTHING TO DO (architect 2026-08-30): the chord IS
+    // the crossing from the warp column, so with the P column standing the
+    // act refuses WHOLE — before any view switch, in T+P and S+P alike —
+    // and says so. Bare `s` is untouched (in T+P it is the drop). The Drop
+    // button's shift lift and the glass long press synthesize this same
+    // chord and meet this same refusal; its face greys only in S+P, where
+    // bare `s`'s off-home refusal meets this one (the arm at
+    // redesign_button_enabled).
+    if (!phase_reset_drop_crossing_actionable(app)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Already in phase reset view");
+        return;
+    }
     switch_active_audio_view_to('T');
     if (app.active_audio_view != 'T') return;   // entry refused
     active_views.switch_active_markers_view_to('P');

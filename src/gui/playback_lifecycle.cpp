@@ -234,6 +234,35 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
+// WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR (architect 2026-08-30;
+// the contract and the one reader — the PLAY face — are at the declaration,
+// app_state.h). It is the press above asked WITHOUT acting, each term the
+// act's own owner in the act's own order: the device (toggle_playback's
+// first card), the dispatch arm's target-preview gate (target_preview_ready
+// — the Space route's first refusal, which lives at on_key rather than in
+// this file), toggle_playback's overflow-ordered end gate against the
+// offset-shifted bound (the comment at that gate owns the ordering
+// argument), and the one launch predicate on the launch position the act
+// would actually form — cursor plus phase_reset_lead_in_launch_offset, the
+// lead-in included, which is what makes the face and the key read ONE
+// launch position. It sits here beside toggle_playback so the composition
+// and the act read as one; a gate added to the press must be added here.
+bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
+                             const GuiTargetRender& target_render,
+                             int64_t total_frames) {
+    if (playback.device_unavailable()) return false;
+    if (a.active_audio_view == 'T') {
+        if (!target_preview_ready(target_render)) return false;
+        const int64_t offset = phase_reset_lead_in_launch_offset(a, playback);
+        if (a.playhead_cursor_sample >= playback.domain_end() - offset - 1)
+            return false;
+        return playback_launch_playable(a, playback, total_frames,
+                                        a.playhead_cursor_sample + offset);
+    }
+    return playback_launch_playable(a, playback, total_frames,
+                                    a.playhead_cursor_sample);
+}
+
 // The audition launch entry, the scrub act's stop-then-start START
 // half: begin the scanner from `frame` — an
 // absolute active-paint-domain position (the caller hands it in already
@@ -370,7 +399,10 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // reader until the A/B audition's press-time gate became the second on
     // 2026-08-26 — a gate reader, not a face — and the PLAY button's face
     // became the third on 2026-08-30 under the truthful-buttons ruling,
-    // asking it about the resting cursor). The
+    // through space_launch_would_play below since that evening, which asks
+    // it about the launch position the act would actually form — the
+    // lead-in offset included, the architect reversing the resting-cursor
+    // seam). The
     // per-arm reasoning moved to
     // the predicate whole: the target arm's
     // buffer-populated check (which must live on this shared path — the scrub
