@@ -4033,7 +4033,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
         // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
         // must not look like a chord that rendered silently. The Render
-        // button wears the mode's own "Render Iterations" face here and
+        // button wears the mode's own "Render grid iterations" face here and
         // dispatches this same chord, so the one card answers both roads.
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: No iter ranges "
@@ -4076,10 +4076,12 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // until the cards landed — the pre-split surface for a sentence the
         // user had to be shown — and that prompt kind retired whole with this
         // move, its other caller (the target-view entry gate) having become a
-        // silent one. The sentence is unchanged.
+        // silent one. The sentence was unchanged by that move; the 2026-08-31
+        // rebrand renamed its subject alone ("Iteration sweep" -> the menu
+        // row's "Grid iterations", kSeriesPopupItems).
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "Iteration sweep refused: more than " +
+            "Grid iterations refused: more than " +
             std::to_string(kMaxIterSweepCells) +
             " cells (cap " + std::to_string(kMaxIterSweepCells) +
             "). Narrow the marker brackets and retry.");
@@ -4209,28 +4211,33 @@ void GuiInputHandler::run_iteration_sweep_render() {
     }
 
     // The batch's DISPLAY label — the progress line's counted noun and the
-    // stderr summary's tag. "iterations" since 2026-08-29 (architect):
-    // the GUI line reads "Rendering 3 of 8 iterations...", the label
+    // stderr summary's tag. "grid iterations" since the 2026-08-31 rebrand,
+    // which is the menu row's own name for this mode (kSeriesPopupItems):
+    // the GUI line reads "Rendering 3 of 8 grid iterations...", the label
     // naming what the two numerals count, and "render" fell out of it
-    // because the sentence already leads with "Rendering". It stays
+    // because the sentence already leads with "Rendering". (It was plain
+    // "iterations" from 2026-08-29, when the architect made the label the
+    // counted noun, and "render" before that.) It stays
     // LOWERCASE because it is a shared ROUTING/CATEGORY LABEL rather than
     // sentence-initial prose in either surface: the GUI sentence leads
     // with its own "Rendering", and in the summary it fills the tag slot
     // ahead of the message proper, whose own first word takes the capital
-    // ("warptempo_gui: iterations: Rendered 3 of 8 entries"). Its position
+    // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries"). Its
+    // position
     // after the "warptempo_gui: " prefix is NOT the reason — the
     // 2026-08-02 terminal pass looks past the program-name prefix when it
-    // locates that first prose word. Contrast the BPM batch's label, which
-    // capitalizes as an acronym everywhere.
+    // locates that first prose word. Contrast the BPM batch's label, whose
+    // acronym capitalizes everywhere; the "iterations" both now share takes
+    // the same lowercase for the same reason.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully
         // built batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
-        cmd.batch_label = "iterations";
+        cmd.batch_label = "grid iterations";
         kill_running_render_and_park(std::move(cmd));
     } else {
-        start_render_batch(std::move(reqs), "iterations");
+        start_render_batch(std::move(reqs), "grid iterations");
     }
     // The sweep is committed to run either way (dispatched, or parked
     // behind the killed render's drain): iteration mode turns off after
@@ -4292,7 +4299,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // TARGET-LEGAL): the bit alone selects the command, and target view needs
     // no clause of its own for the opposite reason it needed none before — the
     // mode can now REST in target, and the arm below fires there. This is also
-    // what keeps the Render button honest, its "Render Iterations" face
+    // what keeps the Render button honest, its "Render grid iterations" face
     // following the same bit from either view. The sweep's own body carries no
     // view assumption (it builds per-cell marker copies off the warp store and
     // renders are view-independent); its success-tail wipe is the granted
@@ -4400,7 +4407,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // the user who pressed it anyway.
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                "Turn off iteration mode to render one file");
+                "Turn off grid iterations to render one file");
             return true;
         }
 
@@ -6350,8 +6357,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // ruling): iteration brackets are a WARP payload — a phase reset
             // carries no tempo to iterate — so the card names the COLUMN and
             // not a view, the bit being legal in both audio views of warp.
+            // THE SUBJECT IS THE MENU ROW'S OWN NAME (2026-08-31 rebrand,
+            // kSeriesPopupItems): this card and the BPM ladder's twin below
+            // say "Grid iterations" / "BPM iterations", the words the user
+            // pressed, rather than a "mode" noun that appears nowhere else.
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "Iteration mode works on warp markers");
+                                 "Grid iterations work on warp markers");
         }
         return true;
     }
@@ -6396,7 +6407,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // walls) belong to the editor and are untouched.
         if (app.active_markers_view != 'W') {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "BPM mode works on warp markers");
+                                 "BPM iterations work on warp markers");
             return true;
         }
         // The bpm editor is DELIBERATELY OMITTED from the warp status/value
@@ -6409,7 +6420,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // (source) view; off home the card names that view.
         if (!active_column_authoring_allowed(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "BPM mode works in source view");
+                                 "BPM iterations work in source view");
             return true;
         }
         // Section-based span gate. A non-empty, contiguous run of selected

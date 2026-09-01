@@ -258,19 +258,24 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // does re-enter the right float's collision corner, which is recorded (and
     // deliberately not acted on) in that note below.
     {RedesignButton::Edit,       "Edit"},
-    // THE SERIES MENU (architect 2026-08-27) — the row's FOURTH dropdown,
-    // painted between Edit and Settings. THE ORDER RULE IS SETTINGS-LAST
+    // THE ITERATIONS MENU (architect 2026-08-27 as "Series", REBRANDED
+    // "Iterations" 2026-08-31) — the row's FOURTH dropdown, painted between
+    // Edit and Settings. THE ORDER RULE IS SETTINGS-LAST
     // (architect 2026-08-03): File and Edit lead as the standard pair, the
     // application's own menus follow, and Settings paints last in the left
     // float — so this landed in front of it without re-opening that ruling.
-    // A COMMAND MENU of TWO rows, "BPM" and "Iterations", and a RELOCATION:
+    // A COMMAND MENU of TWO rows, "BPM iterations" and "Grid iterations", and
+    // a RELOCATION:
     // IconBpm and IconIter were deleted from the icon row in the same ruling,
     // so this menu is those two commands' one pointer home rather than a
     // second road to them. Nothing here needed a width or pad term — the row
     // is one left-to-right accumulation over this table — but the LABEL'S
     // WIDTH re-enters the right float's collision corner, which is recorded
-    // (and deliberately not acted on) in that note below.
-    {RedesignButton::Series,     "Series"},
+    // (and deliberately not acted on) in that note below; the rebrand widened
+    // this slot by 21px at 100% and the answer there did not change.
+    // (The ENUMERATOR keeps its `Series` spelling: the rebrand is labels and
+    // docs, and no identifier here is user-visible.)
+    {RedesignButton::Series,     "Iterations"},
     // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
     // of the zoom and stepping commands — painted between these two from that
     // day until 2026-08-15, when the architect deleted it whole: every one of
@@ -1015,10 +1020,10 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
 // right margin − 8 chrome, at 100%):
 //
-//   File      "Synchronize to external storage" | "Ctrl+Q"   -> content
-//   Series    "Iterations" | "M"                             -> 171   FLOOR
-//   Settings  "Waveform magnification level" (no column)     -> 288   content
-//   Edit      "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
+//   File       "Synchronize to external storage" | "Ctrl+Q"   -> content
+//   Iterations "BPM iterations" | "M"                         -> 209   FLOOR
+//   Settings   "Waveform magnification level" (no column)     -> 288   content
+//   Edit       "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
 //
 // THE SETTINGS MENU LEFT THE FLOOR ON 2026-08-26, when "Waveform magnification
 // level" joined its roster and took the widest-label slot at 209px (the item's
@@ -1027,10 +1032,17 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // so that popup is DERIVED at every scale now — 296px wide with its chrome —
 // and the +42 no longer lands on it at all.
 //
-// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: SERIES, two rows of
-// "BPM"/"Iterations" beside single letters. It is nowhere near 242, so the
+// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: ITERATIONS, two rows of
+// "BPM iterations"/"Grid iterations" beside single letters. THE 2026-08-31
+// REBRAND WIDENED BOTH ROWS AND THE FLOOR STILL WINS: the widest label is
+// "BPM iterations" at 104px (the advance-width method this file's collision
+// note uses), for a content ask of 209 — the pre-rebrand pair, "BPM" and
+// "Iterations", asked 171. It is still under 242, so the
 // floor IS its width — which is what gives a two-row menu a box that reads as a
-// menu at all, and is the whole of what this constant is for.
+// menu at all, and is the whole of what this constant is for. (This is the
+// one measurement the rebrand had to make: had it crossed the 242 the box
+// would simply have derived like Settings' and Edit's, so the answer was
+// never in doubt, only which term won.)
 //
 // FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
 // when the table above was written and asked 168; it carries THREE rows now —
@@ -1378,17 +1390,28 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // AND RE-ENTERED AGAIN ON 2026-08-27 BY THE SERIES ANCHOR, with the
         // same answer a third time. MEASURED by the same advance-width method
         // (which still reproduces the 2026-08-02 walk's Quit 29, Navigation 76
-        // and Settings 58 exactly): "Series" shapes to 45px at 100%, the six
-        // glyphs putting it between Edit's 28 and Settings' 58, so its slot is
-        // 65px with its two 10px pads. The FOUR-button float is 237 at 100%
-        // (46 + 48 + 65 + 78) and ~473 at 200%. At 100% it is still nowhere:
-        // 237 + 183 = 420 of the 640px floor. At 200% it is ~473 + 366 = ~839
-        // on that floor, an overlap of ~199px, which finally passes the
-        // Navigation era's 165 — and it changes nothing, because the KIND of
+        // and Settings 58 exactly): "Series" shaped to 45px at 100%, the six
+        // glyphs putting it between Edit's 28 and Settings' 58, so its slot was
+        // 65px with its two 10px pads. The FOUR-button float was 237 at 100%
+        // (46 + 48 + 65 + 78) and ~473 at 200%. At 100% it was still nowhere:
+        // 237 + 183 = 420 of the 640px floor. At 200% it was ~473 + 366 = ~839
+        // on that floor, an overlap of ~199px, which finally passed the
+        // Navigation era's 165 — and it changed nothing, because the KIND of
         // corner is unchanged and the div still fills its background last and
-        // covers the tail of the left float's labels. THE DEPLOYMENTS ARE NOT
+        // covers the tail of the left float's labels.
+        //
+        // THE 2026-08-31 REBRAND WIDENED THAT ANCHOR AND THE ANSWER HELD A
+        // FOURTH TIME: "Iterations" shapes to 66px by the same method (ten
+        // glyphs, a hair under "Navigation"'s 76), so the slot is 86px and the
+        // four-button float is 258 at 100% (46 + 48 + 86 + 78), ~516 at 200%.
+        // At 100%: 258 + 183 = 441 of the 640px floor, still nowhere. At 200%:
+        // ~516 + 366 = ~882, an overlap of ~242px — 43 more than the Series
+        // era's and the same corner, answered the same way. THIS IS THE CHECK
+        // THE REBRAND OWED, and it is why the record is kept as numbers: a
+        // longer label is one term in a sum this note already spells.
+        // THE DEPLOYMENTS ARE NOT
         // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at its
-        // own 225% is 1024 logical px against a ~420 logical-px float pair.
+        // own 225% is 1024 logical px against a ~441 logical-px float pair.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -3520,11 +3543,13 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // and the accelerator's right margin.
     //
     // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD: the
-    // SERIES menu's "Iterations" row toggles a MODE, which is the first item
+    // ITERATIONS menu's "Grid iterations" row toggles a MODE, which is the
+    // first item
     // in this product that could have worn one, and it does not — the label is
     // the constant act's name and the mode says what it is doing on the screen
     // itself (every warp flag grows its iteration bracket, and the Render
-    // button's hint reads "Render Iterations"). A checkbox column would exist
+    // button's hint reads "Render grid iterations"). A checkbox column would
+    // exist
     // for one row in one menu, and the roster's own no-blink argument answers
     // it: a badge would restate what the picture already shows. The full
     // record is at kSeriesPopupItems (app_state.h).

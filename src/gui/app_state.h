@@ -1844,7 +1844,8 @@ enum class RedesignButton {
     // count is three again for the first time since 2026-08-15, and nothing in
     // the dropdown machinery counts menus — kDropdownMenus grew one row.
     //
-    // THE SERIES MENU IS THE FOURTH ANCHOR SINCE 2026-08-27 (architect),
+    // THE ITERATIONS MENU IS THE FOURTH ANCHOR SINCE 2026-08-27 (architect;
+    // it read "Series" until the 2026-08-31 rebrand),
     // painted between Edit and Settings. THE ORDER RULE IS THE ROW'S OWN AND
     // IT IS SETTINGS-LAST (architect 2026-08-03, when Settings moved behind
     // the Navigation anchor): File and Edit lead as the standard pair, the
@@ -1852,9 +1853,10 @@ enum class RedesignButton {
     // left float — so a new menu lands between Edit and Settings without
     // re-opening that ruling.
     //
-    // IT IS A COMMAND MENU OF TWO ROWS — "BPM" (bare `m`) and "Iterations"
-    // (bare `i`) — and its NAME is the architect's: a BPM series, a series of
-    // iterations ("Sweep" and "Group" were both rejected). LIKE EDIT'S IT IS A
+    // IT IS A COMMAND MENU OF TWO ROWS — "BPM iterations" (bare `m`) and
+    // "Grid iterations" (bare `i`) — and the vocabulary is the architect's
+    // (the naming record, both rounds of it, is at kSeriesPopupItems).
+    // LIKE EDIT'S IT IS A
     // RELOCATION rather than an addition: IconBpm and IconIter were deleted
     // from the icon row in the same ruling, so the two commands have exactly
     // ONE pointer home and the no-second-road doctrine is SATISFIED rather
@@ -3226,11 +3228,27 @@ inline constexpr CommandPopupItem kEditPopupItems[] = {
 inline constexpr int kEditPopupItemCount =
     static_cast<int>(std::size(kEditPopupItems));
 
-// THE SERIES DROPDOWN'S ITEMS (architect 2026-08-27) — THE TWO SWEEP MODES,
-// one category and no separator: "BPM" (bare `m`, the BPM sweep's editor) and
-// "Iterations" (bare `i`, the iteration-mode toggle). THE NAME IS THE
-// ARCHITECT'S and it is what the two rows have in common — a BPM SERIES, a
-// SERIES OF ITERATIONS — chosen over "Sweep" and "Group", both rejected.
+// THE ITERATIONS DROPDOWN'S ITEMS (architect 2026-08-27) — THE TWO SWEEP
+// MODES, one category and no separator: "BPM iterations" (bare `m`, the BPM
+// sweep's editor) and "Grid iterations" (bare `i`, the iteration-mode toggle).
+//
+// THE VOCABULARY IS THE ARCHITECT'S SECOND ONE (2026-08-31, rebranding his own
+// 2026-08-27 naming): the anchor was "Series" over rows "BPM" and
+// "Iterations" — one word for what the two rows had in common, a BPM SERIES
+// and a SERIES OF ITERATIONS, chosen over "Sweep" and "Group". It is
+// "Iterations" over "BPM iterations" and "Grid iterations" now, so the anchor
+// and both rows say the SAME NOUN and the row word says only which axis is
+// swept: BPM values, or the Cartesian GRID of the markers' inline brackets
+// ("grid is the catchiest; matrix is a bit pretentious"; "brackets", "value"
+// and "settings" were all vetoed). ONE VOCABULARY RUNS THROUGH the surfaces
+// the two commands own — the render button's iteration-mode hint, the two
+// batches' counted nouns and every card that NAMES a mode — while the marker's
+// own payload keeps its word ("iteration bracket", "iteration ranges"): the
+// qualifier separates the two ROWS, and a bracket exists only under the inline
+// one, so there is nothing there to disambiguate. THE CODE IDENTIFIERS ARE
+// UNTOUCHED (kSeriesPopupItems, DropdownMenu::Series, iteration_mode_enabled):
+// none of them is user-visible, and a rename is churn a label change does not
+// buy.
 //
 // THIS MENU IS THE TWO COMMANDS' ONE POINTER HOME. IconBpm and IconIter were
 // deleted from the icon row in the same ruling, so nothing here duplicates a
@@ -3269,12 +3287,12 @@ inline constexpr int kEditPopupItemCount =
 // tooltip-constant/lamp-carries-state shape with the lamp left off; WHAT THE
 // MODE IS DOING IS ON THE SCREEN ITSELF — every warp flag grows its iteration
 // bracket the moment the mode comes on, and the Render button's own hint reads
-// "Render Iterations" — which is the same argument that keeps
+// "Render grid iterations" — which is the same argument that keeps
 // refusal-predicting greys off this roster: a badge would restate what the
 // picture already says.
 inline constexpr CommandPopupItem kSeriesPopupItems[] = {
-    {"BPM",        "M", GuiKeys::M, false, false, false, false},
-    {"Iterations", "I", GuiKeys::I, false, false, false, false},
+    {"BPM iterations",  "M", GuiKeys::M, false, false, false, false},
+    {"Grid iterations", "I", GuiKeys::I, false, false, false, false},
 };
 inline constexpr int kSeriesPopupItemCount =
     static_cast<int>(std::size(kSeriesPopupItems));
@@ -8259,7 +8277,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // in T+W — the NUDGE through it literally since 2026-08-29, its dispatch
 // having hand-spelled the rule until then. WHAT THE REFUSAL LOOKS LIKE
 // (2026-08-30): the keyboard routes say "Markers are placed/moved in source
-// view" on a card and `m`'s own is "BPM mode works in source view", while
+// view" on a card and `m`'s own is "BPM iterations work in source view"
+// (the menu row's own name for it since the 2026-08-31 rebrand), while
 // the two POINTER routes (the empty-lane double-click drop and the flag
 // drag) stay SILENT, gesture-class, the unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
@@ -11475,8 +11494,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // and while a checkpoint publishes, Render wears DialogCancel mid-render —
 // redesign_button_icon, paint_handler.cpp). The title-case exception record
 // ("Save and Commit", capital S lowercase "and" capital C, architect-spelled
-// 2026-08-04; "Render Iterations", capital I, 2026-08-03) survives on the
-// tooltip strings that still carry the words. Each is a chord
+// 2026-08-04) survives on the one tooltip string that still carries the
+// words; "Render Iterations", the capital I the architect spelled
+// 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
+// "Render grid iterations" now, because the mode's own name is the menu row
+// "Grid iterations" and a name used mid-sentence is sentence case (the
+// vocabulary's owner is kSeriesPopupItems). Each is a chord
 // whose MEANING is selected by a mode bit, and the button's hint says
 // whichever command it currently is:
 //
@@ -11510,7 +11533,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //
 //   RENDER, WITH ITERATION MODE ON (and nothing live) → the SAME media-record
 //   glyph (the architect's 2026-08-12 ruling: no second render glyph, "the
-//   context makes it clear") under the one-line "Render Iterations
+//   context makes it clear") under the one-line "Render grid iterations
 //   (Ctrl+Alt+R)" hint — the TOOLTIP alone forks the two idle meanings. The
 //   history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary
@@ -11518,14 +11541,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   nothing at all since 2026-08-14 (the 2026-08-12 relayout hid it in there,
 //   and the 2026-08-13 revision already painted it again).
 //
-// THE TITLE CASE IS DELIBERATE AND SCOPED TO THE TWO HINT STRINGS carrying
-// the old labels (architect
-// 2026-08-03 for the capital I, 2026-08-04 for the capital C beside it): every
+// THE TITLE CASE IS DELIBERATE AND SCOPED TO THE ONE HINT STRING still
+// carrying an old label — "Save and Commit" (architect 2026-08-04 for the
+// capital C): every
 // other multi-word GUI label in the product stays sentence case ("Center on
-// focus", "Next marker") — these two are the named
-// exceptions, not a precedent to copy outward or "fix". The joining word stays
+// focus", "Next marker") — it is the one named
+// exception, not a precedent to copy outward or "fix". The joining word stays
 // LOWERCASE ("and"), which is what title case means and what the architect
-// spelled.
+// spelled. (IT WAS A PAIR UNTIL 2026-08-31: "Render Iterations" carried a
+// capital I from 2026-08-03 and went back to sentence case with the rebrand,
+// the hint now naming the menu row "Grid iterations" mid-sentence.)
 //
 // RENDER'S SHIFT LINE GOES WITH ITS ITERATION FACE, and that is the same fact
 // rather than a second decision: Ctrl+Alt+Shift+R is a consumed no-op in
@@ -11593,7 +11618,7 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
         return {"Cancel", nullptr};
     }
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        return {"Render Iterations (Ctrl+Alt+R)", nullptr};
+        return {"Render grid iterations (Ctrl+Alt+R)", nullptr};
     }
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press

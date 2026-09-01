@@ -522,14 +522,19 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     }
 
     // THE BATCH LABEL NAMES WHAT IS BEING COUNTED (architect 2026-08-29):
-    // "Rendering 3 of 8 iterations..." / "Rendering 3 of 8 BPM values...",
+    // "Rendering 3 of 8 grid iterations..." / "Rendering 3 of 8 BPM
+    // iterations...",
     // the label reading as the plural noun the two numerals count rather than
     // as a category in a trailing parenthetical ("Rendering 3 of 8 (BPM)...",
     // which said neither what the 8 were nor what the render was doing to
-    // them). The label is one string shared with the stderr summary above,
+    // them). BOTH LABELS ARE THE MENU ROWS' OWN WORDS since the 2026-08-31
+    // rebrand ("Grid iterations" / "BPM iterations", kSeriesPopupItems): the
+    // counted noun IS the command's name, so the progress line and the row
+    // the user pressed say the same thing. The label is one string shared
+    // with the stderr summary above,
     // where it fills the TAG SLOT ahead of the message proper
-    // ("warptempo_gui: iterations: Rendered 3 of 8 entries") — the same words
-    // read as a tag there, which is what lets the two surfaces keep one
+    // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries") — the same
+    // words read as a tag there, which is what lets the two surfaces keep one
     // string.
     // THE CASE RULE, unchanged by the rewording: "BPM" is CAPITALIZED ALWAYS
     // (architect 2026-08-02 — the acronym caps in both surfaces, which
@@ -817,21 +822,25 @@ bool GuiInputHandler::render_bpm_sweep() {
     }
 
     // The batch's DISPLAY label — the progress line's counted noun and the
-    // stderr summary's tag, both fed from this one string. "BPM values"
-    // since 2026-08-29 (architect): the line says what the numbers count, and
-    // "BPM" alone named a quantity rather than the cells. "BPM" is
+    // stderr summary's tag, both fed from this one string. "BPM iterations"
+    // since the 2026-08-31 rebrand, which put ONE noun through the menu row
+    // ("BPM iterations"), this line and the sweep's twin: the counted things
+    // ARE the menu row's iterations. It read "BPM values" from 2026-08-29
+    // (architect: the line says what the numbers count, and "BPM" alone named
+    // a quantity rather than the cells) and plain "BPM" before that. "BPM" is
     // capitalized always (architect 2026-08-02): it is an acronym, not a
-    // sentence position, so both surfaces carry the caps. It is NOT the
-    // folder token above.
+    // sentence position, so both surfaces carry the caps, and "iterations"
+    // beside it stays lowercase for the reason the grid batch's does. It is
+    // NOT the folder token above.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully built
         // batch for the worker-idle pump.
         AppState::PendingArchivalCommand cmd;
         cmd.reqs        = std::move(reqs);
-        cmd.batch_label = "BPM values";
+        cmd.batch_label = "BPM iterations";
         kill_running_render_and_park(std::move(cmd));
     } else {
-        start_render_batch(std::move(reqs), "BPM values");
+        start_render_batch(std::move(reqs), "BPM iterations");
     }
     // Batch fully built and committed to run (dispatched, or parked behind
     // the killed render's drain): every request carries its own moved
