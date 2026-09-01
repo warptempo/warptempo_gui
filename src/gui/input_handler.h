@@ -2499,11 +2499,23 @@ private:
     // matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
+    // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31, R12): the
+    // stop, the stale-focus clear and the signed COLUMN step, shared by the
+    // bare form (handle_plain_bare_keys' Left / Right arms below) and the two
+    // modified ones (on_key's own arm, which must claim them above the bare
+    // dispatch). `step_columns` is the press's signed painted-column count —
+    // ±1 bare, ±3 shifted, ±10 with ctrl, through the ladder's owner
+    // arrow_step_magnitude (gui_input.h). Reached only with an empty
+    // selection: the marker-lane branch claims the press first in every
+    // magnitude. The full contract is at the definition.
+    void run_waveform_lane_playhead_step(int step_columns);
+
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
     // Home-End / trim begin-end. Caller gates on no modifiers held. Its
-    // Left/Right arms are the WAVEFORM-LANE half of the horizontal arrows: the
-    // marker-lane half returns before reaching the tail, so these run only with
-    // an empty selection (playhead_in_marker_lane false).
+    // Left/Right arms are the WAVEFORM-LANE half of the horizontal arrows' BARE
+    // form: the marker-lane half returns before reaching the tail, so these run
+    // only with an empty selection (playhead_in_marker_lane false), and the
+    // modified forms never arrive here at all.
     void handle_plain_bare_keys(GuiKey key);
 
     // THE Home / End JUMP, one body for every route that spells it. A form
@@ -3594,7 +3606,8 @@ private:
     // never moves the resting cursor. "Scrub" names that and only that.
     // ONE READER since 2026-08-30, the on_key dispatch (which picks the
     // lane); read_only_key_blocked's is_playhead_step entry — which admits the
-    // bare horizontal arrows only in the waveform lane, this gate being their
+    // horizontal arrows, in all three of the step ladder's magnitudes, only in
+    // the waveform lane, this gate being their
     // sole read-only defense — reads the lane through the lock's own owner
     // horizontal_arrow_step_lock_admits (app_state.h) instead, so the Left /
     // Right buttons' face can read the same answer. THE BODY
@@ -3618,9 +3631,10 @@ private:
     // renders and the `[` / Shift+[ trim gestures are ADMITTED — a save writes
     // the state the tab already holds, a render reads it, and trim is band.
     // One entry is
-    // STATE-DEPENDENT: the bare horizontal arrows are admitted as navigation
+    // STATE-DEPENDENT: the horizontal arrows are admitted as navigation
     // only while playhead_in_marker_lane is false, since in the marker lane the
-    // same press authors.
+    // same press authors — the lane decides, and the step ladder's modifier
+    // (bare / shift / ctrl, 2026-08-31) does not enter the decision.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns

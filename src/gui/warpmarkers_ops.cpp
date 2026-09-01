@@ -824,7 +824,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // DISABLED marker (its tempo is render-filtered, so a write would be inaudible),
 // a coincident-collapsed marker (warp_red_flag_set_cached — the resolver
 // replaces the stack with one 1.00 owner, so the write is render-inert), or a
-// marker already AT the bracket edge in the step direction. Disabled and
+// marker that cannot take the WHOLE step without leaving the tempo bracket
+// (the edge compare's generalization, R12 — at the bare ±1 the two are the
+// same test). Disabled and
 // collapsed are render-inert regardless of the authoring view, so they wall in
 // SOURCE view too — a DELIBERATE asymmetry with the SINGLETON step, whose
 // collapsed refusal is target-view-only and whose source-view pass/ref->owner
@@ -846,12 +848,24 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
     const int   n  = static_cast<int>(mv.size());
     const std::set<int>& red = warp_red_flag_set_cached(
         a, audio.sample_rate(), static_cast<long>(audio.total_frames())).red;
-    const int64_t edge = (delta_cents > 0) ? kTempoMaxCents : kTempoMinCents;
     for (int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
         const GuiWarpMarker& m = mv[idx];
         if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
-            red.count(idx) || m.tempo_cents == edge)
+            red.count(idx))
+            return false;
+        // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
+        // bracket edge" (2026-08-31, with the step ladder — R12): the group
+        // arm ADDS delta_cents raw, so with the ten-cent chord a member three
+        // cents from the max would land OUT of bracket, and clamping it would
+        // be exactly the pooling GROUP RIGIDITY refuses. Asked through the
+        // landing owner, so the bracket's ends are named nowhere here: the
+        // clamp bites iff the member cannot take the full step. At the bare
+        // ±1 this is the old edge compare exactly — a member is out of bracket
+        // after one cent iff it was resting on that edge — so the day's other
+        // behaviour is untouched.
+        if (tempo_cent_step_landing(m.tempo_cents, delta_cents) !=
+            m.tempo_cents + delta_cents)
             return false;
     }
     return true;
@@ -925,8 +939,10 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
     std::vector<GuiWarpMarker> pre_state = mv;
-    // Apply +/-1 cent to each selected member (plain integer arithmetic — the
-    // structural producer discipline). None is walled (checked above), so every
+    // Apply the press's own signed cent count to each selected member — ±1
+    // bare, ±3 shifted, ±10 with ctrl (plain integer arithmetic — the
+    // structural producer discipline). None is walled (checked above, and the
+    // scan asks whether the member can take the WHOLE step), so every
     // add stays in-bracket and actually changes the value; positions untouched,
     // so no reorder/remap. A member's iteration bracket is never CLEARED by a
     // tempo change, but it RIDES the new base per member (the retroactive clamp,
@@ -1035,15 +1051,17 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // whole family was deleted (marker_drag.h), and there is no fallback — with the
 // dispatch site in input_handler.cpp owning the routing.
 //
-// The wall regime over the identity map, one shape: the marker steps one PAINTED
-// column (stepped_anchor_frame — the guarantee and its numeric rationale live in
-// the comment there) and its delta is CLAMPED into its own wall headroom, walls
+// The wall regime over the identity map, one shape: the marker steps the
+// press's own count of PAINTED columns — one bare, three under shift, ten under
+// ctrl since 2026-08-31 (the step ladder, arrow_step_magnitude in gui_input.h)
+// — through stepped_anchor_frame (the guarantee and its numeric rationale live
+// in the comment there), and its delta is CLAMPED into its own wall headroom, walls
 // exactly reachable — the unified wall policy, stated once at the head of
 // position_nudge.h. Crossing a neighbor is legal and goes through the
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
 GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
-        int direction, bool synthesized_repeat) {
+        int step_columns, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable — the state and geometry
     // guards, the focused-index belt and THE WALL, all of it ahead of the
@@ -1055,10 +1073,10 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // gate's card already (the loading gate's, the dispatch's home-view card),
     // a belt against an invariant the selection layer keeps, or the wall, whose
     // silence is paired with a greyed button — the prologue's own declaration
-    // names each. `direction` is passed for the wall term alone.
+    // names each. `step_columns` is passed for the wall term alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::WarpNudge, synthesized_repeat, direction);
+        GestureKind::WarpNudge, synthesized_repeat, step_columns);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.warpmarkers.markers();
@@ -1078,7 +1096,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // authoring-grid bit-exactness claims (all source-view) hold. Crossing a
     // neighbor is legal and goes through the reorder-and-remap below.
     const int64_t committed_f =
-        position_nudge_landing(app, audio, orig_f, direction);
+        position_nudge_landing(app, audio, orig_f, step_columns);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop

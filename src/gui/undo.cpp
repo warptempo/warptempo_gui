@@ -154,6 +154,19 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // nudge tap after a tempo tap must not merge). The non-empty-stack guard covers
     // a stack cleared by a load/reset.
     //
+    // THE KIND IS BLIND TO DIRECTION AND, SINCE 2026-08-31, TO MAGNITUDE (the
+    // step ladder — R12: Shift+arrow steps three units and Ctrl+arrow ten).
+    // The blindness is UNCHANGED rather than newly granted: a Left tap and a
+    // Right tap inside the window have always merged into one entry, and a
+    // bare tap followed by a shifted one now merges the same way. Both stay
+    // right for the same reason — an undo entry restores a SNAPSHOT taken
+    // before the run, so what the run did between them is not the entry's
+    // business, and the one-entry-per-BURST rule is untouched either way (a
+    // held key's repeats all carry the press's own chord, so a burst has one
+    // magnitude by construction, and a held button's fires take the arm's
+    // modifiers, which the arm cannot change mid-hold). Splitting on the
+    // magnitude would need a fourth stamp field to buy nothing.
+    //
     // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push
     // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
     // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo

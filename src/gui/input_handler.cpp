@@ -1686,7 +1686,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // focused marker).
     if (handle_tab_switch_keys(key, mods)) return;
 
-    // Tempo nudge, bare Up / Down (architect 2026-07-28). No view or selection
+    // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
     // guard here — adjust_tempo_cents returns at once unless the warp view is
     // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
     // it hands back the sentence for that refusal — and for its two target-view
@@ -1696,18 +1696,30 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-08-31 and the Up / Down buttons GREY on it instead
     // (tempo_cent_step_direction_actionable, app_state.h), the group's wall
     // greying AND carding beside it. `=` / `-` are the waveform magnification keys and
-    // Ctrl+`=` / Ctrl+`-` the zoom keys (see below). Modified Up / Down
-    // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
-    // the vertical arrows in any form.
-    if (!alt && !shift && !ctrl && key == GuiKeys::Up) {
+    // Ctrl+`=` / Ctrl+`-` the zoom keys (see below).
+    //
+    // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
+    // steps ONE cent, Shift THREE and Ctrl TEN, through the ladder's one owner
+    // arrow_step_magnitude (gui_input.h) — which the horizontal pair below
+    // reads too, the ruling being one ladder over both axes. THE ACT IS THE
+    // SAME BODY at every magnitude: adjust_tempo_cents has taken a signed cent
+    // count since it was written, so the three chords differ in nothing but
+    // the number they hand it, and its own arms answer at the scaled size —
+    // the singleton CLAMPS into the tempo bracket (a Ctrl press three cents
+    // from the max lands ON the max, and one already resting there is the
+    // silent walled no-op with the greyed button beside it), while the group
+    // REFUSES WHOLE unless every selected member can take the FULL step
+    // (group rigidity, at the scan). CTRL+SHIFT SPELLS NOTHING here as
+    // everywhere — the pair falls through to the strict-modifier tail — and
+    // ALT still binds no press at all. Read-only tabs refuse upstream in all
+    // three forms: the allowlist does not admit the vertical arrows on any
+    // modifier, and the card names the chord that was pressed.
+    if (!alt && !(ctrl && shift) &&
+        (key == GuiKeys::Up || key == GuiKeys::Down)) {
+        const int64_t delta_cents = (key == GuiKeys::Up ? +1 : -1) *
+                                    arrow_step_magnitude(mods);
         card_op_refusal(notifications,
-                        warpops.adjust_tempo_cents(+1,
-                                                   mods.synthesized_repeat));
-        return;
-    }
-    if (!alt && !shift && !ctrl && key == GuiKeys::Down) {
-        card_op_refusal(notifications,
-                        warpops.adjust_tempo_cents(-1,
+                        warpops.adjust_tempo_cents(delta_cents,
                                                    mods.synthesized_repeat));
         return;
     }
@@ -1906,13 +1918,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // lives (the delete list is at the head of marker_drag.h). No fallback to the
     // waveform-lane step, by the standing rule that a refused marker-lane press is
     // a consumed no-op. Read-only
-    // tabs refuse both routes upstream: the allowlist admits the bare
+    // tabs refuse both routes upstream: the allowlist admits the
     // horizontal arrows only when playhead_in_marker_lane is false, so a locked
-    // tab with a selection drops them at the gate.
-    if (!alt && !shift && !ctrl &&
+    // tab with a selection drops them at the gate — in all three magnitudes,
+    // the lock's lane term reading its one owner and no modifier.
+    //
+    // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
+    // moves ONE painted column, Shift THREE and Ctrl TEN, through the ladder's
+    // one owner arrow_step_magnitude (gui_input.h) — the same ladder the
+    // vertical pair reads, on WHATEVER the arrow's subject is. Here that
+    // subject is the focused marker; the WAVEFORM lane's twin sits in the arm
+    // directly below and steps the cursor by the identical count. The step
+    // travels as a signed COLUMN COUNT the whole way down (`step_columns` at
+    // the prologue, the landing owner and both twins), so nothing but the
+    // number changes: the landing still clamps into the marker's own headroom,
+    // which is what makes a Ctrl press near the song's end land exactly ON the
+    // wall. CTRL+SHIFT spells nothing and falls to the strict-modifier tail.
+    if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
-        const int direction = (key == GuiKeys::Left) ? -1 : +1;
+        const int step_columns =
+            (key == GuiKeys::Left ? -1 : +1) *
+            static_cast<int>(arrow_step_magnitude(mods));
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
@@ -1949,8 +1976,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         card_op_refusal(notifications,
                         app.active_markers_view == 'P'
                             ? phase_resets.nudge_selected_phase_resets(
-                                  direction, rpt)
-                            : warpops.nudge_selected_markers(direction, rpt));
+                                  step_columns, rpt)
+                            : warpops.nudge_selected_markers(step_columns,
+                                                             rpt));
+        return;
+    }
+
+    // THE WAVEFORM LANE'S MODIFIED STEP (architect 2026-08-31, R12) — the arm
+    // above claimed every marker-lane press, so anything reaching here is the
+    // cursor's own step with no selection standing, and this arm carries the
+    // TWO MODIFIED forms alone: the BARE one is handle_plain_bare_keys' Left /
+    // Right case, which it has been since before the ladder existed, and both
+    // roads call the ONE act owner (run_waveform_lane_playhead_step,
+    // input_key_dispatch.cpp) so the stop, the stale-focus clear and the step
+    // are written once. The split of SITES is the dispatch's own shape — the
+    // bare road ends in that switch — and not a second act.
+    // CTRL+SHIFT and ALT spell nothing and fall to the strict-modifier tail.
+    if (!alt && (ctrl != shift) &&
+        (key == GuiKeys::Left || key == GuiKeys::Right)) {
+        run_waveform_lane_playhead_step(
+            (key == GuiKeys::Left ? -1 : +1) *
+            static_cast<int>(arrow_step_magnitude(mods)));
         return;
     }
 

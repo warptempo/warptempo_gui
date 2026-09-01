@@ -197,8 +197,10 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     target_render.trigger();
 }
 
-// Nudge the FOCUSED phase reset by exactly one on-screen pixel column per press.
-// Direction: -1 for earlier, +1 for later. Symmetric with nudge_selected_markers
+// Nudge the FOCUSED phase reset by the press's own count of on-screen pixel
+// columns — ONE bare, THREE under shift, TEN under ctrl since 2026-08-31 (the
+// step ladder, arrow_step_magnitude in gui_input.h), negative for earlier and
+// positive for later. Symmetric with nudge_selected_markers
 // — the moved reset is its own pixel-column anchor (stepped_anchor_frame — the
 // one-column-per-press derivation and its numeric rationale live in the comment
 // there). Both columns share painted_column_of_source_frame, so the anchored
@@ -222,7 +224,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // below). Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below.
 GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
-        int direction, bool synthesized_repeat) {
+        int step_columns, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable — the state and geometry
     // guards, the focused-index belt and THE WALL, all of it ahead of the
@@ -232,10 +234,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // refusals say NOTHING, the warp twin's rule and for its reason
     // (GuiOpRefusal, warpmarkers_ops.h): each is an outer gate's card already,
     // a belt against a kept invariant, or the wall, silent beside its greyed
-    // button. `direction` is passed for the wall term alone.
+    // button. `step_columns` is passed for the wall term alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::PhaseResetNudge, synthesized_repeat, direction);
+        GestureKind::PhaseResetNudge, synthesized_repeat, step_columns);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     // Phase resets carry no tempo, so there is no inherit/tempo analog to the warp
@@ -257,7 +259,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // is the one both columns share. Crossing a neighbor is legal and goes
     // through the reorder-and-remap below.
     const int64_t committed_f =
-        position_nudge_landing(app, audio, orig_f, direction);
+        position_nudge_landing(app, audio, orig_f, step_columns);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop

@@ -189,25 +189,36 @@ struct PositionNudgePrologue {
 // approach) is supplied by the audition scrub instead. The twins keep their own
 // GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
-// consumed by the coalesce verdict alone. `direction` is the press's own step
-// sign (-1 Left, +1 Right), consumed by the wall term at (1) alone — it is what
-// makes the refusal DIRECTIONAL, the marker at frame 0 refusing Left and taking
-// Right. The store size is no longer a parameter: the wall predicate reads the
-// ACTIVE column's store, which is the calling twin's own (the dispatch picks
-// the twin by that same bit), and owns the stale-index belt with it.
+// consumed by the coalesce verdict alone. `step_columns` is the press's own
+// SIGNED PAINTED-COLUMN COUNT — ±1 bare, ±3 shifted, ±10 with ctrl since
+// 2026-08-31 (the step ladder, one owner at arrow_step_magnitude in
+// gui_input.h) — consumed by the wall term at (1) alone, which is what makes
+// the refusal DIRECTIONAL, the marker at frame 0 refusing Left and taking
+// Right. IT WAS A BARE SIGN NAMED `direction` UNTIL THE LADDER LANDED and the
+// magnitude changed nothing else on this road: every arm below reads it as an
+// integer column delta already. The store size is no longer a parameter: the
+// wall predicate reads the ACTIVE column's store, which is the calling twin's
+// own (the dispatch picks the twin by that same bit), and owns the stale-index
+// belt with it.
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int direction);
+    GestureKind kind, bool synthesized_repeat, int step_columns);
 
 // THE pixel-column step, and the ONLY position derivation either nudge uses:
 // read the marker's currently painted column (painted_column_of_source_frame —
 // the stem painters' own math against the displayed paint basis) and commit the
-// frame at cf + direction (authored_frame_at_column, which funnels through
+// frame at cf + step_columns (authored_frame_at_column, which funnels through
 // snap_authored_frame, the one fractional-to-authored route). Returns the
 // committed frame RAW — walls are NOT this helper's business: each twin applies
 // its own regime to the result. Exactly one call per press, on the focus.
+//
+// THE COMMANDED COLUMN COUNT IS THE MODIFIER'S since 2026-08-31 (R12): ±1
+// bare, ±3 shifted, ±10 with ctrl. The arithmetic is unchanged — a signed
+// column delta added to the painted column — and the guarantee below scales
+// with it, three and ten columns being three and ten times a bound that
+// already holds for one.
 //
 // THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here. It is a
 // GRID-FINENESS property, not a gesture-family property: the painted move is
@@ -236,7 +247,7 @@ PositionNudgePrologue position_nudge_prologue(
 int64_t stepped_anchor_frame(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map,
-    int64_t orig_frame, int direction);
+    int64_t orig_frame, int step_columns);
 
 // WHERE ONE POSITION NUDGE WOULD LAND A MARKER — THE WALL-REGIME MIDDLE, one
 // owner for both columns since 2026-08-31 (it stood spelled out in each twin
@@ -245,8 +256,8 @@ int64_t stepped_anchor_frame(
 // and the EOF wall is the SAME wall in both columns, total_frames - 1, the
 // single marker wall stated at drop_phase_reset_at_position). Given the
 // marker's resting frame it returns the frame the press would commit:
-//   (1) THE STEP, one painted column through stepped_anchor_frame (the
-//       one-column-per-press guarantee and its numbers are at that
+//   (1) THE STEP, `step_columns` painted columns through stepped_anchor_frame
+//       (the one-column-per-press guarantee and its numbers are at that
 //       declaration), as a plain integer delta;
 //   (2) WALLS WIN BY CLAMPING, in the marker's own headroom [0 - orig,
 //       wall - orig] — integer arithmetic, non-empty because every stored
@@ -271,8 +282,20 @@ int64_t stepped_anchor_frame(
 // own store read, its post-clamp identity no-op and its stop), and
 // marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
 // wall term, which compares this landing against the resting frame.
+//
+// THE MAGNITUDE IS THE PRESS'S OWN since 2026-08-31 (R12): `step_columns` is
+// the signed painted-column count, ±1 bare, ±3 shifted, ±10 with ctrl, and
+// (1) simply commands that many columns while (2) clamps the result the way it
+// always did — so a long step near a wall lands exactly ON the wall, the
+// unified wall policy at the scaled size. IT IS DIRECTION-INVARIANT AT THE
+// WALL, which is what the face rests on: the column mapping is monotonic and
+// every commanded step is at least one whole frame (the guarantee at
+// stepped_anchor_frame), so `landing == orig_frame` iff the headroom in that
+// direction is zero — the same answer for ±1, ±3 and ±10. That is why
+// marker_nudge_actionable may ask the BARE step and still speak for all three
+// (the twin rule's resolution, recorded at its declaration).
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
-                               int64_t orig_frame, int direction);
+                               int64_t orig_frame, int step_columns);
 
 // The shared type-free COMMIT TAIL. Each twin calls this AFTER it has: run its
 // regime middle, mutated its store, run reorder_markers_by_time +

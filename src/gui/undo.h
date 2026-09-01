@@ -21,8 +21,11 @@ struct GuiInputHandler;
 // of eligible keyboard
 // gestures — THREE of them, re-derived 2026-07-29 when the W+target tempo-IMAGE
 // step was deleted with the whole tempo-image family (marker_drag.h): the warp and
-// phase-reset position nudges (bare Left/Right in the
-// marker lane) and the tempo cent step (bare Up/Down; no wheel route) — collapses
+// phase-reset position nudges (Left/Right in the
+// marker lane) and the tempo cent step (Up/Down; no wheel route) — each in the
+// step ladder's three magnitudes since 2026-08-31, which the coalescing is
+// blind to exactly as it is blind to direction (the record is at
+// coalesce_gesture) — collapses
 // into ONE undo entry under EITHER rule:
 //   (1) REPEAT IDENTITY, for a HELD key OR a HELD BUTTON: the burst's OPENER
 //       pushes the pre-burst snapshot, and every SYNTHESIZED REPEAT behind it

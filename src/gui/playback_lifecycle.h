@@ -79,9 +79,11 @@ struct GuiPlaybackLifecycle {
     //     singleton)
     //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
-    //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the bare Up/Down tempo cent
+    //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the Up/Down tempo cent
     //     step edits values and leaves the selection and its span exactly as they
-    //     stood, so the audition plays on under the edit.
+    //     stood, so the audition plays on under the edit. The step ladder's
+    //     magnitude (bare one cent, three shifted, ten with ctrl) changes the
+    //     number and not the class.
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
     //     PageUp/PageDown, the zoom steps — they move the window onto the audio,
     //     not the audio. `0`'s OTHER arm, taken with the zoom already at full
@@ -104,7 +106,8 @@ struct GuiPlaybackLifecycle {
     // "not stopping audio is not a big priority; audio is constantly being
     // relaunched to audition the impact of decisions."
     // The rule classifies the commands it names and claims nothing about the ones
-    // it does not. The cursor-moving NAVIGATION stops (the bare arrows, Home/End,
+    // it does not. The cursor-moving NAVIGATION stops (the arrows in every
+    // magnitude, Home/End,
     // the Tab family) are older and broader than the rule — they hold under the
     // definition's own contract, a handler about to commit a new cursor position.
     void stop_playback_if_playing();

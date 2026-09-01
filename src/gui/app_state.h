@@ -2281,8 +2281,22 @@ enum class RedesignButton {
     // column; the burst's state and its whole edge inventory are at
     // AppState::ChromePress.
     //
+    // AND THEY ADMIT BOTH MODIFIERS since 2026-08-31 (architect, R12 — THE
+    // STEP LADDER): a SHIFT-click steps THREE units and a CTRL-click TEN, on
+    // whatever the bare arrow's own subject is — the painted column under
+    // Left / Right (the playhead with no selection, the focused marker with
+    // one), the tempo cent under Up / Down. They are the roster's only
+    // dual-modifier buttons and the one-modifier rule's one exception, the two
+    // admissions being two RUNGS OF ONE LADDER rather than two acts, so their
+    // single second tooltip line names both. A HELD MODIFIED PRESS REPEATS ITS
+    // OWN STEP (the burst carries the arm's modifiers), while the SHIFT LONG
+    // PRESS cannot reach them at all — the burst fires at the same beat and
+    // consumes the lift — so both modified rungs are PLASTIC-ONLY here. The
+    // record and its reasoning are at redesign_button_shift_admits.
+    //
     // THE TWO SKIPS ADMIT CTRL (architect 2026-08-24), THE ROSTER'S FIRST
-    // CTRL-CLICK: a CTRL-CLICK on either runs the WHOLE-PIECE jump — frame 0 or
+    // CTRL-CLICK (the arrows' joined it 2026-08-31): a CTRL-CLICK on either
+    // runs the WHOLE-PIECE jump — frame 0 or
     // the active domain's last frame, whatever the trim window is — where the
     // plain click keeps landing on the trim bounds. The button spells the
     // KEYBOARD'S OWN MODIFIER: the act is Ctrl+Home / Ctrl+End, so a ctrl press
@@ -8333,7 +8347,7 @@ inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
 
-// THE TEMPO CENT STEP'S COLUMN GATE — bare Up / Down author TEMPO, and tempo
+// THE TEMPO CENT STEP'S COLUMN GATE — Up / Down author TEMPO, and tempo
 // is the WARP column's alone: a phase reset has no tempo to step. It is the
 // first refusal in GuiWarpMarkersOps::adjust_tempo_cents (which the singleton
 // and the group arm share), and it is deliberately NOT
@@ -8394,8 +8408,18 @@ inline int64_t tempo_cent_step_landing(int64_t start_cents,
 
 // THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
 // selected marker could take a step of `delta_cents` — no pass, no label ref,
-// no disabled marker, no coincident-collapse member, none already AT the
-// bracket edge in the step's direction. Defined in warpmarkers_ops.cpp
+// no disabled marker, no coincident-collapse member, none that would leave the
+// tempo bracket under the WHOLE step (the "already AT the bracket edge"
+// compare until the step ladder landed the same day, and the identical test at
+// the bare ±1: a member is out of bracket after one cent iff it was resting on
+// that edge). THE MAGNITUDE MATTERS HERE, unlike at the singleton — the group
+// arm adds RAW and clamping one member would pool it against its neighbours,
+// which is exactly what GROUP RIGIDITY refuses — so the ten-cent chord walls a
+// selection the one-cent chord would move. THE TWIN RULE IS ANSWERED BY
+// MONOTONICITY: a longer step in the same direction walls a SUPERSET, so the
+// BARE step the face hands this is the widest admitted answer and the button
+// greys exactly when no admitted variant would act. Defined in
+// warpmarkers_ops.cpp
 // immediately above the act, which reads it as its own whole-press refusal
 // (adjust_tempo_cents_group, all-or-nothing by GROUP RIGIDITY — the
 // justification is at the act; the unified wall policy is at the head of
@@ -8431,11 +8455,23 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // or its render identity rather than a wall its value rests on, each needs the
 // act's own resolution run, and each says so on a card the grey would swallow.
 // Defined in warpmarkers_ops.cpp beside both step arms.
-// THE TWIN RULE'S INTERACTION IS DEFERRED: once the modified steps land
-// (Ctrl+Up / Down = 0.10, Shift+Up / Down = 0.03, R12 of the same arc) a
-// button with a live modified twin must stay ENABLED, so these two arms will
-// read the widest admitted step rather than the bare one — the skips' own
-// shape (playhead_end_jump_actionable, asked of both forms).
+//
+// THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
+// R12, closing the note this declaration carried for the hours between the
+// faces commit and the ladder's): the modified steps are live — Ctrl+Up / Down
+// ten cents, Shift+Up / Down three — and a button with a live modified twin
+// must stay ENABLED, so the honest question is "would ANY admitted variant
+// act". THE FACE STILL ASKS THE BARE ±1, because that question and this one
+// have the same answer in each direction:
+//   * the SINGLETON arm compares tempo_cent_step_landing against the resting
+//     value, and for a positive delta that landing is min(start + d, max),
+//     which equals `start` iff start IS max — the same for d = 1, 3 and 10, so
+//     the arm is MAGNITUDE-INVARIANT and the bare step speaks for all three;
+//   * the GROUP arm walls a SUPERSET as the step grows (its own declaration
+//     argues it), so the bare step is the WIDEST admitted answer.
+// Either way the pair greys exactly when every variant would refuse, which is
+// the skips' rule (playhead_end_jump_actionable, asked of both forms) reached
+// by proof instead of by a second call.
 bool tempo_cent_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           int64_t delta_cents);
@@ -8459,8 +8495,11 @@ inline bool transport_session_live(const AppState& a) {
            a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
 }
 
-// WHERE ONE BARE Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane
-// — the adjacent painted column's frame through the one column->frame owner,
+// WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
+// `delta_px` painted columns away (±1 bare, ±3 shifted, ±10 with ctrl since
+// 2026-08-31, the step ladder at arrow_step_magnitude in gui_input.h; it has
+// taken a signed count since it was extracted, so the magnitudes changed
+// nothing here) — the target column's frame through the one column->frame owner,
 // pre-clamped into the live domain exactly as move_playhead_to would clamp
 // it. Defined in viewport.cpp beside the skip landing it is the twin of;
 // the arithmetic and its rationale are at Viewport::move_playhead_pixels,
@@ -8496,14 +8535,25 @@ int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
 // refuses on each of them ahead of the collapse, so nothing happens at all and
 // the face greys with it — the waveform lane's landing owner treats its
 // degenerate grid the same way.
-// THE TWIN RULE'S INTERACTION IS DEFERRED here as well: the modified steps
-// (Ctrl+Left / Right = 10 columns, Shift+Left / Right = 3, R12 of the same
-// arc) will need this arm to read the widest admitted step, not the bare one.
+// THE TWIN RULE IS RESOLVED HERE TOO, AND FOR FREE (2026-08-31, R12, closing
+// this declaration's own deferral): the modified steps are live — Ctrl+Left /
+// Right ten painted columns, Shift+Left / Right three — and `step_columns` is
+// a SIGNED COLUMN COUNT rather than a sign, which the ACT hands its own press's
+// value. THE FACE HANDS IT THE BARE ±1 and that is the widest admitted answer,
+// because this arm is MAGNITUDE-INVARIANT in a given direction: the column
+// mapping is monotonic and every commanded step moves at least one whole frame
+// (the one-column-per-press guarantee at stepped_anchor_frame), while the
+// landing clamps into the marker's own headroom — so the landing equals the
+// resting frame iff that headroom is ZERO, the same verdict for one, three and
+// ten columns. A marker two frames from the end greys nothing (the bare step
+// lands ON the end); a marker AT the end greys every variant that way. The
+// skips reach the same rule by asking both forms
+// (playhead_end_jump_actionable); this one reaches it by proof.
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
-                             int direction);
+                             int step_columns);
 
 // THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, two readers
-// (architect 2026-08-30): bare Left / Right's lane fork is the waveform-lane
+// (architect 2026-08-30): Left / Right's lane fork is the waveform-lane
 // step — the cursor stepping one painted column, refused only AT THE WALLS,
 // where the adjacent column's frame is the frame it already rests on — while
 // a standing selection puts the press in the MARKER lane, where it nudges the
@@ -8553,6 +8603,17 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // not the lane branch's, so the lock's answer for the arrows has its own
 // owner just below (horizontal_arrow_step_lock_admits) which the gate and
 // the face both read — the faces compose the two (planner decision 52).
+//
+// `direction` IS STILL A SIGN AND NOT A COUNT, with the step ladder live
+// (2026-08-31, R12 — Shift+Left / Right steps three painted columns and
+// Ctrl+Left / Right ten, on both lanes): the TWIN RULE says a button greys
+// only when every admitted variant would change nothing, and the bare ±1 this
+// hands both branches IS that answer, because each branch's wall is
+// magnitude-invariant in a given direction — the two landing owners clamp into
+// the same domain the long steps clamp into, so a landing that equals the
+// resting position for the bare step equals it for every step (the proofs are
+// at marker_nudge_actionable and at run_waveform_lane_playhead_step). So no
+// variant is asked twice here, and none needs to be.
 inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
@@ -8564,17 +8625,23 @@ inline bool horizontal_arrow_step_actionable(const AppState& app,
                app.playhead_cursor_sample;
 }
 
-// THE LOCK'S ANSWER FOR THE BARE HORIZONTAL ARROWS, one owner (planner
+// THE LOCK'S ANSWER FOR THE HORIZONTAL ARROWS, one owner (planner
 // decision 52 under the 2026-08-30 truthful-buttons ruling): a locked tab
 // ADMITS Left / Right only in the WAVEFORM lane, where the step is pure
 // navigation — in the MARKER lane (a standing selection) the same press
 // nudges the focused marker, which is authoring, and the lock drops it.
+// IT IS THE ANSWER FOR ALL THREE MAGNITUDES since 2026-08-31 (R12): the
+// modifier scales the step and changes nothing about WHOSE step it is, so the
+// lock reads the lane and no modifier — the gate's own is_playhead_step term
+// admits the bare, shifted and ctrl forms alike, and the card that answers a
+// marker-lane press names the chord that was pressed.
 // READERS: read_only_key_blocked's is_playhead_step entry (the gate — the
 // dispatch's sole read-only defense on the nudge, position_nudge_prologue
 // carrying none of its own) and the Left / Right buttons' disabled face,
 // which greys where the lock bit and this refusal meet. UP / DOWN NEED NO
-// OWNER OF THIS KIND: the lock drops them OUTRIGHT (bare Up / Down sit on no
-// allowlist entry), which is a plain membership, and their faces join the
+// OWNER OF THIS KIND: the lock drops them OUTRIGHT (Up / Down sit on no
+// allowlist entry in any of the ladder's three magnitudes), which is a plain
+// membership, and their faces join the
 // read-only arm's hand-listed set exactly as the verbs did.
 inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
     return !marker_selection_standing(app);
@@ -10818,7 +10885,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
 // a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
-// FIVE carry it, each for that one reason: Render (Ctrl+Alt+R renders the
+// The membership is the predicate below and is deliberately not restated as a
+// count anywhere (it was "FIVE" from 2026-08-26 until 2026-08-31, by which
+// time three more had joined without the word moving). Each member is here for
+// that one reason: Render (Ctrl+Alt+R renders the
 // deliverable into `render/`, Ctrl+Alt+Shift+R a numbered cell inside a
 // `_miscellaneous` batch folder under `tmp/`), Show trim
 // region (Shift+[ the MAXIMIZER — reset the trim to the whole song), THE
@@ -10888,6 +10958,28 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // is WANTED on glass here for the play button's reason: standing the two tabs
 // on a reference and its definition is a reading gesture as much as a desk
 // one, and the panel has no shift key.)
+// (THE FOUR CARDINAL ARROWS JOINED 2026-08-31 with the STEP LADDER — R12,
+// Shift+arrow = a THREE-unit step on whatever the bare arrow's subject is —
+// and they are this set's FIRST MEMBERS THAT ALSO ADMIT CTRL, the ten-unit
+// step (redesign_button_ctrl_admits below, whose one-modifier-per-button
+// assert narrowed for them). Their one second tooltip line names both.
+//
+// AND THEY ARE THE FIRST MEMBERS WHOSE LONG PRESS CANNOT REACH THE TWIN, which
+// is a fact of the machinery rather than a second rule: all four carry
+// `repeats` in kToolbarChords, so a hold past the beat fires the burst instead
+// — the burst's first fire is scheduled at kHoldBeatMs, the very instant
+// kChromeShiftHoldMs would be measured at, and a fired burst CONSUMES its own
+// lift (finish_chrome_press_release's repeat_fired return, which is ranked
+// above the hold's measurement). So a held arrow gives the stream of its
+// PLAIN step, which is the faster road anyway, and the shift hold is reachable
+// only where the compositor advertises no key repeat at all and the burst
+// therefore never fires. THE CONSEQUENCE IS RECORDED, NOT DESIGNED AROUND:
+// glass reaches neither the 3-step nor the 10-step on these four — both are
+// plastic-only, a wider asymmetry than R12's own "no ctrl road on glass" — and
+// closing it would mean bending the plain hold into a shifted one, which would
+// take the stream of single steps away from the panel that has no other road
+// to it. The admission stays because the SHIFT-CLICK is real and because the
+// tooltip's second line is bound to this predicate.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
@@ -10895,7 +10987,11 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
            b == RedesignButton::IconMarkerDrop ||
-           b == RedesignButton::IconCopyValue;
+           b == RedesignButton::IconCopyValue ||
+           b == RedesignButton::TransportUp ||
+           b == RedesignButton::TransportDown ||
+           b == RedesignButton::TransportLeft ||
+           b == RedesignButton::TransportRight;
 }
 
 // THE CTRL-AUGMENTED BUTTONS — the set above one axis over, and the ROSTER'S
@@ -10907,14 +11003,22 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // shape a shift-click dispatches a shifted one — the button spells the
 // keyboard's own modifier and translates nothing.
 //
-// THE TWO ADMISSIONS ARE EXCLUSIVE, one modifier per button, and the
-// static_assert below holds it: a button carries ONE second tooltip line, so it
-// can honestly advertise one modified act and no more. Exclusivity is also what
-// keeps the SHIFT LONG PRESS — glass's held shift — off this pair BY
+// THE TWO ADMISSIONS WERE EXCLUSIVE UNTIL 2026-08-31, one modifier per button
+// on the reasoning that a button carries ONE second tooltip line and so can
+// honestly advertise one modified act and no more. THE STEP LADDER (R12) BROKE
+// THAT, deliberately and in one place: the four cardinal arrows carry a THREE-
+// unit step on shift AND a TEN-unit step on ctrl — one ladder, three rungs, and
+// splitting it across two buttons is not available — so their one second line
+// names BOTH acts in one sentence, which is what the line can honestly do when
+// the two acts are the same act at two sizes. The walk below holds the
+// narrowed rule: a button may admit both modifiers ONLY if it is one of those
+// four. Exclusivity elsewhere is also what
+// keeps the SHIFT LONG PRESS — glass's held shift — off the skips BY
 // CONSTRUCTION: the hold reaches a twin exactly where
 // redesign_button_shift_admits does, and the skips are not in it, so a held skip
 // gives the ordinary trim-bound jump just as a tap does. The architect wants the
-// whole-piece jump off glass here.
+// whole-piece jump off glass here. (The ARROWS' hold is answered by their
+// `repeats` burst instead, the record being at the shift set above.)
 //
 // TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
 // admits a ctrl press only where this says so and leaves it the strict consumed
@@ -10928,16 +11032,48 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // ctrl-click reachable, and the dead face — its press consumed ahead of this
 // admission — means neither form would change anything. The succession is at
 // the skips' case in redesign_button_enabled and at their tooltip entry.
+// (THE FOUR CARDINAL ARROWS JOINED 2026-08-31, R12: their ctrl-click is the
+// ladder's TEN-unit step and dispatches Ctrl+arrow, the skips' own shape — the
+// button spells the keyboard's modifier and translates nothing. They admit
+// SHIFT as well, for the three-unit rung, which is why the exclusivity assert
+// below became a walk with exactly this exception. THE CTRL ROAD IS
+// PLASTIC-ONLY, as the skips' is and for the same reason: the shift long press
+// is glass's one held modifier and it never reaches ctrl, and on these four it
+// does not reach shift either — their `repeats` burst answers a hold first
+// (recorded at redesign_button_shift_admits).)
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportSkipBack ||
-           b == RedesignButton::TransportSkipForward;
+           b == RedesignButton::TransportSkipForward ||
+           b == RedesignButton::TransportUp ||
+           b == RedesignButton::TransportDown ||
+           b == RedesignButton::TransportLeft ||
+           b == RedesignButton::TransportRight;
 }
-static_assert(
-    !(redesign_button_ctrl_admits(RedesignButton::TransportSkipBack) &&
-      redesign_button_shift_admits(RedesignButton::TransportSkipBack)) &&
-    !(redesign_button_ctrl_admits(RedesignButton::TransportSkipForward) &&
-      redesign_button_shift_admits(RedesignButton::TransportSkipForward)),
-    "a button admits one modifier: its one second tooltip line names one act");
+// THE ONE-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31): it named the
+// two skips by hand until the arrows joined both sets, which is the discipline
+// gap the standing rule refuses — a third dual-modifier button would have been
+// true of every name listed and false of the roster. So the walk states the
+// narrowed rule itself: a button carries ONE second tooltip line, so it admits
+// ONE modifier — unless it is one of the four cardinal arrows, whose two
+// admissions are two RUNGS OF ONE LADDER and whose single line names both.
+constexpr bool redesign_button_dual_modifier_is_the_step_ladder() {
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        const RedesignButton b = static_cast<RedesignButton>(i);
+        if (!(redesign_button_ctrl_admits(b) &&
+              redesign_button_shift_admits(b)))
+            continue;
+        if (b != RedesignButton::TransportUp &&
+            b != RedesignButton::TransportDown &&
+            b != RedesignButton::TransportLeft &&
+            b != RedesignButton::TransportRight)
+            return false;
+    }
+    return true;
+}
+static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
+    "a button admits one modifier: its one second tooltip line names one act "
+    "— the four cardinal arrows excepted, whose line names both rungs of the "
+    "step ladder");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -11296,10 +11432,25 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // twice — the hint keeps only the sentence-case direction. (Painted
         // order is down, up, left, right since 2026-08-14; this table is keyed
         // by id and carries no order of its own.)
-        case RedesignButton::TransportDown:  return {"Down", nullptr};
-        case RedesignButton::TransportUp:    return {"Up", nullptr};
-        case RedesignButton::TransportLeft:  return {"Left", nullptr};
-        case RedesignButton::TransportRight: return {"Right", nullptr};
+        //
+        // THE SECOND LINE NAMES BOTH RUNGS OF THE STEP LADDER (2026-08-31,
+        // R12) and is the table's ONE two-act line, which is what the arrows'
+        // exception to the one-modifier rule buys: shift is a three-unit step
+        // and ctrl a ten, on whatever the bare arrow's own subject is — the
+        // painted column under Left / Right, the tempo cent under Up / Down —
+        // so the line says "step" and lets the button's own name supply the
+        // unit rather than spelling two different sentences for one ruling.
+        // The numbers are the ladder's (kArrowStepShift / kArrowStepCtrl,
+        // gui_input.h) and this is the one place they are written as words;
+        // a retune there is a retune here.
+        case RedesignButton::TransportDown:
+            return {"Down", "Press Shift for a 3-step, Ctrl for 10."};
+        case RedesignButton::TransportUp:
+            return {"Up", "Press Shift for a 3-step, Ctrl for 10."};
+        case RedesignButton::TransportLeft:
+            return {"Left", "Press Shift for a 3-step, Ctrl for 10."};
+        case RedesignButton::TransportRight:
+            return {"Right", "Press Shift for a 3-step, Ctrl for 10."};
     }
     return {nullptr, nullptr};
 }
@@ -11483,8 +11634,10 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // Checked at compile time so the tables cannot drift: a button that gains a
 // shifted or a ctrl chord without gaining the line (or the reverse) fails to
 // build here. The two admissions are ORed because a button carries ONE second
-// line, and they are exclusive by the assert at redesign_button_ctrl_admits, so
-// the line that exists names the one modifier that acts.
+// line — for every button but the four cardinal arrows that line names the one
+// modifier that acts, and the walk at redesign_button_ctrl_admits is what
+// holds the arrows to being the only exception (their line names both rungs of
+// the step ladder).
 //
 // IT WALKS THE WHOLE ROSTER (2026-08-29), it does not list buttons. This was a
 // hand-kept enumeration of ten — eight members plus two negatives kept as

@@ -46,6 +46,9 @@ struct GuiPhaseResetMarkersOps {
     // Returns the refusal's own sentence for the dispatcher to card, or
     // std::nullopt for "nothing to say" (GuiOpRefusal, warpmarkers_ops.h —
     // the contract is stated once there).
-    GuiOpRefusal nudge_selected_phase_resets(int direction,
+    // `step_columns` is the press's signed PAINTED-COLUMN count (±1 bare, ±3
+    // shifted, ±10 with ctrl since 2026-08-31 — the step ladder, one owner at
+    // arrow_step_magnitude in gui_input.h), the warp twin's own parameter.
+    GuiOpRefusal nudge_selected_phase_resets(int step_columns,
                                              bool synthesized_repeat);
 };

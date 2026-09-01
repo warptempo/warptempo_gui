@@ -71,9 +71,13 @@ struct GuiWarpMarkersOps {
     void delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();
-    // Steps the focused marker's tempo by `delta_cents` integer cents (one
-    // cent per keypress, signed by direction of travel). With a 2+ selection it
-    // dispatches to the all-or-nothing group step below. `synthesized_repeat` is
+    // Steps the focused marker's tempo by `delta_cents` integer cents, signed
+    // by direction of travel — ONE cent per bare keypress, THREE under shift
+    // and TEN under ctrl since 2026-08-31 (the step ladder, one owner at
+    // arrow_step_magnitude in gui_input.h; this body has taken a signed count
+    // since it was written and needed no change for the magnitudes). With a 2+
+    // selection it dispatches to the all-or-nothing group step below.
+    // `synthesized_repeat` is
     // the dispatching key event's platform repeat bit, read only by the
     // undo-coalesce verdict (undo.h).
     // NEITHER ARM STOPS PLAYBACK, and that is the ruling rather than an omission:
@@ -82,14 +86,17 @@ struct GuiWarpMarkersOps {
     // playback_lifecycle.h).
     GuiOpRefusal adjust_tempo_cents(int64_t delta_cents,
                                     bool synthesized_repeat);
-    GuiOpRefusal nudge_selected_markers(int direction,
+    // `step_columns` is the press's signed PAINTED-COLUMN count (±1 bare, ±3
+    // shifted, ±10 with ctrl — the ladder above), which the shared road reads
+    // as a plain column delta the whole way down.
+    GuiOpRefusal nudge_selected_markers(int step_columns,
                                         bool synthesized_repeat);
 
    private:
     // Group tempo step (architect 2026-07-23, 2+ selection): all-or-nothing.
-    // Every selected marker must be a steppable OWNER not at the bracket edge in
-    // the step direction, or the whole press refuses on its own sentence
-    // (2026-08-30); then each steps
+    // Every selected marker must be a steppable OWNER that can take the FULL
+    // `delta_cents` without leaving the tempo bracket, or the whole press
+    // refuses on its own sentence (2026-08-30); then each steps
     // its own tempo_cents by delta_cents. See the definition for the wall set.
     GuiOpRefusal adjust_tempo_cents_group(int64_t delta_cents,
                                           bool synthesized_repeat);

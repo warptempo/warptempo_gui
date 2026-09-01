@@ -614,6 +614,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     // column is `repeats`, which these four set — as does the waveform
     // magnification pair above since 2026-08-26; the column IS the
     // membership (the contract is at ToolbarChord::repeats).
+    //
+    // THEIR MODIFIER COLUMNS STAY FALSE and that is the split these four make
+    // visible (2026-08-31, R12 — THE STEP LADDER): the table's `shift` and
+    // `ctrl` columns spell a row's OWN base chord (Redo's Ctrl+Shift+Z, the
+    // zoom pair's Ctrl+=), while an ADMISSION is a press-time modifier the
+    // lift moves into the dispatched chord — and the ladder is the second
+    // kind. The bare row here is the one-unit step; a Shift-click dispatches
+    // Shift+arrow (three units) and a Ctrl-click Ctrl+arrow (ten), both
+    // through redesign_button_shift_admits / redesign_button_ctrl_admits
+    // (app_state.h) and both carried into the HOLD-REPEAT's own chord so a
+    // held modified press repeats its own step. Setting a column here instead
+    // would make the modified form the button's ONLY act.
     {RedesignButton::TransportDown,
      GuiKeys::Down,   false, false, false, false, true, true},                       // bare Down
     {RedesignButton::TransportUp,
@@ -7273,17 +7285,30 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // has dispatched by this line and nothing will until the lift, so
         // "press-time" is simply the state this press found.
         //
-        // The chord is the LIFT's minus its long-press term, which no repeating
-        // row can reach (none of the six ADMITS shift, and a shift press
-        // returned above the arm) and minus its CARRIED ctrl, which no
-        // repeating row can carry either (none of the six admits ctrl, and the
-        // band's modifier gate refuses an unadmitted ctrl press before the arm)
-        // — so the predicate is asked about exactly the chord the burst will
-        // fire. The zoom stepping pair's own ctrl comes from tc.ctrl,
-        // this table's column, and is copied below like any other row's.
+        // THE CHORD IS THE LIFT'S MINUS ITS LONG-PRESS TERM, and it carries
+        // BOTH press-time modifiers since 2026-08-31 (R12, the step ladder):
+        // the four cardinal arrows are `repeats` rows that admit shift AND
+        // ctrl, so a Shift+hold walks three units a fire and a Ctrl+hold ten —
+        // A HELD REPEAT CARRIES ITS MODIFIER, the burst continuing the gesture
+        // the press began. Each carried bit is already narrowed to a button
+        // that admits it (a shift press on a non-admitting button returned
+        // above this arm; the band's modifier gate refuses an unadmitted ctrl
+        // press before the arm ever runs), so no second admission is asked
+        // here and the predicate is asked about exactly the chord the burst
+        // will fire. The magnification pair carries neither and is unmoved;
+        // the zoom stepping pair's own ctrl comes from tc.ctrl, this table's
+        // column, and is ORed in like any other row's.
+        //
+        // THE LONG-PRESS TERM IS STILL ABSENT AND NOW FOR A SECOND REASON: no
+        // repeating row could reach it before because none admitted shift, and
+        // the arrows that now do cannot reach it either — their burst fires at
+        // kHoldBeatMs, the same instant the hold would be measured at, and a
+        // fired burst consumes its own lift (the record is at
+        // redesign_button_shift_admits, app_state.h).
         if (tc.repeats) {
             GuiInputState chord{};
-            chord.ctrl  = tc.ctrl;
+            chord.ctrl  = tc.ctrl ||
+                          (mods.ctrl && redesign_button_ctrl_admits(tc.id));
             chord.shift = tc.shift || mods.shift;
             chord.alt   = tc.alt;
             if (repeat_eligible(tc.key, chord))
@@ -7568,8 +7593,18 @@ void GuiInputHandler::tick_chrome_press_repeat() {
         return;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != id) continue;
+        // THE FIRE CARRIES THE ARM'S OWN MODIFIERS, the arm-time chord build's
+        // twin (arm_redesign_press) and the same expression: a HELD REPEAT
+        // CARRIES ITS MODIFIER (2026-08-31, R12), so a Shift+hold on an arrow
+        // fires the three-unit step and a Ctrl+hold the ten-unit one, every
+        // fire. Both bits were narrowed at the press to a button that admits
+        // them, so this restates no admission — it re-asks the ctrl one only
+        // because the expression must be the arm's verbatim, and drift between
+        // "what the burst was judged eligible for" and "what it fires" is
+        // exactly what one expression in two places prevents.
         GuiInputState chord{};
-        chord.ctrl  = tc.ctrl;
+        chord.ctrl  = tc.ctrl ||
+                      (arm.ctrl && redesign_button_ctrl_admits(tc.id));
         chord.shift = tc.shift || arm.shift;
         chord.alt   = tc.alt;
         if (!repeat_eligible(tc.key, chord)) {

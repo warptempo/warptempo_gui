@@ -262,7 +262,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // this list — and writes no store, no setting and no trim. Shift-exact,
     // the dispatch arm's own spelling through the shared predicate.
     const bool is_ab_audition = is_ab_audition_key(key, mods);
-    // The bare horizontal arrows step the PLAYHEAD by one painted column, and
+    // The horizontal arrows step the PLAYHEAD by their own count of painted
+    // columns (one bare, three shifted, ten with ctrl since 2026-08-31), and
     // they are admitted ONLY in the waveform lane, where that step is pure
     // navigation. In the MARKER lane (a non-empty selection) the very same press
     // steps the playhead AND the marker under it — a position nudge in either
@@ -287,9 +288,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // buttons' disabled face reads the same owner, so the lock's refusal and
     // the grey are one decision. (It read playhead_in_marker_lane() until
     // then, the lane predicate whose body that owner now is.)
+    // AND IT ADMITS ALL THREE MAGNITUDES since 2026-08-31 (R12, the step
+    // ladder): Shift+Left / Right steps three painted columns and Ctrl+Left /
+    // Right ten, and the modifier scales the step without changing WHOSE step
+    // it is — so the lane decides for the shifted and ctrl forms exactly as it
+    // decides for the bare one. CTRL+SHIFT stays out (it spells nothing, and
+    // an unbound combination needs no admission) and ALT with it.
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !ctrl && !shift && !alt && horizontal_arrow_step_lock_admits(app));
+         !alt && !(ctrl && shift) &&
+         horizontal_arrow_step_lock_admits(app));
     // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and CTRL (the
     // whole-piece jump, 2026-08-24). Both are pure navigation: they move the
     // cursor, stop an audition and clear a selection, and write no store at
@@ -3691,11 +3699,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
     }
-    // Global dispatch: only the continuous step gestures repeat — the bare
+    // Global dispatch: only the continuous step gestures repeat — the
     // ARROWS all four (Left/Right being the playhead step in the waveform lane
     // and the position nudge in the marker lane, Up/Down the
     // tempo cent step; the lane split is decided per fire at dispatch, so the
-    // arrows repeat as one family), bare PageUp/PageDown, bare Equal/Minus (the
+    // arrows repeat as one family — and since 2026-08-31 they repeat on their
+    // shifted and ctrl spellings too, which the arm below this one owns),
+    // bare PageUp/PageDown, bare Equal/Minus (the
     // WAVEFORM MAGNIFICATION step since 2026-08-27, the horizontal zoom's own
     // eligibility inherited whole when the two acts swapped modifiers),
     // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
@@ -3727,14 +3737,23 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // its forms (bare, and Shift+Space the A/B audition — a held one would
     // only meet the running-sequence refusal, so no repeat is owed), Home/End
     // in BOTH of its forms (bare and the 2026-08-24 ctrl whole-piece jump),
-    // and Delete is one-shot. No MODIFIED arrow repeats at all: the arrows
-    // carry no modified binding to repeat.
+    // and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::Left || key == GuiKeys::Right ||
-         key == GuiKeys::Up || key == GuiKeys::Down ||
-         key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
+        (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
          key == GuiKeys::Equal || key == GuiKeys::Minus ||
          key == GuiKeys::Comma || key == GuiKeys::Period))
+        return true;
+    // THE FOUR ARROWS REPEAT IN ALL THREE MAGNITUDES (architect 2026-08-31,
+    // R12): a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Right walks
+    // three columns a fire and a held Ctrl+Up ten cents a fire — the burst
+    // continues the gesture the press began, which is the whole meaning of a
+    // hold. They are one family however the press is spelled (the lane split
+    // is decided per fire at dispatch, and the magnitude with it), so the arm
+    // is their own rather than a term in the bare list above: CTRL+SHIFT is
+    // excluded because it spells nothing to repeat, and ALT with it.
+    if (!mods.alt && !(mods.ctrl && mods.shift) &&
+        (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::Up || key == GuiKeys::Down))
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
     // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
@@ -7162,6 +7181,53 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
         playhead_skip_landing_frame(app, audio, forward, whole_piece));
 }
 
+// THE WAVEFORM-LANE PLAYHEAD STEP, one act owner for all three magnitudes
+// (architect 2026-08-31, R12 — the step ladder: bare one painted column,
+// Shift three, Ctrl ten, resolved at the dispatch through
+// arrow_step_magnitude, gui_input.h). TWO CALLERS, and they are two SITES of
+// one act rather than two acts: handle_plain_bare_keys' Left / Right case
+// below (the bare form, where the bare road has always ended) and on_key's
+// modified-arrow arm (the shift and ctrl forms, which must be claimed above
+// the bare dispatch because that dispatch is entered only with no modifier at
+// all). It was written inline in that switch until the ladder landed; the
+// extraction is what keeps the stop, the stale-focus clear and the step from
+// being spelled twice.
+//
+// IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's marker-lane
+// branch claims the press first and returns — in every magnitude, the two
+// arms carrying the same lane fork.
+void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
+    // The membership half of the clear below is therefore already satisfied;
+    // the FOCUS half is not — last_selected_marker survives an empty selection
+    // (a ctrl-toggle that empties the set repairs the focus rather than
+    // dropping it, and sanitize can leave one behind), and clearing it is what
+    // stops a stale focus from re-entering the marker lane on the next
+    // selection gesture.
+    // The stop lives HERE, in this lane only: the marker-lane routes carry
+    // their own playback regimes (the position nudges stop in their prologue,
+    // while the W+target refusal stops nothing at all), which is
+    // exactly why on_key routes before reaching this body.
+    playback_lifecycle.stop_playback_if_playing();
+    if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+        selection.clear_selection();
+        viewport.invalidate_waveform_area();
+    }
+    // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
+    // reached through move_playhead_pixels -> move_playhead_to (the rule at
+    // clear_region_highlight, input_handler.h). The playhead is leaving the
+    // overlay, and hiding discards nothing. AT THE WALL the landing is the
+    // cursor itself (playhead_pixel_step_landing, the owner the Left
+    // button's face reads since planner decision 60): the key still runs
+    // the stop, the clear and the hide, the greyed button none of them. THE
+    // WALL IS THE SAME WALL AT EVERY MAGNITUDE — the landing owner clamps into
+    // the live domain, so a ten-column press near the end lands exactly ON the
+    // end and one already resting there moves nothing whatever the modifier,
+    // which is why the buttons' face can read the BARE step and still answer
+    // for all three (the twin rule's own resolution, at
+    // horizontal_arrow_step_actionable).
+    viewport.move_playhead_pixels(step_columns);
+}
+
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape:
@@ -7192,40 +7258,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             notifications.dismiss(app.notifications.cards.back().id);
         break;
     case GuiKeys::Left:
-        // WAVEFORM-LANE playhead step: reached only with an EMPTY selection,
-        // because the
-        // marker-lane branch in on_key claims the press first and returns. The
-        // membership half of the clear below is therefore already satisfied; the
-        // FOCUS half is not — last_selected_marker survives an empty selection
-        // (a ctrl-toggle that empties the set repairs the focus rather than
-        // dropping it, and sanitize can leave one behind), and
-        // clearing it is what stops a stale focus from re-entering the marker
-        // lane on the next selection gesture.
-        // The stop lives HERE, in this lane only: the marker-lane routes carry
-        // their own playback regimes (the position nudges stop in their prologue,
-        // while the W+target refusal stops nothing at all), which is
-        // exactly why on_key routes before reaching this body.
-        playback_lifecycle.stop_playback_if_playing();
-        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-            selection.clear_selection();
-            viewport.invalidate_waveform_area();
-        }
-        // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
-        // reached through move_playhead_pixels -> move_playhead_to (the rule at
-        // clear_region_highlight, input_handler.h). The playhead is leaving the
-        // overlay, and hiding discards nothing. AT THE WALL the landing is the
-        // cursor itself (playhead_pixel_step_landing, the owner the Left
-        // button's face reads since planner decision 60): the key still runs
-        // the stop, the clear and the hide, the greyed button none of them.
-        viewport.move_playhead_pixels(-1);
+        // THE BARE FORM OF THE WAVEFORM-LANE STEP — one painted column back,
+        // through the act owner directly above this dispatch, which the two
+        // MODIFIED forms reach from on_key's own arm (the ladder's contract is
+        // at that owner). The whole body lived here until 2026-08-31.
+        run_waveform_lane_playhead_step(-1);
         break;
     case GuiKeys::Right:
-        playback_lifecycle.stop_playback_if_playing();
-        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-            selection.clear_selection();
-            viewport.invalidate_waveform_area();
-        }
-        viewport.move_playhead_pixels(+1);
+        run_waveform_lane_playhead_step(+1);
         break;
     case GuiKeys::F:
         // Toggle follow mode. The full body (off→on edge resync) lives in

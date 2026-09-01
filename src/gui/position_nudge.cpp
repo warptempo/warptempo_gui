@@ -26,7 +26,7 @@ PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int direction) {
+    GestureKind kind, bool synthesized_repeat, int step_columns) {
     PositionNudgePrologue r;
     // EVERY REFUSAL HERE IS SILENT, AND EACH FOR ITS OWN REASON (re-derived
     // 2026-08-30 under the strictness ruling "a card for every silent
@@ -66,7 +66,11 @@ PositionNudgePrologue position_nudge_prologue(
     // alike). Every term here greys, so the whole set moved ahead. The
     // supersession of the "an early call must poison for a press that goes on
     // to refuse" clause is recorded at Undo::coalesce_gesture.
-    if (!marker_nudge_actionable(app, audio, direction)) return r;
+    // AND IT IS ASKED OF THIS PRESS'S OWN STEP, not of a bare sign: the
+    // predicate takes a signed column count and the act hands it the one it is
+    // about to commit (the FACE hands it the bare ±1, which is the same answer
+    // — the invariance is argued at position_nudge_landing).
+    if (!marker_nudge_actionable(app, audio, step_columns)) return r;
     // The undo-coalescing verdict, now the FIRST thing past the refusals. It
     // reads the press's own repeat bit to pick its arm — a held key's
     // continuation presses carry synthesized_repeat and merge by identity, a
@@ -108,14 +112,14 @@ PositionNudgePrologue position_nudge_prologue(
 int64_t stepped_anchor_frame(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map,
-    int64_t orig_frame, int direction) {
+    int64_t orig_frame, int step_columns) {
     const int cf = painted_column_of_source_frame(
         app, audio, static_cast<double>(orig_frame), map);
-    return authored_frame_at_column(app, audio, cf + direction, map);
+    return authored_frame_at_column(app, audio, cf + step_columns, map);
 }
 
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
-                               int64_t orig_frame, int direction) {
+                               int64_t orig_frame, int step_columns) {
     // The prologue's geometry refusals, asked here so a caller that has NOT
     // run the prologue — the buttons' face — gets the same answer the press
     // would give: nothing moves (the declaration says why).
@@ -131,9 +135,10 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t wall = audio.total_frames() - 1;
-    // (1) one painted column, as a plain integer delta.
-    int64_t D = stepped_anchor_frame(app, audio, map, orig_frame, direction) -
-                orig_frame;
+    // (1) the commanded painted columns, as a plain integer delta.
+    int64_t D =
+        stepped_anchor_frame(app, audio, map, orig_frame, step_columns) -
+        orig_frame;
     // (2) walls win by clamping, in this marker's own headroom.
     if (D < -orig_frame)        D = -orig_frame;
     if (D > wall - orig_frame)  D = wall - orig_frame;
@@ -149,9 +154,10 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // defined here beside the landing it compares. The order of its terms is the
 // PROLOGUE'S OWN, so the face and the press agree at every one of them; the
 // full reasoning — why a 2+ selection stays lit, why the geometry guards are
-// terms — is at the declaration.
+// terms, and why the BARE step the face hands it answers for the shifted and
+// ctrl ones too — is at the declaration.
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
-                             int direction) {
+                             int step_columns) {
     if (a.loading || audio.total_frames() <= 0) return false;
     if (!marker_selection_standing(a)) return false;
     if (!marker_focus_standing(a)) return false;
@@ -167,7 +173,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
     const int64_t orig = (a.active_markers_view == 'P')
         ? a.phaseresetmarkers.markers()[static_cast<size_t>(f)].time_frame
         : a.warpmarkers.markers()[static_cast<size_t>(f)].time_frame;
-    return position_nudge_landing(a, audio, orig, direction) != orig;
+    return position_nudge_landing(a, audio, orig, step_columns) != orig;
 }
 
 void finish_position_nudge(

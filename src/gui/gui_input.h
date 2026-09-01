@@ -188,6 +188,38 @@ struct GuiInputState {
     bool     synthesized_repeat  = false;
 };
 
+// -- THE ARROW STEP LADDER (architect 2026-08-31, R12) -----------------------
+//
+// THE MODIFIER IS THE STEP'S MAGNITUDE, ON THE ARROWS' EVERY SUBJECT: bare is
+// ONE unit, Shift is THREE and Ctrl is TEN, and the unit is whatever the bare
+// arrow's own act steps — a painted COLUMN for Left / Right (the playhead in
+// the waveform lane, the focused marker in the marker lane, both columns) and
+// a CENT for Up / Down (the tempo step, singleton and group). ONE OWNER for
+// all four arms, because the ladder is one ruling and not two: a second
+// spelling in the vertical arm could drift from the horizontal one.
+//
+// THE ORDER bare < shift < ctrl IS DELIBERATE (the architect's own): shift is
+// the everyday coarse step and ctrl the long jump, so the modifier that is
+// harder to hold is the one that moves further.
+//
+// CTRL+SHIFT SPELLS NOTHING — strict modifier validation, so the pair is the
+// consumed no-op it is everywhere else and no arm composes a 30. Alt likewise.
+// The dispatch arms ask for the magnitude only after they have refused those
+// combinations; this function answers ctrl first and never sees the pair.
+//
+// THE WALLS ARE THE BARE FORM'S, at the scaled size: a SINGLETON step clamps
+// onto its wall (so a 10-column press near the end lands exactly on the end)
+// and a GROUP press refuses whole where any member could not take the FULL
+// step — the unified wall policy, stated at the head of position_nudge.h and
+// instanced at the group tempo scan (tempo_cent_step_group_actionable).
+inline constexpr int64_t kArrowStepShift = 3;
+inline constexpr int64_t kArrowStepCtrl  = 10;
+constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
+    if (mods.ctrl)  return kArrowStepCtrl;
+    if (mods.shift) return kArrowStepShift;
+    return 1;
+}
+
 // -- THE CHORD SPELLER (architect 2026-08-30) --------------------------------
 //
 // THE ONE PLACE A PRESS IS TURNED INTO THE NAME THE USER READS. The strictness
@@ -481,10 +513,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         // The shifted Tab's own keysym, admitted shift-agnostically as the
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
-        // The tempo cent step, and the playhead / marker position step.
+        // The tempo cent step, and the playhead / marker position step —
+        // EACH IN THREE MAGNITUDES since 2026-08-31 (R12): bare one unit,
+        // Shift three, Ctrl ten, on whatever the bare arrow's own subject is
+        // (the ladder's owner is arrow_step_magnitude above). Ctrl+Shift
+        // spells nothing on any of the four.
         case GuiKeys::Up: case GuiKeys::Down:
         case GuiKeys::Left: case GuiKeys::Right:
-            return bare;
+            return bare || sh || cl;
         // The trim bounds, and the whole-piece ends under ctrl.
         case GuiKeys::Home: case GuiKeys::End: return bare || cl;
         // The viewport's stepped scroll.
@@ -516,6 +552,15 @@ static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}) &&
                   !chord_is_bound(GuiKeys::Backslash,
                                   GuiInputState{true, false, false}),
               "Synchronize is bare backslash and no decoration of it");
+static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}) &&
+                  chord_is_bound(GuiKeys::Up,
+                                 GuiInputState{false, true, false}) &&
+                  chord_is_bound(GuiKeys::Up,
+                                 GuiInputState{true, false, false}) &&
+                  !chord_is_bound(GuiKeys::Up,
+                                  GuiInputState{true, true, false}),
+              "an arrow binds bare, Shift and Ctrl — the step ladder's three "
+              "magnitudes — and Ctrl+Shift spells no fourth");
 
 // THE SPELLER'S GUARANTEE, PINNED (2026-08-31, the day its three name-only
 // blocks and its "That key" fallback were deleted): EVERY CHORD THIS
