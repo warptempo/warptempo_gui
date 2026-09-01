@@ -7307,9 +7307,11 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         //
         // THE LONG-PRESS TERM IS STILL ABSENT AND NOW FOR A SECOND REASON: no
         // repeating row could reach it before because none admitted shift, and
-        // the arrows that now do cannot reach it either — their burst fires at
-        // kHoldBeatMs, the same instant the hold would be measured at, and a
-        // fired burst consumes its own lift (the record is at
+        // the arrows that now do cannot reach it either — THE LIFT EXCLUDES
+        // EVERY `repeats` ROW FROM THE HOLD-AS-SHIFT READING outright since
+        // 2026-08-31, so the burst's chord and the lift's agree by
+        // construction instead of by the two landing on the same beat (the
+        // reasoning is at that exclusion, and the record at
         // redesign_button_shift_admits, app_state.h).
         if (tc.repeats) {
             GuiInputState chord{};
@@ -7502,8 +7504,27 @@ void GuiInputHandler::finish_chrome_press_release(
         // predicate answers false for them. The architect wants that jump off
         // glass, and a held skip gives the ordinary trim-bound jump exactly as
         // a tap does.
+        //
+        // AND IT REACHES NO HOLD-REPEATING BUTTON EITHER, and that term is
+        // STRUCTURAL rather than incidental (2026-08-31, the round-B
+        // conversion). A repeating row's burst and this hold are measured at
+        // THE SAME INSTANT — the arm schedules its first fire at
+        // press + kHoldBeatMs and kChromeShiftHoldMs is that same beat — and a
+        // fired burst consumes its own lift above, so R12 recorded the long
+        // press as "dead on glass" for the four arrows. SHARING A TIMESTAMP IS
+        // NOT AN ORDERING: a lift delivered just past the beat but before the
+        // next tick finds repeat_fired still false, and without this term the
+        // release would dispatch a SHIFT three-step where the user was owed a
+        // plain one. So the exclusion is stated where it is read, off
+        // kToolbarChords' own `repeats` column — the arm's membership, never a
+        // second list — which makes the promised casualty guaranteed instead
+        // of timing-dependent, for the four cardinal arrows and the
+        // magnification pair alike (the pair admits no shift anyway, so the
+        // term is load-bearing for the arrows). A NON-REPEATING
+        // shift-admitting button is untouched: the hold is still its road to
+        // its twin, on glass and on the desk.
         const bool held_to_shift =
-            redesign_button_shift_admits(tc.id) &&
+            !tc.repeats && redesign_button_shift_admits(tc.id) &&
             monotonic_ms() - arm.press_ms >= kChromeShiftHoldMs;
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
         // CARRIED press-time bit and the hold — well-defined because no row

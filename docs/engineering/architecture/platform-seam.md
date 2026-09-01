@@ -621,8 +621,11 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   (USAGE_MEDIA / CONTENT_TYPE_MUSIC), requested when a push says playing and
   none is held, abandoned when a push says inactive, a refused request logged
   and playback proceeding (the stream is already running). A LOSS is forwarded
-  down as `FocusLost` / `FocusLostTransient` and pauses the player through the
-  same key road ("Android's one imposed interrupt"); GAIN is forwarded and
+  down as `FocusLost` / `FocusLostTransient` and pauses the player — through
+  its TRANSPORT DIRECTLY since 2026-08-31 rather than through the key road, a
+  direction-named command acting on the transport alone now that Space reads
+  the band first (render-player.md's car section owns the split); it is
+  "Android's one imposed interrupt", and it always pauses. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
   default, so a navigation prompt ducks rather than pauses.
 

@@ -72,13 +72,21 @@ static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
 // Shape and paint one run at (x, baseline) in `color`. The row's plain-text
 // tier — the successor of text_display::draw_line, which died with the
 // monospace path it drew in.
-static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
-                          double x, double baseline,
-                          std::string_view text, GuiColor color) {
-    if (text.empty()) return;
+//
+// RETURNS THE RUN'S ADVANCE (0 for an empty string), for the one caller that
+// BUTTS a second run against the first: row 8's lower left, whose clock and
+// state text are one face on one baseline but two runs with two clip fates
+// (the clock never clipped, the state clipped to its own room). Every other
+// caller lays out from a reserved cell or a button rect and ignores it — this
+// is the run's own width, not a cell's.
+static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
+                            double x, double baseline,
+                            std::string_view text, GuiColor color) {
+    if (text.empty()) return 0.0;
     const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     text_shape::show_shaped_run(cr, run, x, baseline);
+    return run.width_px;
 }
 
 // THE STATE TEXT IS PART OF ROW 8'S CLOCK RUN (architect 2026-08-29, folding
@@ -87,9 +95,13 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // reasoning, and seeing it he preferred the text on the row and found the bar a
 // duplicate of that panel's own foot; then 2026-08-31, dissolving the separate
 // CELL it had been for those two days into the clock's own string). The lower
-// left is ONE MONOSPACE RUN — `00:00.100 | Updating...`, the pipe a literal
+// left is ONE MONOSPACE LINE — `00:00.100 | Updating...`, the pipe a literal
 // character — painted by paint_bottom_row_buttons_and_clock with the clock; the
-// ruling is docs/engineering/architecture/messaging.md.
+// ruling is docs/engineering/architecture/messaging.md. It is SHAPED AS TWO
+// RUNS on the one face, size and baseline (the clock, then " | " + the state
+// butted at its advance) because the two halves take different clips: the
+// clock is never clipped and the state is clipped to its own room, or absent
+// when it has none. The line the reader sees is unaffected.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
 // timeouts and no clear on a key press — which is why the "revealed stale"
@@ -3014,11 +3026,29 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
         // overlay rows' precedent — at the right block's own left edge less
         // one lane pad, so a long line is cut rather than colliding with the
-        // marker verbs. The clip is the STATE's, not the clock's: with no state
-        // string the digits paint exactly as they always have, unclipped, and
-        // the row's crop-at-its-floor rule (the block above) is untouched — so
-        // the guard below also keeps the clock painting where the right block
-        // has already walked over this ground. THE ROW YIELDS WHOLE TO A MODAL,
+        // marker verbs.
+        //
+        // THE CLIP IS THE STATE'S OWN RUN, AND THAT IS WHY THERE ARE TWO RUNS
+        // (2026-08-31, the round-B conversion). One face, one size, one
+        // baseline, the second run butted against the first at its own
+        // advance — so the pixels are exactly the single string's — but two
+        // clip fates, because the two texts do not answer to the same rule:
+        //   * THE CLOCK IS NEVER CLIPPED. It paints from the cell's origin
+        //     exactly as it does with no state standing, so making a state
+        //     string appear can never take a digit away, and the row's
+        //     crop-at-its-floor allowance (the block above) is what covers the
+        //     narrow window where the right block has already walked over this
+        //     ground — the same allowance, unchanged, in both cases.
+        //   * THE STATE IS CLIPPED FROM ITS OWN START X to the bound, and a
+        //     start already at or past the bound leaves it ABSENT: no clip is
+        //     installed on a degenerate or negative room and nothing is
+        //     painted, rather than the whole run escaping onto the marker
+        //     verbs. A state with no room is simply not shown.
+        // (Both faults were one expression until this conversion: the clip ran
+        // from the CLOCK's origin, so a narrow-but-honest window cut digits
+        // off the clock, and its `x1 > x0` guard turned a bound left of the
+        // cell into NO clip at all — the collision it exists to prevent.)
+        // THE ROW YIELDS WHOLE TO A MODAL,
         // so this text is hidden while a prompt, a dialog editor, the render
         // player or the picker stands (architect-accepted at the fold; the
         // one-day status BAR painted through a modal, that being what a
@@ -3035,20 +3065,27 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // frame class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        std::string line = format_timestamp(seconds);
-        if (!state.empty()) line += " | " + state;
-
         const double x0 = static_cast<double>(cell_x);
-        const double x1 = static_cast<double>(right_block_x - pad);
-        const bool clipped = !state.empty() && x1 > x0;
-        if (clipped) {
-            cairo_save(cr);
-            cairo_rectangle(cr, x0, static_cast<double>(content_y),
-                            x1 - x0, static_cast<double>(content_h));
-            cairo_clip(cr);
+        // THE CLOCK, UNCLIPPED, and its advance is where the state begins.
+        const double clock_w = show_row_text(cr, font, x0, baseline,
+                                             format_timestamp(seconds),
+                                             kRedesignLabel);
+        if (!state.empty()) {
+            // THE SEPARATION IS A CHARACTER — the literal " | " leading the
+            // state's own run, which is why the two runs read as the one
+            // string the ruling asks for.
+            const double state_x = x0 + clock_w;
+            const double x1      = static_cast<double>(right_block_x - pad);
+            if (x1 > state_x) {
+                cairo_save(cr);
+                cairo_rectangle(cr, state_x, static_cast<double>(content_y),
+                                x1 - state_x, static_cast<double>(content_h));
+                cairo_clip(cr);
+                show_row_text(cr, font, state_x, baseline, " | " + state,
+                              kRedesignLabel);
+                cairo_restore(cr);
+            }
         }
-        show_row_text(cr, font, x0, baseline, line, kRedesignLabel);
-        if (clipped) cairo_restore(cr);
     }
 
     cairo_restore(cr);

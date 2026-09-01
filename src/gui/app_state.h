@@ -11040,16 +11040,24 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // step (redesign_button_ctrl_admits below, whose one-modifier-per-button
 // assert narrowed for them). Their one second tooltip line names both.
 //
-// AND THEY ARE THE FIRST MEMBERS WHOSE LONG PRESS CANNOT REACH THE TWIN, which
-// is a fact of the machinery rather than a second rule: all four carry
-// `repeats` in kToolbarChords, so a hold past the beat fires the burst instead
-// — the burst's first fire is scheduled at kHoldBeatMs, the very instant
-// kChromeShiftHoldMs would be measured at, and a fired burst CONSUMES its own
-// lift (finish_chrome_press_release's repeat_fired return, which is ranked
-// above the hold's measurement). So a held arrow gives the stream of its
-// PLAIN step, which is the faster road anyway, and the shift hold is reachable
-// only where the compositor advertises no key repeat at all and the burst
-// therefore never fires. THE CONSEQUENCE IS RECORDED, NOT DESIGNED AROUND:
+// AND THEY ARE THE FIRST MEMBERS WHOSE LONG PRESS CANNOT REACH THE TWIN — a
+// fact of the machinery rather than a second rule, and STRUCTURAL since
+// 2026-08-31 rather than a matter of timing. All four carry `repeats` in
+// kToolbarChords, so a hold past the beat fires the burst instead: the burst's
+// first fire is scheduled at kHoldBeatMs, the very instant kChromeShiftHoldMs
+// would be measured at, and a fired burst CONSUMES its own lift
+// (finish_chrome_press_release's repeat_fired return, ranked above the hold's
+// measurement). SHARING A TIMESTAMP IS NOT AN ORDERING, though, and that is
+// what the release now states outright: a lift delivered just past the beat
+// but before the next tick found repeat_fired still false and dispatched the
+// SHIFT step where the user was owed a plain one, so the hold's term carries
+// `!tc.repeats` — the exclusion read off the `repeats` column itself, never a
+// second list — and the whole repeat-eligible set (these four and the
+// magnification pair, which admits no shift anyway) is outside the hold-as-
+// shift reading by construction. A held arrow gives the stream of its PLAIN
+// step, which is the faster road anyway; a NON-repeating shift-admitting
+// button keeps the hold as its road to its twin, unchanged. THE CONSEQUENCE IS
+// RECORDED, NOT DESIGNED AROUND:
 // glass reaches neither the 3-step nor the 10-step on these four — both are
 // plastic-only, a wider asymmetry than R12's own "no ctrl road on glass" — and
 // closing it would mean bending the plain hold into a shifted one, which would
@@ -11115,8 +11123,8 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // below became a walk with exactly this exception. THE CTRL ROAD IS
 // PLASTIC-ONLY, as the skips' is and for the same reason: the shift long press
 // is glass's one held modifier and it never reaches ctrl, and on these four it
-// does not reach shift either — their `repeats` burst answers a hold first
-// (recorded at redesign_button_shift_admits).)
+// does not reach shift either — the hold-as-shift reading excludes every
+// `repeats` row outright (recorded at redesign_button_shift_admits).)
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportSkipForward ||

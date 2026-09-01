@@ -199,8 +199,12 @@ struct GuiPlaybackLifecycle {
     // the default 0 keeps plain Space and every other caller byte-identical.
     // The offset is applied only in the target-view branch; the offset launch
     // is re-validated against the target buffer's domain, so an offset landing
-    // at or past the buffer end is a no-op that says "There is nothing left to
-    // play from here" (the pre-sum gate's card, since 2026-08-30).
+    // at or past the buffer end is a SILENT no-op (the pre-sum gate, whose
+    // verdict is the launch body's own — architect 2026-08-31, retiring the
+    // 2026-08-30 card "There is nothing left to play from here": a benign
+    // one-dimensional refusal already at its state says nothing, the playhead
+    // resting visibly at the view's end and the Play button greying on that
+    // very predicate. The rule is at the head of playback_lifecycle.cpp).
     // THE FORK IS "TRANSPORT-LIVE", NOT playback.is_playing(): a REST of the A/B
     // audition takes the stop arm too, the act being one transport session from
     // its first play to its last (the ruling and its face argument at the
@@ -221,9 +225,12 @@ struct GuiPlaybackLifecycle {
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the active view's range — the
     // SONG in source view, the target buffer's domain in target view — or one
-    // leaving fewer than two playable frames of remainder, is a no-op that
-    // says so on the launch body's own card — exactly Space's conventions,
-    // this being the one launch road with no outer gate of its own. A live session never
+    // leaving fewer than two playable frames of remainder, is a SILENT no-op
+    // (the launch body's position gate, whose card retired 2026-08-31) —
+    // exactly Space's conventions,
+    // this being the one launch road with no outer gate of its own. A DEAD OR
+    // ABSENT DEVICE still cards there, being the one refusal the screen cannot
+    // show. A live session never
     // launches (defensive; the caller reaches here only with
     // playback stopped — a scrub act over a live session STOPS it and returns).
     void scrub_launch_at(int64_t frame);
@@ -241,9 +248,10 @@ struct GuiPlaybackLifecycle {
     // gates (playback_launch_playable, so a start at or past the domain end
     // or leaving fewer than two frames refuses), the same follow behaviour,
     // the same scanner. Returns whether it launched; the refusals are the
-    // launch body's own two cards, which the audition's press-time preflight
-    // has already asked ahead of the act (so a refusal here is unreachable in
-    // practice and would merely end the act).
+    // launch body's own two — the POSITION gate, silent since 2026-08-31, and
+    // the DEAD-DEVICE gate, which still cards — and the audition's press-time
+    // preflight has already asked both ahead of the act (so a refusal here is
+    // unreachable in practice and would merely end the act).
     // ONE CALLER: GuiAbAudition::launch_phase (ab_audition.cpp), which owns the
     // sequence this play is one step of and re-arms the sequence only on
     // true. A live session never launches (the caller always arrives stopped —

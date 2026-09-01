@@ -219,7 +219,11 @@ struct GuiInputHandler;
 // arrive as GuiMediaCommand values through main.cpp's hook into
 // on_media_command, which turns each into THE PLAYER'S OWN KEYS through
 // GuiPlatform::synthesize_key — press and release, the on-screen keyboard's
-// road — so the ordinary on_key dispatch runs and there is no second road;
+// road — so the ordinary on_key dispatch runs and there is no second dispatch
+// road for keys. TWO COMMANDS ACT DIRECT instead of pressing anything, and the
+// table at the declaration owns why: SeekTo (no keysym carries an absolute
+// position) and the DIRECTION-NAMED play/pause family, which since R6 must
+// reach the transport past Space's highlight fork (transport_toggle_act);
 // and publish_media_state is the ONE owner of what the head unit shows,
 // called at every edge where that changes. The platform is held for exactly
 // those two calls.
@@ -344,6 +348,23 @@ struct GuiRenderPlayer {
     // with a session standing, Enter (the click act) restarts it from 0 while
     // Space toggles it; everywhere else the two agree.
     void play_button_act();
+    // THE TRANSPORT'S OWN TOGGLE — play_button_act's tail PAST the highlight
+    // fork, in a body of its own since 2026-08-31 (the round-B conversion). It
+    // is the three-arm table above (LIVE pause / PAUSED resume / IDLE the item
+    // from its start, and nothing with no item) and reads no highlight at all.
+    //
+    // TWO CALLERS, and the split between them is by NAME: play_button_act
+    // calls it as its tail, so Space, the Play button and the car's undivided
+    // PlayPause keep the whole highlight-driven act; and on_media_command's
+    // DIRECTION-NAMED arms — Play, Pause, FocusLost, FocusLostTransient —
+    // call it DIRECTLY instead of synthesizing Space, because a direction is a
+    // claim about the transport alone. Without that split R6's highlight arm
+    // would have let a focus loss START a walked-to row instead of pausing
+    // what sounds (R40's bug from the car's side). It is a direct act like
+    // SeekTo, and like SeekTo it clears no modal ring — the ring clear belongs
+    // to the key-synthesis lambda, whose membership is every kind that presses
+    // a key and no other.
+    void transport_toggle_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
     void toggle_pause();
@@ -450,22 +471,36 @@ struct GuiRenderPlayer {
     // THE FEINT assigns it passively, a finger pressed on a button and slid
     // off (update_modal_dialog_hover). So the ring is CLEARED before any key
     // is synthesized, in the synthesis road itself, which is what makes the
-    // membership exactly "every command kind that synthesizes a key" — SeekTo
-    // does not take it, being the direct act below, and a kind that presses
-    // nothing (FocusGained, a state-gated no-op) damages nothing. The clear
+    // membership exactly "every command kind that synthesizes a key" — the
+    // two DIRECT acts do not take it (SeekTo, and the directional family's
+    // transport toggle since the round-B conversion), pressing no button
+    // because they press no key, and a kind that presses nothing (FocusGained,
+    // a state-gated no-op) damages nothing. The clear
     // is dispatch_modal_dialog_editor_act's own three writes: the one owner
     // GuiInputHandler::clear_modal_dialog_key_press for an armed key press (a
     // focus that moves cancels the arm — the rule at
     // AppState::modal_dialog_key_pressed), then modal_dialog_focus = -1 and
     // modal_dialog_focus_active = false, damaging the modal box.
     //
+    // AN UNDIVIDED COMMAND TAKES THE WHOLE ACT, A DIRECTION-NAMED ONE TAKES
+    // THE TRANSPORT ALONE (2026-08-31, the round-B conversion). Until R6 the
+    // two were the same thing, Space having been a transport-only toggle; R6
+    // put the highlight in front of it, so a Pause or a focus loss sent as a
+    // synthesized Space would open a folder or start a walked-to row instead
+    // of pausing what sounds. PlayPause, which says "the other one", still
+    // takes the key and inherits every act Space has; Play, Pause and the two
+    // focus losses call transport_toggle_act DIRECT — the transport's own
+    // three-arm tail, past the highlight — joining SeekTo as a direct act with
+    // no keysym behind it and, like SeekTo, taking no ring clear.
+    //
     // THE TABLE (design §3, R6): PlayPause -> Space UNCONDITIONALLY (the
     // undivided toggle key, which the sliver maps itself rather than letting
-    // the framework split it — gui_media.h; Space is play_button_act's own
-    // toggle, so the key and the act say the same thing and no gate belongs
-    // between them); Play -> Space ONLY WITH THE TRANSPORT DOWN; Pause,
-    // FocusLost and FocusLostTransient -> Space ONLY WITH THE TRANSPORT LIVE
-    // (a focus loss pauses, Android's one imposed interrupt); STOP -> THE STOP
+    // the framework split it — gui_media.h; Space is play_button_act whole, so
+    // the key and the act say the same thing and no gate belongs between
+    // them); Play -> THE TRANSPORT TOGGLE ONLY WITH THE TRANSPORT DOWN; Pause,
+    // FocusLost and FocusLostTransient -> THE TRANSPORT TOGGLE ONLY WITH THE
+    // TRANSPORT LIVE (a focus loss pauses, ALWAYS, Android's one imposed
+    // interrupt); STOP -> THE STOP
     // KEY, unconditionally (R36 gave the player a real stop, so the head
     // unit's stop is no longer a pause; the key names an act rather than a
     // toggle, so no state gate belongs on it and the act's own idle refusal is
@@ -483,13 +518,13 @@ struct GuiRenderPlayer {
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
     // posture; the user presses play). The state gate on the DIRECTIONAL
-    // play/pause family is a SEMANTIC PRE-FILTER, not a second dispatch:
-    // Space is the toggle, and a head unit saying "play" to a live transport
-    // must not pause it, so the gate decides whether the toggle is sent and
-    // the act still runs through the key road.
+    // play/pause family is a SEMANTIC PRE-FILTER, not a second dispatch: the
+    // transport toggle is a toggle, and a head unit saying "play" to a live
+    // transport must not pause it, so the gate decides whether the act runs.
     //
-    // THE ROAD'S ONE RECORDED ASYMMETRY: SeekTo calls seek_to(frame) DIRECT,
-    // because no keysym carries an absolute position — the seeks the keys
+    // THE ROAD'S TWO DIRECT ACTS: the directional family's transport toggle
+    // above, and SeekTo, which calls seek_to(frame) DIRECT because no keysym
+    // carries an absolute position — the seeks the keys
     // bind are relative (Left / Right / Home). Its milliseconds are clamped
     // to the item's own length BEFORE the conversion to frames, the arriving
     // position being any int64 a head unit cares to send (the rule at the

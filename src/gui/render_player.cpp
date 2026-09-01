@@ -512,13 +512,14 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 }
 
 void GuiRenderPlayer::play_button_act() {
-    const AppState::RenderPlayer& rp = app.render_player;
     // THE HIGHLIGHT LEADS (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-
     // DRIVEN IN THE PLAYER, narrowing R40's "the Play button never reads the
     // highlight, in any state" of two days before). A folder, the `..` row or
     // a wav that is NOT the transport's item under the band is somewhere to
     // GO, and Space goes there whatever is sounding; the transport's own item
-    // and an empty band fall through to the transport's fork below.
+    // and an empty band fall through to transport_toggle_act below — the tail
+    // this body used to hold inline, which the car's direction-named commands
+    // now reach WITHOUT this fork (the reasons are at that body).
     //
     // R40'S BUG CANNOT COME BACK, which is what makes the narrowing safe: it
     // was a band left BEHIND the transport (a Next advanced the item and the
@@ -538,10 +539,25 @@ void GuiRenderPlayer::play_button_act() {
         open_row(row);
         return;
     }
-    // THE TRANSPORT'S OWN BUSINESS. THE STATE IS THE STORED FIELD
-    // (AppState::RenderPlayer::transport), so a transport parked at frame 0 —
-    // the no-device pause on a wav that never sounded — answers PAUSED here
-    // and resumes ITS item.
+    transport_toggle_act();
+}
+
+void GuiRenderPlayer::transport_toggle_act() {
+    const AppState::RenderPlayer& rp = app.render_player;
+    // THE TRANSPORT'S OWN BUSINESS — play_button_act's tail, LIFTED INTO A BODY
+    // OF ITS OWN (2026-08-31, the round-B conversion) because the car's
+    // DIRECTION-NAMED commands need exactly this and NOT the highlight fork
+    // above it. R6 made Space highlight-driven, and a Pause or a focus loss
+    // that reached the transport by synthesizing Space would then have STARTED
+    // a walked-to row (or opened a folder) instead of pausing what sounded —
+    // the very shape of R40's bug, arriving from the car's side. So the split
+    // is by NAME: PlayPause, the undivided toggle, still synthesizes Space and
+    // takes the whole act; Play, Pause and the two focus losses call THIS
+    // (on_media_command's table carries the reasoning at each arm).
+    //
+    // THE STATE IS THE STORED FIELD (AppState::RenderPlayer::transport), so a
+    // transport parked at frame 0 — the no-device pause on a wav that never
+    // sounded — answers PAUSED here and resumes ITS item.
     switch (rp.transport) {
         case Transport::Live:
         case Transport::Paused:
@@ -1040,35 +1056,53 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
         gui.synthesize_key(key, code, /*pressed=*/false, /*codepoint=*/0);
     };
 
+    // THE SPLIT (2026-08-31, the round-B conversion — the rule this table now
+    // obeys): AN UNDIVIDED COMMAND TAKES THE WHOLE ACT, A DIRECTION-NAMED ONE
+    // TAKES THE TRANSPORT ALONE. PlayPause says "the other one", which is
+    // exactly what Space means in the player — the highlight fork included
+    // (R6) — so it stays on the synthesis road and inherits every act the key
+    // has. Play, Pause and the two focus losses name a DIRECTION, and a
+    // direction is a claim about the TRANSPORT and about nothing else: since
+    // R6 a synthesized Space would have read the band first, so a focus loss
+    // with the highlight walked to another row would START that row instead of
+    // pausing what sounds (R40's own bug, arriving from the car's side). They
+    // call transport_toggle_act — play_button_act's tail past the highlight —
+    // directly, which is a DIRECT ACT and not a second dispatch road for keys:
+    // it joins SeekTo below as the road's second act with no keysym behind it,
+    // and like SeekTo it clears no modal ring, the ring clear belonging to the
+    // press lambda's membership ("every kind that synthesizes a key, and no
+    // other") because a synthesized Space is what could press a ring-focused
+    // button. THE GATES ARE UNCHANGED and still compose, each being a pure
+    // test of the stored transport that decides whether the act runs at all.
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
         case Kind::PlayPause:
             // THE UNDIVIDED TOGGLE KEY TAKES NO STATE GATE: it says "the
             // other one", and Space in the player is exactly that act
-            // (play_button_act's own fork). The gate below exists only
-            // because Play and Pause name a direction.
+            // (play_button_act's own fork, the highlight arm included). The
+            // gates below exist only because Play and Pause name a direction.
             press(GuiKeys::Space);
             return;
         case Kind::Play:
-            // The state gate (the declaration): a "play" said to a live
-            // transport is already true and must not toggle it off — and it
-            // STILL COMPOSES under R6, the gate being a pure test of the
-            // stored transport that decides whether a key is pressed at all.
-            // AT THE FOLDER'S END the transport is down, so this Play passes
-            // the gate and reaches play_button_act — which since R7 replays
-            // the last track there, the band resting on it (R27's restart to
-            // the folder's first file was the car's own case and is retired).
-            // A WHEEL WALKS NO BAND: the highlight the act reads first is
-            // wherever the transport's own item change left it (R38), which is
-            // the item's row, so the car's Play means the transport's Play.
-            if (rp.transport != Transport::Live) press(GuiKeys::Space);
+            // A "play" said to a LIVE transport is already true and must not
+            // toggle it off; anything else resumes or starts the transport's
+            // own item. AT THE FOLDER'S END the transport is down, so this
+            // Play passes the gate and replays the last track since R7 (R27's
+            // restart to the folder's first file was the car's own case and is
+            // retired). A WHEEL WALKS NO BAND, and this act reads none: the
+            // head unit's Play means the transport's Play, whatever row the
+            // band happens to rest on.
+            if (rp.transport != Transport::Live) transport_toggle_act();
             return;
         case Kind::Pause:
         case Kind::FocusLost:
         case Kind::FocusLostTransient:
-            // A focus loss pauses (Android's one imposed interrupt). A
-            // "pause" said to a resting transport must not start it.
-            if (rp.transport == Transport::Live) press(GuiKeys::Space);
+            // A focus loss pauses (Android's one imposed interrupt), and now
+            // it pauses ALWAYS: the gate admits exactly a live transport and
+            // the act it reaches is the transport's own, so nothing the band
+            // is doing can turn an imposed interrupt into a play. A "pause"
+            // said to a resting transport must not start it — the gate.
+            if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::Stop:
             // THE HEAD UNIT'S STOP IS THE PLAYER'S STOP since R36, where it
