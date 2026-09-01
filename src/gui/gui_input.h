@@ -245,22 +245,35 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // the render player's and the picker's two catch-alls each, and — through
 // spell_modifiers alone — the pointer's unbound modified press.)
 //
-// AND THE TWO DISAGREE ON ONE LETTER, deliberately. The tooltip table writes a
-// bare letter LOWERCASE — "(t)", "(m)" — because it is the key as typed and a
+// AND THE TWO AGREE ON THE BARE LETTER SINCE 2026-09-01. The tooltip table
+// writes it LOWERCASE — "(t)", "(m)" — because it is the key as typed and a
 // capital there would advertise a shifted press the product does not bind
-// (that rule and its reason live at redesign_button_tooltip, app_state.h). A
-// CARD UPPER-CASES IT (architect 2026-08-30): the chord stands alone inside a
-// sentence rather than in parentheses after a verb, where a lone lowercase
-// letter reads as prose instead of as a key, and no capital here can be
-// mistaken for a shifted press because THE SHIFT IS ALWAYS SPELLED — "Shift+F"
-// is the shifted one, "F" is the key.
+// (that rule and its reason live at redesign_button_tooltip, app_state.h), and
+// THE CARD NOW WRITES IT LOWERCASE TOO (architect 2026-09-01, superseding his
+// 2026-08-30 upper-casing): a card reading "V is not available on a read-only
+// tab" IMPLIES SHIFT — with no modifier named, the letter's case is the only
+// signal the sentence carries, so the capital is a lie about which press was
+// refused. The old reasoning ("the shift is always spelled, so no capital can
+// be mistaken for one") asked the reader to know that rule before trusting the
+// letter; the truthful spelling asks nothing. A MODIFIED CHORD KEEPS ITS
+// CAPITAL — "Ctrl+S", "Ctrl+Shift+Z", "Shift+B" — because the named modifier
+// carries the meaning there and the uppercase letter is the product's standing
+// convention, the one HELP teaches ("Ctrl+S means Control held with the s
+// key") and the one every doc and tooltip spells.
+//
+// SO A CARD MAY BEGIN LOWERCASE ("v is not available on a read-only tab"), and
+// that is the ruling rather than a slip against the product's proper-
+// capitalization rule: THE CHORD IS A LITERAL TOKEN, NOT A WORD — it names the
+// key the hand pressed, and capitalizing it at a sentence head would rename
+// that key. Nothing here title-cases the composed string.
 //
 // A CARD NAMING THE CHORD THE USER PRESSED IS NOT A GESTURE HINT (the standing
 // no-hints rule): it names what just happened, never what to press instead.
 //
 // THE SPELLING: modifiers first in the fixed order Ctrl, Alt, Shift, joined by
-// '+', then the key — a printable ASCII key by its own character upper-cased
-// ("F", "1", "/"), a named key by its name. THE ORDER IS THE PRODUCT'S OWN, the
+// '+', then the key — a printable ASCII key by its own character, upper-cased
+// IFF a modifier was named ("Ctrl+F", but a bare "f"; "1" and "/" have no case
+// either way), a named key by its name. THE ORDER IS THE PRODUCT'S OWN, the
 // one every chord in HELP and in the docs is written in (Ctrl+Alt+Shift+R), so
 // the card and the documentation spell one chord one way.
 //
@@ -268,7 +281,7 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // is no fallback for one that does not (architect 2026-08-31): the three
 // readers ask chord_is_bound first, and every key that inventory admits is
 // either named in the table below or a printable ASCII character spell_chord
-// upper-cases. every_bound_key_is_spellable, beside chord_is_bound's own
+// writes by itself. every_bound_key_is_spellable, beside chord_is_bound's own
 // anchors, PINS the implication at compile time, so a binding added on a key
 // with no name breaks the build rather than reaching a card.
 //
@@ -373,6 +386,7 @@ constexpr const char* spell_key_name(GuiKey key) {
 }
 
 inline std::string spell_chord(GuiKey key, GuiInputState mods) {
+    const std::string prefix = spell_modifiers(mods);
     std::string name;
     if (const char* named = spell_key_name(key)) {
         name = named;
@@ -385,13 +399,20 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
         // blocks, which were the only thing that could reach it). It is the
         // KEY'S OWN character, never mods.codepoint: the shifted `1` is
         // still the 1 key, and a card that called it "!" would name a press the
-        // user cannot find on the board. Letters arrive case-folded from the
-        // platform boundary, so this is the one place they are put back up.
+        // user cannot find on the board.
+        //
+        // THE CASE IS THE PREFIX'S (architect 2026-09-01, the head's ruling).
+        // Letters arrive case-folded from the platform boundary and STAY DOWN
+        // where no modifier is named — a lone "V" on a card would imply the
+        // shift the sentence never spells — and are put back up under a prefix,
+        // where the modifier carries the meaning and the capital is the
+        // product's standing spelling ("Ctrl+S"). Digits and punctuation have
+        // no case, so the fork reaches only the letters.
         char c = static_cast<char>(key);
-        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        if (!prefix.empty() && c >= 'a' && c <= 'z')
+            c = static_cast<char>(c - 'a' + 'A');
         name.assign(1, c);
     }
-    const std::string prefix = spell_modifiers(mods);
     if (prefix.empty()) return name;
     return prefix + "+" + name;
 }
@@ -589,8 +610,8 @@ static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}) &&
 // THE SPELLER'S GUARANTEE, PINNED (2026-08-31, the day its three name-only
 // blocks and its "That key" fallback were deleted): EVERY CHORD THIS
 // PREDICATE ADMITS HAS A NAME — its key is either in spell_key_name's table or
-// a printable ASCII character spell_chord upper-cases — which is exactly what
-// lets that speller carry no unnamed arm. A binding added on a key with
+// a printable ASCII character spell_chord writes by itself — which is exactly
+// what lets that speller carry no unnamed arm. A binding added on a key with
 // neither breaks the build here instead of putting a control byte on a card.
 //
 // THE WALK'S RANGE IS THE TWO HOMES GuiKey LIVES IN, and it is a claim about
