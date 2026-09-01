@@ -223,17 +223,19 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // path below.
 GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
         int direction, bool synthesized_repeat) {
-    // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
-    // refusals, the coalesce verdict, the geometry refusals, the focused-index
-    // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
-    // the collapse's own playback stop (the playhead-follows / lead-in rationale
-    // lives at the declaration). ITS refusals say NOTHING, the warp twin's
-    // rule and for its reason (GuiOpRefusal, warpmarkers_ops.h): each is an
-    // outer gate's card already or a belt against a kept invariant.
+    // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
+    // Right buttons' own marker_nudge_actionable — the state and geometry
+    // guards, the focused-index belt and THE WALL, all of it ahead of the
+    // coalesce stamp), then the coalesce verdict, then THE COLLAPSE + LAND that
+    // makes this a focus act — which carries the collapse's own playback stop
+    // (the playhead-follows / lead-in rationale lives at the declaration). ITS
+    // refusals say NOTHING, the warp twin's rule and for its reason
+    // (GuiOpRefusal, warpmarkers_ops.h): each is an outer gate's card already,
+    // a belt against a kept invariant, or the wall, silent beside its greyed
+    // button. `direction` is passed for the wall term alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::PhaseResetNudge, synthesized_repeat,
-        static_cast<int>(app.phaseresetmarkers.markers().size()));
+        GestureKind::PhaseResetNudge, synthesized_repeat, direction);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     // Phase resets carry no tempo, so there is no inherit/tempo analog to the warp
@@ -264,6 +266,9 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // a benign one-dimensional refusal already at its state says nothing, the
     // unmoved flag being its own answer; the one-day card "The marker is
     // already at the edge" is retired in both columns.
+    // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall, the
+    // warp twin's rule verbatim again: the prologue asks the same landing ahead
+    // of the coalesce stamp, so a SINGLETON at its wall refuses there instead.
     if (committed_f == orig_f)
         return std::nullopt;
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the

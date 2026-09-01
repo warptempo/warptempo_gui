@@ -125,26 +125,38 @@ struct GuiTargetRender;
 struct PositionNudgePrologue {
     bool ok      = false;  // false: the press refuses (silent, navigation-class)
     bool merge   = false;  // undo-coalesce verdict for this press
-    int  focused = -1;     // app.last_selected_marker, validated in [0, store_size)
+    int  focused = -1;     // app.last_selected_marker, validated against the
+                           // active store by marker_nudge_actionable
 };
 
 // The shared guard prologue of the two position nudges, and the site that makes
 // the gesture a FOCUS ACT. Order is IDENTICAL in both twins and preserved
-// exactly: (1) loading / empty-audio refusal; (2)
-// empty-selection refusal — unreachable from the dispatcher, which routes an
-// empty selection to the waveform-lane playhead step instead and never reaches
-// here, so this is the belt; (3) no-focus
-// refusal; (4) the undo-coalesce verdict, computed before the geometry refusals
-// (coalesce_gesture reads the press's own repeat bit, which
-// `synthesized_repeat` carries down from the on_key event that reached the
-// handler, to pick its arm — identity for a held key, the fixed tap window plus
-// a subject test for a physical re-press — and it just has to run before
-// record_gesture stamps the burst in the tail); (5) bad
-// sample-rate refusal; (6) non-positive samples-per-pixel refusal; (7) the
-// focused-index stale refusal — the ONLY index this gesture reads, so the old
-// belt over every selected index went with the group (nothing else is touched,
-// and the collapse below drops the rest of the membership anyway).
-// Then (8) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
+// exactly: (1) THE WHOLE REFUSAL SET, asked as ONE predicate —
+// marker_nudge_actionable (app_state.h), which is also the Left / Right
+// buttons' marker-lane face arm, and whose terms are this prologue's own seven
+// (loading / empty audio, an empty selection — unreachable from the
+// dispatcher, which routes an empty selection to the waveform-lane playhead
+// step and never reaches here, so it is a belt — a missing focus, a dead
+// sample rate, a non-positive samples-per-pixel, a stale focused index, the
+// ONLY index this gesture reads) plus THE MARKER'S OWN WALL, which the twins
+// used to discover after the fact through their post-clamp identity no-op. A
+// 2+ selection passes the wall term unconditionally: it collapses and lands
+// below, so the press changes the screen whatever the step then does (the full
+// reasoning is at the predicate).
+// Then (2) the undo-coalesce verdict: coalesce_gesture reads the press's own
+// repeat bit, which `synthesized_repeat` carries down from the on_key event
+// that reached the handler, to pick its arm — identity for a held key, the
+// fixed tap window plus a subject test for a physical re-press — and it just
+// has to run before record_gesture stamps the burst in the tail. IT SITS
+// BEHIND EVERY REFUSAL AND AHEAD OF THE COLLAPSE, and both halves of that are
+// load-bearing: behind, because A WALL NO-OP TOUCHES NOTHING (2026-08-31 — a
+// physical press invalidates the stamp inside that call, so a wall test behind
+// it split an undo run at the KEY while the same press on the greyed BUTTON
+// left it whole; the rule, its discriminator and its supersession are recorded
+// at the call site and at Undo::coalesce_gesture); ahead, because the tap arm
+// compares the PRE-collapse selection against what record_gesture stamped
+// POST-collapse in the tail.
+// Then (3) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
 // LANDS on that focus, the Ctrl+N shape (collapse + land at the CALLER of
 // Selection::collapse_to_focused, the convention that keeps the land at the site
 // which hands the marker lane a focus). The step below is therefore always the
@@ -160,7 +172,9 @@ struct PositionNudgePrologue {
 // A press that then refuses at its wall keeps the collapse — the collapse is the
 // press's own committed act, not a prelude to the step (its damage is
 // collapse_to_focused's own, so a refused press repaints correctly), and the
-// stop it paid stands with it.
+// stop it paid stands with it. That is the 2+ press's path alone since the wall
+// joined (1): a SINGLETON at its wall now refuses ahead of everything, having
+// nothing to collapse and nothing to stop.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.
@@ -175,12 +189,17 @@ struct PositionNudgePrologue {
 // approach) is supplied by the audition scrub instead. The twins keep their own
 // GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
-// consumed by the coalesce verdict alone.
+// consumed by the coalesce verdict alone. `direction` is the press's own step
+// sign (-1 Left, +1 Right), consumed by the wall term at (1) alone — it is what
+// makes the refusal DIRECTIONAL, the marker at frame 0 refusing Left and taking
+// Right. The store size is no longer a parameter: the wall predicate reads the
+// ACTIVE column's store, which is the calling twin's own (the dispatch picks
+// the twin by that same bit), and owns the stale-index belt with it.
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int store_size);
+    GestureKind kind, bool synthesized_repeat, int direction);
 
 // THE pixel-column step, and the ONLY position derivation either nudge uses:
 // read the marker's currently painted column (painted_column_of_source_frame —

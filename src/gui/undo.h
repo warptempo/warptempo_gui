@@ -193,8 +193,13 @@ struct Undo {
     // leaves no stamp for anything later to merge through, while a press that
     // COMMITS re-stamps in record_gesture. It stays callable
     // anywhere before record_gesture and in any order with the handler's own
-    // refusals; the point of putting it at the ENTRY question is precisely that it
-    // runs BEFORE those refusals can return.
+    // refusals, and WHERE EACH CALLER PUTS IT IS RULED BY THE FACE since
+    // 2026-08-31: behind every refusal the act's BUTTON GREYS ON — the walls,
+    // which therefore leave the stamp exactly as a greyed press does — and
+    // ahead of every refusal a per-tick face cannot see, which is what keeps a
+    // key and its button coalescing alike. The full rule, its cost and its
+    // supersession of the older "at the ENTRY, before its own refusals" shape
+    // are at the definition.
     bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
     // Record this eligible press as the burst's latest, stamping the whole
     // coalescing state: the KIND, the ACCEPTED-EVENT TIMESTAMP the tap window
@@ -232,8 +237,10 @@ struct Undo {
     // that changes the undo-stack top CLEARS it — the four push helpers plus the
     // do_undo/do_redo restore core, so a stale stamp cannot outlive the entry it
     // named; and coalesce_gesture itself clears it when the arriving press is
-    // PHYSICAL, so a press that then REFUSES leaves nothing behind (both reasons
-    // are stated at coalesce_gesture's definition).
+    // PHYSICAL, so a press that then refuses for a reason its button cannot
+    // show leaves nothing behind — a press refused AT A WALL never reaches the
+    // call at all since 2026-08-31 (both reasons, and the face rule that
+    // divides them, are stated at coalesce_gesture's definition).
     GestureKind last_gesture_kind_ = GestureKind::None;
     // The last ACCEPTED coalesce event's instant, read ONLY by the tap arm.
     // steady_clock: monotonic, immune to a wall-clock step. The default-

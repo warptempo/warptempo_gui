@@ -516,18 +516,21 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
                                                    bool synthesized_repeat) {
     // THE LEADING REFUSAL BLOCK IS NAMED WHOLE (tempo_cent_step_actionable,
     // app_state.h — the column gate plus the empty-selection and invalid-focus
-    // refusals), and THIS BODY IS ITS ONLY READER since 2026-08-15: the bottom
-    // row's Up and Down buttons mirrored it into their disabled face for one
-    // evening under that morning's whole-row honesty ruling, and the architect
-    // reversed it the same day because every term past the column gate is a
-    // SELECTION fact and the pair blinked on every marker click. Naming the
-    // block still earns itself — it is what makes this act's leading refusals
-    // legible in one place — and the predicate's own header carries the
-    // supersession. The refusals below it are value-shaped per-marker facts
-    // — a label ref, a pass in target view, the bracket wall — and keep a LIVE
-    // face (the row greys on the block alone), but since 2026-08-30 each of
-    // them answers on a card of its own too: naming the block still earns
-    // itself, and what separates it from the rest is the FACE, not silence.
+    // refusals), and IT HAS TWO READERS AGAIN since 2026-08-30: this body and
+    // the bottom row's Up and Down buttons' disabled face. That face read it
+    // for one evening on 2026-08-15 under the whole-row honesty ruling, lost it
+    // the same day (every term past the column gate is a SELECTION fact and the
+    // pair blinked on every marker click), and took it back under the
+    // truthful-buttons ruling, whose one user withdrew the flicker argument;
+    // the predicate's own header carries all three states. The refusals below
+    // it are value-shaped per-marker facts and they split TWO WAYS since
+    // 2026-08-31: a label ref and, in target view, a pass, a ref or a
+    // coincident-collapse member keep a LIVE face and answer on a CARD (each
+    // needs this act's own resolution run, which a per-tick face cannot do),
+    // while THE BRACKET WALL is faced and silent — the Up / Down pair greys at
+    // the bracket's end (tempo_cent_step_direction_actionable) and the key says
+    // nothing, so the wall is now refused at the singleton arm's head, ahead of
+    // the coalesce stamp, and never reaches the loop below.
     //
     // THE BLOCK NOW ANSWERS ON A CARD (architect 2026-08-30, the strictness
     // ruling): this act composes the sentence and RETURNS it, the dispatch
@@ -545,22 +548,43 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // Its refusal is ITS OWN sentence, forwarded verbatim.
     if (app.selected_markers.size() >= 2)
         return adjust_tempo_cents_group(delta_cents, synthesized_repeat);
-    // THE COALESCE VERDICT IS ASKED HERE, at this arm's entry and AHEAD OF EVERY
-    // REFUSAL BELOW (moved up 2026-07-29): the call has a
-    // side effect now — a PHYSICAL press INVALIDATES the coalescing stamp inside it
-    // (the derivation is at Undo::coalesce_gesture) — and an invalidate that sits
-    // behind a refusal is not an invalidate on arrival. `merge` is consumed far
-    // below, and nothing between here and there reads coalescing state, so the hoist
-    // moves no other behavior. coalesce_gesture computes its verdict BEFORE that
-    // invalidate (the hybrid's order rule, stated at its definition), so an early
-    // call still answers this press correctly. It reads the press's own repeat bit
-    // (threaded down from the on_key event that reached this handler) to pick its
-    // arm, so it is
-    // order-independent of the focus-collapse below; it just has to run before
-    // record_gesture stamps the burst. The Up/Down step is the only route reaching
-    // here with kind TempoStep, so a held Up/Down coalesces by identity and a rapid
-    // re-tap by the tap window (architect 2026-08-01) — the SUBJECT the tap arm
-    // compares is this singleton selection, unchanged by the collapse below.
+    // THE BRACKET WALL IS ASKED AHEAD OF THE COALESCE STAMP (2026-08-31,
+    // converting codex round A's MED finding), through the DIRECTIONAL half of
+    // this arm's own face (tempo_cent_step_direction_actionable, defined below
+    // — here it is a singleton by the fork just above, so it is the singleton
+    // arm that answers: the focused OWNER's clamped landing compared against
+    // the value it already holds). A WALL NO-OP TOUCHES NOTHING: the call below
+    // invalidates the coalescing stamp on a physical press, so discovering this
+    // wall AFTER it — as the loop's `changed` flag used to, and only there —
+    // split an undo run at the KEY while the same press on the now-GREYED Up /
+    // Down button never dispatched and left the run whole. The discriminator is
+    // the FACE, not the card: a refusal the button greys on runs BEFORE the
+    // stamp, a refusal that keeps a LIVE face stays behind it, both surfaces
+    // poisoning alike. That is why ONLY the wall moved: the VALUE-SHAPED tails
+    // below — a source-view label ref, and in target view a pass, a ref or a
+    // coincident-collapse member — keep a live face and a card, so they keep
+    // their place past the stamp. The supersession of the old "an early call
+    // must poison for a press that goes on to refuse" clause is recorded at
+    // Undo::coalesce_gesture.
+    if (!tempo_cent_step_direction_actionable(app, audio, delta_cents))
+        return std::nullopt;
+    // THE COALESCE VERDICT, past the wall and ahead of every remaining refusal
+    // (the tails named above): the call has a side effect — a PHYSICAL press
+    // INVALIDATES the coalescing stamp inside it (the derivation is at
+    // Undo::coalesce_gesture) — and for a refusal the face cannot see, an
+    // invalidate that sits behind it is not an invalidate on arrival. `merge`
+    // is consumed far below, and nothing between here and there reads
+    // coalescing state, so the placement moves no other behavior.
+    // coalesce_gesture computes its verdict BEFORE that invalidate (the
+    // hybrid's order rule, stated at its definition), so the call answers this
+    // press correctly either way. It reads the press's own repeat bit (threaded
+    // down from the on_key event that reached this handler) to pick its arm, so
+    // it is order-independent of the focus-collapse below; it just has to run
+    // before record_gesture stamps the burst. The Up/Down step is the only
+    // route reaching here with kind TempoStep, so a held Up/Down coalesces by
+    // identity and a rapid re-tap by the tap window (architect 2026-08-01) —
+    // the SUBJECT the tap arm compares is this singleton selection, unchanged
+    // by the collapse below.
     const bool merge =
         undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
@@ -680,21 +704,21 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         clamp_iter_bracket_to_tempo_bracket(m);
         changed = true;
     }
-    // NOTHING CHANGED, AND ONE OF THE TWO REASONS SAYS SO (architect
-    // 2026-08-30, the strictness ruling; this act's reason channel is
-    // GuiOpRefusal, warpmarkers_ops.h). The loop has exactly ONE subject here
-    // — collapse_to_focused ran above, so the selection is the focus alone —
-    // and only two facts can leave it untouched:
+    // NOTHING CHANGED, AND THE ONE LIVE REASON SAYS SO (architect 2026-08-30,
+    // the strictness ruling; this act's reason channel is GuiOpRefusal,
+    // warpmarkers_ops.h). The loop has exactly ONE subject here —
+    // collapse_to_focused ran above, so the selection is the focus alone — and
+    // what can leave it untouched is:
     //   a LABEL REF, skipped whole by the loop's first `continue` because it
     //     has no tempo of its own to step. What reaches here is the SOURCE-view
     //     ref: in target view the payload arm above already refused it in that
-    //     view's own words, so the two sentences never collide;
-    //   an OWNER AT A BRACKET END, whose clamped step lands the value it
-    //     already holds. A one-cent step can only do that AT an end, so the
-    //     marker rests ON kTempoMinCents or kTempoMaxCents (value_format.h) —
-    //     the bracket's own constants, which the clamp above reads and which
-    //     no number in this sentence restates.
-    // A pass reaches neither arm: it always freezes, so it always changes.
+    //     view's own words, so the two sentences never collide.
+    // AN OWNER AT A BRACKET END NO LONGER REACHES HERE (2026-08-31): its
+    // clamped step lands the value it already holds, and that is the wall the
+    // directional predicate now refuses on at this arm's head, ahead of the
+    // coalesce stamp. The silent return below is what a stale focused index
+    // falls to — a belt against an invariant the selection layer keeps.
+    // A pass reaches no arm at all: it always freezes, so it always changes.
     if (!changed) {
         const int f = app.last_selected_marker;
         // In range by tempo_cent_step_actionable, which proved it above and
@@ -706,9 +730,10 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // 2026-08-30 card "The tempo is already at its limit"): a benign
         // one-dimensional refusal already at its state says nothing — the
         // focused marker's own value is the one place to glance, and the
-        // Up/Down face greys at the bracket's end. The LABEL-REF arm above
-        // keeps its sentence: that is a fact about the marker's kind, not a
-        // wall the value is resting on.
+        // Up/Down face greys at the bracket's end. It is REFUSED AT THIS ARM'S
+        // HEAD since that same day, so this line answers the stale-index belt
+        // alone. The LABEL-REF arm above keeps its sentence: that is a fact
+        // about the marker's kind, not a wall the value is resting on.
         return std::nullopt;
     }
     std::vector<GuiWarpMarker> pre_state = mv_const;
@@ -856,31 +881,22 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         int64_t delta_cents, bool synthesized_repeat) {
-    // THE COALESCE VERDICT IS ASKED FIRST, ahead of the wall scan below (moved up
-    // 2026-07-29): the call INVALIDATES the coalescing
-    // stamp when the arriving press is PHYSICAL (the derivation is at
-    // Undo::coalesce_gesture), and an invalidate behind a refusal is not an
-    // invalidate on arrival — a walled press must still end the previous burst.
-    // The verdict is computed BEFORE that invalidate (the hybrid's order rule at
-    // coalesce_gesture), so the hoist answers this press correctly either way.
-    // Order-independent of the mutation otherwise, and `merge` is consumed below.
-    // On the REPEAT arm coalesce_gesture keys on the kind + the repeat bit and NOT
-    // on any marker index,
-    // so a held key over the SAME group collapses to one entry (a selection change
-    // requires a command, and a command ends the hold). On the TAP arm the
-    // selection IS compared (architect 2026-08-01), which is what keeps a rapid
-    // re-tap over a RE-MADE group from merging into the previous group's entry —
-    // the group is coalesce-eligible unchanged either way, and the Up/Down step is
-    // the only route reaching here with kind TempoStep.
-    const bool merge =
-        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
-    const auto& mv = app.warpmarkers.markers();
-    const int n = static_cast<int>(mv.size());
     // THE WALL SCAN IS THE CONST OWNER ABOVE since 2026-08-31
     // (tempo_cent_step_group_actionable — the wall set, the red-flag cache
     // read and the direction's bracket edge, all of it): ANY walled member
     // refuses the whole press, and the Up / Down buttons now grey on that same
     // answer.
+    // AND IT RUNS AHEAD OF THE COALESCE VERDICT (2026-08-31, converting codex
+    // round A's MED finding; it sat behind it from 2026-07-29): A WALL NO-OP
+    // TOUCHES NOTHING. The verdict's call invalidates the coalescing stamp on a
+    // physical press, so with the scan behind it a refused KEY press split the
+    // previous undo run while the same press on the GREYED button never
+    // dispatched and left it whole — one wall, two undo behaviours. The
+    // discriminator is the FACE and not the card: this refusal KEEPS its card,
+    // and it moves anyway because the button greys on exactly this predicate.
+    // A press that PASSES the scan is unaffected: the scan is const, reads no
+    // coalescing state, and the verdict it then computes is the one it always
+    // was.
     // IT STILL SAYS SO, AND THAT PAIRING IS DELIBERATE (architect 2026-08-31,
     // the refinement arc's rule pair): a command whose effect spreads across
     // the screen keeps its card even where its button greys — a group step
@@ -893,6 +909,21 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // act's worth of detail for a press that changed nothing.
     if (!tempo_cent_step_group_actionable(app, audio, delta_cents))
         return "One of the selected markers cannot take this tempo change";
+    // THE COALESCE VERDICT, now past the one refusal this act has. It is
+    // computed BEFORE the invalidate inside the call (the hybrid's order rule
+    // at coalesce_gesture), and `merge` is consumed below; order-independent of
+    // the mutation otherwise. On the REPEAT arm coalesce_gesture keys on the
+    // kind + the repeat bit and NOT on any marker index,
+    // so a held key over the SAME group collapses to one entry (a selection change
+    // requires a command, and a command ends the hold). On the TAP arm the
+    // selection IS compared (architect 2026-08-01), which is what keeps a rapid
+    // re-tap over a RE-MADE group from merging into the previous group's entry —
+    // the group is coalesce-eligible unchanged either way, and the Up/Down step is
+    // the only route reaching here with kind TempoStep.
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
+    const auto& mv = app.warpmarkers.markers();
+    const int n = static_cast<int>(mv.size());
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every
@@ -1013,19 +1044,21 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // 1.00 owner.
 GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
         int direction, bool synthesized_repeat) {
-    // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
-    // refusals, the coalesce verdict, the geometry refusals, the focused-index
-    // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
-    // the collapse's own playback stop (the playhead-follows / lead-in rationale
-    // lives at the declaration). ITS refusals say NOTHING and that is the
-    // reason channel's own rule (GuiOpRefusal, warpmarkers_ops.h): every one
-    // of them is either an OUTER gate's card already (the loading gate's, the
-    // dispatch's home-view card) or a belt against an invariant the selection
-    // layer keeps — the prologue's own declaration names each.
+    // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
+    // Right buttons' own marker_nudge_actionable — the state and geometry
+    // guards, the focused-index belt and THE WALL, all of it ahead of the
+    // coalesce stamp), then the coalesce verdict, then THE COLLAPSE + LAND that
+    // makes this a focus act — which carries the collapse's own playback stop
+    // (the playhead-follows / lead-in rationale lives at the declaration). ITS
+    // refusals say NOTHING and that is the reason channel's own rule
+    // (GuiOpRefusal, warpmarkers_ops.h): every one of them is either an OUTER
+    // gate's card already (the loading gate's, the dispatch's home-view card),
+    // a belt against an invariant the selection layer keeps, or the wall, whose
+    // silence is paired with a greyed button — the prologue's own declaration
+    // names each. `direction` is passed for the wall term alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::WarpNudge, synthesized_repeat,
-        static_cast<int>(app.warpmarkers.markers().size()));
+        GestureKind::WarpNudge, synthesized_repeat, direction);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.warpmarkers.markers();
@@ -1057,6 +1090,11 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // the glance that answers. (A zero-step press cannot arise off a wall
     // anyway, the authored frame grid being finer than the pixel grid — the
     // one-column-per-press guarantee at stepped_anchor_frame.)
+    // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall: the
+    // prologue asks the same landing ahead of the coalesce stamp now, so a
+    // SINGLETON at its wall never gets this far (the wall no-op touches
+    // nothing — the rule is at the prologue), while a group press passes that
+    // term unconditionally, collapses, lands, and then finds its wall here.
     if (committed_f == orig_f)
         return std::nullopt;
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the

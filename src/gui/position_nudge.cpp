@@ -16,13 +16,17 @@
 // GuiPhaseResetMarkersOps::nudge_selected_phase_resets). The full doctrine
 // (horizontal movement is a focus act; the group-verb doctrine it instances) and
 // the step-by-step ordering rationale live at the declarations in
-// position_nudge.h; the wall-regime middles stay in each twin verbatim.
+// position_nudge.h. THE WALL-REGIME MIDDLE IS SHARED FLESH TOO since
+// 2026-08-31 — position_nudge_landing below, one owner for both columns, the
+// twins' two verbatim copies collapsed into it when the Left / Right buttons'
+// face needed the landing as a const owner to compare against. What stays in
+// each twin is its own STORE read, its post-clamp identity no-op and its stop.
 
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int store_size) {
+    GestureKind kind, bool synthesized_repeat, int direction) {
     PositionNudgePrologue r;
     // EVERY REFUSAL HERE IS SILENT, AND EACH FOR ITS OWN REASON (re-derived
     // 2026-08-30 under the strictness ruling "a card for every silent
@@ -31,44 +35,50 @@ PositionNudgePrologue position_nudge_prologue(
     // unreachable, the dispatcher routing an empty selection to the
     // waveform-lane playhead step and never reaching here; the missing focus
     // is a belt against the never-parked rule (the selection layer keeps the
-    // focus a member at every mutator); and the two geometry guards below are
-    // belts against degenerate state. An error arm exists iff a producer
-    // exists (validation_topology.md), so the reason channel this pair's
-    // callers use (GuiOpRefusal, warpmarkers_ops.h) carries nothing from
-    // here — and nothing from each twin's own WALL either since 2026-08-31,
-    // when that one-day card retired into a silence with a greyed button
-    // beside it (marker_nudge_actionable, app_state.h).
-    if (app.loading || audio.total_frames() <= 0) return r;
-    if (app.selected_markers.empty()) return r;
-    if (app.last_selected_marker < 0) return r;
-    // Undo-coalescing decision, and its PLACEMENT IS LOAD-BEARING rather than
-    // incidental since 2026-07-29: a PHYSICAL press
-    // INVALIDATES the coalescing stamp inside this call — the derivation is at
-    // Undo::coalesce_gesture — so it must run on every press that could otherwise
-    // refuse and leave an older burst's stamp standing for a later press to
-    // merge into (the reachable flip is the async waveform publish moving the
-    // displayed map under the phase twin's wall test between the physical press and
-    // that repeat). Hence it sits AHEAD OF EVERYTHING THAT CAN REFUSE ON GEOMETRY OR
-    // WALLS: the sample-rate and samples-per-pixel guards below, the focused-index
-    // belt, and each twin's own wall regime. What remains AHEAD of it is exactly the
-    // trivial state guards (loading / empty audio / empty selection / no focus), and
-    // those cannot flip mid-hold — every one of them needs a COMMAND to change, and a
-    // command disarms the platform's repeat (layer (1) at maybe_fire_repeat), so no
-    // repeat of this hold can survive to find the stamp. Both tempo-step arms are
-    // ordered on the same rule. A held key's continuation presses carry
-    // synthesized_repeat and merge by identity; a rapid MANUAL re-tap merges too,
-    // on the tap arm's fixed window plus its subject test (architect 2026-08-01).
-    // THE PLACEMENT SURVIVES THE HYBRID because coalesce_gesture computes its
-    // verdict BEFORE it invalidates — so an early call still answers this press
-    // correctly and still poisons the stamp for a press that goes on to refuse.
-    // The SUBJECT the tap arm compares is read here, PRE-collapse, against what
-    // record_gesture stamped POST-collapse in the tail; a steady run of taps has
-    // already collapsed, so the two agree from the second press on.
+    // focus a member at every mutator); and the geometry terms are belts
+    // against degenerate state. An error arm exists iff a producer exists
+    // (validation_topology.md), so the reason channel this pair's callers use
+    // (GuiOpRefusal, warpmarkers_ops.h) carries nothing from here — and
+    // nothing from the WALL either since 2026-08-31, when that one-day card
+    // retired into a silence with a greyed button beside it.
+    //
+    // THE WHOLE REFUSAL SET IS ONE PREDICATE, AND IT IS THE FACE'S OWN
+    // (2026-08-31, converting codex round A's MED finding): the seven guards
+    // this prologue used to spell — loading, empty audio, empty selection, no
+    // focus, a dead sample rate, a degenerate samples-per-pixel, a stale
+    // focused index — plus each twin's WALL are exactly the terms of
+    // marker_nudge_actionable (app_state.h), the Left / Right buttons' own
+    // marker-lane arm, so the press asks the button's question rather than a
+    // second spelling of it. The store the predicate reads is the ACTIVE
+    // column's, which IS the calling twin's store: the one dispatch that
+    // reaches either twin picks it by app.active_markers_view
+    // (input_handler.cpp's marker-lane branch), so the index belt is the same
+    // belt it always was.
+    // AND ITS PLACEMENT AHEAD OF THE COALESCE CALL IS THE POINT: a WALL NO-OP
+    // TOUCHES NOTHING (architect's arc logic, planner-ruled 2026-08-31). A
+    // physical press invalidates the coalescing stamp inside coalesce_gesture,
+    // so a wall test BEHIND that call made a refused KEY press split an undo
+    // run while the same press on the now-GREYED button never dispatched and
+    // left the run whole — pointer and keyboard coalescing differently at the
+    // same wall. The discriminator is the FACE, not the card: a refusal the
+    // button greys on runs BEFORE the stamp (neither surface touches it), a
+    // refusal that keeps a live face stays behind it (both surfaces poison
+    // alike). Every term here greys, so the whole set moved ahead. The
+    // supersession of the "an early call must poison for a press that goes on
+    // to refuse" clause is recorded at Undo::coalesce_gesture.
+    if (!marker_nudge_actionable(app, audio, direction)) return r;
+    // The undo-coalescing verdict, now the FIRST thing past the refusals. It
+    // reads the press's own repeat bit to pick its arm — a held key's
+    // continuation presses carry synthesized_repeat and merge by identity, a
+    // rapid MANUAL re-tap merges on the tap arm's fixed window plus its
+    // subject test (architect 2026-08-01) — and it just has to run before
+    // record_gesture stamps the burst in the tail.
+    // IT STAYS AHEAD OF THE COLLAPSE, and that is load-bearing: the SUBJECT
+    // the tap arm compares is read here, PRE-collapse, against what
+    // record_gesture stamped POST-collapse in the tail; a steady run of taps
+    // has already collapsed, so the two agree from the second press on.
     const bool merge = undo.coalesce_gesture(kind, synthesized_repeat);
-    if (audio.sample_rate() <= 0) return r;
-    if (current_samples_per_pixel(app, audio) <= 0.0) return r;
     const int focused = app.last_selected_marker;
-    if (focused < 0 || focused >= store_size) return r;   // focused stale
     // HORIZONTAL MOVEMENT IS A FOCUS ACT (architect 2026-07-29): a 2+ selection
     // collapses to its focus here, and the playhead lands on that focus — the
     // Ctrl+N shape, the land sitting at the CALLER of collapse_to_focused because

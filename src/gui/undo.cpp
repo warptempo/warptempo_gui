@@ -268,20 +268,54 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (converted
     // 2026-07-29, and it survives the hybrid by moving BELOW the verdict) — this
     // query's one side effect, and the reason it is not const. Every eligible route
-    // asks this question at its ENTRY, before its own refusals run, so a press that
-    // goes on to REFUSE leaves the stamp INVALID; a press that COMMITS re-stamps it
+    // asks this question past the refusals ITS BUTTON GREYS ON and ahead of every
+    // other, so a press that goes on to REFUSE for a reason the face cannot see
+    // leaves the stamp INVALID; a press that COMMITS re-stamps it
     // in record_gesture, which is why clearing here costs the tap arm nothing.
-    // THE DEFECT THIS CLOSES: a physical press can REFUSE without committing (a
-    // phase-reset nudge at its wall, a zero-step press, an ineligible tempo step),
+    // THE DEFECT THIS CLOSES, as derived: a physical press can REFUSE without
+    // committing (the eligible refusals left here are the ineligible tempo
+    // steps — a label ref, or in target view a pass, a ref or a
+    // coincident-collapse member; the WALL refusals moved out from under this
+    // call, see below, and the async displayed-map flip that made the phase
+    // twin's wall test the concrete producer went with them, every survivor
+    // needing a COMMAND to flip),
     // which pushes nothing and so cleared nothing; if the refusal then FLIPS
-    // mid-hold — the async waveform worker publishes a new displayed map, changing
-    // the painted columns the wall test reads — the first synthesized repeat commits
+    // mid-hold the first synthesized repeat commits
     // and finds the stale same-kind stamp from a DIFFERENT subject's burst, skipping
     // its own push and refreshing that older entry's touched_live. One Ctrl+Z would
     // then revert two separate holds, with snapshot and live identity hints naming
     // different markers. Clearing on stack-top changes alone could not see this: the
     // intervening acts (a pointer selection command, or the refusing press's OWN
     // focus collapse under the focus-act prologue) change no stack top.
+    //
+    // A WALL NO-OP TOUCHES NOTHING, AND THAT SUPERSEDES THE "EVERY REFUSED
+    // PRESS SPLITS THE RUN" CLAUSE FOR THE WALL CLASS (planner-ruled
+    // 2026-08-31 on the refinement arc's own logic, converting codex round A's
+    // MED finding; it was "at its ENTRY, before its own refusals run" from
+    // 2026-07-29). THE PROBLEM WAS TWO SURFACES, ONE WALL: the truthful-buttons
+    // ruling greys a button wherever its press would change nothing, and a
+    // greyed press never dispatches — so with the wall test BEHIND this call
+    // the key poisoned the stamp and the button did not, and one Ctrl+Z after
+    // "step to the wall, press again, step back" undid a different amount
+    // depending on which surface was used. THE THREE WALL ROUTES now run their
+    // wall test AHEAD of this call and refuse without reaching it: the position
+    // nudges' shared prologue (through marker_nudge_actionable, which is the
+    // Left / Right face's own term), the singleton cent step (through
+    // tempo_cent_step_direction_actionable) and the group cent step (through
+    // tempo_cent_step_group_actionable). THE DISCRIMINATOR IS THE FACE, NOT THE
+    // CARD: a refusal the button greys on runs ahead of the stamp — the group
+    // step's card moves with it — while a refusal that keeps a LIVE face stays
+    // behind it, so both surfaces poison alike there.
+    // WHAT IT COSTS, accepted: a refused wall press no longer ends the previous
+    // burst, so a later press of the same kind can merge into it (the tap arm
+    // within kTapCoalesceMs, or a repeat behind a mid-hold flip). That is
+    // exactly what the greyed button already gave, and the merged run is
+    // HARMLESS BY CONSTRUCTION: the refusal wrote nothing, so one entry over
+    // both runs restores the same state two entries would. The composition this
+    // invalidate exists to kill — merging into ANOTHER subject's burst — is
+    // killed regardless by the subject terms both arms carry (the tab, the
+    // audio view and the selection; clause (c) above on the repeat arm since
+    // 2026-08-29).
     // THE ORDER IS THE WHOLE TRICK under the hybrid: verdict first, invalidate
     // second. Invalidating first (the pre-2026-08-01 shape) would have killed the
     // very stamp a tap needs to read, so the tap arm would never have fired.

@@ -8348,7 +8348,10 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 //     face the row already wears in the `h` view. The predicate is unchanged
 //     through all three states; only its reader count moved.
 // What was live-faced under both mirrors, and still is, is the VALUE-shaped
-// tail: a label ref, a pass marker in target view, the tempo bracket wall.
+// tail that needs the act's own resolution run: a label ref, and in target
+// view a pass, a ref or a coincident-collapse member. THE TEMPO BRACKET WALL
+// LEFT THAT LIST on 2026-08-31 (R3): the DIRECTIONAL predicate below faces it,
+// so Up greys on the bracket's max and Down on its min.
 inline bool tempo_cent_step_actionable(const AppState& app) {
     return tempo_cent_step_column_allowed(app) &&
            marker_selection_standing(app) && marker_focus_standing(app);
@@ -9349,14 +9352,25 @@ inline bool playback_launch_playable(const AppState& a,
 // and its chord are one decision, the shape Undo/Redo always had. What stays
 // lit through a refusal is exactly what a per-tick face CANNOT know, and each
 // such case is named at its arm: the value-shaped tails that need the act's
-// own resolution run (a label ref or a bracket wall under Up/Down, an empty
-// payload under Copy value — the LEAD-IN OFFSET left this list on 2026-08-30,
+// own resolution run (under Up/Down a label ref, or a pass, a ref or a
+// coincident-collapse member in target view; an empty
+// payload under Copy value — the BRACKET WALL left this list on 2026-08-31,
+// the directional predicate facing it; the LEAD-IN OFFSET left it on 2026-08-30,
 // the architect reversing its recorded seam: Play's face reads the REAL
 // launch position through space_launch_would_play below), and the refusals
 // that live on disk (Play renders, the history opener). The walls — frame 0
-// under Left and the last frame under Right, the walk's "nothing ahead" and
+// under Left and the last frame under Right in the waveform lane, the FOCUSED
+// MARKER's own wall under the same pair in the marker lane, the tempo
+// bracket's two ends under Up/Down, the walk's "nothing ahead" and
 // the history walk's ends — are NOT on that list: each reads its act's own
-// landing owner (planner decisions 59 and 60). The ladder ends of the
+// landing owner (planner decisions 59 and 60).
+// A GREYED REFUSAL MUST TOUCH NOTHING THE KEY WOULD NOT (2026-08-31): a
+// disabled press returns before dispatch, so wherever an act carries a SIDE
+// EFFECT ahead of the refusal its face mirrors, the key and the button diverge
+// on that effect. The effect this rule was written for is the undo-coalescing
+// stamp, and the three wall-refusing acts now run their wall test ahead of it
+// (the rule and its discriminator — the face, not the card — are at
+// Undo::coalesce_gesture). The ladder ends of the
 // six magnifiers were the last to land (planner decision 53, the same day):
 // Zoom out at the per-file ceiling and the magnification pair at its two
 // rungs' ends grey; Zoom in, `0` and `c` stay lit because each always acts
