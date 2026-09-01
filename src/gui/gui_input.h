@@ -233,12 +233,14 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // job: a tooltip advertises a BOUND chord in advance, this spells a press that
 // just happened.
 //
-// AND ALL THREE SPEAK ONLY FOR A CHORD THIS PRODUCT BINDS SOMEWHERE (architect
-// 2026-08-30: bound keys either show an effect or a card, so an unbound key is
-// identified by its silence). Each asks chord_is_bound — the inventory below
-// this speller — before it composes anything, and a press nothing binds dies
-// at its gate saying nothing at all. So every chord a card names is one the
-// user could have expected to do something.
+// AND ALL THREE SPEAK ONLY FOR A CHORD THIS PRODUCT BINDS IN THE STANDING MODE
+// (architect 2026-08-30: bound keys either show an effect or a card, so an
+// unbound key is identified by its silence; the mode term added 2026-09-01,
+// U4). Each asks chord_is_bound — the inventory below this speller, which reads
+// the `h` view's bit so that the view's own seven shapes are spoken for only
+// while it stands — before it composes anything, and a press nothing binds
+// there dies at its gate saying nothing at all. So every chord a card names is
+// one the user could have expected to do something IN THE STATE HE PRESSED IT.
 //
 // (WHAT THIS SPELLER SERVED UNTIL THAT RULING, all retired with the "<chord>
 // is not bound" class: the strict-modifier tail, the unbound bare default,
@@ -434,30 +436,56 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
     return prefix + "+" + name;
 }
 
-// -- IS THIS CHORD BOUND ANYWHERE? (architect 2026-08-30) --------------------
+// -- IS THIS CHORD BOUND IN THIS STATE? (architect 2026-08-30; the one state
+// term added 2026-09-01, U4) ------------------------------------------------
 //
 // "Bound keys either show an effect or a card, so an unbound key is identified
 // by its silence." The gates that answer a swallowed press therefore ask this
-// first, and say nothing for a chord the product binds nowhere: the deduction
-// only works if the silence is reserved for it. SIX READERS, all of them gates
-// and all in on_key (re-greped at this edit): the keyboard-modal editor gate,
-// the editor TEXT DRAG's gate and the pointer gestures' DRAG-MODAL gate, the
-// loading gate, the `h` view's allowlist and the read-only lock — five
+// first, and say nothing for a chord that binds nothing where the press
+// landed: the deduction only works if the silence is reserved for it. SIX
+// READERS, all of them gates and all in on_key (re-greped at this edit): the
+// keyboard-modal editor gate, the editor TEXT DRAG's gate and the pointer
+// gestures' DRAG-MODAL gate, the loading gate, the `h` view's allowlist and
+// the read-only lock — five
 // sentences between them, the two drag gates sharing one literal. THE
 // PLAYER'S AND THE PICKER'S OWN DRAG ARMS, which say that same literal one
 // rank higher, DO NOT ASK: while either mode stands its router is the whole
 // vocabulary, and this inventory does not know it — a bare `r` swallowed by
 // the player's scroll drag is a bound key there and must be answered.
 //
-// WHAT COUNTS AS BOUND IS WHAT THE MAIN DISPATCH OWNS — every chord on_key's
-// own road claims in some state, whether or not it would act in THIS one. The
-// five sub-handlers on that road are in it (handle_escape_cancels,
-// handle_render_dispatch_keys, handle_mode_keys, handle_tab_switch_keys and
-// handle_plain_bare_keys' switch), and so is handle_history_mode_key: the `h`
-// view ADDS its seven shapes to the dispatch rather than replacing it — the
-// allowlist below it still admits the ordinary vocabulary — so bare `g`, bare
-// `u`, the `,` / `.` pair with and without shift and bare `v` are bindings of
-// this product's keyboard like any other.
+// WHAT COUNTS AS BOUND IS WHAT THE MAIN DISPATCH CLAIMS IN THE STANDING MODE —
+// every chord on_key's own road would claim in the state the press arrived in,
+// whether or not it would ACT there. The five sub-handlers on that road are in
+// it (handle_escape_cancels, handle_render_dispatch_keys, handle_mode_keys,
+// handle_tab_switch_keys and handle_plain_bare_keys' switch), and so is
+// handle_history_mode_key: the `h` view ADDS its seven shapes to the dispatch
+// rather than replacing it — the allowlist below it still admits the ordinary
+// vocabulary — so bare `g`, bare `u`, the `,` / `.` pair with and without shift
+// and bare `v` are bindings of this product's keyboard like any other WHILE THE
+// VIEW STANDS, and nothing at all outside it. (Bare `h` itself is NOT one of
+// them: the toggle is claimed in every state, which is why it reads no term.)
+//
+// THE MODE BIT IS THE ONE STATE TERM THIS PREDICATE CARRIES (architect
+// 2026-09-01, U4), and it is THE DISPATCH'S OWN TEST MADE EXECUTABLE rather
+// than a second copy of it: those seven shapes' whole binding sits behind two
+// lines — handle_history_mode_key's `if (!app.history_mode.active) return
+// false;` (input_key_dispatch.cpp), which owns six of them, and the revert
+// arm's own `app.history_mode.active &&` (input_handler.cpp), which owns bare
+// `v` — so outside the view all seven fall to handle_plain_bare_keys' default
+// and to the strict-modifier tail, which already answer them with the unbound
+// silence. Reading the bit here is what makes the gates say the same thing.
+//
+// THE SUCCESSION: this predicate was STATE-BLIND from its landing (2026-08-30)
+// to 2026-09-01, and the architect's own instance was a bare `v` pressed on a
+// LOCKED TAB OUTSIDE THE VIEW, answered with "V is not available on a read-only
+// tab" — a sentence about a key that a WRITABLE tab in that same state would
+// have ignored in silence. The same lie stood at the two drag gates and the
+// loading gate, all four gates asking this one predicate, and all four went
+// truthful in the one edit with no site of theirs touched. What did NOT change:
+// the read-only gate's MEMBERSHIP is still the chord's alone
+// (read_only_key_blocked knows no mode), every act, every face and every
+// existing lock refusal are untouched, and drift here stays what it always was
+// — a MISSED CARD, never a wrong act.
 //
 // THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER PLAYER
 // or the PICKER stands, its router IS the whole vocabulary and the dispatch
@@ -492,7 +520,8 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
 // every modifier decoration no arm spells, which is strict modifier
 // validation's whole no-op class.
-constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
+constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
+                              bool history_view) {
     const bool ctrl = mods.ctrl, alt = mods.alt, shift = mods.shift;
     const bool bare  = !ctrl && !alt && !shift;   // no modifier at all
     const bool sh    = !ctrl && !alt &&  shift;   // Shift alone
@@ -501,16 +530,21 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
-        // -- letters, bare only: the view toggles, the mode toggles and the
-        // `h` view's two radios (`c` centre, `f` follow, `g` walk source,
-        // `i` iteration, `k` add to selection, `l` the render player,
-        // `m` bpm mode, `t` the S/T flip, `u` the compare reading,
-        // `v` the `h` view's REVERT ACT (2026-09-01, off Ctrl+H),
+        // -- letters, bare only, bound in EVERY state: the view toggles and the
+        // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
+        // selection, `l` the render player, `m` bpm mode, `t` the S/T flip,
         // `y` the centered pin).
-        case GuiKeys::C: case GuiKeys::F: case GuiKeys::G: case GuiKeys::I:
+        case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::L: case GuiKeys::M: case GuiKeys::T:
-        case GuiKeys::U: case GuiKeys::V: case GuiKeys::Y:
+        case GuiKeys::Y:
             return bare;
+        // -- THE `h` VIEW'S OWN BARE LETTERS, bound while it stands and unbound
+        // outside it (2026-09-01, U4): `g` the walk source, `u` the compare
+        // reading — both handle_history_mode_key's, behind its mode return —
+        // and `v` the REVERT ACT (2026-09-01, off Ctrl+H), whose own arm in
+        // input_handler.cpp carries the same mode test.
+        case GuiKeys::G: case GuiKeys::U: case GuiKeys::V:
+            return bare && history_view;
         // The value pair: copy, and the jump to where the value came from.
         case GuiKeys::J: return bare || sh;
         // Drop a warp marker / drop a phase reset from the warp column / save.
@@ -519,10 +553,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         case GuiKeys::O: return bare || cl;
         // The W/P flip and the three phase-reset propagate chords.
         case GuiKeys::P: return bare || cl || ca || cas;
-        // The history view's toggle. ITS REVERT LEFT THIS LINE 2026-09-01: the
-        // act was Ctrl+H from 2026-08-05 and is bare `v` now (with the letters
-        // above), so the ctrl spelling binds nothing again and takes the
-        // unbound silence.
+        // The history view's toggle — bound in BOTH modes, since it is what
+        // opens the view and what closes it (handle_history_mode_key claims it
+        // in every state), which is why it reads no mode term while the seven
+        // shapes the view ADDS do. ITS REVERT LEFT THIS LINE 2026-09-01:
+        // the act was Ctrl+H from 2026-08-05 and is bare `v` now (with the
+        // mode-only letters above), so the ctrl spelling binds nothing again
+        // and takes the unbound silence.
         case GuiKeys::H: return bare;
         // Toggle disabled / toggle inherit / quit.
         case GuiKeys::D: case GuiKeys::N: case GuiKeys::Q: return cl;
@@ -544,8 +581,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         case GuiKeys::BracketLeft: return bare || sh;
         // Bare is the waveform magnification, ctrl the horizontal zoom.
         case GuiKeys::Equal: case GuiKeys::Minus: return bare || cl;
-        // The `h` walk: bare steps, shift jumps to its ends.
-        case GuiKeys::Comma: case GuiKeys::Period: return bare || sh;
+        // The `h` walk: bare steps, shift jumps to its ends — the mode's own
+        // arm again (handle_history_mode_key, behind its mode return), so both
+        // spellings are bound while the view stands and unbound outside it
+        // (2026-09-01, U4).
+        case GuiKeys::Comma: case GuiKeys::Period:
+            return (bare || sh) && history_view;
         // Synchronize to external storage (2026-08-31).
         case GuiKeys::Backslash: return bare;
 
@@ -585,44 +626,65 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
 }
 
 // ANCHORS, not a second copy of the inventory: each pins one rule the list
-// above must keep, so a careless widening trips at compile time.
-static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}),
+// above must keep, so a careless widening trips at compile time. The chords
+// that read no mode term are pinned OUTSIDE the view (the ordinary state), and
+// the three anchors that follow them pin the term itself, both ways.
+static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}) &&
-                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}),
+static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
               "digits 4..9 are unbound");
-static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}),
+static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the eight-place contract's own "
               "arms (the oldest card's dismissal), and its top-level silence "
               "is that arm's own, reached only with no card standing");
 static_assert(chord_is_bound(GuiKeys::Escape,
-                             GuiInputState{true, false, false}) &&
+                             GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
-                                  GuiInputState{true, true, false}) &&
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
-                                  GuiInputState{false, true, false}),
+                                  GuiInputState{false, true, false}, false),
               "Ctrl+Esc is the stack's bulk clear and is ctrl-exact: no shift "
               "spelling and no bare-shift one");
-static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}) &&
+static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
-                                 GuiInputState{false, true, false}) &&
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Space,
-                                  GuiInputState{true, false, false}),
+                                  GuiInputState{true, false, false}, false),
               "Space binds bare and shifted only — strict modifier validation");
-static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}) &&
+static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
-                                  GuiInputState{true, false, false}),
+                                  GuiInputState{true, false, false}, false),
               "Synchronize is bare backslash and no decoration of it");
-static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}) &&
+static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{false, true, false}) &&
+                                 GuiInputState{false, true, false}, false) &&
                   chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{true, false, false}) &&
+                                 GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
-                                  GuiInputState{true, true, false}),
+                                  GuiInputState{true, true, false}, false),
               "an arrow binds bare, Shift and Ctrl — the step ladder's three "
               "magnitudes — and Ctrl+Shift spells no fourth");
+// THE MODE TERM, pinned in both directions (2026-09-01, U4). Bare `v` is the
+// architect's own instance — the revert act, which binds nothing outside the
+// view, so the gates below it must say nothing there.
+static_assert(!chord_is_bound(GuiKeys::V, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::V, GuiInputState{}, true),
+              "bare `v` is the `h` view's revert act and binds nothing outside "
+              "it: unbound with the view down, bound with it up");
+static_assert(!chord_is_bound(GuiKeys::Comma, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Comma, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::Comma,
+                                  GuiInputState{false, true, false}, false) &&
+                  chord_is_bound(GuiKeys::Comma,
+                                 GuiInputState{false, true, false}, true),
+              "the walk's `,` carries the mode term in BOTH its spellings — "
+              "the bare step and the shifted jump alike");
+static_assert(chord_is_bound(GuiKeys::H, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::H, GuiInputState{}, true),
+              "bare `h` is the toggle and is bound in both modes: it is what "
+              "opens the view and what closes it, so it reads no mode term");
 
 // THE SPELLER'S GUARANTEE, PINNED (2026-08-31, the day its three name-only
 // blocks and its "That key" fallback were deleted): EVERY CHORD THIS
@@ -636,8 +698,11 @@ static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}) &&
 // either an ASCII keysym (0x20..0x7e) or one of the function-key blocks'
 // (0xfe20 for the shifted Tab, 0xff00..0xffff for the rest), so a case label
 // outside these ranges would need a GuiKeys value outside them — the day this
-// range grows with it. Eight modifier combinations per key, the whole space
-// strict modifier validation can present.
+// range grows with it. Eight modifier combinations per key × BOTH VALUES OF THE
+// MODE BIT (2026-09-01, U4), which is the whole space a press can present:
+// strict modifier validation bounds the first factor, and the second is the one
+// state term the inventory carries, so a binding added on a mode-only key with
+// no name breaks the build exactly as an ordinary one does.
 consteval bool every_bound_key_is_spellable() {
     auto spellable = [](GuiKey k) {
         return spell_key_name(k) != nullptr || (k > 0x20 && k < 0x7f);
@@ -649,7 +714,9 @@ consteval bool every_bound_key_is_spellable() {
             for (int bits = 0; bits < 8; ++bits) {
                 const GuiInputState mods{(bits & 1) != 0, (bits & 2) != 0,
                                          (bits & 4) != 0};
-                if (chord_is_bound(key, mods)) return false;
+                if (chord_is_bound(key, mods, /*history_view=*/false) ||
+                    chord_is_bound(key, mods, /*history_view=*/true))
+                    return false;
             }
         }
         return true;

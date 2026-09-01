@@ -405,8 +405,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // keys either show an effect or a card, so an unbound key is
         // identified by its silence — the rule and its inventory are at
         // chord_is_bound, gui_input.h). A key that does nothing with a piece
-        // loaded says nothing with none loaded either.
-        if (chord_is_bound(key, mods))
+        // loaded says nothing with none loaded either. THE MODE BIT IS FALSE
+        // HERE BY CONSTRUCTION (2026-09-01, U4): the `h` view cannot stand with
+        // no audio, so this reader hands the inventory the state it is in and
+        // the term never varies — passing the bit rather than a literal keeps
+        // the six readers one shape.
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  "No audio is loaded yet");
         return;
@@ -458,8 +462,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // chord for the same reason — the chord is not what was wrong.
             // FOR A BOUND CHORD ALONE, like every gate on the main dispatch
             // (chord_is_bound, gui_input.h): a key that binds nothing is
-            // answered by silence whether a drag is in flight or not.
-            if (chord_is_bound(key, mods))
+            // answered by silence whether a drag is in flight or not. BOUND IN
+            // THE STANDING MODE (2026-09-01, U4), which is why the mode bit is
+            // handed over: a MODE-ONLY chord pressed outside its mode — bare
+            // `v` mid-drag with the `h` view down — binds nothing here either,
+            // and telling it a drag swallowed it would claim a key was taken
+            // that nothing would have run.
+            if (chord_is_bound(key, mods, app.history_mode.active))
                 notifications.notify(AppState::NotificationClass::Normal,
                                      kKeysDuringDrag);
             return;
@@ -533,8 +542,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // "Close the editor first" says the press WOULD have done something,
         // so a chord that does nothing with no editor open must not be told
         // the editor is what stopped it. It is answered by the silence every
-        // unbound press gets.
-        if (chord_is_bound(key, mods))
+        // unbound press gets. THE MODE BIT CHANGES NOTHING THIS GATE CAN SEE
+        // (2026-09-01, U4) and is passed for uniformity with the other five
+        // readers: all seven of the view's shapes are PRINTABLE (`g`, `u`, `v`,
+        // `,`, `.` and the two shifted spellings), so the editor consumes them
+        // as typed characters above this line and none of them ever reaches it.
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(
                 AppState::NotificationClass::Normal,
                 "Close the editor first: " + spell_chord(key, mods) +
@@ -697,8 +710,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // a bound chord, so the test below admits it.
         // THE TEST IS THE MAIN DISPATCH'S OWN (chord_is_bound, gui_input.h):
         // an unbound press does nothing with no gesture in flight and says
-        // nothing with one.
-        if (chord_is_bound(key, mods))
+        // nothing with one. IN THE STANDING MODE (2026-09-01, U4), the bit
+        // handed over below: a mode-only chord outside its mode — bare `,`
+        // during a grab-pan with the `h` view down — is unbound in this state
+        // like any other, and the drag is not what stopped it.
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  kKeysDuringDrag);
         return;
@@ -789,8 +805,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // OWN vocabulary never reaches this line at all — bare `g`, `u` and the
         // `,` / `.` pair are claimed by handle_history_mode_key, Ctrl+S is
         // admitted outright, and bare `'` and bare `v` take the fork above — so
-        // admitting them to the inventory costs this gate nothing.
-        if (chord_is_bound(key, mods))
+        // admitting them to the inventory costs this gate nothing. THE MODE BIT
+        // IS TRUE HERE BY CONSTRUCTION (2026-09-01, U4 — this arm runs only
+        // while the view stands), so the inventory this gate asks is the WIDER
+        // one, the seven shapes included; that is the same answer it gave when
+        // the predicate was state-blind, and the sentence above is why it costs
+        // nothing.
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  spell_chord(key, mods) +
                                      " is not available in the history view");
@@ -897,27 +918,54 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // pressed, which is what the user is looking for after a press that
         // did nothing.
         //
-        // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT, and with it the
-        // cost the wording was chosen to cover. read_only_key_blocked is the
-        // COMPLEMENT OF AN ALLOWLIST, so it answers true both for a bound
-        // authoring chord the lock is holding back AND for a chord that is
-        // unbound everywhere (bare `4`, an unbound modifier decoration); when
-        // every unbound press elsewhere was answered with "<chord> is not
-        // bound", saying nothing at all here would have been the one place
-        // that class went unanswered, and a bare "This tab is read-only"
-        // would have stated a WRONG CAUSE for it. THE UNBOUND-KEYS RULING
-        // (architect 2026-08-30, the same day: bound keys either show an
-        // effect or a card, so an unbound key is identified by its silence)
-        // dissolves both horns — chord_is_bound (gui_input.h) is the test,
-        // the second class takes the silence it now takes everywhere, and
-        // what remains is a sentence about a chord that really would have
-        // acted on a writable tab. The rejected alternative stays rejected on
-        // its own reasoning: a membership list of the authoring chords to
-        // fork the sentence on would be a second spelling of the bindings,
-        // and its drift would lie. (chord_is_bound is a spelling of the
-        // BINDINGS' EXISTENCE, not of the lock's allowlist — it decides
-        // whether a card is owed, never which cause is named, so its drift
-        // costs a missed card and never a wrong one.)
+        // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT — TWICE OVER, in
+        // two rulings a day apart — and with it the cost the wording was chosen
+        // to cover. read_only_key_blocked is the COMPLEMENT OF AN ALLOWLIST, so
+        // it answers true both for a bound authoring chord the lock is holding
+        // back AND for a chord that binds nothing at all (bare `4`, an unbound
+        // modifier decoration); when every unbound press elsewhere was answered
+        // with "<chord> is not bound", saying nothing at all here would have
+        // been the one place that class went unanswered, and a bare "This tab
+        // is read-only" would have stated a WRONG CAUSE for it. THE
+        // UNBOUND-KEYS RULING (architect 2026-08-30, the same day: bound keys
+        // either show an effect or a card, so an unbound key is identified by
+        // its silence) dissolved both horns for the chords bound NOWHERE, and
+        // THE MODE TERM (architect 2026-09-01, U4) dissolved them for the
+        // chords bound nowhere IN THIS STATE: the `h` view's own seven shapes —
+        // bare `g`, bare `u`, bare `v`, bare `,`, bare `.` and the two shifted
+        // walk jumps — are the view's vocabulary and no part of a locked tab's,
+        // so outside the view they now take the same silence a writable tab
+        // gives them. His instance was bare `v`, the revert act, which this
+        // gate answered with "V is not available on a read-only tab" while a
+        // writable tab in the same state ignored it without a word. The two
+        // OWNER LINES that make them the view's alone are
+        // handle_history_mode_key's mode return (input_key_dispatch.cpp) and
+        // the revert arm's own mode test (input_handler.cpp, below this gate);
+        // the inventory that reads them is chord_is_bound (gui_input.h), and
+        // this gate's MEMBERSHIP — what it blocks — learns nothing and stays
+        // the chord's alone.
+        //
+        // SO WHAT REMAINS IS A SENTENCE ABOUT A CHORD THAT REALLY WOULD HAVE
+        // ACTED, OR CARDED ITS OWN REASON, ON A WRITABLE TAB IN THIS SAME
+        // STATE. Where the act would ALSO have refused for its own reason —
+        // bare `s` in T+W, `i` in the P column, a verb with no selection — the
+        // lock still speaks, because the lock is the OUTERMOST STATE (a mode
+        // entered on purpose, exactly as the `h` view is) and both refusals are
+        // true; the ruling's target is the chord that MEANS NOTHING in the
+        // state, not the chord that means something and is refused twice. Three
+        // standing precedents say the same thing: the faces compose
+        // `!read_only && <the act's own predicate>` with the lock first, the
+        // `h` view cards "S is not available in the history view" in T+W under
+        // this very reasoning, and ONE CARD PER PRESS raises at the outermost
+        // site that has the reason.
+        //
+        // The rejected alternative stays rejected on its own reasoning: a
+        // membership list of the authoring chords to fork the sentence on would
+        // be a second spelling of the bindings, and its drift would lie.
+        // (chord_is_bound is a spelling of the BINDINGS' EXISTENCE, not of the
+        // lock's allowlist — it decides whether a card is owed, never which
+        // cause is named, so its drift costs a missed card and never a wrong
+        // one.)
         //
         // IT IS THE KEY'S CARD ALONE — a GREYED button never reaches here,
         // its press being consumed at arm_redesign_press's disabled line
@@ -929,7 +977,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // word of the three sites that KNOW THEIR ACT and so need no chord in
         // the sentence — the Settings dropdown's item click, the render
         // player's Load in place, and the `h` view's bare `v` fork above.
-        if (chord_is_bound(key, mods))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  spell_chord(key, mods) +
                                      " is not available on a read-only tab");

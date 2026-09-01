@@ -7402,10 +7402,17 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // unbound-keys ruling), the strict-modifier tail's other half and its
         // identical answer — this dispatch is the end of the bare road, so a
         // key reaching here binds nothing at all in this state (bare `u`, `g`,
-        // `,` and `.` outside the `h` view; the digits 4..9; a keysym with no
-        // spelling), and saying nothing is what identifies it as unbound. The
-        // rule and its consequences for the gates are at the tail this arm
-        // pairs with (the end of on_key, input_handler.cpp).
+        // `v`, `,` and `.` outside the `h` view; the digits 4..9; a keysym with
+        // no spelling), and saying nothing is what identifies it as unbound.
+        // AND THE GATES AGREE WITH THIS ARM SINCE 2026-09-01 (U4): the
+        // read-only lock, the two drag gates and the loading gate carded those
+        // five (and the walk's two shifted spellings) for the one state term
+        // they were missing, so the same press said "not available on a
+        // read-only tab" a lock away from the silence it gets here.
+        // chord_is_bound reads the mode bit now (gui_input.h), and every one of
+        // them answers a mode-only chord outside its mode exactly as this
+        // default does. The rule and its consequences for the gates are at the
+        // tail this arm pairs with (the end of on_key, input_handler.cpp).
         break;
     }
 }
