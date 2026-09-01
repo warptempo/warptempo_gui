@@ -242,9 +242,13 @@ inline constexpr double kRedesignClickMix = 0.30;
 // own content ground, the very constant row 2 dims toward — applied to the
 // row's two button kinds by DERIVATION, not by a new sample: the borderless
 // glyph buttons dim per-path through icons::draw's keep_own exactly as row
-// 2's glyphs do, and the word buttons' outline, label and focus faces mix
-// by the same factor (paint_modal_dialog's ladder). No new constant, so a
-// retune of this knob retunes both rows together.
+// 2's glyphs do, and a word button's outline, label and focus faces mix
+// by the same factor (paint_modal_dialog's ladder). Since 2026-09-01 THE
+// PLAYER'S ROW IS ALL GLYPHS — Load in place took the checkmark and Close
+// Breeze's window-close X — so the word half of that derivation has no
+// producer today: it is the ladder's shared answer, kept because the ladder
+// is one body over every owner, and the disabled bit is still this row's
+// alone. No new constant, so a retune of this knob retunes both rows together.
 inline constexpr double kRedesignDisabledMix = 0.322;
 
 // -- Row 1's RIGHT-FLOATING VIEW BAR (HARD-CODED, kdenlive-sampled) ---------

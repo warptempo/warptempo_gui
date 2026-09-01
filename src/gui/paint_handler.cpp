@@ -836,9 +836,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the
     // padlock off the tabs. THE HISTORY OPENER stood fourth here from that day
     // until 2026-08-18, when it left to lead its own group again with its four
-    // companions behind it; the three that stay keep his order.
+    // companions behind it. IT IS TWO SINCE 2026-09-01 — Listen and the
+    // padlock — the LOAD IN PLACE having moved to the history group's tail
+    // below (architect: "move the button to the history section"), its act
+    // outside the `h` view having been Play renders' own; the two that stay
+    // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
-    {RedesignButton::IconLoadInPlace,    icons::Icon::DialogOkApply},
     // The padlock, Breeze's object-locked / object-unlocked pair, the very
     // glyphs the tab slots drew. The TABLE entry is the closed lock and the
     // resolver (redesign_button_icon, above) is what swaps it for the open one
@@ -860,7 +863,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // THE OPENER (bare `h`) leads, then the TWO WALK RADIOS (bare `g`, later on
     // 2026-08-18), then the four companions in the order they
     // have always held — how the delta READS, what you can DO from inside the
-    // view, then where you can STEP. The companions' glyphs came back with them
+    // view, then where you can STEP — and, since 2026-09-01, THE LOAD IN PLACE
+    // at the tail, the view's second act arriving from the render-entry
+    // group. The companions' glyphs came back with them
     // unchanged but for one: the CUMULATIVE toggle wears BLACK_SUM, the
     // summation sigma, since 2026-08-18 (a cumulative delta is a sum over the
     // walk's members), where it wore Breeze's two-colour deep-history from
@@ -879,6 +884,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     {RedesignButton::HistoryOlder,      icons::Icon::KeyframePrevious},
     {RedesignButton::HistoryNewer,      icons::Icon::KeyframeNext},
+    // THE LOAD IN PLACE CLOSES THE ROW (architect 2026-09-01), off the
+    // render-entry group above: the icon row's press runs the `h` view's own
+    // load — the confirmation on the viewed walk member — so it paints with
+    // the view's other seven and greys with them outside it. It keeps
+    // DIALOG-OK-APPLY, the checkmark, which is why the render player's Load in
+    // place button took that same glyph the same day. NO SEPARATOR MOVED and
+    // no box was added: one box changed groups, so the row's authored-px walk
+    // is what it was.
+    {RedesignButton::IconLoadInPlace,   icons::Icon::DialogOkApply},
 };
 
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
@@ -1941,10 +1955,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // magnification pair (2026-08-26), FOLLOW, which came in from the
     // dissolved mass-marker group the same day, and THE CENTERED LAMP beside
     // it (2026-08-31, R11) — the RENDER-ENTRY group
-    // (listen, load-in-place, the READ-ONLY toggle, the architect's own order
-    // on 2026-08-14) and THE HISTORY GROUP, the opener leading the TWO WALK
-    // RADIOS and its four companions (2026-08-18, the companions back from the
-    // bottom row and the radios down from row 3 later that day).
+    // (listen and the READ-ONLY toggle, the architect's own order on
+    // 2026-08-14 less the load-in-place, which left for the history group on
+    // 2026-09-01) and THE HISTORY GROUP, the opener leading the TWO WALK
+    // RADIOS, its four companions (2026-08-18, the companions back from the
+    // bottom row and the radios down from row 3 later that day) and THE LOAD
+    // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
     // hiding/showing icons in top icon row"): all twenty-seven paint on every
@@ -2148,11 +2164,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // button in this row the view consumes wears it — Undo / Redo /
         // Render, the Show trim region button, FOLLOW (the mass-marker
         // category's one survivor since the 2026-08-27 relocation),
-        // listen, load-in-place, the read-only toggle, and the MOMENT-STATE
+        // listen, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
         // the walk any more; the S/T + W/P radios, the zoom group and the
-        // history opener stay live, as do the FOUR HISTORY COMPANIONS, whose
-        // chords are the mode's own vocabulary in there. Which is which is
+        // history opener stay live, as do the FOUR HISTORY COMPANIONS and,
+        // since 2026-09-01, the LOAD IN PLACE that joined their group — each
+        // on the derivation's own answer, which is not one reason but two:
+        // bare `u`, `,` and `.` are the mode's own VOCABULARY and answer live
+        // whatever the session holds, while bare `v` and bare `'` are
+        // ALLOWLIST admissions carrying a session term, so the walk answers
+        // DEAD for Revert with no subject and for Load in place over a
+        // memberless walk. Which is which is
         // DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
         // partition is inventoried); nothing here decides membership. SAVE IS
@@ -3168,11 +3190,14 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
-        // THE STATEFUL OVERLOAD, with the enabled predicate's own objects
+        // THE STATEFUL OVERLOAD, with the three objects its forks read
         // (2026-09-01): the words fork on what the acts and the faces read,
-        // and this painter is the overload's one reader.
+        // and this painter is the overload's one reader. It took the enabled
+        // predicate's whole five for the morning of that day, `playback` and
+        // `target_render` unread at the far end; they left with the rule that
+        // a parameter arrives with its producer.
         const RedesignTooltipText text = redesign_button_tooltip(
-            app, audio, audio.total_frames(), playback, target_render, id);
+            app, audio, audio.total_frames(), id);
         // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
         // a standing dwell any more — tooltip MEMBERSHIP is the menu row and
         // nothing else, in every state (the rule is at redesign_button_tooltip,
@@ -5992,10 +6017,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // while the transport is live, the bottom row's one-button-two-faces
     // rule) and MediaSkipForward — the row was FOUR, MediaPlaybackStop among
     // them, until the player's Stop retired 2026-09-01, and the middle
-    // button's live face stays the pause it took from R36 — and the REPEAT
+    // button's live face stays the pause it took from R36 — the REPEAT
     // ONE toggle wears
-    // MediaRepeatSingle in both its states — while a word button keeps the
-    // label box every prompt and editor button has always had. A GLYPH BUTTON
+    // MediaRepeatSingle in both its states, the UP button GoParentFolder, and
+    // since 2026-09-01 the LOAD IN PLACE wears DialogOkApply and CLOSE
+    // WindowClose — while a word button keeps the
+    // label box every prompt and editor button has always had. THE PLAYER'S
+    // ROW IS ALL GLYPHS NOW and the word kind is the other three owners'
+    // alone: a prompt's answers, the dialog editors' OK / Cancel and the
+    // picker's Cancel. A GLYPH BUTTON
     // WEARS NO RESTING OUTLINE (architect R25: "icon buttons have no border —
     // the regular transport has none; text buttons keep theirs"), which is the
     // face ladder's one fork on this field. `lit` is the roster's SELECTED
@@ -6020,8 +6050,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // WHERE IT PAINTS. The single left-flushed cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
-        // separator, the lamp — then the word buttons FLUSH RIGHT), so its own
-        // branch writes all six and the walk simply paints where it is told.
+        // separator, the lamp, the Up button — then the last two FLUSH RIGHT),
+        // so its own branch writes all seven and the walk simply paints where
+        // it is told.
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
@@ -6041,7 +6072,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // then the
         // separator, the scrub, the clock and the second separator (all three
         // laid out in the player's own branch below), then the REPEAT ONE
-        // lamp, and the two WORD buttons FLUSH RIGHT: Load in place · Close.
+        // lamp, the UP button, and the last two FLUSH RIGHT: Load in place ·
+        // Close, GLYPH buttons since 2026-09-01 like every other button on
+        // this row.
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
         // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from R36 (2026-08-28,
@@ -6067,8 +6100,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.play_face     = render_player_play_face(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
-        hint.end_idle      = app.render_player.transport ==
-                             AppState::RenderPlayer::Transport::Idle;
+        // END'S IDLE BIT IS seek_to's SECOND REFUSAL, ASKED IN ITS OWN ORDER
+        // (2026-09-01): the act refuses first for NO ITEM and then for an idle
+        // transport, so the hint may say "At the end" only past the first —
+        // otherwise a freshly opened player, which is idle with nothing bound,
+        // said where a track it does not have was standing.
+        hint.end_idle      = !app.render_player.item.empty() &&
+                             app.render_player.frames > 0 &&
+                             app.render_player.transport ==
+                                 AppState::RenderPlayer::Transport::Idle;
         hint.first_twin_live =
             render_player_first_in_item_folder_actionable(app);
         hint.last_twin_live =
@@ -6086,16 +6126,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.tooltip2   = render_player_button_shift_hint(act, hint);
             plan.push_back(std::move(b));
         };
-        auto word_button = [&](AppState::PlayerButtonAct act,
-                               const char* word) {
-            DialogButtonPlan b;
-            b.player_act = act;
-            b.label      = word;
-            b.enabled    = render_player_button_enabled(app, act);
-            b.tooltip    = render_player_button_hint(act, hint);
-            b.tooltip2   = render_player_button_shift_hint(act, hint);
-            plan.push_back(std::move(b));
-        };
+        // (THE `word_button` LAMBDA IS DELETED — 2026-09-01, with its last two
+        // callers: Load in place and Close became GLYPH buttons, so the
+        // player's row is seven glyphs and no word at all. The other three
+        // owners' word buttons are built in their own branches below and the
+        // walk's word arm still paints them; what went is this owner's copy of
+        // the builder, not the kind.)
         // THE SKIP GLYPHS ARE UNTOUCHED BY THE 2026-08-31 REMAP: the acts
         // are Home and End (the roster's own two transport skips wear the
         // same pair over the same keys), so the icon says what it always
@@ -6122,7 +6158,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // UP, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the two word buttons, on Breeze's own GO-PARENT-FOLDER, the
+        // ahead of the right-flushed pair, on Breeze's own GO-PARENT-FOLDER, the
         // open folder with an arrow rising out of it (architect, later the same
         // day: it wore the roster's `go-up` chevron for the button's first
         // hours, and a chevron says "up" about a NUMBER while the act here is
@@ -6132,8 +6168,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up,
                      icons::Icon::GoParentFolder);
-        word_button(AppState::PlayerButtonAct::LoadInPlace, "Load in place");
-        word_button(AppState::PlayerButtonAct::Close, "Close");
+        // THE LAST TWO ARE GLYPHS SINCE 2026-09-01 (architect, with the icon
+        // row's Load in place moving to the history group): "the media player
+        // button should get the checkmark glyph then. Close should then get a
+        // glyph also, to avoid being the odd one out: window-close.svg". So
+        // the LOAD wears DIALOG-OK-APPLY — the very checkmark the icon row's
+        // button wears for the same act one surface over — and CLOSE wears
+        // Breeze's WINDOW-CLOSE X, the roster's existing entry (the
+        // notification cards' dismiss is its other reader; a def is a glyph
+        // and several buttons are free to wear one). The row is SEVEN GLYPH
+        // BUTTONS and no word button, so its faces take the glyph fork whole.
+        // Close stays LAST, the escape sentinel by construction, and both keep
+        // their acts, their keys and their hints unchanged.
+        glyph_button(AppState::PlayerButtonAct::LoadInPlace,
+                     icons::Icon::DialogOkApply);
+        glyph_button(AppState::PlayerButtonAct::Close,
+                     icons::Icon::WindowClose);
     } else {
         // OK = the editor's Enter commit, Cancel = its Esc — the buttons
         // dispatch through the SAME key route (input_pointer's dialog press
@@ -6313,16 +6363,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    track too small to seat a handle.
         //
         //    THE ROW GAINED THE UP BUTTON on 2026-09-01, between the lamp
-        //    and the word cluster, so the fixed run after the scrub carries
-        //    TWO glyph boxes now and the plan is seven items.
+        //    and the right-flushed pair, so the fixed run after the scrub
+        //    carries TWO glyph boxes now and the plan is seven items — and
+        //    LATER THAT DAY THE PAIR ITSELF BECAME GLYPHS, so every one of the
+        //    seven is a box of the same width and the whole row is fixed
+        //    except the scrub.
         //
         //    THIS BRANCH LAYS OUT AND PAINTS EVERYTHING BUT THE BUTTONS: it
         //    writes each button's own x (the walk below paints where it is
         //    told) and draws the two separators, the slider and the clock
         //    between them. The items are disjoint, so painting them ahead of
-        //    the buttons is only an ordering of convenience — the clock's
-        //    face is put back to the row's sans at the end of the block, for
-        //    the word buttons that paint after it. --
+        //    the buttons is only an ordering of convenience. --
         dlg.owner  = AppState::ModalDialogOwner::Player;
         buttons_x0 = cx0;   // unread on this branch; the plan carries the x's
 
@@ -6370,8 +6421,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const double csep_w = text_shape::shape_text_run(cfont, " / ").width_px;
         const int clock_w   = static_cast<int>(std::ceil(2.0 * cell_w + csep_w));
 
-        // -- The walk: the fixed left run, the right-flushed word cluster, and
-        //    the scrub taking what is between them. --
+        // -- The walk: the fixed left run, the right-flushed PAIR (word
+        //    buttons until 2026-09-01, glyph boxes since), and the scrub
+        //    taking what is between them. --
         int px = cx0;
         plan[0].x = px; px += btn_h + ggap;      // Home (skip back)
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
@@ -6381,22 +6433,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int sep1_x   = px + sep_gap;
         const int scrub_x0 = sep1_x + sep_w + sep_pad;
 
-        // The word cluster, right-flushed inside the reserved ring exactly as
-        // the single cluster's cap is on every other owner.
-        const int words_w  = plan[5].w + bgap + plan[6].w;
+        // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
+        // was Load in place · Close as WORDS, measured runs in label boxes):
+        // both are the box's own square now, so the cluster is two boxes and
+        // the GLYPH GAP between them — right-flushed inside the reserved ring
+        // exactly as the single cluster's cap is on every other owner.
+        const int words_w  = btn_h + ggap + btn_h;
         const int words_x0 = std::max(cx0, cx1 - ring - words_w);
         // What the row owes AFTER the scrub: the scrub → clock distance, the
         // clock cell, the clock → separator distance, the second separator
         // with its own button-side air, the lamp, THE UP BUTTON with the
-        // glyph gap between them (two glyph buttons in one cluster, the
-        // transport triple's own gap), and the WORD BUTTONS' OWN
-        // GAP before the cluster — architect 2026-08-29: the air between the
-        // last glyph and Load in place is the air between Load in place and
-        // Close, the modal word buttons' spacing winning over the icon gap
-        // between clusters (it was the reserved ring plus a pad).
+        // glyph gap between them, and the GAP BEFORE THE RIGHT-FLUSHED PAIR,
+        // which is that same glyph gap since 2026-09-01. THE 2026-08-29
+        // SPACING RULING IS SPENT, not overruled: it put the WORD BUTTONS' OWN
+        // gap there ("the air between the last glyph and Load in place is the
+        // air between Load in place and Close", the modal word buttons'
+        // spacing winning over the icon gap between clusters, where the layout
+        // had spent the reserved ring plus a pad) — and with the words gone
+        // there is no word-button gap left on this row to win: every gap on it
+        // is the transport triple's own 2 px, so the run reads as one glyph
+        // row split by its two separators.
         const int after_scrub =
             sep_pad + clock_w + sep_pad + sep_w + sep_gap +
-            btn_h + ggap + btn_h + bgap;
+            btn_h + ggap + btn_h + ggap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
         // at each end is not a track, and it is the same 40 authored px the
         // scrub floored at before the slider gave the number a derivation.
@@ -6409,7 +6468,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         plan[3].x = sep2_x + sep_w + sep_gap;       // Repeat one
         plan[4].x = plan[3].x + btn_h + ggap;       // Up
         plan[5].x = words_x0;                       // Load in place
-        plan[6].x = words_x0 + plan[5].w + bgap;    // Close
+        plan[6].x = words_x0 + btn_h + ggap;        // Close
 
         paint_separator(sep1_x);
         paint_separator(sep2_x);
@@ -6535,13 +6594,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
         }
-        // THE SANS FACE BACK, AND THE HANDLE WITH IT, for the word buttons the
-        // walk paints below: a cairo_scaled_font_t* borrowed from the context
-        // is only good until the context's font changes, and the clock's
-        // monospace switch is exactly that change — so the row's `font` is
-        // RE-TAKEN here rather than assumed to have survived. (This is the one
-        // branch that switches faces before the buttons are painted; the
-        // clock's own cell was painted after them until R25 moved the time.)
+        // THE SANS FACE BACK, AND THE HANDLE WITH IT: a cairo_scaled_font_t*
+        // borrowed from the context is only good until the context's font
+        // changes, and the clock's monospace switch is exactly that change —
+        // so the row's `font` is RE-TAKEN here rather than assumed to have
+        // survived. (This is the one branch that switches faces before the
+        // buttons are painted; the clock's own cell was painted after them
+        // until R25 moved the time.) IT STAYS THOUGH THIS OWNER'S ROW PAINTS
+        // NO WORD BUTTON SINCE 2026-09-01: the walk below is SHARED, its word
+        // arm reads `font`, and this line is what keeps that arm's
+        // precondition a property of the body rather than of which branch
+        // happened to run.
         font = select_bottom_row_face(cr);
     } else if (picker_up) {
         // -- THE PICKER'S ROW (2026-08-28, architect R22; ONE BUTTON since
@@ -6957,6 +7020,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const bool has_fill = pressed || focused || lit;
         // The rest line is the word button's; a glyph button shows one only
         // while something claims it or its lamp stands (the ladder above).
+        // SINCE 2026-09-01 THE FORK IS OWNER-SHAPED: the player's row is SEVEN
+        // glyph buttons and no word, so none of them wears a resting outline
+        // (architect R25's "icon buttons have no border — the regular
+        // transport has none", now true of the whole row), while a prompt's,
+        // an editor's and the picker's buttons are all words and all keep
+        // theirs. The expression is unchanged — it asks the button, not the
+        // owner.
         const bool has_line = !plan[i].glyph || hovered || armed || pressed ||
                               focused || lit;
         redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad,

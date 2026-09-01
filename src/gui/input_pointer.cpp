@@ -303,12 +303,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // derived partition keeps the face lit) and on a locked tab (navigation,
     // the lock's allowlist).
     {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
-    // THE ROW'S LAST GROUP (architect 2026-08-14): listen, load in place, the
-    // read-only toggle, the history opener. `'` is one of the `h` view's three
-    // admitted mutators, so listen greys beside a live `'` in there.
+    // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
+    // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
+    // 2026-09-01, the LOAD IN PLACE having moved to the history group below
+    // (its row moved with it, the table being read by id and never by
+    // position). Bare `l` is the player's one BUTTON now; bare `'` outside the
+    // `h` view still opens the same player from the keyboard, which is why
+    // listen stays lit in every state this row is live in.
     {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
-    {RedesignButton::IconLoadInPlace,
-     GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // THE READ-ONLY TOGGLE (2026-08-14, the padlock's move off the tabs): bare
     // `o` toggles the ACTIVE tab's read-only bit. A TOGGLE like follow and
     // iteration — its selected face reads the live bit its own chord flips —
@@ -367,11 +369,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // until 2026-09-01, when the architect moved the act onto the letter the
     // render player's retired Stop had just freed — the succession is at the
     // dispatch arm (input_handler.cpp). Momentary like the two
-    // below — not a radio, not a toggle, click face only. It is the one entry
-    // here whose chord is NOT claimed by the mode's own vocabulary: it
-    // dispatches from on_key's ordinary body, BELOW the read-only gate, so a
-    // locked tab refuses the click exactly as it refuses the key (the
-    // load-in-place's precedent, `'`). BOTH OF ITS IN-VIEW REFUSALS ARE
+    // below — not a radio, not a toggle, click face only. It is one of the TWO
+    // entries here whose chord is NOT claimed by the mode's own vocabulary
+    // (the load-in-place at the group's tail is the other, since 2026-09-01):
+    // it dispatches from on_key's ordinary body, BELOW the read-only gate, so
+    // a locked tab refuses the click exactly as it refuses the key. BOTH OF ITS IN-VIEW REFUSALS ARE
     // FACELESS since 2026-08-15 — the lock's and the mode's empty-subject one —
     // the architect having reversed the second as a per-selection blink; the
     // click is a consumed no-op in either case, which is the roster's standing
@@ -392,6 +394,19 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Comma,  false, false, false, false, true},                             // bare ,
     {RedesignButton::HistoryNewer,
      GuiKeys::Period, false, false, false, false, true},                             // bare .
+    // THE LOAD IN PLACE, the group's last since 2026-09-01 (architect: "move
+    // the button to the history section"). The ROW IS UNCHANGED — it
+    // synthesizes bare `'`, exactly as it did from the render-entry group —
+    // and the chord's own fork is what makes the move safe: inside the view
+    // `'` raises the confirmation on the viewed member, which is this button's
+    // whole act, and outside it the press never reaches dispatch at all, the
+    // face being dead there (arm_redesign_press's disabled line) exactly as
+    // the six above. Momentary like Revert and the two steps: click face only.
+    // It is the group's second entry whose chord is not the mode's own
+    // vocabulary — `'` is an ALLOWLIST admission, so a locked tab's click is
+    // refused below the mode gate exactly as the key is, Revert's own shape.
+    {RedesignButton::IconLoadInPlace,
+     GuiKeys::Apostrophe, false, false, false, false, true},  // bare '
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and

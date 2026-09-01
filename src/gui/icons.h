@@ -218,7 +218,13 @@ enum class Icon {
     // lamp beside Follow.
     AlignHorizontalCenter,  // Toggle centered viewport (`y`)
     PreviewRenderOn,     // Listen to a render
-    DialogOkApply,       // Load a render in place as the baseline
+    // THE CHECKMARK HAS TWO READERS SINCE 2026-09-01, one per surface that
+    // runs a load in place: the ICON ROW's button (the `h` view's load, its
+    // group changed that day) and the RENDER PLAYER's modal row, which took
+    // this same glyph when its last two word buttons became glyphs — "the
+    // media player button should get the checkmark glyph then", the architect
+    // naming the icon-row button's own face for the act one surface over.
+    DialogOkApply,       // Load a state in place as the baseline
     VcsDiff,             // The history mode (`h`)
     // Breeze's deep-history — a clock face with a curl-back arrow sweeping
     // around it. THE SET'S ONE TWO-COLOR ICON, knowingly: the dial is
@@ -431,9 +437,15 @@ enum class Icon {
     // #fff, so the glyph is what tells the classes apart at a glance and no
     // caller colours it — the roster paints each path in the table's own ink,
     // as it always has. window-close is the ordinary `.ColorScheme-Text` X.
+    // WINDOW-CLOSE HAS A SECOND READER SINCE 2026-09-01 — the render player's
+    // modal row wears it on CLOSE, the architect having ruled the row's last
+    // two word buttons into glyphs ("Close should then get a glyph also, to
+    // avoid being the odd one out: window-close.svg") — which needed no new
+    // entry and no new transcription: a def is a GLYPH and several buttons are
+    // free to wear one, GoUp's own precedent above. `kIconCount` is unmoved.
     DialogInformation,   // a NORMAL card's glyph
     DialogError,         // a CRITICAL card's glyph
-    WindowClose,         // the X on every card
+    WindowClose,         // the X: a card's dismiss, and the player's Close
 
     // THE COPY VALUE BUTTON'S GLYPH (2026-08-29, the bottom row's verb group):
     // Breeze's actions/22/edit-copy, the two stacked sheets — the same file

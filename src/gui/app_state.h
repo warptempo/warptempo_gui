@@ -1927,7 +1927,9 @@ enum class RedesignButton {
     // (2026-08-12, the architect's live placement "after the trim"), the
     // phase-reset clipboard pair with the three mode/editor buttons, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
-    // the HISTORY OPENER leading its two WALK RADIOS and its four companions.
+    // the HISTORY OPENER leading its two WALK RADIOS, its four companions and
+    // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
+    // for it.
     //
     // THE 2026-08-18 ROSTER RELAYOUT is what gave the row that tail and took
     // its verbs away, both in the architect's own words: "move
@@ -2123,21 +2125,37 @@ enum class RedesignButton {
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
-    // history"). ONLY THE SECOND GREYS ON A LOCKED TAB: `'` replaces the whole
-    // authored state and the lock blocks it. Neither of its neighbours is the
-    // lock's — `o` is the escape chord, and bare `l` JOINED THE READ-ONLY
-    // ALLOWLIST on 2026-08-28 with the in-app render player, which plays a
-    // rendered wav and authors nothing (its own Load in place button carries
-    // the lock's refusal instead). Both buttons stood on this arm until then,
-    // when the key and the face agreed on `l` by both being blocked.
+    // history").
+    //
+    // IT IS TWO SINCE 2026-09-01 — LISTEN AND THE PADLOCK — the LOAD IN PLACE
+    // having left for the history group's tail (architect, on the tooltip
+    // survey: "move the button to the history section. Then we have a
+    // checkmark + `'` for history and 'Load in place' + `'` for the media
+    // player"). The button pressed outside the `h` view opened the RENDER
+    // PLAYER — the same act as Play renders standing beside it, two buttons
+    // for one act — so the row's pointer home for the player is Play renders
+    // alone now and this button is the VIEW'S load, greyed everywhere else
+    // (its arm is with the companions' at redesign_button_enabled). Bare `'`
+    // is unmoved and still opens the player from the keyboard outside the
+    // view: keys may alias where buttons may not, the no-second-road doctrine
+    // being about POINTER homes.
+    //
+    // NEITHER SURVIVOR GREYS ON A LOCKED TAB, and the lock's one member here
+    // went with the button: `o` is the escape chord, and bare `l` JOINED THE
+    // READ-ONLY ALLOWLIST on 2026-08-28 with the in-app render player, which
+    // plays a rendered wav and authors nothing (the player's own Load in place
+    // button carries the lock's refusal instead). Both buttons stood on the
+    // lock's arm until then, when the key and the face agreed on `l` by both
+    // being blocked.
     //
     // IT IS NO LONGER THE ROW'S LAST GROUP: the HISTORY OPENER left it on
     // 2026-08-18 to lead a separator-led group of its own again, which is what
     // the architect asked for when its four companions came back up from the
     // bottom row ("place a separator before the history button, and place
-    // cumulative/etc after the history button"). The three that stay keep his
-    // order and their separator.
-    IconListen, IconLoadInPlace,
+    // cumulative/etc after the history button"). The two that stay keep his
+    // order and their separator, and IconListen still leads them
+    // (redesign_button_opens_icon_group, unmoved by either departure).
+    IconListen,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE
     // ACTIVE TAB's read_only bit — bright closed padlock and a lit lamp when
@@ -2160,7 +2178,10 @@ enum class RedesignButton {
     // opened the view closes it. It held a separator-led group of exactly this
     // shape from 2026-08-04 until 2026-08-14, when the four companions left for
     // the bottom row and the opener joined the render-entry group in last
-    // place; this ruling puts both halves back where they were.
+    // place; this ruling puts both halves back where they were. IT IS EIGHT
+    // SINCE 2026-09-01, the LOAD IN PLACE having joined at the tail (its own
+    // entry, below the companions): the group is now everything the `h` view
+    // can be driven by from this row.
     IconHistory,
     // THE TWO WALK RADIOS (architect 2026-08-18: "add two radio buttons after
     // history button, before cumulative"), which is where they sit — between
@@ -2229,6 +2250,21 @@ enum class RedesignButton {
     // disabled+selected — a combination the shared face expressions already
     // handle.
     HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer,
+    // THE LOAD IN PLACE CLOSES THE GROUP (architect 2026-09-01), off the
+    // render-entry group two separators back: the act it runs from the icon
+    // row is the `h` VIEW'S — the load confirmation on the viewed walk member
+    // — so the button sits with the view's other seven, and OUTSIDE the view it
+    // greys with them. What it was doing over there was Play renders' own act
+    // (bare `'` outside the view opens the render player), which is the
+    // duplicate the move deletes: the player keeps ONE icon-row opener now.
+    // It is one of the group's TWO members whose chord is not the mode's own
+    // vocabulary (bare `v`, the revert, is the other) — bare `'` is on the
+    // mode's ALLOWLIST while the walk carries a member — so its face composes the mode, that admission's own accessor
+    // and the LOCK, which the allowlist does not carry for it (the arm and the
+    // division are at redesign_button_enabled). The glyph is unchanged:
+    // dialog-ok-apply, the checkmark, which is now the row's one checkmark and
+    // is why the render player's own Load in place button took it too.
+    IconLoadInPlace,
     // The BOTTOM ROW's transport cluster (row 8, architect-ratified
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
@@ -2780,7 +2816,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconFollow:
         case RedesignButton::IconCentered:
         case RedesignButton::IconListen:
-        case RedesignButton::IconLoadInPlace:
         case RedesignButton::IconReadOnly:
         case RedesignButton::IconHistory:
         case RedesignButton::HistoryWalkGit:
@@ -2789,6 +2824,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryOlder:
         case RedesignButton::HistoryNewer:
+        case RedesignButton::IconLoadInPlace:
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
@@ -2913,8 +2949,9 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // THE SIX GROUPS, in painted order: the toolbar four, the S/T radios, the
 // W/P radios, THE ZOOM GROUP (the Show trim region button leading the zoom
 // four, the waveform magnification pair and FOLLOW), the render-entry group
-// (listen, load-in-place, the read-only toggle) and THE HISTORY GROUP — the
-// opener, its two WALK RADIOS and its four companions.
+// (listen and the read-only toggle — the load-in-place left it on 2026-09-01)
+// and THE HISTORY GROUP — the opener, its two WALK RADIOS, its four
+// companions and that load-in-place at the tail.
 //
 // SIX SINCE 2026-08-27, DOWN FROM EIGHT, and the two boundaries that went are
 // the architect's own ruling that Follow and the Show trim region button JOIN
@@ -2941,6 +2978,15 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // and the HISTORY OPENER left the render-entry group to lead one again, so
 // IconHistory started. The scissors' deletion cost no boundary — they were the
 // trim group's SECOND member, and a group survives losing one.
+//
+// SIX ACROSS THE 2026-09-01 LOAD-IN-PLACE MOVE, with nothing edited here at
+// all: the button left the render-entry group for the history group's TAIL,
+// and neither group lost its leader — IconListen still opens the first (a
+// group survives losing one, the scissors' precedent again) and IconHistory
+// the second, which the tail joins from behind. That is the whole of what
+// this predicate can feel: it names LEADERS, so a member changing groups is
+// the roster enum's and the painter's table's business, and those two plus
+// this one are the three sites a reorder keeps in step.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
@@ -5212,9 +5258,12 @@ struct AppState {
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
     // the two skips around Play-Pause (Home / Play-Pause / End, the main
     // window's own triple since 2026-09-01), the play-scrub, the clock, the
-    // Repeat one lamp, the Up button and the two word buttons Load in place /
-    // Close (R25's order; R36's Stop sat after the two-faced button until it
-    // retired 2026-09-01, and Up took its place beside the lamp) — is
+    // Repeat one lamp, the Up button and the right-flushed pair Load in place
+    // / Close (R25's order; R36's Stop sat after the two-faced button until it
+    // retired 2026-09-01, and Up took its place beside the lamp — the pair
+    // were WORD buttons until later that same day, when the architect gave
+    // them the checkmark and Breeze's window-close X and the row became seven
+    // glyphs) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
@@ -5263,8 +5312,8 @@ struct AppState {
     //
     // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
     // with the player's move inside `tmp/`): the listings carry no `..` row
-    // any more, so going up is a BUTTON — beside Repeat one, ahead of the two
-    // word buttons — whose act is GuiRenderPlayer::up() and whose key twin is
+    // any more, so going up is a BUTTON — beside Repeat one, ahead of the
+    // right-flushed pair — whose act is GuiRenderPlayer::up() and whose key twin is
     // Backspace, unchanged. It greys at the root, which is `tmp/` itself
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
@@ -7807,8 +7856,12 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   the previous-track window (needs the position, which is
 //                   the engine's and the device's, so the painter resolves
 //                   it where it already reads them for the clock);
-//   end_idle        the transport is IDLE — seek_to's own idle refusal, the
-//                   plain End's dead arm under a face its shifted twin lights;
+//   end_idle        seek_to's own idle refusal ASKED PAST ITS FIRST — an item
+//                   is bound AND the transport is IDLE — which is the plain
+//                   End's dead arm under a face its shifted twin lights. The
+//                   item term joined 2026-09-01: without it a fresh player,
+//                   idle with nothing bound, reported a position it had no
+//                   track to have;
 //   first_twin_live / last_twin_live
 //                   render_player_first_in_item_folder_actionable /
 //                   render_player_last_in_item_folder_actionable — the two
@@ -7841,9 +7894,12 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // press PLAYS THE PREVIOUS ENTRY, and the hint says so — it lived
         // under "Go to start" for one day, the recorded lie the ruling
         // retired (the fork is home()'s own, render_player_home_takes_previous).
-        // END SAYS WHERE IT STANDS AT AN IDLE REST: the plain seek is
-        // seek_to's idle refusal there, and the face is lit for the shifted
-        // twin alone, so "Go to end" would name a dead act.
+        // END SAYS WHERE IT STANDS AT AN IDLE REST WITH AN ITEM: the plain
+        // seek is seek_to's idle refusal there, and the face is lit for the
+        // shifted twin alone, so "Go to end" would name a dead act. WITH NO
+        // ITEM it says "Go to end" again (2026-09-01) — the act's FIRST
+        // refusal is the no-item one, and a player that has played nothing is
+        // not "at" anything.
         case AppState::PlayerButtonAct::Home:
             return s.home_previous ? "Previous file (Home)"
                                    : "Go to start (Home)";
@@ -9979,7 +10035,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     ARROWS since 2026-08-30 (planner decision 52 under the truthful-buttons
 //     ruling: Up/Down whenever the tab is locked, Left/Right only while a
 //     selection stands, the transport block's arrow arms) — and its own entry
-//     is below.
+//     is below. THE ELEVEN ARE NO LONGER ELEVEN ARMS since 2026-09-01: the
+//     LOAD IN PLACE moved to the history group and took its lock term into
+//     THAT arm, where it composes with the mode and the walk's admission, so
+//     the read-only arm below holds six and the button greys for the mode
+//     outside the view and for the lock inside it.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
@@ -10004,8 +10064,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     reintroduce the blink the same ruling removed from the arrows. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/` and bare `'` —
-//     SEVEN as of 2026-08-28, when BARE `l` LEFT with the in-app render
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return and bare `/` — SIX as of
+//     2026-09-01, when BARE `'` LEFT for the history group's own arm with the
+//     Load in place BUTTON (its lock term composed there with the mode and the
+//     walk's admission; the gate still drops the chord inside the view, and
+//     ADMITS it outside, where it opens the render player). It was SEVEN from
+//     2026-08-28, when BARE `l` LEFT with the in-app render
 //     player: the player plays a rendered wav and authors nothing, so the key
 //     joined the allowlist and its button left this arm rather than greying
 //     under a key that still works. IT IS HAND-LISTED RATHER THAN
@@ -10068,7 +10132,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     walk was rejected),
 //     Revert, whose bare `v`
 //     the lock really does eat but whose face the `h` partition and the
-//     companions' own arm decide,
+//     companions' own arm decide, and since 2026-09-01 THE LOAD IN PLACE
+//     beside it — the gate's answer for bare `'` now depends on the MODE (it
+//     blocks inside the view and admits outside it, where the chord opens the
+//     render player), so the walk would light that button on every locked tab
+//     outside the view, which is exactly where the mode greys it,
 //     and since 2026-08-20 THE MEASURE, whose base chord the lock eats while
 //     its shifted twin is admitted — one key, two answers, and a face that can
 //     only give one. A derivation would therefore need an override list on top
@@ -10517,15 +10585,18 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconMarkerMeasure:
             return !active_view_state(a).read_only &&
                    marker_focus_standing(a);
-        // PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
+        // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
         // greying a face whose key still works is the face promising LESS than
         // the key delivers, the read-only-legal set's own rule two paragraphs
         // down. The player's LOAD is what the lock refuses, and that refusal
-        // is the Load in place button's, still here.
-        case RedesignButton::IconLoadInPlace:
-            return !active_view_state(a).read_only;
+        // was the icon row's Load in place button's until 2026-09-01, when the
+        // BUTTON MOVED TO THE HISTORY GROUP and took its lock term with it:
+        // its arm is with the companions' below, where the lock composes with
+        // the mode and the walk's own admission. The lock still reaches
+        // eleven buttons — the six left here, that one, and the four cardinal
+        // arrows — and only the count in this arm moved.)
         // THE BOTTOM ROW IS TRUTHFUL SINCE 2026-08-30 (architect: "Make all the
         // icons truthful — disabled when a key is not pressable — even the
         // transport's back/forward when you're already at the home or the
@@ -10949,6 +11020,33 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::HistoryNewer:
             return a.history_mode.active &&
                    history_walk_newer_actionable(a.history_mode);
+        // THE LOAD IN PLACE TOOK THIS ARM WITH THE BUTTON (architect
+        // 2026-09-01, moving it here from the render-entry group): the act the
+        // icon row runs is the `h` view's load — the confirmation on the
+        // VIEWED walk member — so the button is dead outside the view exactly
+        // as its seven new neighbours are, and the resting term is theirs.
+        //
+        // THE OTHER TWO TERMS ARE THE ACT'S OWN, both read off their owners:
+        //   * THE WALK MUST CARRY A MEMBER — mode.walk_count() > 0, the very
+        //     expression the `h` allowlist's `is_load_in_place` reads
+        //     (input_key_dispatch.cpp: "one decision refuses the key and greys
+        //     the icon row's load-in-place button"), through the accessor and
+        //     never a restated count. Inside the view the derived partition at
+        //     the head of this body reaches the same answer by walking this
+        //     button's chord through that allowlist; it is spelled here so the
+        //     arm states the whole refusal in one place, and the two cannot
+        //     disagree — they ask one function of one state.
+        //   * THE LOCK, which the allowlist does NOT carry for this chord
+        //     (unlike bare `v`, whose admission composes it through
+        //     history_revert_actionable): bare `'` is dropped by
+        //     read_only_key_blocked instead, which is the outermost refusal
+        //     inside the view and the one that cards. So this term is the
+        //     face's own mirror of that gate — the read-only arm above said it
+        //     for this button until the move.
+        case RedesignButton::IconLoadInPlace:
+            return a.history_mode.active &&
+                   a.history_mode.walk_count() > 0 &&
+                   !active_view_state(a).read_only;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -11727,20 +11825,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Toggle follow (F)", nullptr};
         case RedesignButton::IconCentered:
             return {"Toggle centered viewport (Y)", nullptr};
-        // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
-        // — `l` names the act it exists for, `'` keeps its name because it is
-        // the load's chord on both roads: the viewed member's confirmation in
-        // the `h` view, and outside it the player, whose own Load in place
-        // button takes bare
-        // `'` again. Neither button admits a modifier, so neither carries a
-        // second line. "Load in place" not "Load render in place": the act loads A
-        // STATE — a tmp/ entry's sidecar set (the render name is only the
-        // match key) or, in the history view, a commit's sidecars or a
-        // member of the session's own timeline — so naming "render"
-        // overclaims the surface.
+        // PLAY RENDERS IS THE PLAYER'S ONE ICON-ROW OPENER since 2026-09-01
+        // (architect, on the tooltip survey): both buttons opened it until
+        // then — bare `l` and bare `'` being TWO KEYS onto one act outside the
+        // `h` view — and the LOAD IN PLACE moved to the history group, whose
+        // arm greys it out here. Its row is below with its new neighbours. The
+        // KEYS are untouched: bare `'` still opens the player from the
+        // keyboard outside the view, an alias the no-second-road doctrine
+        // permits because that doctrine is about pointer homes.
         case RedesignButton::IconListen: return {"Play renders (L)", nullptr};
-        case RedesignButton::IconLoadInPlace:
-            return {"Load in place (')", nullptr};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
         // has no shifted twin. The TEXT NAMES THE TOGGLE (the lamp rule at
         // this table's head) while the glyph and the lamp carry the state;
@@ -11812,6 +11905,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // reaches it OUTSIDE the view too since 2026-08-18, on the companions'
         // revived resting grey — a different fact, owned at a different arm.
         case RedesignButton::HistoryRevert: return {"Revert (V)", nullptr};
+        // THE HISTORY GROUP'S LAST, one line: bare `'` admits no modifier.
+        // THE WORDS ARE UNCHANGED AND TRUE IN EVERY STATE THE FACE IS LIT
+        // (architect 2026-09-01, with the button's move to this group): the
+        // press raises "Load `<member>` in place?" on the walk member the lane
+        // is standing on, which is what "Load in place" says, and the face is
+        // lit only in the view, with a member, on a writable tab. It was the
+        // RENDER-ENTRY group's until then, where the same press opened the
+        // render player — Play renders' own act — and the hint named the load
+        // the player's own button would go on to run. "Load in place" not
+        // "Load render in place": the act loads A STATE — a commit's sidecars,
+        // a member of the session's own timeline, or (through the player) a
+        // tmp/ entry's sidecar set, the render name being only the match key —
+        // so naming "render" overclaims the surface. The hint shows over the
+        // DEAD button outside the view like its seven neighbours' do
+        // (tooltips-on-disabled, architect 2026-08-07).
+        case RedesignButton::IconLoadInPlace:
+            return {"Load in place (')", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when
@@ -12099,25 +12209,25 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // as four self-labelled tabs, then as two labelled groups, for one day
 // 2026-08-07..08; the READING is row 4's Cumulative toggle,
 // RedesignButton::HistoryCumulative on bare `u`.)
-// THE OVERLOAD TAKES THE ENABLED PREDICATE'S OWN SIGNATURE since 2026-09-01
-// (architect, the truthful-tooltips ruling — the survey at
-// tmp/uniformity_survey_tooltips.md is its record): a hint forks on the
-// predicate the act or the face already reads, and several of those need what
-// redesign_button_enabled needs — the skips' landing owner reads GuiAudio, the
-// trim's full-window owner the frame count, the overview command's resolve the
-// audio again — so the two take the same objects in the same order and the
-// painter passes them once. `playback` and `target_render` are carried for
-// the shape alone today (no fork reads them yet) so a fork that comes to need
-// one adds no parameter. It read AppState alone from 2026-08-02 to that day.
+// THE OVERLOAD TAKES WHAT ITS FORKS READ, AND A PARAMETER LEAVES WITH ITS
+// PRODUCER (2026-09-01, the truthful-tooltips ruling — the survey at
+// tmp/uniformity_survey_tooltips.md is its record — under
+// redesign_button_enabled's own standing rule): a hint forks on the predicate
+// the act or the face already reads, and several of those need what the
+// enabled predicate needs — the skips' landing owner reads GuiAudio, the
+// trim's full-window owner the frame count, the overview command's resolve
+// the audio again — so the two share those three objects in the same order
+// and the painter passes them once. IT SHIPPED WITH THE ENABLED PREDICATE'S
+// WHOLE SIGNATURE that morning, `playback` and `target_render` carried
+// UNREAD "for the shape", and both left the same day: the rule says an object
+// arrives WITH the arm that reads it, and a fork that comes to need one adds
+// it back in the one edit that adds the fork.
 // THE ONE READER is the tooltip painter (paint_shift_tooltip,
 // paint_handler.cpp); the dwell writer (recompute_redesign_button_hover,
 // input_pointer.cpp) asks membership alone and reads the constant table.
 inline RedesignTooltipText redesign_button_tooltip(
         const AppState& a, const GuiAudio& audio, int64_t total_frames,
-        const GuiPlayback& playback, const GuiTargetRender& target_render,
         RedesignButton b) {
-    (void)playback;
-    (void)target_render;
     // (THE TABS' IN-VIEW SILENCE IS DELETED — 2026-08-18. While the `h` view
     // repurposed row 3 as its walk selector the two slots dropped their hints
     // entirely, on the view bar's reasoning: their labels WERE the thing a hint

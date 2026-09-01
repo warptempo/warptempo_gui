@@ -191,8 +191,12 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // (the two COPIES, Ctrl+P and Ctrl+/, explicitly — a copy is non-mutating, but
 // it arms a paste that is not, and the pair travels together; the three PASTES,
 // Ctrl+Alt+P, Ctrl+Alt+Shift+P and Ctrl+Alt+/, structurally, their modifier
-// combinations matching no allowlist predicate) — and `'`, the load-in-place,
-// which replaces the whole authored state.
+// combinations matching no allowlist predicate) — and `'` IN THE `h` VIEW,
+// where it is the load-in-place and replaces the whole authored state. THAT
+// ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
+// the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
+// it there and the entry below is the product's second state-dependent
+// admission beside the horizontal arrows' lane term.
 // The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
 // (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
 // drag arm, the flag editor's double-click open, the empty-lane marker drop) —
@@ -231,9 +235,11 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // are recorded there — chords claimed ABOVE this gate, whose "blocked" here is
 // vacuous, and the buttons the ruling deliberately leaves lit. SO A CHANGE TO
 // THE ADMISSIONS BELOW NEEDS A HAND EDIT THERE; nothing else in the product
-// reads this gate for a face — the one STATE-DEPENDENT admission a face
-// mirrors, the horizontal arrows' lane term, is read off its shared owner
-// rather than off this gate.
+// reads this gate for a face — and the TWO STATE-DEPENDENT admissions a face
+// mirrors are each read off their own owner rather than off this gate: the
+// horizontal arrows' lane term (horizontal_arrow_step_lock_admits) and, since
+// 2026-09-01, bare `'`, whose admission turns on the `h` view's own bit, which
+// the Load in place button's arm composes for itself.
 bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -473,13 +479,28 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // own standard: it plays a rendered wav through the engine and authors
     // nothing; the player's one authoring act, the Load in place button,
     // refuses on a locked tab inside the player (the lock's rule, at the act).
-    // Bare `'` stays BLOCKED: its purpose outside the `h` view is the same
-    // player, but its name is the load's and a locked tab keeps refusing it.
-    // BOTH FACES FOLLOW THEIR KEYS: the Play renders button left
-    // redesign_button_enabled's read-only arm with this admission, and the
-    // Load in place button is still on it (app_state.h).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
+    // BARE `'` IS ADMITTED OUTSIDE THE `h` VIEW AND BLOCKED INSIDE IT
+    // (architect 2026-09-01, with the Load in place button's move to the
+    // history group): THE STATE SELECTS WHICH ACT THE CHORD IS, and the gate
+    // has to ask the same question the dispatch does. Outside the view `'`
+    // OPENS THE RENDER PLAYER — the very act bare `l` above already runs on a
+    // locked tab, and the player's own Load in place answers the lock for
+    // itself, by key and by button, with kTabReadOnlyCard. Inside the view it
+    // is the LOAD, which rewrites the whole authored state, and stays blocked
+    // exactly as it always was — the outermost refusal for that press, since
+    // the mode's allowlist admits the chord while the walk carries a member.
+    // The chord was blocked in BOTH states from the feature's birth, on its
+    // NAME rather than on its act; the arrows' lane term is the same shape's
+    // precedent (one chord, two acts, the state deciding which is admitted).
+    // THE FACE FOLLOWS: the Play renders button left
+    // redesign_button_enabled's read-only arm with `l`'s admission, and the
+    // Load in place button left it with this one — its lock term rides the
+    // history group's arm now, where it composes with the mode (app_state.h).
+    const bool is_load_in_place_player =
+        (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
+         !app.history_mode.active);
     // THE VALUE PAIR — bare `j` and Shift+`j` (2026-08-29) — is admitted on
     // the header's own standard: neither authors anything. `j` composes the
     // focused marker's resolved value and hands it to the compositor's
@@ -518,9 +539,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // Delete, `;`, `i`, `'` and the propagate copy/paste chords are likewise
-    // absent (blocked here). The trim gesture LEFT that list on 2026-08-07 —
-    // see is_trim_region_toggle above.
+    // Delete, `;`, `i` and the propagate copy/paste chords are likewise
+    // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
+    // state-dependent entry of its own, blocked in the `h` view and admitted
+    // outside it (is_load_in_place_player above). The trim gesture left it on
+    // 2026-08-07 — see is_trim_region_toggle above.
     return !(is_o || is_open_project || is_sync_external ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
@@ -533,6 +556,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
              is_add_to_selection || is_play_renders ||
+             is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source);
 }
 

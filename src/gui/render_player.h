@@ -223,7 +223,12 @@ struct GuiInputHandler;
 // construction.
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
-// `h` view and their two icon-row buttons all reach it through on_key — and
+// `h` view and, since 2026-09-01, ONE icon-row button (Play renders) all reach
+// it through on_key; the LOAD IN PLACE button was the second until that day,
+// when the architect moved it to the history group, its press out here having
+// been Play renders' act under a second name (the record is at its roster
+// entry, app_state.h). The KEYS are unchanged, an alias being a keyboard fact
+// and the no-second-road doctrine a pointer one — and
 // it refuses with "Nothing to play: no renders under tmp/" when
 // `tmp/` holds no cell; its callers refuse the modal
 // states (a prompt, an

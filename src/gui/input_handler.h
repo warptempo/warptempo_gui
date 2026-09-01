@@ -820,8 +820,9 @@ struct GuiInputHandler {
     // THE A/B AUDITION (2026-08-26). ONE reader here: on_key's Shift+Space
     // arm, which calls its start; the advance is the tick's (main.cpp).
     GuiAbAudition&           ab_audition;
-    // THE RENDER PLAYER (2026-08-28). Its readers here: the two openers'
-    // arms (bare `l` in handle_mode_keys, bare `'` in on_key), the player's
+    // THE RENDER PLAYER (2026-08-28). Its readers here: the two KEY openers'
+    // arms (bare `l` in handle_mode_keys, bare `'` in on_key — one icon-row
+    // BUTTON behind them since 2026-09-01, Play renders), the player's
     // own key router (route_render_player_key), the overlay's and the
     // scrub's press routers, and the load road; the tick is main.cpp's.
     GuiRenderPlayer&         render_player;

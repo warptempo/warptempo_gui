@@ -891,10 +891,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              a rendered wav and authors nothing; its
     //                              one authoring act, Load in place, refuses
     //                              inside the player on a locked tab
+    //   - ' (no mods), OUTSIDE   → the same render player (2026-09-01), the
+    //     the `h` view              same act on a second key: the state selects
+    //                              which act the chord is, so the gate asks the
+    //                              mode bit the dispatch below asks. INSIDE the
+    //                              view the chord is the LOAD and stays blocked
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
-    // commits are authored content), `i`, `'`, the
+    // commits are authored content), `i`, `'` in the `h` view, the
     // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
@@ -2029,8 +2034,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // fork is HERE rather than inside either road, so each owns one surface
     // whole. TWO PRODUCERS, ONE ROUTE: this key and the icon row's load
     // button, which synthesizes exactly this bare chord through the redesign
-    // chord table, so both roads reach both producers and no second opener
-    // exists. Each road is a modal surface and owns its own
+    // chord table — and SINCE 2026-09-01 THAT BUTTON REACHES ONLY THE VIEW'S
+    // ROAD, its face being dead outside the `h` view (it moved to the history
+    // group, whose resting grey it took; the record is at its roster entry).
+    // So the PLAYER has exactly one icon-row opener, Play renders, and this
+    // key is the second road onto it for the keyboard alone — which is the
+    // no-second-road doctrine satisfied, that doctrine being about pointer
+    // homes. THE LOCK ANSWERS PER STATE for the same reason (2026-09-01,
+    // read_only_key_blocked): outside the view this press is bare `l`'s own
+    // admitted act and passes on a locked tab, inside it the load is blocked.
+    // Each road is a modal surface and owns its own
     // no-source guard AND the playback stop: playback halts only when the
     // modal actually opens, so a refused raise leaves a listening session
     // undisturbed.
