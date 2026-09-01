@@ -556,7 +556,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     visit, the view's premise being that this session knows the piece's
 //     history. It is also the one closer that can fire with a POPUP up (below);
 //   * run_history_commit — the Save-and-Commit act, once its save has landed;
-//   * run_history_revert — Ctrl+H, which rewrites the state the now side was
+//   * run_history_revert — bare `v`, which rewrites the state the now side was
 //     measured against and so must not leave the lane describing it;
 //   * load_history_commit_in_place and load_history_local_entry_in_place — the
 //     mode's own `'`, one act per walk;
@@ -587,7 +587,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //
 // THIS OWNER DOES NOT CLOSE A DROPDOWN, and since 2026-08-09 that is a decision
 // rather than an unreachable case. EVERY USER-ACT CLOSER STILL CANNOT FIRE WITH
-// ONE UP, positionally: bare `h`, the Ctrl+S checkpoint act, the Ctrl+H revert
+// ONE UP, positionally: bare `h`, the Ctrl+S checkpoint act, the bare `v` revert
 // and the loads behind `'` are all KEYBOARD routes dispatching BELOW on_key's
 // popup gate, which swallows every chord but Ctrl+Q while a menu is up (Ctrl+Q
 // closes the popup itself and then takes the close-window route, which ends the
@@ -1343,9 +1343,10 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // rather than being deleted: every shape below it is BARE (or
     // shift-carrying, on Tab and the walk), so a ctrl press falling past this
     // line would reach the bare list and be read as its unmodified twin — a
-    // Ctrl+H would come out as the mode's own `h` toggle and close the view
-    // instead of reverting into it. One line, and strict modifier validation
-    // holds.
+    // Ctrl+H, which binds nothing anywhere since the revert act left it on
+    // 2026-09-01 and must therefore be as silent as any unbound chord, would
+    // come out as the mode's own `h` toggle and close the view. One line, and
+    // strict modifier validation holds.
     //
     // (WHAT IT ALSO CLAIMED: from 2026-08-05 Ctrl+Tab stepped the WALK SOURCE
     // one tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left — both in
@@ -2030,8 +2031,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             than one of its own, while the GLOBAL save lockout
 //                             that DOES show is GuiSaveOps::save's own term,
 //                             mirrored by the "Committing..." face.
-//   - Ctrl+H (no shift/alt) → THE REVERT ACT, the mode's THIRD admitted mutator
-//                             (architect 2026-08-05) and admitted on the same
+//   - Bare `v`              → THE REVERT ACT, the mode's THIRD admitted mutator
+//                             (architect 2026-08-05, on Ctrl+H until
+//                             2026-09-01) and admitted on the same
 //                             reasoning as the two above: in the mode it is not
 //                             an authoring chord that would leave the frozen now
 //                             side describing a state that no longer exists, but
@@ -2279,9 +2281,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare && mode.walk_count() > 0);
     // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
-    // SECOND session-conditional admission: Ctrl+H is admitted only while there
-    // is a subject to revert — a selected diff flag, or the focused one — so
-    // with nothing selected the chord drops here as a consumed no-op. THE
+    // SECOND session-conditional admission: BARE `v` is admitted only while
+    // there is a subject to revert — a selected diff flag, or the focused one
+    // — so with nothing selected the key drops here as a consumed no-op. (It
+    // was CTRL+H until 2026-09-01, when the architect moved the act onto a
+    // bare letter freed by the render player's Stop; the succession is at the
+    // dispatch arm, input_handler.cpp.) THE
     // REVERT BUTTON TAKES ITS ROW'S DISABLED FACE FROM THIS SAME LINE — one
     // decision for the chord and the glyph, through history_mode_disables_
     // button's walk of the chord — as it did until 2026-08-15, when the
@@ -2294,14 +2299,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // same day): the subject AND the lock composed once, so a locked tab's
     // Revert greys from this line too — the admission used to ignore the lock
     // and lit a button whose chord the read-only gate below then dropped. So
-    // on a locked tab this gate now refuses Ctrl+H ahead of that gate, and
+    // on a locked tab this gate now refuses the key ahead of that gate, and
     // the card is this gate's (the view's), not the lock's. Unlike
-    // the two mutators above it, this chord is NOT dispatched from a mode arm:
+    // the two mutators above it, this key is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, below the read-only gate,
     // which is a backstop for it now rather than its first refusal.
     const bool is_revert_act =
-        (ctrl && !shift && !alt && key == GuiKeys::H &&
-         history_revert_actionable(app));
+        (key == GuiKeys::V && bare && history_revert_actionable(app));
     // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
     // — the act saves first, so it belongs on the save chord), AND IT IS
     // ADMITTED UNCONDITIONALLY SINCE 2026-09-01 (architect: a gate's
@@ -3204,9 +3208,10 @@ void GuiInputHandler::on_history_checkpoint_complete(
 
 // -- THE REVERT ACT --------------------------------------------------------
 //
-// CTRL+H, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05): apply the
+// BARE `v`, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05 on Ctrl+H,
+// moved onto the bare letter 2026-09-01): apply the
 // SELECTED diff flags' INVERSES to the live store of the active column, then
-// close the view. The one caller is on_key's own Ctrl+H arm, which is reached
+// close the view. The one caller is on_key's own `v` arm, which is reached
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
 // stands on a WRITABLE tab (history_revert_actionable, app_state.h, whose
@@ -7060,14 +7065,17 @@ void GuiInputHandler::render_player_load_in_place() {
         // Said on a card because the button and `'` are live on every row
         // the band can hold, so a silent nothing would read as a broken
         // button (validation_topology.md's row). THE SENTENCE NAMES THE
-        // EXCLUDED SET (2026-08-30): what has no entry to load is a folder
-        // row, the `..` row, and the DELIVERABLE under render/, which carries
-        // no sidecar recipe — the highlight is one of those whenever this
-        // arm fires.
+        // EXCLUDED SET (2026-08-30) AND NAMES ONLY WHAT IS REACHABLE
+        // (2026-09-01, the gates-stop-lying rule — a refusal's wording, like a
+        // gate's membership, must describe the state the user can actually be
+        // in): it named the `..` row and the DELIVERABLE under render/ too,
+        // and NEITHER CAN BE HIGHLIGHTED ANY MORE — the deliverable left the
+        // listing when the player moved inside tmp/, and `..` became the Up
+        // button on the modal row — so a FOLDER ROW is the whole of what can
+        // reach this arm.
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "Only a batch render under tmp/ can be loaded in place; folders "
-            "and the deliverable carry no recipe");
+            "Only a render can be loaded in place; a folder carries no recipe");
         return;
     }
     // A modal surface is opening over a possibly live transport: PAUSE it

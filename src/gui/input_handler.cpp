@@ -750,7 +750,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         //
         // TWO ADMISSIONS ARE STILL CONDITIONAL ON STATE, and for those the
         // chord is NOT what was wrong (architect 2026-08-30): bare `'` and
-        // Ctrl+H are the view's own vocabulary, admitted while the walk
+        // bare `v` are the view's own vocabulary, admitted while the walk
         // carries a member and while a revert has a subject on a writable tab.
         // Answering either with the generic sentence would say the key means
         // nothing in here, which is false — so each names the state that
@@ -769,7 +769,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                  "There is nothing to load");
             return;
         }
-        if (key == GuiKeys::H && ctrl && !shift && !alt) {
+        if (key == GuiKeys::V && bare) {
             // The admission composes the SUBJECT with the LOCK
             // (history_revert_actionable), so the card forks on the same two
             // terms rather than blaming the subject for a locked tab.
@@ -788,7 +788,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // that press takes the silence every unbound press takes. The view's
         // OWN vocabulary never reaches this line at all — bare `g`, `u` and the
         // `,` / `.` pair are claimed by handle_history_mode_key, Ctrl+S is
-        // admitted outright, and bare `'` and Ctrl+H take the fork above — so
+        // admitted outright, and bare `'` and bare `v` take the fork above — so
         // admitting them to the inventory costs this gate nothing.
         if (chord_is_bound(key, mods))
             notifications.notify(AppState::NotificationClass::Normal,
@@ -928,7 +928,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // exactly as its key is. The bare literal kTabReadOnlyCard stays the
         // word of the three sites that KNOW THEIR ACT and so need no chord in
         // the sentence — the Settings dropdown's item click, the render
-        // player's Load in place, and the `h` view's Ctrl+H fork above.
+        // player's Load in place, and the `h` view's bare `v` fork above.
         if (chord_is_bound(key, mods))
             notifications.notify(AppState::NotificationClass::Normal,
                                  spell_chord(key, mods) +
@@ -1240,10 +1240,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // load-editor opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
-    // CTRL+H — THE HISTORY VIEW'S REVERT ACT (architect 2026-08-05): apply the
-    // view's SELECTED diff flags backwards into the live store and close the
-    // view. Outside the mode the chord is UNBOUND, which is what the mode test
-    // says — there is no second meaning to select between, unlike Ctrl+S's.
+    // BARE `v` — THE HISTORY VIEW'S REVERT ACT (architect 2026-08-05 on
+    // Ctrl+H, MOVED HERE 2026-09-01): apply the view's SELECTED diff flags
+    // backwards into the live store and close the view. Outside the mode the
+    // key is UNBOUND, which is what the mode test says — there is no second
+    // meaning to select between, unlike Ctrl+S's.
+    //
+    // IT WAS CTRL+H FROM 2026-08-05 TO 2026-09-01. That chord predated the
+    // mode's own buttons and read oddly beside the bare `h` that opens the
+    // view — a modified twin of the toggle that is not the toggle. The
+    // architect moved it to a bare letter on his consistency principle the day
+    // the RENDER PLAYER'S STOP RETIRED (the row is the main window's transport
+    // triple now), which left bare `v` carrying no meaning anywhere in the
+    // product: no cross-context clash can exist, so the mode's act can have
+    // the letter outright. CTRL+H IS UNBOUND AGAIN and takes the silence every
+    // unbound chord takes (chord_is_bound, gui_input.h — the deduction rule:
+    // bound keys act or card, so silence identifies unbound).
     //
     // IT IS DISPATCHED HERE RATHER THAN CLAIMED BY handle_history_mode_key, and
     // that placement is the whole gate story: this line sits BELOW the read-only
@@ -1252,10 +1264,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (It parted company with the checkpoint act on 2026-08-07, when the gate
     // reclassified saving and rendering as authoring-free; that act runs from a
     // locked tab, on Ctrl+S since 2026-08-08.) The mode's allowlist above
-    // admits the chord (and only while there is a subject to revert), which is
+    // admits the key (and only while there is a subject to revert), which is
     // what lets it reach here at all; the act's own body owns everything past
-    // that.
-    if (app.history_mode.active && ctrl && !shift && !alt && key == GuiKeys::H) {
+    // that. THE BARE SPELLING CHANGES NOTHING ABOUT THAT PLACEMENT:
+    // history_mode_owns_key's bare list is `h`/`u`/`g`/Home/End/`c` and names
+    // no `v`, so the key falls past the mode's own arm to this line exactly as
+    // the ctrl spelling fell past it, and the allowlist below still decides.
+    //
+    // BARE-EXACT, and one-shot exactly as the chord was: repeat_eligible's
+    // global arms name no bare letter (the step gestures, the cycle and the
+    // five repeating Ctrl chords are the whole of it), so a held `v` reverts
+    // once, as a held Ctrl+H did.
+    if (app.history_mode.active && !ctrl && !shift && !alt &&
+        key == GuiKeys::V) {
         run_history_revert();
         return;
     }

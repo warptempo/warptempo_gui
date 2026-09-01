@@ -418,7 +418,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // handle_plain_bare_keys' switch), and so is handle_history_mode_key: the `h`
 // view ADDS its seven shapes to the dispatch rather than replacing it — the
 // allowlist below it still admits the ordinary vocabulary — so bare `g`, bare
-// `u`, the `,` / `.` pair with and without shift and Ctrl+H are bindings of
+// `u`, the `,` / `.` pair with and without shift and bare `v` are bindings of
 // this product's keyboard like any other.
 //
 // THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER PLAYER
@@ -446,8 +446,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
-// Backspace, and every letter the ladder never tests (A, B, E, V, W, X — Y
-// left the class 2026-08-31, the centered pin's toggle);
+// Backspace, and every letter the ladder never tests (A, B, E, W, X — Y left
+// the class 2026-08-31, the centered pin's toggle, and V on 2026-09-01, the
+// `h` view's revert act moving onto it off Ctrl+H);
 // every key the boards carry that this switch names nowhere (the keypad, the
 // editing and system block, the vendor strip — the speller named them too
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
@@ -466,10 +467,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         // `h` view's two radios (`c` centre, `f` follow, `g` walk source,
         // `i` iteration, `k` add to selection, `l` the render player,
         // `m` bpm mode, `t` the S/T flip, `u` the compare reading,
+        // `v` the `h` view's REVERT ACT (2026-09-01, off Ctrl+H),
         // `y` the centered pin).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::G: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::L: case GuiKeys::M: case GuiKeys::T:
-        case GuiKeys::U: case GuiKeys::Y:
+        case GuiKeys::U: case GuiKeys::V: case GuiKeys::Y:
             return bare;
         // The value pair: copy, and the jump to where the value came from.
         case GuiKeys::J: return bare || sh;
@@ -479,8 +481,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         case GuiKeys::O: return bare || cl;
         // The W/P flip and the three phase-reset propagate chords.
         case GuiKeys::P: return bare || cl || ca || cas;
-        // The history view's toggle and its revert.
-        case GuiKeys::H: return bare || cl;
+        // The history view's toggle. ITS REVERT LEFT THIS LINE 2026-09-01: the
+        // act was Ctrl+H from 2026-08-05 and is bare `v` now (with the letters
+        // above), so the ctrl spelling binds nothing again and takes the
+        // unbound silence.
+        case GuiKeys::H: return bare;
         // Toggle disabled / toggle inherit / quit.
         case GuiKeys::D: case GuiKeys::N: case GuiKeys::Q: return cl;
         // Undo, and redo on the one meaningful shift bit.

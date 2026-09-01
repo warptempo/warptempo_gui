@@ -258,11 +258,12 @@ enum class Icon {
     GoPrevious,          // The left arrow (bare Left)
     GoNext,              // The right arrow (bare Right)
     // THE REVERT ACT'S GLYPH (2026-08-05), the history group's third button: the
-    // selected diff flags applied backwards into the live state (`Ctrl+H`).
+    // selected diff flags applied backwards into the live state (bare `v`,
+    // `Ctrl+H` until 2026-09-01).
     // Breeze's own document-revert — a page with an arrow curving back into it,
     // which is the act — and the FIRST committed file whose `d` uses the smooth
     // cubic (`s`), the one command the interpreter grew for it.
-    DocumentRevert,      // Revert the selected differences (`Ctrl+H`)
+    DocumentRevert,      // Revert the selected differences (bare `v`)
     // Row 8, the transport row (2026-08-11, the touch arc's first surface;
     // a tenant of the unified bottom row since 2026-08-12):
     // SEVEN new glyphs for the eight buttons IT THEN HAD — the four cardinal

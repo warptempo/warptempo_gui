@@ -2201,7 +2201,7 @@ enum class RedesignButton {
     // THE FOUR COMPANIONS, behind the walk radios in the order they have always
     // held
     // — how the delta READS, what you can DO from inside the view, then where
-    // you can STEP: the cumulative toggle (bare `u`), the revert act (Ctrl+H)
+    // you can STEP: the cumulative toggle (bare `u`), the revert act (bare `v`)
     // and the walk's older / newer steps (bare `,` and `.`).
     //
     // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT (2026-08-18), which
@@ -2216,7 +2216,7 @@ enum class RedesignButton {
     //
     // INSIDE THE VIEW THEY ARE TRUTHFUL SINCE 2026-08-30 (architect: "Any
     // time a button would be a no-op, grey it"): REVERT greys with no subject
-    // — the mode admits Ctrl+H only while a diff flag stands, and the derived
+    // — the mode admits bare `v` only while a diff flag stands, and the derived
     // partition's answer reaches the face again now that the lift that kept
     // the four over it is deleted — and OLDER / NEWER grey at the walk's two
     // walls (history_walk_older_actionable / history_walk_newer_actionable,
@@ -6232,8 +6232,8 @@ struct AppState {
     //   + 1 members, bound before the mode goes up), so the REMOTE walk is where
     //   it shows: a piece whose every checkpoint refuses the strict load opens
     //   the view at `0/0`, and that button is the one greyed there.
-    //   REVERT WAS A THIRD UNTIL 2026-08-15 — Ctrl+H is still admitted only
-    //   with a diff flag selected, so this partition still answers DEAD for it
+    //   REVERT WAS A THIRD UNTIL 2026-08-15 — the revert key is still admitted
+    //   only with a diff flag selected, so this partition still answers DEAD
     //   on an empty subject, but no face reads that answer any more: the
     //   architect reversed the grey because it tracked the diff-flag SELECTION
     //   and blinked at interaction cadence, the same argument that took the
@@ -6413,7 +6413,8 @@ struct AppState {
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session EXCEPT
     // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+S (the
-    // commit act, on Ctrl+Alt+R until 2026-08-08) and Ctrl+H (the revert act;
+    // commit act, on Ctrl+Alt+R until 2026-08-08) and bare `v` (the revert
+    // act, on Ctrl+H until 2026-09-01;
     // membership re-derived 2026-08-06)
     // — and every one of those closes the view as it ends, so no session
     // outlives a write to its own now side. The
@@ -6700,9 +6701,9 @@ struct AppState {
         // for the visit — the now side is frozen at init(), and EVERY ROUTE THAT
         // COULD CHANGE THE OTHER SIDE CLOSES THE VIEW. That is the honest
         // derivation, re-stated 2026-08-06: the allowlist DOES admit an authoring
-        // chord — Ctrl+H, the revert act — so "no authoring route is admitted" is
+        // key — bare `v`, the revert act — so "no authoring route is admitted" is
         // not what makes the bit safe. What makes it safe is that all THREE of
-        // the mode's mutators (`'`, Ctrl+S and Ctrl+H) end by closing the
+        // the mode's mutators (`'`, Ctrl+S and `v`) end by closing the
         // view, so no session outlives a write to its own now side. A FUTURE
         // MUTATOR THAT DOES NOT CLOSE THE VIEW WOULD HAVE TO RECOMPUTE THIS BIT.
         // It is cleared by the whole-struct reset at close,
@@ -7458,8 +7459,8 @@ struct AppState {
     // TWO CONSUMERS (re-greped 2026-08-28): THE RENDER PLAYER
     // (render_player.cpp), whose batch-folder listings carry one of these on
     // every wav row — the entry is what makes a row LOAD-IN-PLACE-CAPABLE, so
-    // the deliverable's rows carry none and the Load in place button refuses
-    // "Only a batch render under tmp/ can be loaded in place" on one — and
+    // a FOLDER row carries none and the Load in place button refuses
+    // "Only a render can be loaded in place" on one — and
     // the act that button's
     // confirmation runs (load_render_entry_in_place, input_key_dispatch.cpp).
     // (The `l` external-player spawn and the typed load prompt's own resolve
@@ -9449,7 +9450,7 @@ inline void clear_audition_sequence(AppState& a) {
 
 // IS THERE ANYTHING FOR THE REVERT ACT TO ACT ON? — the act's SUBJECT in one
 // word (architect 2026-08-05): the selected diff flags, else the focused one
-// alone. Empty means Ctrl+H is a consumed no-op. ONE CODE READER:
+// alone. Empty means bare `v` is a consumed no-op. ONE CODE READER:
 // history_revert_actionable just below, which composes it with the lock and
 // is what history_mode_key_blocked's admission reads. The Revert BUTTON'S
 // in-view face reads the same decision THROUGH that gate rather than through
@@ -9482,7 +9483,7 @@ inline bool history_mode_revert_subject_standing(
 // because the act's face is DERIVED from the `h` allowlist's admission, and
 // an admission that ignored the lock lit a button whose chord the gate below
 // it then dropped (codex, round B). TWO READERS: history_mode_key_blocked's
-// Ctrl+H term (the key — so on a locked tab the chord is refused at the
+// bare-`v` term (the key — so on a locked tab the key is refused at the
 // view's gate, ahead of the read-only gate it used to fall through to) and,
 // through that same walk, the Revert button's face. No enum arm spells the
 // lock a second time.
@@ -9839,7 +9840,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     which is worth stating because the faces can look alike: none of its
 //     chords is admitted by the allowlist. Bare `h`, `g`, `u`, `,` and `.` are
 //     blocked VACUOUSLY — nothing the lock protects is behind any of them
-//     (class (1) below) — and Ctrl+H the lock really does eat. The OPENER is
+//     (class (1) below) — and bare `v` the lock really does eat. The OPENER is
 //     lit anyway on its own arm's terms; the two WALK RADIOS and the four
 //     COMPANIONS are greyed at rest all the same, by `a.history_mode.active`
 //     at their own arm below, which is a MODE fact and not the lock's.
@@ -9868,7 +9869,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     gate's own owner horizontal_arrow_step_lock_admits — so this class's
 //     first member is now mirrored and stays here as the record of why the
 //     walk was rejected),
-//     Revert, whose Ctrl+H
+//     Revert, whose bare `v`
 //     the lock really does eat but whose face the `h` partition and the
 //     companions' own arm decide,
 //     and since 2026-08-20 THE MEASURE, whose base chord the lock eats while
@@ -10021,7 +10022,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // four HISTORY COMPANIONS were lifted over it INSIDE the view
     // (redesign_button_is_history_companion, deleted with the lift): three of
     // the four the partition answers LIVE for free (the mode owns bare `u`,
-    // `,` and `.`), so the lift existed for REVERT alone, whose Ctrl+H the
+    // `,` and `.`), so the lift existed for REVERT alone, whose `v` the
     // mode admits only while a diff flag stands — a per-selection grey the
     // architect reversed as a face while leaving the chord's refusal exactly
     // as it was. THE TRUTHFUL-BUTTONS RULING REVERSED THAT ("Any time a button
@@ -10654,7 +10655,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE SIX HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
         // ICON ROW's own settled rule, which is where they live again since
         // the roster relayout: what a mode refuses simply GREYS, and their
-        // chords (bare `g` for the two walk radios, bare `u`, Ctrl+H, bare `,`
+        // chords (bare `g` for the two walk radios, bare `u`, bare `v`, bare `,`
         // and bare `.` for the four companions) are bound in exactly one place
         // in the product and it is inside the view.
         //
@@ -10684,7 +10685,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // greys have TWO OWNERS because the partition can see one and not the
         // other:
         //   * REVERT'S is the DERIVED partition's, at the top of this body: the
-        //     view admits Ctrl+H only while a diff flag stands
+        //     view admits bare `v` only while a diff flag stands
         //     (history_mode_revert_subject_standing), so one decision refuses
         //     the chord and greys the button. THE ARCHITECT REVERSED THAT FACE
         //     ON 2026-08-15 FOR THE BLINK, NOT THE LOGIC — the admission
@@ -11558,7 +11559,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:
             return {"Newer (.)", "Press Shift for newest."};
-        // THE REVERT ACT, one line: the chord has no shifted twin. It is
+        // THE REVERT ACT, one line: the key has no shifted twin. IT READS
+        // BARE `v` SINCE 2026-09-01 (architect), the accelerator following the
+        // act off Ctrl+H onto the letter the render player's retired Stop
+        // freed; the succession is at the dispatch arm, input_handler.cpp. It is
         // GREYED inside the view whenever nothing is selected and shows this
         // hint there too, per the same ruling — from 2026-08-05, lit in every
         // frame the view stood from 2026-08-15 (the architect's reversal of a
@@ -11566,7 +11570,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-08-30 (the truthful-buttons ruling). The disabled ruling
         // reaches it OUTSIDE the view too since 2026-08-18, on the companions'
         // revived resting grey — a different fact, owned at a different arm.
-        case RedesignButton::HistoryRevert: return {"Revert (Ctrl+H)", nullptr};
+        case RedesignButton::HistoryRevert: return {"Revert (v)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when

@@ -4143,8 +4143,9 @@ private:
     //     nothing from the input layer.
     // THE REVERT ACT is the odd one out and deliberately so:
     //   * run_history_revert applies the SELECTED diff flags backwards into the
-    //     live store of the active column and then closes the view. Its chord,
-    //     Ctrl+H, is NOT part of the mode's own vocabulary — it is admitted by
+    //     live store of the active column and then closes the view. Its key,
+    //     bare `v` (Ctrl+H until 2026-09-01), is NOT part of the mode's own
+    //     vocabulary — it is admitted by
     //     the allowlist (conditionally, on a subject standing) and dispatched
     //     from on_key's ordinary body BELOW the read-only gate, so a locked tab
     //     refuses it exactly as it refuses `'` — but no longer as it refuses the

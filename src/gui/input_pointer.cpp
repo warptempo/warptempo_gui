@@ -362,8 +362,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // bit was the stated safeguard from 2026-08-05 and is again.
     {RedesignButton::HistoryCumulative,
      GuiKeys::U,      false, false, false, false, true},                             // bare u
-    // THE REVERT ACT (2026-08-05): CTRL+H applies the view's SELECTED diff flags
-    // backwards into the live state and closes the view. Momentary like the two
+    // THE REVERT ACT (2026-08-05): BARE `v` applies the view's SELECTED diff
+    // flags backwards into the live state and closes the view. It rode CTRL+H
+    // until 2026-09-01, when the architect moved the act onto the letter the
+    // render player's retired Stop had just freed — the succession is at the
+    // dispatch arm (input_handler.cpp). Momentary like the two
     // below — not a radio, not a toggle, click face only. It is the one entry
     // here whose chord is NOT claimed by the mode's own vocabulary: it
     // dispatches from on_key's ordinary body, BELOW the read-only gate, so a
@@ -375,7 +378,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // shape for a refusal. OUTSIDE the view the button is dead like its three
     // neighbours (2026-08-18) and there is no click to consume at all.
     {RedesignButton::HistoryRevert,
-     GuiKeys::H,      true,  false, false, false, true},                             // Ctrl+H
+     GuiKeys::V,      false, false, false, false, true},                             // bare v
     // THE WALK'S TWO STEPS (2026-08-05): bare `,` steps OLDER and bare `.`
     // NEWER, through the same dispatch and therefore through
     // handle_history_mode_key's own arm — walls clamped as consumed no-ops
@@ -1136,7 +1139,8 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   (which this partition cannot see either, both chords being the mode's own
 //   vocabulary) — the lift that kept the four over this partition INSIDE the
 //   view from 2026-08-15 is deleted (see the note on Revert below).
-//   and THE REVERT ACT since 2026-08-05 (Ctrl+H) — the SECOND session-dependent
+//   and THE REVERT ACT since 2026-08-05 (bare `v`, Ctrl+H until 2026-09-01) —
+//   the SECOND session-dependent
 //   entry: the allowlist admits its chord only while a diff flag is selected
 //   (history_mode_revert_subject_standing), so this walk answers DEAD with an
 //   empty subject and LIVE the moment a click selects one, from the same
