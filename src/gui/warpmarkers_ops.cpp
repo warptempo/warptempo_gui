@@ -660,8 +660,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // press differs from a position nudge's near-wall overshoot. Exact
         // integer compares at both edges; nothing here can overflow (stored
         // cents are in-bracket, deltas are a handful of detents).
-        const int64_t cents = std::clamp(start_cents + delta_cents,
-                                         kTempoMinCents, kTempoMaxCents);
+        // THROUGH THE LANDING OWNER since 2026-08-31 (tempo_cent_step_landing,
+        // app_state.h): the clamp is the same one line it always was, and
+        // naming it is what lets the Up / Down face compare THIS arithmetic
+        // against the resting value instead of re-spelling "at the bracket
+        // edge" (tempo_cent_step_direction_actionable, below).
+        const int64_t cents = tempo_cent_step_landing(start_cents, delta_cents);
         if (!m.tempo_inherits && cents == m.tempo_cents) continue;
         m.tempo_inherits = false;
         m.tempo_cents    = cents;
@@ -802,6 +806,54 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // FREEZE CONVERSION stays a singleton-only act (a bulk payload conversion from
 // one keystroke is refused by design). No freeze conversion here: every stepped
 // member is already an owner, so a plain integer add is the whole mutation.
+// THE WALL SCAN AS A CONST OWNER (architect 2026-08-31, R3): the act below is
+// the first reader and the Up / Down buttons' face is the second, through the
+// composed predicate under it. It is EXTRACTED rather than mirrored — the five
+// terms are the group's own and a face may not restate them — and it mutates
+// nothing, which is what made the extraction necessary at all: the act's scan
+// used to sit inside a body that had already asked the coalesce verdict (a
+// call with a side effect on the undo stamp), so there was no callable form.
+// Declared in app_state.h beside the face that reads it; the wall set and its
+// GROUP RIGIDITY justification are at the act.
+bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
+                                      int64_t delta_cents) {
+    const auto& mv = a.warpmarkers.markers();
+    const int   n  = static_cast<int>(mv.size());
+    const std::set<int>& red = warp_red_flag_set_cached(
+        a, audio.sample_rate(), static_cast<long>(audio.total_frames())).red;
+    const int64_t edge = (delta_cents > 0) ? kTempoMaxCents : kTempoMinCents;
+    for (int idx : a.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
+        const GuiWarpMarker& m = mv[idx];
+        if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
+            red.count(idx) || m.tempo_cents == edge)
+            return false;
+    }
+    return true;
+}
+
+// The DIRECTIONAL half of the Up / Down face, forking exactly where
+// adjust_tempo_cents forks — the group scan above at 2+, the focused OWNER's
+// own clamped landing at a singleton. The full ruling, the deliberate
+// grey-and-card pairing on the group arm, and the value-shaped tails this
+// deliberately answers TRUE for are at the declaration (app_state.h).
+bool tempo_cent_step_direction_actionable(const AppState& a,
+                                          const GuiAudio& audio,
+                                          int64_t delta_cents) {
+    if (a.selected_markers.size() >= 2)
+        return tempo_cent_step_group_actionable(a, audio, delta_cents);
+    const auto& mv = a.warpmarkers.markers();
+    const int   f  = a.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
+    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
+    // A PASS ALWAYS FREEZES and so always changes; a LABEL REF and the target
+    // view's payload refusals keep a live face and a card of their own. Only
+    // an OWNER can rest on a wall, and its wall is the landing owner's own
+    // answer.
+    if (m.tempo_inherits || !m.label_ref.empty()) return true;
+    return tempo_cent_step_landing(m.tempo_cents, delta_cents) != m.tempo_cents;
+}
+
 GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         int64_t delta_cents, bool synthesized_repeat) {
     // THE COALESCE VERDICT IS ASKED FIRST, ahead of the wall scan below (moved up
@@ -824,33 +876,23 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
-    // The coincident-collapse red set, computed VIEW-INDEPENDENTLY here (the
-    // group wall is max strict) — the same generation-keyed memoized helper the
-    // singleton step's target-view refusal uses (its other consumer, the
-    // tempo-drag predecessor walk, was deleted with that gesture).
-    const std::set<int>& red = warp_red_flag_set_cached(
-        app, audio.sample_rate(),
-        static_cast<long>(audio.total_frames())).red;
-    // Bracket edge for the step direction: stepping up walls at the max, down at
-    // the min (== the constructive clamp's stopping point for the singleton).
-    const int64_t edge = (delta_cents > 0) ? kTempoMaxCents : kTempoMinCents;
-    // Wall scan: ANY walled member refuses the whole press.
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
-        const GuiWarpMarker& m = mv[idx];
-        if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
-            red.count(idx) || m.tempo_cents == edge) {
-            // WALLED -> ALL-OR-NOTHING REFUSE, AND IT SAYS SO SINCE
-            // 2026-08-30: one sentence for the whole wall set (a pass, a ref,
-            // a disabled marker, a coincident-collapse member, a marker at
-            // the bracket edge) because what the press needs to know is that
-            // the GROUP could not move as a group, not which member walled —
-            // naming the member would be a second act's worth of detail for a
-            // press that changed nothing.
-            return "One of the selected markers cannot take this tempo "
-                   "change";
-        }
-    }
+    // THE WALL SCAN IS THE CONST OWNER ABOVE since 2026-08-31
+    // (tempo_cent_step_group_actionable — the wall set, the red-flag cache
+    // read and the direction's bracket edge, all of it): ANY walled member
+    // refuses the whole press, and the Up / Down buttons now grey on that same
+    // answer.
+    // IT STILL SAYS SO, AND THAT PAIRING IS DELIBERATE (architect 2026-08-31,
+    // the refinement arc's rule pair): a command whose effect spreads across
+    // the screen keeps its card even where its button greys — a group step
+    // would have moved every selected flag's value, so it is not the
+    // one-dimensional already-at-its-state refusal that went silent that day.
+    // The sentence is one for the whole wall set (a pass, a ref, a disabled
+    // marker, a coincident-collapse member, a marker at the bracket edge)
+    // because what the press needs to know is that the GROUP could not move as
+    // a group, not which member walled — naming the member would be a second
+    // act's worth of detail for a press that changed nothing.
+    if (!tempo_cent_step_group_actionable(app, audio, delta_cents))
+        return "One of the selected markers cannot take this tempo change";
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every
@@ -989,42 +1031,21 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     const auto& mv = app.warpmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
 
-    // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the flag/trim painters read — so
-    // the moved marker travels exactly the commanded pixel column against WHAT
-    // IS PAINTED. This gesture runs in warp's SOURCE home view only, so the
-    // displayed map is the empty identity map here — the shared painted_column /
-    // authored_frame helpers take it naturally, every commit is a plain integer
-    // frame, and the working-zoom authoring-grid bit-exactness claims (all
-    // source-view) hold.
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const int64_t warp_wall = audio.total_frames() - 1;
-
     const int64_t orig_f = mv[f].time_frame;
 
-    // (1) THE STEP: one painted column, and D is the plain integer frame
-    // difference.
-    int64_t D = stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
-
-    // (2) WALLS WIN BY CLAMPING, in the marker's own wall headroom [0 - orig_f,
-    // warp_wall - orig_f] (integer arithmetic, non-empty because every stored
-    // marker rests in [0, warp_wall]). The wall is exactly reachable by a press
-    // that would overshoot it. This is the UNIFIED WALL POLICY (architect
-    // 2026-07-30 — singleton steps clamp, group presses refuse whole), stated once
-    // at the head of position_nudge.h; the phase twin took this same shape with
-    // that ruling, so the two middles no longer differ.
-    if (D < -orig_f)             D = -orig_f;
-    if (D > warp_wall - orig_f)  D = warp_wall - orig_f;
-
-    // (3) The marker commits orig_f + D. The [0, warp_wall] clamp is a
-    // deliberate walls-win belt — provably dead today (this path is all-integer
-    // int64 sums, and the headroom clamp above keeps the sum in range), kept as
-    // cheap insurance so a future edit to the clamp cannot commit a wall-illegal
-    // frame (an out-of-wall authored position would save a load-fatal file).
-    int64_t committed_f = orig_f + D;
-    if (committed_f < 0)         committed_f = 0;
-    if (committed_f > warp_wall) committed_f = warp_wall;
+    // THE WALL-REGIME MIDDLE, through the shared landing owner since
+    // 2026-08-31 (position_nudge_landing, position_nudge.h — the painted-column
+    // step, the headroom clamp that makes the wall exactly reachable, and the
+    // walls-win belt, all three argued at its declaration): the twins' two
+    // verbatim copies became ONE when the Left / Right buttons' face needed the
+    // landing as a const owner to compare against, a caller-side copy being the
+    // drift the truthful-buttons rule exists to prevent. The anchoring basis is
+    // the DISPLAYED map there, which in warp's SOURCE home view is the empty
+    // identity map — every commit a plain integer frame, and the working-zoom
+    // authoring-grid bit-exactness claims (all source-view) hold. Crossing a
+    // neighbor is legal and goes through the reorder-and-remap below.
+    const int64_t committed_f =
+        position_nudge_landing(app, audio, orig_f, direction);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop

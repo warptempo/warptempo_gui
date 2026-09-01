@@ -105,14 +105,21 @@ struct GuiTargetRender;
 //
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
 // it singleton-scoped now: an identical guard prologue (which owns the collapse),
-// an identical pixel-column step, and an identical commit tail. The WALL-REGIME
-// MIDDLE is now the SAME SHAPE in both twins under the policy above — a delta
-// clamped into the marker's own wall headroom, over warp's identity domain and
-// over phase's mapped domain alike — but it stays spelled out in each twin
-// VERBATIM, since each reads its own store and its own EOF wall. These three free
-// functions collapse only the type-free parts: no templates, no callbacks, no
-// policy structs (the naming-symmetry doctrine resists genericity — this is plain
-// extraction of the shared flesh).
+// an identical pixel-column step, an identical WALL-REGIME MIDDLE and an
+// identical commit tail. The middle was the SAME SHAPE in both twins under the
+// policy above from 2026-07-30 — a delta clamped into the marker's own wall
+// headroom, over warp's identity domain and over phase's mapped domain alike —
+// but spelled out in each VERBATIM, on the reasoning that each reads its own
+// store and its own EOF wall; it JOINED THE SHARED FLESH ON 2026-08-31
+// (position_nudge_landing below), when the Left / Right buttons needed the
+// landing as a const owner they could compare against and a caller-side copy
+// of it would have been the drift the truthful-buttons rule forbids. The
+// reasoning did not survive its own re-reading: the STORE read stayed in each
+// twin (the landing takes a frame), and the EOF wall was never two walls —
+// total_frames - 1 is the single marker wall both columns share. These four
+// free functions collapse only the type-free parts: no templates, no
+// callbacks, no policy structs (the naming-symmetry doctrine resists
+// genericity — this is plain extraction of the shared flesh).
 
 // Result of the shared guard prologue.
 struct PositionNudgePrologue {
@@ -211,6 +218,42 @@ int64_t stepped_anchor_frame(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map,
     int64_t orig_frame, int direction);
+
+// WHERE ONE POSITION NUDGE WOULD LAND A MARKER — THE WALL-REGIME MIDDLE, one
+// owner for both columns since 2026-08-31 (it stood spelled out in each twin
+// verbatim until then, on the reasoning that each reads its own store and its
+// own EOF wall; the stores are the CALLER's business — this takes a frame —
+// and the EOF wall is the SAME wall in both columns, total_frames - 1, the
+// single marker wall stated at drop_phase_reset_at_position). Given the
+// marker's resting frame it returns the frame the press would commit:
+//   (1) THE STEP, one painted column through stepped_anchor_frame (the
+//       one-column-per-press guarantee and its numbers are at that
+//       declaration), as a plain integer delta;
+//   (2) WALLS WIN BY CLAMPING, in the marker's own headroom [0 - orig,
+//       wall - orig] — integer arithmetic, non-empty because every stored
+//       marker rests in [0, wall] — so a press that would overshoot lands ON
+//       the wall, exactly reachable. This is the UNIFIED WALL POLICY
+//       (architect 2026-07-30: singleton steps clamp, group presses refuse
+//       whole), stated once at the head of this file;
+//   (3) the [0, wall] belt on the sum — provably dead today (all-integer
+//       int64 sums under the headroom clamp above), kept as cheap insurance so
+//       a future edit cannot commit a wall-illegal frame, which would save a
+//       load-fatal file.
+// A DEGENERATE GEOMETRY ANSWERS `orig_frame` ITSELF (no audio, a dead sample
+// rate, a non-positive samples-per-pixel): those are the prologue's own
+// refusals, so the press writes nothing there, and answering the resting frame
+// is how this owner says so to a caller that has not run the prologue. The
+// TWINS reach it past those guards, so the arm is the FACE's alone in practice
+// — the waveform lane's landing owner (playhead_pixel_step_landing) treats its
+// degenerate grid the same way.
+// THREE READERS: both nudge twins, whose committed frame this IS
+// (GuiWarpMarkersOps::nudge_selected_markers,
+// GuiPhaseResetMarkersOps::nudge_selected_phase_resets — each still owns its
+// own store read, its post-clamp identity no-op and its stop), and
+// marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
+// wall term, which compares this landing against the resting frame.
+int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
+                               int64_t orig_frame, int direction);
 
 // The shared type-free COMMIT TAIL. Each twin calls this AFTER it has: run its
 // regime middle, mutated its store, run reorder_markers_by_time +

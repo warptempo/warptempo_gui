@@ -241,43 +241,21 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     const auto& tv = app.phaseresetmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, tv.size()) by the prologue
 
-    // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the flag/trim painters read —
-    // so the moved reset travels exactly the commanded pixel column against
-    // WHAT IS PAINTED, even inside a worker publish window where the displayed
-    // map lags the live one. Phase resets author in their TARGET home view only
-    // (the home-view binding, architect 2026-07-22), a mapped (non-identity)
-    // domain.
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const int64_t reset_wall = audio.total_frames() - 1;
-
-    // (1) THE STEP: the reset's own currently painted column, plus direction,
-    // committed through authored_frame_at_column's target arm
-    // (stepped_anchor_frame; the doctrine and the numbers live at its
-    // declaration).
-    //
-    // (2) WALLS WIN BY CLAMPING, in the reset's own wall headroom
-    // [0 - orig_f, reset_wall - orig_f] (integer arithmetic, non-empty because
-    // every stored reset rests in [0, reset_wall]). Exact integer compares, never
-    // a float compare — the exact-wall-reach doctrine forbids an epsilon-fragile
-    // pre-filter — and the wall is exactly reachable: a press that would overshoot
-    // lands ON it. The warp twin's shape verbatim (the unified wall policy at the
-    // head of position_nudge.h).
     const int64_t orig_f = tv[f].time_frame;
-    int64_t D = stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
-    if (D < -orig_f)              D = -orig_f;
-    if (D > reset_wall - orig_f)  D = reset_wall - orig_f;
 
-    // (3) The reset commits orig_f + D. The [0, reset_wall] clamp is a deliberate
-    // walls-win belt — provably dead today (this path is all-integer int64 sums,
-    // and the headroom clamp above keeps the sum in range), kept as cheap
-    // insurance so a future edit to the clamp cannot commit a wall-illegal frame
-    // (an out-of-wall authored position would save a load-fatal file). The warp
-    // twin carries the same belt for the same reason.
-    int64_t committed_f = orig_f + D;
-    if (committed_f < 0)          committed_f = 0;
-    if (committed_f > reset_wall) committed_f = reset_wall;
+    // THE WALL-REGIME MIDDLE, through the shared landing owner since
+    // 2026-08-31 — THE WARP TWIN'S OWN CALL, not a copy of its shape
+    // (position_nudge_landing, position_nudge.h; the painted-column step, the
+    // headroom clamp with its exact integer compares, and the walls-win belt
+    // are all argued at its declaration). The anchoring basis is the DISPLAYED
+    // map, so the moved reset travels exactly the commanded pixel column
+    // against WHAT IS PAINTED even inside a worker publish window; phase
+    // resets author in their TARGET home view only (the home-view binding,
+    // architect 2026-07-22), a mapped (non-identity) domain, and the EOF wall
+    // is the one both columns share. Crossing a neighbor is legal and goes
+    // through the reorder-and-remap below.
+    const int64_t committed_f =
+        position_nudge_landing(app, audio, orig_f, direction);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop

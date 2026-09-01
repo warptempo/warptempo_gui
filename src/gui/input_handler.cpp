@@ -1688,9 +1688,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // guard here — adjust_tempo_cents returns at once unless the warp view is
     // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
     // it hands back the sentence for that refusal — and for its two target-view
-    // payload refusals, its two NO-CHANGE arms (a source-view label ref, an
-    // owner already resting on a tempo-bracket end) and the group's wall — for
-    // this arm to card: the fact is the act's, the card is the dispatch's. `=` / `-` are the waveform magnification keys and
+    // payload refusals, its remaining NO-CHANGE arm (a source-view label ref)
+    // and the group's wall — for this arm to card: the fact is the act's, the
+    // card is the dispatch's. THE SINGLETON'S BRACKET END IS SILENT since
+    // 2026-08-31 and the Up / Down buttons GREY on it instead
+    // (tempo_cent_step_direction_actionable, app_state.h), the group's wall
+    // greying AND carding beside it. `=` / `-` are the waveform magnification keys and
     // Ctrl+`=` / Ctrl+`-` the zoom keys (see below). Modified Up / Down
     // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
     // the vertical arrows in any form.
@@ -1911,31 +1914,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
-        // T+W IS THE CONSUMED REFUSAL, through the ONE predicate
-        // (horizontal_arrow_step_actionable, app_state.h — the lane fork's
-        // composed refusal, which inside this branch reduces to
-        // active_column_authoring_allowed, the home-view rule itself, its
-        // waveform-lane wall term being asked only with no selection; the
-        // bottom row's LEFT and RIGHT buttons read the same predicate for
-        // their face since 2026-08-30, the truthful-buttons ruling) rather
-        // than a second spelling of its arms: this site hand-wrote the rule
-        // until 2026-08-29, and a one-owner rule with a hand copy beside it
-        // is a rule waiting to drift. ONE refusal is left since the P column
-        // opened to both audio views (architect 2026-08-30) — a WARP marker
-        // in target view, which lost the tempo-image step with the whole
-        // tempo drag family — so the card needs no column fork; "Phase
-        // resets are moved in target view" retired with the P gate.
-        // AND IT SAYS SO: the Left / Right buttons grey on the same
-        // predicate, so a lift never reaches this line.
-        if (!horizontal_arrow_step_actionable(app, audio, direction)) {
+        // T+W IS THE CONSUMED REFUSAL, through the HOME-VIEW RULE'S OWN OWNER
+        // (active_column_authoring_allowed, app_state.h) rather than a second
+        // spelling of it: this site hand-wrote the rule until 2026-08-29, and
+        // a one-owner rule with a hand copy beside it is a rule waiting to
+        // drift. ONE refusal is left since the P column opened to both audio
+        // views (architect 2026-08-30) — a WARP marker in target view, which
+        // lost the tempo-image step with the whole tempo drag family — so the
+        // card needs no column fork; "Phase resets are moved in target view"
+        // retired with the P gate.
+        // IT ASKS THE OWNER AND NOT THE COMPOSED PREDICATE since 2026-08-31,
+        // and the difference is the CARD: horizontal_arrow_step_actionable
+        // grew the marker's own WALL term that day for the Left / Right
+        // buttons' face, and this sentence is about the VIEW — raising it for
+        // a marker resting on frame 0 would be a lie. The wall's refusal is
+        // the twins' own and it is SILENT (a benign one-dimensional refusal
+        // already at its state), so a walled press still runs the act and the
+        // act still writes nothing. The buttons grey on both terms, so a lift
+        // reaches neither line.
+        if (!active_column_authoring_allowed(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
                 "Markers are moved in source view");
             return;
         }
-        // THE WALL SAYS SO (architect 2026-08-30): each twin returns its own
-        // refusal sentence and this arm raises it, the reason channel's
-        // ordinary shape (GuiOpRefusal, warpmarkers_ops.h).
+        // The twins' reason channel, raised here where a press is known to
+        // have happened (GuiOpRefusal, warpmarkers_ops.h). Both return
+        // std::nullopt today — the prologue's refusals are belts or an outer
+        // gate's card, and the wall went silent on 2026-08-31 — and the arm
+        // stays because the channel is the cluster's contract, not this
+        // gesture's private arrangement.
         card_op_refusal(notifications,
                         app.active_markers_view == 'P'
                             ? phase_resets.nudge_selected_phase_resets(

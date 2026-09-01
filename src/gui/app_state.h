@@ -8225,18 +8225,20 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // drag) stay SILENT, gesture-class, the unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// SIX CALL SITES, re-derived by grep 2026-08-30 after the opening (every
-// one answers TRUE in every P-column state through this body's own P arm):
+// SEVEN CALL SITES, re-derived by grep 2026-08-31 (every one answers TRUE in
+// every P-column state through this body's own P arm):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
 // (input_key_dispatch.cpp — its own warp-column test sits ahead, so `m` is
 // W-only regardless), the empty-lane double-click drop and the flag drag
-// (input_pointer.cpp), the COMPOSED PREDICATE
-// horizontal_arrow_step_actionable (the bare Left/Right nudge and the
-// Left / Right buttons — a marker-lane press refuses only for a warp marker
-// in target view; the nudge read this directly until 2026-08-30, when the
-// truthful-buttons ruling gave its face a reader and the composition moved
-// into that named owner), and the DROP BUTTON'S FACE
-// (redesign_button_enabled, the twin rule's arm). marker_selection_verb_-
+// (input_pointer.cpp), the BARE LEFT/RIGHT NUDGE'S DISPATCH (input_handler.cpp
+// — the marker-lane branch, whose card "Markers are moved in source view" is
+// this rule's own sentence; it read this owner directly until 2026-08-30, then
+// the composed horizontal_arrow_step_actionable, and DIRECTLY AGAIN since
+// 2026-08-31, when that predicate grew the marker's own wall term for the
+// buttons' face and a wall stopped being something this sentence may be raised
+// for), the COMPOSED PREDICATE horizontal_arrow_step_actionable (the Left /
+// Right buttons' face, which composes this rule with the wall), and the DROP
+// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm). marker_selection_verb_-
 // actionable LEFT the callers with the opening: its P-column home term
 // became structurally true and the predicate is the selection atom alone
 // (its site records the succession).
@@ -8348,6 +8350,68 @@ inline bool tempo_cent_step_actionable(const AppState& app) {
            marker_selection_standing(app) && marker_focus_standing(app);
 }
 
+// WHERE ONE CENT STEP WOULD LAND A VALUE — the singleton step's constructive
+// clamp into the tempo bracket, ONE owner (2026-08-31), the twin in the value
+// domain of playhead_pixel_step_landing in the frame domain. The act's loop
+// commits exactly this number (adjust_tempo_cents, warpmarkers_ops.cpp) and
+// tempo_cent_step_direction_actionable below COMPARES it against the value the
+// marker already holds, so the face reads the act's own arithmetic rather than
+// a second spelling of "at the bracket edge" — no number here or there
+// restates kTempoMinCents / kTempoMaxCents (value_format.h).
+inline int64_t tempo_cent_step_landing(int64_t start_cents,
+                                       int64_t delta_cents) {
+    return std::clamp(start_cents + delta_cents, kTempoMinCents,
+                      kTempoMaxCents);
+}
+
+// THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
+// selected marker could take a step of `delta_cents` — no pass, no label ref,
+// no disabled marker, no coincident-collapse member, none already AT the
+// bracket edge in the step's direction. Defined in warpmarkers_ops.cpp
+// immediately above the act, which reads it as its own whole-press refusal
+// (adjust_tempo_cents_group, all-or-nothing by GROUP RIGIDITY — the
+// justification is at the act; the unified wall policy is at the head of
+// position_nudge.h). The 2+ arm of the directional predicate below is its
+// second reader, which is the whole point of the extraction: the face may not
+// restate five terms the act already owns.
+bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
+                                      int64_t delta_cents);
+
+// WOULD A CENT STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
+// Up / Down face, asked past tempo_cent_step_actionable above (architect
+// 2026-08-31, R3 of the refinement arc: "the tempo step greys at its bracket
+// end"). `delta_cents` is the press's own signed step (+1 Up, -1 Down), and
+// the answer forks exactly where the act forks:
+//   * a 2+ selection takes the GROUP scan above — the SAME whole-refusal the
+//     act runs, and this is the arc's DELIBERATE PAIRING rather than an
+//     oversight: the group step KEEPS its card ("One of the selected markers
+//     cannot take this tempo change") because a group edit is not
+//     one-dimensional — its effect would have spread across every selected
+//     flag — so the button greys AND the key cards, the shape undo and redo
+//     have always had (the rule pair is the arc's own, tmp/refinement_
+//     decisions.md);
+//   * a singleton compares tempo_cent_step_landing against the focused
+//     OWNER's own value: Up greys with the marker resting on the bracket's
+//     max, Down on its min, and that refusal is SILENT at the key since
+//     2026-08-31 (a benign one-dimensional refusal already at its state — the
+//     focused marker's value is the one place to glance), so here the grey is
+//     the whole cue.
+// WHAT IT STILL ANSWERS TRUE FOR, and deliberately: the VALUE-SHAPED TAILS
+// that keep a live face and a card — a source-view label ref ("A label
+// reference has no tempo of its own"), and in target view a pass, a ref or a
+// coincident-collapse member. Each of those is a fact about the marker's KIND
+// or its render identity rather than a wall its value rests on, each needs the
+// act's own resolution run, and each says so on a card the grey would swallow.
+// Defined in warpmarkers_ops.cpp beside both step arms.
+// THE TWIN RULE'S INTERACTION IS DEFERRED: once the modified steps land
+// (Ctrl+Up / Down = 0.10, Shift+Up / Down = 0.03, R12 of the same arc) a
+// button with a live modified twin must stay ENABLED, so these two arms will
+// read the widest admitted step rather than the bare one — the skips' own
+// shape (playhead_end_jump_actionable, asked of both forms).
+bool tempo_cent_step_direction_actionable(const AppState& a,
+                                          const GuiAudio& audio,
+                                          int64_t delta_cents);
+
 // IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
 // the playhead scanner is active, or the A/B audition sequence stands in any
 // phase (a REST between its plays is transport-live: the act is one session
@@ -8382,19 +8446,61 @@ inline bool transport_session_live(const AppState& a) {
 int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
                                     int delta_px);
 
+// WOULD ONE MARKER NUDGE THIS WAY CHANGE ANYTHING — the MARKER lane's own
+// wall term, both columns (architect 2026-08-31, R3 of the refinement arc:
+// "TransportLeft/Right grey directionally at the marker walls with a selection
+// standing"). It reads the ACT'S OWN LANDING OWNER, position_nudge_landing
+// (position_nudge.h — the wall-regime middle both twins now commit through),
+// and it is defined in position_nudge.cpp beside it, so the warp nudge and the
+// phase-reset nudge take ONE term and the naming symmetry needs no recorded
+// asymmetry: the landing is type-free (one painted column, the delta clamped
+// into the marker's own headroom against the ONE EOF wall both columns share),
+// and only the store the focus indexes differs.
+// A 2+ SELECTION STAYS LIT, and that is the twin rule's own reasoning rather
+// than a term left out: horizontal movement is a FOCUS act, so a group press
+// COLLAPSES the selection to its focus, lands the playhead there and stops
+// playback in the shared prologue BEFORE any wall is consulted (position_nudge
+// _prologue) — the press changes the screen even when the step then walls, and
+// a grey would promise less than the key delivers, exactly as it would on the
+// two skips. So the wall is asked of a SINGLETON alone.
+// The prologue's own geometry refusals are terms here too (a blank piece, a
+// dead sample rate, a degenerate samples-per-pixel, a stale focus): the act
+// refuses on each of them ahead of the collapse, so nothing happens at all and
+// the face greys with it — the waveform lane's landing owner treats its
+// degenerate grid the same way.
+// THE TWIN RULE'S INTERACTION IS DEFERRED here as well: the modified steps
+// (Ctrl+Left / Right = 10 columns, Shift+Left / Right = 3, R12 of the same
+// arc) will need this arm to read the widest admitted step, not the bare one.
+bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
+                             int direction);
+
 // THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, two readers
 // (architect 2026-08-30): bare Left / Right's lane fork is the waveform-lane
 // step — the cursor stepping one painted column, refused only AT THE WALLS,
 // where the adjacent column's frame is the frame it already rests on — while
 // a standing selection puts the press in the MARKER lane, where it nudges the
-// focused marker and refuses only for a WARP marker in target view
+// focused marker and refuses for a WARP marker in target view
 // (active_column_authoring_allowed — the P column nudges in both audio views
-// since 2026-08-30) with no fallback to the waveform step.
-// `direction` is the step's sign (-1 Left, +1 Right) and is consulted by the
-// waveform-lane branch alone. READERS: the dispatch's marker-lane branch
-// (input_handler.cpp, which reads the selection half) and the bottom row's
-// LEFT and RIGHT buttons' disabled face (both halves); the waveform-lane act
-// reads the landing owner itself through Viewport::move_playhead_pixels.
+// since 2026-08-30) and, since 2026-08-31, AT THE MARKER'S OWN WALL
+// (marker_nudge_actionable above — the singleton whose clamped step lands the
+// frame it already holds), with no fallback to the waveform step. THE TWO
+// LANES NOW GREY ALIKE: the inversion that stood for a day — the plain lane
+// mirroring its walls through playhead_pixel_step_landing while the marker
+// lane, the lane that actually AUTHORS, stayed lit over a dead press — is
+// closed, and both walls are read through their act's own landing owner.
+// `direction` is the step's sign (-1 Left, +1 Right) and is consulted by BOTH
+// branches now. IT IS THE FACE'S COMPOSITION AND THE FACE'S ALONE since
+// 2026-08-31, one reader — the bottom row's LEFT and RIGHT buttons — and that
+// is a split of OWNERS rather than a lost reader: each ACT reads the owner its
+// own refusal is about, and the composition is what a truthful FACE owes on
+// top of them. The waveform-lane act reads the landing owner through
+// Viewport::move_playhead_pixels; the marker-lane DISPATCH reads
+// active_column_authoring_allowed directly for its card ("Markers are moved in
+// source view" — a HOME-VIEW sentence, which must not be raised for a wall)
+// and the two nudge twins read position_nudge_landing for the wall, whose
+// refusal is silent. The predicate's marker-lane branch read the dispatch as
+// its second reader from 2026-08-29 until the wall term arrived; what it names
+// today is exactly the two owners, in the lane fork's own shape.
 //
 // WHILE A TRANSPORT SESSION IS LIVE THE PAIR STAYS LIT: the waveform-lane
 // arm STOPS playback and then steps the resting cursor (handle_plain_bare_
@@ -8423,7 +8529,8 @@ inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
     if (marker_selection_standing(app))
-        return active_column_authoring_allowed(app);
+        return active_column_authoring_allowed(app) &&
+               marker_nudge_actionable(app, audio, direction);
     return transport_session_live(app) ||
            playhead_pixel_step_landing(app, audio, direction) !=
                app.playhead_cursor_sample;
@@ -9902,6 +10009,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
         // inherit, Edit flag and the Measure (that same arm), on UP / DOWN,
         // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block), and
+        // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
+        // tempo bracket's two ends and the group step's whole refusal under
+        // UP / DOWN, the nudged marker's frame walls under LEFT / RIGHT in the
+        // marker lane (R3; each pair's arm names its owner) — and
         // THE TRANSPORT THREE at the second switch below the loading guard —
         // the two SKIPS where neither the bare nor the whole-piece jump
         // would change anything ("even the transport's back/forward when
@@ -9921,10 +10032,22 @@ inline bool redesign_button_enabled(const AppState& a,
         //   for the walk pair's all-disabled store and nothing-ahead. "Walls
         //   are the one refusal class this roster has never mirrored" is
         //   SUPERSEDED wherever it once stood.)
-        //   * THE VALUE-SHAPED TAILS: a label ref, a pass in target view and
-        //     the bracket wall under Up/Down; an empty payload under Copy
-        //     value. Each needs the act's own resolution run, which a
-        //     per-tick face has no business doing.
+        //   * THE VALUE-SHAPED TAILS THAT REMAIN: a label ref and, in target
+        //     view, a pass or a coincident-collapse member under Up/Down; an
+        //     empty payload under Copy value. Each is a fact about the
+        //     marker's KIND or its render identity rather than a wall its
+        //     value rests on, each needs the act's own resolution run, and
+        //     each still says so on a card the grey would swallow.
+        //   (THE BRACKET WALL LEFT THIS LIST on 2026-08-31, R3 of the
+        //   refinement arc: Up greys with the focused owner resting on the
+        //   tempo bracket's max and Down on its min, through the act's own
+        //   landing owner (tempo_cent_step_landing) — the same move planner
+        //   decision 60 made for Left / Right, and made here because that
+        //   refusal went SILENT at the key the same day, leaving the grey as
+        //   its whole cue. THE GROUP STEP'S WHOLE REFUSAL joined with it,
+        //   through the act's extracted scan — and that one is the deliberate
+        //   pairing rather than a replacement: it greys AND it cards, a group
+        //   edit not being the one-dimensional refusal a silence needs.)
         //   (THE LOCK ON THE ARROWS WAS ON THIS LIST for the hours of
         //   2026-08-30 between the ruling's first landing and planner decision
         //   52: read_only_key_blocked drops Up/Down outright and Left/Right
@@ -10010,6 +10133,13 @@ inline bool redesign_button_enabled(const AppState& a,
         //     acts everywhere but AT THE WALLS, and since planner decision 60
         //     the pair greys there too (the landing owner's compare, a live
         //     transport session keeping it lit because the press then stops).
+        //     SINCE 2026-08-31 THE MARKER LANE GREYS AT ITS WALLS TOO (R3),
+        //     closing the inversion that had the navigating lane truthful
+        //     about its walls while the AUTHORING lane stayed lit over a dead
+        //     press: marker_nudge_actionable compares the nudge's own landing
+        //     owner against the marker's resting frame, in both columns, and a
+        //     2+ selection stays lit because the press collapses and lands
+        //     before any wall is consulted.
         //   * UP / DOWN are the pair he actually watched blink, and they were
         //     the concrete case the 2026-08-15 reversal existed for — "in warp
         //     markers they can nudge the tempo up and down, but in phase
@@ -10017,7 +10147,12 @@ inline bool redesign_button_enabled(const AppState& a,
         //     marker, that pair would blink in and out, and it would be
         //     distracting". SINCE 2026-08-30 THEY MIRROR
         //     tempo_cent_step_actionable — the P column, an empty selection,
-        //     no focus — the act's own first three returns.
+        //     no focus — the act's own first three returns, AND SINCE
+        //     2026-08-31 the DIRECTIONAL half beside it
+        //     (tempo_cent_step_direction_actionable): the singleton's bracket
+        //     end, Up at the max and Down at the min, and the group's
+        //     all-or-nothing wall scan, each the act's own owner called rather
+        //     than restated.
         // Their chords refuse exactly as they did; a click on a refusing arrow
         // is a consumed no-op, the roster's standing shape.
         //
@@ -10094,6 +10229,12 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportDown:
             if (active_view_state(a).read_only) return false;
             if (!tempo_cent_step_actionable(a)) return false;
+            // AND THE DIRECTIONAL HALF since 2026-08-31 (architect, R3): the
+            // singleton's bracket end and the group's whole refusal, both
+            // through the acts' own owners (the ruling is at the predicate).
+            if (!tempo_cent_step_direction_actionable(
+                    a, audio, b == RedesignButton::TransportUp ? +1 : -1))
+                return false;
             break;
         // THE MARKER-WALK GROUP (2026-08-15's always-on policy until
         // 2026-08-30): the `h` view's derived partition greys NONE of the

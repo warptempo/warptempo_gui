@@ -35,7 +35,9 @@ PositionNudgePrologue position_nudge_prologue(
     // belts against degenerate state. An error arm exists iff a producer
     // exists (validation_topology.md), so the reason channel this pair's
     // callers use (GuiOpRefusal, warpmarkers_ops.h) carries nothing from
-    // here — what a press CAN meet is each twin's own wall, which cards.
+    // here — and nothing from each twin's own WALL either since 2026-08-31,
+    // when that one-day card retired into a silence with a greyed button
+    // beside it (marker_nudge_actionable, app_state.h).
     if (app.loading || audio.total_frames() <= 0) return r;
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;
@@ -100,6 +102,62 @@ int64_t stepped_anchor_frame(
     const int cf = painted_column_of_source_frame(
         app, audio, static_cast<double>(orig_frame), map);
     return authored_frame_at_column(app, audio, cf + direction, map);
+}
+
+int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
+                               int64_t orig_frame, int direction) {
+    // The prologue's geometry refusals, asked here so a caller that has NOT
+    // run the prologue — the buttons' face — gets the same answer the press
+    // would give: nothing moves (the declaration says why).
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return orig_frame;
+    if (current_samples_per_pixel(app, audio) <= 0.0) return orig_frame;
+    // The anchoring map is the DISPLAYED paint basis —
+    // displayed_or_live_target_map, the SAME map the flag/trim painters read —
+    // so the moved marker travels exactly the commanded pixel column against
+    // WHAT IS PAINTED, even inside a worker publish window where the displayed
+    // map lags the live one. In warp's SOURCE home that map is the empty
+    // identity map and every commit is a plain integer frame; in phase's
+    // TARGET home it is a real map.
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    const int64_t wall = audio.total_frames() - 1;
+    // (1) one painted column, as a plain integer delta.
+    int64_t D = stepped_anchor_frame(app, audio, map, orig_frame, direction) -
+                orig_frame;
+    // (2) walls win by clamping, in this marker's own headroom.
+    if (D < -orig_frame)        D = -orig_frame;
+    if (D > wall - orig_frame)  D = wall - orig_frame;
+    // (3) the walls-win belt on the sum.
+    int64_t committed = orig_frame + D;
+    if (committed < 0)     committed = 0;
+    if (committed > wall)  committed = wall;
+    return committed;
+}
+
+// THE MARKER LANE'S WALL TERM FOR THE LEFT / RIGHT BUTTONS (architect
+// 2026-08-31, R3): declared in app_state.h, where the face reads it, and
+// defined here beside the landing it compares. The order of its terms is the
+// PROLOGUE'S OWN, so the face and the press agree at every one of them; the
+// full reasoning — why a 2+ selection stays lit, why the geometry guards are
+// terms — is at the declaration.
+bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
+                             int direction) {
+    if (a.loading || audio.total_frames() <= 0) return false;
+    if (!marker_selection_standing(a)) return false;
+    if (!marker_focus_standing(a)) return false;
+    if (audio.sample_rate() <= 0) return false;
+    if (current_samples_per_pixel(a, audio) <= 0.0) return false;
+    const int f = a.last_selected_marker;
+    if (f >= active_marker_count(a)) return false;   // the focused-index belt
+    // A GROUP PRESS COLLAPSES AND LANDS before any wall is consulted, so it
+    // always changes the screen: horizontal movement is a focus act (the
+    // doctrine at the head of position_nudge.h) and the collapse is the
+    // press's own committed act, not a prelude to the step.
+    if (a.selected_markers.size() >= 2) return true;
+    const int64_t orig = (a.active_markers_view == 'P')
+        ? a.phaseresetmarkers.markers()[static_cast<size_t>(f)].time_frame
+        : a.warpmarkers.markers()[static_cast<size_t>(f)].time_frame;
+    return position_nudge_landing(a, audio, orig, direction) != orig;
 }
 
 void finish_position_nudge(
