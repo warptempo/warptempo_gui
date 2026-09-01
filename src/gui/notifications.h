@@ -48,9 +48,10 @@
 //              line have the card alone. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
-//              the clock), at its X, or at a bare Esc that reaches the stack.
+//              the clock), at its X, at a bare Esc that reaches the stack, or
+//              at Ctrl+Esc with the whole stack.
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
-//              until its X or that same Esc; no clock.
+//              until its X, that same Esc, or Ctrl+Esc; no clock.
 //
 // WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
 // ("that would get annoying"), a Synchronize that mirrored the project, a
@@ -127,14 +128,29 @@
 // player's own modal row takes whole, so that refusal has nothing beside it.)
 //
 // ONE PUSH CHOKEPOINT: GuiNotifications::notify. Every producer above calls
-// it and nothing else writes a card. A text identical to a card already in
-// the stack in the same class does not stack a duplicate — the stack keeps
-// ONE card for that event and THAT CARD IS RE-PUSHED AT THE TOP with a fresh
-// clock, in both classes alike (architect 2026-08-30). It is not re-armed
-// where it stands, because "in the stack" is not "on screen": an overflowing
-// stack is clipped at the room's foot, so a live card can be wholly
-// invisible, and the answer to the act the user has just performed must be
-// visible. The top is also what a repeat means — the last time it happened.
+// it and nothing else writes a card.
+//
+// DELIBERATE PRESSES STACK THEIR DUPLICATES (architect 2026-09-01, retiring
+// the 2026-08-30 unconditional dedup): each PHYSICAL press pushes its OWN
+// card, so a wall hit three times shows three cards — his confirmation count,
+// the same fact the roster's grey cannot give him because a key's refusal is
+// what he is reading. THE ONE CARVE-OUT IS A HELD INPUT'S SYNTHESIZED
+// REPEATS, which coalesce exactly as everything did before: a text identical
+// to a card already in the stack in the same class removes that card and
+// pushes it again at the TOP with a fresh clock, in both classes alike. The
+// rule is "multiples are for distinct presses, not for a 30 Hz flood", and the
+// bit that decides it is the key event's own
+// (AppState::Notifications::held_repeat_dispatch, set from
+// GuiInputState::synthesized_repeat at on_key's head — both of that bit's
+// producers, the held KEY and the held BUTTON, dispatch through that body).
+// A card raised off any other road — a worker's verdict, a pointer gesture —
+// reads the bit false and stacks, which is the deliberate-press answer.
+//
+// WHY THE REPEAT MOVES ITS CARD rather than re-arming it where it stands: "in
+// the stack" is not "on screen". An overflowing stack is clipped at the room's
+// foot, so a live card can be wholly invisible, and the answer to the act the
+// user is this moment performing must be visible. The top is also what a
+// repeat means — the last time it happened.
 //
 // THE STACK IS UNCAPPED AND THE QUEUE IS RETIRED (architect 2026-08-30,
 // "cards bump each other off the screen — newest on top, the oldest leaving;
@@ -176,6 +192,21 @@
 // bottom card stick around preferentially, so the key empties the stack from
 // the back the way the clock does. It reads no class — a critical card is
 // dismissed like any other, exactly as the X takes any class.
+//
+// AND CTRL+ESC IS THE BULK FORM (architect 2026-09-01): the whole stack at
+// once, CRITICALS INCLUDED — the explicit chord is what the X would be if it
+// were pressed on every card, and it therefore clears exactly what the CLOCK
+// never touches (a critical card has none). That is the record a reversal
+// would start from: if the criticals should survive the chord, this is the one
+// line to change. IT SITS AT THE OPPOSITE END OF THE RANKING FROM ITS BARE
+// SIBLING — bound at the HEAD of on_key, above every gate, editor, player,
+// picker and prompt, because a card must be dismissable under any modal and
+// the chord is aimed at nothing else, while bare Esc sits under all of them.
+// One-shot (repeat_eligible names no Escape shape in any state), read-only-
+// legal and `h`-legal for the same reason: it authors nothing and reads no
+// tab. With an EMPTY STACK it is silent — the state it asks for is already
+// true and visibly so, which is the already-at-state class the strictness
+// ruling leaves silent.
 //
 // The pointer's own rule, unchanged: on both backends, a press on the
 // card's BODY is consumed whole — arms nothing, moves nothing, lands no
@@ -242,7 +273,31 @@ inline constexpr const char* kTargetPreviewNotReadyCard =
 
 // The card's width is its content's, clamped to [this, kNotificationMaxWidthPx
 // below]. Authored px, scaled like every other length.
-inline constexpr double kNotificationMinWidthPx = 240.0;
+//
+// THE FLOOR IS THE UNDO CARD'S OWN WIDTH (architect 2026-09-01): he steps undo
+// and redo deliberately as a sanity check, and the two walls' cards — "There
+// is nothing to undo" and "There is nothing to redo", the same sentence but
+// for one letter — came out a few pixels apart and the difference read as a
+// flicker between two presses of the same shape. Raising the floor above BOTH
+// makes them one card: the clamp answers the floor for every sentence shorter
+// than it, so the pair, and every other short refusal with them, paints at one
+// width.
+//
+// THE MEASUREMENT, at 100 % in the card's own face (the one sans at
+// redesign_font_size_px, 16 px): "There is nothing to undo" shapes to 172.73 px
+// and "…to redo" to 169.16, and the card adds its chrome — the painter's
+// four pads and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px.
+// 272 is the next multiple of 8 above the wider of the two, which is the
+// number this constant is: a clean authored round-up with 7 px of air over the
+// sentence that set it, so a face retune of a pixel or two does not silently
+// put the pair back at two widths. AUTHORED PX, so the relation holds at every
+// gui_scale — the sentence and the floor scale together through scaled_px.
+//
+// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 640 authored px and
+// notification_card_max_w_px already floors its window safety here, so the
+// clamp's own precondition (floor <= ceiling) is untouched by the rise and a
+// window too narrow for the floor keeps overhanging exactly as before.
+inline constexpr double kNotificationMinWidthPx = 272.0;
 
 // THE CARD'S CEILING IS THE LAPTOP'S OWN WIDTH, AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
@@ -391,14 +446,14 @@ struct GuiNotifications {
     GuiNotifications(AppState& app_, Viewport& viewport_)
         : app(app_), viewport(viewport_) {}
 
-    // THE ONE PUSH. A duplicate of a card in the stack (same class, same
-    // text) removes that card and pushes it again at the top with a fresh
-    // clock, in both classes alike, instead of stacking a second one or
-    // re-arming it where it stands (the argument is at the site).
-    // A card goes on TOP and is visible at once, its clock started here;
-    // then THE BUMP brings the stack back inside notification_capacity by
-    // removing the oldest NORMAL card, never a critical one and never the
-    // card just pushed (the full argument is at the site).
+    // THE ONE PUSH. A card goes on TOP and is visible at once, its clock
+    // started here; then THE BUMP brings the stack back inside
+    // notification_capacity by removing the oldest NORMAL card, never a
+    // critical one and never the card just pushed (the full argument is at the
+    // site). A DUPLICATE STACKS (2026-09-01) unless this dispatch is a HELD
+    // INPUT'S SYNTHESIZED REPEAT, in which case the matching card is removed
+    // and re-pushed at the top with a fresh clock, in both classes alike — the
+    // ruling and its one bit are at the site and at the head of this file.
     void notify(AppState::NotificationClass cls, std::string text);
 
     // THE X's ACT, AND BARE ESC's ON THE OLDEST CARD (2026-08-31): remove the
@@ -407,6 +462,12 @@ struct GuiNotifications {
     // the published rect under the pointer, Esc by the stack's back — and the
     // live test below is asked of the argument either way.
     void dismiss(uint64_t id);
+
+    // CTRL+ESC's ACT (2026-09-01): the whole stack, CRITICALS INCLUDED, and
+    // the hover with it. An empty stack is a silent nothing — no damage, no
+    // card. The reasoning and the reversal record are at the hit section
+    // above.
+    void dismiss_all();
 
     // THE CLOCK, on the run loop's deadline tick: retire every normal card
     // whose life has elapsed and is not paused, and re-derive the hover from

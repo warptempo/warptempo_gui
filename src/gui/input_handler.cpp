@@ -60,7 +60,43 @@ static void card_op_refusal(GuiNotifications& notifications,
                              std::move(*reason));
 }
 
+namespace {
+
+// THE HELD-REPEAT CARVE-OUT'S SCOPE (architect 2026-09-01, the duplicates
+// ruling): deliberate presses stack their duplicate cards and a held input's
+// SYNTHESIZED REPEATS coalesce into one, so the notify chokepoint has to know
+// which kind of fire it is answering — and the raise sites are everywhere on
+// this dispatch (the gates here, the ops' returned GuiOpRefusal sentences, the
+// editors' red flashes), so threading a parameter down every chain would be a
+// dozen signatures for one fact that arrives once, at the top, with the event.
+// This guard writes that fact into AppState::Notifications for the length of
+// the dispatch and takes it away again at EVERY return of on_key's body,
+// including the early ones the gates take — which is what keeps a card raised
+// by a worker, a pointer gesture or a paint from ever reading a stale true.
+//
+// IT SAVES AND RESTORES rather than clearing: on_key does not re-enter itself
+// today (the two synthetic callers are the roster's lift and its repeat burst,
+// both from the pointer road), and restoring the previous value is what would
+// keep a future nested dispatch honest instead of silently ending the outer
+// one's scope.
+struct HeldRepeatDispatchScope {
+    AppState& a;
+    bool      was;
+    HeldRepeatDispatchScope(AppState& app_, bool repeat)
+        : a(app_), was(app_.notifications.held_repeat_dispatch) {
+        a.notifications.held_repeat_dispatch = repeat;
+    }
+    ~HeldRepeatDispatchScope() {
+        a.notifications.held_repeat_dispatch = was;
+    }
+};
+
+} // namespace
+
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
+    // The dispatch's own repeat scope, first statement so it covers the whole
+    // body (the ruling and the reasoning are at the guard above).
+    const HeldRepeatDispatchScope repeat_scope(app, mods.synthesized_repeat);
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
     // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
@@ -111,6 +147,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
+
+    // CTRL+ESC CLEARS THE WHOLE NOTIFICATION STACK, CRITICALS INCLUDED
+    // (architect 2026-09-01) — the X's BULK FORM, and the one act that reaches
+    // a critical card from the keyboard. It is bound HERE, at the very head of
+    // the dispatch and above every gate below it, for the reason the X's own
+    // pointer claim sits above every veil: A CARD MUST BE DISMISSABLE UNDER ANY
+    // MODAL, and this chord is aimed at nothing but the stack — it authors
+    // nothing, reads no tab, opens and closes no surface, so no prompt, editor,
+    // player, picker, dropdown, drag or loading state has anything to protect
+    // from it. Landing it here is also the seam with the FEWEST EDITS: the
+    // player's and the picker's routers are each "the whole vocabulary" while
+    // they stand and would otherwise have had to enumerate it beside Ctrl+S and
+    // Ctrl+Q, and the four gates below would each have needed a hole.
+    //
+    // IT IS THE OPPOSITE END OF THE RANKING FROM ITS BARE SIBLING, deliberately
+    // (the eight-place Esc contract further down is UNTOUCHED — bare Esc still
+    // dismisses the OLDEST card at the tail of that ranking and nothing here
+    // moves it): the explicit chord is a decision and outranks everything, the
+    // bare key is a retraction and yields to everything.
+    //
+    // CTRL-EXACT, one-shot (repeat_eligible names no Escape shape in any
+    // state), read-only-legal and `h`-legal — the gates it sits above are the
+    // gates that would have refused it. WITH AN EMPTY STACK IT IS SILENT: the
+    // state it asks for is already true and the stack is what the user is
+    // looking at, so it is the already-at-state silence rather than a refusal
+    // (the act's own body owns that, dismiss_all).
+    if (ctrl && !shift && !alt && key == GuiKeys::Escape) {
+        notifications.dismiss_all();
+        return;
+    }
 
     // The modal prompt (painted on the bottom row since 2026-08-13) owns input while
     // active. Only the prompt's
@@ -357,8 +423,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Q (hand on the close routing, which is what tears the edit down)
     // exactly as they would with no drag in flight. A text drag is not a navigation
     // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
-    // modifier-exact: a modified Escape has no binding anywhere, so it is
-    // swallowed here like any other key rather than ending the drag.
+    // modifier-exact: the ONE modified Escape this product binds — Ctrl+Esc,
+    // the notification stack's bulk clear since 2026-09-01 — is claimed at the
+    // head of this function and never arrives here, and every other carries no
+    // binding anywhere, so a modified Escape is swallowed here like any other
+    // key rather than ending the drag.
     // THIS DRAG KEEPS ITS Esc HATCH while the POINTER gestures below lost theirs
     // (they have no cancel at all — the rule is at the drag-modal gate): the hatch
     // FINALIZES the text selection, restoring nothing, and the Esc it falls
@@ -450,10 +519,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Shift+Tab under the ringless flag editor), and any key whose keysym
         // resolves to no codepoint at all.
         //
-        // ONE CARD PER PRESS, and a held one is still one card: no chord in
-        // that set is repeat-eligible under an editor (repeat_eligible's
-        // in-editor arm repeats MotionEditKey and PrintableKey alone), so the
-        // dedup is not even asked here.
+        // ONE CARD PER PRESS, and the duplicates ruling (2026-09-01) leaves
+        // that exactly as it was here: no chord in that set is repeat-eligible
+        // under an editor (repeat_eligible's in-editor arm repeats
+        // MotionEditKey and PrintableKey alone), so every press through this
+        // gate is a PHYSICAL one and stacks its own card — a chord pressed
+        // twice under an editor says so twice, which is the count the ruling
+        // is for, and the held-repeat carve-out is never even asked here.
         //
         // AND ONLY FOR A CHORD THE PRODUCT BINDS (architect 2026-08-30, the
         // unbound-keys ruling; the inventory is chord_is_bound, gui_input.h):
@@ -1082,7 +1154,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the oldest card's dismissal, and an explicit no-op with no
     // card standing (handle_plain_bare_keys) — the one place the press ends.
-    // Modified Escape remains unbound everywhere, at every Escape reader.
+    // THE EIGHT PLACES ARE BARE ESC'S AND THE COUNT IS ITS OWN: CTRL+ESC
+    // (2026-09-01, the notification stack's bulk clear) is a DIFFERENT CHORD and
+    // adds no place to this list — it is claimed at the very head of this
+    // function, above every one of the eight, and is the bare key's opposite end
+    // of the ranking rather than a ninth rung of it (the ruling is at that arm
+    // and at notifications.h). Every OTHER modified Escape remains unbound
+    // everywhere, at every Escape reader.
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {

@@ -372,8 +372,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
-    // Bare Escape only: a modified Escape carries no binding anywhere, so it has
-    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the RENDER /
+    // Bare Escape only, and the one MODIFIED Escape this product binds needs no
+    // admission here: CTRL+ESC (the notification stack's bulk clear, 2026-09-01)
+    // is claimed at the very HEAD of on_key, above this gate and every other, so
+    // it never arrives to be allowed or refused — which is also why it is
+    // read-only-legal without a term. Every other modified Escape carries no
+    // binding anywhere and so has nothing to be admitted FOR.
+    // WHAT BARE Esc IS ADMITTED FOR: the RENDER /
     // BATCH CANCEL and, since 2026-08-31, THE OLDEST NOTIFICATION CARD'S
     // DISMISSAL at the bare tail — the two of Esc's places that reach this
     // gate. Neither mutates anything
@@ -3496,7 +3501,10 @@ void GuiInputHandler::run_history_revert() {
 //
 // Bare-exact and ctrl-exact respectively, like every other modal predicate here:
 // a modified Escape and a shifted Ctrl+Q carry no binding anywhere, so they fall
-// into the swallow with everything else rather than dismissing.
+// into the swallow with everything else rather than dismissing. (CTRL+ESC, the
+// notification stack's bulk clear since 2026-09-01, is the exception that never
+// arrives: on_key claims it at its head, above this gate, so a popup neither
+// swallows it nor closes on it.)
 bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
     if (key == GuiKeys::Escape && bare) {
@@ -3845,7 +3853,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // printable insertion; Space lands in the buffer as a typed character, not as
 // playback). NO admitted key carries alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
-// modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
+// modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V,
 // Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is NotEditorKey like any other
 // unbound chord and drops right here, so it cannot cancel, commit, paste, move
 // the caret, or erase. The gate-level

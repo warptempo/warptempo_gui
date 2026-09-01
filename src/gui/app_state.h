@@ -7230,6 +7230,25 @@ struct AppState {
         bool                             close_hovered = false;
         std::vector<NotificationPainted> painted;
         GuiRect                          painted_rect{0, 0, 0, 0};
+        // THE HELD-REPEAT CARVE-OUT'S ONE BIT (architect 2026-09-01, the
+        // duplicates ruling): true only while on_key is dispatching a
+        // SYNTHESIZED REPEAT — a fire the process generated from a held key or
+        // a held button rather than a fresh physical press
+        // (GuiInputState::synthesized_repeat, gui_input.h, whose two producers
+        // both dispatch THROUGH on_key). GuiNotifications::notify reads it and
+        // nothing else does: a physical press stacks its own card so a
+        // deliberate repeat shows its count, while a 30 Hz burst keeps ONE card
+        // through the dedup that used to be unconditional.
+        //
+        // IT IS DISPATCH-SCOPED, not a mode: on_key's head sets it from the
+        // event and an RAII guard restores it at every one of that body's
+        // returns, so no card raised by a worker, a pointer gesture or a paint
+        // can ever read a stale true. It lives here rather than being threaded
+        // through the raise sites because the raises are everywhere — the
+        // gates, the ops' returned refusals, the red flashes — and one bit set
+        // where the event arrives cannot drift from the event the way a
+        // parameter copied down a dozen call chains would.
+        bool                             held_repeat_dispatch = false;
     };
     Notifications notifications;
 

@@ -117,32 +117,40 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
                               std::string text) {
     std::vector<AppState::Notification>& cards = app.notifications.cards;
     const int64_t now = monotonic_ms();
-    // THE DEDUP: the same sentence already in the stack in the same class is
-    // that event again, not a second card — so the stack keeps ONE card for
-    // it, and THAT CARD IS RE-PUSHED AT THE TOP with a fresh clock rather
-    // than re-armed where it stands (architect 2026-08-30). The matching card
-    // is removed here, dropping its hover and its banked life exactly as
-    // dismiss() does, and the ordinary push below builds the new one; the
-    // bump then runs as it does for any push.
+    // DELIBERATE PRESSES STACK THEIR DUPLICATES (architect 2026-09-01,
+    // superseding the unconditional dedup of 2026-08-30): a PHYSICAL press
+    // pushes its own card whatever stands, so hitting a wall three times
+    // shows three cards — "I am very deliberate with my presses", and the
+    // count IS the confirmation that each press was seen.
     //
-    // WHY THE MOVE, and not a re-arm in place: "in the stack" and "on screen"
-    // are not the same thing. A stack that outgrows the room paints on past
-    // its foot and the painter clips there, so a card can be live and yet
-    // wholly invisible — and a re-arm in place would then answer the act the
-    // user has this moment performed with nothing visible at all. The top is
-    // the one place the answer is certain to be seen, and it is also what a
-    // repeated event means to the reader: the top says the last time it
-    // happened. ONE RULE FOR BOTH CLASSES — a critical duplicate moves to the
-    // top too, where it was a no-op before.
+    // THE ONE CARVE-OUT IS A HELD INPUT'S SYNTHESIZED REPEATS, which coalesce
+    // exactly as everything used to: a burst at the compositor's cadence is
+    // ONE gesture, not thirty presses, and letting it stack would empty the
+    // room of every other card in half a second. The bit is the key event's,
+    // set at on_key's head and dispatch-scoped
+    // (AppState::Notifications::held_repeat_dispatch) — it covers the held
+    // BUTTON as well as the held KEY, both of that bit's producers dispatching
+    // through that one body, and it reads false on every other road into this
+    // function (a worker's verdict, a pointer gesture), which is the
+    // deliberate-press answer for them too.
     //
-    // A HELD KEY firing the same refusal at repeat cadence therefore
-    // re-pushes at each repeat: one card, on top, its life starting again at
-    // every fire — the same picture as a single press, held.
-    for (size_t i = 0; i < cards.size(); ++i) {
-        if (cards[i].cls != cls || cards[i].text != text) continue;
-        if (app.notifications.hovered_id == cards[i].id) set_hover(0, false);
-        cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(i));
-        break;
+    // WHY THE REPEAT MOVES ITS CARD, and does not re-arm it in place: "in the
+    // stack" and "on screen" are not the same thing. A stack that outgrows the
+    // room paints on past its foot and the painter clips there, so a card can
+    // be live and yet wholly invisible — and a re-arm in place would then
+    // answer the act the user is this moment performing with nothing visible
+    // at all. The top is the one place the answer is certain to be seen, and
+    // it is also what a repeated event means to the reader: the top says the
+    // last time it happened. ONE RULE FOR BOTH CLASSES — a critical duplicate
+    // moves to the top too.
+    if (app.notifications.held_repeat_dispatch) {
+        for (size_t i = 0; i < cards.size(); ++i) {
+            if (cards[i].cls != cls || cards[i].text != text) continue;
+            if (app.notifications.hovered_id == cards[i].id)
+                set_hover(0, false);
+            cards.erase(cards.begin() + static_cast<std::ptrdiff_t>(i));
+            break;
+        }
     }
     AppState::Notification card;
     card.id   = app.notifications.next_id++;
@@ -170,6 +178,15 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     //     silent — which is reachable, not theoretical (the capacity is 4 at
     //     a 1080 px window and 350 %, and four critical checkpoint verdicts
     //     can stand there). So the walk stops above index 0.
+    // THE MULTIPLES RULE MADE THIS LOAD-BEARING (2026-09-01): repeated presses
+    // of one refusal now fill the room with copies of one sentence instead of
+    // refreshing a single card, so the walk runs on ordinary use and not only
+    // in a burst of different events. It needs nothing new for that — the
+    // victims are still the oldest normal cards and the count is still the
+    // room's — and what the user sees at the wall is the stack topping out at
+    // the capacity with the newest press on top, which is the picture the
+    // count is for.
+    //
     // When neither leaves a victim the loop simply stops and THE OVERFLOW
     // PAINTS ON PAST THE ROOM, clipped at its foot by the painter. That clip
     // is also the answer to the other overflow the count cannot see: the
@@ -209,6 +226,24 @@ void GuiNotifications::dismiss(uint64_t id) {
     if (it == cards.end()) return;
     if (app.notifications.hovered_id == id) set_hover(0, false);
     cards.erase(it);
+    viewport.invalidate_notification_stack();
+}
+
+void GuiNotifications::dismiss_all() {
+    // CTRL+ESC (architect 2026-09-01): the X pressed on every card at once,
+    // CRITICALS INCLUDED. It is the one act that reaches a critical card
+    // without a pointer — the clock never does, and the bump skips them — and
+    // that is deliberate: an explicit chord is a decision, where a timeout
+    // would be an accident. THE HOVER GOES WITH THEM, because the card it
+    // named is gone and a banked life on a vanished card would be a leak.
+    //
+    // AN EMPTY STACK DAMAGES NOTHING AND SAYS NOTHING: the state asked for is
+    // already true and visibly so (the stack is what the user is looking at),
+    // which is the already-at-state silence the strictness ruling leaves
+    // standing, exactly as bare Esc's own arm has.
+    if (app.notifications.cards.empty()) return;
+    if (app.notifications.hovered_id != 0) set_hover(0, false);
+    app.notifications.cards.clear();
     viewport.invalidate_notification_stack();
 }
 

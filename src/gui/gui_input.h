@@ -312,12 +312,16 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // before a card could name it, and the compile-time pin above is what would
 // then ask for the name.
 //
-// KEY REPEAT RIDES THE CARDS' OWN DEDUP: a held key whose repeats are eligible
-// (repeat_eligible, input_key_dispatch.cpp) re-fires its gate at the
+// KEY REPEAT RIDES THE CARDS' OWN CARVE-OUT: a held key whose repeats are
+// eligible (repeat_eligible, input_key_dispatch.cpp) re-fires its gate at the
 // compositor's cadence and each fire re-pushes the SAME sentence, which
 // GuiNotifications::notify keeps as ONE card moved back to the top with a fresh
-// clock — one card for a hold, exactly as for a single press. No gate counts
-// presses or reads mods.synthesized_repeat for this.
+// clock — one card for a hold, exactly as for a single press. DISTINCT PRESSES
+// DO NOT COALESCE ANY MORE (architect 2026-09-01): each pushes its own card, so
+// a wall hit three times shows three, and what tells the two apart is
+// synthesized_repeat itself, read once at on_key's head and parked for the
+// dispatch (AppState::Notifications::held_repeat_dispatch). No gate here counts
+// presses or reads the bit — the one reader is that chokepoint.
 inline std::string spell_modifiers(GuiInputState mods) {
     std::string out;
     if (mods.ctrl) out += "Ctrl";
@@ -503,9 +507,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
 
         // Play from the playhead, and the A/B audition.
         case GuiKeys::Space: return bare || sh;
-        // The render cancel, and the top-level no-op arm that is deliberately
-        // silent — an arm all the same, so Esc is a bound key.
-        case GuiKeys::Escape: return bare;
+        // BARE: the render cancel, the oldest card's dismissal and the
+        // top-level no-op arm that is deliberately silent — an arm all the
+        // same, so Esc is a bound key. CTRL: the whole notification stack's
+        // bulk clear (2026-09-01), claimed at the head of on_key above every
+        // gate — so no gate below can ever ask this of it, and the entry is
+        // here for the inventory's completeness rather than for a reader.
+        case GuiKeys::Escape: return bare || cl;
         // Open the flag editor on the focused marker.
         case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
         case GuiKeys::Delete: return bare;
@@ -544,6 +552,14 @@ static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}),
               "bare Esc is bound; it is one of the eight-place contract's own "
               "arms (the oldest card's dismissal), and its top-level silence "
               "is that arm's own, reached only with no card standing");
+static_assert(chord_is_bound(GuiKeys::Escape,
+                             GuiInputState{true, false, false}) &&
+                  !chord_is_bound(GuiKeys::Escape,
+                                  GuiInputState{true, true, false}) &&
+                  !chord_is_bound(GuiKeys::Escape,
+                                  GuiInputState{false, true, false}),
+              "Ctrl+Esc is the stack's bulk clear and is ctrl-exact: no shift "
+              "spelling and no bare-shift one");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}) &&
