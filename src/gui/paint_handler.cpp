@@ -726,7 +726,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // TWENTY-EIGHT in EIGHT. THE SERIES RELOCATION later that same day is what
     // makes it TWENTY-SIX in SIX: the BPM and ITERATION buttons left the
     // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
-    // joined the zoom group, dissolving two separator-led groups into it.)
+    // joined the zoom group, dissolving two separator-led groups into it; the
+    // CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
+    // tail, TWENTY-SEVEN in SIX.)
     // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
     // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
     // it then, the Show trim region button filled it on 2026-08-16 and led it
@@ -811,6 +813,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
+    // THE CENTERED LAMP (2026-08-31, R11), Follow's neighbour at the zoom
+    // group's tail: Breeze's align-horizontal-center, two boxes threaded on
+    // one vertical center line — a viewport holding its subject at the
+    // center column. It joins the group rather than opening one, so the row
+    // gains one box and one 2px gap and no separator moves.
+    {RedesignButton::IconCentered, icons::Icon::AlignHorizontalCenter},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the
@@ -1910,23 +1918,24 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members
-    // in SIX groups since 2026-08-27, RE-COUNTED off the roster enum and the
+    // width, separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
+    // in SIX groups since 2026-08-31, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), the S/T and W/P
     // view radios, THE ZOOM GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom four (2026-08-12), the waveform
-    // magnification pair (2026-08-26) and FOLLOW, which came in from the
-    // dissolved mass-marker group the same day — the RENDER-ENTRY group
+    // magnification pair (2026-08-26), FOLLOW, which came in from the
+    // dissolved mass-marker group the same day, and THE CENTERED LAMP beside
+    // it (2026-08-31, R11) — the RENDER-ENTRY group
     // (listen, load-in-place, the READ-ONLY toggle, the architect's own order
     // on 2026-08-14) and THE HISTORY GROUP, the opener leading the TWO WALK
     // RADIOS and its four companions (2026-08-18, the companions back from the
     // bottom row and the radios down from row 3 later that day).
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-six paint on every
+    // hiding/showing icons in top icon row"): all twenty-seven paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -1942,40 +1951,47 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 26·32 + (26−6)·2 + (6−1)·9 = 8 + 832 + 40 + 45 = 925px,
+    //   8 + 27·32 + (27−6)·2 + (6−1)·9 = 8 + 864 + 42 + 45 = 959px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 933.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 967.
     //
-    // THAT IS THE 2026-08-27 SERIES RELOCATION'S ARITHMETIC AND IT IS THE
-    // BIGGEST SINGLE CUT THIS ROW HAS TAKEN: two boxes (−68) and two
+    // THE CENTERED LAMP'S ARITHMETIC (2026-08-31, R11): one box and one gap
+    // (+34) onto the 925 the Series relocation left, which moves the TABLET
+    // FIT CEILING from 249 to 240 (the walk fits while 959·factor ≤ 2304;
+    // 959·2.40 = 2302, and 241 clips by ~3 authored px). THE TABLET'S
+    // FIRST-RUN SCALE IS 225 AND THE WHOLE WALK STILL LANDS THERE:
+    // 959·2.25 = 2158 against the panel's 2304, 146 px of slack, every icon
+    // fitting — and 959 of the panel's 1024 LOGICAL px at that scale.
+    //
+    // THE 925 IT GROWS ON WAS THE 2026-08-27 SERIES RELOCATION'S ARITHMETIC,
+    // THE BIGGEST SINGLE CUT THIS ROW HAS TAKEN: two boxes (−68) and two
     // separators (−18) off the 1007/1015 it stood at that morning, 82px
-    // narrower authored. WHAT IT BUYS IS SCALE HEADROOM ON THE TABLET, which
-    // is the measurement that matters now that the deployment panel is 2304px
-    // (the gui_scale ceiling went to 400 on 2026-08-26 for exactly this
-    // panel): the walk fits while 925·factor ≤ 2304, so the row now lands
-    // WHOLE UP TO gui_scale 249 (925·2.49 = 2303) and clips at 250 by 3
-    // authored px — where the 1041-px roster of 2026-08-26 fitted only to 220,
-    // clipping HistoryNewer by 17 authored px at the 225 the tablet runs.
-    // THE TABLET'S FIRST-RUN SCALE IS 225 AND THE WHOLE WALK
-    // LANDS THERE: 925·2.25 = 2081 against the panel's 2304, 223 px of slack,
-    // every icon fitting. (250 was the template for one afternoon on
-    // 2026-08-27, one step past this row's fit ceiling — 925·2.5 = 2312, so the
-    // rightmost history icon lost its last ~3 authored px (~8 device px) under
-    // the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
+    // narrower authored. WHAT IT BOUGHT IS SCALE HEADROOM ON THE TABLET,
+    // which is the measurement that matters now that the deployment panel is
+    // 2304px (the gui_scale ceiling went to 400 on 2026-08-26 for exactly
+    // this panel): at 925 the row landed whole up to gui_scale 249
+    // (925·2.49 = 2303) — where the 1041-px roster of 2026-08-26 fitted only
+    // to 220, clipping HistoryNewer by 17 authored px at the 225 the tablet
+    // runs. (250 was the template for one afternoon on
+    // 2026-08-27, one step past that roster's fit ceiling — 925·2.5 = 2312, so
+    // the rightmost history icon lost its last ~3 authored px (~8 device px)
+    // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 246 rather than 249 — the pad
+    // (Counting the trailing pad the ceiling is 237 rather than 240 — the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
-    // Both older deployments clear it outright: 933 of 1024 at 100% on the
-    // retired Pi panel, 933 of 1920 on the laptop.
+    // Both older deployments clear it outright: 967 of 1024 at 100% on the
+    // retired Pi panel, 967 of 1920 on the laptop.
     //
-    // (It was 1007px at twenty-eight in eight groups from 2026-08-26; 939px at
+    // (It was 925px at twenty-six in six groups from 2026-08-27; 1007px at
+    // twenty-eight in eight groups from 2026-08-26; 939px at
     // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at
     // twenty-seven from 2026-08-16; and 939 at twenty-six before that — the
     // 2026-08-16 and the relayout rosters matching by coincidence rather than
     // by symmetry, the earlier one being this one with the four verbs in, the
-    // four companions out and no radios. Today's twenty-six matches neither of
-    // those, having a different group count. THE MARGIN IS THE
+    // four companions out and no radios. Today's twenty-seven matches the
+    // 2026-08-16 count by coincidence too, having a different group count.
+    // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
     // against its panel.)

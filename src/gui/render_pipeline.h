@@ -43,6 +43,9 @@ struct AuthoringSnapshot {
     // they are captured from.
     char        active_markers_view = 'W';   // 'W' or 'P'
     bool        follow              = true;
+    // The `y` centered lamp (2026-08-31), follow's sibling in the schema and
+    // here: carried into the entry's .settings, never a render input.
+    bool        centered            = false;
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.

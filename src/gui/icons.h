@@ -212,6 +212,11 @@ enum class Icon {
     // with the button on 2026-08-27.
     BlackSum,            // The cumulative reading (`u`)
     GoJump,              // Follow mode
+    // Breeze's align-horizontal-center (2026-08-31, R11): two boxes riding
+    // one vertical center line — exactly a viewport holding its subject at
+    // the center column. A fresh verbatim transcription for the `y` centered
+    // lamp beside Follow.
+    AlignHorizontalCenter,  // Keep viewport centered on playhead (`y`)
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)

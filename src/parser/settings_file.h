@@ -212,6 +212,17 @@ struct SettingsFile {
     // Every canonical key is required, so the reader always assigns these
     // fields; the member initializers below are construction-state only.
     bool   follow                  = true;
+    // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp's persisted
+    // preference, `follow`'s sibling in every mechanical respect: a required
+    // GUI-kind boolean on the same parse_bool_token grammar, default false.
+    // While the lamp is lit the GUI derives the viewport from the playhead;
+    // the CLI parses the key and ignores it like every other GUI-kind key.
+    // Checkpoints committed before the key leave the `h` walk through the
+    // same strict gate every schema addition costs — NO migration and no
+    // reader leniency, the magnification key's precedent exactly.
+    // (architect approval 2026-08-31 — "the parser's non-engine-modifying
+    // keys are ok to touch".)
+    bool   centered                = false;
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
@@ -315,7 +326,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
 // free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
-    bool        b    = false;   // follow, tab_X_read_only
+    bool        b    = false;   // follow, centered, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, waveform_magnification_level
     double      d    = 0.0;     // tab_X_zoom

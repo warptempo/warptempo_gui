@@ -671,10 +671,11 @@ Linux target's flags and object set are byte-identical to before the port.
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
-wide, and the icon row fits WHOLE up to gui_scale 249 since the 2026-08-27
-Series relocation cut it to 925 authored px — it fitted only to 220 before
-that. THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (925*2.25 = 2081 of the panel's 2304) and the layout
+wide, and the icon row fits WHOLE up to gui_scale 240 since the centered lamp
+made the walk 959 authored px on 2026-08-31 (249 at the 2026-08-27 Series
+relocation's 925; only 220 before
+that). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
+the whole icon row lands (959*2.25 = 2158 of the panel's 2304) and the layout
 is the one the redesign was drawn against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is
 TAPPABLE, whether the second tap of a double-tap lands on the flag rather than

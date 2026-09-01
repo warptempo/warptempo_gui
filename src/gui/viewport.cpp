@@ -721,6 +721,58 @@ void Viewport::center_viewport_on_playhead() {
     }
 }
 
+// THE CENTERED PIN'S ONE DERIVATION BODY (architect 2026-08-31, R11): while
+// the `y` lamp is lit the viewport is a FUNCTION of the playhead — the
+// playhead's frame at the window's center column at the STANDING zoom (the
+// lamp never writes zoom), clamp_viewport_start clamping at the song's two
+// ends, where the playhead walks off-center because no waveform remains.
+//
+// OWNERSHIP: every road that moves the playhead's column — the movement
+// owners, the translations/reseats, the restores, the A/B tab switch AND the
+// playback scanner's per-frame advance — recenters through the pre-paint
+// hook (main.cpp), which reads the resting-or-scanning cursor once per frame
+// and calls THIS body; no mutator scatters a recenter call of its own. The
+// other three callers are the toggle's own chokepoint (set_centered_mode's
+// off->on edge, so the invariant starts holding at the toggle), the settings
+// editor's `centered=` commit through that same chokepoint, and the launch
+// seed (launch_playback_window's visibility fork), which centers the scanner
+// where follow would left-edge-align it.
+//
+// THE WRITE IS THE PAN'S: full waveform-area damage, the top strip, and the
+// synchronous plate rebuild, so a per-frame recenter during playback rides
+// exactly the budget a grab-pan frame already proved. NO PREDICTOR RESYNC —
+// the per-frame case is the continuous pan's (a per-frame re-anchor would
+// step the scanner), and at rest there is no predictor to resync. AND NO
+// FOLLOW SUPPRESSION: this is the autonomous mover itself, not a user pan,
+// so it must never write follow_overridden_for_session — which is also the
+// bit that SUPPRESSES this body for the session when a manual pan during
+// playback takes the camera away (the gate is the callers', at the pre-paint
+// hook; the producer inventory is at the flag's declaration, app_state.h).
+bool Viewport::derive_centered_viewport() {
+    if (audio.total_frames() <= 0) return false;
+    // Split-playhead, center_viewport_on_playhead's own ternary: during
+    // playback the pin holds the SCANNER centered (the waveform scrolls under
+    // a static line); at rest it holds the cursor.
+    const int64_t target = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
+    const int64_t visible = samples_visible(app, audio);
+    if (visible <= 0) return false;
+    const int64_t old_vp = app.viewport_start_sample;
+    app.viewport_start_sample = target - visible / 2;
+    clamp_viewport_start(app, audio);
+    if (app.viewport_start_sample == old_vp) return false;
+    invalidate_waveform_area();
+    // Flags ride the top strip and move with the viewport, the pan funnel's
+    // own pairing.
+    const GuiRect ts = top_strip_area(app);
+    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    // Synchronous plate rebuild, the rule every user-driven pan/zoom frame
+    // takes: no frame paints overlays against a plate from an older basis.
+    kick_waveform_sync();
+    return true;
+}
+
 void Viewport::invalidate_top_strip() {
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h + 1);

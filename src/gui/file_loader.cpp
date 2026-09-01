@@ -24,6 +24,14 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
                                      const SettingsFile& sf) {
     app.engine_settings = sf.engine;
     app.follow_mode         = sf.follow;
+    // The centered lamp loads with follow. The derivation memory resets with
+    // it so the first pre-paint under a lit lamp derives the camera from the
+    // loaded playhead — the invariant holds from the session's first frame
+    // (the derivation point is main.cpp's pre-paint hook).
+    app.centered_mode               = sf.centered;
+    app.centered_derived_cursor     = -1;
+    app.centered_derived_tab        = 0;
+    app.centered_derived_audio_view = 0;
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER

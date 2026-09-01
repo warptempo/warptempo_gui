@@ -99,7 +99,12 @@ using warptempo_parse::prefix_line_error;
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "follow", "waveform_magnification_level",
+    // `centered` landed 2026-08-31 (architect approval 2026-08-31 — "the
+    // parser's non-engine-modifying keys are ok to touch"): follow's sibling,
+    // the `y` lamp's persisted viewport preference. Every checkpoint
+    // committed before it leaves the `h` walk through this same strict gate —
+    // the accepted precedent, no migration and no reader leniency.
+    "follow", "centered", "waveform_magnification_level",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -254,6 +259,15 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     if (key == "follow") {
         // Bools share parse_bool_token schema-wide (same grammar as the
         // per-tab read_only keys).
+        bool v = false;
+        if (!parse_bool_token(value, v))
+            return err("must be true or false");
+        out.b = v;
+        return R(out);
+    }
+    if (key == "centered") {
+        // Follow's sibling: the same shared bool grammar, one canonical
+        // spelling per value (architect approval 2026-08-31).
         bool v = false;
         if (!parse_bool_token(value, v))
             return err("must be true or false");
@@ -431,6 +445,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
             }
         } else if (key == "follow") {
             out.follow = gv.b;
+        } else if (key == "centered") {
+            out.centered = gv.b;
         } else if (key == "active_audio_view") {
             out.active_audio_view = gv.c;
         } else if (key == "active_markers_view") {

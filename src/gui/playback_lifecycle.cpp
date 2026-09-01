@@ -464,7 +464,16 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // construction, so this no-ops there). Follow mode's same-shape check is
     // sufficient regardless of whether the user has follow mode toggled on,
     // so always run it on press.
-    viewport.follow_scroll_if_needed();
+    // UNDER THE CENTERED LAMP THE SEED IS THE DERIVATION instead (2026-08-31,
+    // R11): the scanner issues forth CENTERED where follow's check would
+    // left-edge-align it, so the first frame already holds the invariant
+    // rather than taking a visible two-step (align, then the pre-paint's
+    // recenter one frame later). Unconditional on the lamp for the same
+    // reason the follow-shape check is unconditional here — the launch edges
+    // clear the pan suppression before this line, so a new session always
+    // starts pinned.
+    if (app.centered_mode) viewport.derive_centered_viewport();
+    else                   viewport.follow_scroll_if_needed();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
@@ -582,6 +591,32 @@ void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
         playback.resync_predictor();
         viewport.follow_scroll_if_needed();
     }
+}
+
+// Set the centered pin (contract at the header declaration) — the `y` lamp's
+// one gesture chokepoint, set_follow_mode's sibling above.
+void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
+    const bool was_off = !app.centered_mode;
+    app.centered_mode = desired;
+    if (was_off && app.centered_mode) {
+        // THE TOGGLE ITSELF RECENTERS — the invariant starts holding at the
+        // press, not at the next playhead change. During live playback the
+        // explicit enable clears a prior pan suppression exactly as follow's
+        // off→on arm does (the user re-engaged the autonomous mover), and the
+        // one-shot jump re-anchors the predictor like every discrete pan.
+        if (playback.is_playing()) {
+            app.follow_overridden_for_session = false;
+            playback.resync_predictor();
+        }
+        viewport.derive_centered_viewport();
+        // Stamp the resting memory so the next pre-paint does not re-derive a
+        // camera this press just derived (idempotent either way; the stamp
+        // keeps the bookkeeping truthful).
+        app.centered_derived_cursor     = app.playhead_cursor_sample;
+        app.centered_derived_tab        = app.active_tab_view;
+        app.centered_derived_audio_view = app.active_audio_view;
+    }
+    // The off edge writes nothing: the camera stays where the pin left it.
 }
 
 // (set_playback_speed IS GONE — architect 2026-08-27, with the

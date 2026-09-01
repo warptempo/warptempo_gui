@@ -1428,7 +1428,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's four menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
     // the four companions) and the bottom

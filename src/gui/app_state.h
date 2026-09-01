@@ -1761,7 +1761,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's FOUR MENU ANCHORS
 // (File, Edit, Series and Settings) plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-SIX
+// TABS, row 4's TWENTY-SEVEN
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
 // FOUR COMPANIONS close them since 2026-08-18), then the bottom row's EIGHTEEN — the transport
@@ -2076,6 +2076,17 @@ enum class RedesignButton {
     // is SUPERSEDED: the frequency argument took it in the end, once the menu
     // that fits it existed.)
     IconFollow,
+    // KEEP VIEWPORT CENTERED ON PLAYHEAD (architect 2026-08-31, R11) — the
+    // `y` lamp, FOLLOW'S NEIGHBOUR by design: a viewport-class preference
+    // exactly like it, sitting beside it at the zoom group's tail. It wears
+    // a lamp reading the live bit its own chord flips (centered_mode), stays
+    // LIVE on a locked tab (bare `y` is navigation, on the lock's allowlist)
+    // and stays LIVE in the `h` view too — unlike Follow, whose chase is
+    // playback's and playback is removed from the view whole, the centered
+    // derivation reads the same resting cursor the view's lanes read, so the
+    // mode's allowlist admits `y` and the derived partition keeps this face
+    // lit.
+    IconCentered,
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
@@ -2562,8 +2573,9 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SEVEN in row 1, two
-// in row 3, TWENTY-SIX in row 4 and EIGHTEEN in the bottom row — 53. Of those,
-// FORTY-NINE carry a chord in kToolbarChords and FOUR are the dropdown
+// in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 54. Of
+// those,
+// FIFTY carry a chord in kToolbarChords and FOUR are the dropdown
 // anchors (File, Edit, Series and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
@@ -2653,7 +2665,10 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
-inline constexpr int kRedesignButtonCount = 53;
+// 54 = 53 + THE CENTERED LAMP (2026-08-31, R11): IconCentered joined the zoom
+// group beside Follow with bare `y`, one box and one 2px gap on the icon row's
+// walk and no new separator.
+inline constexpr int kRedesignButtonCount = 54;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2730,6 +2745,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconWaveformMagnify:
         case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconFollow:
+        case RedesignButton::IconCentered:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         case RedesignButton::IconReadOnly:
@@ -4256,6 +4272,36 @@ struct AppState {
     // (set_follow_mode's off->on arm). So the chase resumes at the next launch,
     // or the moment the user re-engages it.
     bool    follow_overridden_for_session = false;
+
+    // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp (architect
+    // 2026-08-31, R11), session-global like follow_mode and persisted beside
+    // it as the required GUI-kind key `centered` (default false). While it is
+    // lit the viewport DERIVES from the playhead: the playhead's frame sits
+    // at the window's center column at the STANDING zoom (the lamp never
+    // writes zoom — press `c` once and the lamp holds the picture),
+    // clamp_viewport_start clamping at the song's two ends, where the
+    // playhead walks off-center because no waveform remains. The ONE
+    // derivation body is Viewport::derive_centered_viewport (ownership
+    // statement there); the pin SHARES follow's suppression bit above — an
+    // aiming pan during playback takes the camera from BOTH autonomous
+    // movers for the session, the same truth the bit has always told.
+    bool    centered_mode          = false;
+
+    // The centered derivation's RESTING-half memory: the cursor value the
+    // last at-rest derivation centered on, -1 before any (a load resets it),
+    // PLUS the A/B tab and the S/T audio view it centered in — the two view
+    // axes that give the one session-global memory a fresh subject without
+    // the cursor's NUMBER moving (each tab is its own virtual playhead over
+    // its own camera, and 0 == 0 across tabs is an ordinary rest; the S/T
+    // flip re-expresses the value in the other domain the same way). The
+    // pre-paint hook re-derives only when the (tab, audio view, cursor)
+    // triple has MOVED since — which is what lets a manual pan at rest simply
+    // work, the next playhead change (or view change) re-pinning. Session
+    // scratch, never serialized; the playing half needs none (the scanner's
+    // advance IS the change).
+    int64_t centered_derived_cursor = -1;
+    char    centered_derived_tab        = 0;
+    char    centered_derived_audio_view = 0;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
@@ -9935,6 +9981,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // direction on any loaded piece, and the lock admits it (follow is
         // navigation, not authored content). Its lamp reports the state.
         case RedesignButton::IconFollow:
+        // THE CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11), on
+        // follow's exact answer: bare `y` toggles the pin in either direction
+        // on any loaded piece and the lock admits it. In the `h` view it
+        // stays LIVE through the derived partition — `y` is on the mode's
+        // allowlist, the derivation reading the same cursor the view's lanes
+        // read — where Follow greys.
+        case RedesignButton::IconCentered:
         // PLAY RENDERS MIRRORS NOTHING (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
         // nothing, so the lock admits the chord and this face follows the key
@@ -10664,6 +10717,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconW:      return a.active_markers_view == 'W';
         case RedesignButton::IconP:      return a.active_markers_view == 'P';
         case RedesignButton::IconFollow: return a.follow_mode;
+        // The centered lamp (2026-08-31): the same toggle pattern, reading
+        // the live bit bare `y` flips, so the lit face and the pin cannot
+        // drift.
+        case RedesignButton::IconCentered: return a.centered_mode;
         // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
         // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
         // bit bare `[` flips, so the lit face and the surface on screen
@@ -11229,6 +11286,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconWaveformReduce:
             return {"Reduce waveform (-)", nullptr};
         case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
+        // The centered lamp (2026-08-31), one line: bare `y` toggles and has
+        // no shifted twin. The text names the constant act while the lamp
+        // carries the state, the read-only toggle's precedent.
+        case RedesignButton::IconCentered:
+            return {"Keep viewport centered on playhead (y)", nullptr};
         // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
         // — `l` names the act it exists for, `'` keeps its name because it is
         // the load's chord on both roads: the viewed member's confirmation in

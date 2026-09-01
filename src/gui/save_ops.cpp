@@ -100,6 +100,7 @@ bool GuiSaveOps::save() {
         const NonEngineSettingsSnapshot gui{
             app.tab_a, app.tab_b,
             app.follow_mode,
+            app.centered_mode,
             app.active_audio_view,
             app.active_markers_view,
             app.active_tab_view,

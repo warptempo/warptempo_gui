@@ -236,6 +236,18 @@ constexpr IconPath kGoJumpPaths[] = {
      "10 16 10 z "},
 };
 
+// THE CENTERED LAMP's icon (2026-08-31, R11, the brief's own pick):
+// align-horizontal-center, two boxes threaded on one vertical center line —
+// what a viewport pinned to its playhead's column IS. Command coverage:
+// relative `m` / `h` / `v` with implicit repetition and the glued-negative
+// number runs parse_number already reads; no `z` — the fill closes each
+// subpath implicitly, six committed files' precedent.
+constexpr IconPath kAlignHorizontalCenterPaths[] = {
+    {kIconText,
+     "m10.5 3v1h-2.5v1 3 1h2.5v4h-5.5v1 4h1 4.5v1h1v-1h5.5v-1-3-1h-5.5v-4h1.5 "
+     "1v-1-3-1h-1-1.5v-1h-1m-1.5 2h4v3h-4v-3m-3 9h10v3h-10v-3"},
+};
+
 constexpr IconPath kPreviewRenderOnPaths[] = {
     {kIconText,
      "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
@@ -1203,6 +1215,7 @@ constexpr IconDef kSpeedometer        {22.0, kSpeedometerPaths,         1};
 constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
+constexpr IconDef kAlignHorizontalCenter {22.0, kAlignHorizontalCenterPaths, 1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
@@ -1261,6 +1274,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ChronometerStart:    return kChronometerStart;
         case Icon::BlackSum:            return kBlackSum;
         case Icon::GoJump:              return kGoJump;
+        case Icon::AlignHorizontalCenter: return kAlignHorizontalCenter;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;

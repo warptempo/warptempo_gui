@@ -332,6 +332,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
+    // THE CENTERED PIN, bare `y` (2026-08-31, R11): follow's sibling and
+    // admitted on follow's exact reasoning — a viewport preference is
+    // navigation, not authored content. Its button stays lit on a locked tab
+    // by the same answer.
+    const bool is_centered =
+        (key == GuiKeys::Y && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
@@ -511,7 +517,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
-             is_follow || is_center || is_sub_t || is_sub_p ||
+             is_follow || is_centered || is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
@@ -2215,6 +2221,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_waveform_magnify =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
+    // THE CENTERED PIN, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
+    // admitted where FOLLOW is not: follow's chase is playback's and playback
+    // is removed from the view whole, so admitting `f` would admit a lamp
+    // with nothing to do, while the centered derivation reads the SAME
+    // resting cursor the view's lanes read (the pre-paint hook's resting
+    // half) and pins the camera in here exactly as outside. Its icon-row
+    // button stays LIVE in the view through the derived partition on this
+    // line.
+    const bool is_centered = (key == GuiKeys::Y && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -2359,7 +2374,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_page_updown ||
+    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_centered ||
+             is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
@@ -7283,6 +7299,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // GuiPlaybackLifecycle::set_follow_mode, shared with the settings
         // editor's `follow=` commit.
         playback_lifecycle.set_follow_mode(!app.follow_mode);
+        break;
+    case GuiKeys::Y:
+        // Toggle the centered pin (2026-08-31, R11). The full body — the
+        // off→on edge's immediate recenter through the one derivation body —
+        // lives in GuiPlaybackLifecycle::set_centered_mode, shared with the
+        // settings editor's `centered=` commit and the icon-row button's
+        // synthesized chord. History-less, one-shot, follow's own shape.
+        playback_lifecycle.set_centered_mode(!app.centered_mode);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

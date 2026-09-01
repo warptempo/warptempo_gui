@@ -273,6 +273,17 @@ struct GuiPlaybackLifecycle {
     // edge branch is inert and this is a plain field set.
     void set_follow_mode(bool desired);
 
+    // Set the centered pin to `desired` — the `y` lamp's one gesture
+    // chokepoint (2026-08-31, R11), set_follow_mode's sibling: shared by the
+    // bare-`y` toggle (which passes !app.centered_mode), its icon-row button
+    // (which synthesizes that chord) and the settings editor's `centered=`
+    // commit. History-less; persisted by the ordinary Ctrl+S like follow. The
+    // off→on edge recenters IMMEDIATELY through the one derivation body — the
+    // invariant starts holding at the toggle — and during live playback also
+    // clears the manual-pan suppression and resyncs, follow's own re-engage
+    // shape.
+    void set_centered_mode(bool desired);
+
 private:
     // The active view's PLAY END — the song's end in source view, the bound
     // preview buffer's domain end in target (the split and its ruling are at

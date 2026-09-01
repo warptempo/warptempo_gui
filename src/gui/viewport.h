@@ -77,8 +77,10 @@ struct Viewport {
     //    move_playhead_to and the cent steps' re-land both reach,
     //    apply_zoom_change,
     //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
-    //    and scroll_viewport — every pan/scroll class, which joined this route
-    //    2026-07-26 when the incremental shift-and-strip path was retired),
+    //    scroll_viewport — every pan/scroll class, which joined this route
+    //    2026-07-26 when the incremental shift-and-strip path was retired —
+    //    and derive_centered_viewport, the `y` pin's one derivation body,
+    //    2026-08-31),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
     //    toggle and the Ctrl+Tab A/B tab switch (both domain flips) and the `p`
     //    W/P marker-column toggle — `p` moves neither viewport nor domain, so its
@@ -159,15 +161,26 @@ struct Viewport {
     // cent step mid-gesture (the kick a hand-copied list kept dropping), and it
     // died with the gesture on 2026-07-29 — so no map edit runs per pointer frame
     // any more.
-    // (The live-per-event kicks that remain are apply_strip_drag_zoom and
-    // scroll_viewport — generic viewport rebuilds, not map edits. Both are
-    // sustained pointer gestures paying one full rebuild per pointer frame.)
+    // (The live-per-event kicks that remain are apply_strip_drag_zoom,
+    // scroll_viewport — generic viewport rebuilds, not map edits, both
+    // sustained pointer gestures paying one full rebuild per pointer frame —
+    // and, since 2026-08-31, derive_centered_viewport, the `y` pin's
+    // per-frame recenter during playback: clock-driven at the scanner's
+    // cadence rather than pointer-driven, ruled onto THIS path by R11 because
+    // the waveform must scroll under a static centered playhead with the
+    // grab-pan's own no-stale-overlay guarantee, whose per-frame budget those
+    // two already proved.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
     // changes — follow-scroll during playback, resize — and repaints the plate
     // on preview completion. Panning left this list 2026-07-26: it is
-    // user-driven, so it renders synchronously like zoom.
+    // user-driven, so it renders synchronously like zoom. The CENTERED
+    // recenter is deliberately NOT here beside follow-scroll: follow pages
+    // once per crossing (a rare jump the async kick absorbs), while the pin
+    // moves the viewport EVERY scanner frame, and an async plate one frame
+    // behind a per-frame pan is exactly the stale-basis smear the sync rule
+    // exists to prevent.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
@@ -278,6 +291,10 @@ struct Viewport {
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();
+    // The `y` centered lamp's ONE derivation body (2026-08-31, R11) — the
+    // ownership statement and the caller inventory are at the definition.
+    // Returns whether the viewport actually moved.
+    bool derive_centered_viewport();
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings

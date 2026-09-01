@@ -137,16 +137,19 @@ inline constexpr const char* kDefaultProjectsRepo =
 // where the EIGHT-LANE stack still fits a 1080-tall window — the top strip's
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
-// tallest scale the vocabulary admits. The tablet's 225 and its 249 fit
-// ceiling are untouched by the move.
+// tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
+// ceiling (240 since 2026-08-31 — the walk's own paragraph below) are
+// untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 925 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-six-button left-to-right walk runs past the window's right edge — the
-// tablet's own 225 clears it with room to spare (2304/2.25 = 1024 logical px,
-// 99 past the walk) and 249 is the fit ceiling on that panel; 250 was tried for
+// 959 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-seven-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it with room to spare (2304/2.25 = 1024 logical
+// px, 65 past the walk) and 240 is the fit ceiling on that panel since the
+// centered lamp joined the row 2026-08-31 (249 at the 925-px walk before it;
+// 250 was tried for
 // an afternoon on 2026-08-27 and stepped back the same evening for the ~3
-// authored px it shaved off the rightmost history icon — and the redesign
+// authored px it shaved off the rightmost history icon) — and the redesign
 // carries no collision rule anywhere — the crop-at-the-floor allowance recorded
 // at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
 // VOCABULARY; which of its values lays out well is the architect's call on his

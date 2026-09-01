@@ -297,6 +297,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // input_key_dispatch.cpp, and the menu ROW spells the key the keyboard
     // actually has.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
+    // THE CENTERED PIN (2026-08-31, R11) — Follow's neighbour and its shape
+    // exactly: bare `y`, a TOGGLE with a lamp on the live bit its own chord
+    // flips. Live in the `h` view (the mode's allowlist admits `y`, so the
+    // derived partition keeps the face lit) and on a locked tab (navigation,
+    // the lock's allowlist).
+    {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
     // THE ROW'S LAST GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. `'` is one of the `h` view's three
     // admitted mutators, so listen greys beside a live `'` in there.
@@ -6844,9 +6850,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's four menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-seven — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 53, the enum's
+// eighteen since 2026-08-29: 54, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

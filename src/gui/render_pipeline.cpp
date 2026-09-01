@@ -420,6 +420,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
                     req.authoring.follow,
+                    req.authoring.centered,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
                     req.authoring.active_tab,

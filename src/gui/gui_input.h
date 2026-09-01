@@ -441,7 +441,8 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
-// Backspace, and every letter the ladder never tests (A, B, E, V, W, X, Y);
+// Backspace, and every letter the ladder never tests (A, B, E, V, W, X — Y
+// left the class 2026-08-31, the centered pin's toggle);
 // every key the boards carry that this switch names nowhere (the keypad, the
 // editing and system block, the vendor strip — the speller named them too
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
@@ -459,10 +460,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods) {
         // -- letters, bare only: the view toggles, the mode toggles and the
         // `h` view's two radios (`c` centre, `f` follow, `g` walk source,
         // `i` iteration, `k` add to selection, `l` the render player,
-        // `m` bpm mode, `t` the S/T flip, `u` the compare reading).
+        // `m` bpm mode, `t` the S/T flip, `u` the compare reading,
+        // `y` the centered pin).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::G: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::L: case GuiKeys::M: case GuiKeys::T:
-        case GuiKeys::U:
+        case GuiKeys::U: case GuiKeys::Y:
             return bare;
         // The value pair: copy, and the jump to where the value came from.
         case GuiKeys::J: return bare || sh;

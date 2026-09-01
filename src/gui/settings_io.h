@@ -72,6 +72,9 @@ struct NonEngineSettingsSnapshot {
     const ViewState&   tab_a;
     const ViewState&   tab_b;
     bool               follow;
+    // The `y` lamp's persisted preference (2026-08-31): keep the viewport
+    // centered on the playhead. A display preference like follow, per piece.
+    bool               centered;
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;

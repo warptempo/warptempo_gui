@@ -231,6 +231,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         playback_lifecycle.set_follow_mode(gv.b);
         applied(); return true;
     }
+    if (key == "centered") {
+        // History-less, through the same chokepoint the bare-`y` toggle and
+        // its icon-row button use (set_centered_mode, follow's shape): the
+        // off->on edge recenters immediately, so a typed `centered=true` is
+        // one more caller of the toggle's own body, never a parallel writer.
+        if (gv.b == app.centered_mode) { unchanged(); return true; }
+        playback_lifecycle.set_centered_mode(gv.b);
+        applied(); return true;
+    }
     if (key == "waveform_magnification_level") {
         // History-less and APPLIED LIVE, through the SAME chokepoint the TWO
         // hotkeys (bare `=` and bare `-`), the TWO icon-row buttons that
@@ -688,7 +697,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // follow, gui_scale, waveform_magnification_level,
+    // follow, centered, gui_scale, waveform_magnification_level,
     // projects_repo — gui_scale and projects_repo the device config's —
     // per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
