@@ -6046,7 +6046,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // wears PAUSE only where its press would PAUSE — the transport live
         // AND the highlight on the transport's own item (or nowhere), which
         // is exactly render_player_highlight_act_row answering −1. Under a
-        // highlight standing on a folder, on `..` or on another wav the press
+        // highlight standing on a folder row or on another wav the press
         // would GO THERE, so the face is the play glyph and the tooltip's word
         // follows it (render_player_button_hint takes this same bit). It
         // reaches a repaint through the row's one damage owner: the three

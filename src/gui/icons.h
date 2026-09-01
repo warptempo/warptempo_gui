@@ -393,7 +393,8 @@ enum class Icon {
     // the program's logo alone, the architect's ruling). Both are painted by
     // folder_overlay rows (paint_handler.cpp) and by nothing else; the names
     // are their Breeze file names, the theme-provenance rule.
-    Folder,              // a folder row (render / tmp / a batch / `..`)
+    Folder,              // a folder row (a batch folder at the player's root,
+                         // a project row in the Open project picker)
     AudioXWav,           // a wav row
 
     // THE RENDER PLAYER'S REPEAT TOGGLE (2026-08-28, architect R30): Breeze's

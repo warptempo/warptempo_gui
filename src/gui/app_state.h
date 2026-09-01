@@ -5196,10 +5196,11 @@ struct AppState {
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
-    // the two skips around Play-Pause and Stop (Home / Play-Pause / Stop /
-    // End since 2026-08-31), the play-scrub, the clock, the
-    // Repeat one lamp and the two word buttons Load in place / Close (R25's
-    // order, with R36's Stop after the two-faced button) — is
+    // the two skips around Play-Pause (Home / Play-Pause / End, the main
+    // window's own triple since 2026-09-01), the play-scrub, the clock, the
+    // Repeat one lamp, the Up button and the two word buttons Load in place /
+    // Close (R25's order; R36's Stop sat after the two-faced button until it
+    // retired 2026-09-01, and Up took its place beside the lamp) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
@@ -5216,7 +5217,7 @@ struct AppState {
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free.
     enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
-    // THE PLAYER'S SIX BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
@@ -7490,8 +7491,11 @@ struct AppState {
     //                 its open and None at every close
     //                 path (the reopen's tail included, all of them through
     //                 close_picker). ONE ROW ACT FORKS ON IT — the OPEN, which
-    //                 under the player enters a folder, goes up or plays a wav
-    //                 and under the picker reopens the row's project; the
+    //                 under the player enters a batch folder or plays a wav
+    //                 (going UP is the row's act no longer: since 2026-09-01
+    //                 the listings carry no `..` row and Up is a button and
+    //                 Backspace) and under the picker reopens the row's
+    //                 project; the
     //                 lift's highlight is every owner's alike (the picker's
     //                 band IS its whole state — there is no field to feed);
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
@@ -7514,9 +7518,14 @@ struct AppState {
     //                 without opening anything, every player listing
     //                 rebuild seats it on the transport's item's row if that
     //                 row is in the new listing, else on row 0; -1 only for an
-    //                 empty listing. Under the PLAYER it is what Enter and the
-    //                 Load in place button act on — NOT the Play button, which
-    //                 answers the transport alone since 2026-08-29;
+    //                 empty listing. Under the PLAYER it is what Enter, the
+    //                 Load in place button and — since 2026-08-31, R6 — the
+    //                 PLAY BUTTON act on: Play reads the highlight FIRST
+    //                 (render_player_highlight_act_row) and falls to the
+    //                 transport's own toggle only where the band stands on
+    //                 the transport's item or nowhere, which is what the
+    //                 2026-08-29 "the Play button answers the transport
+    //                 alone" said and no longer holds;
     //                 under the PICKER it is THE WHOLE STATE — what Enter
     //                 opens, with no field beside it. The picker seats it on
     //                 the CURRENT project's row at the open;
@@ -7853,8 +7862,11 @@ static_assert(
     "line exists on exactly them");
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
-// the highlight is a tmp/ batch cell carrying a recipe (folder rows, `..`
-// and the deliverable carry none). ONE derivation, TWO readers: the Load in
+// the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND LEFT TO
+// REFUSE IS A FOLDER ROW (2026-09-01: the `..` row and the deliverable's own
+// row both left the listings with the player's move inside `tmp/`, so the
+// row table is Folder | Wav and every Wav here is a batch cell). ONE
+// derivation, TWO readers: the Load in
 // place act (GuiRenderPlayer::highlighted_entry delegates here) and the
 // button's face term in render_player_button_enabled below. Defined in
 // render_player.cpp beside the member it feeds.

@@ -6824,7 +6824,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::Space:
             // THE PLAY BUTTON'S ACT, which since R6 (2026-08-31) reads the
             // HIGHLIGHT first and the transport second (the fork at
-            // play_button_act): a band standing on a folder, on `..` or on a
+            // play_button_act): a band standing on a folder row or on a
             // wav that is not the item goes THERE, and anywhere else it is
             // the transport's toggle. Enter one case above is the same act
             // through the row's own body, and the two differ only on the

@@ -3889,10 +3889,12 @@ private:
     // the window's foot to explain it) and
     // says "This tab is read-only" on a read-only tab (kTabReadOnlyCard, the
     // lock's own literal and this one of its three readers — the arm was
-    // silent until 2026-08-30), says "Only a
-    // batch render under tmp/ can be loaded in place; folders and the
-    // deliverable carry no recipe" on any highlight that is
-    // not a load-capable wav, and otherwise
+    // silent until 2026-08-30), says "Only a render can be loaded in place; a
+    // folder carries no recipe" on any highlight that is not a load-capable
+    // wav — the sentence NAMES ONLY WHAT IS REACHABLE since 2026-09-01, a
+    // folder row being the whole of that set once the `..` row and the
+    // deliverable left the listings (the reasoning is at the raise) — and
+    // otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry — the one prompt raised with its FIRST button
     // focused, so a bare Enter answers OK (the reason is at the raise). The

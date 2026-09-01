@@ -125,9 +125,11 @@ std::filesystem::path GuiRendersDir::settings_path(
 }
 
 // THE DELIVERABLE FOLDER'S PRUNE. The whole contract — the definition it
-// serves, its two callers, the CLI asymmetry, the running-render case and the
-// refusals — is at the declaration (renders_dir.h); what is stated here is
-// only what the shape of the body is for.
+// serves, its ONE caller (the deliverable's publish; the render player's
+// listing was the second until the player moved inside `tmp/` on 2026-09-01),
+// the CLI asymmetry, the running-render case and the refusals — is at the
+// declaration (renders_dir.h); what is stated here is only what the shape of
+// the body is for.
 void prune_render_folder(const std::string& source_audio_path,
                          const EngineSettings& es) {
     if (source_audio_path.empty()) return;

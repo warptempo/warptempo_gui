@@ -50,9 +50,11 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // PAUSED IS WHAT THIS BODY MEANS, AND THIS FORK IS ITS ONE WRITER: a
     // sounding transport that stops is parked where it stopped, at frame 0 as
     // anywhere else, so the next Play resumes THAT item. The callers that mean
-    // IDLE instead — stop(), the natural end's rest and close() — write it
-    // after this returns, and open()'s own reset never reaches this fork (the
-    // state's whole writer set is at the field, app_state.h).
+    // IDLE instead — the natural end's rest at the folder's last and close() —
+    // write it after this returns, and open()'s own reset never reaches this
+    // fork (the state's whole writer set is at the field, app_state.h). The
+    // player's own Stop was a fourth Idle road until it retired whole
+    // 2026-09-01 (the record is at render_player.cpp's retirement comment).
     // The FENCE is the same: playback.stop() proves the callback
     // is out of the item's buffer before a rebind or a free, exactly as it
     // proves it out of the source's. Every player stop — the pause, the
