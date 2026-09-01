@@ -1096,7 +1096,7 @@ private:
 // when the architect moved the act onto the chord its first step already is).
 // The GUI half — the COMMIT-TITLE EDITOR that
 // asks for the message (2026-08-07, superseding the confirmation prompt), THE
-// ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and Commit", and a
+// ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and commit", and a
 // failed save refuses it before this module is reached at all), the CLOSE that
 // ends the view once THE SAVE has landed (2026-08-07, superseding the
 // checkpoint-in-the-repository partition), the dispatch onto the background

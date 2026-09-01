@@ -1982,7 +1982,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             opens the COMMIT-TITLE EDITOR; nothing is
 //                             dispatched from here. The Save button reaches it
 //                             by synthesizing this same chord and wears the
-//                             commit icon and the label "Save and Commit" while
+//                             commit icon and the tooltip "Save and commit" while
 //                             the mode stands.
 //                             THE PLAIN DISK SAVE HAS NO HOTKEY IN THE VIEW,
 //                             and that is the ruling rather than a gap: a

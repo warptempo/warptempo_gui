@@ -1089,7 +1089,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // with its menu on 2026-08-15):
 //   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
-//   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
+//   save-and-commit checkpoint act and wears the "Save and commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
 //   allowlist for the act, its own arm in redesign_button_enabled greying it
 //   with an empty head delta or a checkpoint in flight exactly as this walk used
@@ -7056,7 +7056,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // whether a button has one. Re-derived from redesign_button_tooltip's
     // stateful overload, which moves the words on THREE buttons and takes no
     // hint away from any: SAVE (a publishing checkpoint first, then the history
-    // view's "Save and Commit"), RENDER (the mid-render Cancel, then the
+    // view's "Save and commit"), RENDER (the mid-render Cancel, then the
     // iteration bit) and, since 2026-08-15, THE BOTTOM ROW'S COLLAPSED
     // PLAY/STOP BUTTON (the live audition bit, the same condition its glyph
     // reads). (Row 3's tabs were the one membership move in the product, going

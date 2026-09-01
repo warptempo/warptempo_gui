@@ -3182,9 +3182,10 @@ struct CommandPopupItem {
 // and Series' two — so nothing about it is producer-less. The crop's spelling
 // convention is "modifiers spelled out with `+`", which "Ctrl+Q" and "Ctrl+O"
 // both are; the convention's OTHER half — a bare letter written UPPERCASE — is
-// the SERIES table's two rows ("M", "I") and is recorded at
-// RedesignTooltipText, where it is contrasted with the tooltips' lowercase
-// rule. The Synchronize row's accelerator is `\` since 2026-08-31, the bare-letter
+// the SERIES table's two rows ("M", "I") and is the PRODUCT'S spelling since
+// 2026-09-01, stated once at spell_chord's head (gui_input.h) and followed by
+// the tooltips too, so this column no longer contrasts with anything. The
+// Synchronize row's accelerator is `\` since 2026-08-31, the bare-letter
 // convention one punctuation key over. NO ROW IN THIS TABLE CARRIES A NULL
 // HOTKEY NOW, though the painter still reads the field per row (a null hotkey
 // paints no accelerator on that row alone) — there were two such rows until
@@ -3308,11 +3309,11 @@ inline constexpr int kEditPopupItemCount =
 //
 // THE ACCELERATORS ARE THIS PRODUCT'S FIRST BARE-LETTER MENU ROWS, and they
 // are written UPPERCASE — "M" and "I" — from the crop (dropdown_full_hotkeys.
-// png), NOT from the tooltip table's lowercase. The two conventions are two
-// sampled surfaces and neither is evidence about the other; the day a command
-// menu grew a bare-letter row was anticipated at RedesignTooltipText, which
-// carries the ruling, and this is that day. (The deleted Navigation menu's
-// "C" for center-on-focus was the previous instance.)
+// png). That was one sampled surface against the tooltip table's lowercase
+// until 2026-09-01, when the whole product took kdenlive's spelling (the one
+// convention at spell_chord's head, gui_input.h) and these rows stopped being
+// the exception. (The deleted Navigation menu's "C" for center-on-focus was
+// the previous instance.)
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — the phase-reset marker view, a locked
@@ -3719,10 +3720,11 @@ enum class DialogTrigger {
 // tooltips for the buttons. So we don't do underscores or underline or
 // brackets or anything like that." SO THE KEY IS NAMED ON THE BUTTON'S
 // TOOLTIP, the product's own way of naming a chord (the roster's hint format
-// verbatim — "Save (s)"), composed at modal_dialog_button_hint below from what
+// verbatim — "Save (S)"), composed at modal_dialog_button_hint below from what
 // the button DISPATCHES. NONE OF THIS EVER REACHED THE MATCHING:
 // response_keys and the codepoint-exact lowercase compare are untouched
-// through all three spellings, so a typed capital still does not answer.
+// through all three spellings and through the 2026-09-01 upper-casing, so a
+// typed capital still does not answer.
 // A PROMPT DOES HAVE AN ENTER ANSWER, AND IT IS THE PASSIVELY FOCUSED BUTTON
 // (architect 2026-08-13, SUPERSEDING this block's own standing ruling — "no
 // button wears the default face; this prompt system HAS no Enter answer,
@@ -3859,13 +3861,17 @@ struct PromptState {
 // A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
 // the bracketed accelerators: "we just do a tooltip just like the regular icon
 // tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
-// "Set trim from region (x)" — and so is the accelerator's spelling, the one
-// rule that table states for itself (redesign_button_tooltip, below): a bare
-// letter is LOWERCASE, because it is the key AS TYPED, and here that is not
-// merely a convention but the truth about the surface — the prompt match is
-// codepoint-exact on the lowercase letter, so a capital would name a press
-// that does not answer. Named keys are themselves ("Delete", "Escape",
-// "Enter").
+// "Show trim region ([)" — and so is the accelerator's SPELLING, the product's
+// one convention (spell_chord's head, gui_input.h): a bare letter UPPERCASE,
+// a named key by Qt's own English name ("Del", "Esc", "Return").
+//
+// THE CAPITAL IS THE CAP'S NAME AND NOT THE PRESS'S CASE, which is the one
+// thing to know here: the MATCH is codepoint-exact on the LOWERCASE letter
+// (PromptState's rule, untouched), so this hint upper-cases the letter for
+// display alone and a typed capital still does not answer. That is the shift
+// ambiguity the speller's head weighs and accepts, on this surface too. It
+// read the letter as typed until 2026-09-01, when the product took one
+// spelling for every surface.
 //
 // THE KEY IS DERIVED FROM WHAT THE BUTTON DISPATCHES, never hand-listed beside
 // the words: a PROMPT button carries its response char (the two sentinels
@@ -3877,10 +3883,17 @@ inline std::string modal_dialog_button_hint(std::string_view word,
                                             char response_key,
                                             bool editor_ok) {
     std::string key;
-    if (response_key == '\x7f')      key = "Delete";
-    else if (response_key == '\x1b') key = "Escape";
-    else if (response_key != 0)      key = std::string(1, response_key);
-    else                             key = editor_ok ? "Enter" : "Escape";
+    if (response_key == '\x7f') {
+        key = "Del";
+    } else if (response_key == '\x1b') {
+        key = "Esc";
+    } else if (response_key != 0) {
+        char c = response_key;
+        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        key = std::string(1, c);
+    } else {
+        key = editor_ok ? "Return" : "Esc";
+    }
     return std::string(word) + " (" + key + ")";
 }
 
@@ -6365,7 +6378,7 @@ struct AppState {
     // refusal and the coincident-path reasoning. NEITHER RENDER CHORD is
     // admitted, so both stay consumed nothings here and the Render button wears
     // its ordinary face over the mode's disabled one; the SAVE button wears the
-    // commit icon and the label "Save and Commit" while the mode stands, and
+    // commit icon and the tooltip "Save and commit" while the mode stands, and
     // reaches the act through its own chord. THE ADMISSION IS UNCONDITIONAL
     // SINCE 2026-09-01 (architect: a gate's membership is the chord's alone)
     // and the two states it used to carry are the ACT'S: with nothing to
@@ -7792,17 +7805,19 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::PlayPause:
             return pause_face ? "Pause (Space)" : "Play (Space)";
         case AppState::PlayerButtonAct::End:  return "Go to end (End)";
-        // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
-        // roster's own table states once (architect 2026-08-09): the key AS
-        // TYPED, a capital naming a shifted press this product does not bind.
-        case AppState::PlayerButtonAct::RepeatOne:   return "Repeat one (r)";
+        // A BARE LETTER IS UPPERCASE and a named key wears Qt's own name —
+        // the product's one accelerator-spelling convention, stated once at
+        // spell_chord's head (gui_input.h) and followed here (architect
+        // 2026-09-01; this row read "(r)" and the close row "(Escape)" while
+        // the tooltips ran their own lowercase rule).
+        case AppState::PlayerButtonAct::RepeatOne:   return "Repeat one (R)";
         // THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01): the key is
         // Backspace, which the router has bound to this act since the mode
         // was built, so the button advertises the chord it answers exactly as
         // every other row of this table does.
         case AppState::PlayerButtonAct::Up:          return "Up a folder (Backspace)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in place (')";
-        case AppState::PlayerButtonAct::Close:       return "Close (Escape)";
+        case AppState::PlayerButtonAct::Close:       return "Close (Esc)";
         case AppState::PlayerButtonAct::None:        break;
     }
     return std::string();
@@ -11393,26 +11408,24 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // against both predicates below, so the hint cannot advertise a modified press
 // that does nothing (or stay silent about one that does).
 //
-// THE ACCELERATOR'S SPELLING, one rule for this whole table (architect
-// 2026-08-09): A BARE LETTER IS LOWERCASE — "(t)", "(p)", "(m)", "(h)", "(u)" —
-// because it is the key AS TYPED, and a capital would name a shifted press this
-// product does not bind on any of them. A CHORD KEEPS ITS CAPITAL and its
-// spelled-out modifiers — "(Ctrl+S)", "(Ctrl+Alt+R)", "(Ctrl+Shift+Z)" — that
-// being the chord vocabulary's own convention, which the rest of the product
-// writes the same way. Non-letter keys are simply themselves: "(,)", "(.)",
-// "(')". The table was mixed until this ruling (the eight row-4 bare letters
-// were capitals) and is uniform now.
+// THE ACCELERATOR'S SPELLING IS THE PRODUCT'S ONE CONVENTION, stated once at
+// the speller (spell_chord's head, gui_input.h) and followed here: kdenlive's,
+// which is Qt's — a BARE LETTER UPPERCASE ("(T)", "(P)", "(H)"), a CHORD with
+// its spelled-out modifiers in the fixed order ("(Ctrl+S)", "(Ctrl+Alt+R)",
+// "(Ctrl+Shift+Z)"), a NAMED KEY by Qt's own English name ("(Esc)", "(Del)",
+// "(Return)", "(Home)", "(Space)", "(Tab)"), and punctuation naming the CAP
+// rather than the stamped symbol ("(,)", "(.)", "(')", "([)", "(Shift+[)").
+// This table writes literals rather than calling the speller — it advertises a
+// BOUND chord in advance where the speller names a press that just happened —
+// but it writes the same spelling, and the shift ambiguity a capital carries is
+// the accepted cost recorded there.
 //
-// IT WAS THIS SURFACE'S RULE AND NOT THE PRODUCT'S, and the contrast that made
-// that worth saying has NO INSTANCE LEFT: the NAVIGATION DROPDOWN's accelerator
-// column deliberately wrote a bare letter UPPERCASE ("C" for center-on-focus),
-// architect-ordered from its own kdenlive crop (dropdown_full_hotkeys.png), so
-// the two surfaces carried two sampled conventions and neither was evidence
-// about the other. That menu is deleted (2026-08-15) and the only accelerator
-// left in the product is the File menu's "Ctrl+Q" — a CHORD, which both
-// conventions spell identically — so the uppercase half is recorded here rather
-// than lost, and the day a command menu grows a bare-letter row it writes an
-// UPPERCASE one from the crop rather than inheriting this table's lowercase.
+// The succession in one sentence: the table wrote a bare letter LOWERCASE from
+// 2026-08-09 ("the key AS TYPED"; the eight row-4 letters had been capitals
+// before that) under a rule that was this surface's and not the product's, and
+// went UPPERCASE on 2026-09-01 with the rest of the product on the architect's
+// kdenlive key-cap reasoning — the design reference writes a bare "T" the way
+// it writes "Ctrl+S", so an exception here was one convention too many.
 struct RedesignTooltipText {
     const char* line1;   // nullptr -> no tooltip at all
     const char* line2;   // nullptr -> the one-line form
@@ -11449,18 +11462,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // it — planner's call, 2026-08-01.)
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
-        case RedesignButton::IconS:      return {"Source view (t)", nullptr};
-        case RedesignButton::IconT:      return {"Target view (t)", nullptr};
-        case RedesignButton::IconW:      return {"Warp markers (p)", nullptr};
-        case RedesignButton::IconP:      return {"Phase resets (p)", nullptr};
+        case RedesignButton::IconS:      return {"Source view (T)", nullptr};
+        case RedesignButton::IconT:      return {"Target view (T)", nullptr};
+        case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
+        case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
         // SHOW TRIM REGION (the architect's own words, 2026-08-19 — the name
         // the enumerator has carried all along, with "trim" added once the
         // overlay became the trim itself; it read "Show region" from
         // 2026-08-16 and "Trim region" for one day in between), TWO LINES: its
         // twin IS Shift+[ the maximizer, so the hint says so and the shift
         // admission and the line are the one fact the static_assert below
-        // keeps together. The accelerator is a bare letter and so lowercase,
-        // this table's rule. THE TOOLTIP NAMES A CONSTANT ACT WHILE THE LAMP
+        // keeps together. The accelerator is the bare `[` key and so names its
+        // own cap, this table's rule (it read "(x)" until the family moved to
+        // `[` on 2026-08-24). THE TOOLTIP NAMES A CONSTANT ACT WHILE THE LAMP
         // CARRIES THE STATE — the read-only toggle's settled precedent, and
         // this table's rows name a constant act at a constant chord — so a
         // show/hide toggle needs no second name any more than the padlock
@@ -11475,8 +11489,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // with the Navigation dropdown's rows for the two they shared ("Zoom
         // in" / "Zoom out") and are kept verbatim now that the menu is deleted
         // (2026-08-15), the alignment having outlived its second surface; the
-        // accelerators are the table's own convention — non-letter keys are
-        // themselves, a bare letter is lowercase.
+        // accelerators are the table's own convention — punctuation names its
+        // own cap, and a chord spells its modifiers out.
         case RedesignButton::IconZoomIn:
             return {"Zoom in (Ctrl+=)", nullptr};
         case RedesignButton::IconZoomOut:
@@ -11484,7 +11498,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:
             return {"Full zoom out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
-            return {"Center on focus (c)", nullptr};
+            return {"Center on focus (C)", nullptr};
         // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), one line each: neither
         // admits a modifier, so neither carries the second line, and the
         // static_assert below is satisfied by their absence from both
@@ -11497,12 +11511,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Magnify waveform (=)", nullptr};
         case RedesignButton::IconWaveformReduce:
             return {"Reduce waveform (-)", nullptr};
-        case RedesignButton::IconFollow: return {"Follow (f)", nullptr};
+        case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
         // The centered lamp (2026-08-31), one line: bare `y` toggles and has
         // no shifted twin. The text names the constant act while the lamp
         // carries the state, the read-only toggle's precedent.
         case RedesignButton::IconCentered:
-            return {"Keep viewport centered on playhead (y)", nullptr};
+            return {"Keep viewport centered on playhead (Y)", nullptr};
         // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
         // — `l` names the act it exists for, `'` keeps its name because it is
         // the load's chord on both roads: the viewed member's confirmation in
@@ -11514,7 +11528,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // match key) or, in the history view, a commit's sidecars or a
         // member of the session's own timeline — so naming "render"
         // overclaims the surface.
-        case RedesignButton::IconListen: return {"Play renders (l)", nullptr};
+        case RedesignButton::IconListen: return {"Play renders (L)", nullptr};
         case RedesignButton::IconLoadInPlace:
             return {"Load in place (')", nullptr};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
@@ -11523,10 +11537,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // constant chord, and "Read-only" is the act's name in HELP's own
         // vocabulary whichever way the tab currently stands.
         case RedesignButton::IconReadOnly:
-            return {"Read-only (o)", nullptr};
+            return {"Read-only (O)", nullptr};
         // HELP's own vocabulary for the mode ("Checking history"), one line: the
         // key toggles and there is no shifted twin.
-        case RedesignButton::IconHistory: return {"History (h)", nullptr};
+        case RedesignButton::IconHistory: return {"History (H)", nullptr};
         // THE TWO WALK RADIOS (2026-08-18), one line each: one chord for the
         // pair and no shifted twin on it. The words name the WALK — "Git" for
         // the committed checkpoint history, "Session" for this session's own
@@ -11536,9 +11550,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // view, the tooltips-on-disabled ruling's own case (architect
         // 2026-08-07), exactly as their four neighbours' do.
         case RedesignButton::HistoryWalkGit:
-            return {"Git (g)", nullptr};
+            return {"Git (G)", nullptr};
         case RedesignButton::HistoryWalkSession:
-            return {"Session (g)", nullptr};
+            return {"Session (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
         // twin. Like the three below it, this hint is reachable IN EVERY STATE
         // again since 2026-08-18: the four came back to the ICON ROW, which
@@ -11550,7 +11564,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // plain `true` on the bottom row's swapped cluster and were painted
         // inside the view alone.
         case RedesignButton::HistoryCumulative:
-            return {"Cumulative (u)", nullptr};
+            return {"Cumulative (U)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
         // shifted twins jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
@@ -11582,7 +11596,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-08-30 (the truthful-buttons ruling). The disabled ruling
         // reaches it OUTSIDE the view too since 2026-08-18, on the companions'
         // revived resting grey — a different fact, owned at a different arm.
-        case RedesignButton::HistoryRevert: return {"Revert (v)", nullptr};
+        case RedesignButton::HistoryRevert: return {"Revert (V)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when
@@ -11592,9 +11606,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // score-video jump that left the product whole.) The names are the
         // ratified sentence-case
         // labels, the
-        // accelerators the table's own convention (non-letter keys are
-        // themselves, and a CHORD keeps its capital and its spelled-out
-        // modifiers). THE MODIFIER LINE NAMES THE ACT AND THE MODIFIER AND NOT
+        // accelerators the table's own convention (a NAMED key by Qt's own
+        // name — "Home", "End", "Space", "Tab", "Del", "Return" — punctuation
+        // by its cap, and a CHORD with its spelled-out modifiers). THE MODIFIER LINE NAMES THE ACT AND THE MODIFIER AND NOT
         // A KEY, this table's rule for second lines.
         // THE CTRL LINE STAYS ON A GREYED SKIP (2026-08-30): under the twin
         // rule the button greys only when the bare jump AND the whole-piece
@@ -11652,24 +11666,27 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // lead-in seed and its overlay live,
         // and drops the reset at the cursor's own instant once it arrives.
         case RedesignButton::IconMarkerDrop:
-            return {"Drop marker (s)",
+            return {"Drop marker (S)",
                     "Press Shift to drop a phase reset in target view."};
         case RedesignButton::IconMarkerDelete:
-            return {"Delete markers (Delete)", nullptr};
+            return {"Delete markers (Del)", nullptr};
         case RedesignButton::IconMarkerDisable:
             return {"Disable markers (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
         // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
         // like its neighbours: the act named, no shift line, the button
-        // admitting neither shift nor ctrl. THE ACCELERATOR IS "Enter" and not
-        // "Return", because Enter is what the key says on the plastic and on
-        // the painted keyboard alike (the keypad's own Enter opens the editor
-        // too — one arm, two keysyms). It greys in the `h` view and on a locked
+        // admitting neither shift nor ctrl. THE ACCELERATOR IS "Return" since
+        // 2026-09-01, because that is Qt's — and so kdenlive's — name for the
+        // key, the product's one spelling convention (spell_chord's head,
+        // gui_input.h); the keypad's own Enter opens the editor through the
+        // same arm and is not named separately (one act, two keysyms). It read
+        // "Enter" from 2026-08-27, the word stamped on the plastic and on the
+        // painted keyboard, before the convention reached this table. It greys in the `h` view and on a locked
         // tab — the verbs' own two resting greys — and still explains itself in
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerEditFlag:
-            return {"Edit flag (Enter)", nullptr};
+            return {"Edit flag (Return)", nullptr};
         // THE MARKER MEASURE (2026-08-19), the verb group's sixth since
         // 2026-08-27 and its fifth before that, ONE LINE
         // like its neighbours: the act named, no shift line, the button
@@ -11691,23 +11708,25 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // shows the unresolved one, and the second names the two things a
         // source can be — the DEFINITION a `label_ref` points at, the
         // PREVIOUS marker a pass inherits from. The
-        // accelerator is a bare letter and so lowercase. It is the group's one
+        // accelerator is a bare letter and so a capital. It is the group's one
         // member the READ-ONLY LOCK leaves lit, both its chords being
         // navigation, and it still explains itself in the `h` view, where the
         // derived partition greys it — the tooltips-on-disabled ruling above.
         case RedesignButton::IconCopyValue:
-            return {"Copy resolved value (j)",
+            return {"Copy resolved value (J)",
                     "Press Shift to jump to defining/previous marker."};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH since
         // 2026-08-27 and a MODE
         // rather than an act — the hint names it in the architect's own words
-        // and stops there. ONE LINE, no shift line (it admits no shift press)
+        // and stops there, in SENTENCE CASE since 2026-09-01 (it read "Add to
+        // Selection" from 2026-08-18; every multi-word label in the product is
+        // sentence case now, with no exception left). ONE LINE, no shift line (it admits no shift press)
         // and NO GESTURE HINT: the words never explain how to use the mode,
         // which is the product's standing rule about UI text. It greys in the
         // `h` view alone and still explains itself there, the
         // tooltips-on-disabled ruling above.
         case RedesignButton::IconAddToSelection:
-            return {"Add to Selection (k)", nullptr};
+            return {"Add to selection (K)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
         // marker" are HELP's own words for the bare Tab cycle; "Walk both
         // tabs" was the Navigation dropdown's own row for Ctrl+Shift+Tab, and
@@ -11769,10 +11788,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // Render's idle meanings, "the context makes it clear", so only the GLYPH
 // SWAPS say state on the row now: Save wears VcsCommit in the history view
 // and while a checkpoint publishes, Render wears DialogCancel mid-render —
-// redesign_button_icon, paint_handler.cpp). The title-case exception record
-// ("Save and Commit", capital S lowercase "and" capital C, architect-spelled
-// 2026-08-04) survives on the one tooltip string that still carries the
-// words; "Render Iterations", the capital I the architect spelled
+// redesign_button_icon, paint_handler.cpp). The one hint string that still
+// carries the words reads "Save and commit" in sentence case; "Render
+// Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
 // "Render grid iterations" now, because the mode's own name is the menu row
 // "Grid iterations" and a name used mid-sentence is sentence case (the
@@ -11781,7 +11799,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // whichever command it currently is:
 //
 //   SAVE, WITH THE HISTORY MODE STANDING → the vcs-commit icon and the
-//   "Save and Commit (Ctrl+S)" hint: Ctrl+S there SAVES the piece beside its
+//   "Save and commit (Ctrl+S)" hint: Ctrl+S there SAVES the piece beside its
 //   source through this
 //   very button's ordinary act and then commits the live state into the projects
 //   repository as a checkpoint (run_history_commit, input_key_dispatch.cpp, owns
@@ -11818,16 +11836,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   nothing at all since 2026-08-14 (the 2026-08-12 relayout hid it in there,
 //   and the 2026-08-13 revision already painted it again).
 //
-// THE TITLE CASE IS DELIBERATE AND SCOPED TO THE ONE HINT STRING still
-// carrying an old label — "Save and Commit" (architect 2026-08-04 for the
-// capital C): every
-// other multi-word GUI label in the product stays sentence case ("Center on
-// focus", "Next marker") — it is the one named
-// exception, not a precedent to copy outward or "fix". The joining word stays
-// LOWERCASE ("and"), which is what title case means and what the architect
-// spelled. (IT WAS A PAIR UNTIL 2026-08-31: "Render Iterations" carried a
-// capital I from 2026-08-03 and went back to sentence case with the rebrand,
-// the hint now naming the menu row "Grid iterations" mid-sentence.)
+// THE TITLE-CASE EXCEPTION IS RETIRED (architect 2026-09-01): "Save and
+// Commit" carried a capital C from 2026-08-04 as the product's one named
+// exception and reads "Save and commit" now, so EVERY multi-word GUI label is
+// sentence case with nothing left to except ("Center on focus", "Next
+// marker"). It was a pair until 2026-08-31, when "Render Iterations" lost the
+// capital I it had carried since 2026-08-03 to the rebrand.
 //
 // RENDER'S SHIFT LINE GOES WITH ITS ITERATION FACE, and that is the same fact
 // rather than a second decision: Ctrl+Alt+Shift+R is a consumed no-op in
@@ -11870,7 +11884,7 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
         return {"Committing the checkpoint (Ctrl+S)", nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
-        return {"Save and Commit (Ctrl+S)", nullptr};
+        return {"Save and commit (Ctrl+S)", nullptr};
     }
     // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
     // with its chord, so in the view Render is an ordinary dead button and shows

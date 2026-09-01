@@ -277,12 +277,20 @@ inline constexpr GuiKey keysym_of(char base) {
 // This function is the ONE OWNER of the words. It answers the cap for every key
 // that has one that is not simply its own character: the five function keys
 // (Tab among them since 2026-08-27, a word exactly as Shift, Backspace and
-// Enter are), SPACE (which has no glyph of its own to wear), and the LAYER
+// Return are), SPACE (which has no glyph of its own to wear), and the LAYER
 // TOGGLE, whose cap names the layer it goes TO — the reference's own
 // convention and the only one that reads right on a key you press to leave
 // where you are. A Character key other than space answers nullptr and the
 // painter spells it out of the table's own `ch` through the one case
 // derivation above.
+//
+// THE CAPS THAT NAME A KEY ARE SPELLED THE PRODUCT'S ONE WAY (architect
+// 2026-09-01), which is Qt's and so kdenlive's: "Return" — not "Enter", the
+// word stamped on the plastic, which this cap read until that day — beside
+// Shift, Backspace, Tab and Space, which Qt spells the same. THE ESCAPE KEY'S
+// "Cancel" IS NOT IN THAT CLASS and is deliberately left alone: it names what
+// the key DOES to the editor standing over it, the button convention, rather
+// than naming the key at all.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
@@ -293,7 +301,7 @@ inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
     switch (k.role) {
         case Role::Shift:       return "Shift";
         case Role::Backspace:   return "Backspace";
-        case Role::Enter:       return "Enter";
+        case Role::Enter:       return "Return";
         case Role::Escape:      return "Cancel";
         case Role::Tab:         return "Tab";
         case Role::LayerToggle: return symbol_layer ? "abc" : "&123";

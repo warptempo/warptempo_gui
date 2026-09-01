@@ -6123,9 +6123,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the list is the same act from the keyboard. Its one-day OK, named by
         // the act it ran, went with the row-click ruling; Cancel is untouched
         // and stays LAST, which on a one-button row makes it the escape
-        // sentinel by construction. The hint composer's "OK (Enter)" /
-        // "Cancel (Escape)" follows for free, those being the two routers'
-        // own keys.
+        // sentinel by construction. The hint composer's "OK (Return)" /
+        // "Cancel (Esc)" follows for free, those being the two routers'
+        // own keys under the product's one spelling (spell_chord's head,
+        // gui_input.h).
         if (!picker_up) {
             DialogButtonPlan ok;
             ok.label     = "OK";

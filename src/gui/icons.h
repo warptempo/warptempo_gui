@@ -77,7 +77,7 @@ enum class Icon {
     // SAVE's OTHER face: while the history mode stands, Ctrl+S saves and then
     // commits the checkpoint, so the button wears the commit icon — and keeps
     // it while the checkpoint publishes (the swap's owner is
-    // redesign_button_icon, its hint the tooltip override's "Save and Commit"
+    // redesign_button_icon, its hint the tooltip override's "Save and commit"
     // / "Committing the checkpoint"; the mode is AppState::HistoryMode). It
     // was RENDER's second face until 2026-08-08, when the act moved onto the
     // save chord; the WORDS moved off the button whole when row 2's labeled
@@ -382,7 +382,7 @@ enum class Icon {
     // is EDIT FLAG: icon ids name their PROVENANCE, not the product verb (the
     // theme-provenance rule), so this is TextField and not IconEditFlag —
     // MinuetScales' own precedent, one entry above.
-    TextField,           // Edit flag (Enter)
+    TextField,           // Edit flag (Return)
 
     // THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player):
     // places/22/folder, the Breeze dark folder every file picker on the

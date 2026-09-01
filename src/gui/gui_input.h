@@ -229,7 +229,7 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // view's allowlist and the read-only lock. NO OTHER SITE COMPOSES A CHORD NAME
 // FOR A CARD, and spell_modifiers below has no caller of its own — it is this
 // speller's prefix half and nothing else. The roster's TOOLTIPS carry chords
-// too, as hand-written literals in kToolbarChords, and they are a different
+// too, as hand-written literals in redesign_button_tooltip, and they are a different
 // job: a tooltip advertises a BOUND chord in advance, this spells a press that
 // just happened.
 //
@@ -245,13 +245,22 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // the render player's and the picker's two catch-alls each, and — through
 // spell_modifiers alone — the pointer's unbound modified press.)
 //
-// AND THE TWO DISAGREE ON ONE LETTER, deliberately — after a one-day round
-// trip that the succession below records whole rather than pretending it never
-// happened. The tooltip table writes a bare letter LOWERCASE — "(t)", "(m)" —
-// because it is the key as typed and a capital there would advertise a shifted
-// press the product does not bind (that rule and its reason live at
-// redesign_button_tooltip, app_state.h). A CARD UPPER-CASES IT, in three
-// steps: UPPER-CASED at the cards' own landing (architect 2026-08-30 — the
+// AND THE NAMES ARE THE PRODUCT'S, NOT THIS SURFACE'S: every user-facing
+// spelling of a key follows KDENLIVE (Qt), one convention stated here and
+// followed everywhere — the roster's tooltips, the modal hints, the on-screen
+// keyboard's caps, HELP and the README alike (architect 2026-09-01, retiring
+// the "two surfaces, two conventions" split the tooltips and the cards ran
+// under until that day: an exception in user-facing text is a design smell,
+// so there is one rule and no per-surface convention left). Qt's own English
+// names for the named keys (Esc, Del, Return, Backspace, PgUp, PgDown, Space,
+// Tab, Home, End, the four arrows — QKeySequence's keyname[] table, researched
+// against the source), bare letters UPPERCASE, punctuation naming the CAP
+// rather than the stamped symbol ("Shift+[", "Ctrl+=", "Ctrl+-"), modifiers
+// Ctrl, Alt, Shift joined by '+'.
+//
+// THE UPPER-CASING OF A BARE LETTER took a one-day round trip that the
+// succession records whole rather than pretending it never happened:
+// UPPER-CASED at the cards' own landing (architect 2026-08-30 — the
 // chord stands alone inside a sentence rather than in parentheses after a
 // verb, where a lone lowercase letter reads as prose instead of as a key, and
 // no capital can be mistaken for a shifted press because THE SHIFT IS ALWAYS
@@ -268,13 +277,12 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 // knows from the application beside this one beating a spelling that is
 // unambiguous only on its own terms.
 //
-// THE TOOLTIPS ARE A DIFFERENT SURFACE AND THIS RULING DOES NOT REACH THEM —
-// said here so a later hand does not "unify" the two conventions. The roster's
-// "(v)"-style chord suffixes are hand-written literals in kToolbarChords under
-// redesign_button_tooltip's own standing rule (app_state.h), they advertise a
-// BOUND chord in advance rather than naming a press that just happened, and
-// they stay lowercase. Two surfaces, two conventions, each with its own owner;
-// neither is evidence about the other.
+// THE TOOLTIPS FOLLOW THE SAME NAMES (architect 2026-09-01): the roster's
+// "(V)"-style chord suffixes are hand-written literals in
+// redesign_button_tooltip's own table (app_state.h) — a different JOB, since
+// they advertise a BOUND chord in advance rather than naming a press that just
+// happened — but no longer a different CONVENTION. Two surfaces, one spelling,
+// stated here.
 //
 // A CARD NAMING THE CHORD THE USER PRESSED IS NOT A GESTURE HINT (the standing
 // no-hints rule): it names what just happened, never what to press instead.
@@ -364,9 +372,13 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // a key this product binds nowhere, every reader gating on chord_is_bound
 // first, and every_bound_key_is_spellable pins the other way round — no bound
 // key is left without a name here, which is what lets spell_chord carry no
-// unnamed fallback. The two pairs that share a name share it deliberately —
-// Return / KpEnter are one "Enter" to the hand, and IsoLeftTab IS the shifted
-// Tab keysym.
+// unnamed fallback. THE NAMES ARE QT'S OWN (the head's one convention): Esc,
+// Del, Return, PgUp, PgDown — kdenlive's spellings, not the longhand this
+// table wrote until 2026-09-01. The two pairs that share a name share it
+// deliberately — Return / KpEnter are one "Return" to the hand, since both
+// keysyms open the flag editor and Qt's separate "Enter" for the keypad would
+// name a second key the product does not distinguish — and IsoLeftTab IS the
+// shifted Tab keysym.
 //
 // BACKSPACE LEFT WITH THE THREE NAME-ONLY BLOCKS on 2026-08-31: it is one of
 // the keys chord_is_bound lists as deliberately absent — the editors consume
@@ -376,15 +388,15 @@ constexpr const char* spell_key_name(GuiKey key) {
     switch (key) {
         case GuiKeys::Space:      return "Space";
         case GuiKeys::Return:
-        case GuiKeys::KpEnter:    return "Enter";
+        case GuiKeys::KpEnter:    return "Return";
         case GuiKeys::Tab:
         case GuiKeys::IsoLeftTab: return "Tab";
         case GuiKeys::Escape:     return "Esc";
-        case GuiKeys::Delete:     return "Delete";
+        case GuiKeys::Delete:     return "Del";
         case GuiKeys::Home:       return "Home";
         case GuiKeys::End:        return "End";
-        case GuiKeys::PageUp:     return "Page Up";
-        case GuiKeys::PageDown:   return "Page Down";
+        case GuiKeys::PageUp:     return "PgUp";
+        case GuiKeys::PageDown:   return "PgDown";
         case GuiKeys::Up:         return "Up";
         case GuiKeys::Down:       return "Down";
         case GuiKeys::Left:       return "Left";
