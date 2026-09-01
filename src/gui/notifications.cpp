@@ -170,9 +170,12 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     // NORMAL card, walked from the back.
     //
     // TWO CARDS ARE NEVER THE VICTIM, and each for its own reason:
-    //   - a CRITICAL one, by the ruling: it stands until its X whatever the
-    //     count, so the walk skips it and a stack of criticals alone simply
-    //     keeps growing;
+    //   - a CRITICAL one, by the ruling: it is never TIMED out and never
+    //     BUMPED whatever the count, so the walk skips it and a stack of
+    //     criticals alone simply keeps growing (what does take one down is a
+    //     DELIBERATE dismissal — its X, bare Esc's oldest-card dismissal or
+    //     Ctrl+Esc's clearing of the whole stack — and none of those is this
+    //     walk);
     //   - THE CARD JUST PUSHED, at index 0: it is the answer to the act the
     //     user has this moment performed, and bumping it would make that act
     //     silent — which is reachable, not theoretical (the capacity is 4 at

@@ -6361,9 +6361,12 @@ struct AppState {
     // place this product made the user wait on a remote. The act captures what
     // it needs by value, closes the view and hands the job to
     // GuiHistoryCommitWorker; its four failing verdicts come back as a
-    // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that stands
-    // until its X is pressed and takes nothing from the keyboard; it was the
-    // tab row's permanent critical chip from 2026-08-09, and before that an
+    // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that takes no
+    // keyboard focus, is never TIMED out and is never BUMPED, and leaves only
+    // by a deliberate dismissal: its X on the pointer, bare Esc taking the
+    // stack's OLDEST card of any class since 2026-08-31, or Ctrl+Esc clearing
+    // the whole stack, criticals included, since 2026-09-01; it was the tab
+    // row's permanent critical chip from 2026-08-09, and before that an
     // acknowledge modal), and its two ESTABLISHED ones say what they have to
     // say on stderr and raise nothing. The fourth failure is Unconfirmed,
     // split out of NothingToCommit on 2026-08-09: an act that confirmed
@@ -7214,10 +7217,15 @@ struct AppState {
     //             a clock:
     //               NORMAL   leaves on its own kNotificationMs from its PUSH
     //                        (there is no later surfacing to wait for), or at
-    //                        its X, or at a bump;
-    //               CRITICAL stands until its X — no clock, ever, and no
-    //                        bump. The four checkpoint outcomes are its
-    //                        producers.
+    //                        its X, or at a bump, or at either Esc road;
+    //               CRITICAL is never TIMED out and never BUMPED — no clock,
+    //                        ever, and no victimhood at a push — but the
+    //                        keyboard dismisses it deliberately: it leaves at
+    //                        its X, at bare Esc's OLDEST-card dismissal
+    //                        (2026-08-31, which reads no class) or at
+    //                        Ctrl+Esc's clearing of the whole stack
+    //                        (2026-09-01). The four checkpoint outcomes are
+    //                        its producers.
     //             `paused` with `remaining_ms` is the HOVER BANK: while the
     //             pointer rests on a normal card its clock stops, the
     //             remaining time banked at hover-enter and re-armed at
