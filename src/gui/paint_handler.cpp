@@ -3464,9 +3464,19 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
         // not change — and the ROOM the wrap breaks against is what that
         // width leaves between the two boxes.
+        //
+        // IT CEILS (architect 2026-08-31): a box that must CONTAIN a run is
+        // not a point on a grid, so banker's rounding is the wrong class for
+        // it — the cells-not-points rule reserves nearbyint for positions,
+        // and a width that rounded DOWN left the sentence overflowing its own
+        // card by up to half a pixel, which the wrap below then answered by
+        // breaking the last word onto a second line ("There is nothing to
+        // redo" wrapped while the WIDER "…to undo" did not). Ceiling makes
+        // text_room ≥ the shaped width by construction, so the wrap's own
+        // fits-whole test is exact.
         const text_shape::ShapedRun whole =
             text_shape::shape_text_run(font, n.text);
-        int w = chrome_w + static_cast<int>(std::nearbyint(whole.width_px));
+        int w = chrome_w + static_cast<int>(std::ceil(whole.width_px));
         // max_w never answers under min_w (the owner floors it there, so the
         // room this paints into cannot be narrower than the card), and the
         // std::max keeps the clamp's own precondition stated at the call.
