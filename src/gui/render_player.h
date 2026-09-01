@@ -83,15 +83,31 @@ struct GuiInputHandler;
 // THE RENDER PLAYER (architect design 2026-08-28, the in-app player for the
 // car) — the operations cluster for the MODE that plays the project's own
 // renders through the one playback engine: the folder overlay above the
-// bottom row (folder_overlay.h) lists the project's OUTPUT FOLDERS — `render/`
-// with the deliverable, which is the CURRENT TITLE'S ONE WAV and nothing else
-// (the listing prunes the folder to it, prune_render_folder in renders_dir.h),
-// `tmp/` with its batch folders and their cells — and
+// bottom row (folder_overlay.h) lists `tmp/` — its batch folders and their
+// cells, THE PLAYER'S WHOLE SUBJECT since 2026-09-01 (the ruling below) — and
 // the bottom row's modal carries the transport (THE MAIN WINDOW'S OWN
 // TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
 // acts on the same three keys as the roster's — then the play-scrub, the
-// clock, the Repeat one lamp, and Load in place / Close flush right — the
-// row's order and faces are the painter's, R25/R36).
+// clock, the Repeat one lamp, the UP button, and Load in place / Close flush
+// right — the row's order and faces are the painter's, R25/R36).
+//
+// THE PLAYER LIVES INSIDE `tmp/` AND NEVER RISES ABOVE IT (architect
+// 2026-09-01). HIS RATIONALE: the deliverable in `render/` is a
+// NAMING-FOR-SHARING CONVENIENCE OUTSIDE THE GUI'S WORKFLOW — the tablet's
+// engine differs from the laptop's by ULPs, so it is never driven from the
+// glass, and it carries no sidecars, so it cannot be loaded in place (R15) —
+// while `tmp/`'s cells are what the workflow auditions on both hosts. So
+// `tmp/` IS THE ROOT: the two-branch root that listed `render` and `tmp` as
+// folder rows, the deliverable listing under it and the question that fed them
+// (deliverable_wav) are deleted, `AppState::RenderPlayer::Folder` is two
+// places, and the prune's LISTING trigger retires with them (its publish
+// trigger stays — prune_render_folder, renders_dir.h). AND THE `..` ROW LEAVES
+// THE LISTINGS: going up is a BUTTON on the modal row beside Repeat one, its
+// act up(), its key twin Backspace unchanged, greying at the root through the
+// wall's one owner (render_player_up_actionable). Neither the deliverable's
+// PUBLISH road nor the SYNCHRONIZE mirror is touched — the mirror still ships
+// `render/`'s deliverable beside every batch folder; only the PLAYER stops
+// looking at it.
 // The state it moves is AppState::render_player and AppState::folder_overlay
 // (app_state.h, where every field is described); this struct owns the acts.
 //
@@ -117,8 +133,10 @@ struct GuiInputHandler;
 //
 // THE MODEL (R1, R2, revised 2026-08-29): the listing is navigated THE
 // REGULAR WAY and A CLICK ACTIVATES — a click or tap on a folder row ENTERS
-// it, on the `..` row at the top of every non-root listing goes UP (Backspace
-// on plastic), on a wav row PLAYS IT FROM ITS START. The click's act rides
+// it, on a wav row PLAYS IT FROM ITS START. GOING UP IS NOT A ROW since
+// 2026-09-01: it is the modal row's Up button, with Backspace as its key on
+// plastic (the `..` row stood at the top of every non-root listing until
+// then). The click's act rides
 // the motionless LIFT (the press still arms, the same press being the band's
 // possible scroll drag) and the highlight moves onto the row first; Enter is
 // the keyboard's own click on the highlight and Up/Down walk the band without
@@ -206,8 +224,8 @@ struct GuiInputHandler;
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
 // `h` view and their two icon-row buttons all reach it through on_key — and
-// it refuses with "Nothing to play: no renders under render/ or tmp/" when
-// neither `render/` holds the current title's wav nor `tmp/` a cell; its callers refuse the modal
+// it refuses with "Nothing to play: no renders under tmp/" when
+// `tmp/` holds no cell; its callers refuse the modal
 // states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
@@ -295,11 +313,15 @@ struct GuiRenderPlayer {
     // -- The listing --------------------------------------------------------
 
     // THE OPEN ACT on row `index` of the live listing: a folder row enters
-    // it, the up row goes to the parent, a wav row plays from its start. Its
+    // it, a wav row plays from its start — the two kinds a listing carries
+    // since the `..` row left it (2026-09-01). Its
     // producers are the row click's motionless lift and Enter on the
     // highlight, both through the overlay's one row-act fork.
     void open_row(int index);
-    // One folder up; a consumed no-op at the root.
+    // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE, one act, since
+    // the `..` row retired (2026-09-01); a SILENT consumed no-op at the root,
+    // which is `tmp/` (the wall's one owner is render_player_up_actionable,
+    // app_state.h, which the button's face reads too).
     void up();
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the picker
@@ -321,7 +343,7 @@ struct GuiRenderPlayer {
     // R6, narrowing R40's "it never reads the highlight, in any state" of two
     // days before). ONE FORK IN FOUR ARMS, in this order:
     //
-    //   HIGHLIGHT on a FOLDER row or `..`      -> open it (the row's own act).
+    //   HIGHLIGHT on a FOLDER row               -> open it (the row's own act).
     //   HIGHLIGHT on a WAV that is NOT the
     //     transport's item                     -> play that row, live or
     //                                             paused or idle alike.
@@ -580,7 +602,7 @@ private:
     // on the transport's item's row if it is here else row 0, hover and press
     // cleared. Damages the band.
     void rebuild_rows();
-    // Enter a folder (Root, Deliverable, Batches, or the batch at `dir`).
+    // Enter a folder: the Root, which IS `tmp/`, or the batch at `dir`.
     void enter(AppState::RenderPlayer::Folder folder,
                const std::filesystem::path& dir);
     // Decode `path` under the vocabulary above; on success bind it as the
@@ -610,18 +632,15 @@ private:
     std::vector<AppState::FolderOverlayRow> listing_wavs() const;
     // Whether any playable wav exists — the opener's refusal.
     bool has_playable_render() const;
-    // THE DELIVERABLE — the CURRENT TITLE'S wav in `render/`, present iff it
-    // is there as a regular file, and the folder holds nothing else by the
-    // time this answers: IT PRUNES FIRST (prune_render_folder, renders_dir.h,
-    // whose declaration carries the ruling and the refusals). So `render/` is
-    // a ONE-FILE FOLDER in the player — the root row stands iff this answers,
-    // the Deliverable listing is `..` plus at most that one row, and the
-    // folder's play order, the two ends and Home's previous-track window are
-    // the degenerate
-    // one-item case of the walks they already were, needing no arm of their
-    // own (architect 2026-08-29: "player should only list a file if it matches
-    // the current title, and delete the rest also").
-    std::optional<std::filesystem::path> deliverable_wav() const;
+    // (THE DELIVERABLE'S QUESTION STOOD HERE — deliverable_wav, the CURRENT
+    // TITLE'S wav in `render/`, which PRUNED the folder before it answered
+    // (architect 2026-08-29: "player should only list a file if it matches the
+    // current title, and delete the rest also") and made `render/` a ONE-FILE
+    // FOLDER in the player. IT IS DELETED WHOLE with its three callers'
+    // reasons, architect 2026-09-01: THE PLAYER LIVES INSIDE `tmp/` and never
+    // lists `render/` at all — the ruling and his rationale are at the head of
+    // this file and at the listing itself. The PRUNE stays with its other
+    // trigger, the deliverable's publish.)
     // Damage helpers: the band, the modal row.
     //
     // ONE BAND DAMAGE since R35 (2026-08-28): the panel's height is fixed at
@@ -638,7 +657,7 @@ private:
     // decode road's refusals (the probe's, the allocation ceiling's, the
     // read's, the rate-and-channel equality twice, "This wav holds no
     // samples"), "No audio device; the wav cannot be played" and the opener's
-    // "Nothing to play: no renders under render/ or tmp/" — every one a
+    // "Nothing to play: no renders under tmp/" — every one a
     // sentence answering an act, none a state. Kept as a thin call rather than
     // deleted so the player's refusals stay one grep.
     void status(const std::string& line);

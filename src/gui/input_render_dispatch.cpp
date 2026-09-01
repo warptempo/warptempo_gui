@@ -414,17 +414,19 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             // THE DELIVERABLE'S PUBLISH PRUNES `render/` (architect
             // 2026-08-29): the folder holds the current title's deliverable
             // and nothing else, so a retitle's first render takes the previous
-            // title's pair with it instead of leaving it for the player to
-            // list and the Synchronize mirror to sweep off the stick. It runs
+            // title's pair with it instead of leaving it for the Synchronize
+            // mirror to sweep off the stick (and, until the player moved
+            // inside `tmp/` on 2026-09-01, for its listing to show). It runs
             // HERE, on the GUI thread after do_render returned, so the wav and
             // its .fingerprint are both on disk — do_render writes the
             // fingerprint last, as the attestation that the set is complete —
             // before anything else goes. The stem it keeps is the LIVE title,
             // not the request's: the definition is "the current title's", one
-            // definition shared with the player's listing (prune_render_folder,
-            // renders_dir.h), so a title edited in the settings editor while
-            // this render ran leaves what it published for the same prune the
-            // next listing would run. Only Success prunes — a killed or failed
+            // definition shared with the Synchronize mirror (prune_render_folder,
+            // renders_dir.h — THIS IS ITS ONE TRIGGER since the player stopped
+            // listing `render/` on 2026-09-01), so a title edited in the
+            // settings editor while this render ran leaves what it published
+            // for the next deliverable's prune. Only Success prunes — a killed or failed
             // render published nothing — and only the deliverable arm: a batch
             // cell lands in `tmp/`, a different folder, never pruned.
             if (success && publishes_deliverable) {

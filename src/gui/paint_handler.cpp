@@ -6099,6 +6099,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      icons::Icon::MediaRepeatSingle,
                      app.render_player.repeat_one);
+        // UP, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
+        // player's move inside `tmp/`): the listings carry no `..` row any
+        // more, so the way out of a batch folder is here — beside the lamp,
+        // ahead of the two word buttons, on Breeze's own `go-up` chevron,
+        // which the roster already wears on its bare-Up transport button (a
+        // def is a glyph, and several buttons may wear one). It greys at the
+        // root through the act's own wall.
+        glyph_button(AppState::PlayerButtonAct::Up, icons::Icon::GoUp);
         word_button(AppState::PlayerButtonAct::LoadInPlace, "Load in place");
         word_button(AppState::PlayerButtonAct::Close, "Close");
     } else {
@@ -6278,6 +6286,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (a zero rect contains no point and damages nothing) rather than a
         //    track too small to seat a handle.
         //
+        //    THE ROW GAINED THE UP BUTTON on 2026-09-01, between the lamp
+        //    and the word cluster, so the fixed run after the scrub carries
+        //    TWO glyph boxes now and the plan is seven items.
+        //
         //    THIS BRANCH LAYS OUT AND PAINTS EVERYTHING BUT THE BUTTONS: it
         //    writes each button's own x (the walk below paints where it is
         //    told) and draws the two separators, the slider and the clock
@@ -6345,17 +6357,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         // The word cluster, right-flushed inside the reserved ring exactly as
         // the single cluster's cap is on every other owner.
-        const int words_w  = plan[4].w + bgap + plan[5].w;
+        const int words_w  = plan[5].w + bgap + plan[6].w;
         const int words_x0 = std::max(cx0, cx1 - ring - words_w);
         // What the row owes AFTER the scrub: the scrub → clock distance, the
         // clock cell, the clock → separator distance, the second separator
-        // with its own button-side air, the lamp, and the WORD BUTTONS' OWN
-        // GAP before the cluster — architect 2026-08-29: the air between
-        // Repeat one and Load in place is the air between Load in place and
+        // with its own button-side air, the lamp, THE UP BUTTON with the
+        // glyph gap between them (two glyph buttons in one cluster, the
+        // transport triple's own gap), and the WORD BUTTONS' OWN
+        // GAP before the cluster — architect 2026-08-29: the air between the
+        // last glyph and Load in place is the air between Load in place and
         // Close, the modal word buttons' spacing winning over the icon gap
         // between clusters (it was the reserved ring plus a pad).
         const int after_scrub =
-            sep_pad + clock_w + sep_pad + sep_w + sep_gap + btn_h + bgap;
+            sep_pad + clock_w + sep_pad + sep_w + sep_gap +
+            btn_h + ggap + btn_h + bgap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
         // at each end is not a track, and it is the same 40 authored px the
         // scrub floored at before the slider gave the number a derivation.
@@ -6365,9 +6380,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + sep_pad : 0);
         const int clock_end = clock_x0 + clock_w;
         const int sep2_x    = clock_end + sep_pad;
-        plan[3].x = sep2_x + sep_w + sep_gap;    // Repeat one
-        plan[4].x = words_x0;                    // Load in place
-        plan[5].x = words_x0 + plan[4].w + bgap; // Close
+        plan[3].x = sep2_x + sep_w + sep_gap;       // Repeat one
+        plan[4].x = plan[3].x + btn_h + ggap;       // Up
+        plan[5].x = words_x0;                       // Load in place
+        plan[6].x = words_x0 + plan[5].w + bgap;    // Close
 
         paint_separator(sep1_x);
         paint_separator(sep2_x);
@@ -7341,10 +7357,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius,
                               (lit || hovered) ? &fill : nullptr, line);
 
-            // THE GLYPH, on EVERY row: the folder for folder rows and the up
-            // row (it names a folder), the wav for wav rows — swapped for the
+            // THE GLYPH, on EVERY row: the folder for folder rows, the wav
+            // for wav rows — swapped for the
             // transport glyph on the item's row. (The glyph-less TEXT kind
-            // went with the history picker on 2026-08-29.) At
+            // went with the history picker on 2026-08-29, and the UP kind —
+            // the `..` row, which wore the folder glyph because it named a
+            // folder — with the player's move inside `tmp/` on 2026-09-01.) At
             // the BUTTON'S OWN INSET from the row's left edge and centred in
             // its height, which are the same number: a row is a wide button
             // and this is how a button seats its glyph.

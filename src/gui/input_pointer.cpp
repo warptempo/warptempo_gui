@@ -3526,6 +3526,11 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();
                 return true;
+            case AppState::PlayerButtonAct::Up:
+                // THE `..` ROW'S ACT, ON THE ROW SINCE 2026-09-01: the same
+                // body Backspace runs, with its own silent wall at the root.
+                render_player.up();
+                return true;
             case AppState::PlayerButtonAct::LoadInPlace:
                 render_player_load_in_place();
                 return true;

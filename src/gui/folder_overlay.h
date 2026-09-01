@@ -18,9 +18,10 @@
 // hit cannot describe different rows. The ROW TABLE ITSELF is
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
-// WHAT IT IS. A flat list of rows — an UP row (`..`, the parent), FOLDER rows
-// and WAV rows — each an
-// icon and a name, painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
+// WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
+// icon and a name (an UP row, `..`, was a third kind until 2026-09-01, when
+// the player moved inside `tmp/` and going up became a button on its modal
+// row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
 // full window width, standing from the waveform's midpoint down to the bottom
 // row — over the waveform area's lower part, which the waveform's passes then
 // do not paint
@@ -83,7 +84,7 @@
 // AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):
-// under the PLAYER an open enters a folder, goes up, or plays a wav; under
+// under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project. Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
@@ -120,9 +121,11 @@ inline constexpr double kPanelPadPx = 2.0;
 inline constexpr double kRowIconGapPx = 8.0;
 
 // THE ROW BOX: the button's box, the button's between-boxes gap, the button's
-// glyph. A folder row wears icons::Icon::Folder, a wav row
-// icons::Icon::AudioXWav, the up row the folder glyph too (it names a folder).
-// Every row has one: the glyph-less TEXT kind went with the history picker.
+// glyph. A folder row wears icons::Icon::Folder and a wav row
+// icons::Icon::AudioXWav. Every row has one: the glyph-less TEXT kind went
+// with the history picker (2026-08-29), and the UP kind — which wore the
+// folder glyph, naming a folder — with the player's move inside `tmp/`
+// (2026-09-01).
 inline int row_height_px()   { return scaled_px(kIconBtnPx, 1); }
 inline int row_gap_px()      { return scaled_px(kIconBtnGapPx, 1); }
 inline int pad_px()          { return scaled_px(kPanelPadPx); }
@@ -188,7 +191,7 @@ inline int content_height_px(const AppState& a) {
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses with
-// "Nothing to play: no renders under render/ or tmp/" and the project picker
+// "Nothing to play: no renders under tmp/" and the project picker
 // always lists at least the project that is open).
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));

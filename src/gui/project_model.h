@@ -38,8 +38,9 @@
 // guessing: "Move `<name>.wav` into render/". The folder is not opened until it
 // is done. WHAT `render/` THEN KEEPS IS THE CURRENT TITLE'S DELIVERABLE ALONE
 // (prune_render_folder, renders_dir.h): a wav moved in under a PREVIOUS title
-// is deleted the first time the render player lists the folder or a deliverable
-// publishes into it, so the refusal's move is the right home for the current
+// is deleted the first time a deliverable publishes into it (the render
+// player's listing was a second trigger until 2026-09-01, when the player
+// moved inside `tmp/`), so the refusal's move is the right home for the current
 // title's wav and a parking spot for nothing else.
 // BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY
 // CONSTRUCTION: the walk below reads regular files only, so a directory —

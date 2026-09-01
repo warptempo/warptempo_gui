@@ -3,14 +3,12 @@
 #include "folder_overlay.h"
 #include "input_handler.h"          // the ring clear's one owner
                                     // (clear_modal_dialog_key_press)
-#include "render_output_naming.h"   // the deliverable's directory and stem
 #include "text_editor.h"            // next_session_id (the one modal counter)
 #include "wav_io.h"                 // wav_probe, checked_audio_sample_count,
                                     // wav_read_full — called, never changed
 
 #include <algorithm>
 #include <cmath>
-#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -34,29 +32,30 @@ void GuiRenderPlayer::status(const std::string& line) {
 }
 
 // -- The folders ----------------------------------------------------------------
-
-std::optional<std::filesystem::path>
-GuiRenderPlayer::deliverable_wav() const {
-    if (app.source_audio_path.empty()) return std::nullopt;
-    // THE PRUNE IS THE LISTING'S FIRST ACT (architect 2026-08-29): `render/`
-    // holds the current title's deliverable and nothing else, so the folder is
-    // brought to that definition before it is read rather than filtered on the
-    // way out. Its whole contract — the two callers, the CLI asymmetry, the
-    // running render, the refusals — is at prune_render_folder (renders_dir.h).
-    prune_render_folder(app.source_audio_path, app.engine_settings);
-    // The one path, composed by the parser's owners exactly as a render
-    // composes it — never a directory scan, because there is nothing to
-    // search for.
-    const std::filesystem::path p = compose_render_output_path(
-        render_output_directory(app.source_audio_path),
-        render_output_stem(app.engine_settings));
-    std::error_code ec;
-    if (!std::filesystem::is_regular_file(p, ec) || ec) return std::nullopt;
-    return p;
-}
+//
+// THE PLAYER LIVES INSIDE `tmp/` (architect 2026-09-01): it never lists
+// `render/` and never rises above `tmp/`, so every question below is asked of
+// the batch enumeration alone. HIS RATIONALE, recorded here because this is
+// where the listing is built: the deliverable in `render/` is a
+// NAMING-FOR-SHARING CONVENIENCE OUTSIDE THE GUI'S WORKFLOW — the tablet's
+// engine differs from the laptop's by ULPs, so the deliverable is never driven
+// from the glass, and it carries no sidecars, so it cannot be loaded in place
+// (the load road's own refusal, R15) — while `tmp/`'s batch cells are the
+// player's whole subject on both hosts.
+//
+// WHAT WENT WITH THE RULING: GuiRenderPlayer::deliverable_wav (the one-file
+// folder's question, which PRUNED before it answered), the `Folder::Root` that
+// listed `render` and `tmp` as two rows, the `Folder::Deliverable` listing
+// under it, and the `..` row every non-root listing carried. THE PRUNE ITSELF
+// STAYS AND HAS ONE TRIGGER NOW, the deliverable's publish (the succession is
+// at prune_render_folder, renders_dir.h). TWO THINGS ARE DELIBERATELY
+// UNTOUCHED: the deliverable's PUBLISH ROAD — the archival render still writes
+// `render/<title>.wav` and prunes the folder at its completion — and THE
+// SYNCHRONIZE MIRROR, which still ships `render/`'s deliverable beside every
+// `tmp/` batch folder (external_sync.h). Only the PLAYER stops looking at
+// `render/`.
 
 bool GuiRenderPlayer::has_playable_render() const {
-    if (deliverable_wav()) return true;
     return !renders_dir.enumerate_render_entries().empty();
 }
 
@@ -81,53 +80,11 @@ void GuiRenderPlayer::rebuild_rows() {
         r.path = path;
         return r;
     };
-    auto up_row = []() {
-        Row r;
-        r.kind = Row::Kind::Up;
-        r.name = "..";
-        return r;
-    };
-
     switch (rp.folder) {
         case Folder::Root: {
-            // THE ROOT SHOWS `render` IFF THE CURRENT TITLE'S WAV IS THERE AND
-            // `tmp` IFF A CELL EXISTS — no `..` at the root (R13). Both are
-            // asked fresh here: a listing is built when its folder is entered
-            // (R4), and the deliverable question prunes the folder as it asks.
-            if (deliverable_wav()) {
-                ov.rows.push_back(folder_row(
-                    kDeliverableFolderName,
-                    render_output_directory(app.source_audio_path)));
-            }
-            if (!renders_dir.enumerate_render_entries().empty()) {
-                ov.rows.push_back(folder_row(
-                    kBatchFolderName,
-                    project_batch_root(app.source_audio_path)));
-            }
-            break;
-        }
-        case Folder::Deliverable: {
-            ov.rows.push_back(up_row());
-            // ONE ROW AT MOST, after the `..`: the folder is the current
-            // title's deliverable alone. Play order, the two folder ends and
-            // Home's previous-track window read this list like any other and
-            // are simply degenerate over it — no arm of their own.
-            if (const std::optional<std::filesystem::path> p =
-                    deliverable_wav()) {
-                Row r;
-                r.kind = Row::Kind::Wav;
-                r.name = p->filename().string();
-                r.path = *p;
-                // NO ENTRY: the deliverable carries no render-entry sidecars,
-                // so it is not load-capable (R15) — the load road's refusal.
-                ov.rows.push_back(std::move(r));
-            }
-            break;
-        }
-        case Folder::Batches: {
-            ov.rows.push_back(up_row());
-            // The batch folders in the enumeration's own order (the leading
-            // integer), each once.
+            // THE ROOT IS `tmp/` (architect 2026-09-01, the ruling above): its
+            // batch folders in the enumeration's own order (the leading
+            // integer), each once, and NO `..` — there is nothing above it.
             std::filesystem::path last;
             for (const AppState::RenderEntry& e :
                  renders_dir.enumerate_render_entries()) {
@@ -139,9 +96,9 @@ void GuiRenderPlayer::rebuild_rows() {
             break;
         }
         case Folder::Batch: {
-            ov.rows.push_back(up_row());
             // The cells of this batch in the enumeration's order — the order
-            // `'` walks, reused as the play order.
+            // `'` walks, reused as the play order. The way OUT is the modal
+            // row's Up button (and Backspace), not a row.
             for (const AppState::RenderEntry& e :
                  renders_dir.enumerate_render_entries()) {
                 if (e.batch_folder != rp.batch_dir) continue;
@@ -158,6 +115,14 @@ void GuiRenderPlayer::rebuild_rows() {
 
     // THE INITIAL HIGHLIGHT of every rebuild: the transport's item's row when
     // it is in this listing, else row 0; -1 only for an empty listing.
+    // ROW 0 IS THE FIRST REAL ROW since 2026-09-01, and that DISSOLVES R6'S
+    // ONE SURFACED EDGE structurally: while every non-root listing opened with
+    // a `..` row, entering a folder that does not hold the playing item seated
+    // the band on it, so the highlight-driven Space (R6) went UP a folder
+    // instead of playing something — the one case where a highlight the user
+    // had not consciously placed drove the key. With the `..` row gone the
+    // seat is a batch folder or a wav, and Space at every entry acts on
+    // content.
     ov.scroll_px     = 0;
     ov.hovered_row   = -1;
     ov.press         = AppState::FolderOverlayPress{};
@@ -194,19 +159,21 @@ void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
     rebuild_rows();
 }
 
+// THE UP WALL'S ONE OWNER (the contract is at the declaration, app_state.h):
+// the root is `tmp/` and there is nothing above it.
+bool render_player_up_actionable(const AppState& a) {
+    return a.render_player.folder != AppState::RenderPlayer::Folder::Root;
+}
+
 void GuiRenderPlayer::up() {
-    switch (app.render_player.folder) {
-        case Folder::Root:
-            // THE ROOT IS SILENT (architect 2026-08-31, retiring the
-            // 2026-08-30 card "This is the top of the render folders"): a
-            // benign one-dimensional refusal already at its state says
-            // nothing, and the MISSING `..` ROW is itself the one glance that
-            // says which listing this is.
-            return;
-        case Folder::Deliverable: enter(Folder::Root, {});    return;
-        case Folder::Batches:     enter(Folder::Root, {});    return;
-        case Folder::Batch:       enter(Folder::Batches, {}); return;
-    }
+    // THE ROOT IS SILENT (architect 2026-08-31, retiring the 2026-08-30 card
+    // "This is the top of the render folders"): a benign one-dimensional
+    // refusal already at its state says nothing — and since 2026-09-01 THE UP
+    // BUTTON'S GREY IS the glance that says it, the missing `..` row having
+    // said it before. The wall is asked through the predicate above, which the
+    // button's face reads too, so the key and the button cannot disagree.
+    if (!render_player_up_actionable(app)) return;
+    enter(Folder::Root, {});
 }
 
 void GuiRenderPlayer::open_row(int index) {
@@ -215,23 +182,13 @@ void GuiRenderPlayer::open_row(int index) {
     // The row is copied: the act below rebuilds the listing under it.
     const Row row = ov.rows[static_cast<size_t>(index)];
     switch (row.kind) {
-        case Row::Kind::Up:
-            up();
-            return;
         case Row::Kind::Folder:
             switch (app.render_player.folder) {
                 case Folder::Root:
-                    if (row.name == kDeliverableFolderName)
-                        enter(Folder::Deliverable, {});
-                    else
-                        enter(Folder::Batches, {});
-                    return;
-                case Folder::Batches:
                     enter(Folder::Batch, row.path);
                     return;
-                case Folder::Deliverable:
                 case Folder::Batch:
-                    return;   // these listings carry no folder rows
+                    return;   // a batch listing carries no folder rows
             }
             return;
         case Row::Kind::Wav: {
@@ -286,9 +243,11 @@ const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
 
 // THE ROW SPACE WOULD OPEN (architect 2026-08-31, R6) — the contract and the
 // three-reader inventory are at the declaration (app_state.h). The fork is the
-// row's KIND plus one identity compare: a folder and the `..` row are always
-// somewhere to go, a wav is somewhere to go unless it is what is already
-// bound, and the transport's own item hands the press back to the transport.
+// row's KIND plus one identity compare: a folder is always somewhere to go, a
+// wav is somewhere to go unless it is what is already bound, and the
+// transport's own item hands the press back to the transport. (The `..` row
+// was a third arm until 2026-09-01; going up is the modal row's own button
+// now, and no row navigates.)
 int render_player_highlight_act_row(const AppState& a) {
     const AppState::FolderOverlay& ov = a.folder_overlay;
     if (ov.highlight_row < 0 ||
@@ -296,11 +255,10 @@ int render_player_highlight_act_row(const AppState& a) {
         return -1;
     const Row& r = ov.rows[static_cast<size_t>(ov.highlight_row)];
     switch (r.kind) {
-        case Row::Kind::Up:
         case Row::Kind::Folder:
             // A FOLDER ROW IN A LISTING THAT CARRIES NONE cannot exist: only
-            // the root and `tmp` build folder rows (rebuild_rows), which is
-            // also why open_row's own deliverable/batch arm returns doing
+            // the root — `tmp/` itself — builds folder rows (rebuild_rows),
+            // which is also why open_row's own batch arm returns doing
             // nothing — no producer, so this arm claims no dead press.
             return ov.highlight_row;
         case Row::Kind::Wav:
@@ -348,6 +306,11 @@ bool render_player_button_enabled(const AppState& a,
             if (render_player_highlight_act_row(a) >= 0) return true;
             if (rp.transport != Transport::Idle) return true;
             return !rp.item.empty();
+        case AppState::PlayerButtonAct::Up:
+            // THE ACT'S OWN WALL, through its one owner (2026-09-01): the
+            // root is `tmp/` and there is nothing above it. No twin — the
+            // button admits no modifier, so the plain form is the whole set.
+            return render_player_up_actionable(a);
         // (STOP's arm stood here — the no-item belt and R36's already-resting
         // return — and went with the button on 2026-09-01.)
         case AppState::PlayerButtonAct::LoadInPlace:
@@ -513,7 +476,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
 void GuiRenderPlayer::play_button_act() {
     // THE HIGHLIGHT LEADS (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-
     // DRIVEN IN THE PLAYER, narrowing R40's "the Play button never reads the
-    // highlight, in any state" of two days before). A folder, the `..` row or
+    // highlight, in any state" of two days before). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
     // GO, and Space goes there whatever is sounding; the transport's own item
     // and an empty band fall through to transport_toggle_act below — the tail
@@ -917,7 +880,10 @@ bool GuiRenderPlayer::open() {
     if (rp.active) return false;
     if (app.source_audio_path.empty()) return false;
     if (!has_playable_render()) {
-        status("Nothing to play: no renders under render/ or tmp/");
+        // THE SENTENCE NAMES THE ONE FOLDER THE PLAYER LOOKS AT (2026-09-01):
+        // it read "no renders under render/ or tmp/" while the deliverable was
+        // listed too, and the shape is unchanged.
+        status("Nothing to play: no renders under tmp/");
         return false;
     }
     // A modal surface is opening: the shared modal stop
@@ -1168,10 +1134,11 @@ void GuiRenderPlayer::publish_media_state() {
     st.artist         = app.project_name;
     if (rp.active && !rp.item.empty() && rp.frames > 0) {
         // THE ITEM'S SPELLING WITH ITS FOLDER, relative to the project
-        // folder (the source's own parent): `tmp/<batch>/NN.wav` for a cell,
-        // `render/<title>.wav` for the deliverable — lexically, no
-        // filesystem call, and in generic form so the separator is `/` by
-        // construction.
+        // folder (the source's own parent): `tmp/<batch>/NN.wav`, a batch cell
+        // being the only item the player can bind since it moved inside `tmp/`
+        // (`render/<title>.wav` was the deliverable's spelling until
+        // 2026-09-01) — lexically, no filesystem call, and in generic form so
+        // the separator is `/` by construction.
         st.title = rp.item
                        .lexically_relative(
                            std::filesystem::path(app.source_audio_path)

@@ -6091,9 +6091,11 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // is composed exactly as a render composes it (the parser's one owner), so
     // the file the act looks for is the file Ctrl+Alt+R writes; an absent one
     // is simply not in the set. The batch root is the GUI's own owner's.
-    //   THE SET IS THE FOLDER'S OWN CONTENTS since 2026-08-29: the render
-    // player's listing and the deliverable's publish prune `render/` down to
-    // exactly this one file (prune_render_folder, renders_dir.h), so the
+    //   THE SET IS THE FOLDER'S OWN CONTENTS since 2026-08-29: the
+    // deliverable's publish prunes `render/` down to exactly this one file
+    // (prune_render_folder, renders_dir.h — the render player's listing was
+    // its second trigger until the player moved inside `tmp/` on 2026-09-01),
+    // so the
     // mirror's deletions on the stick and the prune's on disk are ONE
     // definition rather than two that happen to agree — a previous title's
     // deliverable is gone from both sides, not swept off the stick while it
@@ -6698,14 +6700,15 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // `l` (no modifiers): "Play renders" — THE RENDER PLAYER (architect
     // design 2026-08-28, retiring the external `audio_player` spawn whole):
-    // the in-app player over the project's `render/` and `tmp/` folders,
+    // the in-app player over the project's `tmp/` batch cells (it walked
+    // `render/` too until 2026-09-01),
     // through the product's own engine on both devices. TWO PRODUCERS, ONE
     // ROUTE: this key and the icon row's Play renders button, which
     // synthesizes exactly this bare chord. The modal / editor / `h` /
     // loading gates in on_key run before this handler, so `l` is inert while
     // any of them owns the keyboard; inside the player the key is the mode's
     // own closer (route_render_player_key) and never reaches here. "Nothing
-    // to play: no renders under render/ or tmp/" is the opener's one status
+    // to play: no renders under tmp/" is the opener's one status
     // refusal.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         toggle_render_player();

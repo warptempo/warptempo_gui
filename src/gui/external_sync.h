@@ -86,8 +86,9 @@
 //      run, and no directory_iterator is ever live while its own directory is
 //      being changed.
 //      THE SET THIS MIRRORS IS THE ONE THE DISK ALREADY HOLDS (architect
-//      2026-08-29): the render player's listing and the deliverable's publish
-//      prune `render/` to the current title's `<title>.wav` and its
+//      2026-08-29): the deliverable's publish — the prune's ONE trigger since
+//      the render player moved inside `tmp/` on 2026-09-01, its listing having
+//      been the other — keeps `render/` to the current title's `<title>.wav` and its
 //      `.fingerprint` and nothing else (prune_render_folder, renders_dir.h), so
 //      the deliverable this act copies and the deletions it makes on the stick
 //      are ONE definition with the prune's on disk — a previous title's

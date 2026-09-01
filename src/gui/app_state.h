@@ -5245,8 +5245,16 @@ struct AppState {
     // skip-forward, the roster's own two transport skips wearing the same
     // pair over bare Home / bare End). The shifted twins are unchanged: the
     // item folder's FIRST / LAST wav (player_button_shift_admits).
+    //
+    // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
+    // with the player's move inside `tmp/`): the listings carry no `..` row
+    // any more, so going up is a BUTTON — beside Repeat one, ahead of the two
+    // word buttons — whose act is GuiRenderPlayer::up() and whose key twin is
+    // Backspace, unchanged. It greys at the root, which is `tmp/` itself
+    // (render_player_up_actionable, the wall's one owner, read by the act and
+    // by the face alike).
     enum class PlayerButtonAct {
-        None, Home, PlayPause, End, RepeatOne, LoadInPlace, Close
+        None, Home, PlayPause, End, RepeatOne, Up, LoadInPlace, Close
     };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
@@ -7545,13 +7553,17 @@ struct AppState {
     //                 no act. No hold and no modifier
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
-    // A ROW'S KIND decides its glyph: Up and Folder wear the folder glyph and
-    // Wav the wav glyph (the transport glyph on the item's row). A fourth,
+    // A ROW'S KIND decides its glyph: Folder wears the folder glyph and Wav
+    // the wav glyph (the transport glyph on the item's row). A KIND EXISTS IFF
+    // A CONTENT PRODUCES IT, and this enum has lost two on that rule: the
     // glyph-less TEXT kind carried the history picker's rows for one day and
-    // went with that content on 2026-08-29 — a kind exists iff a content
-    // produces it.
+    // went with that content on 2026-08-29, and UP — the `..` row, the folder
+    // glyph over the parent — went on 2026-09-01, when the player moved inside
+    // `tmp/` and going up became a BUTTON on the modal row
+    // (PlayerButtonAct::Up) instead of a row in the listing. The picker never
+    // produced either.
     struct FolderOverlayRow {
-        enum class Kind { Up, Folder, Wav };
+        enum class Kind { Folder, Wav };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -7586,11 +7598,15 @@ struct AppState {
     //              Player) and the folder overlay's standing predicate;
     //   `session`  its modal session id from the one counter
     //              (text_editor::next_session_id), minted at every open;
-    //   `folder`   WHERE THE LISTING IS, never a free path: the root (the
-    //              `render` and `tmp` folder rows), the deliverable folder,
-    //              the batch list (`tmp/`'s folders) or ONE batch, named by
-    //              `batch_dir` — the enumerated batch folder's own path,
-    //              taken from the enumeration that listed it;
+    //   `folder`   WHERE THE LISTING IS, never a free path: the ROOT, WHICH
+    //              IS `tmp/` ITSELF (its batch folders), or ONE batch, named
+    //              by `batch_dir` — the enumerated batch folder's own path,
+    //              taken from the enumeration that listed it. THE PLAYER
+    //              LIVES INSIDE `tmp/` (architect 2026-09-01): it never lists
+    //              `render/` and never rises above `tmp/`, so the two
+    //              enumerators the old two-branch root needed — a `Root` over
+    //              both output folders and a `Deliverable` listing under it —
+    //              are deleted, and `Root` names the batch root now;
     //   `item` / `item_folder` / `item_index` THE TRANSPORT'S ITEM — the wav
     //              decoded and bound (empty path: none yet), the WAV ROWS OF
     //              ITS FOLDER as listed when it was played (R2: auto-advance,
@@ -7688,7 +7704,10 @@ struct AppState {
     //              cannot both be parked (neither raise is reachable under the
     //              other).
     struct RenderPlayer {
-        enum class Folder { Root, Deliverable, Batches, Batch };
+        // TWO PLACES, AND THE ROOT IS `tmp/` (architect 2026-09-01; the field
+        // above carries the ruling). It was four — Root / Deliverable /
+        // Batches / Batch — while the player listed both output folders.
+        enum class Folder { Root, Batch };
         // THE TRANSPORT'S THREE STATES (R36), stored in `transport` below —
         // the reasons, the writers and the readers are at the field.
         enum class Transport { Idle, Live, Paused };
@@ -7767,6 +7786,11 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // roster's own table states once (architect 2026-08-09): the key AS
         // TYPED, a capital naming a shifted press this product does not bind.
         case AppState::PlayerButtonAct::RepeatOne:   return "Repeat one (r)";
+        // THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01): the key is
+        // Backspace, which the router has bound to this act since the mode
+        // was built, so the button advertises the chord it answers exactly as
+        // every other row of this table does.
+        case AppState::PlayerButtonAct::Up:          return "Up a folder (Backspace)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in place (')";
         case AppState::PlayerButtonAct::Close:       return "Close (Escape)";
         case AppState::PlayerButtonAct::None:        break;
@@ -7808,6 +7832,7 @@ inline std::string render_player_button_shift_hint(
             return "Press Shift for the folder's last file.";
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
+        case AppState::PlayerButtonAct::Up:
         case AppState::PlayerButtonAct::LoadInPlace:
         case AppState::PlayerButtonAct::Close:
         case AppState::PlayerButtonAct::None:
@@ -7820,6 +7845,7 @@ static_assert(
     player_button_shift_admits(AppState::PlayerButtonAct::End) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::PlayPause) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::Up) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
     "the player's shift-admitting set is the two skips, and the hint's second "
@@ -7836,9 +7862,11 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 // THE ROW SPACE WOULD OPEN, or −1 for "the transport's own business"
 // (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER,
 // narrowing R40's "the Play button never reads the highlight"). It answers the
-// highlighted row's index when that row is a FOLDER, the `..` row, or a WAV
-// THAT IS NOT THE TRANSPORT'S ITEM — the three rows whose open act Space runs
-// instead of toggling — and −1 on the transport's own item, on an empty band
+// highlighted row's index when that row is a FOLDER or a WAV THAT IS NOT THE
+// TRANSPORT'S ITEM — the two rows whose open act Space runs
+// instead of toggling (it was three until 2026-09-01, the `..` row having been
+// the first of them; going up is the modal row's own button now) — and −1 on
+// the transport's own item, on an empty band
 // and on a highlight out of range, which is where the transport's fork takes
 // over. Defined in render_player.cpp beside the act it forks.
 //
@@ -7873,7 +7901,7 @@ int render_player_highlight_act_row(const AppState& a);
 //     next entry the seek refuses while the jump to the folder's last wav
 //     acts, so the button stays live for the shifted press.
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
-//   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder, `..` or another wav under the
+//   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder or another wav under the
 //   band is always an act, whatever the transport is doing), then a live or
 //   paused transport, then an idle one on its resting item; only an idle
 //   transport with no item and no usable highlight is the consumed no-op.
@@ -7881,6 +7909,11 @@ int render_player_highlight_act_row(const AppState& a);
 //   a bound item, that arm's own record.)
 //   (STOP had an arm of its own here — the no-item belt and R36's
 //   already-resting return — and it went with the button on 2026-09-01.)
+//   UP greys AT THE ROOT, which is `tmp/` itself — the act's own wall, read
+//   through the one owner render_player_up_actionable below, so the face and
+//   GuiRenderPlayer::up() cannot disagree about where the wall is. The wall
+//   is SILENT on the key (Backspace at the root is a one-dimensional refusal
+//   already at its state) and the grey is the button's whole message.
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load) and
 //   on a highlight with no recipe (render_player_highlighted_entry, the
 //   act's own question). THE RUNNING-RENDER REFUSAL IS DELIBERATELY NOT A
@@ -7912,6 +7945,17 @@ int render_player_highlight_act_row(const AppState& a);
 // refuses — recorded rather than damaged.
 bool render_player_button_enabled(const AppState& a,
                                   AppState::PlayerButtonAct act);
+
+// IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
+// 2026-09-01, with the player's move inside `tmp/`): false at the root, which
+// IS `tmp/`, and true inside a batch. TWO READERS and they must not drift:
+// GuiRenderPlayer::up()'s own leading refusal (silent, a one-dimensional
+// refusal already at its state) and the Up button's face arm in
+// render_player_button_enabled — the truthful-buttons rule's "a face arm reads
+// the predicate the act's own refusal reads". Defined in render_player.cpp
+// beside the act. Backspace is the button's key twin and takes the same wall
+// through the same act.
+bool render_player_up_actionable(const AppState& a);
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;
@@ -10126,8 +10170,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // The opener's own refusals are the class this roster does not mirror
         // even under the 2026-08-30 truthful-buttons ruling, being unknowable
         // per frame: a
-        // project with no render at all answers "Nothing to play: no renders
-        // under render/ or tmp/" on a card, and asking that per frame is a
+        // project with no batch cell answers "Nothing to play: no renders
+        // under tmp/" on a card, and asking that per frame is a
         // directory walk the
         // painter has no business doing (the `h` button's own reasoning). The
         // `h` view greys it through the derived partition above, bare `l`
