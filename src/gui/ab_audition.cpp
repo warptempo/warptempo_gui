@@ -53,9 +53,11 @@ bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
 // contract and the one reader are at the declaration, app_state.h): start()'s
 // press-time gates asked without acting, in start()'s own order — the device
 // once for the pair, then both tabs' launch readiness. The running-sequence
-// refusal is deliberately not here: a standing sequence is
-// transport_session_live, which the face reads ahead of this. It sits beside
-// start() so the two read as one; a gate added there must be added here.
+// arm is deliberately not here — and since 2026-08-31 it is not a refusal at
+// all but the act's STOP: a standing sequence is transport_session_live, which
+// the face reads ahead of this and answers with its lit STOP glyph, so a press
+// on that face always does something. It sits beside start() so the two read as
+// one; a gate added there must be added here.
 bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render) {
@@ -68,19 +70,27 @@ bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
 
 void GuiAbAudition::start() {
     using Phase = GuiAuditionSequence::Phase;
-    // A SEQUENCE ALREADY RUNNING: consumed no-op — never a restart. `phase` is
-    // the act's one running bit in BOTH halves, so this test covers a standing
-    // rest as it covers a live play and needs no second term. A running PLAIN
-    // audition is not a refusal: the switch below stops it through the one stop
-    // body, exactly as a Ctrl+Tab over it would.
+    // A SEQUENCE ALREADY RUNNING: THE PRESS STOPS IT (architect 2026-08-31,
+    // superseding the 2026-08-30 "An audition is already running" card). The
+    // chord is a TOGGLE like the transport it rides: Shift+Space starts the act
+    // and Shift+Space ends it, exactly as bare Space already does through the
+    // same body — and the Play button, which wears STOP for the act's whole
+    // duration (redesign_button_glyph_swapped reads this same `phase !=
+    // Idle`), now AGREES WITH ITS FACE on its shift-click and long press too.
+    // `phase` is the act's one running bit in BOTH halves, so this test covers
+    // a standing rest as it covers a live play and needs no second term.
+    //
+    // THE ONE STOP BODY, no second road: this is the body bare Space's fork
+    // reaches for the identical case (GuiPlaybackLifecycle::toggle_playback's
+    // play/stop fork, whose transport-live term is this same phase test), and
+    // it is EXACTLY RIGHT for a rest — its clear of the sequence sits ahead of
+    // its own nothing-to-do guard, so it ends the act and then early-returns
+    // having moved no cursor and damaged nothing. The press is therefore a
+    // caller of clearing owner (1), not a new owner (the inventory at
+    // GuiAuditionSequence, app_state.h). No card — the silence stops, which is
+    // the answer — and no audition is launched by this press.
     if (app.audition_sequence.phase != Phase::Idle) {
-        // AND IT SAYS SO (architect 2026-08-30): the act spans four plays and
-        // three rests, so most of its duration LOOKS idle — a rest is
-        // silence — and a second Shift+Space during one would otherwise read
-        // as a chord that does nothing. (Bare Space is the way OUT: a rest is
-        // transport-live, so the plain toggle stops the act.)
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "An audition is already running");
+        playback_lifecycle.stop_playback_if_playing();
         return;
     }
     // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), ahead of both

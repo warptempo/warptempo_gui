@@ -4076,7 +4076,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
 //         which clears it BEFORE its own nothing-to-do guard — so a stop that
 //         finds nothing playing still ends a RESTING act. Every caller of
-//         that body ends the act: Space's stop edge, every keyboard stop under
+//         that body ends the act: Space's stop edge, SHIFT+SPACE'S OWN stop
+//         edge (2026-08-31 — a press that finds the act standing routes into
+//         this body from GuiAbAudition::start, so the chord that starts the
+//         act is the chord that ends it, and the press is a CALLER here rather
+//         than a new owner), every keyboard stop under
 //         the keyboard stop rule, the modal-open stop (every dialog editor and
 //         prompt), the A/B tab switch by any route (Ctrl+Tab, the tab click,
 //         undo/redo's tab restore, the settings editor's tab key), the `h`
@@ -9630,7 +9634,8 @@ bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
 // WOULD THE A/B AUDITION'S PRESS-TIME PREFLIGHT PASS — the same gates
 // GuiAbAudition::start cards on (the device, then both tabs' launch
 // readiness), composed in ab_audition.cpp beside that body so the two read
-// as one; the running-sequence refusal is deliberately absent (a standing
+// as one; the running-sequence arm is deliberately absent, and since
+// 2026-08-31 it is not a refusal at all but the act's STOP (a standing
 // sequence is transport_session_live, which the face reads first). ONE
 // READER: the PLAY button's face, its shift-twin term under the twin rule.
 bool ab_audition_preflight_ok(const AppState& a, const GuiAudio& audio,
@@ -11416,6 +11421,13 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // switch stops that audition and the sequence begins — so, unlike Render's
     // Cancel face (where a shift press cancels exactly as the plain one does),
     // the modified press does something DIFFERENT here and the line is owed.
+    // THE ONE STATE WHERE IT DOES NOT is a standing SEQUENCE since 2026-08-31,
+    // the chord having become a toggle: there the shift press stops the act
+    // exactly as the plain one does, so the line names the act the button is
+    // ALREADY running rather than a second one. Recorded rather than forked:
+    // the words would have to change per transport KIND (plain audition vs
+    // sequence) where the glyph does not, and the line stays true of the
+    // face's other live state.
     if (b == RedesignButton::TransportPlayStop &&
         redesign_button_glyph_swapped(a, b)) {
         return {"Stop (Space)", "Press Shift for the A/B audition."};

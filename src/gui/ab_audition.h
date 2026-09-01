@@ -95,6 +95,11 @@ struct GuiInputHandler;
 // redesign_button_glyph_swapped, both reading `phase != Idle` beside the
 // scanner bit). The alternative would flip the glyph to Play and back three
 // times per act, and the transport row must never lie about live state.
+// AND SHIFT+SPACE IS THE ACT'S STOP TOO (architect 2026-08-31): the chord is a
+// TOGGLE like the transport it rides — start() routes a press that finds a
+// standing sequence into that same one stop body instead of refusing, so the
+// button's shift-click and long press agree with the STOP face it already
+// wears, and the "An audition is already running" card retires with the arm.
 //
 // THE SWITCH IS switch_active_tab_view_to ALONE, NOT Ctrl+Tab's trigger()
 // tail. Ctrl+Tab re-dispatches the preview for the entering tab's trim; here
@@ -123,15 +128,20 @@ struct GuiInputHandler;
 // are not, which is what lets the act's own two tab switches run inside it.
 // Bare Esc is NOT one of them — its five bindings are closed.
 //
+// THE RUNNING CASE IS NOT A REFUSAL (architect 2026-08-31): a Shift+Space that
+// finds `phase != Idle` STOPS the act through the one stop body and launches
+// nothing — the same body bare Space's own fork reaches for the same case, so
+// the press is a caller of clearing owner (1) and not a new owner. A REST
+// COUNTS AS RUNNING, `phase` being the act's one running bit in both halves, so
+// the test is the same `phase != Idle` it always was (and the same term the
+// transport fork and the play/stop glyph read); a held key meets the same
+// answer, though Space is one-shot in repeat_eligible and no repeat arrives.
+// No card: the silence stops, which is the answer, and the "An audition is
+// already running" sentence retired with the arm that said it.
+//
 // REFUSALS, all at the press, all at start, and EACH ONE CARDED since
 // 2026-08-30 (the strictness ruling: the whole act is silence and a camera
-// move, so a refusal that said nothing was indistinguishable from one): a
-// sequence already running (a second Shift+Space is a consumed no-op; a held
-// key meets the same answer, though Space is one-shot in repeat_eligible and
-// no repeat arrives) —
-// AND A REST COUNTS AS RUNNING, `phase` being the act's one running bit in
-// both halves, so the test is the same `phase != Idle` it always was (and the
-// same term the transport fork and the play/stop glyph read);
+// move, so a refusal that said nothing was indistinguishable from one):
 // A DEAD OR ABSENT DEVICE, asked once for the pair ahead of everything below
 // it because nothing will sound on either tab (the launch body's own literal,
 // kPlaybackDeviceUnavailableCard);
@@ -158,9 +168,11 @@ struct GuiAbAudition {
     GuiActiveViews&       active_views;
     GuiTargetRender&      target_render;
     // THE ACT'S TWO PRESS-TIME REFUSALS SPEAK (2026-08-30, the strictness
-    // ruling): a sequence already running, and a tab with nothing to play
-    // from. Both are start()'s, and start() is the only body here that
-    // refuses a PRESS — the advance and the fire answer no key.
+    // ruling): a dead or absent device, and a tab with nothing to play from.
+    // Both are start()'s, and start() is the only body here that refuses a
+    // PRESS — the advance and the fire answer no key. (The third refusal, a
+    // sequence already running, stopped being one on 2026-08-31: that press
+    // takes the stop body and says nothing.)
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // built (the handler holds this cluster by reference, so it cannot be a
@@ -185,8 +197,10 @@ struct GuiAbAudition {
 
     // THE PRESS-TIME ACT (the refusals at the head comment): gate both tabs,
     // run `c` on this tab, switch to the other one, run `c` there, launch the
-    // first play. ONE CALLER: on_key's Shift+Space arm (input_handler.cpp),
-    // which the play button's shift-click and long press also reach.
+    // first play — OR, where the press finds the act already standing, STOP it
+    // through the one stop body and launch nothing (the toggle, 2026-08-31).
+    // ONE CALLER: on_key's Shift+Space arm (input_handler.cpp), which the play
+    // button's shift-click and long press also reach.
     void start();
 
     // THE ADVANCE: `ended` is the sequence state the tick's natural-end branch
