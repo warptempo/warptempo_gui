@@ -81,13 +81,15 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
-// THE STATE TEXT IS ROW 8'S OWN CELL, right of the clock (architect
-// 2026-08-29, folding the STATUS BAR that had stood for that one day back into
-// the toolbar he already reads — "status bars are generally the last row" was
-// the bar's reasoning, and seeing it he preferred the text on the row and
-// found the bar a duplicate of that panel's own foot). The cell is painted by
-// paint_bottom_row_buttons_and_clock, laid out with the clock; the ruling is
-// docs/engineering/architecture/messaging.md.
+// THE STATE TEXT IS PART OF ROW 8'S CLOCK RUN (architect 2026-08-29, folding
+// the STATUS BAR that had stood for that one day back into the toolbar he
+// already reads — "status bars are generally the last row" was the bar's
+// reasoning, and seeing it he preferred the text on the row and found the bar a
+// duplicate of that panel's own foot; then 2026-08-31, dissolving the separate
+// CELL it had been for those two days into the clock's own string). The lower
+// left is ONE MONOSPACE RUN — `00:00.100 | Updating...`, the pipe a literal
+// character — painted by paint_bottom_row_buttons_and_clock with the clock; the
+// ruling is docs/engineering/architecture/messaging.md.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
 // timeouts and no clear on a key press — which is why the "revealed stale"
@@ -2601,18 +2603,19 @@ constexpr double kClockCellOffsetYPx = 1.0;
 // that distance (architect 2026-08-29): the whole air between the divider's
 // line and the first digit, which this row spends in its two halves — the
 // separator's own trailing gap above, then the cell's authored margin mirror.
-// IT HAS THREE READERS, all of them the same air said again:
+// IT HAS TWO READERS, both of them the same air said again:
 //   * the CLOCK CELL itself, above;
-//   * the STATE CELL right of the clock (the status bar's fold into this row,
-//     later the same day): the DIGITS-TO-TEXT distance is this
-//     separator-to-digits distance, so the row's two gaps around the clock
-//     match and no second number is authored for the cell;
 //   * the RENDER PLAYER'S MODAL ROW, which reads it whole for every gap around
 //     its play-scrub (left separator → scrub, scrub → clock, clock → right
 //     separator), the architect's ruling being that those gaps ARE this one:
 //     the modal row stands in row 8's lane and its clock is row 8's cell said
 //     twice, so it takes this distance rather than authoring a second spec for
 //     the same air in the same place.
+// (A THIRD READER stood from 2026-08-29 to 2026-08-31: the sans STATE CELL
+// right of the clock took this same distance as its DIGITS-TO-TEXT gap, so no
+// second number was authored for it. It went when the state text joined the
+// clock's own run behind a literal ` | ` — the separation is a character now,
+// not a measured gap.)
 constexpr double kTransportSepToClockPx =
     kTransportSepGapPx + kClockCellOffsetXPx;
 
@@ -2621,20 +2624,15 @@ constexpr double kTransportSepToClockPx =
 // frame, the face being fixed and the size the only variable. Single-threaded
 // paint state; the waveform worker never reaches this file's text tiers.
 //
-// THE CELL IS THE SPECIMEN'S, ADVANCE AND INK BOTH. `cell_w` is the reserved
-// WIDTH the digits are laid inside — an advance sum, so no digit ever walks —
-// and `ink_left` / `ink_right` are where that same specimen's PIXELS start and
-// stop inside it (text_shape::ink_extents_px). The state cell beside the clock
-// needs the ink pair to butt against the digits by eye rather than by advance
-// (its own block below); the cell's own width and damage box stay the advance's.
-// THE INK IS THE SPECIMEN'S AND NOT THE LIVE TIMESTAMP'S, deliberately: the
-// specimen is what DEFINES this cell, and reading the painted digits instead
-// would move the neighbour text by a pixel as the seconds ran.
+// THE CELL IS THE SPECIMEN'S ADVANCE: `cell_w` is the reserved WIDTH the digits
+// are laid inside — an advance sum, so no digit ever walks — and it is the
+// cell's damage box too. (It carried the specimen's INK pair beside it from
+// 2026-08-30 to 2026-08-31, for the sans STATE CELL that butted against the
+// digits by eye rather than by advance; both fields and the one ink reader in
+// text_shape retired when the state text became part of this clock's own run.)
 struct TransportClockMetrics {
     double px        = -1.0;   // the size this was measured at
     double cell_w    = 0.0;    // the widest specimen's shaped width (advances)
-    double ink_left  = 0.0;    // cell origin -> the specimen's first lit pixel
-    double ink_right = 0.0;    // cell origin -> past its last lit pixel
 };
 static TransportClockMetrics g_clock_metrics;
 
@@ -2652,10 +2650,7 @@ static const TransportClockMetrics& clock_cell_metrics(
     for (char& c : specimen) if (c == 'D') c = widest;
     const text_shape::ShapedRun run =
         text_shape::shape_text_run(font, specimen);
-    const text_shape::InkExtents ink = text_shape::ink_extents_px(font, run);
     g_clock_metrics.cell_w    = run.width_px;
-    g_clock_metrics.ink_left  = ink.left_px;
-    g_clock_metrics.ink_right = ink.right_px;
     g_clock_metrics.px        = size_px;
     return g_clock_metrics;
 }
@@ -2948,63 +2943,50 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                       static_cast<double>(sr);
         }
         if (seconds < 0.0) seconds = 0.0;
-        show_row_text(cr, font, static_cast<double>(cell_x), baseline,
-                      format_timestamp(seconds), kRedesignLabel);
 
-        // THE STATE CELL — the clock's neighbour (architect 2026-08-29, the
-        // evening the STATUS BAR folded into this row): what is TRUE RIGHT NOW,
-        // in the row's ordinary label ink at the row's own size, sans like
-        // every other string in the product.
+        // THE LOWER LEFT IS ONE MONOSPACE RUN (architect 2026-08-31): the
+        // clock, a LITERAL pipe, and the state text — `00:00.100 | Updating...`
+        // is his own example — painted as ONE string in the clock's own face,
+        // at the clock's size, on the clock's baseline, from the clock's own
+        // origin. There is no second cell and no second face here any more.
         //
-        //   | sep | kTransportSepToClockPx | 02:42.608 |
-        //   kTransportSepToClockPx | <state text> |
+        // WHAT THIS SUPERSEDES (2026-08-29 to 2026-08-31): the state text was
+        // the clock's NEIGHBOUR, a sans run in the row's ordinary label ink,
+        // laid a second read of kTransportSepToClockPx off the clock — the
+        // layout `| sep | gap | 02:42.608 | gap | <state text> |` — with an
+        // ink-to-ink origin correction (the constant taken off the memoised
+        // specimen's ink RIGHT edge, plus the specimen's left bearing, less the
+        // sans run's own, so both gaps around the digits read alike) and its
+        // own centred baseline. THE SEPARATION IS NOW A CHARACTER, so all of
+        // that geometry retires: the second read of the constant, the ink pair's
+        // use at this site, the face switch and the sans baseline. The constant
+        // keeps its FIRST reader (this row's separator -> clock distance, above)
+        // and the render player's modal row's three; the memoised ink pair
+        // keeps the specimen it was measured from.
         //
-        // NO SEPARATOR between the digits and the text, and the DIGITS-TO-TEXT
-        // distance is THE CLOCK'S OWN separator-to-digits distance said again
-        // — one constant read twice (kTransportSepToClockPx, this file's own
-        // owner, which the render player's modal row already reads for the
-        // three gaps around its scrub). No new number is authored for this
-        // cell at all.
-        //
-        // GAPS ARE INK TO INK HERE, THE ROW'S SEPARATOR -> CLOCK GAP BEING THE
-        // ONE DISTANCE (architect 2026-08-30, who saw this text standing about
-        // two pixels further from the digits than the separator stands from
-        // them). Both gaps are the same authored number and they read
-        // differently because the SIDE BEARINGS fall on opposite sides of it:
-        // to the clock's left the constant is followed by the specimen's own
-        // left bearing, while to its right the constant is preceded by the
-        // specimen's right bearing (the cell is an ADVANCE sum, whose last
-        // column is air) and then followed by the sans run's left bearing.
-        // MEASURED AT 100 % on this face: the specimen advances 79.17 px and
-        // its ink stops at 78.375, its left bearing is 0 and the sans run's is
-        // 1, and the old origin laid the constant off the CEILED advance — so
-        // the left gap read 9.0 px of ink and the right one 80 - 78.375 + 9 + 1
-        // = 11.625. That difference is the two-and-a-bit pixels he saw. So the
-        // origin below is placed so that
-        // (clock ink right -> text ink left) EQUALS (separator -> clock ink
-        // left): the clock's ink edges come from the memoised specimen and the
-        // text's left bearing from its own shaped run, and no correction is
-        // authored as a number.
-        //
-        // THE CONTENT is the one-day status bar's LEFT cell exactly: the `h`
-        // walk line, else the render / batch / loading progress line. The two
-        // CAN COEXIST and THE WALK LINE WINS — nothing STARTS a render inside
-        // the `h` view (both render chords are off its allowlist), but a
-        // render or a target preview dispatched BEFORE the visit runs on
-        // through it, so the mode's line is what the cell is for while the
-        // view stands and the progress line is back the moment it closes.
-        // (The bar's RIGHT cell, the resolved readout, retired with the bar.)
+        // THE CONTENT is unchanged and so is its precedence: the `h` walk line,
+        // else the render / batch / loading progress line. The two CAN COEXIST
+        // and THE WALK LINE WINS — nothing STARTS a render inside the `h` view
+        // (both render chords are off its allowlist), but a render or a target
+        // preview dispatched BEFORE the visit runs on through it, so the mode's
+        // line is what the cell is for while the view stands and the progress
+        // line is back the moment it closes.
         //
         // IT IS CLIPPED, NEVER ELLIPSISED — a cairo rectangle clip, the folder
         // overlay rows' precedent — at the right block's own left edge less
         // one lane pad, so a long line is cut rather than colliding with the
-        // marker verbs. THE ROW YIELDS WHOLE TO A MODAL, so this text is
-        // hidden while a prompt, a dialog editor, the render player or the
-        // picker stands (architect-accepted at the fold; the bar painted
-        // through a modal for its one day, that being what a separate lane
-        // buys). It is why the render player's load-under-a-running-render
-        // refusal says its sentence on a CARD: the explanation this cell would
-        // have carried is not on screen under that modal.
+        // marker verbs. The clip is the STATE's, not the clock's: with no state
+        // string the digits paint exactly as they always have, unclipped, and
+        // the row's crop-at-its-floor rule (the block above) is untouched — so
+        // the guard below also keeps the clock painting where the right block
+        // has already walked over this ground. THE ROW YIELDS WHOLE TO A MODAL,
+        // so this text is hidden while a prompt, a dialog editor, the render
+        // player or the picker stands (architect-accepted at the fold; the
+        // one-day status BAR painted through a modal, that being what a
+        // separate lane buys). It is why the render player's
+        // load-under-a-running-render refusal says its sentence on a CARD: the
+        // explanation this cell would have carried is not on screen under that
+        // modal.
         std::string state;
         if (app.history_mode.active) {
             state = history_walk_line(app);
@@ -3014,48 +2996,20 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // frame class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        if (!state.empty()) {
-            gui_select_font_face(cr, GuiFontFamily::Sans);
-            cairo_set_font_size(cr, redesign_font_size_px());
-            cairo_scaled_font_t* sans = cairo_get_scaled_font(cr);
-            // THE RUN IS SHAPED HERE rather than inside show_row_text,
-            // because this site needs the run's OWN ink geometry and the two
-            // must be the same run (the shaping chokepoint's rule said of ink:
-            // measure and paint the same glyphs). The paint below is
-            // show_row_text's two lines with that run already in hand.
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(sans, state);
-            const double text_ink_left =
-                text_shape::ink_extents_px(sans, run).left_px;
-            // THE ONE DISTANCE, ink to ink (the block above): the separator ->
-            // clock ink gap is the constant plus the specimen's left bearing,
-            // and the same gap is laid off the clock's ink RIGHT edge, the
-            // text's own left bearing taken back out so its first lit pixel —
-            // not its pen — lands where the air ends.
-            const double clock_ink_right =
-                static_cast<double>(cell_x) + clock_metrics.ink_right;
-            const double x0 = std::nearbyint(
-                clock_ink_right + scaled_px(kTransportSepToClockPx) +
-                clock_metrics.ink_left - text_ink_left);
-            const double x1 =
-                static_cast<double>(right_block_x - pad);
-            if (x1 > x0) {
-                // THE ROW'S OWN CENTRED BASELINE, the one every other lane's
-                // text takes — NOT the clock's, whose authored 1px nudge is a
-                // monospace-cell correction and belongs to that cell alone.
-                const double sans_baseline = redesign_baseline(
-                    sans, static_cast<double>(content_y),
-                    static_cast<double>(content_h));
-                cairo_save(cr);
-                cairo_rectangle(cr, x0, static_cast<double>(content_y),
-                                x1 - x0, static_cast<double>(content_h));
-                cairo_clip(cr);
-                cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                     kRedesignLabel.b);
-                text_shape::show_shaped_run(cr, run, x0, sans_baseline);
-                cairo_restore(cr);
-            }
+        std::string line = format_timestamp(seconds);
+        if (!state.empty()) line += " | " + state;
+
+        const double x0 = static_cast<double>(cell_x);
+        const double x1 = static_cast<double>(right_block_x - pad);
+        const bool clipped = !state.empty() && x1 > x0;
+        if (clipped) {
+            cairo_save(cr);
+            cairo_rectangle(cr, x0, static_cast<double>(content_y),
+                            x1 - x0, static_cast<double>(content_h));
+            cairo_clip(cr);
         }
+        show_row_text(cr, font, x0, baseline, line, kRedesignLabel);
+        if (clipped) cairo_restore(cr);
     }
 
     cairo_restore(cr);

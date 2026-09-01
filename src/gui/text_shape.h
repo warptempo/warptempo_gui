@@ -82,28 +82,18 @@ ShapedRun shape_text_run(cairo_scaled_font_t* font, std::string_view utf8);
 // and current scaled font. Cairo state is not modified.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
-// A RUN'S INK EDGES, in pixels from the run's pen origin — where the first lit
-// pixel starts and where the last one ends, as against `width_px`, which is the
-// sum of the ADVANCES and so carries each end glyph's side bearing as air.
-//
-// WHY THE DISTINCTION HAS A CONSUMER (architect 2026-08-30): two runs butted at
-// a measured distance read WRONG BY THEIR BEARINGS. Row 8's state cell sits a
-// fixed gap right of the clock, and the clock's cell is a monospace advance sum
-// while the sans text opens with its own left side bearing, so the gap the eye
-// sees was the authored one plus a digit's right bearing plus a letter's left
-// one — about two pixels wider than the separator-to-clock gap beside it, which
-// is what the architect saw. A layout that wants EQUAL AIR asks for ink here
-// and subtracts; a layout that wants a reserved CELL keeps using `width_px`.
-//
-// Measured through cairo's own glyph extents on the run's OWN positioned
-// glyphs, so the answer is the ink cairo will actually put down — the shaping
-// chokepoint's whole property, said of ink instead of advance. An empty run
-// answers {0, 0}.
-struct InkExtents {
-    double left_px  = 0.0;   // origin -> first lit pixel (a bearing, may be < 0)
-    double right_px = 0.0;   // origin -> past the last lit pixel
-};
-InkExtents ink_extents_px(cairo_scaled_font_t* font, const ShapedRun& run);
+// (A RUN'S INK EDGES — `InkExtents` / `ink_extents_px`, the run's first and last
+// LIT pixel as against `width_px`'s sum of ADVANCES — stood here from
+// 2026-08-30 to 2026-08-31 for ONE consumer: row 8's sans STATE CELL, which sat
+// a measured gap right of the monospace clock and read about two pixels wider
+// than the separator-to-clock gap beside it, the two runs' side bearings both
+// falling inside the air. It retired with that cell, the state text having
+// become part of the clock's OWN run — one face, one string, no butted runs and
+// so no bearings to correct (paint_bottom_row_buttons_and_clock). Nothing else
+// ever asked for ink: every other layout here wants a reserved CELL, which is
+// `width_px`'s job. A layout that needs equal air again reinstates this from
+// git — the walk was show_shaped_run's glyph array at pen origin 0 through
+// cairo_scaled_font_glyph_extents.)
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels
 // from the run's origin, one per byte BOUNDARY of the shaped string — index 0

@@ -120,33 +120,8 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     cairo_show_glyphs(cr, glyphs.data(), static_cast<int>(glyphs.size()));
 }
 
-InkExtents ink_extents_px(cairo_scaled_font_t* font, const ShapedRun& run) {
-    // The contract is at the declaration. The glyph array is show_shaped_run's,
-    // built at pen origin 0 so the answer is relative to the run's own origin —
-    // one walk, the same positions the paint uses, which is what makes this an
-    // ink reading of THIS run rather than of the string re-mapped by some other
-    // road.
-    InkExtents out;
-    if (run.glyphs.empty()) return out;
-
-    std::vector<cairo_glyph_t> glyphs;
-    glyphs.reserve(run.glyphs.size());
-    double pen_x = 0.0;
-    for (const ShapedGlyph& glyph : run.glyphs) {
-        cairo_glyph_t placed;
-        placed.index = glyph.glyph_index;
-        placed.x     = pen_x + glyph.x_offset_px;
-        placed.y     = -glyph.y_offset_px;
-        glyphs.push_back(placed);
-        pen_x += glyph.x_advance_px;
-    }
-    cairo_text_extents_t ext;
-    cairo_scaled_font_glyph_extents(font, glyphs.data(),
-                                    static_cast<int>(glyphs.size()), &ext);
-    out.left_px  = ext.x_bearing;
-    out.right_px = ext.x_bearing + ext.width;
-    return out;
-}
+// (ink_extents_px retired 2026-08-31 with its one consumer, row 8's sans state
+// cell — the record is at the declaration's old place in text_shape.h.)
 
 std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
     // byte_count + 1 boundaries; the contract (including the
