@@ -643,8 +643,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FOUR menu anchors carries a chord here — 49
-// rows against the roster's 53 since 2026-08-29'S COPY VALUE BUTTON, one pure
+// every RedesignButton but the FOUR menu anchors carries a chord here — 50
+// rows against the roster's 54 since 2026-08-31'S CENTERED LAMP, one pure
+// addition inside an existing group (a chord, so the pair moved together):
+// `IconCentered` joined row 4's viewport-class group beside Follow on bare
+// `y`, and no separator or group boundary moved. It was 49 against 53 from
+// 2026-08-29'S COPY VALUE BUTTON, one pure
 // addition inside an existing group (a chord, so the pair moved together): the
 // bottom row's verb group gained a FIFTH box on bare `j`, the value pair's
 // pointer home, and no separator or group boundary moved. It was 48 against 52

@@ -736,7 +736,10 @@ void Viewport::center_viewport_on_playhead() {
 // off->on edge, so the invariant starts holding at the toggle), the settings
 // editor's `centered=` commit through that same chokepoint, and the launch
 // seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it.
+// where follow would left-edge-align it. THIS BODY ALSO OWNS THE DERIVATION
+// MEMORY the resting hook edge-triggers on (the four `centered_derived_*`
+// fields, app_state.h): it stamps the subject and the state it derived
+// against, so every caller is truthful without a stamp of its own.
 //
 // THE WRITE IS THE PAN'S: full waveform-area damage, the top strip, and the
 // synchronous plate rebuild, so a per-frame recenter during playback rides
@@ -758,6 +761,20 @@ bool Viewport::derive_centered_viewport() {
         : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return false;
+    // THE MEMORY'S ONE WRITER (2026-08-31, codex round C): this body records
+    // what it derived against — the SUBJECT its ternary just chose and the
+    // (tab, audio view, cursor) triple it ran under — so no caller carries a
+    // hand-kept stamp of its own and the pre-paint hook's resting half can
+    // simply ask whether either has moved since. It sits AFTER the two guards
+    // (a derivation that could not take effect records nothing, so the next
+    // frame retries) and AHEAD of the no-move return (a derivation that
+    // landed on the camera already in place is still a derivation, or the
+    // hook would re-call it every frame). The field block's contract, the
+    // subject term's reasoning and the reader are at app_state.h.
+    app.centered_derived_scanner    = app.playhead_scanner_active;
+    app.centered_derived_cursor     = app.playhead_cursor_sample;
+    app.centered_derived_tab        = app.active_tab_view;
+    app.centered_derived_audio_view = app.active_audio_view;
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);

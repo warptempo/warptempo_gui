@@ -2654,13 +2654,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // A/B tab switch, the `h` view's own sweep — already damages, so
             // a frame follows and THIS line reads the result once, instead of
             // a recenter call scattered across those owners. EDGE-TRIGGERED
-            // on the (tab, audio view, cursor) TRIPLE (the memory's contract
-            // at its declaration): a manual pan at rest moves the viewport
-            // and none of the three, so it simply works and the next playhead
-            // change — or an A/B or S/T switch, each tab being its own
-            // virtual playhead — re-pins; by the same token a programmatic
-            // framing (bring_span_into_view, bare `[`'s show) stands until
-            // one does.
+            // on the memory's four terms (its contract at the declaration):
+            // the (tab, audio view, cursor) TRIPLE — a manual pan at rest
+            // moves the viewport and none of the three, so it simply works
+            // and the next playhead change, or an A/B or S/T switch (each tab
+            // being its own virtual playhead), re-pins; by the same token a
+            // programmatic framing (bring_span_into_view, bare `[`'s show)
+            // stands until one does — PLUS THE SUBJECT, which is the STOP
+            // EDGE: a stop swaps the painted playhead from the scanner back
+            // to the cursor while all three of those are unchanged, so the
+            // last derivation's subject being the SCANNER is itself due here
+            // and every stop road (Space's stop, the natural end, the bounded
+            // audition's last play, the target-view freeze) re-centers on the
+            // resting cursor in the frame its own damage already produces.
+            // The memory is written by the derivation body, not here.
             // PAUSED while a pointer gesture or a finger is live, the follow
             // chase's own aiming rule below: a former carrying the playhead
             // mid-drag must not have the waveform recentered under it; the
@@ -2670,12 +2677,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (app.centered_mode && !app.playhead_scanner_active &&
                 !any_pointer_gesture_active(app) &&
                 !gui.touch_contact_active() &&
-                (app.playhead_cursor_sample != app.centered_derived_cursor ||
+                (app.centered_derived_scanner ||
+                 app.playhead_cursor_sample != app.centered_derived_cursor ||
                  app.active_tab_view != app.centered_derived_tab ||
                  app.active_audio_view != app.centered_derived_audio_view)) {
-                app.centered_derived_cursor     = app.playhead_cursor_sample;
-                app.centered_derived_tab        = app.active_tab_view;
-                app.centered_derived_audio_view = app.active_audio_view;
                 viewport.derive_centered_viewport();
             }
             return;

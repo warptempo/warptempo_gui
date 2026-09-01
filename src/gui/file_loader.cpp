@@ -32,6 +32,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.centered_derived_cursor     = -1;
     app.centered_derived_tab        = 0;
     app.centered_derived_audio_view = 0;
+    app.centered_derived_scanner    = false;
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER

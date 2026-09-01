@@ -608,13 +608,10 @@ void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
             app.follow_overridden_for_session = false;
             playback.resync_predictor();
         }
+        // (The derivation memory is stamped by the body itself — its one
+        // writer since codex round C, so the next pre-paint does not re-derive
+        // a camera this press just derived. No hand-kept stamp here.)
         viewport.derive_centered_viewport();
-        // Stamp the resting memory so the next pre-paint does not re-derive a
-        // camera this press just derived (idempotent either way; the stamp
-        // keeps the bookkeeping truthful).
-        app.centered_derived_cursor     = app.playhead_cursor_sample;
-        app.centered_derived_tab        = app.active_tab_view;
-        app.centered_derived_audio_view = app.active_audio_view;
     }
     // The off edge writes nothing: the camera stays where the pin left it.
 }

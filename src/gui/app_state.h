@@ -4287,21 +4287,42 @@ struct AppState {
     // movers for the session, the same truth the bit has always told.
     bool    centered_mode          = false;
 
-    // The centered derivation's RESTING-half memory: the cursor value the
-    // last at-rest derivation centered on, -1 before any (a load resets it),
-    // PLUS the A/B tab and the S/T audio view it centered in — the two view
-    // axes that give the one session-global memory a fresh subject without
-    // the cursor's NUMBER moving (each tab is its own virtual playhead over
-    // its own camera, and 0 == 0 across tabs is an ordinary rest; the S/T
-    // flip re-expresses the value in the other domain the same way). The
-    // pre-paint hook re-derives only when the (tab, audio view, cursor)
-    // triple has MOVED since — which is what lets a manual pan at rest simply
-    // work, the next playhead change (or view change) re-pinning. Session
-    // scratch, never serialized; the playing half needs none (the scanner's
-    // advance IS the change).
+    // The centered derivation's memory — WHAT THE LAST DERIVATION WAS MADE
+    // AGAINST, written by Viewport::derive_centered_viewport itself (its one
+    // writer, viewport.cpp) and read by the pre-paint hook's resting half
+    // (main.cpp): the cursor value it centered on, -1 before any (a load
+    // resets the whole memory), PLUS the A/B tab and the S/T audio view it
+    // centered in — the two view axes that give the one session-global memory
+    // a fresh subject without the cursor's NUMBER moving (each tab is its own
+    // virtual playhead over its own camera, and 0 == 0 across tabs is an
+    // ordinary rest; the S/T flip re-expresses the value in the other domain
+    // the same way) — PLUS THE SUBJECT ITSELF, the fourth term: true where
+    // the derivation centered the SCANNER, false where it centered the
+    // resting cursor (the body's own ternary, so the field records the
+    // subject it actually used).
+    //
+    // THE SUBJECT TERM IS THE STOP EDGE (architect 2026-08-31, codex round C):
+    // a stop swaps the painted playhead from the scanner back to the cursor
+    // while the tab, the view and the cursor's number are all unchanged, so a
+    // triple-only memory left the camera parked on the scanner's last
+    // position under a lit lamp. Remembering the subject makes the
+    // playing->resting transition ITSELF due at the next pre-paint, which
+    // catches EVERY stop road — Space's stop, the natural end, the bounded
+    // audition's last play, the target-view freeze — with no recenter call
+    // scattered into any of them (each of those roads already damages, so a
+    // frame follows). A session whose pin was suppressed by a manual pan
+    // during playback re-pins at that stop too: the suppression is the
+    // SESSION's (the stop body clears the bit), and the resting half has
+    // never consulted it.
+    //
+    // The pre-paint hook re-derives when the subject has flipped back to the
+    // cursor or the (tab, audio view, cursor) triple has MOVED since — which
+    // is what lets a manual pan at rest simply work, the next playhead change
+    // (or view change) re-pinning. Session scratch, never serialized.
     int64_t centered_derived_cursor = -1;
     char    centered_derived_tab        = 0;
     char    centered_derived_audio_view = 0;
+    bool    centered_derived_scanner    = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
