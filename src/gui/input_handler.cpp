@@ -1997,18 +1997,19 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // ruling), and the test is THE LANDING OWNER'S — marker_walk_actionable
     // over marker_walk_landing (app_state.h), the very predicate the Walk
     // previous / Walk next buttons wear as their face. A step with nothing
-    // ahead now writes NOTHING: no select, no playhead land, no recentre, and
-    // one card saying there is nowhere to step. It used to fall through to the
-    // jump below, which — with a focus standing — re-landed the playhead on
-    // that same focus and recentred on it, so a GREYED button sat over a key
-    // that moved the cursor; the face and the act ask one question now, so
-    // they cannot disagree. THE Ctrl+Shift+Tab MARCH takes this answer at each
-    // of its two cycles (the tab switch between them is its own act and still
-    // runs); two refusals in one press collapse to one card, the stack keeping
-    // a single card per sentence.
+    // ahead now writes NOTHING: no select, no playhead land, no recentre. It
+    // used to fall through to the jump below, which — with a focus standing —
+    // re-landed the playhead on that same focus and recentred on it, so a
+    // GREYED button sat over a key that moved the cursor; the face and the act
+    // ask one question now, so they cannot disagree. THE Ctrl+Shift+Tab MARCH
+    // takes this answer at each of its two cycles (the tab switch between them
+    // is its own act and still runs).
+    //
+    // THE REFUSAL IS SILENT (architect 2026-08-31, superseding the 2026-08-30
+    // card): a benign one-dimensional refusal already at its state says
+    // nothing — one glance at the marker lane shows the focus is at its end —
+    // and the greyed Walk button is the standing cue.
     if (!marker_walk_actionable(app, audio, forward)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "There is no marker to step to");
         return;
     }
 

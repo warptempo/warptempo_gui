@@ -7,14 +7,14 @@
 
 using RenderPlayerTransport = AppState::RenderPlayer::Transport;
 
-namespace {
-// THE LAUNCH'S POSITION REFUSAL, ONE SENTENCE AND TWO SITES (architect
-// 2026-08-30): the one launch body's own playable gate, and the target arm's
-// pre-sum twin in toggle_playback, which is verdict-identical for its caller
-// and merely asks earlier. Exactly one of them fires per press.
-constexpr const char* kNothingLeftToPlay =
-    "There is nothing left to play from here";
-}  // namespace
+// THE LAUNCH'S POSITION REFUSAL IS SILENT AT BOTH ITS SITES (architect
+// 2026-08-31, retiring the 2026-08-30 sentence "There is nothing left to play
+// from here" and its shared constant): a benign one-dimensional refusal
+// already at its state says nothing — the playhead rests visibly at the view's
+// end and the Play button greys on that very predicate. The two sites (the one
+// launch body's playable gate and toggle_playback's verdict-identical pre-sum
+// twin) still refuse exactly as before; only the card is gone. The DEVICE
+// refusal keeps its card: a dead device is the one fact the screen cannot show.
 
 // Gesture-stop: called by any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
@@ -109,8 +109,8 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // Space-bar: start/stop playback. Playback runs from the cursor to the active
 // view's end — the SONG's end in source view, the preview buffer's (which is the
 // trim window's) in target view; the split and its reasoning are at the launch
-// body. Pressing space with the cursor at or past that end is a no-op that
-// says "There is nothing left to play from here" (2026-08-30).
+// body. Pressing space with the cursor at or past that end is a SILENT no-op
+// (architect 2026-08-31; the rule is at the file head).
 // THE CURSOR IS ALWAYS THE START
 // (architect 2026-07-30): the region left-bound launch that used to divert
 // Space's play edge to scrub_launch_at is deleted with the SPAN FORM, so every
@@ -220,13 +220,11 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // domain_end() is well-defined for whatever buffer is bound).
         if (app.playhead_cursor_sample >=
             playback.domain_end() - launch_offset - 1) {
-            // THE LAUNCH BODY'S OWN VERDICT ASKED EARLIER, so it says the
-            // launch body's own sentence (2026-08-30): the two are
-            // verdict-identical for this caller (the comment above), and one
-            // fact refused in two places must not be two sentences. Only one
-            // of the pair can fire per press — this arm returns.
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingLeftToPlay);
+            // THE LAUNCH BODY'S OWN VERDICT ASKED EARLIER, and silent like it
+            // (architect 2026-08-31, the file head's rule): a benign
+            // one-dimensional refusal already at its state says nothing — the
+            // playhead resting at the view's end is the whole answer, and the
+            // Play button greys on this very predicate.
             return;
         }
         launch_pos = app.playhead_cursor_sample + launch_offset;
@@ -438,17 +436,16 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
                              kPlaybackDeviceUnavailableCard);
         return false;
     }
-    // AND A LAUNCH POSITION WITH NOTHING LEFT SAYS SO TOO (architect
-    // 2026-08-30). THE CARD IS THE ONE LAUNCH BODY'S, which is what makes it
-    // one card per press for every road that plays: Space, the scrub's
-    // audition and the A/B audition's bounded plays all pass through here and
-    // none of them spells the refusal a second time. The Play button greys on
-    // this very predicate, so no LIFT reaches the line — the grey is the
-    // message on the roster and this is the message on the keyboard.
+    // AND A LAUNCH POSITION WITH NOTHING LEFT REFUSES IN SILENCE (architect
+    // 2026-08-31, retiring the 2026-08-30 card; the rule is at the file head).
+    // A benign one-dimensional refusal already at its state says nothing: the
+    // playhead is one mark resting visibly at the view's end, and the Play
+    // button greys on this very predicate, so the grey is the message on the
+    // roster and the unmoved playhead is the message on the keyboard. Every
+    // road that plays — Space, the scrub's audition, the A/B audition's
+    // bounded plays — passes through here and none of them said it twice.
     if (!playback_launch_playable(app, playback, audio.total_frames(),
                                   start)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kNothingLeftToPlay);
         return false;
     }
     // (`end` is the caller's: the view's end from active_view_play_end for

@@ -676,7 +676,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         clamp_iter_bracket_to_tempo_bracket(m);
         changed = true;
     }
-    // NOTHING CHANGED, AND IT SAYS WHICH OF THE TWO IT WAS (architect
+    // NOTHING CHANGED, AND ONE OF THE TWO REASONS SAYS SO (architect
     // 2026-08-30, the strictness ruling; this act's reason channel is
     // GuiOpRefusal, warpmarkers_ops.h). The loop has exactly ONE subject here
     // — collapse_to_focused ran above, so the selection is the focus alone —
@@ -698,7 +698,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         if (f >= 0 && f < static_cast<int>(mv_const.size()) &&
             !mv_const[f].label_ref.empty())
             return "A label reference has no tempo of its own";
-        return "The tempo is already at its limit";
+        // THE BRACKET END IS SILENT (architect 2026-08-31, superseding the
+        // 2026-08-30 card "The tempo is already at its limit"): a benign
+        // one-dimensional refusal already at its state says nothing — the
+        // focused marker's own value is the one place to glance, and the
+        // Up/Down face greys at the bracket's end. The LABEL-REF arm above
+        // keeps its sentence: that is a fact about the marker's kind, not a
+        // wall the value is resting on.
+        return std::nullopt;
     }
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
@@ -1022,13 +1029,15 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    // AND IT SAYS SO SINCE 2026-08-30 (architect, the strictness ruling): the
-    // wall is what the press met, and the sentence names it. A zero-step press
-    // is the same words and cannot be told apart from a wall by the user — nor
-    // does it arise off a wall, the authored frame grid being finer than the
-    // pixel grid (the one-column-per-press guarantee at stepped_anchor_frame).
+    // AND IT IS SILENT AGAIN SINCE 2026-08-31 (architect, retiring the
+    // one-day card "The marker is already at the edge"): a benign
+    // one-dimensional refusal already at its state says nothing — the marker
+    // is one flag in one place, and the glance that asks whether it moved is
+    // the glance that answers. (A zero-step press cannot arise off a wall
+    // anyway, the authored frame grid being finer than the pixel grid — the
+    // one-column-per-press guarantee at stepped_anchor_frame.)
     if (committed_f == orig_f)
-        return "The marker is already at the edge";
+        return std::nullopt;
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
     // first write (the keyboard stop rule's refusal gating, at
     // stop_playback_if_playing's declaration in playback_lifecycle.h): a position

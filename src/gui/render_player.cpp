@@ -197,10 +197,11 @@ void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
 void GuiRenderPlayer::up() {
     switch (app.render_player.folder) {
         case Folder::Root:
-            // THE ROOT SAYS IT IS THE ROOT (architect 2026-08-30): the root
-            // listing carries no `..` row, so a Backspace here has nothing on
-            // screen to explain itself against.
-            status("This is the top of the render folders");
+            // THE ROOT IS SILENT (architect 2026-08-31, retiring the
+            // 2026-08-30 card "This is the top of the render folders"): a
+            // benign one-dimensional refusal already at its state says
+            // nothing, and the MISSING `..` ROW is itself the one glance that
+            // says which listing this is.
             return;
         case Folder::Deliverable: enter(Folder::Root, {});    return;
         case Folder::Batches:     enter(Folder::Root, {});    return;
@@ -623,14 +624,17 @@ void GuiRenderPlayer::stop() {
     publish_media_state();
 }
 
-// THE TWO FOLDER WALKS ANSWER IN TWO SENTENCES (architect 2026-08-30): NO
-// ITEM — there is nothing whose folder to walk, the state a freshly opened
-// player rests in — and THE END ITSELF, which is a wall because nothing loops.
-// Each walk asks the two in that order, so an empty transport never reports a
-// wall it is not standing at. Both keys and both buttons reach these bodies,
-// so the card is one per press whichever surface asked. (They were FOUR walks
-// until 2026-08-31 — the item's two neighbours took the same two sentences on
-// bare `,` / `.`; the step back lives inside home() now and says neither.)
+// THE TWO FOLDER WALKS ANSWER IN ONE SENTENCE (architect 2026-08-31, when the
+// END'S OWN pair went silent): NO ITEM — there is nothing whose folder to walk,
+// the state a freshly opened player rests in — still cards, because an empty
+// transport is not a state the band shows. THE END ITSELF says nothing: a
+// benign one-dimensional refusal already at its state is silent, and the
+// highlighted row sitting at the listing's first or last line is the one glance
+// that answers it (the two sentences it used to raise, kFirstInFolder /
+// kLastInFolder, are deleted with their raises). Each walk still asks the two
+// in that order, so an empty transport never reaches the end's own arm. (They
+// were FOUR walks until 2026-08-31 — the item's two neighbours took the same
+// sentences on bare `,` / `.`; the step back lives inside home() now.)
 //
 // THE ITEM FOLDER'S ENDS (R37) — the play road with the index named outright
 // instead of stepped. THE END ITSELF REFUSES: an item that is already the
@@ -640,7 +644,7 @@ void GuiRenderPlayer::first_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
     const int n = static_cast<int>(rp.item_folder.size());
     if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
-    if (rp.item_index == 0) { status(kFirstInFolder); return; }
+    if (rp.item_index == 0) return;   // already the first — silent (above)
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder.front().path, folder, 0);
 }
@@ -650,7 +654,7 @@ void GuiRenderPlayer::last_in_item_folder() {
     const int n    = static_cast<int>(rp.item_folder.size());
     const int last = n - 1;
     if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
-    if (rp.item_index >= last) { status(kLastInFolder); return; }
+    if (rp.item_index >= last) return;   // already the last — silent (above)
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder[static_cast<size_t>(last)].path, folder, last);
 }

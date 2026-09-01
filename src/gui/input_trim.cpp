@@ -305,18 +305,16 @@ void GuiInputHandler::commit_trim_mutation() {
 //
 // THE ALREADY-FULL IDENTITY GUARD replaces the old has-a-bound refusal gate: a
 // Shift+[ over an already-maximized window stops nothing, repaints nothing and
-// triggers nothing, which keeps the refusal-gated stop rule exactly as it was
-// — and SINCE 2026-08-30 it says so on a notification card, the guard's only
-// visible effect.
+// triggers nothing, which keeps the refusal-gated stop rule exactly as it was.
+// IT IS SILENT (architect 2026-08-31, retiring the one-day card "The trim
+// already covers the whole song"): a benign one-dimensional refusal already at
+// its state says nothing — the trim bar spans the window and the endcaps sit at
+// its ends, so one glance at one place answers what the maximizer would have
+// done. Both roads — the key and the Show trim region button's shift-click or
+// long press, which dispatches this same chord — are quiet alike.
 void GuiInputHandler::handle_trim_clear_both() {
     if (trim_is_full_window(app.trim, audio.total_frames())) {
-        // AND THE IDENTITY GUARD SAYS SO (architect 2026-08-30): Shift+[ is
-        // the RECOVERY, trim having no undo, so a press that finds nothing to
-        // recover must not read as a maximizer that failed. It answers on
-        // both roads — the key, and the Show trim region button's shift-click
-        // or long press, which dispatches this same chord.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "The trim already covers the whole song");
+        // Nothing to recover, nothing to say (the rule above).
     } else {
         // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
         // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).

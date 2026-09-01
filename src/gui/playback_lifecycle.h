@@ -38,12 +38,13 @@ struct GuiPlaybackLifecycle {
     const GuiAudio&   audio;
     GuiPlayback&      playback;
     Viewport&         viewport;
-    // THE CARDS (2026-08-30, the strictness ruling): the ONE LAUNCH BODY is
-    // where a play that will not sound is discovered — a dead or absent
-    // device, and a launch position with nothing left to play from — so it is
-    // where those two sentences are raised. Both were stderr-or-nothing
-    // before: the device line was printed once at load and never again, and
-    // the position refusal said nothing at all.
+    // THE CARD (2026-08-30, the strictness ruling; ONE sentence since
+    // 2026-08-31): the ONE LAUNCH BODY is where a play that will not sound is
+    // discovered, and the DEVICE half is what it says — a dead or absent
+    // device is the one refusal the screen cannot show for itself. Its former
+    // companion, the launch position with nothing left to play from, went
+    // SILENT again on 2026-08-31 (a benign one-dimensional refusal already at
+    // its state; the record is at the file head).
     GuiNotifications& notifications;
     // THE RENDER PLAYER'S BACK-POINTER (2026-08-28, the car's state push),
     // wired in main.cpp once both exist — the settings editor's and the

@@ -43,16 +43,14 @@ inline constexpr uint32_t kCarStableCodeBase = 1000;
 // every seek road — Home and End among them, both of which reach seek_to.
 inline constexpr const char* kNoPlayerItem = "No render is loaded to play";
 
-// THE ITEM FOLDER'S TWO ENDS: the first-jump at the first wav, the last-jump
-// at the last. NOTHING LOOPS, so an end is an end. (Their producers were the
-// two neighbour walks as well until 2026-08-31, when the skips became Home
-// and End and the neighbour steps left the product — Home's previous-track
-// window is the one step that remains, and it does not report a wall: at the
-// first entry it restarts the track instead.)
-inline constexpr const char* kFirstInFolder =
-    "This is the first render in the folder";
-inline constexpr const char* kLastInFolder =
-    "This is the last render in the folder";
+// THE ITEM FOLDER'S TWO ENDS ARE SILENT (architect 2026-08-31): NOTHING LOOPS,
+// so an end is still an end, but a benign one-dimensional refusal already at
+// its state says nothing — the highlighted row rests at the listing's first or
+// last line and one glance answers it. The pair kFirstInFolder /
+// kLastInFolder ("This is the first/last render in the folder") is deleted
+// with its two raises in first_in_item_folder / last_in_item_folder; their
+// other producers, the item's two neighbour walks, had already left the
+// product earlier that day when the skips became Home and End.
 
 // A SEEK WHILE THE TRANSPORT IS IDLE (R41's dead slider): the two seek keys,
 // bare Home, bare End, the car's absolute seek and the scrub's own press all

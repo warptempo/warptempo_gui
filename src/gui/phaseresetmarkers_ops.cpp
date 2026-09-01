@@ -282,10 +282,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    // AND IT SAYS SO SINCE 2026-08-30, the warp twin's sentence verbatim —
-    // one wall, one answer, whichever column met it.
+    // AND IT IS SILENT AGAIN SINCE 2026-08-31, the warp twin's rule verbatim —
+    // a benign one-dimensional refusal already at its state says nothing, the
+    // unmoved flag being its own answer; the one-day card "The marker is
+    // already at the edge" is retired in both columns.
     if (committed_f == orig_f)
-        return "The marker is already at the edge";
+        return std::nullopt;
     // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
     // first write (the keyboard stop rule's refusal gating, at
     // stop_playback_if_playing's declaration in playback_lifecycle.h): a position

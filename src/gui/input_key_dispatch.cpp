@@ -1359,29 +1359,17 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
 // arm that spells it, and this is the one body that runs them.
-// EVERY REFUSAL HERE IS A CARD (architect 2026-08-30), and the card is THIS
-// body's rather than its two callers': both callers refuse for exactly these
-// reasons and neither adds one, so a sentence at each spelling would be the
-// same sentence twice. THE MARCH COMPOSES THIS BODY TWICE and that stays ONE
-// card per press by the stack's own rule — a duplicate text is not stacked, it
-// is the standing card re-pushed at the top with a fresh clock (the argument
-// is at GuiNotifications::notify) — so a Ctrl+Shift+Tab at a wall answers once
-// even where both halves refuse.
+// EVERY REFUSAL HERE IS SILENT (architect 2026-08-31, retiring the 2026-08-30
+// cards "There are no changed markers to step through" / "This is the last
+// change" / "This is the first change"): a benign one-dimensional refusal
+// already at its state says nothing — the diff lane is on screen, and one
+// glance at it shows both an empty list and a focus resting at its end. The
+// walls and the empty arm are the consumed no-ops they were; only the
+// sentences left. (Which is also why the march's two compositions no longer
+// need the stack's duplicate-text rule to answer once.)
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     const int n = static_cast<int>(app.history_mode.flags.size());
-    if (n == 0) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "There are no changed markers to step through");
-        return;
-    }
-    // THE WALLS' TWO SENTENCES, said from the three places this body can hit
-    // one: the unseated scan that finds nothing past the playhead, and the
-    // two seated ends.
-    const auto report_wall = [this](bool fwd) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             fwd ? "This is the last change"
-                                 : "This is the first change");
-    };
+    if (n == 0) return;
     const int here = app.history_mode.focus;
     int there = -1;
     if (here < 0 || here >= n) {
@@ -1432,21 +1420,15 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
         // live cycle's "nothing ahead" return and the no-wrap walls two lines
         // below in one shape. Forward with the playhead at or past the last
         // flag, backward at or before the first, and the view rests untouched.
-        // It takes the SAME sentence the seated walls below take, because it
-        // is the same wall reached from an unseated cursor: nothing ahead of
-        // the playhead is nothing ahead.
-        if (there < 0) { report_wall(forward); return; }
+        // It is silent for the SAME reason the seated walls below are,
+        // because it is the same wall reached from an unseated cursor:
+        // nothing ahead of the playhead is nothing ahead.
+        if (there < 0) return;
     } else if (forward) {
-        if (here + 1 >= n) {         // last already
-            report_wall(true);
-            return;
-        }
+        if (here + 1 >= n) return;   // last already
         there = here + 1;
     } else {
-        if (here == 0) {             // first already
-            report_wall(false);
-            return;
-        }
+        if (here == 0) return;       // first already
         there = here - 1;
     }
     playback_lifecycle.stop_playback_if_playing();
@@ -1629,23 +1611,18 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // at that end are the same consumed no-op, with no edge and nothing
         // moved, and the EMPTY walk — one address (0), stood at — answers
         // false in both directions with no case of its own. The walk has ends,
-        // and reaching one must not wrap — it says which end it is on and
-        // moves nothing (the card below). (Until 2026-08-30
+        // and reaching one must not wrap — it moves nothing. (Until 2026-08-30
         // this arm computed `there` and compared it to `here`; the predicate
         // is that compare, named once for the act and the face.)
         //
-        // AND THE WALL SAYS WHICH WALL IT IS (architect 2026-08-30): the
-        // buttons grey on these same two predicates, so no LIFT reaches this
-        // line — the grey is the message on the roster — and what is left is
-        // the KEY, which owes its own answer. The EMPTY walk answers false in
-        // both directions and takes whichever sentence the direction names,
-        // which is honest there too: one address, stood at, is both ends.
+        // AND THE WALL IS SILENT (architect 2026-08-31, retiring the
+        // 2026-08-30 pair "This is the oldest checkpoint" / "This is the
+        // newest state"): a benign one-dimensional refusal already at its
+        // state says nothing — the walk's own position is on screen and the
+        // Older / Newer buttons grey on these very predicates, so the grey is
+        // the cue and the unmoved walk is the answer.
         if (!(older ? history_walk_older_actionable(app.history_mode)
                     : history_walk_newer_actionable(app.history_mode))) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                older ? "This is the oldest checkpoint"
-                      : "This is the newest state");
             return true;
         }
         const std::size_t count  = app.history_mode.walk_count();
@@ -1788,20 +1765,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // piece's ends, and in here that is what a jump already means, so the chord
     // means one thing in every state and this arm needs no fork.
     if (key == GuiKeys::Home || key == GuiKeys::End) {
-        // A JUMP THAT WOULD CHANGE NOTHING SAYS SO here too (architect
-        // 2026-08-30, the live body's card): the actionability owner's mode
-        // arm reads the diff-flag focus this body clears and the
-        // piece's-ends landing its mode bit already selects, so the refusal
-        // is exactly "no write below would move anything". The sentences are
-        // the whole-piece pair's — in this view a jump means the piece's
-        // ends whichever spelling arrived.
+        // A JUMP THAT WOULD CHANGE NOTHING IS SILENT here too (architect
+        // 2026-08-31, the live body's rule): a benign one-dimensional
+        // refusal already at its state says nothing, the playhead's own
+        // position being the tell. The actionability owner's mode arm reads
+        // the diff-flag focus this body clears and the piece's-ends landing
+        // its mode bit already selects, so the refusal is exactly "no write
+        // below would move anything".
         if (!playhead_end_jump_actionable(app, audio, key == GuiKeys::End,
                                           /*whole_piece=*/false)) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                key == GuiKeys::End
-                    ? "The playhead is already at the end of the song"
-                    : "The playhead is already at the start of the song");
             return true;
         }
         playback_lifecycle.stop_playback_if_playing();
@@ -5728,13 +5700,11 @@ void GuiInputHandler::open_project_commit(int index) {
         // field's one producer there (AppState::project_name) — so the no-op
         // cannot be missed by a link in the way of either spelling.
         //
-        // AND IT SAYS SO (architect 2026-08-30) — the ONE arm of this act
-        // that is not a refusal, so the picker still CLOSES: the answer is
-        // "you are already there", not "try another row". Without it the row
-        // that is most likely to be pressed by accident (the band opens on
-        // it) reads as a picker that shut itself for no reason.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "That project is already open");
+        // AND IT IS SILENT (architect 2026-08-31, retiring the one-day card
+        // "That project is already open"): a benign one-dimensional refusal
+        // already at its state says nothing — the window title names the
+        // project the picker just closed over, which is one glance at one
+        // place. The CLOSE is unchanged; only the sentence left.
         close_picker();
         return;
     }
@@ -7160,24 +7130,20 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // three steps to make it honest would change behaviour); the truthful-buttons
 // ruling greyed them again that morning, knowingly forgoing the side acts on
 // the dead face; the twin rule that evening folded the side acts into
-// playhead_end_jump_actionable, so the grey, this card and the body are one
-// decision — the full record is at the skips' case in
-// redesign_button_enabled.
+// playhead_end_jump_actionable, so the grey, this body's refusal and the body
+// are one decision — the full record is at the skips' case in
+// redesign_button_enabled. (The refusal CARDED for one day, 2026-08-30 to
+// 2026-08-31, when the one-dimensional rule silenced it; the grey stayed.)
 void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
-    // A FORM THAT WOULD CHANGE NOTHING SAYS SO (architect 2026-08-30, the
-    // twin rule's card): the owner's terms are exactly this body's writes —
-    // the stop, the clear, the mover's overlay hide and the landing — so
-    // past this return at least one act below does real work or the jump
-    // moves, and the card fires only for a press that would have been a
-    // whole no-op. Each form names its own rest.
+    // A FORM THAT WOULD CHANGE NOTHING IS SILENT (architect 2026-08-31,
+    // superseding the 2026-08-30 card): a benign one-dimensional refusal
+    // already at its state says nothing — the playhead is one mark in one
+    // place, and the glance that asks "did it move?" is the same glance that
+    // answers it; the greyed skip button is the standing cue. The owner's
+    // terms are exactly this body's writes — the stop, the clear, the mover's
+    // overlay hide and the landing — so past this return at least one act
+    // below does real work or the jump moves.
     if (!playhead_end_jump_actionable(app, audio, forward, whole_piece)) {
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            whole_piece
-                ? (forward ? "The playhead is already at the end of the song"
-                           : "The playhead is already at the start of the song")
-                : (forward ? "The playhead is already at the trim end"
-                           : "The playhead is already at the trim start"));
         return;
     }
     playback_lifecycle.stop_playback_if_playing();
