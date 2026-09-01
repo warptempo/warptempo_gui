@@ -4704,7 +4704,9 @@ bool GuiInputHandler::load_render_entry_in_place(
     // already refuses on this same condition — with its own sentence — before
     // it raises the confirmation, so the one caller never reaches here; this
     // backstop protects any other caller and answers like every arm below it.
-    if (app.queue_running || app.pending_archival.armed) {
+    // The condition is the one owner load_in_place_render_blocked
+    // (app_state.h), the act's, the face's and this backstop's alike.
+    if (load_in_place_render_blocked(app)) {
         return refuse("a render batch is running or an archival is armed", {});
     }
 
@@ -6994,10 +6996,6 @@ void GuiInputHandler::jump_to_value_source() {
                              "The focused marker has no resolved value");
         return;
     }
-    int source = -1;
-    const std::string payload = resolved_marker_payload(
-        slice_to_warp_markers(app.warpmarkers.markers()),
-        app.last_selected_marker, audio.total_frames(), &source);
     // AN EMPTY PAYLOAD IS THE COPY'S OWN REFUSAL and the jump's too — an
     // unresolvable ref or a carve-out with no successor — and a payload that
     // names NO SOURCE is the value's own fallback (a first-marker pass, a walk
@@ -7008,8 +7006,12 @@ void GuiInputHandler::jump_to_value_source() {
     // marker to stand on. (The third is a belt — a source index past the
     // store — and shares the sentence rather than earning one, since a
     // separate wording would describe an invariant breach to the user.)
-    if (payload.empty() || source < 0 ||
-        source >= static_cast<int>(app.warpmarkers.markers().size())) {
+    // THE THREE ARE ONE OWNER since 2026-09-01 — value_source_marker
+    // (app_state.cpp), which wraps the composer call this body made inline
+    // and which the Copy value button's shift line reads too, so the line
+    // drops exactly where this cards.
+    const int source = value_source_marker(app, audio.total_frames());
+    if (source < 0) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "There is no source marker to jump to");
         return;
@@ -7031,8 +7033,9 @@ void GuiInputHandler::render_player_load_in_place() {
     // DAY THE BUTTON GREYS on this refusal and on a recipe-less highlight
     // (render_player_button_enabled — its lift is consumed, the grey being
     // the message), so this card and the highlight one below are the
-    // KEYBOARD's, bare `'`'s own; the running-render card stays both
-    // roads', that refusal being deliberately not a face term. It is
+    // KEYBOARD's, bare `'`'s own — and so is the running-render card since
+    // 2026-09-01, when that refusal became a face term too (the roster's
+    // shape: the grey is the button's message, the key keeps its card). It is
     // one of the THREE readers of kTabReadOnlyCard (notifications.h) — the
     // sites that KNOW THEIR ACT and so need no chord in the sentence. The
     // keyboard gate is not among them: it drops an unbound chord and a bound
@@ -7054,8 +7057,10 @@ void GuiInputHandler::render_player_load_in_place() {
     // dead button (validation_topology.md's row, and the batch-cell refusal
     // one arm down is the same class). THE SENTENCE NAMES THE ACT IT
     // REFUSES (architect 2026-08-30, his own example): a bare "Render
-    // running" was a fact with no verb, and a card answers a press.
-    if (app.queue_running || app.pending_archival.armed) {
+    // running" was a fact with no verb, and a card answers a press. THE
+    // CONDITION IS ONE OWNER (load_in_place_render_blocked, app_state.h —
+    // 2026-09-01), read by the mutator's backstop and the button's face too.
+    if (load_in_place_render_blocked(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "Cannot load in place while a render is running");
         return;

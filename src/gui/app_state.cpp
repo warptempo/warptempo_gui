@@ -5,6 +5,7 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
+#include "warp_frame_map_build.h"  // resolved_marker_payload (value_source_marker)
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 
@@ -457,6 +458,25 @@ bool payload_eligible_marker(const AppState& app, int idx) {
         }
     }
     return m.tempo_inherits || !m.label_ref.empty();
+}
+
+// THE VALUE'S SOURCE MARKER — the contract and the two readers are at the
+// declaration (app_state.h). The composer's out-parameter is written on its
+// two success paths and nowhere else (its own contract), so the sentinel
+// seeded here comes back unchanged wherever no marker is named; the empty
+// payload and the out-of-store belt are the jump's own three-way test,
+// answered as one "no source" here.
+int value_source_marker(const AppState& app, int64_t total_frames) {
+    const int idx = app.last_selected_marker;
+    const auto& mv = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return -1;
+    int source = -1;
+    const std::string payload = resolved_marker_payload(
+        slice_to_warp_markers(mv), idx, total_frames, &source);
+    if (payload.empty() || source < 0 ||
+        source >= static_cast<int>(mv.size()))
+        return -1;
+    return source;
 }
 
 // -- The overview strip's column mapping ------------------------------------

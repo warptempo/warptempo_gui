@@ -2337,9 +2337,11 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
         // NOT on the no-focus one — which is right: `c` with nothing focused is
         // a zoom and a recenter, camera and nothing else (the rule is at
         // clear_region_highlight, input_handler.h).
-        const int focus = app.history_mode.focus;
-        if (focus >= 0 &&
-            focus < static_cast<int>(app.history_mode.flags.size())) {
+        // THE RANGE TEST IS THE FORK'S ONE OWNER since 2026-09-01
+        // (center_command_lands_on_focus, app_state.h — the Center button's
+        // hint reads it too, "Center on focus" / "Center on playhead").
+        if (center_command_lands_on_focus(app)) {
+            const int focus = app.history_mode.focus;
             // The live arm's stop lives inside its jump, so it stops only when
             // something is focused; this keeps that shape. NO REACHABLE
             // PRODUCER (recorded 2026-08-06): the entry owner stops any session
@@ -2377,10 +2379,38 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // IS THE TRIM rather than a group's playhead form. The jump below is a
     // jump TO THE FOCUS and accepts a group's focus as-is; the always-visible
     // cursor lands there, the other members keeping their brightened flags.
+    // (The jump's own no-focus return is center_command_lands_on_focus's live
+    // arm — the focus atom — plus an out-of-range belt the faces accept
+    // reading unrepaired; the Center button's hint reads that predicate.)
     selection.repair_last_selected();
     jump_playhead_to_focused_marker();
     viewport.apply_zoom_change(target_zoom_level);
     viewport.center_viewport_on_playhead();
+}
+
+// WHAT BARE `0` WOULD DO — the contract and the two readers are at the
+// declaration (app_state.h); the reasoning for each arm is at
+// run_overview_command below, which is the fork's act and decides nothing of
+// its own past this. The ceiling compare is `>=`, Viewport::zoom_out's own.
+OverviewCommandTarget overview_command_target(const AppState& app,
+                                              const GuiAudio& audio) {
+    OverviewCommandTarget t;
+    const double full_out = effective_max_zoom_level(
+        waveform_area(app).w, live_total_frames(app, audio),
+        audio.sample_rate());
+    t.at_ceiling = app.zoom_level >= full_out;
+    if (!t.at_ceiling) {
+        t.level = full_out;
+        return t;
+    }
+    // THE RETURN TRIP'S RESOLVE (the argument is at the act): the stamp
+    // clamped into the live window, spending as the working zoom when it is
+    // empty or can no longer move the zoom.
+    const double recall = clamp_zoom_level(
+        app, audio,
+        active_view_state(app).zoom_recall_level.value_or(kWorkingZoomLevel));
+    t.level = recall == app.zoom_level ? kWorkingZoomLevel : recall;
+    return t;
 }
 
 void GuiInputHandler::run_overview_command() {
@@ -2453,14 +2483,15 @@ void GuiInputHandler::run_overview_command() {
     // `>=` rather than `==`, matching Viewport::zoom_out's own ceiling test: the
     // clamp chokepoint keeps the live level at or under the ceiling, and a level
     // resting exactly on it is what "already full out" means either way.
-    const double full_out = effective_max_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio),
-        audio.sample_rate());
-    ViewState& band = active_view_state(app);
-    if (app.zoom_level >= full_out) {
+    // THE FORK AND THE RESOLVE ARE ONE OWNER since 2026-09-01
+    // (overview_command_target above), which the Full zoom out button's hint
+    // reads too, so the word it says is the level this arm will hand to `c`.
+    const OverviewCommandTarget target = overview_command_target(app, audio);
+    if (target.at_ceiling) {
         // THE RETURN TRIP. value_or is the whole of the empty-slot rule: with
         // nothing stamped this is `c` verbatim.
-        // AND A STAMP IS RESOLVED HERE rather than left to apply_zoom_change's
+        // AND A STAMP IS RESOLVED (in the owner above) rather than left to
+        // apply_zoom_change's
         // own pre-clamp, because that clamp alone can strand this arm: a level
         // stamped while it was legal sits ABOVE the ceiling once the ceiling
         // FALLS (a narrower window, an S/T flip into a shorter domain), the
@@ -2479,18 +2510,15 @@ void GuiInputHandler::run_overview_command() {
         // only against the CURRENT ceiling — widen the window or flip the domain
         // back and it is the right answer again — and the next press below the
         // ceiling overwrites it regardless.
-        const double recall = clamp_zoom_level(
-            app, audio, band.zoom_recall_level.value_or(kWorkingZoomLevel));
-        run_center_command(recall == app.zoom_level ? kWorkingZoomLevel
-                                                    : recall);
+        run_center_command(target.level);
     } else {
         // Stamp BEFORE the move, since the move is what makes the level
         // historical. The live app.zoom_level is the value: it is the clamped
         // truth (clamp_viewport_start's zoom clamp owns every write to it) and
         // it is strictly below the ceiling on this arm, so a stamp can never
         // name full zoom-out and make the return trip a no-op.
-        band.zoom_recall_level = app.zoom_level;
-        viewport.apply_zoom_change(full_out);
+        active_view_state(app).zoom_recall_level = app.zoom_level;
+        viewport.apply_zoom_change(target.level);
     }
 }
 
@@ -3570,9 +3598,10 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // act refuses WHOLE — before any view switch, in T+P and S+P alike —
     // and says so. Bare `s` is untouched (in T+P it is the drop). The Drop
     // button's shift lift and the glass long press synthesize this same
-    // chord and meet this same refusal; its face greys only in S+P, where
-    // bare `s`'s off-home refusal meets this one (the arm at
-    // redesign_button_enabled).
+    // chord and meet this same refusal; its face NEVER greys past the lock
+    // (one form is always live since the P column opened, the twin rule's
+    // arm at redesign_button_enabled), and its tooltip's shift line drops
+    // exactly where this refuses (the stateful overload, 2026-09-01).
     if (!phase_reset_drop_crossing_actionable(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "Already in phase reset view");

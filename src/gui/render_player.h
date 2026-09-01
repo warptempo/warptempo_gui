@@ -445,7 +445,9 @@ struct GuiRenderPlayer {
     // item's own start and takes every refusal seek_to owns, the no-item arm
     // and the idle arm alike — both silent since 2026-08-31 (R5). It never
     // reports a folder wall either: at the first
-    // entry the restart IS the act.
+    // entry the restart IS the act. THE FORK IS ONE OWNER since 2026-09-01,
+    // render_player_home_takes_previous (app_state.h), which the button's
+    // hint reads too ("Previous file" / "Go to start").
     void home();
     // THE ITEM'S END (architect 2026-08-30) — Home's twin, the RIGHT SKIP's
     // plain act and the head unit's Next since 2026-08-31, and NOT the

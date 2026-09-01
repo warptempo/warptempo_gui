@@ -3168,7 +3168,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
-        const RedesignTooltipText text = redesign_button_tooltip(app, id);
+        // THE STATEFUL OVERLOAD, with the enabled predicate's own objects
+        // (2026-09-01): the words fork on what the acts and the faces read,
+        // and this painter is the overload's one reader.
+        const RedesignTooltipText text = redesign_button_tooltip(
+            app, audio, audio.total_frames(), playback, target_render, id);
         // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
         // a standing dwell any more — tooltip MEMBERSHIP is the menu row and
         // nothing else, in every state (the rule is at redesign_button_tooltip,
@@ -6048,12 +6052,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // is exactly render_player_highlight_act_row answering −1. Under a
         // highlight standing on a folder row or on another wav the press
         // would GO THERE, so the face is the play glyph and the tooltip's word
-        // follows it (render_player_button_hint takes this same bit). It
+        // follows it. SINCE 2026-09-01 THE FACE AND THE WORD ARE ONE OWNER,
+        // render_player_play_face (the act's own two forks read without
+        // acting), and the glyph is its Pause answer alone; the hint takes
+        // the whole answer, so a folder row says "Open folder" and a paused
+        // transport "Resume". THE HINTS' OTHER STATE BITS ARE RESOLVED HERE
+        // TOO (RenderPlayerHintState, app_state.h — each a predicate the act
+        // or the face reads; the previous-track window needs the position,
+        // which this painter already reads for the clock). Every bit
         // reaches a repaint through the row's one damage owner: the three
-        // highlight movers damage the row already, for the Load in place face.
-        const bool pause_face = app.render_player.transport ==
-                                    AppState::RenderPlayer::Transport::Live &&
-                                render_player_highlight_act_row(app) < 0;
+        // highlight movers and the transport writers damage the row already,
+        // for the Load in place face and the pause glyph.
+        RenderPlayerHintState hint;
+        hint.play_face     = render_player_play_face(app);
+        hint.home_previous = render_player_home_takes_previous(app, playback,
+                                                                audio);
+        hint.end_idle      = app.render_player.transport ==
+                             AppState::RenderPlayer::Transport::Idle;
+        hint.first_twin_live =
+            render_player_first_in_item_folder_actionable(app);
+        hint.last_twin_live =
+            render_player_last_in_item_folder_actionable(app);
+        const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {
             DialogButtonPlan b;
@@ -6062,8 +6082,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.lit        = lit;
             b.enabled    = render_player_button_enabled(app, act);
             b.icon       = icon;
-            b.tooltip    = render_player_button_hint(act, pause_face);
-            b.tooltip2   = render_player_button_shift_hint(act);
+            b.tooltip    = render_player_button_hint(act, hint);
+            b.tooltip2   = render_player_button_shift_hint(act, hint);
             plan.push_back(std::move(b));
         };
         auto word_button = [&](AppState::PlayerButtonAct act,
@@ -6072,8 +6092,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.label      = word;
             b.enabled    = render_player_button_enabled(app, act);
-            b.tooltip    = render_player_button_hint(act, pause_face);
-            b.tooltip2   = render_player_button_shift_hint(act);
+            b.tooltip    = render_player_button_hint(act, hint);
+            b.tooltip2   = render_player_button_shift_hint(act, hint);
             plan.push_back(std::move(b));
         };
         // THE SKIP GLYPHS ARE UNTOUCHED BY THE 2026-08-31 REMAP: the acts

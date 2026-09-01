@@ -3333,8 +3333,9 @@ inline constexpr int kEditPopupItemCount =
 // ruling rather than an omission: this product's menus carry NO ICONS, NO
 // CHECKBOXES AND NO SUBMENU ARROWS (paint_dropdown, paint_handler.cpp — the
 // crops reserve all three columns and the redesign dropped them), so there is
-// no check for a lit mode to wear. The label is the constant act's name, the
-// tooltip-constant/lamp-carries-state shape with the lamp left off; WHAT THE
+// no check for a lit mode to wear. The label is the constant act's name — the
+// shape the lamp toggles' tooltips had until 2026-09-01 (they name the toggle
+// now, the rule at redesign_button_tooltip's head) with the lamp left off; WHAT THE
 // MODE IS DOING IS ON THE SCREEN ITSELF — every warp flag grows its iteration
 // bracket the moment the mode comes on, and the Render button's own hint reads
 // "Render grid iterations" — which is the same argument that keeps
@@ -3861,7 +3862,7 @@ struct PromptState {
 // A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
 // the bracketed accelerators: "we just do a tooltip just like the regular icon
 // tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
-// "Show trim region ([)" — and so is the accelerator's SPELLING, the product's
+// "Toggle trim region ([)" — and so is the accelerator's SPELLING, the product's
 // one convention (spell_chord's head, gui_input.h): a bare letter UPPERCASE,
 // a named key by Qt's own English name ("Del", "Esc", "Return").
 //
@@ -7781,36 +7782,97 @@ inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }
 
+// THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
+// wears, ONE answer for both (architect 2026-09-01, the truthful-tooltips
+// ruling: a tooltip names the act the press will run in the current state).
+// It composes play_button_act's own two forks in the act's own order — the
+// highlight's arm first (render_player_highlight_act_row: a FOLDER row opens,
+// a wav that is not the transport's item plays), then the transport's
+// (transport_toggle_act: LIVE pauses, PAUSED resumes, IDLE plays the item
+// from its start) — so the face, the word and the act cannot disagree.
+// Defined in render_player.cpp beside the act it mirrors; the plan builder
+// (paint_modal_dialog) asks it once per frame and hands the answer to the
+// hint below, the glyph being `Pause` and nothing else. It replaces the
+// painter's `pause_face` bit of 2026-08-31, which carried the glyph alone and
+// left the hint saying "Play" over a folder row the press would OPEN.
+enum class PlayerPlayFace { Play, Pause, Resume, OpenFolder };
+PlayerPlayFace render_player_play_face(const AppState& a);
+
+// THE STATE THE PLAYER'S HINTS FORK ON, resolved by the plan builder
+// (paint_modal_dialog, paint_handler.cpp) once per frame from the predicates
+// the ACTS and the FACES already read — the same shape the pause bit took
+// from R6 until 2026-09-01, widened to every state a hint names:
+//   play_face       render_player_play_face above (Play/Pause's word);
+//   home_previous   render_player_home_takes_previous — Home's own fork,
+//                   the previous-track window (needs the position, which is
+//                   the engine's and the device's, so the painter resolves
+//                   it where it already reads them for the clock);
+//   end_idle        the transport is IDLE — seek_to's own idle refusal, the
+//                   plain End's dead arm under a face its shifted twin lights;
+//   first_twin_live / last_twin_live
+//                   render_player_first_in_item_folder_actionable /
+//                   render_player_last_in_item_folder_actionable — the two
+//                   shifted twins' own walls, which the face reads too.
+struct RenderPlayerHintState {
+    PlayerPlayFace play_face       = PlayerPlayFace::Play;
+    bool           home_previous   = false;
+    bool           end_idle        = false;
+    bool           first_twin_live = false;
+    bool           last_twin_live  = false;
+};
+
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
 // the player's own act vocabulary: the word is the act's, the key is the
 // chord the player's key router binds to exactly that act
 // (route_render_player_key, input_key_dispatch.cpp), so a button cannot
-// advertise a key it does not answer. Play/Pause is the one two-faced button
-// and names the face it wears (the bottom row's transport rule) — `pause_face`
-// is that face's own bit, the painter's, and NOT "the transport is live":
-// since R6 (2026-08-31) a live transport under a highlight standing elsewhere
-// would PLAY that row, so it wears Play and says "Play (Space)" with it.
+// advertise a key it does not answer. EVERY WORD IS THE ACT THE PRESS WILL
+// RUN IN THE CURRENT STATE (architect 2026-09-01, the truthful-tooltips
+// ruling — "tooltips never lie: they update dynamically with the act"), read
+// off RenderPlayerHintState above, whose every bit is a predicate an act or a
+// face already reads; a hint never restates a condition of its own.
 inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
-                                             bool pause_face) {
+                                             const RenderPlayerHintState& s) {
     switch (act) {
         // THE TWO SKIPS ARE THE ROSTER'S OWN TRANSPORT PAIR (architect
         // 2026-08-31): the same acts on the same keys as the main window's
-        // two skip buttons, so they wear the roster's own two labels
-        // verbatim rather than a second wording for one act. THE PREVIOUS-
-        // TRACK WINDOW LIVES UNDER "Go to start" and does not rename it: a
-        // Home inside the item's first kPlayerPreviousThresholdMs goes to the
-        // previous entry, which is what "go to the start" means twice over on
-        // every car head unit and every iPod before them.
-        case AppState::PlayerButtonAct::Home: return "Go to start (Home)";
+        // two skip buttons, so they wear the roster's own two labels where
+        // the act is the same. THE PREVIOUS-TRACK WINDOW RENAMES HOME since
+        // 2026-09-01: inside the item's first kPlayerPreviousThresholdMs the
+        // press PLAYS THE PREVIOUS ENTRY, and the hint says so — it lived
+        // under "Go to start" for one day, the recorded lie the ruling
+        // retired (the fork is home()'s own, render_player_home_takes_previous).
+        // END SAYS WHERE IT STANDS AT AN IDLE REST: the plain seek is
+        // seek_to's idle refusal there, and the face is lit for the shifted
+        // twin alone, so "Go to end" would name a dead act.
+        case AppState::PlayerButtonAct::Home:
+            return s.home_previous ? "Previous file (Home)"
+                                   : "Go to start (Home)";
+        // PLAY/PAUSE NAMES ITS FACE, and the face is render_player_play_face's
+        // (the glyph's own owner): a folder under the band OPENS, another wav
+        // PLAYS, and on the item's row or an empty band the transport's own
+        // three states name themselves.
         case AppState::PlayerButtonAct::PlayPause:
-            return pause_face ? "Pause (Space)" : "Play (Space)";
-        case AppState::PlayerButtonAct::End:  return "Go to end (End)";
+            switch (s.play_face) {
+                case PlayerPlayFace::Pause:      return "Pause (Space)";
+                case PlayerPlayFace::Resume:     return "Resume (Space)";
+                case PlayerPlayFace::OpenFolder: return "Open folder (Space)";
+                case PlayerPlayFace::Play:       break;
+            }
+            return "Play (Space)";
+        case AppState::PlayerButtonAct::End:
+            return s.end_idle ? "At the end (End)" : "Go to end (End)";
         // A BARE LETTER IS UPPERCASE and a named key wears Qt's own name —
         // the product's one accelerator-spelling convention, stated once at
         // spell_chord's head (gui_input.h) and followed here (architect
         // 2026-09-01; this row read "(r)" and the close row "(Escape)" while
         // the tooltips ran their own lowercase rule).
-        case AppState::PlayerButtonAct::RepeatOne:   return "Repeat one (R)";
+        // THE LAMP'S TEXT NAMES THE TOGGLE (architect 2026-09-01, the class
+        // ruling at redesign_button_tooltip's head: "use toggle-based wording
+        // so it's always accurate") — constant in both states and true in
+        // both, the lamp saying which way the next press goes. It read
+        // "Repeat one (R)" from 2026-08-28.
+        case AppState::PlayerButtonAct::RepeatOne:
+            return "Toggle repeat one (R)";
         // THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01): the key is
         // Backspace, which the router has bound to this act since the mode
         // was built, so the button advertises the chord it answers exactly as
@@ -7847,14 +7909,28 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 // NAMES THE OTHER FUNCTION rather than saying "for more"): non-empty on
 // exactly the buttons player_button_shift_admits names, which the assert below
 // holds. It is the standing no-gesture-hints preference's same ruled
-// exception, scoped to the buttons that admit a modifier.
+// exception, scoped to the buttons that admit a modifier. THE LINE GOES
+// EMPTY WHERE THE TWIN IS DEAD (architect 2026-09-01, the truthful-tooltips
+// ruling): the twins walk the TRANSPORT ITEM'S folder (first_in_item_folder /
+// last_in_item_folder — not the listed folder the band stands in, which is
+// why the words say "the playing folder"), and each refuses silently at its
+// own end of it, so on the folder's first item Home's line and on its last
+// End's line would advertise a press that does nothing under a face the plain
+// act keeps lit. The two bits are the twins' own walls
+// (render_player_first_in_item_folder_actionable and its last twin), which
+// the acts and the face read too. It read "the folder's first file" from
+// 2026-08-28.
 inline std::string render_player_button_shift_hint(
-        AppState::PlayerButtonAct act) {
+        AppState::PlayerButtonAct act, const RenderPlayerHintState& s) {
     switch (act) {
         case AppState::PlayerButtonAct::Home:
-            return "Press Shift for the folder's first file.";
+            return s.first_twin_live
+                       ? "Press Shift for the first file of the playing folder."
+                       : std::string();
         case AppState::PlayerButtonAct::End:
-            return "Press Shift for the folder's last file.";
+            return s.last_twin_live
+                       ? "Press Shift for the last file of the playing folder."
+                       : std::string();
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::Up:
@@ -7865,6 +7941,12 @@ inline std::string render_player_button_shift_hint(
     }
     return std::string();
 }
+// THE ADMISSION AND THE LINE ARE ONE FACT, held here on the ADMISSION
+// predicate: the line's arms above are exactly the buttons this names, and a
+// button admitted here without an arm (or the reverse) is a drift to catch.
+// The line MAY DROP in a state where the admitted twin is dead (the two walls
+// above) — never appear on a button the admission lacks; that is why the
+// hint takes its state and this assert reads the admission alone.
 static_assert(
     player_button_shift_admits(AppState::PlayerButtonAct::Home) &&
     player_button_shift_admits(AppState::PlayerButtonAct::End) &&
@@ -7874,7 +7956,7 @@ static_assert(
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
     "the player's shift-admitting set is the two skips, and the hint's second "
-    "line exists on exactly them");
+    "line exists on exactly them (dropping only where the twin is dead)");
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
 // the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND LEFT TO
@@ -7900,8 +7982,9 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 //
 // ONE OWNER, THREE READERS, and they are three because the act, the face and
 // the glyph must say the same thing: play_button_act's leading fork,
-// render_player_button_enabled's PlayPause arm, and the modal row's PAUSE-face
-// bit (paint_modal_dialog, which is the tooltip's word too). Every reader asks
+// render_player_button_enabled's PlayPause arm, and render_player_play_face
+// (the modal row's glyph AND the tooltip's word since 2026-09-01; the
+// painter's pause bit read this directly before). Every reader asks
 // it with the PLAYER standing, so it takes no owner term of its own — under
 // the project picker the band belongs to a content that has no transport, and
 // none of the three is reached there.
@@ -7923,11 +8006,13 @@ int render_player_highlight_act_row(const AppState& a);
 //     RenderPlayer::resume_frame), so no position term is needed here and
 //     the face asks nothing of the engine's cursor. THE TWIN ADDS NOTHING:
 //     first_in_item_folder acts exactly where a previous entry exists,
-//     which is that third term itself.
+//     which is that third term itself — read through the twin's own owner
+//     render_player_first_in_item_folder_actionable since 2026-09-01.
 //     END acts on a LIVE transport and on a PAUSED one not already resting
 //     at `frames`; THE TWIN ADDS ITS OWN TERM here — at an IDLE rest with a
 //     next entry the seek refuses while the jump to the folder's last wav
-//     acts, so the button stays live for the shifted press.
+//     acts (render_player_last_in_item_folder_actionable, the twin's own
+//     owner), so the button stays live for the shifted press.
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
 //   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder or another wav under the
 //   band is always an act, whatever the transport is doing), then a live or
@@ -7942,11 +8027,16 @@ int render_player_highlight_act_row(const AppState& a);
 //   GuiRenderPlayer::up() cannot disagree about where the wall is. The wall
 //   is SILENT on the key (Backspace at the root is a one-dimensional refusal
 //   already at its state) and the grey is the button's whole message.
-//   LOAD IN PLACE greys on a read-only tab (the lock refuses the load) and
-//   on a highlight with no recipe (render_player_highlighted_entry, the
-//   act's own question). THE RUNNING-RENDER REFUSAL IS DELIBERATELY NOT A
-//   TERM: it is transient state the user is watching finish, and its card
-//   stays the answer on BOTH roads.
+//   LOAD IN PLACE greys on a read-only tab (the lock refuses the load), on
+//   a highlight with no recipe (render_player_highlighted_entry, the act's
+//   own question) and, since 2026-09-01, WHILE A RENDER IS RUNNING —
+//   load_in_place_render_blocked, the act's own third refusal (architect,
+//   the truthful-tooltips ruling: a lit "Load in place" over a press that
+//   cards is a lie the face tells). It was deliberately NOT a term from
+//   2026-08-30 until then, on the ground that a render is transient state
+//   the user is watching finish; the grey is the button's message now and
+//   the key keeps its card, the roster's shape. The bit's writers all
+//   repaint the row through the standing per-frame plan rebuild.
 //   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
 //   escape sentinel).
 // FOUR READER CLASSES: the plan builder (paint_modal_dialog, publishing the
@@ -7984,6 +8074,45 @@ bool render_player_button_enabled(const AppState& a,
 // beside the act. Backspace is the button's key twin and takes the same wall
 // through the same act.
 bool render_player_up_actionable(const AppState& a);
+
+// THE TWO SHIFTED TWINS' OWN WALLS (architect 2026-09-01, the truthful-
+// tooltips ruling — extracted so the act, the face and the hint read one
+// owner): would the jump to the TRANSPORT ITEM'S folder's first / last wav
+// change anything? False with no item in a folder, and false at the end the
+// jump names — the item already the folder's first, or already its last.
+// THREE READERS EACH: the twin's own leading refusal
+// (GuiRenderPlayer::first_in_item_folder / last_in_item_folder, whose two
+// silent returns these ARE), the two skips' face arms in
+// render_player_button_enabled (Home's third term, End's first), and the
+// hint's shift line (render_player_button_shift_hint, which goes empty where
+// the twin is dead). Defined in render_player.cpp beside the acts.
+bool render_player_first_in_item_folder_actionable(const AppState& a);
+bool render_player_last_in_item_folder_actionable(const AppState& a);
+
+// WOULD BARE HOME PLAY THE PREVIOUS ENTRY — the previous-track window
+// (kPlayerPreviousThresholdMs, render_player.h), Home's own first arm
+// extracted 2026-09-01 so the act and its hint read one predicate: a
+// previous entry exists (the twin's wall above, plus a bound item with
+// frames) AND the position the clock and the scrub show is inside the window
+// at the DEVICE's rate. TWO READERS: GuiRenderPlayer::home() (the fork's
+// owner) and the plan builder's hint state (paint_modal_dialog), which is why
+// it takes the playback and the audio — the position is the engine's while
+// live. Defined in render_player.cpp beside home().
+bool render_player_home_takes_previous(const AppState& a,
+                                       const GuiPlayback& playback,
+                                       const GuiAudio& audio);
+
+// IS A RENDER RUNNING THAT A LOAD IN PLACE MUST NOT RACE — the batch queue
+// or an armed archival, both publishing into the folders the load wipes.
+// ONE OWNER, THREE READERS (2026-09-01; the expression stood spelled twice
+// before the face joined): the player's load act (render_player_load_in_place,
+// input_key_dispatch.cpp — the card "Cannot load in place while a render is
+// running"), the standalone mutator's own backstop
+// (load_render_entry_in_place) and the Load in place button's face
+// (render_player_button_enabled).
+inline bool load_in_place_render_blocked(const AppState& a) {
+    return a.queue_running || a.pending_archival.armed;
+}
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;
@@ -8574,15 +8703,37 @@ inline bool marker_focus_standing(const AppState& app) {
     return app.last_selected_marker >= 0;
 }
 
+// DOES THE `c` COMMAND LAND ON A FOCUS — the center command's own fork
+// (GuiInputHandler::run_center_command, input_handler.cpp), named 2026-09-01
+// so its button's hint can say which of the two things the press will do
+// (architect, the truthful-tooltips ruling: "Center on focus" with nothing
+// focused centers on the PLAYHEAD). Outside the `h` view it is the focus
+// atom above — the live arm's jump_playhead_to_focused_marker lands exactly
+// when a focus stands, its out-of-range belt being an invariant breach the
+// faces already accept reading unrepaired; inside the view it is the mode's
+// own diff-flag focus, in range of the mode's flags, which is the mode arm's
+// own test moved here. TWO READERS: the mode arm of run_center_command and
+// the Center button's hint (redesign_button_tooltip's stateful overload).
+inline bool center_command_lands_on_focus(const AppState& a) {
+    if (a.history_mode.active) {
+        const int focus = a.history_mode.focus;
+        return focus >= 0 &&
+               focus < static_cast<int>(a.history_mode.flags.size());
+    }
+    return marker_focus_standing(a);
+}
+
 // SHIFT+S'S OWN LEADING REFUSAL (architect 2026-08-30): the chord IS the
 // crossing from the warp column into T+P, the lead-in drop's view, so with the P
 // column already standing there is nothing to cross and the act refuses
 // WHOLE — "Already in phase reset view", before any view switch, T+P and
-// S+P alike; bare `s` is untouched. TWO READERS: the act's head
-// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp) and
-// the Drop marker button's face (redesign_button_enabled), whose S+P grey
-// is this refusal meeting bare `s`'s off-home one — the twin rule's arm
-// there.
+// S+P alike; bare `s` is untouched. THREE READERS: the act's head
+// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp), the
+// Drop marker button's face (redesign_button_enabled — the twin rule's arm,
+// which never greys past the lock since the P column opened 2026-08-30: one
+// form is always live), and since 2026-09-01 the button's tooltip
+// (redesign_button_tooltip's stateful overload), whose shift line drops
+// exactly where this refuses.
 inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
@@ -9295,6 +9446,25 @@ inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
            clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
 }
 
+// WHAT BARE `0` WOULD DO — the overview command's one fork and its one
+// resolve, named 2026-09-01 (architect, the truthful-tooltips ruling: at the
+// ceiling the press is the RECALL, "Full zoom out" being a lie there). BELOW
+// the per-file ceiling `at_ceiling` is false and `level` is the ceiling the
+// zoom-out arm applies; AT it (`>=`, Viewport::zoom_out's own compare)
+// `at_ceiling` is true and `level` is what the `c` command is handed — the
+// tab's stamped recall clamped into the live window, spending as
+// kWorkingZoomLevel when nothing is stamped or the stamp cannot move the zoom
+// (the fallen-ceiling rule, argued at the act). TWO READERS:
+// GuiInputHandler::run_overview_command (the act, which decides nothing of
+// its own past this) and the Full zoom out button's hint. Defined in
+// input_handler.cpp beside the act.
+struct OverviewCommandTarget {
+    bool   at_ceiling = false;
+    double level      = 0.0;
+};
+OverviewCommandTarget overview_command_target(const AppState& a,
+                                              const GuiAudio& audio);
+
 // THE MAGNIFICATION STEP'S TARGET, one owner (planner decision 53): a step
 // asks for the current level plus or minus one, and the applier's bracket
 // (is_waveform_magnification_level, settings_file.h — the range shared with
@@ -9974,6 +10144,20 @@ inline bool playback_launch_playable(const AppState& a,
 // declarations below; it is named here ahead of them because the Copy value
 // arm reads it since 2026-08-30 and this predicate is inline in the header.)
 bool payload_eligible_marker(const AppState& app, int idx);
+// THE MARKER THE FOCUSED VALUE CAME FROM, or −1 — the jump's own question
+// (Shift+`j`, GuiInputHandler::jump_to_value_source), named 2026-09-01 so the
+// Copy value button's shift line can drop where there is nothing to jump to
+// (architect, the truthful-tooltips ruling). It wraps the one parser composer
+// resolved_marker_payload (warp_frame_map_build.h — called, never touched)
+// exactly as the jump calls it, and answers −1 on every case the jump's own
+// three-way test refuses: an empty payload, a value naming no source (a
+// first-marker pass, a walk that ended on a ref, a synthetic prior, a
+// normalized ref) and the out-of-store belt. It asks NOTHING of eligibility
+// — that is payload_eligible_marker's, the gate both chords run first — so
+// the jump keeps its two cards in the act's own order and this answers the
+// second. TWO READERS: the jump and the hint. Defined in app_state.cpp
+// beside the eligibility gate.
+int value_source_marker(const AppState& app, int64_t total_frames);
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
 // GuiTargetRender::preview_ready, reachable from this inline body although
 // the class is only forward-declared here. The contract is at the member.
@@ -11408,6 +11592,26 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // against both predicates below, so the hint cannot advertise a modified press
 // that does nothing (or stay silent about one that does).
 //
+// A TOOLTIP NAMES THE ACT THE PRESS WILL RUN IN THE CURRENT STATE (architect
+// 2026-09-01, the truthful-tooltips ruling — "tooltips never lie: they update
+// dynamically with the act"), and its second line exists exactly where the
+// modified press does something DIFFERENT from the plain one in that state.
+// This table is the STATE-FREE truth; every row whose word or whose line
+// depends on state is overridden in the stateful overload below, and every
+// fork there reads the predicate the ACT or the FACE already reads — never a
+// restated condition. A LAMP BUTTON'S TEXT NAMES THE TOGGLE (architect, the
+// same day: "use toggle-based wording so it's always accurate"): "Toggle
+// <mode> (<key>)", constant in both states and true in both — the lamp says
+// which way the next press goes, and the text never has to swap between a
+// verb and its opposite. Toggle inherit's own shape, worn since that day by
+// every lamp-carried toggle here (trim region, follow, centered viewport,
+// read-only, history view, cumulative, add to selection) and by the render
+// player's Repeat one. Until then those rows named a CONSTANT ACT while the
+// lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
+// which read "Show trim region" over a lit lamp whose press HIDES it, the lie
+// the ruling retired; a RADIO's unlit half still names its own act, a press
+// on the lit half being the consumed nothing the lamp shows.
+//
 // THE ACCELERATOR'S SPELLING IS THE PRODUCT'S ONE CONVENTION, stated once at
 // the speller (spell_chord's head, gui_input.h) and followed here: kdenlive's,
 // which is Qt's — a BARE LETTER UPPERCASE ("(T)", "(P)", "(H)"), a CHORD with
@@ -11466,31 +11670,34 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (T)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
-        // SHOW TRIM REGION (the architect's own words, 2026-08-19 — the name
-        // the enumerator has carried all along, with "trim" added once the
-        // overlay became the trim itself; it read "Show region" from
-        // 2026-08-16 and "Trim region" for one day in between), TWO LINES: its
-        // twin IS Shift+[ the maximizer, so the hint says so and the shift
-        // admission and the line are the one fact the static_assert below
-        // keeps together. The accelerator is the bare `[` key and so names its
-        // own cap, this table's rule (it read "(x)" until the family moved to
-        // `[` on 2026-08-24). THE TOOLTIP NAMES A CONSTANT ACT WHILE THE LAMP
-        // CARRIES THE STATE — the read-only toggle's settled precedent, and
-        // this table's rows name a constant act at a constant chord — so a
-        // show/hide toggle needs no second name any more than the padlock
-        // does: it never swaps to "Hide", the lit face being what says which
-        // press comes next, and there is no second glyph either (every
-        // eye-shaped alternative collides with ViewHidden, which is already
-        // IconMarkerDisable). The SHIFT LINE is the trim scissors' own words,
-        // inherited with their admission.
+        // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
+        // maximizer, so the hint says so and the shift admission and the line
+        // are the one fact the static_assert below keeps together. The
+        // accelerator is the bare `[` key and so names its own cap, this
+        // table's rule (it read "(x)" until the family moved to `[` on
+        // 2026-08-24). THE TEXT NAMES THE TOGGLE (the lamp rule at this
+        // table's head, architect 2026-09-01): it read "Show trim region" —
+        // the architect's own words of 2026-08-19, "Show region" from
+        // 2026-08-16 and "Trim region" for one day between — over a lit lamp
+        // whose press HIDES, the read-only precedent's constant-act shape,
+        // and the enumerator keeps that name. There is no second glyph
+        // either (every eye-shaped alternative collides with ViewHidden,
+        // which is already IconMarkerDisable). The SHIFT LINE is the trim
+        // scissors' own words, inherited with their admission; THE OVERLOAD
+        // DROPS IT over a full trim window, where the maximizer's own guard
+        // refuses (trim_is_full_window, handle_trim_clear_both's head).
         case RedesignButton::IconShowRegion:
-            return {"Show trim region ([)", "Press Shift for the whole song."};
+            return {"Toggle trim region ([)", "Press Shift for the whole song."};
         // THE ZOOM GROUP (2026-08-12), all one-line: the names were aligned
         // with the Navigation dropdown's rows for the two they shared ("Zoom
         // in" / "Zoom out") and are kept verbatim now that the menu is deleted
         // (2026-08-15), the alignment having outlived its second surface; the
         // accelerators are the table's own convention — punctuation names its
-        // own cap, and a chord spells its modifiers out.
+        // own cap, and a chord spells its modifiers out. THREE OF THE FOUR
+        // ARE STATE-FREE HERE ONLY (2026-09-01, the overload): Zoom in at the
+        // floor recentres on the playhead, Full zoom out at the ceiling is
+        // the recall, and Center with nothing focused centers on the playhead
+        // — each press does something, and the overload names which.
         case RedesignButton::IconZoomIn:
             return {"Zoom in (Ctrl+=)", nullptr};
         case RedesignButton::IconZoomOut:
@@ -11511,12 +11718,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Magnify waveform (=)", nullptr};
         case RedesignButton::IconWaveformReduce:
             return {"Reduce waveform (-)", nullptr};
-        case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
-        // The centered lamp (2026-08-31), one line: bare `y` toggles and has
-        // no shifted twin. The text names the constant act while the lamp
-        // carries the state, the read-only toggle's precedent.
+        // THE TWO VIEWPORT LAMPS, one line each: bare `f` / bare `y` toggle
+        // and neither has a shifted twin. Their texts NAME THE TOGGLE (the
+        // lamp rule at this table's head, architect 2026-09-01): Follow read
+        // "Follow (F)" and the centered lamp "Keep viewport centered on
+        // playhead (Y)" — a verb that was a lie on the lit face, whose press
+        // STOPS centering — until that day.
+        case RedesignButton::IconFollow: return {"Toggle follow (F)", nullptr};
         case RedesignButton::IconCentered:
-            return {"Keep viewport centered on playhead (Y)", nullptr};
+            return {"Toggle centered viewport (Y)", nullptr};
         // THE TWO PLAYER OPENERS (2026-08-28): both open the render player
         // — `l` names the act it exists for, `'` keeps its name because it is
         // the load's chord on both roads: the viewed member's confirmation in
@@ -11532,15 +11742,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconLoadInPlace:
             return {"Load in place (')", nullptr};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
-        // has no shifted twin. The TEXT IS CONSTANT while the glyph and the
-        // lamp carry the state — this table's rows name a constant act at a
-        // constant chord, and "Read-only" is the act's name in HELP's own
-        // vocabulary whichever way the tab currently stands.
+        // has no shifted twin. The TEXT NAMES THE TOGGLE (the lamp rule at
+        // this table's head) while the glyph and the lamp carry the state;
+        // it read "Read-only (O)" — the constant-act precedent the other
+        // lamps followed — until 2026-09-01.
         case RedesignButton::IconReadOnly:
-            return {"Read-only (O)", nullptr};
-        // HELP's own vocabulary for the mode ("Checking history"), one line: the
-        // key toggles and there is no shifted twin.
-        case RedesignButton::IconHistory: return {"History (H)", nullptr};
+            return {"Toggle read-only (O)", nullptr};
+        // THE HISTORY VIEW'S TOGGLE, one line: the key toggles and there is
+        // no shifted twin. The text names the toggle (the lamp rule at this
+        // table's head); it read "History (H)", HELP's own word for the
+        // mode, until 2026-09-01.
+        case RedesignButton::IconHistory:
+            return {"Toggle history view (H)", nullptr};
         // THE TWO WALK RADIOS (2026-08-18), one line each: one chord for the
         // pair and no shifted twin on it. The words name the WALK — "Git" for
         // the committed checkpoint history, "Session" for this session's own
@@ -11554,7 +11767,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::HistoryWalkSession:
             return {"Session (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
-        // twin. Like the three below it, this hint is reachable IN EVERY STATE
+        // twin; the text names the toggle (the lamp rule at this table's
+        // head — it read "Cumulative (U)" until 2026-09-01). Like the three
+        // below it, this hint is reachable IN EVERY STATE
         // again since 2026-08-18: the four came back to the ICON ROW, which
         // paints every member always, so they carry a DEAD face outside the `h`
         // view and this hint over it — which is exactly the tooltips-on-
@@ -11564,7 +11779,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // plain `true` on the bottom row's swapped cluster and were painted
         // inside the view alone.
         case RedesignButton::HistoryCumulative:
-            return {"Cumulative (U)", nullptr};
+            return {"Toggle cumulative (U)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
         // shifted twins jump to the walk's walls, so the hint says so — the same
         // rule the static_assert below states, met by two more buttons. The
@@ -11616,7 +11831,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // on every dead face — a live ctrl twin keeps the button lit and the
         // ctrl-click reachable instead — and the tooltips-on-disabled ruling
         // (a disabled icon still explains itself) says the line stays; the
-        // keys keep the act.
+        // keys keep the act. THE OVERLOAD FORKS BOTH LINES (2026-09-01): on a
+        // face the ctrl twin alone keeps lit the first line says the cursor
+        // is already at the bound, and the line drops where the two forms
+        // land on one frame (a full trim window, and the `h` view, whose
+        // every jump takes the whole-piece arm) — the landing owner's own
+        // two coincidences.
         case RedesignButton::TransportSkipBack:
             return {"Go to start (Home)",
                     "Press Ctrl to ignore the trim window."};
@@ -11628,10 +11848,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // saying in the same breath. THE SHIFT LINE (2026-08-26) names the
         // A/B audition, the button's twin since it joined
         // redesign_button_shift_admits; the static_assert below keeps the line
-        // and the admission one fact. The live form carries the same line —
-        // see the overload — because a shift press starts the sequence in
-        // both states, so it does something different from the plain press in
-        // both. THE LINE STAYS ON A GREYED PLAY (2026-08-30): under the twin
+        // and the admission one fact. The live form over a PLAIN audition
+        // carries the same line — see the overload — because a shift press
+        // starts the sequence there, so it does something different from the
+        // plain press; over a standing A/B SEQUENCE the overload drops it
+        // (the shift press stops the act exactly as the plain one does).
+        // THE LINE STAYS ON A GREYED PLAY (2026-08-30): under the twin
         // rule the button greys only where the plain launch AND the
         // audition's own preflight would refuse, so the act the line names
         // is dead on every dead face — a runnable audition keeps the button
@@ -11665,13 +11887,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // beyond dropping — it takes the reader to target view, where the
         // lead-in seed and its overlay live,
         // and drops the reset at the cursor's own instant once it arrives.
+        // THIS ROW IS THE S-VIEW WARP-COLUMN TRUTH (2026-09-01, the
+        // overload): in the P column the shifted press refuses as already
+        // crossed and the line drops, and in T+W the plain press cards
+        // "Markers are placed in source view", which the first line then
+        // says — the tooltip saying what the press will say.
         case RedesignButton::IconMarkerDrop:
             return {"Drop marker (S)",
                     "Press Shift to drop a phase reset in target view."};
         case RedesignButton::IconMarkerDelete:
             return {"Delete markers (Del)", nullptr};
+        // TOGGLE DISABLED, Toggle inherit's own shape (architect 2026-09-01,
+        // the truthful-tooltips ruling): the act flips `disabled` PER MEMBER
+        // (warpmarkers_ops.cpp / phaseresetmarkers_ops.cpp), so on a disabled
+        // selection the press ENABLES and on a mixed one it goes both ways in
+        // one press — "Disable markers", its text from 2026-08-12, named one
+        // direction of a toggle.
         case RedesignButton::IconMarkerDisable:
-            return {"Disable markers (Ctrl+D)", nullptr};
+            return {"Toggle disabled (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle inherit (Ctrl+N)", nullptr};
         // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
@@ -11712,21 +11945,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // member the READ-ONLY LOCK leaves lit, both its chords being
         // navigation, and it still explains itself in the `h` view, where the
         // derived partition greys it — the tooltips-on-disabled ruling above.
+        // THE OVERLOAD DROPS THE SECOND LINE where the value names no source
+        // marker (value_source_marker, the jump's own question — 2026-09-01).
         case RedesignButton::IconCopyValue:
             return {"Copy resolved value (J)",
                     "Press Shift to jump to defining/previous marker."};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH since
-        // 2026-08-27 and a MODE
-        // rather than an act — the hint names it in the architect's own words
-        // and stops there, in SENTENCE CASE since 2026-09-01 (it read "Add to
-        // Selection" from 2026-08-18; every multi-word label in the product is
-        // sentence case now, with no exception left). ONE LINE, no shift line (it admits no shift press)
-        // and NO GESTURE HINT: the words never explain how to use the mode,
-        // which is the product's standing rule about UI text. It greys in the
-        // `h` view alone and still explains itself there, the
-        // tooltips-on-disabled ruling above.
+        // 2026-08-27 and a MODE rather than an act — the hint NAMES THE
+        // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
+        // it read "Add to Selection" from 2026-08-18 and "Add to selection"
+        // for the hours of that day's sentence-case pass, a verb phrase that
+        // named the ON act over a lit lamp whose press turns the mode off).
+        // ONE LINE, no shift line (it admits no shift press) and NO GESTURE
+        // HINT: the words never explain how to use the mode, which is the
+        // product's standing rule about UI text. It greys in the `h` view
+        // alone and still explains itself there, the tooltips-on-disabled
+        // ruling above.
         case RedesignButton::IconAddToSelection:
-            return {"Add to selection (K)", nullptr};
+            return {"Toggle add to selection (K)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
         // marker" are HELP's own words for the bare Tab cycle; "Walk both
         // tabs" was the Navigation dropdown's own row for Ctrl+Shift+Tab, and
@@ -11863,8 +12099,25 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // as four self-labelled tabs, then as two labelled groups, for one day
 // 2026-08-07..08; the READING is row 4's Cumulative toggle,
 // RedesignButton::HistoryCumulative on bare `u`.)
-inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
-                                                   RedesignButton b) {
+// THE OVERLOAD TAKES THE ENABLED PREDICATE'S OWN SIGNATURE since 2026-09-01
+// (architect, the truthful-tooltips ruling — the survey at
+// tmp/uniformity_survey_tooltips.md is its record): a hint forks on the
+// predicate the act or the face already reads, and several of those need what
+// redesign_button_enabled needs — the skips' landing owner reads GuiAudio, the
+// trim's full-window owner the frame count, the overview command's resolve the
+// audio again — so the two take the same objects in the same order and the
+// painter passes them once. `playback` and `target_render` are carried for
+// the shape alone today (no fork reads them yet) so a fork that comes to need
+// one adds no parameter. It read AppState alone from 2026-08-02 to that day.
+// THE ONE READER is the tooltip painter (paint_shift_tooltip,
+// paint_handler.cpp); the dwell writer (recompute_redesign_button_hover,
+// input_pointer.cpp) asks membership alone and reads the constant table.
+inline RedesignTooltipText redesign_button_tooltip(
+        const AppState& a, const GuiAudio& audio, int64_t total_frames,
+        const GuiPlayback& playback, const GuiTargetRender& target_render,
+        RedesignButton b) {
+    (void)playback;
+    (void)target_render;
     // (THE TABS' IN-VIEW SILENCE IS DELETED — 2026-08-18. While the `h` view
     // repurposed row 3 as its walk selector the two slots dropped their hints
     // entirely, on the view bar's reasoning: their labels WERE the thing a hint
@@ -11918,21 +12171,123 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
     // otherwise. The condition is redesign_button_glyph_swapped's, not a
     // second read of the audition bit, so the WORDS and the GLYPH can never
     // disagree about which half the button currently is. THE SHIFT LINE
-    // STAYS ON THE LIVE FORM (2026-08-26): the shift press's act is the A/B
-    // audition in both states — over a running plain audition its first tab
-    // switch stops that audition and the sequence begins — so, unlike Render's
-    // Cancel face (where a shift press cancels exactly as the plain one does),
-    // the modified press does something DIFFERENT here and the line is owed.
-    // THE ONE STATE WHERE IT DOES NOT is a standing SEQUENCE since 2026-08-31,
-    // the chord having become a toggle: there the shift press stops the act
-    // exactly as the plain one does, so the line names the act the button is
-    // ALREADY running rather than a second one. Recorded rather than forked:
-    // the words would have to change per transport KIND (plain audition vs
-    // sequence) where the glyph does not, and the line stays true of the
-    // face's other live state.
+    // STAYS ON THE LIVE FORM OVER A PLAIN AUDITION (2026-08-26): the shift
+    // press's act is the A/B audition there — its first tab switch stops
+    // that audition and the sequence begins — so, unlike Render's Cancel
+    // face (where a shift press cancels exactly as the plain one does), the
+    // modified press does something DIFFERENT and the line is owed. OVER A
+    // STANDING SEQUENCE IT DROPS (2026-09-01; the chord became a toggle on
+    // 2026-08-31 and the line was "recorded rather than forked" for one day):
+    // there the shift press stops the act exactly as the plain one does —
+    // GuiAbAudition::start's head, whose test this is — so the face is
+    // Render's Cancel shape, one face, one act, no line.
     if (b == RedesignButton::TransportPlayStop &&
         redesign_button_glyph_swapped(a, b)) {
+        if (a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle)
+            return {"Stop (Space)", nullptr};
         return {"Stop (Space)", "Press Shift for the A/B audition."};
+    }
+    // EVERY FORK BELOW IS THE TRUTHFUL-TOOLTIPS RULING'S (architect
+    // 2026-09-01; the rule is at the constant table's head): the word names
+    // the act the press will run in this state, and the second line drops
+    // where the modified press would do nothing different. Each condition is
+    // the act's or the face's own predicate — none is restated here.
+    switch (b) {
+        // THE TRIM REGION TOGGLE'S SHIFT LINE drops over a full trim window:
+        // the maximizer's own guard (trim_is_full_window at
+        // handle_trim_clear_both's head, input_trim.cpp) refuses there, so
+        // "Press Shift for the whole song" would name a press that does
+        // nothing under a face the plain toggle keeps lit.
+        case RedesignButton::IconShowRegion:
+            if (trim_is_full_window(a.trim, total_frames))
+                return {"Toggle trim region ([)", nullptr};
+            break;
+        // ZOOM IN AT THE FLOOR recentres on the playhead — Viewport::zoom_in's
+        // second arm, whose compare this is; the button never greys for it.
+        case RedesignButton::IconZoomIn:
+            if (!(a.zoom_level > kMinZoom))
+                return {"Center on playhead (Ctrl+=)", nullptr};
+            break;
+        // FULL ZOOM OUT AT THE CEILING is the recall — `c` at the stamped
+        // level, or plain `c` when nothing usable is stamped — through the
+        // act's one resolve (overview_command_target, run_overview_command's
+        // own fork), so the word cannot pick the level the act will not.
+        case RedesignButton::IconZoomFitBest: {
+            const OverviewCommandTarget t = overview_command_target(a, audio);
+            if (t.at_ceiling) {
+                return {t.level == kWorkingZoomLevel
+                            ? "Back to working zoom (0)"
+                            : "Back to previous zoom (0)",
+                        nullptr};
+            }
+            break;
+        }
+        // CENTER WITH NOTHING FOCUSED centers on the playhead —
+        // run_center_command's own fork (center_command_lands_on_focus, the
+        // live focus atom outside the `h` view and the mode's own range
+        // inside it).
+        case RedesignButton::IconZoomOriginal:
+            if (!center_command_lands_on_focus(a))
+                return {"Center on playhead (C)", nullptr};
+            break;
+        // THE TWO SKIPS, both lines forked on the acts' own owners. THE
+        // SECOND LINE DROPS where the bare and the whole-piece landings
+        // coincide — playhead_skip_landing_frame's own two coincidences: a
+        // full trim window ("with a full trim window the two arms coincide")
+        // and the `h` view, which takes the whole-piece arm for EVERY jump —
+        // so "Press Ctrl to ignore the trim window" never advertises a
+        // distinction that does not exist. THE FIRST LINE says the cursor is
+        // already at the bound when the bare form is dead and the ctrl form
+        // alone lights the face — the face's own two reads of
+        // playhead_end_jump_actionable, asked in the face's order — because
+        // "Go to start" would then name the press's dead half.
+        case RedesignButton::TransportSkipBack:
+        case RedesignButton::TransportSkipForward: {
+            const bool forward = b == RedesignButton::TransportSkipForward;
+            const bool coincide =
+                trim_is_full_window(a.trim, total_frames) ||
+                a.history_mode.active;
+            const char* const line2 =
+                coincide ? nullptr : "Press Ctrl to ignore the trim window.";
+            const bool bare_live =
+                playhead_end_jump_actionable(a, audio, forward,
+                                             /*whole_piece=*/false);
+            const bool ctrl_live =
+                playhead_end_jump_actionable(a, audio, forward,
+                                             /*whole_piece=*/true);
+            if (!bare_live && ctrl_live) {
+                return {forward ? "At the trim end (End)"
+                                : "At the trim start (Home)",
+                        line2};
+            }
+            return {forward ? "Go to end (End)" : "Go to start (Home)",
+                    line2};
+        }
+        // DROP MARKER: in the P column the shifted press refuses as already
+        // crossed (phase_reset_drop_crossing_actionable, the shift act's own
+        // head), so its line drops; in T+W the plain press cards "Markers
+        // are placed in source view" (active_column_authoring_allowed, bare
+        // `s`'s own gate) while the crossing keeps the face lit, so the first
+        // line says what the press will say and the live twin keeps its line.
+        case RedesignButton::IconMarkerDrop:
+            if (!phase_reset_drop_crossing_actionable(a))
+                return {"Drop marker (S)", nullptr};
+            if (!active_column_authoring_allowed(a)) {
+                return {"Markers are placed in source view (S)",
+                        "Press Shift to drop a phase reset in target view."};
+            }
+            break;
+        // COPY RESOLVED VALUE: the shift line drops where the focused value
+        // names no marker to jump to — value_source_marker, the jump's own
+        // question, wrapping the parser composer the jump calls. The
+        // composer runs at each paint of the hint, on this one button, which
+        // is the accepted cost.
+        case RedesignButton::IconCopyValue:
+            if (value_source_marker(a, total_frames) < 0)
+                return {"Copy resolved value (J)", nullptr};
+            break;
+        default:
+            break;
     }
     return redesign_button_tooltip(b);
 }
@@ -11954,6 +12309,16 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // modifier that acts, and the walk at redesign_button_ctrl_admits is what
 // holds the arrows to being the only exception (their line names both rungs of
 // the step ladder).
+//
+// IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
+// MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
+// on Render's iteration-mode precedent of 2026-08-02): where the admitted
+// twin is dead in the current state — the maximizer over a full window, the
+// crossing in the P column, the jump with no source, the audition's shift
+// over a standing sequence, the skips' ctrl form where the two landings
+// coincide — the overload returns the one-line form, and it can return a
+// second line only on a button this walk has already bound to an admission,
+// since every overload arm either forwards the table's line or drops it.
 //
 // IT WALKS THE WHOLE ROSTER (2026-08-29), it does not list buttons. This was a
 // hand-kept enumeration of ten — eight members plus two negatives kept as

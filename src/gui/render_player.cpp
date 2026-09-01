@@ -267,6 +267,39 @@ int render_player_highlight_act_row(const AppState& a) {
     return -1;
 }
 
+// THE PLAY/PAUSE FACE — the contract and the readers are at the declaration
+// (app_state.h). play_button_act's two forks in the act's own order, read
+// without acting: the highlight's row first, then transport_toggle_act's
+// three states.
+PlayerPlayFace render_player_play_face(const AppState& a) {
+    if (const int row = render_player_highlight_act_row(a); row >= 0) {
+        const Row& r = a.folder_overlay.rows[static_cast<size_t>(row)];
+        return r.kind == Row::Kind::Folder ? PlayerPlayFace::OpenFolder
+                                           : PlayerPlayFace::Play;
+    }
+    switch (a.render_player.transport) {
+        case Transport::Live:   return PlayerPlayFace::Pause;
+        case Transport::Paused: return PlayerPlayFace::Resume;
+        case Transport::Idle:   break;
+    }
+    return PlayerPlayFace::Play;
+}
+
+// THE TWO SHIFTED TWINS' WALLS — the contract and the three readers each are
+// at the declaration (app_state.h): no item in a folder, or the item already
+// at the end the jump names.
+bool render_player_first_in_item_folder_actionable(const AppState& a) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    const int n = static_cast<int>(rp.item_folder.size());
+    return rp.item_index >= 0 && rp.item_index < n && rp.item_index > 0;
+}
+
+bool render_player_last_in_item_folder_actionable(const AppState& a) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    const int n = static_cast<int>(rp.item_folder.size());
+    return rp.item_index >= 0 && rp.item_index < n && rp.item_index + 1 < n;
+}
+
 // THE MODAL ROW'S DISABLED FACE — the contract, the per-act arms' rationale
 // and the reader inventory are at the declaration (app_state.h). Each arm
 // below is the act's own leading refusals in the act's own order.
@@ -274,8 +307,6 @@ bool render_player_button_enabled(const AppState& a,
                                   AppState::PlayerButtonAct act) {
     const AppState::RenderPlayer& rp = a.render_player;
     using Transport = AppState::RenderPlayer::Transport;
-    const int n = static_cast<int>(rp.item_folder.size());
-    const bool item_in_folder = rp.item_index >= 0 && rp.item_index < n;
     switch (act) {
         // THE TWO SKIPS' FACES ARE HOME'S AND END'S (2026-08-31), each the
         // act's own leading refusals ORed with its shifted twin's under the
@@ -283,18 +314,20 @@ bool render_player_button_enabled(const AppState& a,
         // (the reseek re-lands its window), and off LIVE the position IS
         // `resume_frame` — 0 at every idle rest by construction — so the
         // previous-track window's test collapses into "is there a previous
-        // entry", which is also exactly when the shifted first-jump acts.
+        // entry", which is also exactly when the shifted first-jump acts —
+        // and so is read as that twin's own owner (2026-09-01).
         case AppState::PlayerButtonAct::Home:
             if (rp.item.empty() || rp.frames <= 0) return false;
             if (rp.transport == Transport::Live) return true;
             if (rp.transport == Transport::Paused && rp.resume_frame != 0)
                 return true;
-            return item_in_folder && rp.item_index > 0;
+            return render_player_first_in_item_folder_actionable(a);
         case AppState::PlayerButtonAct::End:
             // The twin DOES add a term here: at an idle rest with a next
             // entry the seek to `frames` refuses while the jump to the
-            // folder's LAST wav acts, so the button stays live for it.
-            if (item_in_folder && rp.item_index + 1 < n) return true;
+            // folder's LAST wav acts, so the button stays live for it — the
+            // twin's own owner (2026-09-01).
+            if (render_player_last_in_item_folder_actionable(a)) return true;
             if (rp.item.empty() || rp.frames <= 0) return false;
             if (rp.transport == Transport::Live) return true;
             return rp.transport == Transport::Paused &&
@@ -313,8 +346,13 @@ bool render_player_button_enabled(const AppState& a,
             return render_player_up_actionable(a);
         // (STOP's arm stood here — the no-item belt and R36's already-resting
         // return — and went with the button on 2026-09-01.)
+        // LOAD IN PLACE: the act's three leading refusals in the act's own
+        // order — the lock, the running render (load_in_place_render_blocked,
+        // a face term since 2026-09-01; the reasoning is at the declaration)
+        // and the recipe-less highlight.
         case AppState::PlayerButtonAct::LoadInPlace:
             return !active_view_state(a).read_only &&
+                   !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::Close:
@@ -622,22 +660,20 @@ void GuiRenderPlayer::toggle_pause() {
 // instead of stepped. THE END ITSELF REFUSES: an item that is already the
 // folder's first is already where "go to the first" would put it, and bare
 // Home is what restarts a wav in place.
+// BOTH WALLS ARE ONE OWNER EACH (2026-09-01): the no-item and the
+// already-there returns are render_player_first_in_item_folder_actionable /
+// render_player_last_in_item_folder_actionable, which the face and the hint's
+// shift line read too — silent here, the rule above.
 void GuiRenderPlayer::first_in_item_folder() {
-    AppState::RenderPlayer& rp = app.render_player;
-    const int n = static_cast<int>(rp.item_folder.size());
-    if (rp.item_index < 0 || rp.item_index >= n) return;  // no item — silent
-    if (rp.item_index == 0) return;   // already the first — silent (above)
-    const std::vector<Row> folder = rp.item_folder;
+    if (!render_player_first_in_item_folder_actionable(app)) return;
+    const std::vector<Row> folder = app.render_player.item_folder;
     play_wav(folder.front().path, folder, 0);
 }
 
 void GuiRenderPlayer::last_in_item_folder() {
-    AppState::RenderPlayer& rp = app.render_player;
-    const int n    = static_cast<int>(rp.item_folder.size());
-    const int last = n - 1;
-    if (rp.item_index < 0 || rp.item_index >= n) return;  // no item — silent
-    if (rp.item_index >= last) return;   // already the last — silent (above)
-    const std::vector<Row> folder = rp.item_folder;
+    if (!render_player_last_in_item_folder_actionable(app)) return;
+    const std::vector<Row> folder = app.render_player.item_folder;
+    const int last = static_cast<int>(folder.size()) - 1;
     play_wav(folder[static_cast<size_t>(last)].path, folder, last);
 }
 
@@ -723,26 +759,33 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 // nothing to step back to. The idle rule is about not NUDGING a resting
 // transport to some other point in the item it would not resume from; a track
 // change is not a nudge.
+//
+// THE FORK IS ONE OWNER since 2026-09-01 (render_player_home_takes_previous
+// below), which the Home button's hint reads too, so "Previous file" and
+// "Go to start" are said exactly where each is what the press does.
+bool render_player_home_takes_previous(const AppState& a,
+                                       const GuiPlayback& playback,
+                                       const GuiAudio& audio) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    const bool has_previous = render_player_first_in_item_folder_actionable(a) &&
+                              !rp.item.empty() && rp.frames > 0;
+    if (!has_previous) return false;
+    // The window in frames at the DEVICE's rate — the item's own rate by
+    // the decode's equality. A rate the engine cannot name closes the
+    // window rather than opening it wide.
+    const int64_t rate   = audio.sample_rate();
+    const int64_t window = rate > 0 ? kPlayerPreviousThresholdMs * rate / 1000
+                                    : 0;
+    return render_player_position(a, playback) < window;
+}
+
 void GuiRenderPlayer::home() {
-    AppState::RenderPlayer& rp = app.render_player;
-    const int n = static_cast<int>(rp.item_folder.size());
-    const bool has_previous =
-        rp.item_index > 0 && rp.item_index < n && !rp.item.empty() &&
-        rp.frames > 0;
-    if (has_previous) {
-        // The window in frames at the DEVICE's rate — the item's own rate by
-        // the decode's equality. A rate the engine cannot name closes the
-        // window rather than opening it wide.
-        const int64_t rate   = audio.sample_rate();
-        const int64_t window = rate > 0
-                                   ? kPlayerPreviousThresholdMs * rate / 1000
-                                   : 0;
-        if (position() < window) {
-            const std::vector<Row> folder = rp.item_folder;
-            const int i = rp.item_index - 1;
-            play_wav(folder[static_cast<size_t>(i)].path, folder, i);
-            return;
-        }
+    if (render_player_home_takes_previous(app, playback, audio)) {
+        const AppState::RenderPlayer& rp = app.render_player;
+        const std::vector<Row> folder = rp.item_folder;
+        const int i = rp.item_index - 1;
+        play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+        return;
     }
     seek_to(0);
 }

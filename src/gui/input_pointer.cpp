@@ -7001,8 +7001,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             else
                 changed_top = true;
         }
+        // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
+        // whether the button HAS a tooltip — a null line 1 — and that is the
+        // menu-row exclusion the state-free table owns; the stateful overload
+        // (whose every arm returns a non-null line 1) is the painter's, which
+        // reads the words at paint time.
         if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
-            redesign_button_tooltip(app, id).line1 != nullptr)
+            redesign_button_tooltip(id).line1 != nullptr)
             hovered_tip = i;
     }
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
@@ -7054,12 +7059,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
     // and that membership is a CONSTANT: only the TEXT is stateful, never
     // whether a button has one. Re-derived from redesign_button_tooltip's
-    // stateful overload, which moves the words on THREE buttons and takes no
-    // hint away from any: SAVE (a publishing checkpoint first, then the history
-    // view's "Save and commit"), RENDER (the mid-render Cancel, then the
-    // iteration bit) and, since 2026-08-15, THE BOTTOM ROW'S COLLAPSED
-    // PLAY/STOP BUTTON (the live audition bit, the same condition its glyph
-    // reads). (Row 3's tabs were the one membership move in the product, going
+    // stateful overload, whose every arm returns a non-null line 1 and so
+    // takes no hint away from any button: it moved the words on THREE — SAVE
+    // (a publishing checkpoint first, then the history view's "Save and
+    // commit"), RENDER (the mid-render Cancel, then the iteration bit) and,
+    // since 2026-08-15, THE BOTTOM ROW'S COLLAPSED PLAY/STOP BUTTON (the live
+    // audition bit, the same condition its glyph reads) — until the
+    // 2026-09-01 truthful-tooltips ruling forked a dozen more on the acts'
+    // own predicates, membership untouched. (Row 3's tabs were the one membership move in the product, going
     // silent while the `h` view repurposed them as its walk selector; the
     // selector left the row on 2026-08-18 and they carry their ordinary hint in
     // every state again.)

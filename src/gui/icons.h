@@ -133,7 +133,7 @@ enum class Icon {
     // four-number derivation rather than a verbatim copy — stated at the table
     // entry, which also records the two stroke attributes it brought (a
     // non-default width and the dash).
-    ToolRectSelection,   // Show trim region (bare `[`)
+    ToolRectSelection,   // Toggle trim region (bare `[`)
     // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
     // roster commit — the icon row's zoom group after the trim group).
     // Breeze's own magnifier family, one construction four ways: the bare
@@ -183,7 +183,7 @@ enum class Icon {
     // the artifact fine; the record is at the table entry).
     ListAdd,             // Drop marker (bare `s`)
     ListRemove,          // Delete markers (`Delete`)
-    ViewHidden,          // Disable markers (`Ctrl+D`)
+    ViewHidden,          // Toggle disabled (`Ctrl+D`)
     InsertLink,          // Inherit tempo (`Ctrl+N`)
     // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave all five propagate commands the
@@ -216,7 +216,7 @@ enum class Icon {
     // one vertical center line — exactly a viewport holding its subject at
     // the center column. A fresh verbatim transcription for the `y` centered
     // lamp beside Follow.
-    AlignHorizontalCenter,  // Keep viewport centered on playhead (`y`)
+    AlignHorizontalCenter,  // Toggle centered viewport (`y`)
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Load a render in place as the baseline
     VcsDiff,             // The history mode (`h`)
@@ -401,8 +401,9 @@ enum class Icon {
     // actions/22/media-repeat-single — the loop with a "1" — worn in BOTH
     // states by the modal row's one lamp, "a plain toggle: off is the
     // unpressed face, on is the pressed/lit face", so the glyph never
-    // changes and the LAMP carries the state (the Show trim region toggle's
-    // own precedent). Breeze spells "repeat one" as media-repeat-single /
+    // changes and the LAMP carries the state (the trim region toggle's own
+    // precedent; the text names the toggle since 2026-09-01, the rule at
+    // redesign_button_tooltip's head). Breeze spells "repeat one" as media-repeat-single /
     // media-playlist-repeat-song, two names for one artwork; there is no
     // media-repeat-one.
     MediaRepeatSingle,   // Repeat one (the player's modal row)
