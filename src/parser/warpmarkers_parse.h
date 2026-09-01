@@ -104,8 +104,11 @@ namespace warpmarkers_internal {
 // The four callers and their answers:
 //
 //   - the whole-file loop below (TRUE) — the on-disk grammar carries measures.
-//   - the Ctrl+H revert's warp reconstitution (TRUE, input_key_dispatch.cpp) —
-//     the delta token carries the measure, so the rebuilt line does too.
+//   - the revert's warp reconstitution (bare `v` since 2026-09-01, `Ctrl+H`
+//     before it; TRUE, input_key_dispatch.cpp) — the delta token carries the
+//     measure, so the rebuilt line does too.
+//     (Comment-only touch, architect grant 2026-08-29: the chord was renamed
+//     and this sentence named the old one.)
 //   - extract_warp_entry (TRUE, history_diff.cpp) — the history delta reads
 //     the same on-disk lines; false there would refuse every measured marker
 //     on the whitespace loop and vanish it from the diff lane.

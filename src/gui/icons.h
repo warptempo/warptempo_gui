@@ -405,6 +405,16 @@ enum class Icon {
     // media-playlist-repeat-song, two names for one artwork; there is no
     // media-repeat-one.
     MediaRepeatSingle,   // Repeat one (the player's modal row)
+    // THE PLAYER ROW'S UP BUTTON (architect 2026-09-01): Breeze's
+    // actions/22/go-parent-folder — an open folder with an arrow rising out of
+    // it. The button landed earlier the same day wearing the roster's `go-up`
+    // chevron, and the chevron says "up" about a NUMBER while this says it
+    // about a DIRECTORY, which is the act: leave this batch folder for the one
+    // above it. One fresh verbatim transcription; the ROSTER's bare-Up
+    // transport button keeps GoUp, an Icon being a glyph rather than a button.
+    // The enumerator keeps the Breeze file name (the theme-provenance rule),
+    // so it is GoParentFolder and not IconPlayerUp.
+    GoParentFolder,      // Up, out of a batch folder (the player's modal row)
     // THE NOTIFICATION CARDS' THREE (2026-08-29, the messaging redesign's
     // card half — notifications.h): the two CLASS glyphs at a card's left and
     // the X at its right, three fresh verbatim transcriptions from the
@@ -523,7 +533,20 @@ enum class Icon {
 // dialog-error and window-close — the card's two class glyphs and its X,
 // three fresh verbatim transcriptions with no departures beside them (the
 // two dialog files are two-colour, media-record's shape).
-inline constexpr int kIconCount = 55;
+// 57 SINCE 2026-09-01, THE PLAYER ROW'S UP BUTTON: 56 + go-parent-folder, one
+// fresh verbatim transcription with no departure beside it — absolute M/L over
+// two `z`-closed subpaths with an explicit command letter before every pair,
+// the interpreter's oldest arm. The button had worn the roster's `go-up` since
+// it landed hours earlier the same day; GoUp stays for the roster's own bare-Up
+// transport button, so this is an addition rather than a swap.
+// 56 was ALREADY TRUE ON 2026-08-31 and this constant said 55: the CENTERED
+// LAMP's align-horizontal-center added its enumerator without bumping the
+// number, so the roster's last entry (edit-copy) ran latch-less for a day. The
+// count above is a re-COUNT of the enumerators rather than an increment of the
+// stale value, per the inventory-retell rule; the drift cost exactly what this
+// header says it costs — one icon's once-per-icon diagnostic latch, the latch
+// being bounds-checked — and nothing else.
+inline constexpr int kIconCount = 57;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

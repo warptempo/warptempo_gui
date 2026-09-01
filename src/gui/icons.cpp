@@ -791,6 +791,38 @@ constexpr IconPath kMediaRepeatSinglePaths[] = {
      "-5z"},
 };
 
+// -- THE PLAYER ROW'S UP BUTTON (architect 2026-09-01) ------------------------
+//
+// PROVENANCE, per the theme-provenance rule: breeze-dark's
+// actions/22/go-parent-folder.svg, a real file on this host (not a symlink);
+// the committed assets/icons/breeze/go-parent-folder.svg is that install's
+// bytes verbatim. ONE `<path>` under the file's own `.ColorScheme-Text
+// { color: #fcfcfc }` stylesheet, so it resolves to kIconText like every
+// arrow in this table.
+//
+// IT REPLACES `go-up` ON THAT BUTTON AND ONLY THERE (the button landed
+// 2026-09-01 wearing the roster's chevron; the roster's own bare-Up transport
+// button keeps it): the act is LEAVING A FOLDER, not stepping a value up, and
+// this is Breeze's folder-semantic glyph for exactly that — an open folder
+// with an arrow rising out of it. The chevron said "up" about a number; this
+// says "up" about a directory, which is what the button does.
+//
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
+// precedent: absolute `M` / `L` with an explicit command letter before every
+// pair (no implicit repetition to read) and a `z` closing each of the two
+// subpaths — the folder outline and the arrow — which is the interpreter's
+// oldest arm and the same subset the `folder` row glyph above already spends.
+// The file names no fill-rule, so cairo's nonzero default is SVG's own.
+constexpr IconPath kGoParentFolderPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 4 L 3 19 L 4 19 L 12 19 L 12 18 L 4 18 L 4 10 L 7 10 L 7 "
+     "9.9921875 L 7.0078125 10 L 9.0078125 8 L 18 8 L 18 12 L 19 12 L 19 5 L "
+     "12.007812 5 L 10.007812 3 L 10 3.0078125 L 10 3 L 4 3 L 3 3 z M 15.5 "
+     "11.792969 L 14.792969 12.5 L 12 15.292969 L 12.707031 16 L 15 13.707031 "
+     "L 15 19 L 16 19 L 16 18 L 16 17 L 16 13.707031 L 18.292969 16 L 19 "
+     "15.292969 L 16.207031 12.5 L 15.5 11.792969 z "},
+};
+
 // -- Row 8's seven (2026-08-11, the transport row) -----------------------------
 //
 // Same rules as every entry above: `d` verbatim from the committed file, the
@@ -1235,6 +1267,7 @@ constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
 constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
 constexpr IconDef kAudioXWav          {22.0, kAudioXWavPaths,           1};
 constexpr IconDef kMediaRepeatSingle  {22.0, kMediaRepeatSinglePaths,   3};
+constexpr IconDef kGoParentFolder     {22.0, kGoParentFolderPaths,      1};
 constexpr IconDef kMediaSkipBackward  {22.0, kMediaSkipBackwardPaths,   1};
 constexpr IconDef kMediaPlaybackStart {22.0, kMediaPlaybackStartPaths,  1};
 constexpr IconDef kMediaPlaybackStop  {22.0, kMediaPlaybackStopPaths,   1};
@@ -1293,6 +1326,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::Folder:              return kFolder;
         case Icon::AudioXWav:           return kAudioXWav;
         case Icon::MediaRepeatSingle:   return kMediaRepeatSingle;
+        case Icon::GoParentFolder:      return kGoParentFolder;
         case Icon::MediaSkipBackward:   return kMediaSkipBackward;
         case Icon::MediaPlaybackStart:  return kMediaPlaybackStart;
         case Icon::MediaPlaybackStop:   return kMediaPlaybackStop;

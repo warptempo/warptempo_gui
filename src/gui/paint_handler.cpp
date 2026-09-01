@@ -6102,11 +6102,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // UP, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the two word buttons, on Breeze's own `go-up` chevron,
-        // which the roster already wears on its bare-Up transport button (a
-        // def is a glyph, and several buttons may wear one). It greys at the
-        // root through the act's own wall.
-        glyph_button(AppState::PlayerButtonAct::Up, icons::Icon::GoUp);
+        // ahead of the two word buttons, on Breeze's own GO-PARENT-FOLDER, the
+        // open folder with an arrow rising out of it (architect, later the same
+        // day: it wore the roster's `go-up` chevron for the button's first
+        // hours, and a chevron says "up" about a NUMBER while the act here is
+        // leaving a DIRECTORY). GoUp is untouched — the roster's bare-Up
+        // transport button still wears it, a def being a glyph and several
+        // buttons being free to wear one. It greys at the root through the
+        // act's own wall.
+        glyph_button(AppState::PlayerButtonAct::Up,
+                     icons::Icon::GoParentFolder);
         word_button(AppState::PlayerButtonAct::LoadInPlace, "Load in place");
         word_button(AppState::PlayerButtonAct::Close, "Close");
     } else {
