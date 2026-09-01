@@ -114,9 +114,10 @@ struct GuiInputHandler;
 // the motionless LIFT (the press still arms, the same press being the band's
 // possible scroll drag) and the highlight moves onto the row first; Enter is
 // the keyboard's own click on the highlight and Up/Down walk the band without
-// opening anything. THE PLAY BUTTON DOES NOT READ THE HIGHLIGHT AT ALL — it
-// answers the transport (the table at play_button_act). THE TRANSPORT'S ITEM
-// is separate from the highlight: it keeps playing while
+// opening anything. THE PLAY BUTTON READS THE HIGHLIGHT FIRST AND THE
+// TRANSPORT SECOND (architect 2026-08-31, R6, narrowing R40's "it never reads
+// the highlight, in any state" — the table is at play_button_act). THE
+// TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
 // the listing is navigated elsewhere, it wears the transport glyph on its
 // row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW and the two
 // Shift+Home / Shift+End ENDS walk ITS
@@ -127,8 +128,7 @@ struct GuiInputHandler;
 // THE HIGHLIGHT FOLLOWS THE TRANSPORT'S ITEM (architect 2026-08-28, R38,
 // superseding the design's "Previous and Next never move the highlight"): at
 // every item change THE TRANSPORT MAKES ON ITS OWN — Home's previous-track
-// window / the folder's ends / auto-advance / the folder-end restart — the
-// band moves onto
+// window / the folder's ends / auto-advance — the band moves onto
 // the new item's row and scrolls it into view WHEN THAT ROW IS IN THE LIVE
 // LISTING, and stays where it is when the user has navigated elsewhere. Its
 // one owner is play_wav, which is the one place the item changes, so the rule
@@ -149,19 +149,21 @@ struct GuiInputHandler;
 // WHETHER THE REPLAY SOUNDS OR REFUSES: a replay that cannot decode (the file
 // deleted or republished in another shape while it played) leaves its own
 // words on a notification card and the transport resting on that item at its
-// start, never the folder's next wav and never the folder-end bit. It is the
+// start, never the folder's next wav. It is the
 // whole of the exception: nothing else in the product plays anything twice by
 // itself, and the state is session-only (false at every open, serialized
 // nowhere).
 //
 // AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
-// item resting at its start — and THE NEXT PLAY STARTS THE FOLDER'S FIRST
-// WAV rather than replaying that last one (architect 2026-08-28, R27: the
-// car's Play at the end of a playlist). `ended_at_folder_end` is the one bit
-// that says the transport is resting THERE, cleared by every play, resume,
-// seek, row open, open, close and STOP; `play_button_act` is its one reader
-// and so the one owner of the act, which the car's Play reaches through the
-// same key as every other Play.
+// item resting at its start AND THAT IS ALL IT MEANS — the next Play replays
+// that last file, exactly as it would after a Stop (architect 2026-08-31, R7:
+// "we simplify — play on last file means play last file"). THE FOLDER-END
+// RESTART IS RETIRED: from 2026-08-28 the bit `ended_at_folder_end` said the
+// transport was resting THERE and turned the next Play — the car's at the end
+// of a playlist above all — into "start the folder's FIRST wav" (R27); the
+// bit, its one writer at the natural end, its one reader in play_button_act
+// and its seven clears are all deleted, and the car's Play at that rest now
+// replays the last track, which is also the row the band is resting on.
 //
 // THE ITEM IS A WAV PLAYED AS IT IS: decoded through the in-tree WAV reader
 // (wav_read_full, audio_io — called, never changed) after the PROBE has
@@ -301,42 +303,52 @@ struct GuiRenderPlayer {
     // -- The transport ------------------------------------------------------
 
     // THE PLAY BUTTON'S ACT (and Space's, and the car's Play / PlayPause).
-    // IT NEVER READS THE HIGHLIGHT, IN ANY STATE (architect 2026-08-29,
-    // Audacious: Play when idle plays the current track). The three states it
-    // forks on are STORED in AppState::RenderPlayer::transport, which owns
-    // them: LIVE is the sounding transport, PAUSED an item the transport
-    // parked AT WHATEVER FRAME (a pause that caught the cursor at 0 answers
-    // PAUSED here and resumes its own item), IDLE everything with nothing to
-    // resume.
+    // THE HIGHLIGHT LEADS AND THE TRANSPORT FOLLOWS (architect 2026-08-31,
+    // R6, narrowing R40's "it never reads the highlight, in any state" of two
+    // days before). ONE FORK IN FOUR ARMS, in this order:
     //
-    //   LIVE    -> pause it.
-    //   PAUSED  -> resume it.
-    //   IDLE with an item -> at the folder's END the item folder's FIRST wav
-    //                        (R27, the bit's one reader), else the item from
-    //                        ITS START, ALWAYS (architect 2026-08-29 ~01:40,
-    //                        Audacious: Play when idle starts literally). A
-    //                        seek while idle is a consumed no-op (seek_to's
-    //                        own head, the one owner), so `resume_frame` is
-    //                        always 0 at an idle rest and every rest the
-    //                        transport's own acts leave it in — a STOP, a
-    //                        natural end, a fresh bind — plays from frame 0.
-    //   IDLE with no item -> nothing.
+    //   HIGHLIGHT on a FOLDER row or `..`      -> open it (the row's own act).
+    //   HIGHLIGHT on a WAV that is NOT the
+    //     transport's item                     -> play that row, live or
+    //                                             paused or idle alike.
+    //   otherwise the TRANSPORT, whose three states are STORED in
+    //   AppState::RenderPlayer::transport — LIVE the sounding one, PAUSED an
+    //   item the transport parked AT WHATEVER FRAME (a pause that caught the
+    //   cursor at 0 answers PAUSED here and resumes its own item), IDLE
+    //   everything with nothing to resume:
+    //     LIVE    -> pause it.
+    //     PAUSED  -> resume it.
+    //     IDLE with an item -> the item from ITS START, ALWAYS (architect
+    //                        2026-08-29 ~01:40, Audacious: Play when idle
+    //                        starts literally) — the folder's end included
+    //                        since R7. A seek while idle is a consumed no-op
+    //                        (seek_to's own head, the one owner), so
+    //                        `resume_frame` is always 0 at an idle rest and
+    //                        every rest the transport's own acts leave it in —
+    //                        a STOP, a natural end, a fresh bind — plays from
+    //                        frame 0.
+    //     IDLE with no item -> nothing.
     //
-    // THE ROW ACTS ARE THE ROWS' OWN since the same ruling: a click on a
-    // folder opens it and a click on a wav plays it, so this button no longer
-    // carries the car-stereo OK/Play convention R17 gave it (the highlight's
-    // folder open and its play-another-wav arm are both gone).
-    // THE BUG THAT PUT THE TRANSPORT AHEAD OF THE HIGHLIGHT IN THE FIRST
-    // PLACE (architect 2026-08-28, R36) is subsumed rather than superseded: a
-    // Next while a track played advanced the item but not the band, and the
-    // live button — wearing Pause — then PLAYED the row still highlighted
-    // behind it instead of pausing what was sounding.
+    // THE THREE ROW ARMS RUN open_row, the row click's and Enter's own body,
+    // so the acts have ONE owner and this fork walks no listing of its own;
+    // the question "which row would Space open" is
+    // render_player_highlight_act_row (app_state.h), shared with the button's
+    // face and its glyph.
+    // R40'S BUG CANNOT RETURN, which is what makes the narrowing safe: it was
+    // a band left BEHIND the transport (architect 2026-08-28, R36 — a Next
+    // advanced the item but not the band, and the live button then PLAYED the
+    // row still highlighted behind it instead of pausing what sounded), and
+    // THE BAND FOLLOWS THE ITEM since R38, so a highlight anywhere else is one
+    // the user walked there deliberately.
+    // ENTER AND SPACE DIFFER IN EXACTLY ONE CASE: on the transport's own item
+    // with a session standing, Enter (the click act) restarts it from 0 while
+    // Space toggles it; everywhere else the two agree.
     void play_button_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
     void toggle_pause();
     // STOP (R36): the transport goes idle with the item resting at ITS START —
-    // the resume point cleared to 0 and the folder-end bit with it, THE ITEM
+    // the resume point cleared to 0, THE ITEM
     // ITSELF UNTOUCHED, so a following Play replays it from the beginning.
     // That is the whole difference from a pause, and it is why the row carries
     // both. A consumed no-op with no item and on an item already resting at
@@ -390,8 +402,9 @@ struct GuiRenderPlayer {
     // "next" is what the NATURAL END already does, and this act reaches it by
     // playing the last frames out.
     // A LIVE transport therefore plays the last frames out and the NATURAL END
-    // takes it from there, unaltered (advance where a next entry exists,
-    // `ended_at_folder_end` at the folder's last, a replay under a lit Repeat
+    // takes it from there, unaltered (advance where a next entry exists, an
+    // ordinary idle rest on the item at the folder's last, a replay under a
+    // lit Repeat
     // one); a PAUSED one moves its rest, which the resume arm reads as at-or-
     // past the end and replays from the start; an IDLE one meets seek_to's own
     // silent refusal, exactly as Home does.
@@ -530,7 +543,8 @@ private:
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the next wav of the item's
-    // folder, else the rest at the item's start with the folder-end bit set.
+    // folder, else the ordinary idle rest at the item's start (R7 — the
+    // folder's end is no longer a state of its own).
     // THE LAMP'S ARM IS TERMINAL: it returns on a REFUSED replay too, so a
     // lit lamp never falls through to the advance.
     // A NATURAL

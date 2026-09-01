@@ -6714,6 +6714,13 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.open_row(highlight);
             return true;
         case GuiKeys::Space:
+            // THE PLAY BUTTON'S ACT, which since R6 (2026-08-31) reads the
+            // HIGHLIGHT first and the transport second (the fork at
+            // play_button_act): a band standing on a folder, on `..` or on a
+            // wav that is not the item goes THERE, and anywhere else it is
+            // the transport's toggle. Enter one case above is the same act
+            // through the row's own body, and the two differ only on the
+            // transport's own item.
             if (mods.synthesized_repeat) return true;
             render_player.play_button_act();
             return true;
@@ -6742,8 +6749,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // nothing more — the item is unchanged and no folder is walked.
             // What happens after is the NATURAL END's, unaltered: a live
             // transport plays out the last frames and then advances to the
-            // next entry where one exists, sets `ended_at_folder_end` at the
-            // last, or replays under a lit Repeat one. A PAUSED one just moves
+            // next entry where one exists, rests idle on the item at the
+            // folder's last, or replays under a lit Repeat one. A PAUSED one just moves
             // its rest, which the resume arm reads as "at or past the end" and
             // replays from the start (toggle_pause), and an IDLE one meets
             // seek_to's own carded refusal — Home's twin here too, except

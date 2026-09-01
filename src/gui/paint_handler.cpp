@@ -6002,8 +6002,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
         // right. STOP SITS AFTER PLAY/PAUSE, Audacious's own order (R36).
-        const bool live = app.render_player.transport ==
-                          AppState::RenderPlayer::Transport::Live;
+        // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31, R6): the button
+        // wears PAUSE only where its press would PAUSE — the transport live
+        // AND the highlight on the transport's own item (or nowhere), which
+        // is exactly render_player_highlight_act_row answering −1. Under a
+        // highlight standing on a folder, on `..` or on another wav the press
+        // would GO THERE, so the face is the play glyph and the tooltip's word
+        // follows it (render_player_button_hint takes this same bit). It
+        // reaches a repaint through the row's one damage owner: the three
+        // highlight movers damage the row already, for the Load in place face.
+        const bool pause_face = app.render_player.transport ==
+                                    AppState::RenderPlayer::Transport::Live &&
+                                render_player_highlight_act_row(app) < 0;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {
             DialogButtonPlan b;
@@ -6012,7 +6022,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.lit        = lit;
             b.enabled    = render_player_button_enabled(app, act);
             b.icon       = icon;
-            b.tooltip    = render_player_button_hint(act, live);
+            b.tooltip    = render_player_button_hint(act, pause_face);
             b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
         };
@@ -6022,7 +6032,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.label      = word;
             b.enabled    = render_player_button_enabled(app, act);
-            b.tooltip    = render_player_button_hint(act, live);
+            b.tooltip    = render_player_button_hint(act, pause_face);
             b.tooltip2   = render_player_button_shift_hint(act);
             plan.push_back(std::move(b));
         };
@@ -6032,14 +6042,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // said — skip to this track's start, skip to its end.
         glyph_button(AppState::PlayerButtonAct::Home,
                      icons::Icon::MediaSkipBackward);
-        // PLAY/PAUSE WEARS THE PAUSE GLYPH WHILE LIVE, not the stop square it
-        // wore until R36 gave the row a Stop button of its own: two buttons,
-        // two acts, two faces. The roster's transport button is untouched —
-        // bare Space over the project's audio is one toggle with no pause
-        // state, so it keeps Play/Stop.
+        // PLAY/PAUSE WEARS THE PAUSE GLYPH ON THE PAUSE FACE (above), not the
+        // stop square it wore until R36 gave the row a Stop button of its own:
+        // two buttons, two acts, two faces. The roster's transport button is
+        // untouched — bare Space over the project's audio is one toggle with
+        // no pause state, so it keeps Play/Stop.
         glyph_button(AppState::PlayerButtonAct::PlayPause,
-                     live ? icons::Icon::MediaPlaybackPause
-                          : icons::Icon::MediaPlaybackStart);
+                     pause_face ? icons::Icon::MediaPlaybackPause
+                                : icons::Icon::MediaPlaybackStart);
         glyph_button(AppState::PlayerButtonAct::Stop,
                      icons::Icon::MediaPlaybackStop);
         glyph_button(AppState::PlayerButtonAct::End,

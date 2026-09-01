@@ -7484,17 +7484,14 @@ struct AppState {
     //              from its start instead of advancing. SESSION-ONLY: false at
     //              every open(), never serialized, carried by no sidecar and
     //              no device-config key;
-    //   `ended_at_folder_end` THE FOLDER FINISHED (architect 2026-08-28, R27):
-    //              set by the natural end when the item was the LAST wav of
-    //              its folder and repeat_one was off — the transport stops
-    //              with the item resting at its start, as it always has — and
-    //              read by play_button_act alone, where it turns the next Play
-    //              (the car's included) into "start the folder's FIRST file"
-    //              rather than "replay this one". Cleared by every play,
-    //              resume, seek, open-a-row, open, close and STOP (R36's act,
-    //              which names this item's start as where the transport is),
-    //              so it names the END OF THE FOLDER and no other resting
-    //              state;
+    //              (`ended_at_folder_end` was a fourteenth field from
+    //              2026-08-28 to 2026-08-31: the natural end set it at the
+    //              item folder's last wav and play_button_act read it as
+    //              "start the folder's FIRST file". THE FOLDER-END RESTART
+    //              RETIRED WHOLE — architect 2026-08-31, R7, "we simplify —
+    //              play on last file means play last file" — so the bit, its
+    //              writer and its seven clears went with it and a folder-end
+    //              rest is now an ordinary idle rest on the last item;)
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
     //              asks about; consumed by its OK, dropped by its Cancel. It
     //              is one of that prompt's TWO subjects — the `h` view's is
@@ -7517,7 +7514,6 @@ struct AppState {
         int64_t                    frames         = 0;
         Transport                  transport      = Transport::Idle;
         bool                       repeat_one     = false;
-        bool                       ended_at_folder_end = false;
         int64_t                    resume_frame   = 0;
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
@@ -7559,9 +7555,12 @@ inline bool folder_overlay_stands(const AppState& a) {
 // chord the player's key router binds to exactly that act
 // (route_render_player_key, input_key_dispatch.cpp), so a button cannot
 // advertise a key it does not answer. Play/Pause is the one two-faced button
-// and names the face it wears (the bottom row's transport rule).
+// and names the face it wears (the bottom row's transport rule) — `pause_face`
+// is that face's own bit, the painter's, and NOT "the transport is live":
+// since R6 (2026-08-31) a live transport under a highlight standing elsewhere
+// would PLAY that row, so it wears Play and says "Play (Space)" with it.
 inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
-                                             bool transport_live) {
+                                             bool pause_face) {
     switch (act) {
         // THE TWO SKIPS ARE THE ROSTER'S OWN TRANSPORT PAIR (architect
         // 2026-08-31): the same acts on the same keys as the main window's
@@ -7573,7 +7572,7 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // every car head unit and every iPod before them.
         case AppState::PlayerButtonAct::Home: return "Go to start (Home)";
         case AppState::PlayerButtonAct::PlayPause:
-            return transport_live ? "Pause (Space)" : "Play (Space)";
+            return pause_face ? "Pause (Space)" : "Play (Space)";
         // STOP IS ITS OWN BUTTON (R36) and its chord is a bare letter, so the
         // table's own accelerator rule spells it lowercase.
         case AppState::PlayerButtonAct::Stop:        return "Stop (v)";
@@ -7650,6 +7649,24 @@ static_assert(
 // render_player.cpp beside the member it feeds.
 const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 
+// THE ROW SPACE WOULD OPEN, or −1 for "the transport's own business"
+// (architect 2026-08-31, R6 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER,
+// narrowing R40's "the Play button never reads the highlight"). It answers the
+// highlighted row's index when that row is a FOLDER, the `..` row, or a WAV
+// THAT IS NOT THE TRANSPORT'S ITEM — the three rows whose open act Space runs
+// instead of toggling — and −1 on the transport's own item, on an empty band
+// and on a highlight out of range, which is where the transport's fork takes
+// over. Defined in render_player.cpp beside the act it forks.
+//
+// ONE OWNER, THREE READERS, and they are three because the act, the face and
+// the glyph must say the same thing: play_button_act's leading fork,
+// render_player_button_enabled's PlayPause arm, and the modal row's PAUSE-face
+// bit (paint_modal_dialog, which is the tooltip's word too). Every reader asks
+// it with the PLAYER standing, so it takes no owner term of its own — under
+// the project picker the band belongs to a content that has no transport, and
+// none of the three is reached there.
+int render_player_highlight_act_row(const AppState& a);
+
 // WOULD THIS PLAYER BUTTON'S PRESS DO ANYTHING (architect 2026-08-30: the
 // transport keys are their own class) — the modal row's disabled face, one
 // arm per act MIRRORING that act's own leading refusals, never a
@@ -7671,17 +7688,18 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 //     at `frames`; THE TWIN ADDS ITS OWN TERM here — at an IDLE rest with a
 //     next entry the seek refuses while the jump to the folder's last wav
 //     acts, so the button stays live for the shifted press.
-//   PLAY/PAUSE mirrors play_button_act's forks in their own order: a live
-//   or paused transport always acts, an idle one acts through R27's
-//   folder-end restart or on its resting item, and only an idle transport
-//   with no item is the consumed no-op the act's card answers.
+//   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
+//   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder, `..` or another wav under the
+//   band is always an act, whatever the transport is doing), then a live or
+//   paused transport, then an idle one on its resting item; only an idle
+//   transport with no item and no usable highlight is the consumed no-op.
 //   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
 //   a bound item, that arm's own record.)
 //   STOP mirrors stop()'s WHOLE no-op set — the no-item belt and R36's
-//   already-resting return (Idle, the rest at frame 0, the folder-end bit
-//   clear); a transport PAUSED at frame 0 and a folder-end rest both keep
-//   it live, exactly as the act treats them. The key's own refusal there
-//   stays R36's ruled silence.
+//   already-resting return (Idle with the rest at frame 0); a transport
+//   PAUSED at frame 0 keeps it live, exactly as the act treats it. The key's
+//   own refusal there stays R36's ruled silence. IT READS NO HIGHLIGHT: R6
+//   moved Space alone, Stop naming one act on the transport.
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load) and
 //   on a highlight with no recipe (render_player_highlighted_entry, the
 //   act's own question). THE RUNNING-RENDER REFUSAL IS DELIBERATELY NOT A
@@ -7704,7 +7722,10 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 // (play_wav, toggle_pause's both arms, stop's both arms, seek_to,
 // on_natural_end through the stop body's player fork; open and close
 // repaint whole), and the HIGHLIGHT movers damage it since the Load face
-// reads the highlight (move_highlight, set_highlight, rebuild_rows). The
+// reads the highlight (move_highlight, set_highlight, rebuild_rows) — the
+// same three carry PLAY/PAUSE'S face and its PAUSE GLYPH, which read the
+// highlight too since R6, so the band walk repaints the button with no
+// damage call of its own at the walk. The
 // read-only bit cannot change while the player stands —
 // route_render_player_key consumes bare `o` and the Settings menu's opener
 // refuses — recorded rather than damaged.
