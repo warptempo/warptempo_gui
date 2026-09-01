@@ -37,13 +37,20 @@ namespace {
 constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
 
 // THE TWO PASTES' SHARED "NOTHING HAPPENED" SENTENCE (architect 2026-08-30,
-// the strictness ruling). Both pastes end on the always-switch to target view
-// — a change of scene that looks exactly like a paste — so a run that paired
-// no block with any block must say that it wrote nothing, and both say it in
-// the same words. Its two readers are paste_apply's matched==0 arm (where the
-// destination produced no owned block) and paste_state_apply's pair_count==0
-// arm. A CLEAN PARTIAL WALK is not this: it pasted what it had, and a success
-// says nothing.
+// the strictness ruling; kept 2026-08-31 when the switch under it left). Its
+// two readers are paste_apply's matched==0 arm (where the destination produced
+// no owned block) and paste_state_apply's pair_count==0 arm. A CLEAN PARTIAL
+// WALK is not this: it pasted what it had, and a success says nothing.
+//
+// THE SENTENCE OUTLIVED ITS ORIGINAL ARGUMENT AND STANDS ON ITS OWN. It was
+// raised because both pastes ended on the ALWAYS-SWITCH to target view — a
+// change of scene that looks exactly like a paste, so a run that paired no
+// block had to deny it in words. On 2026-08-31 the architect removed the
+// switch from every produced-nothing path instead (the misleading half of the
+// success rule: a success cards when what shows would mislead, which is why
+// that switch retires rather than the card). The card is KEPT because a paste
+// that wrote nothing shows nothing at all now — the view stays exactly where
+// it stood — and the words need no scene change to make sense.
 constexpr const char* kNothingMatched = "Nothing matched, so nothing was pasted";
 
 // One named block resolved from a warp-marker walk. `label` is the
@@ -304,18 +311,21 @@ void PhaseResetPropagate::paste_apply() {
         // owned blocks (e.g., no enabled labeled marker at or after the anchor —
         // the store-final marker now DOES own a block, running to the song
         // end, so only unlabeled or effective-disabled destinations reach
-        // here), which is a clean partial walk and stays silent. Either way:
-        // no undo
-        // entry, no waveform / render flush, but the view-switch fires
-        // per the always-switch rule.
+        // here). Either way: no undo entry and no waveform / render flush.
         //
-        // AND THE SECOND CASE SAYS SO SINCE 2026-08-30 (architect, the
-        // strictness ruling): a paste that produced no destination block at
-        // all wrote nothing, and the always-switch to target view is a change
-        // of scene that looks exactly like a paste — so without a sentence the
-        // act reads as having pasted. A CLEAN PARTIAL WALK (one side simply
-        // ran out, with blocks matched) stays silent: it pasted what it had,
-        // and a success says nothing.
+        // AND IT SAYS SO WITHOUT MOVING (architect 2026-08-30 for the sentence,
+        // 2026-08-31 for the stillness). A paste that paired no block wrote
+        // nothing, so it raises its card — the second case kNothingMatched, the
+        // first its own `Stopped at …` report — AND IT DOES NOT SWITCH VIEWS:
+        // the always-switch tail below is a change of scene that looks exactly
+        // like a paste, which is the "what shows would mislead" half of the
+        // success rule, so THE SWITCH RETIRES ON THIS PATH rather than the card
+        // (R10). The view stays exactly where the user left it and the sentence
+        // is the whole answer. THE LAND IS SKIPPED, NOT STUBBED: every caller
+        // that DID paste still runs land_paste_in_target_view unchanged.
+        // A CLEAN PARTIAL WALK (one side simply ran out, with blocks matched)
+        // is not this path at all: it pasted what it had, so it lands, and a
+        // success says nothing.
         if (!stop_message.empty()) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(stop_message));
@@ -323,8 +333,6 @@ void PhaseResetPropagate::paste_apply() {
             notifications.notify(AppState::NotificationClass::Normal,
                                  kNothingMatched);
         }
-        // Nothing materialized: land in target view with no new selection.
-        land_paste_in_target_view({});
         return;
     }
 
@@ -456,7 +464,8 @@ void PhaseResetPropagate::paste_apply() {
     // render/preview time, one stderr line per collapsed timestamp) — so
     // the store genuinely changes there too.
     // Compare before pre_state is moved into the push. The stop message
-    // and the always-switch-to-P rule below still run.
+    // and the switch to P below still run (this arm has matched blocks, so it
+    // is past the produced-nothing path that keeps the view still).
     bool store_changed = out.size() != pre_state.size();
     for (size_t i = 0; !store_changed && i < out.size(); ++i) {
         if (out[i].time_frame != pre_state[i].time_frame ||
@@ -530,6 +539,13 @@ void PhaseResetPropagate::paste_state_apply() {
 
     bool any_change = false;
     std::string stop_message;
+    // BLOCKS THAT COMPLETED THEIR PASS — the produced-nothing test below, and
+    // NOT the same question as any_change: a block that paired, walked and
+    // found every flag already right counts here (it pasted its state; the
+    // state simply matched), while a block the walk never reached does not.
+    // Bumped at the bottom of the body, so BOTH breaks leave it holding the
+    // number of blocks written before the stop.
+    size_t applied_pairs = 0;
 
     const size_t pair_count = std::min(clip_blocks.size(), dest_blocks.size());
     for (size_t i = 0; i < pair_count; ++i) {
@@ -605,12 +621,15 @@ void PhaseResetPropagate::paste_state_apply() {
                 any_change = true;
             }
         }
+        ++applied_pairs;
     }
 
     // An undo entry represents a state change, not a gesture: a paste-
     // state run that flips no flag leaves the store byte-equal, so it
-    // pushes nothing and touches no dirty/render state. The stop message
-    // and the P-view switch below still fire unconditionally.
+    // pushes nothing and touches no dirty/render state. The stop message still
+    // fires unconditionally; the P-view switch fires for every run that WROTE
+    // a block — byte-equal or not — a run that wrote none keeping the view
+    // still (the ruling and its two halves are below).
     if (any_change) {
         undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
@@ -620,11 +639,10 @@ void PhaseResetPropagate::paste_state_apply() {
 
     // ONE CARD FOR THE PRESS, and only where the run paired nothing at all:
     // pair_count == 0 means one of the two sides produced no block, so the
-    // lockstep loop never ran, no flag could flip, and the switch to target
-    // view below is the only visible effect — the state a sentence exists for
-    // (architect 2026-08-30, the strictness ruling; the literal is its
-    // sibling's, kNothingMatched above). A DIVERGENCE or a count mismatch has
-    // its own `Stopped at …` report and wins here, and a run that paired
+    // lockstep loop never ran and no flag could flip — the state a sentence
+    // exists for (architect 2026-08-30, the strictness ruling; the literal is
+    // its sibling's, kNothingMatched above). A DIVERGENCE or a count mismatch
+    // has its own `Stopped at …` report and wins here, and a run that paired
     // blocks and flipped nothing stays silent: it walked what it had, and a
     // clean walk says nothing.
     if (!stop_message.empty()) {
@@ -635,18 +653,51 @@ void PhaseResetPropagate::paste_state_apply() {
                              kNothingMatched);
     }
 
-    // Land in target view (the lead-in overlay's view) at the end of a completed
-    // paste-state run, including diverged/mismatched/no-change cases. State
-    // paste creates no resets (it only flips disabled flags on existing ones),
-    // so there is no selection to set and the tail leaves none: the column swap
-    // it runs clears the selection, and nothing restores one.
+    // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31, R10 —
+    // the twin of paste_apply's matched==0 arm above). The switch to target
+    // view is a change of scene that looks exactly like a paste, so on the
+    // produced-nothing path it retires and the card stands alone: the view
+    // stays exactly where the user left it. THE LAND IS SKIPPED, NOT STUBBED —
+    // every run that wrote a block still reaches it unchanged below.
+    //
+    // THE TEST IS applied_pairs, WHICH IS THE WHOLE PRODUCED-NOTHING FAMILY IN
+    // ONE COMPARE, and it covers three shapes that would otherwise each want an
+    // arm: pair_count == 0 (one side produced no block, the loop never ran —
+    // kNothingMatched above), a LABEL DIVERGENCE at block 0, and a MARKER COUNT
+    // MISMATCH at block 0. The last two are paste_apply's enumerated block-0
+    // divergence read across (architect 2026-08-31, closing the asymmetry the
+    // R10 pass surfaced): the walk stopped before writing anything, so the run
+    // pasted nothing, said its `Stopped at …`, and must stand still exactly as
+    // its sibling does.
+    //
+    // AND CASE 2 IS RULED THE OTHER WAY, DELIBERATELY (architect 2026-08-31): a
+    // run that PAIRED blocks and left the store byte-equal — every destination
+    // flag already in the clipboard's state, the any_change == false path —
+    // STILL LANDS. A paste that paired stands as a paste: it walked its blocks
+    // and wrote the state they were asked for, and the switch shows a TRUE
+    // result (the destination in target view, already carrying what was
+    // pasted). It is not the misleading scene the switch was retired for, which
+    // is a paste that touched no block at all. This is a RULING, not an
+    // oversight, and the same line holds for paste_apply's byte-equal
+    // self-paste, which lands too.
+    if (applied_pairs == 0) return;
+
+    // Land in target view (the lead-in overlay's view) at the end of a
+    // paste-state run that wrote at least one block — a run stopped LATER by a
+    // divergence or a count mismatch, and a run that flipped no flag because
+    // every one already matched, both included (the ruling above). State paste
+    // creates no resets (it only flips disabled flags on existing ones), so
+    // there is no selection to set and the tail leaves none: the column swap it
+    // runs clears the selection, and nothing restores one.
     land_paste_in_target_view({});
 }
 
 // The architect inspects a propagate paste by eye instead of the old
 // Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate starts in the warp
-// (source) view and ends in target view, and this tail is shared by its three
-// paste actions. IT IS NO LONGER THE ONLY ACT OF THAT SHAPE — SHIFT+S, the
+// (source) view and ends in target view, and this tail is shared by the paste
+// actions — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
+// (R10; the produced-nothing arms skip it and stand still, the ruling and its
+// two halves at the declaration). IT IS NO LONGER THE ONLY ACT OF THAT SHAPE — SHIFT+S, the
 // drop from any view (2026-08-28,
 // GuiInputHandler::drop_phase_reset_in_target_view), does the same trip for
 // the same reason and takes this tail's own order verbatim, the reasoning

@@ -122,9 +122,23 @@ struct PhaseResetPropagate {
     // card (GuiNotifications::notify); a clean or empty run is silent.
     void paste_state_apply();
 
-    // Shared end-of-paste tail for all three paste actions: land the completed
-    // paste in TARGET view (where the lead-in overlay lives) with the newly created resets
-    // selected. `created` is the exact post-insert index set of the resets this
-    // paste materialized (empty for the no-materialize / state-only tails).
+    // Shared end-of-paste tail: land the completed paste in TARGET view (where
+    // the lead-in overlay lives) with the newly created resets selected.
+    // `created` is the exact post-insert index set of the resets this paste
+    // materialized (empty for the state-only tail, which flips flags on resets
+    // that already exist).
+    // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31, R10):
+    // a run that produced nothing says its sentence on a card and leaves the
+    // view exactly where it stands, the switch being a change of scene that
+    // reads as a paste. The produced-nothing arms SKIP this call rather than
+    // stubbing it — the two live call sites are paste_apply's materialized tail
+    // and paste_state_apply's applied_pairs tail.
+    // THE LINE IS "WROTE A BLOCK", NOT "CHANGED THE STORE" (the same day, the
+    // deliberate half): a run that PAIRED blocks and left the store byte-equal
+    // — paste_state_apply flipping no flag because every one already matched,
+    // paste_apply's self-paste at offset zero — STILL LANDS, because a paste
+    // that paired stands as a paste and the switch shows a true result. What
+    // the switch was retired for is a paste that touched no block at all:
+    // pair_count 0 on either side, or a divergence / count mismatch at block 0.
     void land_paste_in_target_view(const std::set<int>& created);
 };

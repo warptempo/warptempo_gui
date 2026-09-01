@@ -193,13 +193,14 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // crossed/equal trim bounds cannot REST — committing one bound onto or across
 // the other RESETS BOTH bounds to the song edges, the trim sibling of the
 // marker normalizations (ambiguous states resolve instead of resting or
-// refusing). The bar's endcaps visibly JUMP TO THE SONG
-// EDGES, which
-// was held to be the whole signal until 2026-08-30 (it used to be the old
-// chips vanishing; with the window always set there is nothing to vanish
-// into) — SINCE THEN THE RESET ALSO SAYS SO, on one card raised at the owner
-// below, because a collapsed sweep takes its overlay down with it and the
-// jump is easy to miss. The check is the exact integer
+// refusing). The bar's endcaps visibly JUMP TO THE SONG EDGES, and that is the
+// whole signal — it used to be the old chips vanishing; with the window always
+// set there is nothing to vanish into. A card said it too for one day
+// (2026-08-30 to 2026-08-31, on the argument that a collapsed sweep takes its
+// overlay down with it and the jump is easy to miss); the architect retired it
+// under the arc's success rule, the endcaps at the extremes being the visible
+// cue on every road and the full window having zero impact on the render. The
+// check is the exact integer
 // compare end_frame <= begin_frame, run only at COMMIT — nothing pops
 // mid-gesture, and update_trim_drag never calls this.
 //
@@ -231,21 +232,16 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     if (trim_is_full_window(app.trim, audio.total_frames())) return;
     if (app.trim.end_frame <= app.trim.begin_frame) {
         reset_trim_to_full_window();
-        // AND THE RESET SAYS SO (architect 2026-08-30). It is not a refusal
-        // but a REPORT: the gesture did land, and what it landed is the whole
-        // song rather than the sliver the stroke drew, which is a surprise
-        // worth a sentence — a sweep collapsed onto its anchor and an endcap
-        // dragged onto its twin both look like "nothing happened" otherwise,
-        // the overlay having collapsed with them. THE CARD IS THIS ONE
-        // OWNER'S, which is what makes it one card for every former: the
-        // endcap drag, the bridge, the sweep, the bound-set click and the
-        // settings editor's `trim_*=` commit all reach the reset here and
-        // none of them spells it a second time. Trim has no undo, so the
-        // sentence also names the recovery the user has (Shift+[ maximizes,
-        // and the window is already maximized).
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            "The trim bounds crossed; the window was reset to the whole song");
+        // AND THE RESET SAYS NOTHING (architect 2026-08-31, retiring the
+        // one-day card "The trim bounds crossed; the window was reset to the
+        // whole song"). The reset is a SUCCESS whose result is on screen: the
+        // trim bar's endcaps snap to the song's extremes on every road into
+        // here — the endcap drag, the bridge, the sweep, the bound-set click
+        // and the settings editor's `trim_*=` commit alike — and the trim is
+        // scratch viewport, render-modifying but benign, a full window having
+        // zero impact on the output. So there is nothing to warn about and
+        // nothing the screen fails to show. The RESET BEHAVIOR is untouched:
+        // what left is the sentence, not the rule.
     }
 }
 
@@ -480,7 +476,7 @@ int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
 // (this file's header block: read-only does not reach trim at all since
 // 2026-08-07, and the key is on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
-// makes a second Shift+[ a no-op that says so on a card (2026-08-30) and whose
+// makes a second Shift+[ a silent no-op (the ruling at that function) and whose
 // tail owns the repaint
 // (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
@@ -585,17 +581,16 @@ void GuiInputHandler::handle_toggle_trim_region() {
         return;
     }
     app.region.shown = true;
-    // THE FULL WINDOW STILL SHOWS, AND SAYS WHAT IT IS SHOWING (architect
-    // 2026-08-30). This is NOT a refusal — the overlay goes up exactly as it
-    // does over a narrowed window, the standing ruling that the case is
-    // self-resolving is untouched, and no guard is added — but an overlay
-    // covering the whole song looks like an overlay that failed to find one,
-    // so the card names the span the user is looking at. Both roads reach it:
-    // bare `[` and the Show trim region button's plain lift.
-    if (trim_is_full_window(app.trim, audio.total_frames())) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "The trim covers the whole song");
-    }
+    // THE FULL WINDOW STILL SHOWS, AND SAYS NOTHING (architect 2026-08-31,
+    // retiring the one-day card "The trim covers the whole song"). The site's
+    // own reading was always that this is not a refusal — the overlay goes up
+    // exactly as it does over a narrowed window, the standing ruling that the
+    // case is self-resolving is untouched, and no guard is added — and under
+    // the arc's success rule that is precisely why it is silent: A SUCCESS
+    // WHOSE RESULT IS ON SCREEN SAYS NOTHING. The overlay going up over the
+    // whole song, its two bounds at the song edges, IS the confirmation, on
+    // both roads alike (bare `[` and the Show trim region button's plain
+    // lift).
     const TrimOverlaySpan span = trim_overlay_span(app, audio);
     bring_span_into_view(app, audio, viewport, span.lo, span.hi);
     viewport.invalidate_waveform_area();
