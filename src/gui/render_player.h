@@ -27,35 +27,37 @@
 // keys differ and no car key can meet a painted one.
 inline constexpr uint32_t kCarStableCodeBase = 1000;
 
-// -- THE MODE'S SHARED REFUSAL SENTENCES ------------------------------------
+// -- THE MODE'S SHARED REFUSAL SENTENCES ARE RETIRED WHOLE -------------------
 //
-// (architect 2026-08-30, the strictness ruling.) Each is said from SEVERAL
-// acts, and two of them from a POINTER site as well — the play-scrub's press,
-// which lives with the other pointer routers (input_pointer.cpp) — so they
-// are spelled here rather than inside the operations file. Every refusal with
-// a single site keeps its literal where it fires. The acts raise these
-// through GuiRenderPlayer::status, the thin road the decode refusals already
-// take; the scrub's press raises them on the ordinary notify, having no
-// status of its own.
+// They were spelled here rather than inside the operations file from
+// 2026-08-30's strictness ruling, each being said from SEVERAL acts and two of
+// them from a POINTER site as well — the play-scrub's press, which lives with
+// the other pointer routers (input_pointer.cpp). The family is silent now and
+// the header keeps only its record. Every refusal with a single site still
+// keeps its literal where it fires, and the DECODE's own sentences — which
+// report a fact no surface shows — still take GuiRenderPlayer::status.
 //
-// NOTHING IS LOADED: Play with no item, the two folder-end jumps (which walk
-// the TRANSPORT ITEM's folder and so have nothing to walk without one), and
-// every seek road — Home and End among them, both of which reach seek_to.
-inline constexpr const char* kNoPlayerItem = "No render is loaded to play";
-
-// THE ITEM FOLDER'S TWO ENDS ARE SILENT (architect 2026-08-31): NOTHING LOOPS,
-// so an end is still an end, but a benign one-dimensional refusal already at
-// its state says nothing — the highlighted row rests at the listing's first or
-// last line and one glance answers it. The pair kFirstInFolder /
-// kLastInFolder ("This is the first/last render in the folder") is deleted
-// with its two raises in first_in_item_folder / last_in_item_folder; their
-// other producers, the item's two neighbour walks, had already left the
-// product earlier that day when the skips became Home and End.
-
-// A SEEK WHILE THE TRANSPORT IS IDLE (R41's dead slider): the two seek keys,
-// bare Home, bare End, the car's absolute seek and the scrub's own press all
-// meet it.
-inline constexpr const char* kSeekWhileIdle = "Start playback before seeking";
+// THE IDLE FAMILY WENT SILENT LAST (architect 2026-08-31, R5, the
+// one-dimensional rule): kNoPlayerItem ("No render is loaded to play") — Play
+// with no item, the two folder-end jumps (which walk the TRANSPORT ITEM's
+// folder and so have nothing to walk without one), and every seek road, Home
+// and End among them — and kSeekWhileIdle ("Start playback before seeking"),
+// which the two seek keys, bare Home, bare End, the car's absolute seek and
+// the scrub's own press all met. A BENIGN REFUSAL ALREADY AT ITS STATE SAYS
+// NOTHING: the modal row IS the state both name — an empty transport and an
+// idle one rest with the clock at zero and the slider at its left end — so the
+// row is the answer and a sentence only repeats it. THE REFUSALS THEMSELVES
+// ARE UNCHANGED: an idle seek still refuses (R41's dead slider), which is what
+// keeps `resume_frame` 0 at every idle rest by construction.
+//
+// THE ITEM FOLDER'S TWO ENDS went silent earlier that same day, on the same
+// reasoning: NOTHING LOOPS, so an end is still an end, but the highlighted row
+// rests at the listing's first or last line and one glance answers it. The
+// pair kFirstInFolder / kLastInFolder ("This is the first/last render in the
+// folder") is deleted with its two raises in first_in_item_folder /
+// last_in_item_folder; their other producers, the item's two neighbour walks,
+// had already left the product earlier that day when the skips became Home and
+// End.
 
 // THE PREVIOUS-TRACK WINDOW (architect 2026-08-31, decision 88 — "agree on
 // <3s"): bare Home, its skip button and the head unit's Previous all run ONE
@@ -343,8 +345,10 @@ struct GuiRenderPlayer {
     // THE ITEM FOLDER'S ENDS (R37, Shift+Home / Shift+End since 2026-08-31 and
     // the two skip buttons' shift-click or long press): the first / last wav of
     // `item_folder`, played from its start on the play road — never
-    // a wrap, and a CARDED refusal with no item AND on an item already at that
-    // end. They are the folder walk's whole surface now: the item's two
+    // a wrap, and a SILENT refusal with no item AND on an item already at that
+    // end (both went silent on 2026-08-31, the end's own first and the no-item
+    // arm with the idle family that evening — the record is at the header's
+    // retired sentences). They are the folder walk's whole surface now: the item's two
     // NEIGHBOURS were `previous()` / `next()` on bare `,` / `.` and the two
     // skips' plain acts until 2026-08-31, when the skips became Home and End
     // and the step back moved inside Home as its previous-track window (the
@@ -372,8 +376,9 @@ struct GuiRenderPlayer {
     // entry in `item_folder`, this plays THAT ENTRY from its start (the
     // previous-track window at the constant); anywhere else — past the
     // window, at the folder's first entry, with no folder — it seeks the
-    // item's own start and takes every refusal seek_to owns, the no-item card
-    // and the idle card alike. It never reports a folder wall: at the first
+    // item's own start and takes every refusal seek_to owns, the no-item arm
+    // and the idle arm alike — both silent since 2026-08-31 (R5). It never
+    // reports a folder wall either: at the first
     // entry the restart IS the act.
     void home();
     // THE ITEM'S END (architect 2026-08-30) — Home's twin, the RIGHT SKIP's
@@ -389,7 +394,7 @@ struct GuiRenderPlayer {
     // `ended_at_folder_end` at the folder's last, a replay under a lit Repeat
     // one); a PAUSED one moves its rest, which the resume arm reads as at-or-
     // past the end and replays from the start; an IDLE one meets seek_to's own
-    // carded refusal, exactly as Home does.
+    // silent refusal, exactly as Home does.
     void end();
     // Left / Right's step: 5 s at the device's rate (R6).
     int64_t seek_step_frames() const;

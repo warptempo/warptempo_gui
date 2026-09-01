@@ -530,16 +530,16 @@ void GuiRenderPlayer::play_button_act() {
     // nothing can have moved it since the last Stop, natural end or fresh
     // bind — and toggle_pause's resume arm reads exactly that field.
     //
-    // WITH NO ITEM THE ANSWER IS THIS BODY'S (architect 2026-08-30): the
-    // resume below is a consumed no-op there, and it is the OUTERMOST site
-    // with the reason — the button, bare Space and the car's Play all arrive
-    // here — so the sentence is raised once, in front of the call, and
-    // toggle_pause's own guard stays the silent belt behind it. (`frames <= 0`
-    // with an item is not reachable from a bound item and keeps that silence.)
-    if (app.render_player.item.empty()) {
-        status(kNoPlayerItem);
-        return;
-    }
+    // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (architect
+    // 2026-08-31, R5 — the one-dimensional rule): a player resting with
+    // nothing bound shows that state on its own row, the clock at zero and the
+    // slider at its left end, so a sentence only repeats what is painted. This
+    // body carried a carded guard of its own from 2026-08-30 as the OUTERMOST
+    // site with the reason — the button, bare Space and the car's Play all
+    // arrive here — and with the card gone it was a second copy of the
+    // predicate behind it, so it is deleted rather than silenced: the resume
+    // below is the consumed no-op, on `item.empty()` and on the `frames <= 0`
+    // an item cannot reach alike.
     toggle_pause();
 }
 
@@ -624,17 +624,19 @@ void GuiRenderPlayer::stop() {
     publish_media_state();
 }
 
-// THE TWO FOLDER WALKS ANSWER IN ONE SENTENCE (architect 2026-08-31, when the
-// END'S OWN pair went silent): NO ITEM — there is nothing whose folder to walk,
-// the state a freshly opened player rests in — still cards, because an empty
-// transport is not a state the band shows. THE END ITSELF says nothing: a
-// benign one-dimensional refusal already at its state is silent, and the
-// highlighted row sitting at the listing's first or last line is the one glance
-// that answers it (the two sentences it used to raise, kFirstInFolder /
-// kLastInFolder, are deleted with their raises). Each walk still asks the two
-// in that order, so an empty transport never reaches the end's own arm. (They
-// were FOUR walks until 2026-08-31 — the item's two neighbours took the same
-// sentences on bare `,` / `.`; the step back lives inside home() now.)
+// THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31, R5 — the
+// one-dimensional rule, which took the END'S OWN pair that morning and the
+// NO-ITEM arm that evening): a benign refusal already at its state is silent.
+// At the end, the highlighted row sitting at the listing's first or last line
+// is the one glance that answers it; with no item — the state a freshly opened
+// player rests in — the modal row is resting whole, its clock at zero and its
+// slider at the left end, and that is the answer too. The three sentences the
+// pair used to raise (kFirstInFolder / kLastInFolder and the shared
+// kNoPlayerItem) are all deleted with their raises. Each walk still asks the
+// two conditions in that order, so an empty transport never reaches the end's
+// own arm. (They were FOUR walks until 2026-08-31 — the item's two neighbours
+// took the same sentences on bare `,` / `.`; the step back lives inside home()
+// now.)
 //
 // THE ITEM FOLDER'S ENDS (R37) — the play road with the index named outright
 // instead of stepped. THE END ITSELF REFUSES: an item that is already the
@@ -643,7 +645,7 @@ void GuiRenderPlayer::stop() {
 void GuiRenderPlayer::first_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
     const int n = static_cast<int>(rp.item_folder.size());
-    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index < 0 || rp.item_index >= n) return;  // no item — silent
     if (rp.item_index == 0) return;   // already the first — silent (above)
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder.front().path, folder, 0);
@@ -653,7 +655,7 @@ void GuiRenderPlayer::last_in_item_folder() {
     AppState::RenderPlayer& rp = app.render_player;
     const int n    = static_cast<int>(rp.item_folder.size());
     const int last = n - 1;
-    if (rp.item_index < 0 || rp.item_index >= n) { status(kNoPlayerItem); return; }
+    if (rp.item_index < 0 || rp.item_index >= n) return;  // no item — silent
     if (rp.item_index >= last) return;   // already the last — silent (above)
     const std::vector<Row> folder = rp.item_folder;
     play_wav(folder[static_cast<size_t>(last)].path, folder, last);
@@ -670,10 +672,10 @@ void GuiRenderPlayer::seek_by(int64_t delta_frames) {
 
 void GuiRenderPlayer::seek_to(int64_t frame) {
     AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item.empty() || rp.frames <= 0) {
-        status(kNoPlayerItem);
-        return;
-    }
+    // NO ITEM IS A SILENT CONSUME (architect 2026-08-31, R5, with the idle arm
+    // below): a player with nothing bound rests with its clock at zero and its
+    // slider at the left end, so the row already says what a sentence would.
+    if (rp.item.empty() || rp.frames <= 0) return;
     // A SEEK WHILE IDLE IS A CONSUMED NO-OP (architect 2026-08-29 ~01:40,
     // Audacious's own stopped slider): Play when idle starts the item from
     // its start, so an idle transport must not be nudgeable to some other
@@ -684,13 +686,13 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // PAUSED are unchanged below, and this is why `resume_frame` is always 0
     // at an idle rest, by construction (the field's own comment,
     // app_state.h).
-    // AND IT SAYS SO (architect 2026-08-30): the slider is drawn at the
-    // resting point and the two keys look live, so a dead press owes the
-    // reason. The scrub's own gate says the same words one road over.
-    if (rp.transport == Transport::Idle) {
-        status(kSeekWhileIdle);
-        return;
-    }
+    // AND IT SAYS NOTHING (architect 2026-08-31, R5, reversing 2026-08-30's
+    // "and it says so"): the refusal is unchanged and only the card leaves —
+    // an idle transport is a one-dimensional state the row itself shows, the
+    // slider resting and the clock at zero, so the sentence repeated what was
+    // already painted. The scrub's own gate is silent one road over for the
+    // same reason.
+    if (rp.transport == Transport::Idle) return;
     // A SEEK MOVES THE REST, so the folder-end rest is over (R27's bit): the
     // user has named a place in this item, and the next Play resumes there
     // rather than starting the folder over.

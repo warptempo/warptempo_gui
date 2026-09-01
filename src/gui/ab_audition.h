@@ -126,7 +126,8 @@ struct GuiInputHandler;
 // which is what makes "the resting playhead cannot move under a standing act"
 // structural rather than a list of routes — while a TRANSLATION and a RESTORE
 // are not, which is what lets the act's own two tab switches run inside it.
-// Bare Esc is NOT one of them — its five bindings are closed.
+// Bare Esc is NOT one of them — its eight bindings are closed (the card
+// dismissal joined them on 2026-08-31; the enumeration is input_handler.cpp's).
 //
 // THE RUNNING CASE IS NOT A REFUSAL (architect 2026-08-31): a Shift+Space that
 // finds `phase != Idle` STOPS the act through the one stop body and launches

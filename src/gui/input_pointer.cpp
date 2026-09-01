@@ -4306,25 +4306,22 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // that the plain press works, and a chord on a slider is not an act
     // anyone spelled.
     if (mods.ctrl || mods.shift || mods.alt) return true;
-    // THE TWO STATE REFUSALS SAY WHAT THE ACTS SAY (architect 2026-08-30):
-    // they are the seek's own two, met here instead of at seek_to because the
-    // press must not ARM the handle drag either — so the words are the mode's
-    // shared ones (render_player.h) rather than a second wording of one fact.
-    if (app.render_player.frames <= 0 || app.render_player.item.empty()) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kNoPlayerItem);
+    // THE TWO STATE REFUSALS ARE SILENT (architect 2026-08-31, R5): they are
+    // the seek's own two, met here instead of at seek_to because the press
+    // must not ARM the handle drag either, and they went silent with seek_to's
+    // — a slider resting at the left end under a zeroed clock IS the state
+    // both name, so a sentence only repeated what the press was already
+    // looking at (the retirement record is at render_player.h, where the two
+    // shared sentences used to be spelled).
+    if (app.render_player.frames <= 0 || app.render_player.item.empty())
         return true;
-    }
     // THE SCRUB RESTS WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
     // Audacious's own slider — dead while stopped): the press seeks nothing
     // and arms no handle drag, and the painter keeps drawing the handle at
     // the resting point. LIVE and PAUSED are unchanged.
     if (app.render_player.transport ==
-        AppState::RenderPlayer::Transport::Idle) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kSeekWhileIdle);
+        AppState::RenderPlayer::Transport::Idle)
         return true;
-    }
     const int marker_x =
         render_player_scrub_x_of(app, render_player_position(app, playback));
     if (render_player_scrub_handle_hit(track, marker_x, x, y)) {
