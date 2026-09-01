@@ -592,9 +592,11 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   command becomes THE PLAYER'S OWN KEYS through `synthesize_key`, press and
   release, under `kCarStableCodeBase` = 1000 (recorded beside the keyboard's
   `kStableCodeBase`), so the ordinary `on_key` dispatch runs — no second road;
-  `SeekTo` is the one direct act, no keysym carrying an absolute position. (The
-  head unit's STOP became a real stop on 2026-08-28, R36 — the player's own
-  Stop key rather than the pause it had been mapped to; the mapping table is
+  the DIRECT ACTS take no key at all, `SeekTo` among them because no keysym
+  carries an absolute position. (The head unit's STOP became a real stop on
+  2026-08-28, R36 — the player's own Stop key rather than the pause it had
+  been mapped to — and became PAUSE AND THEN HOME on 2026-09-01, a direct act,
+  when that key and its button retired; the mapping table is
   render-player.md's.)
 - **`publish_media_state`** — the push UP, from the ONE owner
   `GuiRenderPlayer::publish_media_state` at every edge where the display

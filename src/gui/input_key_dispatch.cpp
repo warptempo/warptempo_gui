@@ -3723,7 +3723,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // THE RENDER PLAYER (2026-08-28): its continuous steps repeat — the
     // highlight walk (Up/Down) and the seeks (Left/Right) — AND NOTHING ELSE
     // DOES, on any modifier. Enter and Space are the modal's one-shot press or
-    // the open/play acts; the closers, the stop chord and the load chord are
+    // the open/play acts; the closers and the load chord are
     // one-shot commands; HOME AND END ARE ABSOLUTE (architect 2026-08-31, and
     // that is why the two skips' keys are one-shot on BOTH shapes: the plain
     // pair lands the item's start or its end — or, inside Home's
@@ -6791,23 +6791,12 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         case GuiKeys::L:
             render_player.close();
             return true;
-        case GuiKeys::V:
-            // STOP (architect 2026-08-28, R36; RE-KEYED TO BARE `v`
-            // 2026-08-30) — the Stop button's own chord: the item rests at its
-            // start and the next Play replays it from there. One-shot like
-            // every other act key here, and bare-exact: every modified
-            // spelling of `v` is consumed above by the router's `if (!bare)`.
-            //
-            // WHY `v`: THE ROW IS AUDACIOUS'S BY RULING (R25's arrangement),
-            // and Audacious — Winamp before it — stops on V. It was bare `s`
-            // for two days, which was the one CROSS-MODAL DOUBLE MEANING left
-            // in the product: outside the player bare `s` drops a marker, so
-            // the same letter authored in one state and stopped a transport in
-            // another. `v` is bound nowhere else, in the player or out of it
-            // (the editors' paste is ctrl-exact), so the letter says one thing
-            // everywhere.
-            render_player.stop();
-            return true;
+        // BARE `v` WAS STOP (R36, on this letter since 2026-08-30 — Audacious
+        // and Winamp before it stop on V) AND IS UNBOUND HERE since 2026-09-01:
+        // the player's Stop act retired whole with its button, leaving the row
+        // the main window's own transport triple, so the letter falls to the
+        // silent catch-all below like every other chord this router does not
+        // name.
         case GuiKeys::Apostrophe:
             render_player_load_in_place();
             return true;
@@ -6881,6 +6870,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // the item's folder for one day and fall here now, silent like
             // every other unbound chord (decision 72's deduction rule, not a
             // card), their acts having gone to the two skips as Home and End.
+            // Bare `v` joined them on 2026-09-01 with the Stop's retirement.
             return true;   // consumed
     }
 }

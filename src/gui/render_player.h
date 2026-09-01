@@ -87,22 +87,30 @@ struct GuiInputHandler;
 // with the deliverable, which is the CURRENT TITLE'S ONE WAV and nothing else
 // (the listing prunes the folder to it, prune_render_folder in renders_dir.h),
 // `tmp/` with its batch folders and their cells — and
-// the bottom row's modal carries the transport (the two skips around
-// Play-Pause and Stop — Home / Play-Pause / Stop / End since 2026-08-31 —
-// the play-scrub, the clock, the Repeat one lamp, and Load in place /
-// Close flush right — the row's order and faces are the painter's, R25/R36).
+// the bottom row's modal carries the transport (THE MAIN WINDOW'S OWN
+// TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
+// acts on the same three keys as the roster's — then the play-scrub, the
+// clock, the Repeat one lamp, and Load in place / Close flush right — the
+// row's order and faces are the painter's, R25/R36).
 // The state it moves is AppState::render_player and AppState::folder_overlay
 // (app_state.h, where every field is described); this struct owns the acts.
 //
+// THE PLAYER'S STOP IS RETIRED WHOLE (architect 2026-09-01, reversing his R8
+// keep of 2026-08-31 — "it sounds like stop is actually useful" — once the
+// row's symmetry with the main window's transport became the goal): the
+// button, its act body, its bare `v` key, its face arm and its tooltip are
+// all deleted, and the row is the triple above. It was R36's own (2026-08-28,
+// "one button that's either play or pause, and the other one is stop"), and
+// what makes it superfluous is what replaced it: Home puts the playing file
+// back at its beginning, and Space reads the highlight first (R6) so any file
+// starts from its start in one press.
+//
 // THE TRANSPORT HAS THREE STATES AND THE BUTTONS ANSWER THEM (architect
-// 2026-08-28, R36 — PLAY/PAUSE PLUS STOP, "if the user is playing a track and
-// wants to go back to the beginning of that track, they can hit stop and then
-// play again. This is different from the live transport, because there we have
-// the scrub, and a pause wouldn't make sense — the scrub always returns to the
-// playhead when not playing"). THE STATE IS STORED, in
+// 2026-08-28, R36). THE STATE IS STORED, in
 // `AppState::RenderPlayer::transport` (that field's block owns the reasons,
 // the writer set and the readers) — IDLE (nothing to resume: no item, or an
-// item a STOP, a natural end or a fresh open left resting at its start), LIVE,
+// item a natural end or a fresh open left resting at its start — NO USER ACT
+// PRODUCES IT since the Stop retired), LIVE,
 // PAUSED (an item the transport parked, AT WHATEVER FRAME — a pause at frame 0
 // is PAUSED, which no reading of the resume point could say) — and the table
 // is at play_button_act.
@@ -156,7 +164,7 @@ struct GuiInputHandler;
 //
 // AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
 // item resting at its start AND THAT IS ALL IT MEANS — the next Play replays
-// that last file, exactly as it would after a Stop (architect 2026-08-31, R7:
+// that last file (architect 2026-08-31, R7:
 // "we simplify — play on last file means play last file"). THE FOLDER-END
 // RESTART IS RETIRED: from 2026-08-28 the bit `ended_at_folder_end` said the
 // transport was resting THERE and turned the next Play — the car's at the end
@@ -220,10 +228,12 @@ struct GuiInputHandler;
 // on_media_command, which turns each into THE PLAYER'S OWN KEYS through
 // GuiPlatform::synthesize_key — press and release, the on-screen keyboard's
 // road — so the ordinary on_key dispatch runs and there is no second dispatch
-// road for keys. TWO COMMANDS ACT DIRECT instead of pressing anything, and the
-// table at the declaration owns why: SeekTo (no keysym carries an absolute
-// position) and the DIRECTION-NAMED play/pause family, which since R6 must
-// reach the transport past Space's highlight fork (transport_toggle_act);
+// road for keys. THREE COMMAND FAMILIES ACT DIRECT instead of pressing
+// anything, and the table at the declaration owns why: SeekTo (no keysym
+// carries an absolute position), the DIRECTION-NAMED play/pause family, which
+// since R6 must reach the transport past Space's highlight fork
+// (transport_toggle_act), and — since the player's Stop key retired
+// 2026-09-01 — STOP, which composes that same toggle with a seek to the top;
 // and publish_media_state is the ONE owner of what the head unit shows,
 // called at every edge where that changes. The platform is held for exactly
 // those two calls.
@@ -329,7 +339,7 @@ struct GuiRenderPlayer {
     //                        (seek_to's own head, the one owner), so
     //                        `resume_frame` is always 0 at an idle rest and
     //                        every rest the transport's own acts leave it in —
-    //                        a STOP, a natural end, a fresh bind — plays from
+    //                        a natural end, a fresh bind — plays from
     //                        frame 0.
     //     IDLE with no item -> nothing.
     //
@@ -368,13 +378,14 @@ struct GuiRenderPlayer {
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
     void toggle_pause();
-    // STOP (R36): the transport goes idle with the item resting at ITS START —
-    // the resume point cleared to 0, THE ITEM
-    // ITSELF UNTOUCHED, so a following Play replays it from the beginning.
-    // That is the whole difference from a pause, and it is why the row carries
-    // both. A consumed no-op with no item and on an item already resting at
-    // its start.
-    void stop();
+    // (STOP STOOD HERE, R36's own act — the transport to IDLE with the item
+    // resting at its start, the resume point cleared to 0 and the item itself
+    // untouched, a consumed no-op with no item and on an item already there.
+    // It is RETIRED WHOLE, architect 2026-09-01; the record is at the head of
+    // this file. Its three roads — the row's button, bare `v` and the head
+    // unit's Stop — went with it, the last of them becoming the pause-then-
+    // home composition at on_media_command's own arm.)
+    //
     // THE ITEM FOLDER'S ENDS (R37, Shift+Home / Shift+End since 2026-08-31 and
     // the two skip buttons' shift-click or long press): the first / last wav of
     // `item_folder`, played from its start on the play road — never
@@ -472,8 +483,9 @@ struct GuiRenderPlayer {
     // off (update_modal_dialog_hover). So the ring is CLEARED before any key
     // is synthesized, in the synthesis road itself, which is what makes the
     // membership exactly "every command kind that synthesizes a key" — the
-    // two DIRECT acts do not take it (SeekTo, and the directional family's
-    // transport toggle since the round-B conversion), pressing no button
+    // DIRECT acts do not take it (SeekTo, the directional family's
+    // transport toggle since the round-B conversion, and Stop since the
+    // player's stop key retired 2026-09-01), pressing no button
     // because they press no key, and a kind that presses nothing (FocusGained,
     // a state-gated no-op) damages nothing. The clear
     // is dispatch_modal_dialog_editor_act's own three writes: the one owner
@@ -500,13 +512,15 @@ struct GuiRenderPlayer {
     // them); Play -> THE TRANSPORT TOGGLE ONLY WITH THE TRANSPORT DOWN; Pause,
     // FocusLost and FocusLostTransient -> THE TRANSPORT TOGGLE ONLY WITH THE
     // TRANSPORT LIVE (a focus loss pauses, ALWAYS, Android's one imposed
-    // interrupt); STOP -> THE STOP
-    // KEY, unconditionally (R36 gave the player a real stop, so the head
-    // unit's stop is no longer a pause; the key names an act rather than a
-    // toggle, so no state gate belongs on it and the act's own idle refusal is
-    // the answer) — the key being BARE `v` since 2026-08-30, which the one
-    // road simply follows: the table names the player's STOP KEY, whatever
-    // letter that is; Previous / Next -> Home / End (architect 2026-08-31 —
+    // interrupt); STOP -> PAUSE AND THEN HOME, direct (architect 2026-09-01,
+    // with the player's own Stop act retired: a live transport takes the
+    // directional pause, and a session standing after it takes seek_to(0) —
+    // never bare Home's act, whose previous-track window would change TRACKS
+    // on a head unit's Stop. Audibly it is the old Stop: silence now, the top
+    // on the next Play; what differs is the state left behind, PAUSED rather
+    // than IDLE, so the scrub stays live under it. R36 had mapped this to the
+    // player's stop KEY, and before R36 it was a plain pause);
+    // Previous / Next -> Home / End (architect 2026-08-31 —
     // THE PLAYER'S OWN TRANSPORT PAIR, whatever the head unit calls its
     // buttons: the road stays "the car button presses the player's key", and
     // Home's PREVIOUS-TRACK WINDOW is what gives the wheel a real previous-
@@ -522,8 +536,9 @@ struct GuiRenderPlayer {
     // transport toggle is a toggle, and a head unit saying "play" to a live
     // transport must not pause it, so the gate decides whether the act runs.
     //
-    // THE ROAD'S TWO DIRECT ACTS: the directional family's transport toggle
-    // above, and SeekTo, which calls seek_to(frame) DIRECT because no keysym
+    // THE ROAD'S DIRECT ACTS: the directional family's transport toggle
+    // above, Stop's composition of that toggle with seek_to(0), and SeekTo,
+    // which calls seek_to(frame) DIRECT because no keysym
     // carries an absolute position — the seeks the keys
     // bind are relative (Left / Right / Home). Its milliseconds are clamped
     // to the item's own length BEFORE the conversion to frames, the arriving
@@ -541,17 +556,17 @@ struct GuiRenderPlayer {
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep (EIGHT call sites across SEVEN functions): open() —
+    // re-derived by grep at each retell (SEVEN call sites across SIX
+    // functions; it was eight across seven until GuiRenderPlayer::stop() went
+    // with the player's Stop on 2026-09-01): open() —
     // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
     // covers the pause, the natural end's last-wav rest, the dead device and
-    // the rebind ahead of the next item; GuiRenderPlayer::stop()'s OWN push in
-    // its not-sounding arm (R36) — a transport that has already passed that
-    // fork moves its rest to frame 0, which the head unit's clock must see, and
-    // the arm that DOES sound needs no second push because the fork just made
-    // one; seek_to — both arms, so the head unit's clock stays honest; and
+    // the rebind ahead of the next item; seek_to — both arms, so the head
+    // unit's clock stays honest (which is also what publishes the car Stop's
+    // seek to the top, that command being a pause and then this seek); and
     // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last
     // push at speed 1.0. Title = the item's path relative to the project

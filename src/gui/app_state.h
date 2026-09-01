@@ -5216,16 +5216,25 @@ struct AppState {
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free.
     enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
-    // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S SIX BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
     // there). REPEAT ONE joined 2026-08-28 (architect R26) — the row's one
-    // LAMP, the only member here whose face carries a state — and STOP the
-    // same evening (R36): the transport is PLAY/PAUSE PLUS STOP, "one button
-    // that's either play or pause, and the other one is stop", so a listener
-    // who wants the track from its beginning stops and plays instead of
-    // scrubbing back. The order below is the ROW's, which is Audacious's.
+    // LAMP, the only member here whose face carries a state. The order below
+    // is the ROW's.
+    //
+    // STOP IS RETIRED (architect 2026-09-01, reversing his R8 keep of the day
+    // before): the modal row is THE MAIN WINDOW'S OWN TRANSPORT TRIPLE —
+    // Home · Play/Pause · End, the same three acts on the same three keys as
+    // the roster's — and the member, its button, its act, its key and its
+    // face arm are all deleted. It was R36's (2026-08-28, "one button that's
+    // either play or pause, and the other one is stop"), and what made it
+    // superfluous is the row it now matches: Home already puts the playing
+    // file back at its beginning, and the highlight-driven Space (R6) reaches
+    // any file from its start with one press. The IDLE transport state stays
+    // — open(), the natural end and close() still produce it — but no user
+    // act writes it any more.
     //
     // THE TWO SKIPS ARE HOME AND END (architect 2026-08-31): "the transport
     // keys are mapped to Home and End in the media player just like the
@@ -5237,7 +5246,7 @@ struct AppState {
     // pair over bare Home / bare End). The shifted twins are unchanged: the
     // item folder's FIRST / LAST wav (player_button_shift_admits).
     enum class PlayerButtonAct {
-        None, Home, PlayPause, Stop, End, RepeatOne, LoadInPlace, Close
+        None, Home, PlayPause, End, RepeatOne, LoadInPlace, Close
     };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
@@ -7602,8 +7611,8 @@ struct AppState {
     //   `transport` THE TRANSPORT'S STATE, STORED and never derived (R36's
     //              three states; the table is at
     //              GuiRenderPlayer::play_button_act): IDLE — nothing to
-    //              resume, which is no item, an item a STOP or a natural end
-    //              left resting at its start, or a fresh open; LIVE —
+    //              resume, which is no item, an item a natural end left
+    //              resting at its start, or a fresh open; LIVE —
     //              sounding; PAUSED — an item the transport parked, AT
     //              WHATEVER FRAME. PAUSED AT FRAME ZERO IS PAUSED, NOT IDLE,
     //              and that is why this is a field rather than a reading of
@@ -7616,15 +7625,20 @@ struct AppState {
     //              (GuiPlaybackLifecycle::stop_playback_if_playing — every
     //              live transport that stops passes there, the pause, the
     //              dead device, the natural end and the close alike), and IDLE
-    //              at the four acts that mean "resting at the start": stop(),
-    //              the natural end's own rest, open() and close(), each
-    //              written AFTER that fork — open()'s reset alone never
-    //              meeting it, since it runs with the mode down. LIVE is what
+    //              at the THREE acts that mean "resting at the start": the
+    //              natural end's own rest, open() and close(), each written
+    //              AFTER that fork — open()'s reset alone never meeting it,
+    //              since it runs with the mode down. IT WAS FOUR until
+    //              2026-09-01: GuiRenderPlayer::stop() was the fourth and the
+    //              only USER act among them, and the player's Stop retired
+    //              whole with the row's transport triple — the class stays,
+    //              its three remaining producers are all the player's own
+    //              lifecycle, and no press puts the transport into it. LIVE is what
     //              the play/pause glyph, the tick, the position reader, the
     //              car's directional gates and the head unit's `playing` all
     //              ask for;
     //   `resume_frame` THE RESUME POINT AND NOTHING ELSE — where a pause left
-    //              the cursor (0 after a fresh bind, a natural end or a STOP);
+    //              the cursor (0 after a fresh bind or a natural end);
     //              a seek moves it on a PAUSED transport and the play moves it
     //              on a live one. A SEEK WHILE IDLE IS A CONSUMED NO-OP
     //              (architect 2026-08-29, seek_to's own head, the one owner),
@@ -7748,9 +7762,6 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::Home: return "Go to start (Home)";
         case AppState::PlayerButtonAct::PlayPause:
             return pause_face ? "Pause (Space)" : "Play (Space)";
-        // STOP IS ITS OWN BUTTON (R36) and its chord is a bare letter, so the
-        // table's own accelerator rule spells it lowercase.
-        case AppState::PlayerButtonAct::Stop:        return "Stop (v)";
         case AppState::PlayerButtonAct::End:  return "Go to end (End)";
         // A BARE LETTER IS LOWERCASE — the accelerator-spelling rule the
         // roster's own table states once (architect 2026-08-09): the key AS
@@ -7796,7 +7807,6 @@ inline std::string render_player_button_shift_hint(
         case AppState::PlayerButtonAct::End:
             return "Press Shift for the folder's last file.";
         case AppState::PlayerButtonAct::PlayPause:
-        case AppState::PlayerButtonAct::Stop:
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::LoadInPlace:
         case AppState::PlayerButtonAct::Close:
@@ -7809,7 +7819,6 @@ static_assert(
     player_button_shift_admits(AppState::PlayerButtonAct::Home) &&
     player_button_shift_admits(AppState::PlayerButtonAct::End) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::PlayPause) &&
-    !player_button_shift_admits(AppState::PlayerButtonAct::Stop) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
@@ -7870,11 +7879,8 @@ int render_player_highlight_act_row(const AppState& a);
 //   transport with no item and no usable highlight is the consumed no-op.
 //   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
 //   a bound item, that arm's own record.)
-//   STOP mirrors stop()'s WHOLE no-op set — the no-item belt and R36's
-//   already-resting return (Idle with the rest at frame 0); a transport
-//   PAUSED at frame 0 keeps it live, exactly as the act treats it. The key's
-//   own refusal there stays R36's ruled silence. IT READS NO HIGHLIGHT: R6
-//   moved Space alone, Stop naming one act on the transport.
+//   (STOP had an arm of its own here — the no-item belt and R36's
+//   already-resting return — and it went with the button on 2026-09-01.)
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load) and
 //   on a highlight with no recipe (render_player_highlighted_entry, the
 //   act's own question). THE RUNNING-RENDER REFUSAL IS DELIBERATELY NOT A
@@ -7894,7 +7900,7 @@ int render_player_highlight_act_row(const AppState& a);
 // player's keys cannot touch it.
 // EVERY FACE EDGE REACHES A REPAINT through the row's one damage owner
 // (GuiRenderPlayer::damage_row): the transport writers all damage the row
-// (play_wav, toggle_pause's both arms, stop's both arms, seek_to,
+// (play_wav, toggle_pause's both arms, seek_to,
 // on_natural_end through the stop body's player fork; open and close
 // repaint whole), and the HIGHLIGHT movers damage it since the Load face
 // reads the highlight (move_highlight, set_highlight, rebuild_rows) — the
@@ -11884,7 +11890,7 @@ inline RedesignTooltipText redesign_button_tooltip(const AppState& a,
 // RedesignButton, the enumerators are contiguous and kRedesignButtonCount is
 // their count, so the walk is expressible and the witnesses are structural —
 // every button is on both sides of the equivalence. (The render player's own
-// copy at player_button_shift_admits was already exhaustive over its seven.)
+// copy at player_button_shift_admits was already exhaustive over its six.)
 constexpr bool redesign_button_modifier_hint_agrees() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);

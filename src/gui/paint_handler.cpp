@@ -5983,12 +5983,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    row's total before anything can be placed). --
     // A BUTTON IS A WORD OR A GLYPH (2026-08-28, the render player's row):
     // `glyph` set means the button is the roster's own icon in a
-    // kModalBtnBoxPx SQUARE — the FOUR transport buttons wear
+    // kModalBtnBoxPx SQUARE — the THREE transport buttons wear
     // MediaSkipBackward, MediaPlaybackStart (swapped to MediaPlaybackPause
     // while the transport is live, the bottom row's one-button-two-faces
-    // rule), MediaPlaybackStop — Stop being a button of its own since R36,
-    // which is why the live face is a pause and not the stop square — and
-    // MediaSkipForward, and the REPEAT ONE toggle wears
+    // rule) and MediaSkipForward — the row was FOUR, MediaPlaybackStop among
+    // them, until the player's Stop retired 2026-09-01, and the middle
+    // button's live face stays the pause it took from R36 — and the REPEAT
+    // ONE toggle wears
     // MediaRepeatSingle in both its states — while a word button keeps the
     // label box every prompt and editor button has always had. A GLYPH BUTTON
     // WEARS NO RESTING OUTLINE (architect R25: "icon buttons have no border —
@@ -6016,7 +6017,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
         // separator, the lamp — then the word buttons FLUSH RIGHT), so its own
-        // branch writes all seven and the walk simply paints where it is told.
+        // branch writes all six and the walk simply paints where it is told.
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
@@ -6029,16 +6030,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
-        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25 and
-        // R36): the TRANSPORT — the two SKIPS around Play/Pause and Stop, on
-        // Home and End since 2026-08-31 and wearing the skip glyphs still —
+        // THE PLAYER'S ROW, in painted order (architect 2026-08-28, R25; the
+        // transport is THE MAIN WINDOW'S OWN TRIPLE since 2026-09-01): the
+        // two SKIPS around Play/Pause, on Home and End since 2026-08-31 and
+        // wearing the skip glyphs still —
         // then the
         // separator, the scrub, the clock and the second separator (all three
         // laid out in the player's own branch below), then the REPEAT ONE
         // lamp, and the two WORD buttons FLUSH RIGHT: Load in place · Close.
         // Close LAST, the escape sentinel by construction as every prompt has
         // it. The plan's order is also the ring's, so Tab walks the row left to
-        // right. STOP SITS AFTER PLAY/PAUSE, Audacious's own order (R36).
+        // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from R36 (2026-08-28,
+        // Audacious's own order) until the act retired.
         // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31, R6): the button
         // wears PAUSE only where its press would PAUSE — the transport live
         // AND the highlight on the transport's own item (or nowhere), which
@@ -6080,15 +6083,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::Home,
                      icons::Icon::MediaSkipBackward);
         // PLAY/PAUSE WEARS THE PAUSE GLYPH ON THE PAUSE FACE (above), not the
-        // stop square it wore until R36 gave the row a Stop button of its own:
-        // two buttons, two acts, two faces. The roster's transport button is
+        // stop square it wore until R36 gave the row a Stop button of its own.
+        // THAT BUTTON RETIRED 2026-09-01 AND THE PAUSE GLYPH STAYS: this is a
+        // player's transport, where a pause is a resumable rest, and the row
+        // is now the main window's triple with the pause face on the middle
+        // button. The roster's transport button is
         // untouched — bare Space over the project's audio is one toggle with
-        // no pause state, so it keeps Play/Stop.
+        // no pause state, so it keeps Play/Stop, and MediaPlaybackStop keeps
+        // that one reader.
         glyph_button(AppState::PlayerButtonAct::PlayPause,
                      pause_face ? icons::Icon::MediaPlaybackPause
                                 : icons::Icon::MediaPlaybackStart);
-        glyph_button(AppState::PlayerButtonAct::Stop,
-                     icons::Icon::MediaPlaybackStop);
         glyph_button(AppState::PlayerButtonAct::End,
                      icons::Icon::MediaSkipForward);
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
@@ -6332,8 +6337,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         int px = cx0;
         plan[0].x = px; px += btn_h + ggap;      // Home (skip back)
         plan[1].x = px; px += btn_h + ggap;      // Play / Pause
-        plan[2].x = px; px += btn_h + ggap;      // Stop
-        plan[3].x = px; px += btn_h;             // End (skip forward)
+        plan[2].x = px; px += btn_h;             // End (skip forward)
         // The separator keeps the spec's own 5px on its BUTTON side; the
         // scrub side takes the distance above, exactly as row 8's clock does.
         const int sep1_x   = px + sep_gap;
@@ -6341,7 +6345,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         // The word cluster, right-flushed inside the reserved ring exactly as
         // the single cluster's cap is on every other owner.
-        const int words_w  = plan[5].w + bgap + plan[6].w;
+        const int words_w  = plan[4].w + bgap + plan[5].w;
         const int words_x0 = std::max(cx0, cx1 - ring - words_w);
         // What the row owes AFTER the scrub: the scrub → clock distance, the
         // clock cell, the clock → separator distance, the second separator
@@ -6361,9 +6365,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + sep_pad : 0);
         const int clock_end = clock_x0 + clock_w;
         const int sep2_x    = clock_end + sep_pad;
-        plan[4].x = sep2_x + sep_w + sep_gap;    // Repeat one
-        plan[5].x = words_x0;                    // Load in place
-        plan[6].x = words_x0 + plan[5].w + bgap; // Close
+        plan[3].x = sep2_x + sep_w + sep_gap;    // Repeat one
+        plan[4].x = words_x0;                    // Load in place
+        plan[5].x = words_x0 + plan[4].w + bgap; // Close
 
         paint_separator(sep1_x);
         paint_separator(sep2_x);

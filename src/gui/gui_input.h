@@ -408,7 +408,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // sentences between them, the two drag gates sharing one literal. THE
 // PLAYER'S AND THE PICKER'S OWN DRAG ARMS, which say that same literal one
 // rank higher, DO NOT ASK: while either mode stands its router is the whole
-// vocabulary, and this inventory does not know it — a bare `v` swallowed by
+// vocabulary, and this inventory does not know it — a bare `r` swallowed by
 // the player's scroll drag is a bound key there and must be answered.
 //
 // WHAT COUNTS AS BOUND IS WHAT THE MAIN DISPATCH OWNS — every chord on_key's
@@ -424,8 +424,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER PLAYER
 // or the PICKER stands, its router IS the whole vocabulary and the dispatch
 // below it never runs, so its keys are its own world and not the product's —
-// bare `v` stops a track in the player and binds nothing anywhere else, and a
-// `v` pressed outside it must be as silent as any unbound letter. Neither
+// bare `r` flips Repeat one in the player and binds nothing anywhere else
+// (the render chords are Ctrl+Alt), and an `r` pressed outside it must be as
+// silent as any unbound letter. Neither
 // router can reach a gate below it either (both are ranked above all six), so
 // no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
 // WORLD: an editor's own keys (its motion arm, its ctrl-exact clipboard

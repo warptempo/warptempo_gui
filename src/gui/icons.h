@@ -293,14 +293,18 @@ enum class Icon {
     // most recently as a radio pair; an Icon is a GLYPH rather than a button
     // and neither entry moved.
     MediaPlaybackStart,  // Play (bare Space, the face while stopped)
-    MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs;
-                         // the render player's own Stop button, R36)
+    MediaPlaybackStop,   // Stop (bare Space, the face while an audition runs
+                         // — the ROSTER'S own, and its one reader since the
+                         // render player's Stop button retired 2026-09-01)
     // THE RENDER PLAYER'S PAUSE FACE (2026-08-28, architect R36): its row
-    // carries Play/Pause AND Stop as two buttons — "one button that's either
+    // carried Play/Pause AND Stop as two buttons — "one button that's either
     // play or pause, and the other one is stop" — so the two-faced button
     // needed a pause glyph of its own rather than the stop square it wore
     // while live. Breeze actions/22/media-playback-pause, one fresh verbatim
-    // transcription. The ROSTER'S transport button is untouched: bare Space
+    // transcription. THE PAUSE STAYS WITHOUT THE STOP (2026-09-01): the
+    // player's transport parks a resumable rest whatever the row's shape, so
+    // the live face is a pause there. The ROSTER'S transport button is
+    // untouched: bare Space
     // there is one toggle over the project's audio with no pause state, so it
     // keeps Play/Stop.
     MediaPlaybackPause,  // Pause (the player's row, the face while live)

@@ -348,9 +348,8 @@ bool render_player_button_enabled(const AppState& a,
             if (render_player_highlight_act_row(a) >= 0) return true;
             if (rp.transport != Transport::Idle) return true;
             return !rp.item.empty();
-        case AppState::PlayerButtonAct::Stop:
-            if (rp.item.empty() || rp.frames <= 0) return false;
-            return !(rp.transport == Transport::Idle && rp.resume_frame == 0);
+        // (STOP's arm stood here — the no-item belt and R36's already-resting
+        // return — and went with the button on 2026-09-01.)
         case AppState::PlayerButtonAct::LoadInPlace:
             return !active_view_state(a).read_only &&
                    render_player_highlighted_entry(a) != nullptr;
@@ -579,7 +578,7 @@ void GuiRenderPlayer::transport_toggle_act() {
     // ELSE THE ITEM FROM ITS START, ALWAYS (architect 2026-08-29 ~01:40:
     // "Play when idle should start literally"): `resume_frame` is 0 at every
     // idle rest by construction — seek_to's own head refuses an idle seek, so
-    // nothing can have moved it since the last Stop, natural end or fresh
+    // nothing can have moved it since the last natural end or fresh
     // bind — and toggle_pause's resume arm reads exactly that field.
     //
     // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (architect
@@ -628,41 +627,19 @@ void GuiRenderPlayer::toggle_pause() {
     publish_media_state();
 }
 
-void GuiRenderPlayer::stop() {
-    AppState::RenderPlayer& rp = app.render_player;
-    if (rp.item.empty() || rp.frames <= 0) return;
-    // ALREADY RESTING AT THE START IS A CONSUMED NO-OP (R36): there is nothing
-    // for a stop to do to an item already where a stop leaves it, and the test
-    // is the two things this body writes. THE STATE IS PART OF IT: a
-    // transport PAUSED at frame 0 (the no-device arm's own rest) is not where
-    // a stop leaves one, its next Play resuming from a state a Play would not
-    // resume from. (It was a THREE-part test until 2026-08-31: the folder-end
-    // rest was not that state either, its bit being what the next Play read —
-    // and with R7's retirement a folder-end rest IS an ordinary idle rest at
-    // frame 0, which this arm now answers as the no-op it is.)
-    if (rp.transport == Transport::Idle && rp.resume_frame == 0) return;
-    // THE REST IS AT THE ITEM'S START, written BEFORE the stop body so the
-    // "paused" that body's player fork publishes reads position 0 — the
-    // natural end's own ordering, and for the same reason.
-    rp.resume_frame        = 0;
-    rp.painted_cursor      = -1;
-    if (rp.transport == Transport::Live) {
-        // THE FENCE, the row's damage and the head unit's push are the one
-        // stop body's player fork, which leaves the transport PAUSED; the
-        // state a STOP means is written over it here. No second push: the
-        // fork's own already carried "not playing" at the rest this body
-        // wrote above, and the wire does not distinguish idle from paused.
-        playback_lifecycle.stop_playback_if_playing();
-        rp.transport = Transport::Idle;
-        return;
-    }
-    // A TRANSPORT THAT IS NOT SOUNDING has already passed that fork — paused,
-    // or idle with a seeked rest — so what is left is the state and the rest
-    // moving to 0, which the clock, the scrub and the head unit read.
-    rp.transport = Transport::Idle;
-    damage_row();
-    publish_media_state();
-}
+// THE STOP BODY STOOD HERE AND IS RETIRED WHOLE (architect 2026-09-01,
+// reversing R8's keep of the day before once the row's symmetry with the main
+// window's transport became the goal — the record and the reasoning are at the
+// head of render_player.h). It was R36's act: the rest written to frame 0 and
+// the transport moved to IDLE, over the one stop body's player fork where the
+// transport was sounding, a consumed no-op with no item and on an item already
+// resting there. ITS THREE ROADS WERE ALL USER ACTS AND ALL DELETED WITH IT —
+// the modal row's Stop button, bare `v` in route_render_player_key, and the
+// head unit's Stop, which composes a pause with a seek to the top at
+// on_media_command's own arm now. Nothing else called it, so nothing had to be
+// kept: THE ONE STOP BODY (GuiPlaybackLifecycle::stop_playback_if_playing) is
+// untouched, and every close, pause, natural end and rebind still passes
+// through it exactly as before.
 
 // THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31, R5 — the
 // one-dimensional rule, which took the END'S OWN pair that morning and the
@@ -872,8 +849,9 @@ void GuiRenderPlayer::on_natural_end() {
     }
     // THE FOLDER IS AT ITS END (or the next wav refused to decode, its own
     // words on a card and the item unchanged) and the transport rests at the
-    // item's start, IDLE, exactly as it rests after a Stop — so the next Play
-    // replays THIS item.
+    // item's start, IDLE — so the next Play replays THIS item. This rest and
+    // open()'s are the whole of the IDLE state's production since the player's
+    // Stop retired (2026-09-01); no user act reaches it any more.
     //
     // THE FOLDER-END RESTART STOOD HERE (architect 2026-08-28, R27) and IS
     // RETIRED (architect 2026-08-31, R7 — "we simplify — play on last file
@@ -1068,8 +1046,10 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     // pausing what sounds (R40's own bug, arriving from the car's side). They
     // call transport_toggle_act — play_button_act's tail past the highlight —
     // directly, which is a DIRECT ACT and not a second dispatch road for keys:
-    // it joins SeekTo below as the road's second act with no keysym behind it,
-    // and like SeekTo it clears no modal ring, the ring clear belonging to the
+    // it joins SeekTo below — and, since 2026-09-01, Stop, which composes that
+    // same toggle with a seek to the top now that the player has no stop key
+    // to press — as a road with no keysym behind it, and like them it clears
+    // no modal ring, the ring clear belonging to the
     // press lambda's membership ("every kind that synthesizes a key, and no
     // other") because a synthesized Space is what could press a ring-focused
     // button. THE GATES ARE UNCHANGED and still compose, each being a pure
@@ -1105,17 +1085,27 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::Stop:
-            // THE HEAD UNIT'S STOP IS THE PLAYER'S STOP since R36, where it
-            // was a pause before the row had a stop of its own. IT TAKES NO
-            // STATE GATE — the gate above exists only because Space is a
-            // TOGGLE and Play and Pause name a direction, while this key names
-            // an act that says the same thing whatever the transport is doing;
-            // a stop said to a resting transport is the act's own consumed
-            // no-op. THE KEY IS BARE `v` since 2026-08-30 (the player's own
-            // re-keying, route_render_player_key) and this line follows it:
-            // one road, and the head unit's Stop keeps working because the
-            // table names the STOP KEY rather than a letter.
-            press(GuiKeys::V);
+            // THE HEAD UNIT'S STOP IS PAUSE AND THEN HOME (architect
+            // 2026-09-01, with the player's own Stop act retired — it was that
+            // act's key from R36, and a plain pause before R36 gave the row a
+            // stop). AUDIBLY IT IS THE OLD STOP: silence now, the top on the
+            // next Play. What differs is the state left behind — the CLASS IS
+            // PAUSED rather than IDLE, so the scrub stays live under it and
+            // the next Play resumes a rest that happens to be frame 0.
+            //
+            // TWO DIRECT ACTS IN ORDER, no key pressed and so no ring cleared
+            // (the membership rule at the declaration). The pause is the
+            // DIRECTIONAL tail (transport_toggle_act, R6's conversion — a
+            // synthesized Space would have read the highlight first), gated on
+            // LIVE exactly as Kind::Pause is; the seek is seek_to(0) DIRECT
+            // AND NEVER home(), whose previous-track window would step a head
+            // unit's Stop back a TRACK inside a file's first three seconds.
+            // `rp` is a reference, so the second arm reads the state the first
+            // one just wrote: LIVE pauses and then seeks, an already PAUSED
+            // transport only seeks, and an IDLE one or a player with no item
+            // does nothing at all (seek_to's own two silent refusals).
+            if (rp.transport == Transport::Live) transport_toggle_act();
+            if (rp.transport == Transport::Paused) seek_to(0);
             return;
         case Kind::Next:
             // THE WHEEL'S TWO SKIPS ARE THE PLAYER'S TWO SKIPS (architect

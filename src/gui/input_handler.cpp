@@ -42,7 +42,8 @@
 // chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
 // below sit on the MAIN DISPATCH, where an unbound press is answered by
 // silence, while the player's and the picker's arms sit inside a mode whose
-// router is the whole vocabulary — bare `v` stops a track in there — and that
+// router is the whole vocabulary — bare `r` flips Repeat one in there — and
+// that
 // vocabulary is not what the inventory knows, so those two ask nothing and
 // answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";

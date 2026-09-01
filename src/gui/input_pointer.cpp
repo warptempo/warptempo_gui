@@ -3494,7 +3494,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         // act is consumed with no card — the grey is the message — whichever
         // road armed it (the pointer's lift, the ring's Enter/Space
         // release). The KEYS never come through here, so their own cards and
-        // R36's ruled silence at Stop's rest are untouched, and the head
+        // their ruled silences are untouched, and the head
         // unit's road (on_media_command -> synthesize_key) arrives as keys
         // and bypasses this line by construction.
         if (!render_player_button_enabled(app, b.player_act)) return true;
@@ -3517,9 +3517,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::PlayPause:
                 render_player.play_button_act();
                 return true;
-            case AppState::PlayerButtonAct::Stop:
-                render_player.stop();
-                return true;
+            // (STOP dispatched here between the two of them until 2026-09-01,
+            // when the player's Stop retired whole with its button.)
             case AppState::PlayerButtonAct::End:
                 if (shifted) render_player.last_in_item_folder();
                 else         render_player.end();

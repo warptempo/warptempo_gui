@@ -3791,8 +3791,9 @@ private:
     // folder (a consumed no-op at the root); SHIFT+Home / Shift+End the
     // folder's FIRST / LAST wav (R37, re-keyed off Page Up / Page Down
     // 2026-08-30 and off comma/period 2026-08-31 — bare `,` / `.` are unbound
-    // here and fall to the silent catch-all below); bare `v` STOP (R36,
-    // re-keyed off bare `s` the same day); `r` the Repeat one lamp; `'` the Load in
+    // here and fall to the silent catch-all below, and bare `v` joined them
+    // 2026-09-01 when the player's Stop retired with its
+    // button); `r` the Repeat one lamp; `'` the Load in
     // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
