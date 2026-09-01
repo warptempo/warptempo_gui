@@ -54,6 +54,14 @@ struct GuiInputHandler;
 // preview stay per-press and unchanged — only the redundant history push is
 // suppressed, and a single Ctrl+Z reverts the whole burst.
 // Presses BEYOND the window are separate entries, as they always were.
+// AND A BURST THAT NETS TO ZERO POPS ITS OWN ENTRY (architect 2026-09-01, the
+// byte-equal pop): a merge skips the push and skipped the push sites' NET
+// CHANGE gate with it, so a tap Right then a tap Left inside the window left an
+// entry byte-equal to the live store — one Ctrl+Z that changed nothing, over a
+// dirty dot that stayed lit. The merge tail now asks the producers' own
+// question post-mutation and takes the entry back off the stack when the answer
+// is equal. The rule, its reach and what it deliberately does not give back are
+// at Undo::record_gesture.
 //
 // "Same target / same tab / same history" follow for FREE on arm (1): a
 // synthesized repeat can
@@ -204,16 +212,31 @@ struct Undo {
     // supersession of the older "at the ENTRY, before its own refusals" shape
     // are at the definition.
     bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
-    // Record this eligible press as the burst's latest, stamping the whole
-    // coalescing state: the KIND, the ACCEPTED-EVENT TIMESTAMP the tap window
-    // measures from, and the SUBJECT — THREE tags since 2026-08-29: the
-    // selection, the A/B tab and the S/T AUDIO VIEW, which both the tap arm
-    // and the held-key arm re-test (the audio view joined when the A/B
-    // audition's tick-driven switch was found able to land between a burst's
-    // opener and its repeats).
-    // Call after the push / skip — and ONLY on the accepted path, which is what
-    // makes a refusing press leave the stamp invalid.
-    void record_gesture(GestureKind kind);
+    // SETTLE THE BURST at the tail of an eligible press. Two outcomes, and
+    // `merged` (the verdict coalesce_gesture returned for this same press)
+    // picks which is even possible:
+    //   * THE BYTE-EQUAL POP, on a MERGED press only (architect 2026-09-01):
+    //     when the burst's surviving entry would restore the marker stores that
+    //     are ALREADY LIVE — a tap Right then a tap Left inside kTapCoalesceMs
+    //     — the entry comes off the undo stack, the stamp is cleared and the
+    //     dirty dot is re-derived, so the burst dissolves as if it had never
+    //     happened and the next press opens its own entry. This is the
+    //     commit-on-NET-CHANGE principle every PUSH site already gates on
+    //     (stated at marker_drag.cpp's commit), extended to the one path that
+    //     skips the push; direction-blind merging is untouched. THE MERGE TAIL
+    //     IS THE ONE SEAM all three eligible kinds share, which is why the
+    //     question is asked here and not at the three call sites.
+    //   * OTHERWISE THE STAMP, written as one unit: the KIND, the
+    //     ACCEPTED-EVENT TIMESTAMP the tap window measures from, and the
+    //     SUBJECT — THREE tags since 2026-08-29: the selection, the A/B tab and
+    //     the S/T AUDIO VIEW, which both the tap arm and the held-key arm
+    //     re-test (the audio view joined when the A/B audition's tick-driven
+    //     switch was found able to land between a burst's opener and its
+    //     repeats).
+    // Call after the push / skip and after the mutation — and ONLY on the
+    // accepted path, which is what makes a refusing press leave the stamp
+    // invalid and is what keeps the pop off every no-op press.
+    void record_gesture(GestureKind kind, bool merged);
     // Refresh the coalesced burst entry's touched_live to a continuation press's
     // LATEST post-reorder indices (the position nudges, which reorder — the
     // tempo step never does). The surviving first-press undo entry keeps its

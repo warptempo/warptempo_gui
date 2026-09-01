@@ -743,7 +743,10 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // — note_coalesced_commit existed to mirror the push helpers' hover-popup
     // clear, and died with the hover popup (row 5).
     if (!merge) undo.push_undo_warp(std::move(pre_state));
-    undo.record_gesture(GestureKind::TempoStep);
+    // Settle the burst, POST-mutation: the stamp, or — on a merged press that
+    // stepped the value back to the burst entry's own snapshot — the BYTE-EQUAL
+    // POP of that entry (the rule is at Undo::record_gesture).
+    undo.record_gesture(GestureKind::TempoStep, merge);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
@@ -975,7 +978,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     if (!merge) undo.push_undo_warp(std::move(pre_state),
                                     /*affects_persistence=*/true,
                                     touched, touched);
-    undo.record_gesture(GestureKind::TempoStep);
+    // Settle the burst, POST-mutation: the stamp, or — on a merged press that
+    // stepped every member back to the burst entry's own snapshot — the
+    // BYTE-EQUAL POP of that entry (the rule is at Undo::record_gesture). The
+    // group's all-or-nothing rigidity is what makes the whole store the honest
+    // subject of that compare.
+    undo.record_gesture(GestureKind::TempoStep, merge);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
@@ -1167,7 +1175,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // view-independent target trigger (no synchronous re-warp — source-view warp
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
-                                GestureKind::WarpNudge, committed_f,
+                                GestureKind::WarpNudge, merge, committed_f,
                                 target_render);
     return std::nullopt;
 }

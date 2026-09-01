@@ -302,7 +302,13 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // remap_marker_indices_after_reorder, collected touched_live, and done its own
 // typed undo merge/push block (push_undo_warp with affects_persistence=true /
 // push_undo_phase_reset — those stay in the twins). The tail then, in order:
-// (a) record_gesture (re-stamps this press's kind for the next coalesce test);
+// (a) record_gesture — the burst's SETTLEMENT, which is why the twin's own
+//     coalesce verdict rides down here as `merged`: it re-stamps this press's
+//     kind for the next coalesce test, OR, on a merged press whose mutation
+//     returned the stores to the burst entry's own snapshot, POPS that entry
+//     (the byte-equal pop, architect 2026-09-01 — the rule and its whole
+//     derivation are at Undo::record_gesture). Post-mutation by construction:
+//     the twin has already written its store before it reaches this tail;
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
 //     nudged marker's STEM move: a nudge shifts that marker's frame, and its
@@ -379,5 +385,5 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // nothing the playhead move writes.
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
-    GestureKind kind, int64_t committed_focused_frame,
+    GestureKind kind, bool merged, int64_t committed_focused_frame,
     GuiTargetRender& target_render);

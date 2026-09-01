@@ -20,10 +20,105 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <set>
 #include <utility>
 #include <vector>
+
+namespace {
+
+// THE ROW EQUALITY BASIS, ONE ENUMERATION PER COLUMN AND TWO READERS (hoisted
+// out of the post-restore matcher's own two lambdas 2026-09-01, when the
+// net-zero pop below needed the same question asked of a whole store and a
+// second spelling of a field list would have been exactly the drift the "one
+// authoritative enumeration per concept" preference exists to prevent).
+// `differ(a, b)` is false exactly when the two rows are identical in EVERY
+// field the store holds, serialized and session-only alike — row identity means
+// the WHOLE struct. THE TWO READERS: apply_post_restore_rules_impl's same-count
+// arm, which asks it of one row pair at a time to reconstruct a touched set,
+// and entry_restores_live_marker_stores below, which asks it of a whole store.
+// EXACT COMPARES, no epsilon and no re-rounding: an authored position is a
+// whole frame and an authored tempo whole cents BY TYPE, and the two double
+// fields (tempo_scale, the bpm bracket) are compared as stored — what a restore
+// would write back, field for field.
+bool warp_row_fields_differ(const GuiWarpMarker& a, const GuiWarpMarker& b) {
+    return a.time_frame     != b.time_frame
+        || a.disabled       != b.disabled
+        || a.tempo_inherits != b.tempo_inherits
+        || a.tempo_cents    != b.tempo_cents
+        || a.tempo_scale    != b.tempo_scale
+        || a.label_def      != b.label_def
+        || a.label_ref      != b.label_ref
+        // The measure is a serialized field like the rest: a measure-only undo
+        // mutates nothing else, so omitting it would strand the selection
+        // exactly as an omitted bracket would.
+        || a.measure        != b.measure
+        // Session-only iter/bpm fields ride undo snapshots too, and row
+        // identity means the WHOLE struct: an iteration-bracket-only or
+        // bpm-only undo mutates only these, so omitting them would leave the
+        // same-count matcher finding no touched row and stranding the
+        // selection. Every GuiWarpMarker field beyond the serialized eight
+        // above.
+        || a.iter_start_cents != b.iter_start_cents
+        || a.iter_end_cents   != b.iter_end_cents
+        || a.bpm_owner        != b.bpm_owner
+        || a.bpm_beats        != b.bpm_beats
+        || a.bpm_lo           != b.bpm_lo
+        || a.bpm_hi           != b.bpm_hi
+        || a.bpm_endpoint     != b.bpm_endpoint;
+}
+
+bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
+                                   const GuiPhaseResetMarker& b) {
+    return a.time_frame != b.time_frame
+        || a.disabled   != b.disabled
+        // The measure, for the warp column's reason: a measure-only undo
+        // mutates nothing else, and row identity means the whole struct.
+        || a.measure    != b.measure;
+}
+
+// True when restoring `entry` would write back the marker stores THAT ARE
+// ALREADY LIVE — the question the coalesced burst's net-zero pop asks
+// (Undo::record_gesture, where the rule is stated). BOTH columns, because every
+// entry carries a full pair and a restore assigns both unconditionally, so a
+// 'W' entry that a merged press returned to its snapshot is only byte-equal
+// when the phase column matches too.
+//
+// THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
+// entry's THIRD payload — its engine settings block — needs no term of its own:
+// the three coalescing kinds (both position nudges and the tempo cent step)
+// write no engine setting, and no engine-settings writer can run between a
+// burst's opener and a merged press without killing the stamp the merge was
+// verdicted on. There are three of them, re-grepped at this writing
+// (`app.engine_settings =`): the typed engine commit pushes an 'S' entry
+// (push_settings_undo), the render-entry load in place pushes a both-columns
+// entry (push_undo_both) — and EVERY push helper clears the stamp — while a
+// file load resets the history whole. So entry.settings is provably the live
+// block wherever this is asked.
+// THE VIEW TAGS AND THE HINTS ARE NOT CONTENT EITHER: both merge arms already
+// require the tab and the audio view to have stood still, the column is the
+// entry's own op_mode, and the touched hints are presentation the restore
+// derives a selection from — they die with the entry when it goes.
+bool entry_restores_live_marker_stores(const AppState& app,
+                                       const UndoEntry& entry) {
+    const std::vector<GuiWarpMarker>&       live_w = app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& live_p =
+        app.phaseresetmarkers.markers();
+    if (entry.snapshot.size() != live_w.size()) return false;
+    if (entry.phase_reset_snapshot.size() != live_p.size()) return false;
+    for (std::size_t i = 0; i < live_w.size(); ++i) {
+        if (warp_row_fields_differ(entry.snapshot[i], live_w[i])) return false;
+    }
+    for (std::size_t i = 0; i < live_p.size(); ++i) {
+        if (phase_reset_row_fields_differ(entry.phase_reset_snapshot[i],
+                                          live_p[i]))
+            return false;
+    }
+    return true;
+}
+
+}  // namespace
 
 void Undo::recompute_dirty() {
     const auto& h = app.history;
@@ -348,7 +443,68 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     return merge;
 }
 
-void Undo::record_gesture(GestureKind kind) {
+void Undo::record_gesture(GestureKind kind, bool merged) {
+    // THE BYTE-EQUAL POP — the merge path's half of the commit-on-NET-CHANGE
+    // principle (architect 2026-09-01). Every PUSH site in the product already
+    // gates on net change, and the marker drag's commit states the reason for
+    // all of them, verbatim: "pushing an undo entry there would record a
+    // snapshot byte-equal to the live store, a no-op history entry that both
+    // undo and redo restore invisibly" (marker_drag.cpp). A MERGED press skips
+    // the push and skipped that gate with it — and a nudge pair is exactly
+    // reversible (the painted column grid is anchored at frame 0 and
+    // reorder_markers_by_time is stable, so the store comes back row for row),
+    // which is how a tap Right then a tap Left inside kTapCoalesceMs left the
+    // burst's surviving entry byte-equal to the live store: one Ctrl+Z that
+    // changed nothing at all, and a dirty dot lit over a store equal to the
+    // file. The same hole stood on all three coalesce-eligible kinds.
+    //
+    // SO THE MERGE TAIL ASKS THE PRODUCERS' OWN QUESTION, and it asks it
+    // POST-MUTATION because that is the only place the answer exists — the
+    // coalesce verdict is computed ahead of the act and cannot know where the
+    // press lands. When the burst's entry would restore the stores that are
+    // already live, the entry comes back OFF the stack and the stamp is
+    // cleared, so the burst dissolves as if it had never happened and the NEXT
+    // press opens its own entry. THIS IS NOT A NEW RULE and it narrows nothing:
+    // direction-blind merging stays exactly as it was (Left×5 then Right×5
+    // still merge — they now merge into nothing), and the kind, the window and
+    // the subject terms are untouched.
+    //
+    // ONE SEAM FOR ALL THREE KINDS: every eligible route reaches this call
+    // post-mutation on its accepted path (the two position nudges through their
+    // shared commit tail, both arms of the Up/Down cent step at their own
+    // tails), so the equality question has ONE owner here rather than three
+    // copies — the per-column readers it uses are the row enumerations at the
+    // head of this file.
+    // IT CANNOT FIRE ON A NO-OP PRESS: a route reaches this call only past its
+    // own refusals and past its own mutation, and a press refused AT A WALL
+    // never even asks the coalesce verdict (the wall-before-stamp order,
+    // 2026-08-31, at coalesce_gesture) — so a wall no-op still touches nothing,
+    // and what pops is only ever a merge that MUTATED to equality.
+    // THE SELECTION AND THE FOCUS ARE NOT ITS BUSINESS: an entry restores STORE
+    // content, and its touched hints are presentation a restore derives a
+    // selection from. A burst that nets to zero in the store while having
+    // collapsed a group selection to its focus (the position nudges' prologue)
+    // pops regardless — that collapse was never in the entry to begin with, the
+    // selection is never parked, and the hints die with the entry.
+    // THE REDO BRANCH STAYS CLEARED, by the ordinary rule and not by a
+    // judgement made here: the redo clear at the burst's FIRST press is the
+    // standing any-edit rule running (an action taken mid-history disrupts the
+    // redo branch unless it is viewport-related), so the pop does not and need
+    // not resurrect it. The SAVED REFERENCE is given back — the arithmetic is
+    // at UndoHistory::pop_undo_top_with_saved_ref.
+    if (merged && !app.history.undo_stack.empty() &&
+        entry_restores_live_marker_stores(app, app.history.undo_stack.back())) {
+        app.history.pop_undo_top_with_saved_ref();
+        last_gesture_kind_ = GestureKind::None;
+        // THE DOT IS RE-DERIVED HERE, by the owner that moved the reference,
+        // rather than being left to the callers' own recompute_dirty below this
+        // call: the pop is what puts a saved baseline back at distance 0, and a
+        // net-zero wobble over a saved file must read CLEAN again. The callers'
+        // own call right after is then a same-state re-ask (recompute_dirty's
+        // title setter does not move a flag that has not moved).
+        recompute_dirty();
+        return;
+    }
     // THE STAMP IS WRITTEN AS ONE UNIT, on the accepted path only (the callers put
     // this after their push / skip, past every refusal). The timestamp is what
     // makes the tap window measure from the last ACCEPTED event rather than from
@@ -529,50 +685,23 @@ void apply_post_restore_rules_impl(AppState& app,
 
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
+    // The row equality basis is the shared enumeration at the head of this
+    // file — this matcher's own field list until 2026-09-01, when the net-zero
+    // pop became its second reader.
     apply_post_restore_rules_impl(
         app, selection, entry, before, app.warpmarkers.markers(),
-        [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
-            return a.time_frame     != b.time_frame
-                || a.disabled       != b.disabled
-                || a.tempo_inherits != b.tempo_inherits
-                || a.tempo_cents    != b.tempo_cents
-                || a.tempo_scale    != b.tempo_scale
-                || a.label_def      != b.label_def
-                || a.label_ref      != b.label_ref
-                // The measure is a serialized field like the rest: a
-                // measure-only undo mutates nothing else, so omitting it would
-                // strand the selection exactly as an omitted bracket would.
-                || a.measure        != b.measure
-                // Session-only iter/bpm fields ride undo snapshots too, and row
-                // identity means the WHOLE struct: an iteration-bracket-only or
-                // bpm-only undo mutates only these, so omitting them would leave
-                // the same-count matcher finding no touched row and stranding
-                // the selection. Every GuiWarpMarker field beyond the serialized
-                // eight above.
-                || a.iter_start_cents != b.iter_start_cents
-                || a.iter_end_cents   != b.iter_end_cents
-                || a.bpm_owner        != b.bpm_owner
-                || a.bpm_beats        != b.bpm_beats
-                || a.bpm_lo           != b.bpm_lo
-                || a.bpm_hi           != b.bpm_hi
-                || a.bpm_endpoint     != b.bpm_endpoint;
-        });
+        warp_row_fields_differ);
 }
 
 void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
+    // The row equality basis is the shared enumeration at the head of this
+    // file (the warp twin's rule verbatim).
     apply_post_restore_rules_impl(
         app, selection, entry, before,
         app.phaseresetmarkers.markers(),
-        [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
-            return a.time_frame != b.time_frame
-                || a.disabled   != b.disabled
-                // The measure, for the warp column's reason: a
-                // measure-only undo mutates nothing else, and row identity
-                // means the whole struct.
-                || a.measure    != b.measure;
-        });
+        phase_reset_row_fields_differ);
 }
 
 // True when do_undo / do_redo would actually act — the authoritative guard for

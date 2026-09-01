@@ -319,7 +319,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // collapse, and the view-independent target trigger. Ordering rationale at the
     // declaration.
     finish_position_nudge(app, audio, viewport, undo,
-                                GestureKind::PhaseResetNudge, committed_f,
-                                target_render);
+                                GestureKind::PhaseResetNudge, merge,
+                                committed_f, target_render);
     return std::nullopt;
 }

@@ -178,10 +178,15 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
-    GestureKind kind, int64_t committed_focused_frame,
+    GestureKind kind, bool merged, int64_t committed_focused_frame,
     GuiTargetRender& target_render) {
-    // (a) re-stamp this press's kind for the next coalesce test.
-    undo.record_gesture(kind);
+    // (a) settle the burst: re-stamp this press's kind for the next coalesce
+    // test, or — on a MERGED press whose mutation returned the stores to the
+    // burst entry's own snapshot — POP that entry, the byte-equal pop
+    // (Undo::record_gesture owns the rule; `merged` is the verdict the
+    // prologue's coalesce_gesture returned for this same press, carried down
+    // the twin). It runs POST-mutation because that is where the answer exists.
+    undo.record_gesture(kind, merged);
     // (b) dirty flags.
     undo.recompute_dirty();
     // (c, d) damage, and it is FULL: invalidate_waveform_area spans y=0 through

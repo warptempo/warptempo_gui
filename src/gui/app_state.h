@@ -591,6 +591,39 @@ struct UndoHistory {
         }
     }
 
+    // POP THE TOP UNDO ENTRY WITH THE SAVED REFERENCE KEPT HONEST — push()'s
+    // partial inverse, and the saved-reference arithmetic lives here beside
+    // push's own so the reference has ONE owner. Its only caller is THE
+    // COALESCED BURST'S NET-ZERO POP (Undo::record_gesture, undo.cpp, where the
+    // rule and its derivation are stated): a merged press that returns the
+    // stores to the burst entry's own snapshot leaves an entry byte-equal to
+    // the live store, which both undo and redo would restore invisibly, so the
+    // entry comes back off the stack and the burst dissolves.
+    //
+    // WHAT IT INVERTS is that reference arithmetic alone: push() moved the
+    // saved reference one entry further back while it was valid, and this moves
+    // it one entry forward again — which is what lets a wobble that nets to
+    // zero over a SAVED baseline read clean again (saved_distance returns to 0
+    // and recompute_dirty finds no dirty entry to walk).
+    // WHAT IT DOES NOT TOUCH:
+    //   * THE REDO STACK. The redo clear at the burst's FIRST press is the
+    //     standing any-edit rule running — an action taken mid-history disrupts
+    //     the redo branch unless it is viewport-related — so the pop does not
+    //     and need not resurrect it.
+    //   * A kCap EVICTION, which a push at the cap already made permanent: it
+    //     dropped the stack's bottom entry, and if the saved reference pointed
+    //     at or below it the eviction has already pinned or invalidated it.
+    //     Adding one back can then leave the reference naming an entry past the
+    //     stack's bottom, where recompute_dirty's walk clamps at
+    //     max(0, size - n) and reads the WHOLE stack — conservative in the safe
+    //     direction only (it can over-report dirty, never under-report it), and
+    //     the next save rebinds the reference.
+    void pop_undo_top_with_saved_ref() {
+        if (undo_stack.empty()) return;   // defensive
+        undo_stack.pop_back();
+        if (saved_valid) saved_distance += 1;
+    }
+
     void mark_saved() {
         saved_distance = 0;
         saved_valid    = true;
