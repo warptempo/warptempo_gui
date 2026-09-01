@@ -697,15 +697,18 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 //
 // THE SECOND TAKES THE WHOLE AppState, THE FIRST TAKES NOTHING BUT THE PRESS,
 // and the asymmetry is the membership's own: the mode's keys are a fixed keymap,
-// while FOUR allowlist admissions are conditional on state they are asked about
-// (re-derived 2026-08-09) — the commit act's, which is CTRL+S since 2026-08-08,
-// on head_delta_empty (a view whose
-// newest checkpoint already carries the session's authoring content has nothing
-// to commit) and on history_checkpoint_in_flight (one checkpoint at a time), the
-// revert act's, on a subject standing on a writable tab
-// (history_revert_actionable — a selected diff flag, else the focused one,
-// and the lock since planner decision 58, 2026-08-30), and the load-in-place's,
-// on the active walk carrying a member. Both
+// while TWO allowlist admissions are conditional on state they are asked about
+// (re-derived 2026-09-01) — the revert act's, on a subject standing on a
+// writable tab (history_revert_actionable — a selected diff flag, else the
+// focused one, and the lock since planner decision 58, 2026-08-30), and the
+// load-in-place's, on the active walk carrying a member. THE COMMIT ACT'S TWO
+// LEFT THIS LIST ON 2026-09-01 (architect: a gate's membership test is the
+// CHORD'S ALONE): Ctrl+S — head_delta_empty and history_checkpoint_in_flight —
+// was the instance he hit, a committed-and-current session being told the
+// view's own save chord was "not available in the history view", so the chord
+// is admitted as vocabulary and open_history_commit_editor answers both states
+// (the publishing card, then the one-dimensional silence), with the Save
+// button's grey reading history_checkpoint_actionable at its own arm. Both
 // readers hand it the
 // same `app` and neither restates a term of it, which is what
 // keeps the key and the face one decision — FOR THE REVERT ACT TOO SINCE
@@ -718,7 +721,8 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // companions' arm in app_state.h).
 // It took the HistoryMode struct alone
 // until the in-flight bit joined, that bit living on AppState because the act
-// outlives the view it was launched from.
+// outlives the view it was launched from; the bit left again with the commit
+// act's terms, and the whole AppState stays for the revert admission's lock.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app);
@@ -2792,7 +2796,10 @@ private:
     // open_history_commit_editor: the opener, reached from ONE place —
     // Ctrl+S's own arm, which the mode bit re-aims (on_key's `s` handler,
     // input_handler.cpp; it was Ctrl+Alt+R's arm until 2026-08-08, when the
-    // architect moved the act onto the SAVE button's chord).
+    // architect moved the act onto the SAVE button's chord). IT OWNS THE ACT'S
+    // TWO SESSION REFUSALS since 2026-09-01 (a checkpoint in flight, an empty
+    // head delta), which the mode's allowlist carried as admission terms until
+    // then; its body states both.
     // commit_title_editor_commit: Enter — validate non-blank, close the editor,
     // run the act (run_history_commit, which owns the save, the close and the
     // dispatch).
@@ -4044,8 +4051,8 @@ private:
     //     app_state.h). It is a FREE function beside this class, with
     //     history_mode_owns_key (that vocabulary's shape), for that second reader:
     //     both are pure, the face derivation having no press and no handler in
-    //     hand. Declarations above the class, where the one conditional
-    //     admission — and why only this one takes the session — is stated.
+    //     hand. Declarations above the class, where the two conditional
+    //     admissions — and why only those take the session — are stated.
     //   * handle_history_mode_press is the pointer half, and it both refuses and
     //     acts: true when the press was consumed (as one of the mode's own acts
     //     or as a refusal), false for the navigation gestures the mode lets

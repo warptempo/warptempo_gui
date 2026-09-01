@@ -6348,13 +6348,19 @@ struct AppState {
     // admitted, so both stay consumed nothings here and the Render button wears
     // its ordinary face over the mode's disabled one; the SAVE button wears the
     // commit icon and the label "Save and Commit" while the mode stands, and
-    // reaches the act through its own chord. THE
-    // ADMISSION IS CONDITIONAL since 2026-08-05: with nothing to checkpoint the
-    // chord is a consumed no-op and that button greys (head_delta_empty, below,
-    // owns the bit and the one decision both readers take it from), and since
-    // 2026-08-07 the same is true while a checkpoint is already publishing
-    // (history_checkpoint_in_flight, which lives on AppState rather than here
-    // because the act outlives the view).
+    // reaches the act through its own chord. THE ADMISSION IS UNCONDITIONAL
+    // SINCE 2026-09-01 (architect: a gate's membership is the chord's alone)
+    // and the two states it used to carry are the ACT'S: with nothing to
+    // checkpoint the press is a silent no-op and that button greys
+    // (head_delta_empty, below, owns the bit), and while a checkpoint is
+    // already publishing the press says the publishing sentence and the button
+    // greys too (history_checkpoint_in_flight, which lives on AppState rather
+    // than here because the act outlives the view). Both terms are composed
+    // once at history_checkpoint_actionable, which the face reads; the act
+    // forks on them in that order (open_history_commit_editor). They were the
+    // allowlist's admission terms from 2026-08-05 and 2026-08-07, which is what
+    // made the gate answer this chord with "Ctrl+S is not available in the
+    // history view".
     //
     // EVERYTHING PAST THE SAVE RUNS ON A WORKER (architect 2026-08-07): the git
     // steps are a network act, and freezing the window for them was the one
@@ -6728,10 +6734,17 @@ struct AppState {
         // the state where the bit says there IS something and the repository
         // disagrees.
         //
-        // ONE READER, TWO CONSUMERS: history_mode_key_blocked (input_key_-
-        // dispatch.cpp) makes its Ctrl+S admission conditional on this, so
-        // the chord is a consumed no-op and the SAVE button takes its row's
-        // disabled face from the SAME decision — never two spellings of it.
+        // ONE READER, TWO CONSUMERS: history_checkpoint_actionable composes it
+        // with the in-flight bit, and the ACT (open_history_commit_editor,
+        // input_key_dispatch.cpp) and the SAVE button's own arm both take that
+        // one decision — the press a silent no-op under the one-dimensional
+        // rule, the button greyed, never two spellings of it. THE READER WAS
+        // THE `h` ALLOWLIST until 2026-09-01, which made its Ctrl+S ADMISSION
+        // conditional on this and derived the same grey through the partition;
+        // the architect ruled a gate's membership the chord's alone that day
+        // (the gate was answering the view's own save chord with "not available
+        // in the history view"), and the decision moved to the act with the
+        // face following it.
         //
         // "MEASURED ONCE AT ENTRY" BECAME "MEASURED ONCE" (2026-08-07, with the
         // streaming walk): a visit may open before member 0 has arrived, and
@@ -7182,9 +7195,12 @@ struct AppState {
     // different objects.
     //
     // THREE REFUSALS READ IT, single-in-flight and the write race being the two
-    // rules: the history view's Ctrl+S admission (history_mode_key_blocked, so
-    // the chord is a consumed no-op AND the Save-and-Commit button greys from
-    // that same one decision, exactly as the head-delta bit does); bare `h`
+    // rules: the history view's COMMIT ACT (open_history_commit_editor, which
+    // says the publishing sentence, AND the Save-and-Commit button, which greys
+    // through history_checkpoint_actionable — one composition of this bit with
+    // the head delta, read by the act and the face alike; it was the
+    // ALLOWLIST'S Ctrl+S ADMISSION until 2026-09-01, when a membership test
+    // became the chord's alone); bare `h`
     // itself, which will not open a view whose walk would be measured against a
     // repository the worker is mid-mutation on; and — since 2026-08-08 — EVERY
     // SAVE, globally, at the one save owner (GuiSaveOps::save). That third one
@@ -9425,6 +9441,32 @@ inline bool history_revert_actionable(const AppState& a) {
            !active_view_state(a).read_only;
 }
 
+// WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own two session
+// terms in one word (architect 2026-09-01): something to commit (the head
+// delta, measured once per visit) and no checkpoint already publishing (single
+// in flight, a bit that OUTLIVES the view, which is why this takes the whole
+// AppState rather than the mode struct).
+//
+// IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
+// admitted into the `h` view's vocabulary only while both held from 2026-08-08
+// until 2026-09-01 — one decision that refused the key and, through the derived
+// partition, greyed the button — and the architect ruled that shape out: a
+// membership test carrying state makes the gate's generic "Ctrl+S is not
+// available in the history view" answer a chord the view exists to run, which
+// is a lie about the vocabulary. So the ACT answers now
+// (open_history_commit_editor: the publishing card, then the one-dimensional
+// silence for an empty delta) and the FACE reads this predicate — the same two
+// terms, composed once, in the act's own order.
+// TWO READERS: redesign_button_enabled's Save arm (scoped to the mode, the
+// button being the plain disk save everywhere else) and the tooltip's
+// in-flight override one line over, which reads the bit directly because it
+// names WHAT IS HAPPENING rather than what a press would do.
+inline bool history_checkpoint_actionable(const AppState& a) {
+    return a.history_mode.active &&
+           !a.history_mode.head_delta_empty &&
+           !a.history_checkpoint_in_flight;
+}
+
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
 // `,` steps OLDER (index + 1) and `.` NEWER (index − 1) through the ACTIVE
 // walk, and each clamps at its end as a consumed no-op. THE SHIFT JUMP TAKES
@@ -9494,11 +9536,13 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
 // only while the mode stands (the caller below tests that), so it says nothing
 // about any other state.
 //
-// IT TAKES THE WHOLE AppState because the gate it asks does: FOUR of that
-// gate's admissions are conditional on state (re-derived 2026-08-09 — the commit
-// act's, on head_delta_empty and on history_checkpoint_in_flight; the revert
-// act's, on history_mode_revert_subject_standing above; and the load-in-place's,
-// on the active walk carrying a member), so both readers must
+// IT TAKES THE WHOLE AppState because the gate it asks does: TWO of that
+// gate's admissions are conditional on state (re-derived 2026-09-01 — the revert
+// act's, on history_mode_revert_subject_standing above composed with the lock;
+// and the load-in-place's, on the active walk carrying a member. The COMMIT
+// ACT'S TWO left the gate that day, the architect ruling a membership test the
+// chord's alone; Save's grey comes off history_checkpoint_actionable at its own
+// arm now), so both readers must
 // hand it the SAME state or the face
 // and the key would answer differently. The caller passes `a` and
 // restates none of its terms.
@@ -10682,9 +10726,25 @@ inline bool redesign_button_enabled(const AppState& a,
         // face it produces is the "Committing..." label's own state, and the
         // per-tick drift comparator (main.cpp) is what repaints the row on both
         // edges of the bit with no damage call at either.
+        //
+        // AND SAVE'S THIRD TERM IS THE HEAD DELTA, MODE-SCOPED (2026-09-01):
+        // inside the `h` view this button IS the Save-and-Commit act, and with
+        // the newest checkpoint already carrying the session's authoring
+        // content the act would do nothing, so the face greys. IT USED TO
+        // ARRIVE FROM THE ALLOWLIST — the mode admitted Ctrl+S only while both
+        // of the act's terms held, and the derived partition above turned that
+        // admission into this grey — until the architect ruled a gate's
+        // membership the CHORD'S ALONE (the gate then answered its own
+        // vocabulary with "not available in the history view"). The
+        // admission is unconditional now and the face reads the act's own
+        // predicate instead, so the button greys exactly where it always did.
+        // OUTSIDE THE VIEW THE TERM IS VACUOUS by construction — the predicate
+        // carries the mode bit — the button being the plain disk save there,
+        // which has no delta to ask about.
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
-                   !a.history_checkpoint_in_flight;
+                   !a.history_checkpoint_in_flight &&
+                   (!a.history_mode.active || history_checkpoint_actionable(a));
         case RedesignButton::Undo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.undo_stack);

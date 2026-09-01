@@ -2155,7 +2155,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // chords are the mode's own vocabulary in there. Which is which is
         // DERIVED from the mode's own gates
         // (history_mode_disables_button, input_pointer.cpp, where the whole
-        // partition is inventoried); nothing here decides membership.
+        // partition is inventoried); nothing here decides membership. SAVE IS
+        // THE ONE THAT NO LONGER COMES FROM THAT DERIVATION (2026-09-01): its
+        // two moment-state terms left the allowlist for the act when a gate's
+        // membership became the chord's alone, so the grey arrives from
+        // redesign_button_enabled's own Save arm instead — the same face, the
+        // same two states, another owner.
         //
         // A THIRD MODE REACHES THIS ROW SINCE 2026-08-18 and it is the reverse
         // of the first: the four HISTORY COMPANIONS grey OUTSIDE the `h` view,

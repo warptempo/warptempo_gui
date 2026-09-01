@@ -53,10 +53,14 @@ namespace {
 // this file and a producer of it in another translation unit.)
 
 // THE CHECKPOINT-PUBLISHING SENTENCE, ONE LITERAL (2026-08-30). ONE MODE, ONE
-// FACT, ONE WORDING, and it now has THREE readers in this file: bare `h`'s
+// FACT, ONE WORDING, and it now has FOUR readers in this file: bare `h`'s
 // entry refusal (which also prints it on stderr — one composer, two
-// surfaces), the Open project picker's own open act, and that picker's
-// router's Ctrl+S arm, which meets the identical bit at the identical moment.
+// surfaces), the Open project picker's own open act, that picker's
+// router's Ctrl+S arm, which meets the identical bit at the identical moment,
+// and — since 2026-09-01 — THE COMMIT ACT'S OWN OPENER
+// (open_history_commit_editor), which met the bit as an allowlist admission
+// term until the architect ruled a gate's membership the chord's alone and the
+// refusal became the act's to say.
 constexpr const char* kCheckpointPublishing =
     "A checkpoint is still publishing; try again when it finishes";
 
@@ -1990,18 +1994,24 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             at — which this
 //                             gate never sees: the keyboard-modal gate sits
 //                             above it.)
-//                             IT IS ONE OF THE THREE ADMISSIONS CONDITIONAL ON
-//                             THE SESSION, and the first of them
-//                             (architect 2026-08-05 for the head delta,
-//                             2026-08-07 for the in-flight bit, both inherited
-//                             from the chord this act moved off): with the HEAD
-//                             DELTA EMPTY — the newest checkpoint already
-//                             carrying this session's authoring content — AND NO
-//                             PUSH STILL OWED, there
-//                             is nothing to do, so the chord drops here
-//                             as a consumed no-op and the SAVE button takes its
-//                             row's disabled face from this same line. The delta
-//                             bit
+//                             IT WAS THE FIRST OF THREE ADMISSIONS CONDITIONAL
+//                             ON THE SESSION AND IS UNCONDITIONAL SINCE
+//                             2026-09-01 (architect: a gate's membership is the
+//                             chord's alone — the two terms were what made the
+//                             gate answer this very chord with "not available
+//                             in the history view"). They were the head delta
+//                             (2026-08-05) and the in-flight bit (2026-08-07),
+//                             both inherited from the chord this act moved off,
+//                             and they live at the ACT now
+//                             (open_history_commit_editor: the publishing card,
+//                             then silence for an empty delta) with the SAVE
+//                             button's grey reading the same two terms through
+//                             history_checkpoint_actionable (app_state.h)
+//                             instead of through this line. With the HEAD DELTA
+//                             EMPTY — the newest checkpoint already carrying
+//                             this session's authoring content — there is
+//                             nothing to do, and that is what the face says.
+//                             The delta bit
 //                             is measured once and cannot change while the mode
 //                             stands (AppState::HistoryMode::head_delta_empty
 //                             owns it, the asymmetry included: "no changes" is
@@ -2012,13 +2022,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             in-app retry for a checkpoint that committed and
 //                             failed to push; it went with the graded machinery
 //                             — that fix is the terminal's now. The in-flight
-//                             term is the same one
-//                             decision for one checkpoint at a time; it is
-//                             structural rather than visible in here (the act
-//                             closes the view and `h` will not reopen one over a
-//                             publishing repository), while the GLOBAL save
-//                             lockout that DOES show is GuiSaveOps::save's own
-//                             term, mirrored by the "Committing..." face.
+//                             term is one checkpoint at a time; it is nearly
+//                             unreachable in here (the act closes the view and
+//                             `h` will not reopen one over a publishing
+//                             repository), which is why the act answers it with
+//                             the sentence three other sites already say rather
+//                             than one of its own, while the GLOBAL save lockout
+//                             that DOES show is GuiSaveOps::save's own term,
+//                             mirrored by the "Committing..." face.
 //   - Ctrl+H (no shift/alt) → THE REVERT ACT, the mode's THIRD admitted mutator
 //                             (architect 2026-08-05) and admitted on the same
 //                             reasoning as the two above: in the mode it is not
@@ -2187,10 +2198,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that second reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
-// FOUR admissions are conditional on session state (the commit act's — Ctrl+S
-// since 2026-08-08 — on head_delta_empty AND on no checkpoint already being in
-// flight, the revert act's, on a subject standing, and the load-in-place's, on
-// the active walk carrying a member), and both readers hand it
+// TWO admissions are conditional on session state (the revert act's, on a
+// subject standing on a writable tab, and the load-in-place's, on the active
+// walk carrying a member). THEY WERE FOUR UNTIL 2026-09-01, when the COMMIT
+// ACT'S TWO — head_delta_empty and history_checkpoint_in_flight, Ctrl+S's since
+// 2026-08-08 — moved to the act on the architect's ruling that a gate's
+// membership is the chord's alone (a state term here makes the gate answer the
+// view's own chord with "not available in the history view"); the two that
+// remain say their own true sentence at the gate's call site instead of falling
+// into that one. Both readers hand it
 // the same `app` — each condition is decided HERE and restated at neither
 // caller, which is what keeps the key that refuses and the face that greys one
 // decision rather than two spellings of one. THE REVERT ACT'S ADMISSION HAD
@@ -2202,8 +2218,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // interaction cadence; the truthful-buttons ruling deleted that lift, so the
 // face reads this admission through the partition again, recorded at the
 // companions' arm in app_state.h. It took the HistoryMode struct
-// alone until the in-flight bit arrived, which lives on AppState because the act
-// outlives the view it was launched from.
+// alone until the in-flight bit arrived (that bit living on AppState because
+// the act outlives the view it was launched from); the bit left again with the
+// commit act's terms on 2026-09-01, and the whole AppState stays because the
+// REVERT admission composes the active tab's lock, which is no more the mode's
+// than the worker was.
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app) {
     const AppState::HistoryMode& mode = app.history_mode;
@@ -2284,31 +2303,46 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
         (ctrl && !shift && !alt && key == GuiKeys::H &&
          history_revert_actionable(app));
     // CTRL+S IS THE ACT IN HERE (architect 2026-08-08, moving it off Ctrl+Alt+R
-    // — the act saves first, so it belongs on the save chord). It is admitted
-    // while there is something TO DO and no checkpoint is already in flight
-    // (2026-08-07, single-in-flight): with either condition failing the chord is
-    // not admitted at all, which is both the key's refusal and the Save button's
-    // grey.
+    // — the act saves first, so it belongs on the save chord), AND IT IS
+    // ADMITTED UNCONDITIONALLY SINCE 2026-09-01 (architect: a gate's
+    // membership test is the CHORD'S ALONE — a chord the mode owns is admitted
+    // as vocabulary, and its ACT answers whatever the session cannot do right
+    // now). IT CARRIED THE ACT'S TWO SESSION TERMS UNTIL THEN — a non-empty
+    // head delta (2026-08-05) and no checkpoint in flight (2026-08-07) — and
+    // that is exactly the shape the architect ruled out: with either failing,
+    // the press fell out of this list into the gate's GENERIC sentence, which
+    // says "Ctrl+S is not available in the history view" about the one chord
+    // this view exists to run. The act owns both refusals now
+    // (open_history_commit_editor, below): a checkpoint in flight says the
+    // publishing sentence three other sites already say, and an EMPTY HEAD
+    // DELTA is silent under the one-dimensional rule (nothing to commit is a
+    // state the greyed Save-and-Commit face is already showing).
     //
-    // IT ASKS ONE QUESTION: IS THERE ANYTHING TO CHECKPOINT? — the head delta,
-    // live against the newest commit. Static once measured, and it rests TRUE
-    // (greying the act) in the window before the prefetch has delivered member 0
-    // to measure against (2026-08-07, measure_history_head_delta owns that rule).
+    // THE FACE IS THE ACT'S TOO, and it did not move an inch when the terms
+    // did: the Save button greys inside the view through
+    // history_checkpoint_actionable (app_state.h — the same two terms plus the
+    // mode bit) read by redesign_button_enabled's own Save arm, instead of
+    // through this line and the derived partition. One decision for the key
+    // and the glyph, as before; only its home changed.
     //
-    // A CLEAN-BUT-UNPUSHED SESSION IS GREY HERE, AND THAT IS THE MODEL RATHER
+    // THE QUESTION THE ACT ASKS IS UNCHANGED: IS THERE ANYTHING TO
+    // CHECKPOINT? — the head delta, live against the newest commit. Static
+    // once measured, and it rests TRUE (greying the act) in the window before
+    // the prefetch has delivered member 0 to measure against (2026-08-07,
+    // measure_history_head_delta owns that rule).
+    //
+    // A CLEAN-BUT-UNPUSHED SESSION IS GREY, AND THAT IS THE MODEL RATHER
     // THAN A GAP (2026-08-09): the act publishes what it commits, and a branch
     // already committed and merely unpushed is fixed in the TERMINAL, where the
     // user has git. A push-pending bit admitted the chord for an in-app retry
     // until this date; the retry family went with the graded machinery, and the
     // act's clean arm now says so on stderr in as many words.
     //
-    // THE PLAIN DISK SAVE IS NOT SEPARATELY ADMITTED, deliberately: in the view
-    // this chord has exactly one meaning, and a session with nothing to
+    // THE PLAIN DISK SAVE IS NOT SEPARATELY REACHABLE, deliberately: in the
+    // view this chord has exactly one meaning, and a session with nothing to
     // checkpoint saves by leaving the view.
     const bool is_save =
-        (ctrl && !shift && !alt && key == GuiKeys::S &&
-         !mode.head_delta_empty &&
-         !app.history_checkpoint_in_flight);
+        (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q = (ctrl && !shift && !alt && key == GuiKeys::Q);
     // CTRL+O IS ADMITTED (architect 2026-08-29, "admit both"), and it is the
     // ONE OTHER ACT ON THE SESSION AS A WHOLE — Ctrl+Q's own family, sitting
@@ -2410,16 +2444,30 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // open-selected, so the common case is a bare Enter and the uncommon one is
 // typing over it.
 //
-// The guards are the act's preconditions restated as "there is something to ask
-// about": no mode, or a session that never resolved a piece directory, and there
-// is no commit to offer. Neither is reachable from the one call site (the chord
-// is admitted only while the mode stands, and an available session always
-// carries both strings), which is why they are silent. The allowlist narrows it
-// further without moving that reachability — "nothing to do" (an empty head
-// delta, 2026-08-05) and a checkpoint
-// already in flight (2026-08-07) both drop the chord ABOVE the `s` arm, so
-// nothing can raise this editor over a session with nothing to do or a worker
-// mid-act, and neither refusal has to be spelled here.
+// The structural guards are the act's preconditions restated as "there is
+// something to ask about": no mode, or a session that never resolved a piece
+// directory, and there is no commit to offer. Neither is reachable from the one
+// call site (the chord is admitted only while the mode stands, and an available
+// session always carries both strings), which is why they are silent.
+//
+// THE TWO SESSION REFUSALS ARE THIS ACT'S OWN SINCE 2026-09-01 (architect: a
+// gate's membership is the chord's alone, so a chord the mode owns says its
+// TRUE reason rather than falling into the allowlist's "not available in the
+// history view"). They were the allowlist's admission terms from 2026-08-05
+// and 2026-08-07, which dropped the press ABOVE the `s` arm and so never let it
+// reach here at all:
+//   - A CHECKPOINT ALREADY IN FLIGHT says the publishing sentence its three
+//     other sites say (kCheckpointPublishing, the head of this file) — single
+//     in flight, and the wait is seconds. It is a card rather than a silence
+//     because the fact is a BACKGROUND act's, not a state the view is showing.
+//   - AN EMPTY HEAD DELTA IS SILENT, the benign one-dimensional refusal already
+//     at its state: the newest checkpoint already carries this session's
+//     authoring content, nothing would change, and the Save-and-Commit face is
+//     greyed on that very predicate (history_checkpoint_actionable, app_state.h
+//     — the ONE composition of these two terms, which the face reads and this
+//     body forks on) with its tooltip naming the act.
+// The order is the face's own: the in-flight bit outranks the delta, because a
+// worker mid-act is the fact the user is waiting on either way.
 //
 // PLAYBACK STOPS AS THE MODAL OPENS, through the shared owner and past every
 // guard, exactly as the three editors before it do. It is a structural no-op in
@@ -2429,6 +2477,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 void GuiInputHandler::open_history_commit_editor() {
     if (!app.history_mode.active) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
+    if (app.history_checkpoint_in_flight) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kCheckpointPublishing);
+        return;
+    }
+    if (app.history_mode.head_delta_empty) return;
     const std::string& dir = app.history_mode.session.project_directory();
     if (dir.empty() || app.history_mode.session.sidecar_base_name().empty()) {
         return;
@@ -2992,8 +3046,11 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // the save three statements above ran while nothing was in flight.
     app.history_checkpoint_in_flight = true;
     // TWO FACES COME OFF THIS ONE BIT AND ONLY ONE OF THEM IS VISIBLE. The
-    // allowlist's Ctrl+S refusal derives a grey on the SAVE-AND-COMMIT face,
-    // which exists only inside the view — the view has just closed and `h`
+    // SAVE-AND-COMMIT face greys on it through history_checkpoint_actionable
+    // (app_state.h — the allowlist's Ctrl+S admission derived that grey until
+    // 2026-09-01, when the membership was purified and the term moved to the
+    // act's own predicate; the same one decision, one house over), and that
+    // face exists only inside the view — the view has just closed and `h`
     // refuses to reopen one while the bit stands — so that half is structural,
     // kept because it is not a second decision. What the user actually sees is
     // the GLOBAL one: the same bit greys the Save button in every view and

@@ -1045,17 +1045,19 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // kToolbarChords dispatches bare Tab, Home, End or `c`" for three roster
 // growths after it stopped being true.)
 //
-// THREE ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
-// (2026-08-05 for the first two, 2026-08-08 for the third), which is why this
-// takes the state rather than only a button. The
-// allowlist admits Ctrl+S — the checkpoint act's chord since 2026-08-08 — only
-// while there is something to checkpoint AND no
-// checkpoint is in flight, so the Save-and-Commit-faced SAVE button GREYS when
-// the session's authoring content already matches the newest checkpoint
-// (AppState::HistoryMode::head_delta_empty) and again while the worker is
-// publishing one (AppState::history_checkpoint_in_flight, 2026-08-07 — the
-// second bit is why this now takes the whole AppState rather than the mode
-// struct); and it admits CTRL+H only while a diff flag is selected on a
+// TWO ENTRIES ARE A FUNCTION OF THE SESSION, not of the chord alone
+// (2026-08-05, both of them), which is why this takes the state rather than
+// only a button.
+// THEY WERE THREE UNTIL 2026-09-01: the allowlist admitted Ctrl+S — the
+// checkpoint act's chord since 2026-08-08 — only while there was something to
+// checkpoint and no checkpoint in flight, and the Save-and-Commit-faced SAVE
+// button took its grey from that admission through this walk. The architect
+// ruled a gate's membership the CHORD'S ALONE that day (a state term there made
+// the gate answer the view's own save chord with "not available in the history
+// view"), so Ctrl+S is admitted outright, this walk answers LIVE for Save, and
+// the same two terms reach the face from redesign_button_enabled's own Save arm
+// through history_checkpoint_actionable (app_state.h) — the identical grey off
+// the act's own predicate. It admits CTRL+H only while a diff flag is selected on a
 // writable tab (history_revert_actionable), so this walk answers DEAD for
 // REVERT with an empty subject or a locked tab — AN ANSWER THE FACE READS
 // AGAIN SINCE 2026-08-30 (it read nothing from 2026-08-15 until then, when
@@ -1070,11 +1072,11 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // whenever a piece has no eligible checkpoint and a live Local tab cannot reach
 // at all. The derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
-// cadence and that is the honest difference: the head delta is measured once
-// (at the entry, or at the drain that answers it) and is static for the visit,
-// while the active walk's count grows as the prefetch streams, the revert
-// subject moves with every click and the in-flight bit falls when the worker
-// reports.
+// cadence and that is the honest difference: the active walk's count grows as
+// the prefetch streams and the revert subject moves with every click, while the
+// terms that left this walk in 2026-09-01 sit at the other end of it — the head
+// delta measured once (at the entry, or at the drain that answers it) and
+// static for the visit, the in-flight bit falling when the worker reports.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05, re-derived 2026-08-13 when the Quit button
@@ -1085,9 +1087,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare
 //   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
-//   ONLY WITH A NON-EMPTY HEAD DELTA AND NO CHECKPOINT IN FLIGHT, and greyed
-//   rather than relabelled in either case; it was RENDER's chord and RENDER's
-//   face until 2026-08-08, when the act moved onto the save it begins with),
+//   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
+//   allowlist for the act, its own arm in redesign_button_enabled greying it
+//   with an empty head delta or a checkpoint in flight exactly as this walk used
+//   to, and greyed rather than relabelled in either case; it was RENDER's chord
+//   and RENDER's face until 2026-08-08, when the act moved onto the save it
+//   begins with),
 //   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
 //   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (Ctrl+`=`,
 //   Ctrl+`-` and bare `0` are the allowlist's own zoom admissions and bare `c`
@@ -1095,7 +1100,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:
-//   the THIRD session-dependent entry, dead on a walk with no member — the
+//   a session-dependent entry, dead on a walk with no member — the
 //   Remote tab's empty one, since 2026-08-09), and the history button itself
 //   (bare `h`, the
 //   mode's own key,

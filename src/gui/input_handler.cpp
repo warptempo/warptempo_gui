@@ -733,21 +733,35 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // face walk asks the same function once per button per frame, and a
         // card raised inside it would paint a stack every frame.
         //
-        // TWO OF THE ALLOWLIST'S ADMISSIONS ARE CONDITIONAL ON STATE, and for
-        // those the chord is NOT what was wrong (architect 2026-08-30): bare
-        // `'` and Ctrl+H are the view's own vocabulary, admitted while the
-        // walk carries a member and while a revert has a subject on a
-        // writable tab. Answering either with the generic sentence would say
-        // the key means nothing in here, which is false — so each names the
-        // state that refused it, exactly as the greyed Load in place and
-        // Revert buttons say the same thing to the pointer. Every other
-        // refusal in the list is the chord's own and takes the sentence
-        // below. (The membership is the allowlist's, re-greped: the two
-        // remaining conditional admissions are Ctrl+S's, whose two arms —
-        // an empty head delta, a checkpoint in flight — are the commit act's
-        // and are answered by the picker's own publishing sentence one road
-        // over, and the walk's `,` / `.`, which the mode's own arm claims
-        // above this gate and never reaches it.)
+        // THE GENERIC SENTENCE IS FOR A CHORD THAT MEANS NOTHING IN THE MODE,
+        // AND FOR NOTHING ELSE (architect 2026-09-01: "look for instances
+        // where it lies by saying it's not allowed when, in fact, it's only
+        // contextually not allowed"). CTRL+S WAS THE INSTANCE HE HIT — the
+        // view's own Save-and-Commit chord, admitted by the allowlist only
+        // while the act could run, so a committed-and-current session was told
+        // "Ctrl+S is not available in the history view" about the one chord
+        // the view exists to run. The membership is the CHORD'S ALONE for it
+        // now: Ctrl+S is admitted as vocabulary and the ACT answers (the
+        // publishing card for a worker mid-act, silence for an empty head
+        // delta — the one-dimensional refusal whose greyed Save-and-Commit
+        // face is the cue), with the face reading the act's own predicate
+        // rather than this gate's admission.
+        //
+        // TWO ADMISSIONS ARE STILL CONDITIONAL ON STATE, and for those the
+        // chord is NOT what was wrong (architect 2026-08-30): bare `'` and
+        // Ctrl+H are the view's own vocabulary, admitted while the walk
+        // carries a member and while a revert has a subject on a writable tab.
+        // Answering either with the generic sentence would say the key means
+        // nothing in here, which is false — so each names the state that
+        // refused it, exactly as the greyed Load in place and Revert buttons
+        // say the same thing to the pointer, and NEITHER LIES with the
+        // sentence it does say. They keep the terms because the one decision
+        // that refuses the chord is also the one that greys the button, which
+        // is what the derived partition buys; the record of the alternative is
+        // Ctrl+S's, one paragraph up. (The membership is the allowlist's,
+        // re-greped: those two are the whole of it — the walk's `,` / `.` are
+        // the mode's own arm's, claimed above this gate and never reaching
+        // it.)
         const bool bare = !ctrl && !shift && !alt;
         if (key == GuiKeys::Apostrophe && bare) {
             notifications.notify(AppState::NotificationClass::Normal,
@@ -771,10 +785,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // outside it, which is exactly what the two arms above were carved out
         // for; for a chord bound nowhere it would say the same false thing, so
         // that press takes the silence every unbound press takes. The view's
-        // OWN vocabulary never reaches this line at all — bare `g`, `u`, the
-        // `,` / `.` pair and Ctrl+H are claimed by handle_history_mode_key and
-        // by the fork above — so admitting them to the inventory costs this
-        // gate nothing.
+        // OWN vocabulary never reaches this line at all — bare `g`, `u` and the
+        // `,` / `.` pair are claimed by handle_history_mode_key, Ctrl+S is
+        // admitted outright, and bare `'` and Ctrl+H take the fork above — so
+        // admitting them to the inventory costs this gate nothing.
         if (chord_is_bound(key, mods))
             notifications.notify(AppState::NotificationClass::Normal,
                                  spell_chord(key, mods) +
@@ -1561,10 +1575,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // chord): while the view stands Ctrl+S is SAVE AND COMMIT — the act that
         // runs this very save first and then publishes the checkpoint — so the
         // fork is here, inside the one route, and the Save button reaches it by
-        // synthesizing this chord like every other redesigned button. The act's
-        // own preconditions are already spent above: the view's allowlist admits
-        // this chord only with a non-empty head delta and no checkpoint in
-        // flight, which is the same one decision that greys the button. (It rode
+        // synthesizing this chord like every other redesigned button. THE ACT'S
+        // OWN PRECONDITIONS ARE THE ACT'S SINCE 2026-09-01
+        // (open_history_commit_editor, which raises the publishing card for a
+        // checkpoint in flight and stays silent on an empty head delta): the
+        // view's allowlist admits this chord as VOCABULARY now, unconditionally,
+        // and the grey the two terms used to produce through that admission
+        // comes off history_checkpoint_actionable at the button's own arm. What
+        // reaches this line is every Ctrl+S pressed in the view. (It rode
         // Ctrl+Alt+R from 2026-08-04 to 2026-08-08; the act is save-first by
         // definition, so it belongs on the save chord and the Render hijack is
         // gone whole.) Inside the commit-title editor Ctrl+S is the PLAIN save
