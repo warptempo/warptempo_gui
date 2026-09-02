@@ -762,7 +762,10 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 //
 // THE FORK IS ONE OWNER since 2026-09-01 (render_player_home_takes_previous
 // below), which the Home button's hint reads too, so "Previous file" and
-// "Go to start" are said exactly where each is what the press does.
+// "Go to start" are said exactly where each is what the press does — and,
+// since codex round A the same day, so does the hint's SHIFT line, which
+// compares this arm's destination with the shifted twin's and drops where the
+// folder's second item makes them one file.
 bool render_player_home_takes_previous(const AppState& a,
                                        const GuiPlayback& playback,
                                        const GuiAudio& audio) {

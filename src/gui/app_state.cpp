@@ -466,17 +466,43 @@ bool payload_eligible_marker(const AppState& app, int idx) {
 // seeded here comes back unchanged wherever no marker is named; the empty
 // payload and the out-of-store belt are the jump's own three-way test,
 // answered as one "no source" here.
+//
+// MEMOIZED AT THE OWNER (codex round A, 2026-09-01): one of the two readers is
+// the Copy resolved value button's hint, which the tooltip painter asks inside
+// the redraw callback — and the Wayland backend runs that callback once per
+// pending damage rectangle, so with the hint up during playback the scanner's
+// damage re-ran the marker copy and the parser composer several times a frame
+// on an answer that had not changed. The key is exactly what this body reads
+// (the fields are at AppState::ValueSourceMarkerCache): the focused index, the
+// warp store's generation — the store's own change token, which the red-flag
+// memos and the flag-cache fingerprint key on already, and which the A/B tabs
+// cannot dodge because they share this one store — and the frame count. No
+// mutator calls an invalidation; a stale key is the whole invalidation.
 int value_source_marker(const AppState& app, int64_t total_frames) {
     const int idx = app.last_selected_marker;
     const auto& mv = app.warpmarkers.markers();
-    if (idx < 0 || idx >= static_cast<int>(mv.size())) return -1;
-    int source = -1;
-    const std::string payload = resolved_marker_payload(
-        slice_to_warp_markers(mv), idx, total_frames, &source);
-    if (payload.empty() || source < 0 ||
-        source >= static_cast<int>(mv.size()))
-        return -1;
-    return source;
+    AppState::ValueSourceMarkerCache& c = app.value_source_marker_cache;
+    const long long gen = app.warpmarkers.generation();
+    if (c.valid && c.markers_gen == gen && c.focus == idx &&
+        c.total_frames == total_frames) {
+        return c.source;
+    }
+    int answer = -1;
+    if (idx >= 0 && idx < static_cast<int>(mv.size())) {
+        int source = -1;
+        const std::string payload = resolved_marker_payload(
+            slice_to_warp_markers(mv), idx, total_frames, &source);
+        if (!payload.empty() && source >= 0 &&
+            source < static_cast<int>(mv.size())) {
+            answer = source;
+        }
+    }
+    c.valid        = true;
+    c.markers_gen  = gen;
+    c.focus        = idx;
+    c.total_frames = total_frames;
+    c.source       = answer;
+    return answer;
 }
 
 // -- The overview strip's column mapping ------------------------------------

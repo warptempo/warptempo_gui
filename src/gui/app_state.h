@@ -4790,6 +4790,28 @@ struct AppState {
     mutable WarpRedFlagCache warp_red_flag_cache;
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
+    // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
+    // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
+    // resolved value tooltip asks that question inside the redraw callback,
+    // which Wayland runs once per pending damage rectangle, so during playback
+    // the scanner's damage re-ran an O(markers) copy plus the parser composer
+    // at paint cadence). The key is the function's OWN inputs and nothing
+    // wider — the focused marker, the warp store's one generation (the store's
+    // own "did anything change" token, which the red-flag memos above and the
+    // flag-cache fingerprint already key on; the A/B tabs share this store, so
+    // no view or tab axis can change the answer without it) and the frame
+    // count the composer resolves against. Mutable and written by
+    // value_source_marker alone; invalidated by the key compare, so no mutator
+    // calls anything. Session-only, never serialized.
+    struct ValueSourceMarkerCache {
+        bool      valid        = false;
+        long long markers_gen  = -1;
+        int       focus        = -1;
+        int64_t   total_frames = -1;
+        int       source       = -1;
+    };
+    mutable ValueSourceMarkerCache value_source_marker_cache;
+
     // The warp_frame_map the LAST COMMITTED frame's target-view item pixels
     // (flags; the live trim/selected-stem passes read it directly per frame)
     // were painted with — the geometry the
@@ -7862,16 +7884,23 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   item term joined 2026-09-01: without it a fresh player,
 //                   idle with nothing bound, reported a position it had no
 //                   track to have;
-//   first_twin_live / last_twin_live
-//                   render_player_first_in_item_folder_actionable /
-//                   render_player_last_in_item_folder_actionable — the two
-//                   shifted twins' own walls, which the face reads too.
+//   home_shift_differs / end_shift_differs
+//                   DOES THE SHIFTED TWIN REACH A DIFFERENT FILE THAN THE
+//                   PLAIN PRESS (codex round A, 2026-09-01; the two bits held
+//                   the twins' own walls alone — first_twin_live /
+//                   last_twin_live — for one day). Each is composed by the
+//                   plan builder from the twin's wall
+//                   (render_player_first_in_item_folder_actionable /
+//                   render_player_last_in_item_folder_actionable, which the
+//                   face reads too) and, on HOME, the destination compare the
+//                   previous-track window makes necessary; END has no such
+//                   window, so its bit is its wall alone.
 struct RenderPlayerHintState {
-    PlayerPlayFace play_face       = PlayerPlayFace::Play;
-    bool           home_previous   = false;
-    bool           end_idle        = false;
-    bool           first_twin_live = false;
-    bool           last_twin_live  = false;
+    PlayerPlayFace play_face          = PlayerPlayFace::Play;
+    bool           home_previous      = false;
+    bool           end_idle           = false;
+    bool           home_shift_differs = false;
+    bool           end_shift_differs  = false;
 };
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
@@ -7968,25 +7997,28 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 // with the exception framing both carried retired on the same day
 // (2026-09-01): a tooltip that names the modifier reaching its button's second
 // act is a tooltip doing its job, not a gesture hint. THE LINE GOES
-// EMPTY WHERE THE TWIN IS DEAD (architect 2026-09-01, the truthful-tooltips
-// ruling): the twins walk the TRANSPORT ITEM'S folder (first_in_item_folder /
+// EMPTY WHERE THE SHIFTED PRESS WOULD LAND WHERE THE PLAIN ONE DOES
+// (architect 2026-09-01, the truthful-tooltips ruling; the DESTINATION
+// compare since codex round A, where the twins' walls alone stood for one
+// day): the twins walk the TRANSPORT ITEM'S folder (first_in_item_folder /
 // last_in_item_folder — not the listed folder the band stands in, which is
-// why the words say "the playing folder"), and each refuses silently at its
-// own end of it, so on the folder's first item Home's line and on its last
-// End's line would advertise a press that does nothing under a face the plain
-// act keeps lit. The two bits are the twins' own walls
-// (render_player_first_in_item_folder_actionable and its last twin), which
-// the acts and the face read too. It read "the folder's first file" from
-// 2026-08-28.
+// why the words say "the playing folder"), so on the folder's first item
+// Home's line and on its last End's line would advertise a press that does
+// nothing under a face the plain act keeps lit — AND on the folder's SECOND
+// item inside the previous-track window plain Home already plays the first
+// file, which is where the wall alone was not enough. The two bits are
+// composed at the plan builder from those walls and Home's destination
+// compare (RenderPlayerHintState, above). It read "the folder's first file"
+// from 2026-08-28.
 inline std::string render_player_button_shift_hint(
         AppState::PlayerButtonAct act, const RenderPlayerHintState& s) {
     switch (act) {
         case AppState::PlayerButtonAct::Home:
-            return s.first_twin_live
+            return s.home_shift_differs
                        ? "Press Shift for the first file of the playing folder."
                        : std::string();
         case AppState::PlayerButtonAct::End:
-            return s.last_twin_live
+            return s.end_shift_differs
                        ? "Press Shift for the last file of the playing folder."
                        : std::string();
         case AppState::PlayerButtonAct::PlayPause:
@@ -8002,9 +8034,10 @@ inline std::string render_player_button_shift_hint(
 // THE ADMISSION AND THE LINE ARE ONE FACT, held here on the ADMISSION
 // predicate: the line's arms above are exactly the buttons this names, and a
 // button admitted here without an arm (or the reverse) is a drift to catch.
-// The line MAY DROP in a state where the admitted twin is dead (the two walls
-// above) — never appear on a button the admission lacks; that is why the
-// hint takes its state and this assert reads the admission alone.
+// The line MAY DROP in a state where the shifted press reaches what the plain
+// one does (the two walls, plus Home's window — above) — never appear on a
+// button the admission lacks; that is why the hint takes its state and this
+// assert reads the admission alone.
 static_assert(
     player_button_shift_admits(AppState::PlayerButtonAct::Home) &&
     player_button_shift_admits(AppState::PlayerButtonAct::End) &&
@@ -8014,7 +8047,8 @@ static_assert(
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Close),
     "the player's shift-admitting set is the two skips, and the hint's second "
-    "line exists on exactly them (dropping only where the twin is dead)");
+    "line exists on exactly them (dropping only where the shifted press would "
+    "reach what the plain one reaches)");
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
 // the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND LEFT TO
@@ -8142,8 +8176,12 @@ bool render_player_up_actionable(const AppState& a);
 // (GuiRenderPlayer::first_in_item_folder / last_in_item_folder, whose two
 // silent returns these ARE), the two skips' face arms in
 // render_player_button_enabled (Home's third term, End's first), and the
-// hint's shift line (render_player_button_shift_hint, which goes empty where
-// the twin is dead). Defined in render_player.cpp beside the acts.
+// hint's shift line, where each is ONE TERM of that line's own question —
+// the plan builder ANDs Home's with the destination compare the
+// previous-track window makes necessary, End having no such window
+// (RenderPlayerHintState's home_shift_differs / end_shift_differs; codex
+// round A, 2026-09-01, where the wall alone stood for one day). Defined in
+// render_player.cpp beside the acts.
 bool render_player_first_in_item_folder_actionable(const AppState& a);
 bool render_player_last_in_item_folder_actionable(const AppState& a);
 
@@ -8155,7 +8193,10 @@ bool render_player_last_in_item_folder_actionable(const AppState& a);
 // at the DEVICE's rate. TWO READERS: GuiRenderPlayer::home() (the fork's
 // owner) and the plan builder's hint state (paint_modal_dialog), which is why
 // it takes the playback and the audio — the position is the engine's while
-// live. Defined in render_player.cpp beside home().
+// live. It is also what makes the Home hint's shift line a DESTINATION
+// compare rather than the twin's wall alone: inside the window the plain
+// press plays the previous entry, which on the folder's second item IS the
+// file the shifted press names. Defined in render_player.cpp beside home().
 bool render_player_home_takes_previous(const AppState& a,
                                        const GuiPlayback& playback,
                                        const GuiAudio& audio);
@@ -10229,8 +10270,12 @@ bool payload_eligible_marker(const AppState& app, int idx);
 // normalized ref) and the out-of-store belt. It asks NOTHING of eligibility
 // — that is payload_eligible_marker's, the gate both chords run first — so
 // the jump keeps its two cards in the act's own order and this answers the
-// second. TWO READERS: the jump and the hint. Defined in app_state.cpp
-// beside the eligibility gate.
+// second. TWO READERS: the jump and the hint. MEMOIZED SINCE codex round A
+// (2026-09-01) on the store generation, the focus and the frame count — the
+// hint's reader is the tooltip painter, which the Wayland backend runs once
+// per damage rectangle; the cache, its key and the reasoning are at
+// AppState::ValueSourceMarkerCache. Defined in app_state.cpp beside the
+// eligibility gate.
 int value_source_marker(const AppState& app, int64_t total_frames);
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
 // GuiTargetRender::preview_ready, reachable from this inline body although
@@ -11955,9 +12000,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // keys keep the act. THE OVERLOAD FORKS BOTH LINES (2026-09-01): on a
         // face the ctrl twin alone keeps lit the first line says the cursor
         // is already at the bound, and the line drops where the two forms
-        // land on one frame (a full trim window, and the `h` view, whose
-        // every jump takes the whole-piece arm) — the landing owner's own
-        // two coincidences.
+        // land on one frame — the landing owner's own compare
+        // (playhead_skip_landing_frame in both arms since codex round A,
+        // where a restated trim shape stood for one day and missed the
+        // single bound already at its song wall).
         case RedesignButton::TransportSkipBack:
             return {"Go to start (Home)",
                     "Press Ctrl to ignore the trim window."};
@@ -12353,21 +12399,27 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
         // THE TWO SKIPS, both lines forked on the acts' own owners. THE
         // SECOND LINE DROPS where the bare and the whole-piece landings
-        // coincide — playhead_skip_landing_frame's own two coincidences: a
-        // full trim window ("with a full trim window the two arms coincide")
-        // and the `h` view, which takes the whole-piece arm for EVERY jump —
-        // so "Press Ctrl to ignore the trim window" never advertises a
-        // distinction that does not exist. THE FIRST LINE says the cursor is
-        // already at the bound when the bare form is dead and the ctrl form
-        // alone lights the face — the face's own two reads of
+        // coincide, AND THE COMPARE IS THE LANDING OWNER'S OWN
+        // (playhead_skip_landing_frame, viewport.cpp, asked in both arms —
+        // codex round A, 2026-09-01): the shape this restated until then (a
+        // full trim window, or the `h` view taking the whole-piece arm for
+        // every jump) missed the case where only the RELEVANT bound sits at
+        // its song wall — with trim [0, x] bare Home and Ctrl+Home both land
+        // on frame 0 — and the two shapes fall out of the compare anyway, so
+        // "Press Ctrl to ignore the trim window" now advertises the ctrl form
+        // exactly where it lands somewhere else. THE FIRST LINE says the
+        // cursor is already at the bound when the bare form is dead and the
+        // ctrl form alone lights the face — the face's own two reads of
         // playhead_end_jump_actionable, asked in the face's order — because
         // "Go to start" would then name the press's dead half.
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward: {
             const bool forward = b == RedesignButton::TransportSkipForward;
             const bool coincide =
-                trim_is_full_window(a.trim, total_frames) ||
-                a.history_mode.active;
+                playhead_skip_landing_frame(a, audio, forward,
+                                            /*whole_piece=*/false) ==
+                playhead_skip_landing_frame(a, audio, forward,
+                                            /*whole_piece=*/true);
             const char* const line2 =
                 coincide ? nullptr : "Press Ctrl to ignore the trim window.";
             const bool bare_live =
@@ -12400,9 +12452,11 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
         // COPY RESOLVED VALUE: the shift line drops where the focused value
         // names no marker to jump to — value_source_marker, the jump's own
-        // question, wrapping the parser composer the jump calls. The
-        // composer runs at each paint of the hint, on this one button, which
-        // is the accepted cost.
+        // question, wrapping the parser composer the jump calls. The composer
+        // runs ONCE PER ANSWER since codex round A (2026-09-01), the owner
+        // memoizing on the store generation, the focus and the frame count;
+        // it ran at each paint of the hint until then, which the paint path's
+        // per-damage-rectangle redraw made a real cost during playback.
         case RedesignButton::IconCopyValue:
             if (value_source_marker(a, total_frames) < 0)
                 return {"Copy resolved value (J)", nullptr};

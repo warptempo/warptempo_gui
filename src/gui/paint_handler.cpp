@@ -6130,9 +6130,30 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                              app.render_player.frames > 0 &&
                              app.render_player.transport ==
                                  AppState::RenderPlayer::Transport::Idle;
-        hint.first_twin_live =
-            render_player_first_in_item_folder_actionable(app);
-        hint.last_twin_live =
+        // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
+        // (codex round A, 2026-09-01): the line names the FILE the shifted
+        // press plays, so it must drop wherever the plain press already
+        // plays that file. Home's two destinations are home()'s own — the
+        // PREVIOUS entry inside the previous-track window
+        // (render_player_home_takes_previous, the fork's one owner, resolved
+        // just above) and otherwise a seek that leaves the item where it is —
+        // against the twin's `folder.front()`, index 0; both land at frame 0
+        // of the file they name, so the index decides. On the folder's second
+        // item inside that window the two are one file and the line goes,
+        // which the wall alone (item_index > 0) could not see. THE WALL IS
+        // STILL A TERM and is still asked from the twin's own owner, which
+        // the face reads too — it is what answers on item_index == 0, where
+        // the twin is dead outright.
+        const int home_plain_index =
+            hint.home_previous ? app.render_player.item_index - 1
+                               : app.render_player.item_index;
+        hint.home_shift_differs =
+            render_player_first_in_item_folder_actionable(app) &&
+            home_plain_index != 0;
+        // END HAS NO SUCH WINDOW: the plain act is seek_to(frames), always
+        // inside the item and never a track change, so it can never reach the
+        // folder's last wav — the twin's own wall is the whole question.
+        hint.end_shift_differs =
             render_player_last_in_item_folder_actionable(app);
         const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
