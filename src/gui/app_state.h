@@ -8509,8 +8509,11 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // already, the claim's own rect having admitted it.
 // IT IS A PURE SCALE, NOT A HIT TEST, AND x MAY LEGITIMATELY BE lane.x + lane.w
 // (codex round 21): what it returns is the NEAR boundary of column x — the
-// ORIGIN of the bin column x IS under the lane's cell class, and so the exact
-// inverse of the forward floor — so a
+// ORIGIN of the bin column x IS under the lane's cell class, and so the inverse
+// of the forward floor: EXACT in source view, and in target view exact up to
+// the whole-frame quantization of that origin — at most one column left, at a
+// lane where a column is thousands of frames (the derivation is at the
+// definition, weakened there after codex round 2, 2026-09-02) — so a
 // caller wanting a column's FAR boundary — which is what an END bound is, the
 // box span being half-open [x0, x1) — asks at x + 1, and at the right wall that
 // is lane.w, the song end exactly. The edge-END drag is the one caller that
@@ -8542,7 +8545,10 @@ bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
 // first visible frame and *x1 is the column containing the LAST visible one
 // plus one, which is what makes the tick's own column fall inside this span
 // whenever the playhead is inside the viewport (the proof is at the class's
-// declaration, app_state.cpp).
+// declaration, app_state.cpp). THE LAST VISIBLE FRAME IS NAMED IN THE ACTIVE
+// DOMAIN — viewport_end_sample is exclusive, so it is that end MINUS ONE that
+// is inverse-mapped in target view, never the mapped end minus one: the
+// crossing is monotone but not injective, and the two orders do not commute.
 // Returns false on degenerate geometry (no lane, no audio, no waveform
 // width) with the outputs untouched.
 bool overview_box_span(const AppState& a, const GuiAudio& audio,
@@ -9387,8 +9393,10 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // too. The superseded rule here said the opposite ("the narrow-damage path needs
 // the live position because live == displayed in steady state") — true at a
 // settled rest, false in exactly the windows that matter: an ASYNC publish is in
-// flight (a follow-scroll page turn, a resize, the launch load, a preview-driven
-// total drift) whenever live holds the NEW span and the plate still shows the
+// flight (a resize, the launch load, a preview-driven
+// total drift — follow's page turn was a fourth producer until 2026-09-02, when
+// it took the synchronous kick) whenever live holds the NEW span and the plate
+// still shows the
 // OLD, and a live-basis column then damages pixels the playhead was never drawn
 // at — a frozen scanner line, or a stop that leaves its last column un-erased,
 // until the next publish heals it.
@@ -10419,10 +10427,14 @@ bool target_preview_ready(const GuiTargetRender& target_render);
 // CONSTANT IS EXACT; THE GEOMETRY IT DESCRIBES CARRIES THE SCHEDULE'S
 // ROUNDING (architect 2026-09-02, "no effect on audio output; accept and
 // record"): the engine places its seed by a compare on the ROUNDED window
-// start, so the seed grain can end a sample or two past the reset's image +
-// this and the painted band can come out that much wider — the residue's
-// arithmetic, its worked case and its acceptance are at the drop's comment,
-// the derivation's one prose home. It reaches no audio and moves no
+// start, so the seed grain can end HALF A SOURCE FRAME AT THE LOCAL SEGMENT
+// SLOPE past the reset's image + this, the drop's own whole-frame snap adds a
+// second such term and the painted band's rounding half an output sample more
+// — a few samples at ordinary tempos, up to ~8 + ~8 + ½ at the numeric slope
+// ceiling of 16, unbounded only across a label-reference segment, and NOT a
+// universal "sample or two" (codex round 2 corrected that reading). The
+// residue's three terms, its worked case and its acceptance are at the drop's
+// comment, the derivation's one prose home. It reaches no audio and moves no
 // authored frame.
 // The static_assert pins the identity the derivation rests on: the offset IS
 // the half-window, and the half-window IS two hops, so neither the engine's

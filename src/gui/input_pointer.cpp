@@ -2540,9 +2540,22 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     // 2026-09-02), so a viewport BEGIN at song position p paints at the column
     // CONTAINING p, floor(p/spp), and a viewport END at p paints its visible
     // edge at the column containing the last visible frame, floor((p − 1)/spp).
-    // The inverse of the first is column·spp — the bin's own origin, exact,
-    // which is why the left edge has never been wrong and
-    // why its exactness is the proof rather than the convention. The inverse of
+    // The inverse of the first is column·spp — the bin's own origin, which is
+    // why the left edge has never been wrong and why the inverse relation is
+    // the proof rather than the convention. IT IS EXACT IN SOURCE VIEW ONLY
+    // (weakened after codex round 2, 2026-09-02, which found this round trip
+    // overclaimed): in TARGET view overview_anchor_sample_at_x must hand back a
+    // whole active-domain frame, so it snaps the generally fractional origin to
+    // a whole SOURCE frame on the way — which can cross the bin's lower
+    // boundary and put the returned coordinate's own rounded inverse ONE COLUMN
+    // LEFT of the column asked for (the worked case is at that function,
+    // app_state.cpp). One column at a lane where a column is thousands of
+    // frames, on a gesture whose own outcome is a viewport the user is watching
+    // — no road changes for it. THE PAN IS UNAFFECTED BY CANCELLATION (its grab
+    // offset is measured through this same reading), and the box painter's own
+    // target-view end takes the ACTIVE-domain last frame since the same day
+    // (overview_box_span), so what remains here is the quantization slack
+    // above, not a disagreement in the derivation. The inverse of
     // the second is (column + 1)·spp — the first frame PAST the bin, so the
     // last frame inside the span is one below it and falls in that same bin,
     // which is the edge the painter draws — and asking the ONE mapping at

@@ -136,27 +136,68 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // + N/2 — and Space's lead-in launch skips it (selection.cpp).
 //
 // THE ROUNDING RESIDUE, ACCEPTED AND RECORDED (architect 2026-09-02, "no
-// effect on audio output; accept and record"). The engine's placement
-// compare is on the schedule's ROUNDED window start, so a seed centre up to
-// HALF A SOURCE FRAME PAST S still qualifies:
-// llrint(map_target_to_source(m·R_s) − N/2) ≤ S − N/2 admits
-// map_target_to_source(m·R_s) ≤ S + ½, whose output image is at most
-// T + ½·dT/dS — under one output sample at unity tempo, ½/tempo in general
-// (two samples at the 0.25 bracket floor). So "C's image is at most T",
-// "the grain ends at most at T + N/2" and the "FOR EVERY PLACEMENT iff"
-// above are true TO THE SCHEDULE'S ROUNDING: the grain can end that far
-// past T + N/2 and leave P inside its last samples — at the grain's own
-// ZERO-WEIGHT EDGE, where the Hann² window has tapered to nothing. It has
-// NO EFFECT ON THE AUDIO OUTPUT and none on the drop, whose authored frame
-// is unchanged; it is the trim crop's own rounding class (the deep dive's
-// item K), one more sample of a quantity already quantized onto the
-// schedule. The worked case (codex, 2026-09-02): tempo 0.30 with a target
-// playhead P = 3071 drops at S = 307, and m = 1 qualifies —
+// effect on audio output; accept and record"). THIS IS ITS ONE PROSE HOME;
+// every other site states its own share and points here. IT HAS THREE TERMS
+// (codex round 2, 2026-09-02, correcting the first telling — which named one
+// term, put it on the wrong slope, and gave it a universal two-sample
+// ceiling):
+//
+// (1) THE SCHEDULE'S ROUNDING. The engine's placement compare is on the
+// schedule's ROUNDED window start, so a seed centre up to HALF A SOURCE FRAME
+// PAST S still qualifies: llrint(map_target_to_source(m·R_s) − N/2) ≤ S − N/2
+// admits map_target_to_source(m·R_s) ≤ S + ½, whose output image is at most
+// ½·dT/dS output samples past T. dT/dS IS THE LOCAL SEGMENT SLOPE
+// 1/(tempo · marker_scale · settings_scale), NOT 1/tempo — the two scales
+// divide the segment with it (warp_frame_map_build.cpp's segment arithmetic).
+// Its NUMERIC legal maximum is 16, the reciprocal of the bracket floors'
+// product 0.25 · 0.5 · 0.5 (value_format.h, which states that product as the
+// bound the whole-frame nudge guarantee is computed from), so this term is
+// under half an output sample at unity tempo and up to ~8 at that ceiling.
+// ACROSS A LABEL-REFERENCE SEGMENT THERE IS NO CEILING AT ALL: a label_ref
+// imposes its definition's target duration and the implied stretch is
+// unbounded by construction (warp_frame_map_build.cpp's label_ref arm —
+// "extreme implied multipliers are the author's concern"), so no product-wide
+// number covers this term there.
+//
+// (2) THE DROP'S OWN SNAP. The call below inverse-maps P − N/2 and snaps the
+// result to a WHOLE SOURCE FRAME (active_domain_to_source_frame ends in
+// snap_authored_frame), so the authored S sits up to half a source frame from
+// the point the lead-in was measured against — a second, independent
+// ½·dT/dS output samples between the marker's image T and the protected point
+// P, on the same slope, with the same ceilings.
+//
+// (3) THE BAND'S OWN ROUNDING. The painter subtracts nearbyint(T) when it
+// turns the derivation into pixels (paint_handler.cpp's band), adding up to
+// half an OUTPUT sample of painted width. Slope-free.
+//
+// TOGETHER: a few output samples at ordinary tempos, up to ~8 + ~8 + ½ at the
+// numeric slope ceiling of 16, and unbounded only across a label-reference
+// segment. THERE IS NO UNIVERSAL TWO-SAMPLE CEILING. So "C's image is at most
+// T", "the grain ends at most at T + N/2" and the "FOR EVERY PLACEMENT iff"
+// above are true TO THE SCHEDULE'S ROUNDING: the grain can end that far past
+// T + N/2 and leave P inside its last samples — at the grain's own
+// ZERO-WEIGHT EDGE, where the Hann² window has tapered to nothing. The worked
+// case (codex round 1, 2026-09-02): tempo 0.30 with a target playhead
+// P = 3071 drops at S = 307, and m = 1 qualifies —
 // llrint(0.30·1024 − 2048) = −1741 = S − 2048 — while T = 1023.33…, so the
 // seed grain ends at 3072, ONE SAMPLE PAST P, and the painted band is 2049
-// samples where N/2 is 2048. The number is NOT made quantization-aware and
-// the band is NOT clamped to N/2: a clamp would hide the engine's geometry
-// rather than fix it.
+// samples where N/2 is 2048.
+//
+// WHY IT IS ACCEPTED, AND WHAT IT IS NOT. It has NO EFFECT ON THE AUDIO
+// OUTPUT and none on the drop: the authored frame is unchanged, the marker is
+// never off, the render is deterministic. His ruling — "prefer slight
+// untruthfulness in an overlay that affects no output to a truthfulness that
+// serves no output reason". IT IS NOT THE TRIM CROP'S ROUNDING CLASS, and
+// that comparison (which this comment carried for one day) is WITHDRAWN: the
+// trim crop's rounding is TRANSIENT, a tool's own window that the next stroke
+// replaces, while this seam sits in the geometry of every deliverable. Nor is
+// it worth a third rounding rule to remove — a placement-dependent offset, or
+// a band clamped to N/2; the number is NOT made quantization-aware and the
+// band is NOT clamped, because a clamp would hide the engine's geometry
+// rather than fix it. And it is invisible where it is read: SUB-PIXEL at the
+// working zoom for every numeric slope (`c` is zoom level 2.0 = 1.25 ms/px,
+// ~55 output samples per pixel at 44.1 kHz, 60 at 48 kHz — the whole ~16.5
+// worst case is under a third of one pixel).
 //
 // N/2 is measured in the target/output paint domain, then mapped to a
 // source frame. kPhaseResetLeadInSamples is an exact integer and the

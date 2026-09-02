@@ -1367,7 +1367,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // kPhaseResetLeadInSamples (kN/2) output samples AHEAD of the resting
         // playhead — past the seed grain of a reset dropped at the playhead
         // (to the schedule's rounding, the accepted residue recorded with the
-        // derivation), on the instant the drop's lead-in was derived to
+        // derivation: three terms scaling with the LOCAL SEGMENT SLOPE, not a
+        // fixed sample count), on the instant the drop's lead-in was derived to
         // protect (the derivation at drop_phase_reset_lead_in_at_playhead,
         // phaseresetmarkers_ops.cpp) — without moving the cursor, so the stop
         // merely deactivates the scanner and the cursor it never touched is

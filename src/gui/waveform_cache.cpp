@@ -596,8 +596,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      the input edge, not a second rendering path.)
 //   2. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
-//      load, follow_scroll_if_needed during playback, and the on_tick safety
-//      net that catches residual fingerprint drift. The marker and trim
+//      load, and the on_tick safety net that catches residual fingerprint
+//      drift. (FOLLOW'S PAGE TURN LEFT THIS LIST 2026-09-02: it takes the
+//      synchronous kick now — kick_waveform_sync at
+//      Viewport::follow_scroll_if_needed — so the playhead line never paints
+//      against a plate that is still a page behind.) The marker and trim
 //      drags freeze this worker's dispatch for the gesture's whole
 //      duration (the full-enqueue gate at maybe_enqueue_waveform_render, with
 //      on_waveform_render_done dropping the at-most-one job already in flight
@@ -612,8 +615,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      marker_drag.h). No pointer gesture re-warps the plate now.
 //
 // This is still NOT "make everything synchronous." Async earns its keep for
-// UNDRIVEN and playback-adjacent changes — resize, the launch load, follow
-// scrolling, the tick's drift net — where no gesture is waiting on the frame.
+// UNDRIVEN changes — resize, the launch load, the tick's drift net — where no
+// gesture is waiting on the frame (follow's page turn was in this list until
+// 2026-09-02 and is synchronous now: a page turn IS a frame something is
+// waiting on, the playhead line drawn onto it).
 // What is synchronous is everything the user is actively driving, pan included;
 // the rule is that a user-driven change must not paint its overlays against a
 // stale plate.

@@ -534,16 +534,35 @@ int value_source_marker(const AppState& app, int64_t total_frames) {
 // playhead and the box rounded its two viewport endpoints, so with the
 // playhead INSIDE the viewport (p < vp_end) nearbyint(p / spp) could equal
 // nearbyint(vp_end / spp) = x1 — one column right of the box's own right
-// outline, which the painter draws at x1 - 1. Under the cell class the tick is
-// floor(p / spp) and the box is [floor(vp_start / spp),
-// floor((vp_end - 1) / spp) + 1) — the column containing the LAST VISIBLE
-// frame, plus one, the span staying half-open — and floor is monotone, so
-// vp_start <= p <= vp_end - 1 gives x0 <= tick <= x1 - 1: A PLAYHEAD INSIDE
-// THE VIEWPORT IS INSIDE THE PAINTED BOX BY CONSTRUCTION. The proof is stated
-// in the SOURCE domain, which is where both readings land; in target view both
-// pass through the same strictly increasing warp map (the tempo and marker
-// scales are bounded away from zero), so the ordering that carries it survives
-// the crossing.
+// outline, which the painter draws at x1 - 1.
+//
+// THE PROOF, OVER THE ACTUAL ROUNDED TRANSFORMATIONS (restated after codex
+// round 2 found the first telling insufficient — it argued the ordering in the
+// source domain and so silently assumed the crossing commuted with the minus
+// one, which it does not). Write M for active_domain_to_source_frame, the ONE
+// crossing both readings take: identity in source view, and in target view
+// map_target_to_source under snap_authored_frame's nearbyint. M is MONOTONE
+// NON-DECREASING (the warp map is increasing, nearbyint is monotone) but NOT
+// injective — a slow segment gives many active frames one source frame — which
+// is exactly why the box must cross the same value the tick can cross rather
+// than an adjacent one.
+//
+//   the tick:  p is an active-domain frame, nearbyint of the scanner's
+//              fractional position, with vp_start <= p <= vp_end - 1 (the
+//              hypothesis: the playhead is inside the viewport, whose end is
+//              exclusive). Its column is floor(M(p) / spp).
+//   the box:   x0 = floor(M(vp_start) / spp) and
+//              x1 = floor(M(vp_end - 1) / spp) + 1 — the column containing the
+//              LAST VISIBLE frame, plus one, the span staying half-open. The
+//              minus one is taken in the ACTIVE domain, BEFORE the crossing.
+//
+// M monotone on vp_start <= p <= vp_end - 1 gives
+// M(vp_start) <= M(p) <= M(vp_end - 1); floor is monotone and spp > 0, so
+// x0 <= floor(M(p) / spp) <= x1 - 1: A PLAYHEAD INSIDE THE VIEWPORT IS INSIDE
+// THE PAINTED BOX BY CONSTRUCTION, monotonicity alone carrying it and
+// injectivity never needed. The lane clamps that follow only widen the span
+// (x1 >= x0 + 1) and clamp both into [0, lane.w], which the tick's own clamp
+// mirrors.
 //
 // THE WAVEFORM'S OWN COLUMNS ARE THE OTHER CLASS AND DO NOT MOVE: the
 // authoring lattice is a grid of POINTS (g(c) = nearbyint(c * spp)), where the
@@ -593,19 +612,34 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
     const GuiRect lane = top_overview_row_area(a);
     const double spp = overview_samples_per_pixel(a, audio);
     if (spp <= 0.0) return 0.0;
-    // THE EXACT INVERSE OF THE LANE'S CELL RULE: column c covers the source
-    // frames [c*spp, (c+1)*spp), and this returns that bin's ORIGIN — the
-    // frame the column's first pixel of ink stands for. Unchanged by the
-    // 2026-09-02 class declaration, which is what makes it the inverse: the
-    // forward rule floors, so the origin is the one point that maps back to
-    // the column asked for, and a caller wanting the bin's FAR boundary asks
-    // at x + 1 (the header's contract, the edge-END drag its one caller).
+    // THE INVERSE OF THE LANE'S CELL RULE: column c covers the source frames
+    // [c*spp, (c+1)*spp), and this returns that bin's ORIGIN — the frame the
+    // column's first pixel of ink stands for. Unchanged by the 2026-09-02
+    // class declaration, which is what makes it the inverse: the forward rule
+    // floors, so the origin is the one point that maps back to the column
+    // asked for, and a caller wanting the bin's FAR boundary asks at x + 1
+    // (the header's contract, the edge-END drag its one caller).
+    //
+    // IT IS EXACT IN SOURCE VIEW AND EXACT UP TO ONE QUANTIZATION IN TARGET
+    // VIEW (the claim weakened after codex round 2, 2026-09-02): the origin
+    // x*spp is generally FRACTIONAL, and the target-view arm below must hand
+    // its consumers a whole active-domain frame, so it snaps that origin to a
+    // whole SOURCE frame before mapping forward. The snap can cross the bin's
+    // lower boundary — spp 10.3, column 1, origin 10.3, nearbyint 10 — and the
+    // returned coordinate's own rounded inverse then floors one column LEFT of
+    // the column asked for. ONE COLUMN AT MOST, at a lane where one column is
+    // the whole song over the lane's width (thousands of frames), and the two
+    // callers are unharmed: the box pan measures a GRAB OFFSET through this
+    // same reading and so cancels it, and the teleport centres on a position
+    // whose own column is not re-derived. What the quantization does bound is
+    // the ROUND-TRIP CLAIM — see the invariant at apply_overview_drag_at
+    // (input_pointer.cpp), which states the same one-column slack.
     const double src = static_cast<double>(x - lane.x) * spp;
     if (a.active_audio_view != 'T') return src;
     // Target view: the pressed column names a SOURCE position (the lane's
     // domain), and the drag body's anchor lives in the ACTIVE domain — map it
-    // forward once at the press. The int64 round-trip costs under one frame,
-    // invisible at whole-song scale.
+    // forward once at the press. The int64 round-trip costs under one source
+    // frame here, which is the quantization the paragraph above bounds.
     return static_cast<double>(source_frame_to_active_domain(
         a, audio, static_cast<int64_t>(std::nearbyint(src))));
 }
@@ -657,26 +691,40 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
     int64_t vp_start = 0;
     int64_t vp_end   = 0;
     if (!overview_box_edge_samples(a, audio, &vp_start, &vp_end)) return false;
-    int64_t src_b = vp_start;
-    int64_t src_e = vp_end;
+    // THE LAST VISIBLE FRAME IS NAMED IN THE ACTIVE DOMAIN AND CROSSED THERE
+    // (codex round 2, 2026-09-02): vp_end is EXCLUSIVE, so the last visible
+    // ACTIVE frame is vp_end - 1 — and it is that frame, not the exclusive
+    // endpoint, that goes through the map. The two orders do not commute: the
+    // inverse map is monotone but not injective (many active frames share a
+    // source frame at a slow segment), so active_domain_to_source_frame(vp_end)
+    // can equal active_domain_to_source_frame(vp_end - 1), and subtracting one
+    // in the SOURCE domain then dropped a source frame the tick can legally
+    // stand on — the tick paints one column right of the box's outline with the
+    // playhead inside the viewport. Crossing vp_end - 1 puts the box's end on
+    // the tick's OWN conversion at the tick's own endpoint class, which is what
+    // makes the containment proof (the class block above) survive the rounding.
+    // A degenerate span (vp_end <= vp_start) has no last frame: last_active
+    // falls back to vp_start, src_last then clamps onto src_b and x1 lands at
+    // x0 + 1, the >= 1px floor's own answer. Source view is the identity arm —
+    // vp_end - 1 IS src_e - 1 there — so nothing about it changes.
+    const int64_t last_active = vp_end > vp_start ? vp_end - 1 : vp_start;
+    int64_t src_b    = vp_start;
+    int64_t src_last = last_active;
     if (a.active_audio_view == 'T') {
-        src_b = active_domain_to_source_frame(a, audio, vp_start);
-        src_e = active_domain_to_source_frame(a, audio, vp_end);
+        src_b    = active_domain_to_source_frame(a, audio, vp_start);
+        src_last = active_domain_to_source_frame(a, audio, last_active);
     }
     const int64_t total = audio.total_frames();
     if (src_b < 0) src_b = 0;
-    if (src_e > total) src_e = total;
+    if (src_last > total - 1) src_last = total - 1;
+    if (src_last < src_b) src_last = src_b;
     // THE LANE'S CELL CLASS ON BOTH EDGES (the block above
     // overview_samples_per_pixel): the begin column CONTAINS the first visible
     // frame, and the end is the column containing the LAST visible frame plus
     // one, so the span stays half-open [x0, x1) and the painter's right outline
-    // at x1 - 1 is that last frame's own column. src_e is exclusive, so the
-    // last visible frame is src_e - 1; a degenerate span (src_e <= src_b) has
-    // no last frame and takes the >= 1px floor below like any other.
+    // at x1 - 1 is that last frame's own column.
     int x0 = overview_column_containing(static_cast<double>(src_b), spp_ov);
-    int x1 = src_e > src_b
-        ? overview_column_containing(static_cast<double>(src_e - 1), spp_ov) + 1
-        : x0 + 1;
+    int x1 = overview_column_containing(static_cast<double>(src_last), spp_ov) + 1;
     if (x0 < 0) x0 = 0;
     if (x0 > lane.w - 1) x0 = lane.w - 1;
     if (x1 > lane.w) x1 = lane.w;

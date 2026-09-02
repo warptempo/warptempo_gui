@@ -4410,7 +4410,8 @@ void GuiInputHandler::card_trim_fallback_if_any() {
     // a second Ctrl+Alt+R under the same tiny window is a second explicit
     // command producing a second untrimmed deliverable, and it gets its own
     // card. The PREVIEW's edge gate exists because its dispatches are not
-    // presses at all (last_dispatch_trim_fell_back_, target_render.h).
+    // presses at all (last_dispatch_trim_fallback_, target_render.h — the edge
+    // scoped to the tab and trim pair that produced the verdict).
     //
     // THE TWO SWEEPS ARE NOT CARDED, and the asymmetry is deliberate rather
     // than an omission. A sweep cell rewrites the warp markers per cell, so the

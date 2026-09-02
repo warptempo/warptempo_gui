@@ -509,17 +509,27 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // SCHEDULE'S ROUNDING, so the grain's lateness does not reach it;
             // neither a nearest-centre placement nor a stretched seed is
             // opened. THE RESIDUE IN THAT "TO THE ROUNDING" (recorded
-            // 2026-09-02, architect approval 2026-09-02, comment-only): pass
-            // 1's placement compare is on the schedule's ROUNDED window start
-            // against the integer query, so a seed centre up to half a source
-            // frame past the authored reset still qualifies and the grain can
-            // end ½/tempo output samples past the protected point — two
-            // samples at the 0.25 tempo floor — at the grain's own ZERO-WEIGHT
-            // edge, where the Hann² window has tapered to nothing. It has no
-            // effect on the audio and none on the drop, whose authored frame
-            // is unchanged; it is the trim crop's own rounding class (the deep
-            // dive's item K), one more sample of a quantity already quantized
-            // onto the schedule. The derivation, the worked case and the
+            // 2026-09-02, restated the same day after codex round 2;
+            // architect approval 2026-09-02, comment-only): pass 1's placement
+            // compare is on the schedule's ROUNDED window start against the
+            // integer query, so a seed centre up to half a source frame past
+            // the authored reset still qualifies and the grain can end HALF A
+            // SOURCE FRAME'S TARGET IMAGE AT THE LOCAL SEGMENT SLOPE past the
+            // protected point — the slope being 1/(tempo · marker_scale ·
+            // settings_scale), NOT 1/tempo — with the GUI drop's own
+            // whole-frame snap adding a second such term and its painted band's
+            // rounding half an output sample more: a few output samples at
+            // ordinary tempos, up to ~8 + ~8 + ½ at the numeric slope ceiling
+            // of 16, unbounded only across a label-reference segment, and NOT
+            // the universal two samples this clause claimed for one day. It
+            // lands at the grain's own ZERO-WEIGHT edge, where the Hann² window
+            // has tapered to nothing. It has no effect on the audio and none on
+            // the drop, whose authored frame is unchanged — the marker is never
+            // off and the render stays deterministic. IT IS NOT THE TRIM CROP'S
+            // ROUNDING CLASS (that comparison is withdrawn: the trim crop's
+            // rounding is transient, a tool's own window, while this seam sits
+            // in the geometry of every deliverable), and it is not worth a
+            // third rounding rule. The three terms, the worked case and the
             // decision not to make the offset quantization-aware are at
             // phaseresetmarkers_ops.cpp's derivation comment.
             bool phase_reset_fired = false;

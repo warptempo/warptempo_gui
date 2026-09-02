@@ -441,18 +441,26 @@ void GuiTargetRender::dispatch_render_now() {
     // the breach mirror of validate_trim_frames' check order, which a committed
     // sub-window can never rest in.
     //
-    // THE RISING EDGE, not the dispatch (the full reasoning is at
-    // last_dispatch_trim_fell_back_): a standing tiny window re-dispatches on
+    // THE EDGE ON THE SUBJECT, not the dispatch (the full reasoning is at
+    // last_dispatch_trim_fallback_): a standing tiny window re-dispatches on
     // every output-affecting edit, and one card per keystroke is the flood the
-    // ruling's "one card per deliberate act" excludes. THE STDERR LINES ARE
+    // ruling's "one card per deliberate act" excludes — but the remembered
+    // verdict is scoped to the TAB AND TRIM PAIR that produced it, so a switch
+    // to the other tab's own falling-back window, or an undo landing on a
+    // different one, is a new subject and cards once. THE STDERR LINES ARE
     // UNCHANGED and stay per-dispatch — the two rungs below print their own,
     // do_render prints the synthesis path's — because that signal is the
     // engineering log, where a repeat IS information.
-    if (verdict.trim_fell_back && !last_dispatch_trim_fell_back_) {
+    const TrimFallbackSubject fallback_subject{verdict.trim_fell_back,
+                                               app.active_tab_view,
+                                               app.trim.begin_frame,
+                                               app.trim.end_frame};
+    if (verdict.trim_fell_back &&
+        !(fallback_subject == last_dispatch_trim_fallback_)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kTrimFallbackCard);
     }
-    last_dispatch_trim_fell_back_ = verdict.trim_fell_back;
+    last_dispatch_trim_fallback_ = fallback_subject;
 
     // The preview always proceeds from here: the parser resolver normalizes
     // ambiguous marker arrangements to tempo 1.00 at resolve time (one

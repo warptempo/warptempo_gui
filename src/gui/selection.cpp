@@ -59,7 +59,10 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
 // lands on the instant the drop was derived to protect — past the seed grain
 // TO THE SCHEDULE'S ROUNDING, the accepted residue recorded with the
 // derivation at drop_phase_reset_lead_in_at_playhead,
-// phaseresetmarkers_ops.cpp. The offset's own arithmetic is exact integer
+// phaseresetmarkers_ops.cpp (three terms, each half a source frame at the
+// LOCAL SEGMENT SLOPE or half an output sample — no fixed sample count, and
+// the enumeration is that one prose home's, not this site's). The offset's
+// own arithmetic is exact integer
 // work, and it is never the painted band, whose right edge snaps to the
 // engine's hop lattice and is at most this to that same rounding.
 int64_t phase_reset_lead_in_launch_offset(const AppState& app,

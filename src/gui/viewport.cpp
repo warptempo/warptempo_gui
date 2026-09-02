@@ -308,7 +308,7 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
         // computed on the LIVE viewport) — the cursor's pixels are
         // PLATE-registered, and Viewport sees no GuiPaintHandler, so the site
         // takes the widening shape: an async publish still in flight from an
-        // earlier follow-scroll, resize or load leaves live and plate on
+        // earlier resize or load leaves live and plate on
         // different spans, and narrow live columns then erase pixels the cursor
         // was never drawn at. The cost is bounded — the fastest caller is the
         // compositor-throttled arrow step, and the moved branch above already

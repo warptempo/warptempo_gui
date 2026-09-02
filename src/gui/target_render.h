@@ -284,8 +284,10 @@ private:
     //
     // trim_fell_back HAS THREE READERS (2026-09-02, deep dive item L): the two
     // reuse rungs' stderr lines, the PREVIEW'S CARD at the top of
-    // dispatch_render_now (kTrimFallbackCard on this flag's rising edge, the
-    // one outermost site every target-view dispatch passes through) and the
+    // dispatch_render_now (kTrimFallbackCard when this flag and the subject it
+    // was computed from change into a fallback — last_dispatch_trim_fallback_
+    // below — at the one outermost site every target-view dispatch passes
+    // through) and the
     // ARCHIVAL CHORDS' card through trim_would_fall_back above. Only the
     // stderr readers consult fallback_reason: the card names the outcome, not
     // the producer.
@@ -326,10 +328,12 @@ private:
     // samples never embodied.
     int64_t dispatched_buffer_start_frame_ = 0;
 
-    // THE PREVIEW CARD'S EDGE (architect 2026-09-02, deep dive item L): the
-    // trim_fell_back verdict of the PREVIOUS dispatch, so dispatch_render_now
-    // cards kTrimFallbackCard on the RISING edge alone — it fell back now and
-    // did not at the dispatch before it.
+    // THE PREVIEW CARD'S EDGE (architect 2026-09-02, deep dive item L; SCOPED
+    // TO ITS SUBJECT after codex round 2): the trim_fell_back verdict of the
+    // PREVIOUS dispatch TOGETHER WITH THE SUBJECT THAT PRODUCED IT, so
+    // dispatch_render_now cards kTrimFallbackCard when the whole record changes
+    // into a fallback — it fell back now, and the last dispatch was not this
+    // same window on this same tab falling back.
     //
     // WHY AN EDGE HERE AND A PLAIN PRESS COUNT ON THE ARCHIVAL CHORDS: the
     // ruling is one card per deliberate act, and a preview dispatch is not one.
@@ -344,11 +348,36 @@ private:
     // already been told: that the window he has just made is one the render
     // cannot honor.
     //
-    // It is the LAST DISPATCH'S verdict and nothing more — the acts that skip a
+    // WHY A SUBJECT AND NOT A BARE BIT (the defect codex round 2 found in the
+    // inventory above): "each one re-dispatches under a trim window that has
+    // not changed" is true of every producer in that list EXCEPT the tab
+    // switch, and undo/redo can land on a different pair too. THE A/B TABS
+    // RESTORE INDEPENDENT TRIM PAIRS (restore_active_view_state,
+    // active_views.cpp) and Ctrl+Tab triggers a preview at once
+    // (input_key_dispatch.cpp), so under a bare bit tab A's fallback followed
+    // by tab B's DIFFERENT falling-back window was true -> true and B's
+    // misleading preview got no card at all — and a T->S->switch->T round trip
+    // the same way, since the source-view interval deliberately leaves the
+    // record standing. Remembering WHICH window on WHICH tab fell back keeps
+    // the ruled quiet (repeated output edits under ONE unchanged tiny window
+    // say nothing) while entry into a DISTINCT fallback window cards once.
+    // Compared WHOLE — a differing tab alone is a differing subject, because a
+    // tab switch is itself the deliberate act the card answers.
+    //
+    // It is the LAST DISPATCH'S record and nothing more — the acts that skip a
     // dispatch entirely (ensure_ready's clean path, a T->S flip) leave it
     // standing on purpose, exactly as dispatched_buffer_start_frame_ keeps the
-    // anchor of the production that is actually bound.
-    bool last_dispatch_trim_fell_back_ = false;
+    // anchor of the production that is actually bound. A PROJECT REOPEN NEEDS
+    // NO CLEAR: gui_main's run_project constructs a fresh GuiTargetRender per
+    // session, so the record is born default there like every other member.
+    struct TrimFallbackSubject {
+        bool    fell_back = false;
+        char    tab       = '\0';   // AppState::active_tab_view at the dispatch
+        int64_t begin     = 0;      // app.trim.begin_frame, the pair the
+        int64_t end       = 0;      // verdict was computed from
+        bool operator==(const TrimFallbackSubject&) const = default;
+    };
+    TrimFallbackSubject last_dispatch_trim_fallback_{};
 
     // THE RUN STATE, the whole of it — two fields. last_trigger_time_ is written
     // by trigger()'s top alone and read by trigger() and tick_updating_hold;

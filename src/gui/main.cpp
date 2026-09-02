@@ -2831,7 +2831,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // continuous position), names exactly the column the last paint put the
         // line at. A stash could only be WORSE — its producers captured on the LIVE
         // viewport, which parts company with the plate during every async publish
-        // window (follow scroll, resize, load, preview-driven total drift), and two
+        // window (resize, load, preview-driven total drift — follow's page turn
+        // left this list 2026-09-02 for the synchronous kick), and two
         // of them published on paths that then discovered they had moved nothing.
         // Nor is a stash needed: every viewport mutator that could reflow the
         // scanner's column pairs its write with full waveform-area damage AND a

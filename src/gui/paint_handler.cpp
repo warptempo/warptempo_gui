@@ -4336,10 +4336,13 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //   1. Worker full render — maybe_enqueue_waveform_render
     //      dispatches a full-window render on GuiWaveformWorker,
     //      which swaps into wf_cache.surface on completion. Fires
-    //      for UNDRIVEN changes — resize, the launch load, follow-scroll
-    //      during playback — and as the on_tick backstop for any residual
-    //      fingerprint drift (a warp_frame_map hash included). Map EDITS
-    //      themselves are user-driven and take path 2.
+    //      for UNDRIVEN changes — resize, the launch load — and as the
+    //      on_tick backstop for any residual fingerprint drift (a
+    //      warp_frame_map hash included). Map EDITS themselves are
+    //      user-driven and take path 2, and so does FOLLOW'S PAGE TURN since
+    //      2026-09-02 (it was on this list until then; the playhead line is
+    //      drawn onto that very frame, so the page turn cannot wait a
+    //      publish — Viewport::follow_scroll_if_needed).
     //   2. Synchronous full render — force_synchronous_waveform_rebuild
     //      renders the full window inline on the GUI thread for every
     //      USER-DRIVEN viewport change: zoom, center-on-playhead, the
@@ -4613,16 +4616,24 @@ static int64_t phase_reset_seed_frame_index(
 // centre); the static_assert at the constant pins the drop's offset to the
 // seed window's half-width, which is exact, not the painted width, which
 // carries the rounding. THE RESIDUE, ACCEPTED AND RECORDED (architect
-// 2026-09-02, "no effect on audio output; accept and record"; the arithmetic
-// and the worked case are at the drop's comment, the one prose home): the
-// engine's placement compare is on the schedule's ROUNDED window start and
-// this mirror rounds with it, so a seed centre up to half a source frame
-// past the reset still qualifies and the band can come out A SAMPLE OR TWO
-// WIDER than N/2 (codex's case — tempo 0.30, reset at source 307 — paints
-// 2049 where N/2 is 2048). NOT CLAMPED to N/2: the clamp would hide the
-// engine's geometry rather than fix it, and this band exists to depict that
-// geometry. It is the trim crop's own rounding class (the deep dive's item
-// K), and it reaches no audio.
+// 2026-09-02, "no effect on audio output; accept and record"; the three terms,
+// their slope and the worked case are at the drop's comment, the one prose
+// home — this site states only its own share): the engine's placement compare
+// is on the schedule's ROUNDED window start and this mirror rounds with it, so
+// a seed centre up to half a source frame past the reset still qualifies, and
+// its image is HALF A SOURCE FRAME AT THE LOCAL SEGMENT SLOPE
+// 1/(tempo · marker_scale · settings_scale) — a fraction of a sample at unity
+// tempo, up to ~8 at the numeric slope ceiling of 16, unbounded across a
+// label-reference segment, and NOT the "sample or two" this comment claimed
+// for one day (codex round 2). THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
+// below is up to another half OUTPUT sample of painted width. So the band can
+// come out that much wider than N/2 (codex round 1's case — tempo 0.30, reset
+// at source 307 — paints 2049 where N/2 is 2048). NOT CLAMPED to N/2: the
+// clamp would hide the engine's geometry rather than fix it, and this band
+// exists to depict that geometry. It reaches no audio and it is SUB-PIXEL at
+// the working zoom for every numeric slope; it is NOT the trim crop's rounding
+// class (that comparison is withdrawn — the trim's rounding is transient,
+// while this seam sits in every deliverable's geometry).
 //
 // DAMAGE. The right edge depends on the reset's frame and on the displayed
 // map, both of which the left edge already depended on, so no new damage
@@ -4763,10 +4774,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // ≥ 1 by construction: the seed centre's image is at most the reset's
         // TO THE SCHEDULE'S ROUNDING, so grain_end − ms > N/2 − R_s. The
         // clamp guards that rounding edge only, never a real geometry. That
-        // same rounding is the residue recorded at this function's header
-        // and derived at the drop's comment: the band's other end can run a
-        // sample or two past N/2 for exactly the reason this end can fall
-        // under the marker.
+        // same rounding is the residue recorded at this function's header and
+        // derived at the drop's comment: the band's other end can run past N/2
+        // by half a source frame AT THE LOCAL SEGMENT SLOPE — plus the half
+        // output sample the nearbyint above puts into `ms` — for exactly the
+        // reason this end can fall under the marker.
         width_samples = std::max<int64_t>(1, width_samples);
     }
 
