@@ -838,9 +838,20 @@ void Viewport::follow_scroll_if_needed() {
         if (app.viewport_start_sample != old_vp) {
             invalidate_waveform_area();
             if (playback.is_playing()) playback.resync_predictor();
-            // Viewport actually moved — kick the waveform worker now rather
-            // than waiting for the next tick.
-            kick_waveform_render();
+            // Viewport actually moved — THE PAGE TAKES THE SYNCHRONOUS
+            // REBUILD (architect 2026-09-02), the same body every user-driven
+            // pan/zoom frame takes. It kicked the ASYNC worker until that day,
+            // and until the worker published, every surface painted the OLD
+            // viewport while the scanner's column sat outside it: the playhead
+            // line VANISHED for a frame or two at every page (main.cpp's
+            // pre-paint documents that offscreen scanner as its own fallback
+            // case). The centered pin (2026-08-31) proved the synchronous
+            // rebuild fits inside a frame EVERY frame; follow pays it once per
+            // page — and the 2026-08-07 flicker ruling (github-recheck.md) put
+            // a reported flicker onto this path the same way.
+            // kick_waveform_sync reclamps through clamp_viewport_start before
+            // rendering, which is idempotent against the clamp just above.
+            kick_waveform_sync();
         }
     }
 }

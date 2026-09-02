@@ -631,7 +631,9 @@ struct GuiPaintHandler {
     // PANNING INCLUDED since the incremental shift-and-strip path was retired
     // (architect 2026-07-26 — moving and resting plates come off one code path;
     // see the routing rules at the definition). Undriven changes — resize, the
-    // launch load, follow scrolling — stay on the worker.
+    // launch load, the preview completion's repaint — stay on the worker;
+    // FOLLOW SCROLLING joined this route 2026-09-02 (the vanishing playhead
+    // line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
 
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED

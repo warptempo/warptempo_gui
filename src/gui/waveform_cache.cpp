@@ -515,7 +515,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // declaration in paint_handler.h enumerates which overlays those are; the
     // hazard here is the whole class, not any member of it), visibly left its
     // flags for one frame during a
-    // follow-scroll / resize / drift-catchup publish. Doing the rebuild here makes
+    // resize / drift-catchup publish (and during a follow-scroll page until
+    // 2026-09-02, when follow took the synchronous route). Doing the rebuild here makes
     // the committing frame blit new plate + new items together and promote the
     // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
     // the rebuild STAGES the displayed hit map (app.staged_displayed_*), and
@@ -530,7 +531,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // CONTAINS THE OVERVIEW LANE since the relayout's commit B moved the strip
     // into the centered block, so the dedicated overview rider that stood here
     // is deleted with that owner's (the rationale lives there). This is the
-    // ASYNC publish (follow scroll, resize, drift catch-up), whose viewport
+    // ASYNC publish (resize, drift catch-up — follow scroll left for the
+    // synchronous route 2026-09-02), whose viewport
     // moved undriven, and the lane's box owes the same frame — it simply gets it
     // from the one rect now.
     const GuiRect a = waveform_area(app);

@@ -1317,21 +1317,23 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // and both went with the prompt on 2026-08-07, the act now being run by the
     // commit-title editor's Enter inside the input handler itself.)
 
-    // Viewport worker kick: FOLLOW-SCROLL during playback is the one caller
-    // that requests the new waveform immediately rather than waiting for the
-    // next tick (Viewport::follow_scroll_if_needed, the sole
-    // kick_waveform_render call site outside kick_waveform_sync's
-    // callback-unwired fallback). The worker's OTHER undriven work — a
-    // compositor resize and the launch load, both of which run on_resize, which
-    // only stores the new dimensions, re-clamps zoom/viewport, and re-anchors
-    // the playback predictor if the level moved: no enqueue and no cache
-    // rebuild there — is discovered instead when
+    // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY ANY MORE. Follow-scroll
+    // during playback was the one caller that asked for the new waveform
+    // immediately rather than waiting for the next tick, and it took the
+    // synchronous rebuild on 2026-09-02 (the vanishing playhead line — the
+    // reasoning is at Viewport::follow_scroll_if_needed), leaving
+    // kick_waveform_render with only kick_waveform_sync's callback-unwired
+    // fallback as a call site. This wiring stays for that fallback. The
+    // worker's undriven work — a compositor resize and the launch load, both of
+    // which run on_resize, which only stores the new dimensions, re-clamps
+    // zoom/viewport, and re-anchors the playback predictor if the level moved:
+    // no enqueue and no cache rebuild there — is discovered when
     // maybe_enqueue_waveform_render's dirty-detect sees the changed fingerprint
     // on the next tick, which is also where the cache rebuild happens. (Pan, zoom, center and the one-shot jumps do NOT come here at
     // all: they are user-driven and render synchronously through
     // request_waveform_sync_ below.) maybe_enqueue_waveform_render is
     // main-thread-safe and idempotent
-    // against the on_tick backstop, so the earlier trigger only shortens
+    // against the on_tick backstop, so a call here would only shorten
     // input-to-render latency. See Viewport::kick_waveform_render.
     viewport.request_waveform_render_ =
         [&]() { paint_handler.maybe_enqueue_waveform_render(); };

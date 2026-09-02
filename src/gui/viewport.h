@@ -43,7 +43,10 @@ struct Viewport {
     // is null-safe: if the callback is unset (e.g. before main.cpp wires it),
     // it no-ops. The enqueue is idempotent against the on_tick backstop —
     // both dirty-check the same pending fingerprint, so a redundant call is
-    // a cheap no-op. Callers fire it only inside their actually-changed guard.
+    // a cheap no-op. Since 2026-09-02 its ONE call site is kick_waveform_sync's
+    // callback-unwired fallback below (follow-scroll, the last explicit caller,
+    // took the synchronous route that day); the async path's own inventory is
+    // stated once at request_waveform_sync_'s block.
     std::function<void()> request_waveform_render_;
     void kick_waveform_render() {
         if (request_waveform_render_) request_waveform_render_();
@@ -173,14 +176,23 @@ struct Viewport {
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
-    // changes — follow-scroll during playback, resize — and repaints the plate
-    // on preview completion. Panning left this list 2026-07-26: it is
-    // user-driven, so it renders synchronously like zoom. The CENTERED
-    // recenter is deliberately NOT here beside follow-scroll: follow pages
-    // once per crossing (a rare jump the async kick absorbs), while the pin
-    // moves the viewport EVERY scanner frame, and an async plate one frame
-    // behind a per-frame pan is exactly the stale-basis smear the sync rule
-    // exists to prevent.
+    // changes — a compositor RESIZE and the launch load — and repaints the
+    // plate on preview completion. NONE of those is an explicit kick: they are
+    // discovered by maybe_enqueue_waveform_render's dirty-detect on the next
+    // tick (main.cpp), so since 2026-09-02 kick_waveform_render has NO caller
+    // but the callback-unwired fallback at the tail of kick_waveform_sync
+    // below (grep-derived). FOLLOW-SCROLL LEFT THIS LIST that day — it was the
+    // last explicit async kick and the one the wiring in main.cpp was written
+    // for — because the async page left every surface painting the OLD
+    // viewport while the scanner's column sat outside it, so the playhead line
+    // vanished for a frame or two at each crossing; its reasoning lives at
+    // follow_scroll_if_needed. Panning left the list 2026-07-26 for the same
+    // rule: a mover the user sees renders synchronously like zoom. So both
+    // playback movers are on the synchronous route now — the CENTERED pin
+    // every scanner frame (the entry above) and follow once per page — and the
+    // old contrast between them (the pin's per-frame pan being the stale-basis
+    // smear the sync rule exists to prevent, follow's rare jump being absorbed
+    // by the async kick) is retired with the move.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport

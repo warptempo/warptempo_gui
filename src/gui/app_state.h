@@ -4943,7 +4943,9 @@ struct AppState {
     // fingerprint (wf_cache.fp_vp_start / fp_vp_end / fp_area_w), NOT the live
     // viewport; painted_column_of_source_frame reads the LIVE viewport
     // (app.viewport_start_sample). During an async plate-publish window (a
-    // worker-dispatched viewport change — follow-scroll, center-on-playhead) the
+    // worker-dispatched viewport change — a compositor resize is the one left,
+    // follow-scroll having taken the synchronous route 2026-09-02 and
+    // center-on-playhead long before it) the
     // live viewport already holds the NEW span while the flags still paint at the
     // OLD one, so an overlay centered by the LIVE viewport would jump off its
     // flag until the worker caught up. These fields hold the vp_start/vp_end/
