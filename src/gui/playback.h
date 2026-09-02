@@ -30,9 +30,10 @@
 //
 // Thread model:
 //   - Audio thread (the device's callback thread: JACK's process thread,
-//     AAudio's data callback): reads cursor_, writes
-//     cursor_ and is_playing_ via relaxed atomics. No allocation, no I/O,
-//     no locks.
+//     AAudio's data callback): reads and writes the cursor via relaxed
+//     atomics, lowers the session word's playing bit at a natural end by a
+//     generation-qualified compare-exchange (playback_common.h). No
+//     allocation, no I/O, no locks.
 //   - Main thread: calls init/play/stop/shutdown; snapshots
 //     cursor() and is_playing() per redraw.
 //
@@ -63,9 +64,13 @@
 //
 // EVERY ANCHOR IS A HEARD INSTANT (architect 2026-09-01): the pair is
 // (sample, the steady_clock instant that sample leaves the loudspeaker), and
-// one per-session constant — the device's reported output latency,
-// `output_latency_frames` at the output rate, the JACK backend's figure and
-// AAudio's zero by ruling — is added at every anchor write. The audio thread
+// one figure — the device's reported output latency, `output_latency_frames`
+// at the output rate, the JACK backend's figure and AAudio's zero by ruling —
+// is added at every anchor write: ONE FIGURE PER EPOCH, re-anchored at the
+// change (a quantum change moves it mid-session; the reader records the
+// offset its anchor was built with and, when the live figure differs,
+// re-anchors from the latest stamp exactly as a resync does, so the cursor and
+// the natural-end deadline never mix two epochs). The audio thread
 // supplies the instants: at the top of each fill it reads the clock once and
 // publishes, under a generation seqlock, the pair (read cursor, the instant
 // that cursor's frame enters the port) — the SEAT when a fill absorbs a
@@ -77,9 +82,10 @@
 // the latest stamp plus the constant, so a resync's step is the wall-clock
 // DRIFT since the last anchor and nothing else — neither the latency nor the
 // period-wide phase residual the old `now` anchoring re-rolled. THE
-// NATURAL-END HOLD is the same constant at the far end: the render body
-// lowers `playing` at the window's end and sets `ended_naturally` beside it,
-// cursor() keeps extrapolating (clamped at the end) while natural_end_holding()
+// NATURAL-END HOLD is the same figure at the far end: the render body swaps
+// the session word from playing to ended at the window's end (one
+// generation-qualified exchange, playback_common.h), cursor() keeps
+// extrapolating (clamped at the end) while natural_end_holding()
 // answers true — until the last frame the ending fill consumed has been heard
 // — and the run loop's tick tears the scanner down only then, so the line
 // vanishes when the sound does. is_playing() is untouched by the hold.
@@ -131,8 +137,14 @@ public:
     // natural-end teardown.
     // Both are DOMAIN coordinates of the bound buffer; the domain offset
     // is subtracted here, before the internal buffer-local clamps and
-    // early-return checks. Safe to call while already playing — the
-    // previous run is torn down cleanly first.
+    // early-return checks. Safe to call while already playing, and safe
+    // against the previous run's own natural end: the publish is a new
+    // generation of the session word, and the old run's terminal is a
+    // compare-exchange on that word which fails against it — the fill in
+    // flight finishes its block of the old run and the next callback seats
+    // this one (playback_common.h, the session word). No teardown happens
+    // here: the callback keeps running and the range/pending stores simply
+    // supersede the old run's.
     void play(int64_t start_sample, int64_t end_sample);
 
     // Stop playback and block until any in-flight audio callback has exited,

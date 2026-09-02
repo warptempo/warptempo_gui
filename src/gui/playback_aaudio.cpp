@@ -153,7 +153,10 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     const int     channel_count = impl->state.channels;
     const int64_t frames        = static_cast<int64_t>(num_frames);
 
-    if (!impl->state.playing.load(std::memory_order_acquire)) {
+    // THE GATE is an acquire load of the session word's playing bit
+    // (playback_common.h), the JACK callback's own.
+    if (!playback_session_playing(
+            impl->state.session.load(std::memory_order_acquire))) {
         playback_write_silence(channel_buffers, channel_count,
                                kPlaybackOutputChannels, 0, frames);
         // CONTINUE, never STOP: this arm is what the stream spends most of its
@@ -189,9 +192,14 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // SUSPENDED state, which is exactly the behaviour playback.h's
     // graph-suspension clause asks for: the render body would emit silence and
     // hold, and cursor() holds at the last audio position instead of
-    // extrapolating. Clearing `playing` makes is_playing() false, so the run
-    // loop's next tick reads this as a natural end and tears the scanner down
-    // through the product's one stop body.
+    // extrapolating. Lowering the session word's playing bit makes
+    // is_playing() false, so the run loop's next tick reads this as a natural
+    // end and tears the scanner down through the product's one stop body. A
+    // fill in flight that reaches its natural end after this finds the flag
+    // down and abandons its terminal (the word's comment, playback_common.h),
+    // so a live session's disconnect never raises the hold; and the next
+    // play() publishes a fresh generation, so no session is left stranded
+    // behind the lowered flag.
     //
     // NOTHING RECOVERS BY ITSELF: no auto-resume, no reconnect timer, no
     // retry. The next play() closes this stream and opens a new one at the new
@@ -199,7 +207,7 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // the product gives every other rare, loud fault.
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
-    impl->state.playing.store(false, std::memory_order_release);
+    impl->state.session.fetch_and(~kSessionPlayingBit, std::memory_order_release);
     impl->stream_dead.store(true, std::memory_order_release);
 
     std::fprintf(stderr,
@@ -466,7 +474,8 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // above, and an init whose own start was refused — and a refusal here
     // disables the device until the next play reopens it.
     if (!start_stream(*impl_)) {
-        impl_->state.playing.store(false, std::memory_order_release);
+        impl_->state.session.fetch_and(~kSessionPlayingBit,
+                                       std::memory_order_release);
         close_stream(*impl_);
     }
 }
@@ -478,17 +487,15 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
-    // THE DEVICE IS NOT TOUCHED HERE. Lower the flag, then fence on the
-    // callback counter (fence_quiesced): the stream keeps running and the
-    // callback keeps writing silence, which is the whole of the no-click
-    // lifecycle at the head of this file.
-    impl_->state.playing.store(false, std::memory_order_seq_cst);
+    // THE DEVICE IS NOT TOUCHED HERE. Lower the flag — and end any natural-end
+    // hold in the same word (the session word's clearer inventory,
+    // playback_common.h: a fill in flight can commit no terminal once the
+    // flag is down) — then fence on the callback counter (fence_quiesced):
+    // the stream keeps running and the callback keeps writing silence, which
+    // is the whole of the no-click lifecycle at the head of this file.
+    impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
+                                   std::memory_order_seq_cst);
     fence_quiesced(*impl_);
-    // A stop ends the natural-end hold (the field's clearer inventory,
-    // playback_common.h): behind the fence, so no fill is left to set it —
-    // and the fence's early returns (no stream, never started, a dead stream)
-    // are all states with no callback running either.
-    impl_->state.ended_naturally.store(false, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::is_playing() const {
@@ -546,7 +553,8 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
 
 void GuiPlayback::shutdown() {
     if (!impl_) return;
-    impl_->state.playing.store(false, std::memory_order_relaxed);
+    impl_->state.session.fetch_and(~kSessionPlayingBit,
+                                   std::memory_order_relaxed);
     close_stream(*impl_);  // stops and joins the callback thread
     impl_->device_ready = false;
     playback_clear_binding(impl_->state);

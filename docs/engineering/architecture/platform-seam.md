@@ -119,8 +119,12 @@ drag coordinates floor instead of truncating.
   (sample, the instant that sample leaves the loudspeaker), built from the
   audio thread's cycle stamp — (read cursor, the instant its frame enters
   the port), published under a seqlock at the seat and at every fill's end
-  — plus ONE per-session constant, the device's reported output latency
-  (`output_latency_frames`). THE CONSTANT IS THE JACK HALF'S: `playback.cpp`
+  — plus ONE FIGURE PER EPOCH, the device's reported output latency
+  (`output_latency_frames`), RE-ANCHORED AT THE CHANGE: the reader records
+  the offset its anchor was built with (`anchor_offset_ns`) and, when the
+  live figure differs (a quantum change mid-session), re-anchors from the
+  latest stamp exactly as a resync does, so the cursor and the natural-end
+  deadline never mix two epochs. THE FIGURE IS THE JACK HALF'S: `playback.cpp`
   registers the latency and buffer-size callbacks before `jack_activate`,
   reads the port range once after the auto-connect, takes the max over both
   ports and prints the figure to stderr whenever it changes. AAUDIO'S IS

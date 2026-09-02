@@ -48,6 +48,23 @@
 // interleaved lanes of one AAudio buffer.
 constexpr int kPlaybackOutputChannels = 2;
 
+// THE SESSION WORD'S LAYOUT (the field's comment, GuiPlaybackState::session):
+// bit 0 playing, bit 1 ended naturally, the generation above them.
+constexpr uint64_t kSessionPlayingBit = 1u;
+constexpr uint64_t kSessionEndedBit   = 2u;
+constexpr uint64_t kSessionGenShift   = 2u;
+constexpr bool playback_session_playing(uint64_t word) {
+    return (word & kSessionPlayingBit) != 0;
+}
+constexpr bool playback_session_ended(uint64_t word) {
+    return (word & kSessionEndedBit) != 0;
+}
+// A new session's word: the next generation, playing, not ended.
+constexpr uint64_t playback_session_next(uint64_t word) {
+    return (((word >> kSessionGenShift) + 1) << kSessionGenShift) |
+           kSessionPlayingBit;
+}
+
 // The engine state. Every backend's GuiPlayback::Impl holds one of these
 // beside its own device handles.
 struct GuiPlaybackState {
@@ -78,7 +95,7 @@ struct GuiPlaybackState {
     // whole buffer ahead of the block just rendered, and that block itself
     // `output_latency_frames` ahead of the loudspeaker). It is what the
     // resting readers snapshot — the render player's pause reads its resume
-    // point here, the natural-end compare clamps it at `end_sample` — and it
+    // point here, the natural-end fill clamps it at `end_sample` — and it
     // is NOT the predictor's anchor: the predictor anchors on the cycle stamp
     // below, which pairs this same position with the instant it enters the
     // port.
@@ -89,23 +106,38 @@ struct GuiPlaybackState {
     // extrapolates linearly from it in wall-clock time, in both directions —
     // a `now` before the anchor's instant reads the position heard at `now`,
     // floored at `start_sample`, which is how the line RESTS on the launch
-    // frame until the first sound and never steps back. THREE WRITERS, all
-    // main thread, one form: the launch latch (playback_cursor's first read
-    // after the session is seated: the stamp's sample at the stamp's port
-    // instant plus the heard offset), every resync (playback_resync_predictor:
-    // the same stamp-plus-offset form, so a resync's step is the accumulated
-    // steady_clock-vs-interface-clock DRIFT alone — the period-wide phase
-    // residual and the latency constant are both in the stamp) and the
-    // suspended hold (playback_cursor while output_rate reads 0: the held
-    // integer cursor at `now`, so a resume extrapolates from the held
-    // position). play() publishes (start, 0) — "await the seat" — and the latch
-    // fills the instant in exactly once per session (the monotonicity argument
-    // is at that arm). Never written inside the audio callback. Drift between
-    // predictor and audio is bounded by time since the last resync ×
-    // steady_clock vs sample-clock skew (sub-pixel at typical zoom levels for
-    // typical resync intervals).
+    // frame until the first sound and never steps back. FOUR WRITERS, all
+    // main thread, one form (`store_anchor`, playback_common.cpp): the launch
+    // latch (playback_cursor's first read after the session is seated: the
+    // stamp's sample at the stamp's port instant plus the heard offset), every
+    // resync (playback_resync_predictor: the same stamp-plus-offset form, so a
+    // resync's step is the accumulated steady_clock-vs-interface-clock DRIFT
+    // alone — the period-wide phase residual and the latency figure are both
+    // in the stamp), the LATENCY EPOCH re-anchor (playback_cursor's advancing
+    // arm, the same stamp form again, the moment the live heard offset differs
+    // from `anchor_offset_ns` below) and the suspended hold (playback_cursor
+    // while output_rate reads 0: the held integer cursor at `now`, so a resume
+    // extrapolates from the held position). play() publishes (start, 0) —
+    // "await the seat" — and the latch fills the instant in exactly once per
+    // session (the monotonicity argument is at that arm). Never written inside
+    // the audio callback. Drift between predictor and audio is bounded by time
+    // since the last resync × steady_clock vs sample-clock skew (sub-pixel at
+    // typical zoom levels for typical resync intervals).
     std::atomic<int64_t> anchor_sample{0};
     std::atomic<int64_t> anchor_ns{0};
+    // THE ANCHOR'S EPOCH: the heard offset (ns) the standing anchor was built
+    // with — the third word of the anchor, written beside the other two by
+    // every writer and main thread only like them. The device's latency figure
+    // is ONE FIGURE PER EPOCH, not a session constant: a quantum change moves
+    // it mid-session (the buffer-size callback re-reads it), and an anchor
+    // built with the old figure would then be extrapolated in the new epoch —
+    // the natural-end deadline, which reads the live figure, ending the hold
+    // short of (or past) the end the anchor reaches. So the reader compares
+    // the live offset to this word on every advancing read and, when they
+    // differ, re-anchors from the latest cycle stamp exactly as a resync does
+    // — one step of the latency delta, in the frame the figure changed.
+    // Unseated sessions need nothing: the latch reads the live figure.
+    std::atomic<int64_t> anchor_offset_ns{0};
     // The session's start, buffer-local — play()'s own, written beside the
     // anchor and read by the predictor as its FLOOR: an anchor stamped at a
     // heard instant still in the future extrapolates BACKWARD for a `now`
@@ -113,26 +145,75 @@ struct GuiPlaybackState {
     // rests on the launch frame until the first sound is actually heard.
     // Main thread only, like the anchor.
     std::atomic<int64_t> start_sample{0};
-    std::atomic<bool>    playing{false};
 
-    // THE NATURAL-END HOLD (architect 2026-09-01): set by the render body
-    // beside its `playing = false` at the natural end — the fill that read
-    // past `end_sample` — and read by playback_cursor's not-playing arm, which
-    // keeps extrapolating from the anchor (clamped at `end_sample`) while it
-    // stands, and by playback_natural_end_holding, which answers true until
-    // the last frame that fill consumed has been HEARD (the stamp's port
-    // instant plus the heard offset). So the drawn playhead outlives `playing`
-    // by exactly the output latency and vanishes when the SOUND ends, not
-    // `latency + (0, period]` early. `playing` itself is untouched by this bit:
-    // is_playing() still drops at the flag, so the fence-before-rebind ordering
-    // every conditional stop rests on is unchanged. THREE CLEARERS, all main
-    // thread: play()'s publish (a new session), the backends' stop() after
-    // their quiescence fence (the one stop body's road, and every other
-    // stop's), and bind / rebind (a new buffer). The audio thread never clears
-    // it: a session that ends is over for the callback the moment `playing`
-    // drops, and the hold is the main thread's picture of the sound still in
-    // the device's queue.
-    std::atomic<bool>    ended_naturally{false};
+    // THE SESSION WORD — the playing flag, the natural-end hold and the
+    // session generation in ONE atomic, so that the audio thread's terminal
+    // write is GENERATION-QUALIFIED by construction (2026-09-01, closing the
+    // play()-over-the-last-fill race): bit 0 is PLAYING, bit 1 is ENDED
+    // NATURALLY, the bits above are the generation, incremented by every
+    // publish. Layout at the constants below; the readers ask
+    // playback_session_playing / _ended of a loaded word.
+    //
+    // THE FLAG (bit 0) is the one release/acquire synchronization point
+    // between the two threads, as the bool it replaced was: play()'s publish
+    // stores the new word — generation + 1, playing — with release as the last
+    // step of its publish block, and the backend's callback loads the word
+    // with acquire at its gate, so a callback that sees the bit up sees the
+    // range and pending-start stores that preceded it. stop() lowers both bits
+    // in one fetch_and ahead of its quiescence fence; the AAudio disconnect and
+    // both shutdowns lower the flag the same way.
+    //
+    // THE TERMINAL (the render body's natural end) is ONE compare-exchange on
+    // this word: expected = the word the fill captured at its top (generation
+    // N, playing), desired = (generation N, ended). It succeeds only if no
+    // publish (a newer generation) and no stop (the bit already down) has
+    // written the word since the fill began, and a publish landing AFTER a
+    // successful exchange simply overwrites it with the new generation's word.
+    // So a stale fill can never lower a newer session's flag: before the word,
+    // a play() published between the old fill's gate and its natural-end
+    // stores let that fill store `playing = false` after the new publish's
+    // `true`, stranding the new pending_start behind the silence gate — the
+    // new scanner rested at its seed until the tick tore it down. The
+    // exchange's success order is RELEASE, pairing with every main-thread
+    // acquire load of the word (is_playing, the cursor readers, the rebind
+    // check) exactly as the bool's release store did: the fill's last buffer
+    // reads and its stamp and cursor stores are ordered before whatever the
+    // reader mutates afterwards. The capture at the fill's top is a relaxed
+    // load ordered by the gate's own acquire on the same word; a publish that
+    // lands between the gate and the capture makes the fill the NEW session's
+    // (it consumes that pending and its terminal names that generation), and
+    // one that lands after the capture makes the exchange fail — the fill
+    // abandons the terminal, having rendered a block of the old session into
+    // this buffer, and the next callback seats the new one. A failed exchange
+    // is the audio thread's ONLY reaction; it never retries and never writes
+    // the word otherwise.
+    //
+    // THE NATURAL-END HOLD (bit 1, architect 2026-09-01) is set by that same
+    // exchange — the fill that read past `end_sample` — and read by
+    // playback_cursor's not-playing arm, which keeps extrapolating from the
+    // anchor (clamped at `end_sample`) while it stands, and by
+    // playback_natural_end_holding, which answers true until the last frame
+    // that fill consumed has been HEARD (the stamp's port instant plus the
+    // heard offset). So the drawn playhead outlives the flag by exactly the
+    // output latency and vanishes when the SOUND ends, not `latency + (0,
+    // period]` early. The flag still drops at the terminal — is_playing()
+    // reads bit 0 alone — so the fence-before-rebind ordering every
+    // conditional stop rests on is unchanged, and riding in the same word the
+    // hold bit is visible to every reader that saw the flag drop, with no
+    // second ordering to argue. THREE CLEARERS, all main thread: play()'s
+    // publish (a fresh word, no bits), the backends' stop() (the fetch_and at
+    // its head, ahead of the fence — a fill in flight can commit no terminal
+    // once the flag is down, its exchange expecting the flag up), and bind /
+    // rebind (a new buffer). The audio thread never clears it: a session that
+    // ends is over for the callback the moment the flag drops, and the hold is
+    // the main thread's picture of the sound still in the device's queue.
+    //
+    // THE GENERATION never wraps in practice (a publish per press) and is
+    // never read as a number by anyone but the publish; it exists so two
+    // words that mean "playing" from different sessions can never compare
+    // equal. bind resets the whole word (no callback runs there); rebind
+    // clears the hold bit alone and keeps the generation.
+    std::atomic<uint64_t> session{0};
 
     // THE DEVICE'S OUTPUT LATENCY IN OUTPUT FRAMES: the time between a frame
     // entering our output port and its leaving the loudspeaker, as the backend
@@ -142,6 +223,10 @@ struct GuiPlaybackState {
     // the figure to stderr whenever it changes) and read by the predictor's
     // anchor writers on the main thread as `heard_offset_ns` (playback_common.
     // cpp): `output_latency_frames × 1e9 / output_rate`, 0 while suspended.
+    // ONE FIGURE PER EPOCH, re-anchored at the change: a mid-session change
+    // is consumed by playback_cursor's epoch check against `anchor_offset_ns`
+    // (that field's comment), so no anchor is ever extrapolated with a figure
+    // other than the one it was built with.
     // AAUDIO NEVER WRITES IT — the recorded asymmetry (the record is at the
     // AAudio Impl): the tablet's route is Bluetooth in the car, whose latency
     // is large, variable and unreported to the stream, so no figure the
@@ -168,8 +253,9 @@ struct GuiPlaybackState {
     // instant the last sound enters the port exactly). The predictor's anchor
     // writers read it and add the heard offset; playback_natural_end_holding
     // reads it for the hold's end. Never reset: every reader gates on the seat
-    // (pending_start == -1) or on `ended_naturally`, each of which a publish,
-    // a bind or a rebind puts back, so a stale stamp is never anchored to.
+    // (pending_start == -1) or on the session word's ended bit, each of which
+    // a publish, a bind or a rebind puts back, so a stale stamp is never
+    // anchored to.
     //
     // THE SEQLOCK'S ORDERING (the classic shape, all three words atomics so a
     // torn read is impossible and the lock guards only the pair's
@@ -229,12 +315,14 @@ void playback_write_silence(float* const* channel_buffers, int channel_count,
 // advancing the cursor. Stops early and fills the remainder with
 // silence if the cursor would pass end_sample. Writes the final source-cursor
 // back to state.cursor before returning, with the cycle stamp beside it; on
-// natural end, also sets state.ended_naturally and clears state.playing.
-// Audio thread only; the backend's callback calls this after its own
-// `playing` gate. See playback_write_silence for the stride. ONE CLOCK READ
-// per fill (the vDSO's steady_clock, at the fill's top), one compare-exchange
-// when a pending restart is absorbed, the seqlock's stores — no lock, no
-// allocation, no syscall.
+// natural end, also swaps the session word from playing to ended — the
+// generation-qualified terminal (the field's comment), abandoned if a newer
+// session was published since this fill began. Audio thread only; the
+// backend's callback calls this after its own acquire gate on the session
+// word. See playback_write_silence for the stride. ONE CLOCK READ per fill
+// (the vDSO's steady_clock, at the fill's top), one compare-exchange when a
+// pending restart is absorbed, one at a natural end, the seqlock's stores —
+// no lock, no allocation, no syscall.
 void playback_render_block(GuiPlaybackState& state,
                            float* const* channel_buffers,
                            int64_t stride,
@@ -269,7 +357,7 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 
 void   playback_resync_predictor(GuiPlaybackState& state);
 bool   playback_is_playing(const GuiPlaybackState& state);
-// The natural-end hold's whole test (the `ended_naturally` field): the
+// The natural-end hold's whole test (the session word's ended bit): the
 // session ended at its window's end and the last sound it queued has not yet
 // left the loudspeaker. False while playing, false after any stop.
 bool   playback_natural_end_holding(const GuiPlaybackState& state);

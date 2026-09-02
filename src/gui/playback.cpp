@@ -71,8 +71,9 @@ int sample_rate_callback(jack_nframes_t nframes, void* arg) {
 
 // THE OUTPUT LATENCY FIGURE (architect 2026-09-01): read each port's playback
 // latency range and publish the MAX over both ports' max into the engine's
-// `output_latency_frames` — the constant every predictor anchor adds
-// (playback_common.h). What the range holds is what the server propagated to
+// `output_latency_frames` — the figure every predictor anchor adds, one per
+// epoch, a standing anchor re-anchoring at the change (playback_common.h).
+// What the range holds is what the server propagated to
 // our port from the sink it feeds (pipewire-jack converts the port's
 // downstream latency into frames at the graph rate, WITH THE CURRENT QUANTUM
 // AS A TERM — on the architect's rig the quantum plus the USB sink's headroom,
@@ -167,8 +168,10 @@ int process_callback(jack_nframes_t nframes, void* arg) {
     }
 
     // STRIDE 1: JACK hands out one contiguous buffer per port
-    // (playback_write_silence's contract).
-    if (!impl->state.playing.load(std::memory_order_acquire)) {
+    // (playback_write_silence's contract). THE GATE is an acquire load of the
+    // session word's playing bit (playback_common.h).
+    if (!playback_session_playing(
+            impl->state.session.load(std::memory_order_acquire))) {
         playback_write_silence(channel_buffers.data(), channel_count, 1, 0,
                                static_cast<int64_t>(nframes));
         impl->process_cycles.fetch_add(1, std::memory_order_release);
@@ -360,7 +363,12 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->client_active) return;
-    impl_->state.playing.store(false, std::memory_order_seq_cst);
+    // Lower the flag AND end any natural-end hold in the one word (the
+    // session word's clearer inventory, playback_common.h): a fill in flight
+    // can commit no terminal once the flag is down — its exchange expects the
+    // flag up — so nothing is left to set the hold behind the fence.
+    impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
+                                   std::memory_order_seq_cst);
     // Quiescence fence. At most one process callback is in flight at a
     // time. One increment after the store retires the callback that may
     // have loaded playing before the store became visible; a second
@@ -378,9 +386,6 @@ void GuiPlayback::stop() {
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    // A stop ends the natural-end hold (the field's clearer inventory,
-    // playback_common.h): behind the fence, so no fill is left to set it.
-    impl_->state.ended_naturally.store(false, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::is_playing() const {
@@ -442,7 +447,8 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
 void GuiPlayback::shutdown() {
     if (!impl_) return;
     if (impl_->client) {
-        impl_->state.playing.store(false, std::memory_order_relaxed);
+        impl_->state.session.fetch_and(~kSessionPlayingBit,
+                                       std::memory_order_relaxed);
         if (impl_->client_active) {
             // jack_deactivate returns after the client leaves the graph, so
             // the process callback no longer borrows the sample buffer.

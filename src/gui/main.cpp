@@ -2505,7 +2505,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the audio thread's own flag, which drops at the natural end — and
         // the fence/bypass reasoning below is stated on it. `ma_sounding`
         // adds the NATURAL-END HOLD (GuiPlayback::natural_end_holding, the
-        // engine's ended_naturally bit): the flag has dropped but the last
+        // engine's session word's ended bit): the flag has dropped but the last
         // frames the ending fill queued are still leaving the loudspeaker,
         // and cursor() goes on extrapolating to the window's end for exactly
         // that long, so the heartbeat runs through it and the stop body waits
