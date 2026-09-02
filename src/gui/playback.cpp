@@ -171,10 +171,12 @@ int process_callback(jack_nframes_t nframes, void* arg) {
     // (playback_write_silence's contract). THE GATE is ONE acquire load of
     // the session word (playback_common.h): the callback gates on its playing
     // bit and hands that same word to the render body as its terminal's
-    // expected value — the word is loaded here and nowhere later in the
-    // fill, so a stop or a publish after this load changes the word and
-    // fails the fill's terminal, and the next callback acquires and seats
-    // the new publication.
+    // expected value and as the one generation whose command packet the fill
+    // may consume — the word is loaded here and nowhere later in the fill,
+    // so a stop or a publish after this load changes the word and fails the
+    // fill's terminal, the fill renders under its own generation's window
+    // regardless, and the next callback acquires and seats the new
+    // publication.
     const uint64_t session_word =
         impl->state.session.load(std::memory_order_acquire);
     if (!playback_session_playing(session_word)) {

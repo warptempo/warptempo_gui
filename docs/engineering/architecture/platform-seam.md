@@ -135,12 +135,24 @@ drag coordinates floor instead of truncating.
   the natural-end hold (the scanner outlives the session word's playing bit
   by the heard offset, which is the ending burst's own duration there). The
   hold and the cursor are ONE OBSERVATION on both backends (`GuiPlayback::
-  snapshot`, the tick's read; `cursor()`, `cursor_precise()` and
-  `natural_end_holding()` are faces of the same body): the latency epoch is
-  reconciled — the anchor re-built from the stamp at the live figure — BEFORE
-  the hold's verdict is formed from that same stamp/offset pair, so a figure
-  that moves inside the hold moves the line and the deadline together, and
-  the teardown never runs ahead of the re-anchor. So on the laptop the
+  snapshot`, the tick's read — the playing bit and the hold's verdict, no
+  cursor; `cursor()`, `cursor_precise()` and `natural_end_holding()` are
+  faces of the same body): the anchor is reconciled — re-built from the
+  stamp at the live figure where the epoch moved, and, from the first read
+  of the ended bit, onto the TERMINAL STAMP itself — BEFORE the hold's
+  verdict is formed from that same stamp/offset pair, so a figure that
+  moves inside the hold moves the line and the deadline together, the line
+  reaches the window's end exactly as the hold ends, and the teardown never
+  runs ahead of the re-anchor. THE WINDOW TRAVELS AS A COMMAND PACKET
+  (2026-09-01, the arc's third review): `play()` writes (start, end) under a
+  sequence word carrying the new generation and then releases the session
+  word; a fill consumes only the packet of the generation its gate acquired
+  — one read, no retry, a rejected read meaning a newer publish the next
+  callback's gate will acquire — and keeps that window as audio-thread-
+  private state, so a publish landing mid-fill can move neither the start
+  it seated nor the end it renders against; the seat is published by the
+  cycle stamp's generation tag, which the launch latch and every resync
+  compare against the word they loaded. So on the laptop the
   line rests on the launch frame until the first sound, tracks the ear to
   the crystal skew between resyncs (a resync's step is the drift alone),
   and vanishes with the sound; what remains is the DAC's own few-ms

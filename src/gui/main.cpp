@@ -2502,27 +2502,28 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
 
-        // THE FLAG, THE HOLD AND THE CURSOR, ONE READ (2026-09-01, the epoch
-        // reconciled ahead of the hold): `snap` is the engine's one
-        // main-thread observation (GuiPlayback::snapshot) — the session word
-        // loaded once, its playing bit and its natural-end hold answered
-        // from that load, and the predictor's cursor beside them from the
-        // same clock read and the same latency epoch, the anchor re-anchored
-        // FIRST where the live figure had moved under it. So the teardown
-        // below can never decide on a deadline the cursor's anchor has not
-        // caught up with: the verdict and the line's position are one epoch
-        // by this one call's shape. `ma_playing` is the audio thread's own
-        // bit, which drops at the natural end — the fence/bypass reasoning
-        // below is stated on it. `ma_sounding` adds the NATURAL-END HOLD (the
-        // session word's ended bit): the bit has dropped but the last frames
-        // the ending fill queued are still leaving the loudspeaker, and
-        // cursor() goes on extrapolating to the window's end for exactly
-        // that long, so the heartbeat runs through it and the stop body
-        // waits for it. THE SNAPSHOT'S CURSOR IS NOT WRITTEN INTO THE
-        // SCANNER HERE — the pre-paint hook owns that advance (the
-        // heartbeat's note below); the tick takes the observation for its
-        // verdict, and the anchor it reconciled is the one the paint then
-        // reads.
+        // THE FLAG AND THE HOLD, ONE READ (2026-09-01, the epoch reconciled
+        // ahead of the hold): `snap` is the engine's one main-thread
+        // observation (GuiPlayback::snapshot) — the session word loaded
+        // once, its playing bit and its natural-end hold answered from that
+        // load, the predictor's anchor re-anchored FIRST where the live
+        // figure had moved under it and, from the first read of the ended
+        // bit, onto the terminal stamp itself. So the teardown below can
+        // never decide on a deadline the line's anchor has not caught up
+        // with: the verdict and the line are one stamp by this one call's
+        // shape, and the line reaches the window's end exactly as the hold
+        // ends. `ma_playing` is the audio thread's own bit, which drops at
+        // the natural end — the fence/bypass reasoning below is stated on
+        // it. `ma_sounding` adds the NATURAL-END HOLD (the session word's
+        // ended bit): the bit has dropped but the last frames the ending
+        // fill queued are still leaving the loudspeaker, and cursor() goes
+        // on extrapolating to the window's end for exactly that long, so the
+        // heartbeat runs through it and the stop body waits for it. THE
+        // SNAPSHOT CARRIES NO CURSOR — the pre-paint hook owns the scanner's
+        // advance (the heartbeat's note below), so a cursor handed back here
+        // had no reader and rode the struct for one day (its record at
+        // GuiPlaybackSnapshot); the tick takes the observation for its
+        // verdict, and the anchor it stored is the one the paint then reads.
         const GuiPlaybackSnapshot snap = playback.snapshot();
         const bool ma_playing  = snap.playing;
         const bool ma_sounding = ma_playing || snap.natural_end_holding;
@@ -2594,14 +2595,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // latency), and cursor() extrapolated to the end through it; before
         // that day the line vanished the moment the flag dropped,
         // latency-and-a-fraction-of-a-period short of the last sound. AND THE
-        // VERDICT THAT LETS THIS BRANCH RUN CARRIES THE RECONCILED EPOCH: the
-        // snapshot above re-anchors the line onto the live latency figure
-        // before it answers the hold, so a figure that moved between the
-        // ending fill and this tick (a quantum change inside the hold) moves
-        // the deadline and the line together — until that day's second
-        // review the hold read the live figure while the anchor kept the
-        // old one, and a figure that DROPPED inside the hold could end it
-        // with the line still short of the end. The hold is the ENGINE's and
+        // VERDICT THAT LETS THIS BRANCH RUN CARRIES THE TERMINAL STAMP'S OWN
+        // LINE: the snapshot above re-anchors the line onto the ending fill's
+        // stamp — (end, the instant the last sound is heard), at the live
+        // latency figure — from its first read of the ended bit and before it
+        // answers the hold, so the line arrives at the window's end at the
+        // deadline itself and a figure that moved inside the hold (a quantum
+        // change) moves the deadline and the line together. Until that day's
+        // second review the hold read the live figure while the anchor kept
+        // the old one, and a figure that DROPPED inside the hold could end it
+        // with the line still short of the end; until its third the line ran
+        // on the standing anchor, drifted since its last resync, and the
+        // hold's end could find it short of `end` by that drift. WHAT THIS
+        // BRANCH ERASES is the last pre-paint's pixels, at most one paint
+        // period short of the end (the display's own, recorded at
+        // playback_publish_play); no cursor is written into the scanner here,
+        // since a deactivated scanner is never painted again (the scanner
+        // block, app_state.h) and a value written for no reader is residue —
+        // which is why the snapshot carries none. The hold is the ENGINE's and
         // belongs to every session (the render player's tick reads the same
         // deferred end); every OTHER stop road — Space, a modal open, the S/T
         // flip, a scrub, a trim write — takes the stop body at once, whose

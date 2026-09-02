@@ -107,10 +107,10 @@ struct GuiPlayback::Impl {
     // running BEHIND the sound by a wrong guess is the one failure the
     // compensation must not produce. What DOES reach this backend, through the
     // shared body, is the SEAT: the launch anchor is the instant the data
-    // callback absorbed the restart rather than the publish instant — at
-    // most one burst later (about 2 ms), and the truer of the two on both
-    // devices — and the natural-end hold, which with a zero offset ends
-    // within the ending burst's own duration of the flag's drop.
+    // callback consumed the session's command packet rather than the publish
+    // instant — at most one burst later (about 2 ms), and the truer of the
+    // two on both devices — and the natural-end hold, which with a zero
+    // offset ends within the ending burst's own duration of the flag's drop.
     GuiPlaybackState state;
 
     // MAIN THREAD ONLY (the head comment's threading block). `started` is
@@ -157,9 +157,11 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     // THE GATE is ONE acquire load of the session word (playback_common.h),
     // the JACK callback's own: the callback gates on its playing bit and
     // hands that same word to the render body as its terminal's expected
-    // value — loaded here and nowhere later in the burst, so a stop or a
+    // value and as the one generation whose command packet the fill may
+    // consume — loaded here and nowhere later in the burst, so a stop or a
     // publish after this load changes the word and fails the fill's
-    // terminal, and the next callback acquires and seats the new
+    // terminal, the fill renders under its own generation's window
+    // regardless, and the next callback acquires and seats the new
     // publication.
     const uint64_t session_word =
         impl->state.session.load(std::memory_order_acquire);
@@ -506,7 +508,16 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // callback's fence, is visible to this load, and the bit is lowered
     // here. Either way the published bit comes down, and the road taken is
     // the failed start's own: lower the bit, close the dead stream, and the
-    // next play() reopens.
+    // next play() reopens. THE THIRD LEG, which the fences do not cover: the
+    // callback stores the latch, fences, and is preempted BEFORE its
+    // fetch_and while this call sees the latch at its head, closes, reopens
+    // and publishes the fresh generation — the late fetch_and would then
+    // lower the NEW session's bit. What excludes it is close_stream's
+    // AAudioStream_close, which returns only after the callback thread has
+    // left (the error callback runs on that thread — the header's own rule
+    // that it may call neither requestStop nor close is the self-join it
+    // would be), so the delayed fetch_and has landed before the close
+    // returns, and so before the reopen and the publish.
     std::atomic_thread_fence(std::memory_order_seq_cst);
     if (impl_->stream_dead.load(std::memory_order_acquire)) {
         impl_->state.session.fetch_and(~kSessionPlayingBit,
