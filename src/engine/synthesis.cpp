@@ -505,9 +505,23 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // fires exactly at the authored frame" is true of WHICH frame
             // seeds, not of where that frame's content lands. The GUI's
             // lead-in drop authors a reset N/2 output samples before the point
-            // it protects, which puts that point outside the seed grain by
-            // construction, so the grain's lateness never reaches it; neither
-            // a nearest-centre placement nor a stretched seed is opened.
+            // it protects, which puts that point outside the seed grain TO THE
+            // SCHEDULE'S ROUNDING, so the grain's lateness does not reach it;
+            // neither a nearest-centre placement nor a stretched seed is
+            // opened. THE RESIDUE IN THAT "TO THE ROUNDING" (recorded
+            // 2026-09-02, architect approval 2026-09-02, comment-only): pass
+            // 1's placement compare is on the schedule's ROUNDED window start
+            // against the integer query, so a seed centre up to half a source
+            // frame past the authored reset still qualifies and the grain can
+            // end ½/tempo output samples past the protected point — two
+            // samples at the 0.25 tempo floor — at the grain's own ZERO-WEIGHT
+            // edge, where the Hann² window has tapered to nothing. It has no
+            // effect on the audio and none on the drop, whose authored frame
+            // is unchanged; it is the trim crop's own rounding class (the deep
+            // dive's item K), one more sample of a quantity already quantized
+            // onto the schedule. The derivation, the worked case and the
+            // decision not to make the offset quantization-aware are at
+            // phaseresetmarkers_ops.cpp's derivation comment.
             bool phase_reset_fired = false;
             while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
                    stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {

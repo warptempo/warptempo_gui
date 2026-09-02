@@ -111,6 +111,23 @@ struct GuiPlayback::Impl {
     // instant — at most one burst later (about 2 ms), and the truer of the
     // two on both devices — and the natural-end hold, which with a zero
     // offset ends within the ending burst's own duration of the flag's drop.
+    //
+    // THE ZERO IS SCOPED TO THE ROUTE, AND THE ROUTE IT WAS RULED FOR PAINTS
+    // NO SCANNER (recorded 2026-09-02 from the truthfulness deep dive's item
+    // I, record-only — the zero stays). In the car the render player stands,
+    // and under it the waveform scanner is not sampled or painted at all
+    // (main.cpp's pre-paint hook returns above it): the only moving picture is
+    // the modal row's play-scrub and its clock, and neither is registered
+    // against a waveform, so the uncompensated lead costs nothing anyone can
+    // see there. On the tablet's own SPEAKER, where the scanner IS painted,
+    // the latency is by contrast stable and reportable
+    // (AAudioStream_getTimestamp, the 10–25 ms class), and the line leads the
+    // sound by that unreported figure — the laptop's pre-compensation picture
+    // in miniature. That is accepted and left whole rather than half-measured:
+    // the tablet is the car's player, so its scanner accuracy on the speaker
+    // is moot for this use, and publishing a figure for one route while the
+    // other stays a guess would make the backend's answer depend on where the
+    // sound happens to be going.
     GuiPlaybackState state;
 
     // MAIN THREAD ONLY (the head comment's threading block). `started` is

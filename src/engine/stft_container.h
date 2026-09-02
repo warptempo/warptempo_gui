@@ -67,9 +67,26 @@ struct PghiHeapNode {
 // frame's content is centered at its window center, which the synthesis un-shift
 // lands at OLA index N/2. Trimming exactly N/2 makes source frame 0 map to output
 // frame 0. The remaining OLA ramp-up (the head region before overlap reaches
-// unity) is intentionally NOT trimmed -- it is kept as a brief head fade-in over
-// (near-)silent lead-in material; it is amplitude only and does not move
-// alignment. Consequences any downstream module must respect:
+// unity) is intentionally NOT trimmed -- it is kept as a head fade-in over
+// (near-)silent lead-in material, and it does not move alignment.
+// WHAT THAT FADE ACTUALLY IS (recorded 2026-09-02 from the truthfulness deep
+// dive's item D, measured on a scratch render; architect approval 2026-09-02,
+// comment-only): it is not "brief" and it is not amplitude alone, which is
+// what this block claimed until that day. The analysis guard in analyze_frame
+// leaves a frame whose read STARTS before sample 0 entirely zero -- the tail
+// is zero-PADDED through navail, the head is not -- and the schedule's first
+// two entries are negative (positions[0] = -2048, positions[1] = -1024 at
+// unity tempo), so frames 0 and 1 are analysed as silence and the output
+// ramps 0 -> 1 over 3*R_s = 3072 samples, 70 ms at 44.1 kHz (measured
+// amplitude 0.000 / 0.162 / 0.828 / 1.02 at output 0 / 1024 / 2048 / 2560).
+// IT IS HEAD PHASE STATE TOO: frame 0 seats theta = phi on an empty spectrum
+// and frame 1 is quiet everywhere, so the head's synthesis phase is seeded
+// from zeros rather than from analysis, and a phase reset authored before the
+// third schedule frame's centre (source frame 2048 at unity tempo,
+// map_target_to_source(N/2) in general) places on frame 0 or 1 and seeds
+// NOTHING -- measured inert. Alignment is intact throughout. The history,
+// the accepted cost and the shape a fix would take are at that guard.
+// Consequences any downstream module must respect:
 //   - Output sample 0 in the final WAV corresponds to pre-trim OLA position N/2,
 //     so a feature at source S lands at output sample tgt(S) (== map_source_to_
 //     target(S)) -- frame-exact with an ideal time-stretch from frame 0 onward.
@@ -288,6 +305,33 @@ struct AudioSTFT {
         // Whole-frame guard: a frame whose start is out of [0, src_frames) is
         // entirely zero; a valid frame reads min(N, src_frames - ta) samples
         // and zero-pads the tail.
+        // THE HEAD IS NOT PADDED THE WAY THE TAIL IS, AND THAT IS KEPT ON
+        // PURPOSE (architect 2026-09-02, record-only, the deep dive's item D;
+        // architect approval 2026-09-02, comment-only). The two frames whose
+        // read starts before sample 0 are left WHOLE-ZERO, which is what makes
+        // the head fade 3*R_s long and seeds the head's synthesis phase from
+        // silence (the measured envelope and the inert-early-reset consequence
+        // are in the output-timing contract at the head of this file).
+        // HISTORY: the whole-zero head frames are a PRESERVED ACCIDENT of the
+        // libsndfile era -- a negative sf_seek read nothing -- kept
+        // deliberately at the planar move (01014096, 2026-05-31, "matches the
+        // old sf_seek/sf_readf behavior"). The one attempt to remove the ramp
+        // was 62f878f9 (2026-06-05, "Fix timing"): before it synthesis skipped
+        // a FULL N from the head, which took the ramp AND the latency away but
+        // put every feature N/2 early against the map; that fix cut the skip
+        // to N/2 and deliberately kept the ramp.
+        // THE FILL-THE-INPUT SHAPE, DESCRIBED HERE AND NOT LANDED: read
+        // [max(0, ta), min(src_frames, ta + N)) into the corresponding window
+        // indices -- the mirror on the left of the navail clamp on the right.
+        // Alignment is untouched by construction (a sample's window index does
+        // not depend on where the read starts), the head envelope would become
+        // 0.83 -> 1.0 and frame 0's seed would carry real content. It is a
+        // DIFFERENT mechanism from the failed cut-the-output attempt above,
+        // and it is NOT built: bytes would change from sample 0 through the
+        // first phase reset, costing a kFingerprintVersion bump, and the only
+        // hard-start source in this corpus would be an opera track cut at a
+        // transition, where a dip at the track's start is expected -- accepted
+        // 2026-09-02.
         if (ta >= 0 && ta < src_frames) {
             const int navail =
                 static_cast<int>(std::min<int64_t>(N, src_frames - ta));

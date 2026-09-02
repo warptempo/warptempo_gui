@@ -100,8 +100,17 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
 // exact, with no floating-point map round-trip; the forward map call
 // serves only the render-end verdict. An authored reset at frame 0 derives
 // to query -N/2, exactly the engine's first analysis frame query position:
-// legal and inert, since the first frame seeds synthesis phase from
-// analysis phase anyway. Strict ascent of the output holds trivially — the
+// legal and inert. THE INERT RANGE IS WIDER THAN FRAME 0, AND THE REASON IS
+// NOT THE ONE THIS COMMENT GAVE (recorded 2026-09-02 from the truthfulness
+// deep dive's item D, measured; architect approval 2026-09-02, comment-only):
+// the engine's first TWO schedule frames read from before sample 0 and its
+// analysis guard leaves such a frame WHOLE-ZERO, so frames 0 and 1 seed from
+// ZEROS rather than from analysis phase, and every reset authored before the
+// third schedule frame's centre — source frame 2048 at unity tempo,
+// map_target_to_source(N/2) in general — places on one of them and seeds
+// nothing at all. The engine-side record, the history and the accepted cost
+// are at stft_container.h's output-timing contract and its analysis guard.
+// Strict ascent of the output holds trivially — the
 // input source frames are strictly increasing and the emission is a
 // constant shift of them; the render-end drop only shortens the list.
 std::vector<double> derive_phase_reset_frame_map(

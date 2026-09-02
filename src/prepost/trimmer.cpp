@@ -358,6 +358,23 @@ std::expected<TrimPlan, std::string> plan_trim(
     // puts the closing target past L + N/2 > T_e (unclamped, step 5), and
     // under the clamp it is the full map's own EOF target, at or beyond
     // T_e; llrint is monotone.
+    // THE CROP IS END-EXCLUSIVE ON AN INCLUSIVE AUTHORED DOMAIN, ACCEPTED AND
+    // RECORDED (architect 2026-09-02, the truthfulness deep dive's item K;
+    // architect approval 2026-09-02, comment-only). The kept output is
+    // [llrint(tgt(b)), llrint(tgt(e))), so the authored end frame e — the last
+    // frame INSIDE the window by data-model.md's inclusive [0, total-1]
+    // ruling, the frame End lands on and the endcap sits on — is the first
+    // frame NOT rendered, one source frame's target span (1/tempo output
+    // samples, 23 µs at 44.1 kHz). It is not fixed to map(e + 1): the trim is
+    // already a rounded quantity here — both edges are llrint of mapped
+    // positions and the pre-roll anchors on hop multiples to keep the phase
+    // null past the first in-window reset — so the exclusive end is one more
+    // sample of that same rounding class. It is also the whole reason the
+    // full-window translation (trim_window_is_full) is load-bearing rather
+    // than an optimization: a (0, total-1) pair through this crop would not be
+    // byte-identical to untrimmed. The one place it shows is target view under
+    // a sub-window, where End parks the playhead one sample past the preview
+    // buffer's last frame and Space plays nothing.
     plan.post.begin_sample = std::llrint(T_b) - origin_target;
     plan.post.samples      = std::llrint(T_e) - std::llrint(T_b);
     return plan;

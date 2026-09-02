@@ -104,19 +104,52 @@
 // hold ends and a teardown decided on the verdict always has that line under
 // it (playback_common.h, the readers' block).
 //
-// Two alternatives were considered and rejected. A free-running predictor
-// with no resync is insufficient for medium-zoom playback
-// over windows long enough for steady_clock vs sample-clock skew to
-// accumulate to visible drift. A continuous audio-thread timestamp publish
-// with main-thread extrapolation against the latest publish is
-// rejected on perceptual grounds: a 100 Hz resync cadence at audio-buffer
-// rate produces a periodic high-frequency signal that the user is
-// sensitive to, even at sub-sample per-resync amplitudes. (The cycle stamp
-// above is that publish's DATA without its cadence: the main thread reads it
-// only at the resync events, never per frame, so motion between resyncs
-// stays the smooth wall-clock line.) A JACK-clock predictor — jack_frame_time
-// as the clock, every resync a no-op on JACK — was set aside for the same
-// smoothness reason and to keep a JACK-only clock out of the shared body.
+// THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
+// (architect 2026-09-02, the truthfulness deep dive's item C; the periodic
+// cadence proposed there does NOT land). Every resync is an EVENT — SIXTEEN
+// call sites at this writing, in classes: the zooms (apply_zoom_change,
+// apply_strip_drag_zoom's final frame, apply_zoom_to_start), the DISCRETE
+// pan (scroll_viewport with continuous=false — a drag pans without one and
+// re-anchors once at its end), the centring jump, follow's page and the
+// on-edges of the follow and centred toggles, the map-change re-land
+// (reseat_playhead_to), the resize whose level moved, and the pointer ends
+// (the nav drag's and the overview drag's release and force-end, the touch
+// hard end). Grep `resync_predictor` and re-count; never inherit this number.
+// So a session that is launched and left alone — the architect's own `c`,
+// Space, no pan, and the `y` pin, which derives its camera per frame and
+// resyncs nothing (the statement is at derive_centered_viewport) — runs the
+// whole play on steady_clock against the DAC's crystal with no re-anchor at
+// all. THAT IS AFFORDABLE BECAUSE THE DRIFT BETWEEN EVENTS IS BELOW THE
+// FRAME GRID AT THIS TOOL'S PLAY LENGTHS: the clocks part at 10–100 ppm, so
+// 0.6–6 ms per minute, and this is a spot-check instrument for segments of
+// up to ~30 s (the trim/render design, the memory-vs-disk preview cutoff),
+// where that is 0.6–3 ms — under a pixel at the working zoom and inside the
+// ±10 ms band in which a picture/sound offset is invisible. The gain from a
+// cadence exists only on the multi-minute plays the tool is not for, while
+// its cost is a per-play risk of exactly the "imperceptible" class plus
+// machinery. The event resync is kept because it is FREE, not because a play
+// without one would be wrong: its step is the drift alone and it lands in the
+// same frame as the reflow that masks it (the criterion below). AND A LONG
+// PLAY STILL RESOLVES: the natural-end hold re-anchors onto the TERMINAL
+// STAMP, so whatever drift a multi-minute play accumulated is taken back
+// there in one step — the recorded, accepted behaviour.
+//
+// THE OLD PERCEPTUAL ARGUMENT IS RETIRED, NOT CARRIED. A continuous
+// audio-thread timestamp publish with main-thread extrapolation against the
+// latest publish used to be rejected here on perceptual grounds — a 100 Hz
+// re-anchor "produces a periodic high-frequency signal the user is sensitive
+// to". That was an argument against the OLD `now` anchoring, which re-rolled
+// the period-wide phase residual and could step by a whole buffer period;
+// today's anchor is the stamp, whose step is the drift alone — about one
+// source frame, 0.02 px at the working zoom, fifty re-anchors under a single
+// pixel — so a periodic re-anchor would not be VISIBLE. It is not built
+// because it is not NEEDED. (The cycle stamp above is that publish's DATA
+// without its cadence: the main thread reads it only at the resync events,
+// never per frame, so motion between resyncs stays the smooth wall-clock
+// line.) A JACK-clock predictor — jack_frame_time as the clock, every resync
+// a no-op on JACK — stays set aside on the one reason that survives: keeping
+// a JACK-only clock out of the shared body (its smoothness half went with
+// the perceptual argument).
 //
 // The masking criterion for the chosen design is single-frame: each
 // resync's discontinuity — the accumulated drift since the last anchor, now

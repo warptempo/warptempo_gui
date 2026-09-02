@@ -449,6 +449,22 @@ void render_playhead(cairo_t* cr,
     if (playhead_pixel_x < -static_cast<double>(playhead_half_px())) return;
     if (playhead_pixel_x > static_cast<double>(area.w - 1 + playhead_half_px())) return;
 
+    // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
+    // CELL, AND THE HALF-COLUMN BIAS THAT LEAVES IS ACCEPTED (architect
+    // 2026-09-02, the truthfulness deep dive's item N, a coarse-zoom cost).
+    // The playhead — and the marker stems, endcaps and flags, which all reach
+    // their column through the same nearbyint rule (frame_to_paint_sample at
+    // the head of this file) — paints AT a lattice point, while the bar drawn
+    // in that column covers the frames AFTER it, [g(c), g(c+1)) in the plate
+    // loop above. So a point and the bar under it can disagree by up to half a
+    // column: invisible at the working zoom, and only at coarse zooms does the
+    // line fall on the wrong side of a transient (up to ~0.47 s at the full
+    // zoom-out of a 30-minute movement, where one column is nearly a second
+    // wide). The POINT model is what is load-bearing and it is not traded for
+    // the cell rule here: every column→frame landing in the product rides it,
+    // with the worst-case round-trip residue derived as 0.345 px in
+    // zoom-viewport-strip.md. Reading the bar as [g(c) − spp/2, g(c) + spp/2)
+    // is the alternative that was declined.
     const double col  = std::nearbyint(playhead_pixel_x);
     const double x_px = area.x + col + 0.5;
 

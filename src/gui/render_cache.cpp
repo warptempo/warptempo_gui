@@ -323,6 +323,16 @@ std::vector<uint8_t> render_fingerprint(
     // and the static_assert below fails the build the moment EngineSettings
     // gains a field (the canonical-key addition recipe touches both), so a new
     // field's encoding and order must be chosen at this switch.
+    // THE PROVENANCE FIELDS ARE KEY MEMBERS, AND THAT COST IS ACCEPTED
+    // (recorded 2026-09-02, the truthfulness deep dive's item Q). Of the six,
+    // only `scale` reaches the engine; title, bpm, notes, url and cover are
+    // informational (engine_settings.h says so at each field), so editing one
+    // of them invalidates every cached artifact and the next render spends the
+    // full synthesis to produce byte-identical audio. It is the price of the
+    // full-recipe key ruled above and it is deliberately not bought off with a
+    // per-field live/inert classification: such a split would have to be
+    // re-proved at every schema change, and this exhaustive switch exists
+    // precisely so no field is ever quietly assumed inert.
     static_assert(sizeof(EngineSettings) ==
                       5 * sizeof(std::string) + sizeof(double),
                   "EngineSettings changed: decide the new field's render-byte "
@@ -369,6 +379,14 @@ std::vector<uint8_t> render_fingerprint(
     // materialization discards never reach this list, so edits that cannot
     // change engine input cannot move the key. All survivors are enabled by
     // the resolver's output invariants — no disabled flag exists here.
+    // THE LABEL STRINGS ARE ENGINE INPUT, AND A CONSISTENT RENAME BUYS
+    // NOTHING (recorded 2026-09-02, item Q, accepted): a `label_ref` takes its
+    // `label_def`'s segment duration in build_warp_frame_map, so the names do
+    // select the map and belong in the key — but renaming BOTH sides of a pair
+    // yields the identical map and identical output bytes while moving this
+    // key, so the next render redoes the whole synthesis to land exactly where
+    // it already was. A cost, not a defect, on the same reasoning as the
+    // provenance fields above.
     put_u32(fp, static_cast<uint32_t>(resolved_warp_markers.size()));
     for (const auto& m : resolved_warp_markers) {
         put_i64(fp, m.time_frame);

@@ -449,6 +449,16 @@ int main(int argc, char** argv) {
     // --- render into the buffer, then run the shared post-engine chain
     // (crop when trimmed -> peak limiter -> encode to the sibling staging
     // file); success publishes atomically via rename.
+    // THIS PUBLISH WRITES THE WAV AND NO `.fingerprint`, THE CLI'S SECOND
+    // RECORDED ASYMMETRY WITH THE GUI (recorded 2026-09-02, the truthfulness
+    // deep dive's item Q; architect approval 2026-09-02, comment-only — the
+    // first is the missing prune, render-pipeline.md). The GUI publishes the
+    // deliverable together with its fingerprint sidecar, which is what later
+    // lets it recognize that deliverable as current and serve the up-to-date
+    // rung; a CLI deliverable therefore can never prove itself current, and
+    // the GUI's next render into the same path re-renders instead of reusing
+    // it. That is the SAFE direction — the cost is one redundant render, never
+    // a stale wav served as fresh — so it is recorded rather than fixed.
     const std::string staging_output_path = render_staging_path(out_path);
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {

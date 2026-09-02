@@ -144,7 +144,19 @@ drag coordinates floor instead of truncating.
   keeps the uncompensated lead and gets only the seat move (the launch
   anchor at the absorbing burst rather than the publish, ≤ one burst) and
   the natural-end hold (the scanner outlives the session word's playing bit
-  by the heard offset, which is the ending burst's own duration there). The
+  by the heard offset, which is the ending burst's own duration there). THE
+  ZERO IS SCOPED TO THE ROUTE, AND THE ROUTE IT WAS RULED FOR PAINTS NO
+  SCANNER (architect 2026-09-02, the deep dive's item I, record-only — the
+  zero stays): in the car the render player stands, and under it the waveform
+  scanner is neither sampled nor painted (`main.cpp`'s pre-paint hook returns
+  above it), so the only moving picture is the modal row's scrub and clock,
+  neither registered against a waveform, and the uncompensated lead costs
+  nothing visible there. On the tablet's own SPEAKER, where the scanner IS
+  painted, the latency is stable and reportable (`AAudioStream_getTimestamp`,
+  the 10–25 ms class) and the line leads the sound by that unreported figure
+  — the laptop's pre-compensation picture in miniature, moot for this use
+  because the tablet is the car's player, and left whole rather than measured
+  for one route and guessed for the other. The
   hold and the cursor are ONE OBSERVATION on both backends (`GuiPlayback::
   snapshot`, the tick's read — the playing bit and the hold's verdict, no
   cursor; `cursor()`, `cursor_precise()` and `natural_end_holding()` are
