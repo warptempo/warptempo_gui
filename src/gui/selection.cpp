@@ -1,7 +1,6 @@
 #include "selection.h"
 
 #include "audio.h"
-#include "engine/engine_geometry.h"  // kN — the lead-in offset's half-window
 #include "warp_frame_map_view.h"
 
 #include <cstdint>
@@ -55,12 +54,16 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
 
 // THE LEAD-IN LAUNCH OFFSET (architect 2026-08-30) — the contract and the
 // reader inventory are at the declaration (app_state.h). It lives here
-// beside the one subject derivation it reads; kN/2 output samples is the
-// lead-in the overlay depicts, exact arithmetic and never the painted band.
+// beside the one subject derivation it reads; kPhaseResetLeadInSamples
+// (kN/2) output samples is the drop's own subtraction inverted, so the launch
+// lands past the seed grain on the instant the drop was derived to protect
+// (the derivation at drop_phase_reset_lead_in_at_playhead,
+// phaseresetmarkers_ops.cpp) — exact arithmetic and never the painted band,
+// whose right edge snaps to the engine's hop lattice and is at most this.
 int64_t phase_reset_lead_in_launch_offset(const AppState& app,
                                           const GuiPlayback& playback) {
     return (!playback.is_playing() && overlay_subject(app).has_value())
-               ? kN / 2
+               ? kPhaseResetLeadInSamples
                : 0;
 }
 

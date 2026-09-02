@@ -12,7 +12,7 @@
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
-#include "engine/engine_geometry.h"  // kRs
+#include "engine/engine_geometry.h"  // kN, kRs — the seed frame mirror
 
 #include <algorithm>
 #include <array>
@@ -4546,20 +4546,80 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
 
 // -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
 
-// Paint-only overlay width: two synthesis hops of target/output time, the
-// scale of the reset's local effect — the stretch of output immediately
-// following the reset over which the re-seeded phase takes hold before
-// normal propagation resumes. A pure authoring aid with no engine meaning,
-// consumed nowhere else in the product.
-constexpr double kPhaseResetOverlayHops = 2.0;
-const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
-    std::nearbyint(kPhaseResetOverlayHops * static_cast<double>(kRs)));
+// THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
+// schedule index m the engine seeds at for a reset authored at source frame
+// `reset_source_frame` under `map` — an EMPTY map is the identity, as it is
+// for the map functions themselves. It restates engine.cpp's pass 1 (the
+// last schedule entry ≤ the parser's `S − N/2`) over stft_container.h's
+// schedule (generate_source_frame_positions: positions[m] =
+// llrint(map_target_to_source(m·R_s) − N/2), half-to-even), and it MUST STAY
+// IN LOCKSTEP with both — a change to either is a change here. The compare
+// is in SOURCE terms exactly as the engine's is; ⌊T/R_s⌋ in the target
+// domain is NOT the rule (the schedule rounds in source terms, and a
+// piecewise map can put the two on different sides of a boundary). The
+// condition is monotone in m (the map is monotone), so the search starts at
+// ⌊T/R_s⌋ and steps until it flips — a few iterations at most. m = 0 always
+// qualifies (positions[0] = −N/2 ≤ S − N/2 for every authored S ≥ 0), so the
+// engine's before-the-first-frame drop has no twin here. The schedule's END
+// is not applied: a reset past the map's final anchor, which the parser
+// drops from participation, still paints its band as it paints its flag.
+static int64_t phase_reset_seed_frame_index(
+    int64_t reset_source_frame,
+    const std::vector<WarpFrameMapSegment>& map) {
+    const auto seeds_at_or_before = [&](int64_t m) {
+        const double window_start =
+            map_target_to_source(static_cast<double>(m * kRs), map)
+            - static_cast<double>(kN) / 2.0;
+        return std::llrint(window_start) <= reset_source_frame - kN / 2;
+    };
+    const double t_reset = map_source_to_target(
+        static_cast<double>(reset_source_frame), map);
+    int64_t m = std::max<int64_t>(
+        0, static_cast<int64_t>(std::floor(t_reset / static_cast<double>(kRs))));
+    while (m > 0 && !seeds_at_or_before(m)) --m;
+    while (seeds_at_or_before(m + 1)) ++m;
+    return m;
+}
 
-// Resolves the band shown ahead of the focused phase reset marker: a
-// fixed-width forward span in target time starting at the marker's stem
-// column, showing the stretch of output immediately following the reset over
-// which the re-seeded phase takes hold. Paint-only: no persisted state,
-// nothing on disk, no settings key, no undo interaction.
+// Resolves the band shown ahead of the focused phase reset marker: from the
+// marker's stem column to where the reset's SEED GRAIN ends, in target time.
+// Paint-only: no persisted state, nothing on disk, no settings key, no undo
+// interaction.
+//
+// THE BAND IS DERIVED, NOT A CONSTANT (architect 2026-09-02; the model and
+// the derivation of the lead-in it depicts are at
+// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead,
+// phaseresetmarkers_ops.cpp — the one prose home). The engine seeds a reset
+// at the LAST synthesis frame whose window CENTRE ≤ the authored frame
+// (phase_reset_seed_frame_index above, the engine's rule mirrored) and that
+// frame re-synthesizes its window verbatim — the seed grain, centred on the
+// seed centre C, ending at C + N/2 — with propagation resuming past it. So:
+//   LEFT EDGE  = the marker's own column (the stem's placement), the
+//                authored event;
+//   RIGHT EDGE = the seed centre's target image + N/2, i.e. m·kRs +
+//                kPhaseResetLeadInSamples in output samples — where the
+//                verbatim grain ends and the map-placed, fully re-phased
+//                output begins.
+// The band is what the drop's lead-in clears and what Space's lead-in launch
+// skips (the launch reads the SELECTION predicate's exact
+// marker + kPhaseResetLeadInSamples, never this painted edge).
+// CONSEQUENCES, which are the point: the right edge sits on the engine's hop
+// lattice, so it STANDS STILL while the reset is nudged within one hop cell
+// and SNAPS a whole hop when the reset crosses a schedule frame's centre —
+// the moment the render's bytes actually change (two resets inside one cell
+// are one event). Its width is at most kPhaseResetLeadInSamples — exactly
+// that when the marker sits on a seed centre — and at least about
+// N/2 − R_s + 1 samples (the marker just short of the next centre); the
+// static_assert at the constant pins the maximum to the drop's offset.
+//
+// DAMAGE. The right edge depends on the reset's frame and on the displayed
+// map, both of which the left edge already depended on, so no new damage
+// owner is needed: a nudge and a drag commit pay the FULL waveform-area
+// invalidate (position_nudge.cpp's tail, marker_drag.cpp's commit — the
+// stem's own requirement), the drag's every motion event does too
+// (marker_drag.cpp's apply), and every map change (a cent step, a warp
+// move) runs the full waveform damage beside its plate re-warp
+// (warpmarkers_ops.cpp). A hop snap under any of them rides that damage.
 //
 // THE GEOMETRY AND VISIBILITY OWNER, kept SEPARATE from its one consumer
 // (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
@@ -4575,11 +4635,13 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 //
 // Painted in TARGET view, never source view, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
-// recorded here per CLAUDE.md). The span is a fixed target/output-domain
-// width, so it is constant in target time. Source view would show a
-// map-dependent, varying width — misrepresenting a constant span — so the
-// overlay is not drawn there. The reset's local take-hold stretch is a
-// phase-reset-only concept, so there is nothing on the warp axis to mirror.
+// recorded here per CLAUDE.md). The seed grain is an OUTPUT-domain extent —
+// the engine's window, on the engine's output lattice — so target time is
+// where it is a fixed picture; source view would show a map-dependent,
+// varying width, misrepresenting it, and the S+P drop is a stub with no
+// lead-in to depict (the drop's comment), so the overlay is not drawn there.
+// A seed grain is a phase-reset-only concept, so there is nothing on the
+// warp axis to mirror.
 GuiPaintHandler::PhaseResetOverlayBand
 GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     PhaseResetOverlayBand out;
@@ -4628,6 +4690,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // Paint sample: the exact expression render.cpp's file-local
     // frame_to_paint_sample uses, so marker and overlay can never disagree.
     double ms;
+    // The band's extent in output samples: from the marker's paint sample to
+    // the seed grain's end, derived in the block below from the same frame
+    // and the same map the paint sample reads.
+    int64_t width_samples;
     {
         if (app.active_audio_view != 'T') return out;
 
@@ -4664,13 +4730,28 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
             eff_time = ov.effective_time(idx, marker.time_frame);
         }
 
+        const size_t src_frame =
+            static_cast<size_t>(std::nearbyint(eff_time));
         if (tmap && !tmap->empty()) {
-            const size_t src_frame =
-                static_cast<size_t>(std::nearbyint(eff_time));
             ms = std::nearbyint(map_source_to_target(src_frame, *tmap));
         } else {
             ms = std::nearbyint(eff_time);
         }
+
+        // The right edge: the engine's seed frame for this reset, under the
+        // same displayed map (empty = identity, the rule unchanged), then its
+        // target image plus the seed window's half-width. The GUI's target
+        // coordinates are the FULL target-frame domain and the trimmer's
+        // pre-roll re-anchors on hop multiples of that same domain, so the
+        // lattice m·kRs is the same under a trim — no anchor term.
+        const int64_t seed_m = phase_reset_seed_frame_index(
+            static_cast<int64_t>(src_frame), m);
+        const int64_t grain_end = seed_m * kRs + kPhaseResetLeadInSamples;
+        width_samples = grain_end - static_cast<int64_t>(ms);
+        // ≥ 1 by construction: the seed centre's image is at most the reset's
+        // to the schedule's rounding, so grain_end − ms > N/2 − R_s. The
+        // clamp guards that rounding edge only, never a real geometry.
+        width_samples = std::max<int64_t>(1, width_samples);
     }
 
     // Displayed-viewport recipe: same as paint_playheads, so the overlay
@@ -4684,18 +4765,18 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // Columns: left_col takes the stem renderer's own placement — the shared
     // displayed_column_at rounding (warp_frame_map_view.h) — so the overlay's
     // left edge stays on the marker's column.
-    // right_col is a fixed whole-pixel offset ahead of it, so the far edge
-    // tracks the marker in lockstep instead of wobbling by independent
-    // per-endpoint rounding. width_px is the overlay span banker's-rounded to
-    // whole pixels — an approximate but rigid forward extent, which beats an
-    // exact but jittering one (the span is an authoring aid, not an engine
-    // point).
+    // right_col is a whole-pixel offset ahead of it, so the far edge tracks
+    // the marker in lockstep instead of wobbling by independent per-endpoint
+    // rounding. width_px is the derived extent banker's-rounded to whole
+    // pixels — an approximate but rigid extent, which beats an exact but
+    // jittering one (the band is an authoring aid, not an engine point; the
+    // hop snap is the extent's own step, not this rounding's).
     const int left_col = displayed_column_at(ms, vp_start, spp);
     const int width_px = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPhaseResetOverlaySamples) / spp));
+        static_cast<double>(width_samples) / spp));
 
-    // Too-zoomed-out: if the fixed forward extent rounds below one pixel,
-    // paint nothing at all — no sliver, no clamped minimum.
+    // Too-zoomed-out: if the extent rounds below one pixel, paint nothing at
+    // all — no sliver, no clamped minimum.
     if (width_px < 1) return out;
 
     const int right_col = left_col + width_px;

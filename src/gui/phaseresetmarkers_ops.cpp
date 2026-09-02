@@ -1,7 +1,6 @@
 #include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
-#include "engine/engine_geometry.h"  // kN
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "target_render.h"
@@ -84,23 +83,68 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // seed differently by its own clause: "no lead-in at all, just like no
 // offset overlay").
 //
-// TARGET VIEW — the LEAD-IN drop: place the reset kN/2 OUTPUT samples BEFORE
-// the playhead. The OLA/Hann synthesis lead-in makes a reset's output ramp
-// up over ~N/2 samples, reaching full scale ~N/2 after its authored frame;
-// offsetting by -N/2 places the reset so its full-scale output lands on the
-// playhead (the perceived transient). N/2 is measured in the target/output
-// paint domain, matching the output-domain phase-reset overlay, then mapped
-// to a source frame. kN/2 is an exact integer and the playhead is an integer
-// frame, so the offset is plain integer arithmetic (no snap needed); clamped
-// to 0.
+// TARGET VIEW — the LEAD-IN drop: place the reset kPhaseResetLeadInSamples
+// (kN/2) OUTPUT samples BEFORE the playhead. THE DERIVATION'S ONE PROSE HOME
+// (architect 2026-09-02, the requirement stated and the number derived from
+// it; the constant and its static_assert are at app_state.h, and Space's
+// inverse and the overlay band point here):
+//
+// THE REQUIREMENT. "Full coherence and full volume at the point where the
+// playhead stands when I drop the reset, such that the offset places the
+// actual reset marker enough in advance that both are reached by the time we
+// get to that point." Call that point P (the playhead at the press, in
+// output samples), the authored reset S in source frames and T its target
+// image.
+//
+// THE ENGINE IS WINDOW-CENTRED. A synthesis frame m analyses the source
+// window centred at map_target_to_source(m·R_s) and emits it around output
+// m·R_s; the parser hands the engine S − N/2 and the engine seeds the LAST
+// schedule frame whose window start ≤ S − N/2, i.e. whose CENTRE C ≤ S
+// (engine.cpp's pass 1 over stft_container.h's schedule), so C lies in
+// (S − R_a, S] and its image m·R_s in (T − R_s, T] to the schedule's
+// rounding. The seed frame re-synthesizes its window [C − N/2, C + N/2)
+// VERBATIM — theta = phi, the SEED GRAIN — and every later frame propagates
+// from it. Measured (2026-09-02, a steady tone across a reset): the OLA
+// crossover from the old phase to the new one DIPS from C − 1.5·R_s to
+// C + 0.75·R_s, deepest at C − R_s/2, its depth the old/new phase mismatch
+// (0 dB to a full null, random per channel), and is CLOSED from C + R_s.
+// Nothing "builds to full scale N/2 after the authored frame" — that
+// window-START picture was this comment's until 2026-09-02, and the
+// arithmetic below never rested on it.
+//
+// THE DERIVATION. P must be (1) past the dip, P ≥ C + R_s, and (2) OUTSIDE
+// the seed grain, P ≥ C + N/2: inside the grain the content is the seed's
+// verbatim, unstretched copy, which lands off the map under a tempo change
+// (the record at synthesis.cpp's seed comment), and only outside it is P
+// placed by propagation — on the map, at PGHI quality, the new phase fully
+// established. (2) implies (1). Since C's image is at most T, the grain ends
+// at most at T + N/2, so P is outside it FOR EVERY PLACEMENT iff
+// P ≥ T + N/2 — the reset authored at least N/2 output samples before P.
+// ONE HOP IS NOT ENOUGH: with the offset R_s, P = T + R_s while the grain
+// ends at C + 2·R_s > T + R_s for every C in (T − R_s, T], so P always sits
+// inside the seed's tail — the smearing heard at one hop (2a290c98,
+// 2026-06-29, "set kPhaseResetOffsetHops = 2.0", by ear). So THE OFFSET IS
+// N/2 = 2·R_s, the seed window's half-width: the MINIMUM that satisfies the
+// requirement, derived from it rather than chosen. The overlay band
+// (paint_handler.cpp) paints exactly the region this offset clears — the
+// seed grain's remaining extent past the authored reset, ending at C's image
+// + N/2 — and Space's lead-in launch skips it (selection.cpp).
+//
+// N/2 is measured in the target/output paint domain, then mapped to a
+// source frame. kPhaseResetLeadInSamples is an exact integer and the
+// playhead is an integer frame, so the offset is plain integer arithmetic
+// (no snap needed); clamped to 0.
 //
 // SOURCE VIEW — NO LEAD-IN AND NO MAP CONVERSION: the reset lands EXACTLY at
-// the playhead's source frame. The kN/2 is an OUTPUT-domain length the
-// source cursor is not in (subtracting it here would take kN/2 SOURCE frames
-// off a source cursor and seat the reset somewhere the lead-in does not
-// reach), and the offset's whole aim — the full-scale point on the playhead
-// — is only visible where the overlay is: the missing overlay and the
-// missing lead-in are the clues you are reading the wrong domain, and a
+// the playhead's source frame. S+P IS A STUB (architect 2026-09-02): it
+// exists so the W/P radio is not broken in source view, takes the minimum —
+// no overlay, no lead-in — and no decision rests on it; the lead-in is
+// needed and wanted, and it lives in T+P. The kN/2 is an OUTPUT-domain
+// length the source cursor is not in (subtracting it here would take kN/2
+// SOURCE frames off a source cursor and seat the reset somewhere the lead-in
+// does not reach), and the offset's whole aim — the protected point on the
+// playhead — is only visible where the overlay is: the missing overlay and
+// the missing lead-in are the clues you are reading the wrong domain, and a
 // misplaced reset is harmless and adjusted in target view. The identity
 // domain needs no active_domain_to_source_frame call either — the cursor IS
 // a source frame there.
@@ -123,8 +167,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
             static_cast<double>(app.playhead_cursor_sample));
         return;
     }
-    const int64_t ph =
-        std::max<int64_t>(0, app.playhead_cursor_sample - kN / 2);
+    const int64_t ph = std::max<int64_t>(
+        0, app.playhead_cursor_sample - kPhaseResetLeadInSamples);
     const int64_t src_frame = active_domain_to_source_frame(app, audio, ph);
     drop_phase_reset_at_position(static_cast<double>(src_frame));
 }

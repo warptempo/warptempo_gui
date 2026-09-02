@@ -1364,11 +1364,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the
         // phase-reset lead-in overlay has a SUBJECT, Space launches the scanner
-        // kN/2 output samples AHEAD of the resting playhead — the full-scale
-        // point of a reset dropped at the playhead — without moving the cursor,
-        // so the stop merely deactivates the scanner and the cursor it never
-        // touched is exactly where it was. A non-destructive audition of the
-        // OLA/Hann synthesis lead-in.
+        // kPhaseResetLeadInSamples (kN/2) output samples AHEAD of the resting
+        // playhead — past the seed grain of a reset dropped at the playhead,
+        // on the instant the drop's lead-in was derived to protect (the
+        // derivation at drop_phase_reset_lead_in_at_playhead,
+        // phaseresetmarkers_ops.cpp) — without moving the cursor, so the stop
+        // merely deactivates the scanner and the cursor it never touched is
+        // exactly where it was. A non-destructive audition of the reset's
+        // settled output.
         // THE PREDICATE IS THE SELECTION-STATE ONE (Selection::phase_overlay_
         // subject), never GuiPaintHandler::phase_reset_overlay_band: the band
         // layers geometry gates (area size, samples-per-pixel, sub-pixel forward
@@ -1604,8 +1607,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         //     every reference to that label. A property of definitions, not a
         //     defect.
         // In P view it drops the lead-in reset: a reset placed N/2 before the
-        // playhead so its OLA/Hann lead-in reaches full scale AT the playhead
-        // (the perceived transient), which composes with Space's lead-in
+        // playhead so the playhead's instant lies past the seed grain and its
+        // crossover — full level, the new phase settled, placed on the map
+        // (the derivation at drop_phase_reset_lead_in_at_playhead,
+        // phaseresetmarkers_ops.cpp) — which composes with Space's lead-in
         // audition — drop then Space cancels the two N/2 offsets and auditions
         // from exactly where the cursor was.
         // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S

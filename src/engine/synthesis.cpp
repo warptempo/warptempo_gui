@@ -489,6 +489,25 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // position. A frame-0 placement is inert: frame 0 seeds as
             // frame0 anyway. Channel-independent: each channel walks its own
             // cursor.
+            // THE SEED FRAME IS SYNTHESIZED UNSTRETCHED (recorded 2026-09-02,
+            // architect approval 2026-09-02, comment-only): theta = phi
+            // verbatim (stft_container.h's seed seat), while every propagated
+            // frame's content is placed on the map through the alpha-scaled
+            // frequency spread (stft_container.h's frontier step, the gradient
+            // scaled by R_s/R_a). So the seed grain's content at source offset
+            // δ from its centre lands at output m·R_s + δ, where the map puts
+            // it at m·R_s + δ·R_s/R_a — δ·(1 − R_s/R_a) off the map: late
+            // under a speed-up (up to +4.6 ms at tempo 1.20, +7.7 ms at 1.33;
+            // measured +130 samples on a real onset at 1.20), early under a
+            // slow-down; the propagated frames re-converge on the map. And
+            // the seed is the LAST frame whose centre ≤ the authored frame
+            // (engine.cpp's pass 1), 0 to R_a before it, so "a phase reset
+            // fires exactly at the authored frame" is true of WHICH frame
+            // seeds, not of where that frame's content lands. The GUI's
+            // lead-in drop authors a reset N/2 output samples before the point
+            // it protects, which puts that point outside the seed grain by
+            // construction, so the grain's lateness never reaches it; neither
+            // a nearest-centre placement nor a stretched seed is opened.
             bool phase_reset_fired = false;
             while (phase_reset_cursor < static_cast<int>(stft.phase_reset_placements.size()) &&
                    stft.phase_reset_placements[phase_reset_cursor].synth_frame == frame_idx) {

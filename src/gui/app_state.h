@@ -1,6 +1,7 @@
 #pragma once
 
 #include "device_config.h"
+#include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lead-in's one quantity
 #include "engine_settings.h"
 #include "gui_input.h"
 #include "history_diff.h"
@@ -10386,10 +10387,35 @@ int value_source_marker(const AppState& app, int64_t total_frames);
 // the class is only forward-declared here. The contract is at the member.
 bool target_preview_ready(const GuiTargetRender& target_render);
 
+// THE PHASE-RESET LEAD-IN, one quantity (architect 2026-09-02): the seed
+// window's half-width, N/2 = two synthesis hops of OUTPUT time. It is DERIVED
+// from the requirement — full level and full coherence at the point the
+// playhead stood on when the reset was dropped — and the derivation's one
+// prose home is the target-view drop's comment
+// (GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead,
+// phaseresetmarkers_ops.cpp); the two other readers point there. THREE
+// READERS, one number: the drop's subtraction, Space's launch offset
+// (phase_reset_lead_in_launch_offset below, its inverse) and the overlay
+// band's MAXIMUM width (GuiPaintHandler::phase_reset_overlay_band — the
+// band's right edge is the seed frame's image + this, so the band is exactly
+// this wide when the reset sits on a seed centre and narrower otherwise).
+// The static_assert pins the identity the derivation rests on: the offset IS
+// the half-window, and the half-window IS two hops, so neither the engine's
+// geometry nor this number can move without the other.
+constexpr int64_t kPhaseResetLeadInSamples = kN / 2;
+static_assert(kPhaseResetLeadInSamples == kN / 2 &&
+              kPhaseResetLeadInSamples == 2 * kRs,
+              "the phase-reset lead-in is the seed window's half-width, two "
+              "synthesis hops — see the derivation at "
+              "GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead");
+
 // THE LEAD-IN LAUNCH OFFSET, one owner (architect 2026-08-30, lifting the
-// Space arm's inline derivation): kN/2 output samples when the phase-reset
-// lead-in overlay has a SUBJECT and nothing is playing, else 0 — the offset
-// Space's launch adds to the resting cursor. Defined in selection.cpp beside
+// Space arm's inline derivation): kPhaseResetLeadInSamples (kN/2) output
+// samples when the phase-reset lead-in overlay has a SUBJECT and nothing is
+// playing, else 0 — the offset Space's launch adds to the resting cursor,
+// the drop's subtraction inverted, so drop-then-Space auditions from the
+// instant the cursor stood on: the point the lead-in was derived to protect,
+// past the seed grain the band depicts. Defined in selection.cpp beside
 // the one subject derivation it reads (Selection::phase_overlay_subject's
 // own spelling). TWO READERS: the Space dispatch arm (input_handler.cpp) and
 // space_launch_would_play below, which is how the PLAY face reads the REAL
