@@ -724,7 +724,7 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         // live session, the reseek body's precedent): the window stays the
         // item and only the resume point moves. A target inside the last
         // frame would be a one-frame impulse and a play() over an empty range
-        // returns without clearing the playing flag, so the end of the item
+        // returns without lowering the session word's playing bit, so the end of the item
         // is reached by letting it play out — the seek stops one frame short
         // of the exclusive end, which is where the natural end takes over.
         const int64_t live_target = std::min<int64_t>(target, rp.frames - 2);
@@ -819,8 +819,9 @@ void GuiRenderPlayer::on_natural_end() {
     // resume point left over from an earlier pause (the resume point is dead
     // state while the transport is live, so nothing else reads this write).
     rp.resume_frame = 0;
-    // THE FENCE FIRST, through the one stop body: `playing` is already false
-    // (the audio thread published it) but stop() is the quiescence proof the
+    // THE FENCE FIRST, through the one stop body: the session word's playing
+    // bit is already down (the audio thread's terminal exchange lowered it)
+    // but stop() is the quiescence proof the
     // next rebind requires, and the body's player fork takes the transport
     // down behind it — the tick's own natural-end shape.
     playback_lifecycle.stop_playback_if_playing();
@@ -888,8 +889,9 @@ void GuiRenderPlayer::tick() {
     if (rp.transport != Transport::Live) return;
     if (playback.device_unavailable()) {
         // NO DEVICE PAUSES, IT DOES NOT ADVANCE (the rule at on_natural_end's
-        // declaration): an engine that cannot sound leaves `playing` false
-        // exactly as a finished window does, so this arm stands ABOVE the
+        // declaration): an engine that cannot sound leaves the session word's
+        // playing bit down exactly as a finished window does, so this arm
+        // stands ABOVE the
         // natural-end test — and it covers BOTH shapes, the device that went
         // away mid-play (the AAudio latch) and the device that never came up
         // (an init that failed, the laptop without pipewire-jack), which

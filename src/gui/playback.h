@@ -75,20 +75,27 @@
 // publishes, under a generation seqlock, the pair (read cursor, the instant
 // that cursor's frame enters the port) — the SEAT when a fill absorbs a
 // restart, the fill-end pair on every fill (playback_common.h, the cycle
-// stamp). The launch anchor is the seat's stamp plus the constant, latched
-// once by cursor()'s first read after the seat (the publish anchors at
-// (start, "await the seat") and the line RESTS on the launch frame until the
-// first sound is heard — never a backward step); every resync anchors at
-// the latest stamp plus the constant, so a resync's step is the wall-clock
-// DRIFT since the last anchor and nothing else — neither the latency nor the
-// period-wide phase residual the old `now` anchoring re-rolled. THE
-// NATURAL-END HOLD is the same figure at the far end: the render body swaps
-// the session word from playing to ended at the window's end (one
-// generation-qualified exchange, playback_common.h), cursor() keeps
-// extrapolating (clamped at the end) while natural_end_holding()
-// answers true — until the last frame the ending fill consumed has been heard
-// — and the run loop's tick tears the scanner down only then, so the line
-// vanishes when the sound does. is_playing() is untouched by the hold.
+// stamp). The launch anchor is the seat's stamp plus that epoch's offset,
+// latched once by the first predictor read after the seat (the publish
+// anchors at (start, "await the seat") and the line RESTS on the launch frame
+// until the first sound is heard — never a backward step); every resync
+// anchors at the latest stamp plus that epoch's offset, so a resync's step is
+// the wall-clock DRIFT since the last anchor and nothing else — neither the
+// latency nor the period-wide phase residual the old `now` anchoring
+// re-rolled. THE NATURAL-END HOLD is the same figure at the far end: the
+// render body swaps the session word from playing to ended at the window's
+// end (one generation-qualified exchange, playback_common.h), cursor() keeps
+// extrapolating (clamped at the end) while natural_end_holding() answers true
+// — until the last frame the ending fill consumed has been heard — and the
+// run loop's tick tears the scanner down only then, so the line vanishes when
+// the sound does. is_playing() is untouched by the hold. THE READERS ARE ONE
+// OBSERVATION: cursor(), cursor_precise(), natural_end_holding() and
+// snapshot() are faces over one main-thread body that reconciles the epoch
+// FIRST — re-anchoring from the stamp where the live figure differs from the
+// anchor's — and then forms the position and the hold's verdict from that
+// one stamp/offset pair and one clock read, so a teardown decided on the
+// verdict always has the re-anchored line under it (playback_common.h, the
+// readers' block).
 //
 // Two alternatives were considered and rejected. A free-running predictor
 // with no resync is insufficient for medium-zoom playback
@@ -114,6 +121,17 @@
 // viewport-event frequency, keeping per-event accumulated drift sub-pixel
 // at every zoom and the snap masked by the user
 // motion at the resync site.
+
+// ONE OBSERVATION'S THREE ANSWERS (GuiPlayback::snapshot): the session word's
+// playing bit, the natural-end hold's verdict and the predicted cursor (the
+// bound buffer's domain, floored — cursor()'s own value), all from one load
+// of the word, one clock read and one latency epoch.
+struct GuiPlaybackSnapshot {
+    bool    playing             = false;
+    bool    natural_end_holding = false;
+    int64_t cursor              = 0;
+};
+
 class GuiPlayback {
 public:
     GuiPlayback();
@@ -140,11 +158,13 @@ public:
     // early-return checks. Safe to call while already playing, and safe
     // against the previous run's own natural end: the publish is a new
     // generation of the session word, and the old run's terminal is a
-    // compare-exchange on that word which fails against it — the fill in
-    // flight finishes its block of the old run and the next callback seats
-    // this one (playback_common.h, the session word). No teardown happens
-    // here: the callback keeps running and the range/pending stores simply
-    // supersede the old run's.
+    // compare-exchange expecting exactly the word its callback's gate
+    // acquired, which this publish changes — so a fill in flight when the
+    // publish lands finishes its block of the old run, its terminal fails,
+    // and the next callback acquires this publication and seats it
+    // (playback_common.h, the session word). No teardown happens here: the
+    // callback keeps running and the range/pending stores simply supersede
+    // the old run's.
     void play(int64_t start_sample, int64_t end_sample);
 
     // Stop playback and block until any in-flight audio callback has exited,
@@ -152,8 +172,11 @@ public:
     // COUNT CALLBACK INVOCATIONS for that proof — a JACK client's process
     // callback and an AAudio stream's data callback both keep running (silent)
     // between plays, each backend's device staying live from init to shutdown,
-    // so two counted invocations after the playing flag is lowered prove the
-    // callback is out of the sample buffer. THE DEVICE IS NOT STOPPED HERE on
+    // so two counted invocations after the session word's playing bit is
+    // lowered prove the callback is out of the sample buffer (and a fill that
+    // was in flight at the lowering can commit no terminal: its exchange
+    // expects the word its gate acquired, which the lowering changed). THE
+    // DEVICE IS NOT STOPPED HERE on
     // either platform. The wait has no deadline on either backend: it returns
     // only once the callback has quiesced, so a stalled or dead device hangs
     // here rather than letting the caller mutate a buffer the audio thread may
@@ -186,8 +209,20 @@ public:
     // natural end — is_playing() already false — until the last frame it
     // queued has been heard. The run loop's tick keeps the scanner through it
     // and takes the one stop body when it ends; every stop road clears it at
-    // once. False while playing and after any stop. Main thread only.
+    // once. False while playing and after any stop. Main thread only. A
+    // STORING reader like cursor(): the one observation it is a face of
+    // reconciles the latency epoch before it answers (the design note).
     bool    natural_end_holding() const;
+
+    // THE TICK'S READ — the playing bit, the hold's verdict and the cursor
+    // from ONE observation (the design note): one load of the session word
+    // answers the first two, and the cursor beside them comes from the same
+    // clock read and the same latency epoch, the anchor re-anchored first
+    // where the live figure had moved under it. So a terminal decision taken
+    // on `natural_end_holding` can never run ahead of the re-anchor the
+    // cursor's next paint would have made. Stores like cursor(). Main thread
+    // only.
+    GuiPlaybackSnapshot snapshot() const;
 
     // THERE IS NO DEVICE TO PLAY ON (2026-08-28, the render player's rule):
     // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
@@ -198,8 +233,9 @@ public:
     // play() is the documented silent no-op). The two are ONE ANSWER because
     // they are one fact to every consumer: nothing will sound.
     // IT IS NOT A NATURAL END, and that is what it exists to separate: a
-    // silent engine leaves `playing` false exactly as a window that reached
-    // its end does, and a consumer reading is_playing() alone would take the
+    // silent engine leaves the session word's playing bit down exactly as a
+    // window that reached its end does, and a consumer reading is_playing()
+    // alone would take the
     // one for the other — the render player's tick forks on this BEFORE its
     // natural-end test and PAUSES instead of advancing (GuiRenderPlayer::tick),
     // where otherwise it would walk a folder at tick rate with nothing to play
@@ -214,8 +250,11 @@ public:
     // extrapolated position as a double, in the SAME domain cursor() reports
     // (the bound buffer's domain offset added once, no translation). cursor()
     // returns floor(this) clamped to the window; the two agree exactly at the
-    // clamped window end. A pure reader with no side effects — cursor(), called
-    // alongside it on the main thread, owns the graph-suspended re-anchor. The
+    // clamped window end. A pure reader with no side effects — the same
+    // observation cursor() is, without its store: cursor(), called alongside
+    // it on the main thread, owns the graph-suspended re-anchor, the launch
+    // latch and the latency-epoch re-anchor, and this derives the same anchor
+    // without writing it. The
     // scanner's DRAWN pixel is derived from this so a per-frame viewport rescale
     // (a strip-drag zoom) slides it smoothly instead of stepping on integer
     // frames; the integer cursor() stays the domain / change-detection anchor.

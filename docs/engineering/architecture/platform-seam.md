@@ -107,8 +107,8 @@ drag coordinates floor instead of truncating.
   transient was audible as a click at the head of every audition): it is
   started at open, stopped only where it is about to be closed (shutdown,
   the dead-stream reopen — `close_stream` holds the file's one
-  `requestStop`), and between plays it runs while the callback's `playing`
-  gate writes silence and reads no sample. So the fence is now the SAME
+  `requestStop`), and between plays it runs while the callback's gate on the
+  session word's playing bit writes silence and reads no sample. So the fence is now the SAME
   PROOF ON BOTH BACKENDS — counting callback invocations, two after the
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback
@@ -132,8 +132,15 @@ drag coordinates floor instead of truncating.
   Bluetooth, whose latency is large, variable and unreported, so the tablet
   keeps the uncompensated lead and gets only the seat move (the launch
   anchor at the absorbing burst rather than the publish, ≤ one burst) and
-  the natural-end hold (the scanner outlives `playing` by the heard offset,
-  which is the ending burst's own duration there). So on the laptop the
+  the natural-end hold (the scanner outlives the session word's playing bit
+  by the heard offset, which is the ending burst's own duration there). The
+  hold and the cursor are ONE OBSERVATION on both backends (`GuiPlayback::
+  snapshot`, the tick's read; `cursor()`, `cursor_precise()` and
+  `natural_end_holding()` are faces of the same body): the latency epoch is
+  reconciled — the anchor re-built from the stamp at the live figure — BEFORE
+  the hold's verdict is formed from that same stamp/offset pair, so a figure
+  that moves inside the hold moves the line and the deadline together, and
+  the teardown never runs ahead of the re-anchor. So on the laptop the
   line rests on the launch frame until the first sound, tracks the ear to
   the crystal skew between resyncs (a resync's step is the drift alone),
   and vanishes with the sound; what remains is the DAC's own few-ms

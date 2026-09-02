@@ -2002,7 +2002,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Tick: runs once per event-loop iteration. During playback, snapshots
     // the audio thread's cursor and mirrors it into the main-thread playhead,
     // invalidating just the columns and timestamp that changed. Also
-    // detects natural end-of-playback via the atomic playing flag.
+    // detects natural end-of-playback via the session word's playing bit and
+    // its natural-end hold, read together in one engine snapshot.
     gui.set_on_tick([&]() {
         // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
         // thing this body does on EVERY tick, ahead of all four of its early
@@ -2501,17 +2502,30 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
 
-        // THE FLAG AND THE HOLD, read apart (2026-09-01): `ma_playing` is
-        // the audio thread's own flag, which drops at the natural end — and
-        // the fence/bypass reasoning below is stated on it. `ma_sounding`
-        // adds the NATURAL-END HOLD (GuiPlayback::natural_end_holding, the
-        // engine's session word's ended bit): the flag has dropped but the last
-        // frames the ending fill queued are still leaving the loudspeaker,
-        // and cursor() goes on extrapolating to the window's end for exactly
-        // that long, so the heartbeat runs through it and the stop body waits
-        // for it.
-        const bool ma_playing  = playback.is_playing();
-        const bool ma_sounding = ma_playing || playback.natural_end_holding();
+        // THE FLAG, THE HOLD AND THE CURSOR, ONE READ (2026-09-01, the epoch
+        // reconciled ahead of the hold): `snap` is the engine's one
+        // main-thread observation (GuiPlayback::snapshot) — the session word
+        // loaded once, its playing bit and its natural-end hold answered
+        // from that load, and the predictor's cursor beside them from the
+        // same clock read and the same latency epoch, the anchor re-anchored
+        // FIRST where the live figure had moved under it. So the teardown
+        // below can never decide on a deadline the cursor's anchor has not
+        // caught up with: the verdict and the line's position are one epoch
+        // by this one call's shape. `ma_playing` is the audio thread's own
+        // bit, which drops at the natural end — the fence/bypass reasoning
+        // below is stated on it. `ma_sounding` adds the NATURAL-END HOLD (the
+        // session word's ended bit): the bit has dropped but the last frames
+        // the ending fill queued are still leaving the loudspeaker, and
+        // cursor() goes on extrapolating to the window's end for exactly
+        // that long, so the heartbeat runs through it and the stop body
+        // waits for it. THE SNAPSHOT'S CURSOR IS NOT WRITTEN INTO THE
+        // SCANNER HERE — the pre-paint hook owns that advance (the
+        // heartbeat's note below); the tick takes the observation for its
+        // verdict, and the anchor it reconciled is the one the paint then
+        // reads.
+        const GuiPlaybackSnapshot snap = playback.snapshot();
+        const bool ma_playing  = snap.playing;
+        const bool ma_sounding = ma_playing || snap.natural_end_holding;
         if (!app.playhead_scanner_active && !ma_playing) return;
 
         if (ma_sounding) {
@@ -2574,16 +2588,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // app_state.h's scanner block). The scanner's last-painted pixels are
         // damaged by the call, so the line vanishes from wherever the predictor
         // last drew it — at the window's end, since 2026-09-01: THE HOLD
-        // ABOVE kept this branch from running while the engine's
-        // natural_end_holding() stood, i.e. from the flag's drop until the
-        // last frame the ending fill consumed had been heard (its cycle stamp
-        // plus the reported latency), and cursor() extrapolated to the end
-        // through it; before that day the line vanished the moment the flag
-        // dropped, latency-and-a-fraction-of-a-period short of the last
-        // sound. The hold is the ENGINE's and belongs to every session (the
-        // render player's tick reads the same deferred end); every OTHER stop
-        // road — Space, a modal open, the S/T flip, a scrub, a trim write —
-        // takes the stop body at once, whose fence path clears the hold.
+        // ABOVE kept this branch from running while the engine's hold stood,
+        // i.e. from the flag's drop until the last frame the ending fill
+        // consumed had been heard (its cycle stamp plus the reported
+        // latency), and cursor() extrapolated to the end through it; before
+        // that day the line vanished the moment the flag dropped,
+        // latency-and-a-fraction-of-a-period short of the last sound. AND THE
+        // VERDICT THAT LETS THIS BRANCH RUN CARRIES THE RECONCILED EPOCH: the
+        // snapshot above re-anchors the line onto the live latency figure
+        // before it answers the hold, so a figure that moved between the
+        // ending fill and this tick (a quantum change inside the hold) moves
+        // the deadline and the line together — until that day's second
+        // review the hold read the live figure while the anchor kept the
+        // old one, and a figure that DROPPED inside the hold could end it
+        // with the line still short of the end. The hold is the ENGINE's and
+        // belongs to every session (the render player's tick reads the same
+        // deferred end); every OTHER stop road — Space, a modal open, the S/T
+        // flip, a scrub, a trim write — takes the stop body at once, whose
+        // fence path clears the hold.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
         // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
         // hand-spelled pair this branch and Space's stop edge both carried
@@ -2596,8 +2618,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the arm rather than being fixed inside it.
         //
         // THE FENCE-BEFORE-FLAG-CLEAR ORDERING SURVIVES THE COLLAPSE, and it is the
-        // whole reason this branch calls anything at all: `playing` is already false
-        // here — the JACK process callback published it (release store) at the
+        // whole reason this branch calls anything at all: the session word's
+        // playing bit is already down here — the process callback's terminal
+        // exchange lowered it (release) at the
         // natural end — but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag
         // write, and the helper takes it FIRST and only then clears
         // `playhead_scanner_active`, exactly as the pair did. The callback that
@@ -2614,7 +2637,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the stop edge, closes it at the source — the Space-symmetric design, and
         // the reason the rebind sites keep their conditional stops rather than
         // becoming unconditional. THE HOLD DOES NOT REOPEN THE BYPASS: through
-        // it `playing` is false and the scanner flag is still TRUE, so the stop
+        // it the playing bit is down and the scanner flag is still TRUE, so the stop
         // body's guard PROCEEDS for any road that reaches it (an S/T flip inside
         // the hold fences and clears exactly as one inside the old sub-tick
         // window did), and only this branch's own deferral stands between the

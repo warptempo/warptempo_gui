@@ -629,7 +629,7 @@ private:
     // A NATURAL
     // END IS THE CURSOR REACHING THE END, NOT THE ABSENCE OF A DEVICE
     // (2026-08-28): a Bluetooth drop, a headphone pull and an audio device
-    // that never came up all leave the same `playing` flag false, and the
+    // that never came up all leave the session word's playing bit down, and the
     // tick asks GuiPlayback::device_unavailable FIRST so every one of them
     // pauses in place instead of arriving here and advancing to a wav
     // nothing can play — a whole folder at tick rate, in the never-came-up

@@ -4462,7 +4462,7 @@ struct AppState {
     // non-playing window in which these value fields are valid, and the rule
     // has no exceptions. Natural end-of-playback takes the same deactivation
     // every manual stop takes — literally the same call since 2026-07-30: the tick
-    // sees the atomic playing flag drop, keeps the scanner through the
+    // sees the session word's playing bit drop, keeps the scanner through the
     // engine's NATURAL-END HOLD (GuiPlayback::natural_end_holding — the last
     // frames the ending fill queued are still leaving the loudspeaker, and
     // cursor() extrapolates to the window's end through it; since

@@ -46,7 +46,8 @@
 //
 // So the transient happens once per session, at launch, with no audition under
 // it, and no play() or stop() touches the device's run state at all. BETWEEN
-// PLAYS THE STREAM RUNS AND THE CALLBACK WRITES SILENCE — its `playing` gate
+// PLAYS THE STREAM RUNS AND THE CALLBACK WRITES SILENCE — its gate on the
+// session word's playing bit
 // takes the silence arm and the render body is never reached, so an idle stream
 // reads no samples and costs the tablet a few mW of an already screen-on
 // device, which is the price the architect accepted for the click. (A
@@ -153,10 +154,16 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     const int     channel_count = impl->state.channels;
     const int64_t frames        = static_cast<int64_t>(num_frames);
 
-    // THE GATE is an acquire load of the session word's playing bit
-    // (playback_common.h), the JACK callback's own.
-    if (!playback_session_playing(
-            impl->state.session.load(std::memory_order_acquire))) {
+    // THE GATE is ONE acquire load of the session word (playback_common.h),
+    // the JACK callback's own: the callback gates on its playing bit and
+    // hands that same word to the render body as its terminal's expected
+    // value — loaded here and nowhere later in the burst, so a stop or a
+    // publish after this load changes the word and fails the fill's
+    // terminal, and the next callback acquires and seats the new
+    // publication.
+    const uint64_t session_word =
+        impl->state.session.load(std::memory_order_acquire);
+    if (!playback_session_playing(session_word)) {
         playback_write_silence(channel_buffers, channel_count,
                                kPlaybackOutputChannels, 0, frames);
         // CONTINUE, never STOP: this arm is what the stream spends most of its
@@ -171,7 +178,7 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
         return AAUDIO_CALLBACK_RESULT_CONTINUE;
     }
 
-    playback_render_block(impl->state, channel_buffers,
+    playback_render_block(impl->state, session_word, channel_buffers,
                           kPlaybackOutputChannels, frames, channel_count);
     impl->callback_cycles.fetch_add(1, std::memory_order_release);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
@@ -187,19 +194,33 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // on: a documented Android bug reports TIMEOUT where DISCONNECTED is
     // meant, so ANY error means the stream is finished.
     //
-    // Three atomic stores and a log line; NO AAudio call, per the head
-    // comment's threading rule. Clearing `output_rate` puts the engine in its
-    // SUSPENDED state, which is exactly the behaviour playback.h's
+    // Four atomic writes, one fence and a log line; NO AAudio call, per the
+    // head comment's threading rule. Clearing `output_rate` puts the engine
+    // in its SUSPENDED state, which is exactly the behaviour playback.h's
     // graph-suspension clause asks for: the render body would emit silence and
     // hold, and cursor() holds at the last audio position instead of
     // extrapolating. Lowering the session word's playing bit makes
     // is_playing() false, so the run loop's next tick reads this as a natural
     // end and tears the scanner down through the product's one stop body. A
-    // fill in flight that reaches its natural end after this finds the flag
-    // down and abandons its terminal (the word's comment, playback_common.h),
-    // so a live session's disconnect never raises the hold; and the next
-    // play() publishes a fresh generation, so no session is left stranded
-    // behind the lowered flag.
+    // fill in flight that reaches its natural end after this finds the word
+    // changed under its gate's value and abandons its terminal (the word's
+    // comment, playback_common.h), so a live session's disconnect never
+    // raises the hold; and the next play() closes this stream and publishes a
+    // fresh generation, so no session is left stranded behind the lowered
+    // flag.
+    //
+    // THE LATCH IS PUBLISHED BEFORE THE BIT IS LOWERED, WITH A seq_cst FENCE
+    // BETWEEN (2026-09-01, the disconnect outranking a concurrent publish):
+    // play() publishes a fresh playing generation and then re-checks the
+    // latch behind its own seq_cst fence, and the two-case argument at that
+    // site rests on this order — a publish store here could otherwise land
+    // between play()'s dead check and its publish and be OVERWRITTEN by the
+    // fresh generation, leaving `stream_dead` true, `output_rate` 0 and the
+    // playing bit up forever (the source view's tick has no device fork to
+    // notice). With the latch first, whichever thread's fence is earlier in
+    // the fences' total order, the other sees its write: play() either sees
+    // the latch and lowers the bit it just published, or its publish is
+    // ordered before this fetch_and, which lowers it.
     //
     // NOTHING RECOVERS BY ITSELF: no auto-resume, no reconnect timer, no
     // retry. The next play() closes this stream and opens a new one at the new
@@ -207,8 +228,9 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // the product gives every other rare, loud fault.
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
-    impl->state.session.fetch_and(~kSessionPlayingBit, std::memory_order_release);
     impl->stream_dead.store(true, std::memory_order_release);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    impl->state.session.fetch_and(~kSessionPlayingBit, std::memory_order_release);
 
     std::fprintf(stderr,
         "warptempo_gui: AAudio stream error %d (%s); stream is dead, playback "
@@ -246,14 +268,15 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 // STREAM STATE MACHINE (requestStop, then wait for STOPPED), and that
 // requestStop is exactly the click this backend no longer makes.
 //
-// THE PROOF. stop() lowers `playing` (seq_cst) before calling here. One
-// increment after that store retires a callback that may have loaded `playing`
-// before the store became visible; a second proves a full callback ran
-// start-to-finish afterwards, and its release increment paired with the
-// acquire loads here orders every sample read it made before anything the
-// caller mutates once stop() returns. The bound is conservative: a callback
-// that sees playing == false takes the silence arm and reads no sample at all.
-// Normally about two callback periods — a few ms at the granted burst.
+// THE PROOF. stop() lowers the session word's playing bit (seq_cst) before
+// calling here. One increment after that write retires a callback that may
+// have loaded the word with the bit up before the write became visible; a
+// second proves a full callback ran start-to-finish afterwards, and its
+// release increment paired with the acquire loads here orders every sample
+// read it made before anything the caller mutates once stop() returns. The
+// bound is conservative: a callback that sees the bit down takes the silence
+// arm and reads no sample at all. Normally about two callback periods — a
+// few ms at the granted burst.
 //
 // THE ESCAPE, and why this cannot hang on a device that has gone away: a
 // stream that is dead or positively terminal has no callback left to count, so
@@ -467,6 +490,31 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // must not spin the device up at all.
     if (!playback_publish_play(impl_->state, start_sample, end_sample)) return;
 
+    // THE DISCONNECT OUTRANKS THE PUBLISH (2026-09-01). The dead check at the
+    // head of this call and the publish just above are two steps, and the
+    // error callback can run between them: its lowering of the playing bit
+    // would then be OVERWRITTEN by the fresh generation the publish stored,
+    // leaving the latch true, the rate 0 and the bit up on a stream that
+    // will never call back — the scanner live forever at the held cursor.
+    // So the latch is asked AGAIN here, behind a seq_cst fence, and the
+    // error callback stores the latch BEFORE its fetch_and behind a fence of
+    // its own. TWO CASES, by the fences' total order: (1) this fence precedes
+    // the callback's — then the publish store, sequenced before this fence,
+    // is what the callback's fetch_and (sequenced after its fence) modifies,
+    // and it lowers the bit this publish set; (2) the callback's fence
+    // precedes this one — then the latch store, sequenced before the
+    // callback's fence, is visible to this load, and the bit is lowered
+    // here. Either way the published bit comes down, and the road taken is
+    // the failed start's own: lower the bit, close the dead stream, and the
+    // next play() reopens.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    if (impl_->stream_dead.load(std::memory_order_acquire)) {
+        impl_->state.session.fetch_and(~kSessionPlayingBit,
+                                       std::memory_order_release);
+        close_stream(*impl_);
+        return;
+    }
+
     // ORDINARILY A NO-OP, and that is the point of the new lifecycle: the
     // stream was started at open and has been running ever since, so an
     // ordinary play makes no device call at all. Two paths still arrive here
@@ -489,8 +537,10 @@ void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
     // THE DEVICE IS NOT TOUCHED HERE. Lower the flag — and end any natural-end
     // hold in the same word (the session word's clearer inventory,
-    // playback_common.h: a fill in flight can commit no terminal once the
-    // flag is down) — then fence on the callback counter (fence_quiesced):
+    // playback_common.h: a fill in flight can commit no terminal once this
+    // has landed — its exchange expects exactly the word its gate acquired,
+    // playing bit up, and this fetch_and changed that word) — then fence on
+    // the callback counter (fence_quiesced):
     // the stream keeps running and the callback keeps writing silence, which
     // is the whole of the no-click lifecycle at the head of this file.
     impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
@@ -505,6 +555,11 @@ bool GuiPlayback::is_playing() const {
 bool GuiPlayback::natural_end_holding() const {
     if (!impl_) return false;
     return playback_natural_end_holding(impl_->state);
+}
+
+GuiPlaybackSnapshot GuiPlayback::snapshot() const {
+    if (!impl_) return GuiPlaybackSnapshot{};
+    return playback_snapshot(impl_->state);
 }
 
 // THE THREE WAYS THIS DEVICE CANNOT SOUND (contract at the declaration), and

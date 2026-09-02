@@ -620,7 +620,8 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     // on a card at its gate; this reseek is not a press and says nothing). This guard also
     // means play() below can never be reached with an empty range from this site,
     // closing the play() early-return trap (end_sample <= start_sample returns
-    // early WITHOUT clearing the playing flag) at its only reseek exposure.
+    // early WITHOUT lowering the session word's playing bit) at its only
+    // reseek exposure.
     const int64_t song_end = audio.total_frames();
     if (sample < 0 || sample >= song_end - 1) {
         stop_playback_if_playing();

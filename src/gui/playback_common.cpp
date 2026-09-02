@@ -96,15 +96,17 @@ struct HeardAnchor {
 // THE ONE ANCHOR FORM, read off the stamp: (the stamped position, its port
 // instant plus the heard offset) — the instant that position is heard, with
 // the offset it used. The launch latch, every resync and the epoch re-anchor
-// store exactly this (anchor_on_stamp); the precise reader computes it
-// without storing. The offset is read ONCE, here, so the instant and the
-// epoch word can never disagree about which figure built the anchor.
-HeardAnchor heard_anchor_from_stamp(const GuiPlaybackState& state) {
+// store exactly this; the observation's hold deadline is its `heard_ns`. The
+// offset is the CALLER'S one read — the observation reads it once for
+// everything it forms, the resync once for its anchor — so the instant and
+// the epoch word can never disagree about which figure built the anchor.
+HeardAnchor heard_anchor_from_stamp(const GuiPlaybackState& state,
+                                    int64_t offset_ns) {
     HeardAnchor a;
     int64_t port_ns = 0;
     read_stamp(state, a.sample, port_ns);
-    a.offset_ns = heard_offset_ns(state);
-    a.heard_ns  = port_ns + a.offset_ns;
+    a.offset_ns = offset_ns;
+    a.heard_ns  = port_ns + offset_ns;
     return a;
 }
 
@@ -116,15 +118,13 @@ void store_anchor(GuiPlaybackState& state, const HeardAnchor& a) {
     state.anchor_offset_ns.store(a.offset_ns, std::memory_order_relaxed);
 }
 
-// THE ONE RE-ANCHOR BODY: anchor on the latest cycle stamp at its heard
-// instant. The resync calls it at every resync event, the launch latch calls
-// it once per session, and the epoch check calls it when the latency figure
-// has moved under a standing anchor — three callers, one step (the drift, or
-// the latency delta), one body. Returns what it stored.
-HeardAnchor anchor_on_stamp(GuiPlaybackState& state) {
-    const HeardAnchor a = heard_anchor_from_stamp(state);
-    store_anchor(state, a);
-    return a;
+// THE RESYNC'S RE-ANCHOR: anchor on the latest cycle stamp at its heard
+// instant, at the live offset. The launch latch and the epoch re-anchor take
+// the same stamp form inside `observe` below, which hands the anchor to its
+// storing readers instead of storing here — so every anchor the predictor
+// ever rests on is one of these two stores of one form.
+void anchor_on_stamp(GuiPlaybackState& state) {
+    store_anchor(state, heard_anchor_from_stamp(state, heard_offset_ns(state)));
 }
 
 // THE EXTRAPOLATION, shared by the two readers: the anchor's position advanced
@@ -167,16 +167,17 @@ void playback_write_silence(float* const* channel_buffers, int channel_count,
 }
 
 void playback_render_block(GuiPlaybackState& state,
+                           uint64_t session_word,
                            float* const* channel_buffers,
                            int64_t stride,
                            int64_t frame_count,
                            int channel_count) {
-    // THE FILL'S SESSION: the word as it stands at the top — relaxed, the
-    // backend's acquire gate on the same word having just ordered it — and
-    // the exact value the natural-end terminal below must find unchanged. A
-    // publish landing between the gate and this load makes this fill the new
-    // session's (the field's comment, playback_common.h).
-    const uint64_t session_word = state.session.load(std::memory_order_relaxed);
+    // `session_word` is THE WORD THE GATE ACQUIRED — the backend's one load,
+    // playing bit up — and the exact value the natural-end terminal below
+    // must find unchanged; this body never loads the word itself (the field's
+    // comment, playback_common.h: a re-load here could adopt a stop's or a
+    // newer publish's word and qualify the terminal by a session that never
+    // passed the gate).
     const int    src_channels = state.channels;
     const uint32_t output_rate = state.output_rate.load(std::memory_order_relaxed);
     // The device asks for output-rate frames; the output-to-source rate ratio
@@ -284,15 +285,15 @@ void playback_render_block(GuiPlaybackState& state,
     state.cursor.store(new_cur, std::memory_order_relaxed);
     if (natural_end) {
         // THE TERMINAL, generation-qualified (the session word's comment):
-        // playing -> ended on exactly the word this fill began under. The
-        // hold's bit rides the same release as the flag's drop — one word —
-        // so a reader that sees the flag down through an acquire load sees
-        // the hold set, and the not-playing arm of playback_cursor
+        // playing -> ended on exactly the word the gate acquired for this
+        // fill. The hold's bit rides the same release as the flag's drop —
+        // one word — so a reader that sees the flag down through an acquire
+        // load sees the hold set, and the observation's not-playing arm
         // extrapolates on instead of snapping to the read cursor. A failed
-        // exchange means a newer session was published (or a stop lowered
-        // the flag) since the top of this fill: the terminal is ABANDONED —
-        // this block of the old session has sounded, the new session's
-        // pending is still up, and the next callback seats it.
+        // exchange means a newer session was published, or a stop lowered
+        // the flag, since the gate: the terminal is ABANDONED — this block of
+        // the gated session has sounded, a new session's pending is still
+        // up, and the next callback acquires and seats it.
         uint64_t expected = session_word;
         state.session.compare_exchange_strong(
             expected,
@@ -401,8 +402,8 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // it changes, so a surprising number is visible at launch.
 //
 // THE PUBLISH ITSELF anchors at (start, 0) — "await the seat" — and the
-// reader's latch turns the seat's stamp into the launch anchor once
-// (playback_cursor). The `now` read that used to anchor here is gone with
+// observation's latch turns the seat's stamp into the launch anchor once
+// (`observe`, below). The `now` read that used to anchor here is gone with
 // the lead it produced.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample) {
@@ -474,24 +475,6 @@ void playback_resync_predictor(GuiPlaybackState& state) {
     anchor_on_stamp(state);
 }
 
-// THE HOLD'S END IS THE STAMP'S: the natural-end fill stamped the instant its
-// last consumed frame entered the port, so the last sound leaves the
-// loudspeaker at that instant plus the heard offset — exact to the fill's
-// wake jitter, no belt needed. With a zero offset (AAudio) the hold ends
-// within the fill's own duration of the flag's drop. ONE EPOCH WITH THE
-// CURSOR, by construction: this deadline is the stamp's port instant plus the
-// offset read NOW, and the cursor reader re-anchors onto that same stamp with
-// that same offset the moment the live figure differs from its anchor's
-// (playback_cursor's epoch check), so the line reaches `end_sample` at
-// exactly the instant this answers false — a latency change inside the hold
-// moves both together, never one without the other.
-bool playback_natural_end_holding(const GuiPlaybackState& state) {
-    const uint64_t word = state.session.load(std::memory_order_acquire);
-    if (playback_session_playing(word)) return false;
-    if (!playback_session_ended(word)) return false;
-    return steady_now_ns() < heard_anchor_from_stamp(state).heard_ns;
-}
-
 bool playback_is_playing(const GuiPlaybackState& state) {
     // ACQUIRE, not relaxed: this load pairs with the audio thread's release
     // exchange of the session word at the natural end (playback_render_block),
@@ -505,119 +488,197 @@ bool playback_is_playing(const GuiPlaybackState& state) {
         state.session.load(std::memory_order_acquire));
 }
 
-int64_t playback_cursor(GuiPlaybackState& state) {
-    // Every internal value below (integer cursor, predictor anchor, end/total
-    // clamps) is buffer-local; the bound buffer's domain offset is added once
-    // at each return, so the reported position is a domain coordinate
-    // (playback.h head comment).
-    const int64_t off = state.domain_offset;
+namespace {
+
+// WHAT ONE OBSERVATION HANDS BACK: the position (buffer-local, pre-
+// truncation), the hold's verdict, the playing bit, and — where an arm
+// derived a fresh anchor — that anchor with `re_anchor` set, for a storing
+// reader to write. Everything in it came from one load of the session word,
+// one clock read and one read of the live heard offset.
+struct Observation {
+    double      predicted = 0.0;
+    bool        playing   = false;
+    bool        holding   = false;
+    bool        re_anchor = false;
+    HeardAnchor anchor;
+};
+
+// THE ONE MAIN-THREAD OBSERVATION (2026-09-01, the epoch reconciled AHEAD OF
+// THE HOLD). Every predictor reader — playback_cursor, playback_cursor_
+// precise, playback_natural_end_holding and playback_snapshot — is this body
+// behind a face, and the body DERIVES ONLY: it stores nothing, handing a
+// fresh anchor back for the storing faces to write (the declarations' block,
+// playback_common.h), which is what lets the precise reader be the same pure
+// function of the same atomics with no write, agreeing with the others
+// whichever is asked first.
+//
+// THE EPOCH IS RECONCILED BEFORE ANY ANSWER IS FORMED, and that ordering is
+// the point of there being one body (codex's second review of the arc: the
+// tick asked the hold with the live offset while the anchor still carried
+// the old one — with `ended` set on a 1536-frame anchor and the figure
+// dropping to 544 before the next tick, the hold could answer false past
+// `stamp + 544/rate`, the tick tore the scanner down, and the epoch arm the
+// cursor reader carried never ran — the short-of-end teardown reachable
+// again; and the cursor and the hold each took their own offset and stamp
+// snapshots, so "one epoch by construction" was false across a notification
+// landing between them). Here the live offset is read ONCE, a standing
+// anchor built with another figure is replaced from the stamp WITH THIS ONE
+// before either the position or the verdict exists, the hold's deadline is
+// the stamp's port instant plus this same offset, and `now` is one read —
+// so the line and the deadline move together at a latency change, in the
+// same read, and a teardown decided on the verdict has the re-anchor under
+// it.
+//
+// The stamp is read at most once, and only by the arms that need it (the
+// latch, the epoch change, the hold's deadline) — the ordinary per-frame read
+// of a standing anchor never reads it, which keeps playback.h's design note
+// literal: the main thread reads the stamp at the resync events and these,
+// never per frame, so motion between resyncs stays the smooth wall-clock
+// line.
+Observation observe(const GuiPlaybackState& state) {
+    Observation o;
     // ACQUIRE on the session word: a flag read down that came from the
     // natural-end fill must see that fill's stamp (the render body stores it
     // ahead of its release exchange), or the hold would snap to the read
-    // cursor for one paint before extrapolating on; the hold bit itself rides
-    // in the same word.
-    {
-        const uint64_t word = state.session.load(std::memory_order_acquire);
-        if (!playback_session_playing(word) && !playback_session_ended(word)) {
-            return state.cursor.load(std::memory_order_relaxed) + off;
+    // cursor for one paint before extrapolating on; the hold bit rides in
+    // the same word, so the playing bit and the hold are one load's answer.
+    const uint64_t word = state.session.load(std::memory_order_acquire);
+    o.playing = playback_session_playing(word);
+    const bool ended = playback_session_ended(word);
+    if (!o.playing && !ended) {
+        // At rest: the read cursor, where the last fill, the publish or the
+        // bind left it.
+        o.predicted = static_cast<double>(
+            state.cursor.load(std::memory_order_relaxed));
+        return o;
+    }
+
+    const int64_t now_ns    = steady_now_ns();
+    // THE EPOCH THIS OBSERVATION IS IN — the one read of the live figure.
+    const int64_t offset_ns = heard_offset_ns(state);
+    bool        stamped = false;
+    HeardAnchor stamp;
+    const auto on_stamp = [&]() -> const HeardAnchor& {
+        if (!stamped) {
+            stamp   = heard_anchor_from_stamp(state, offset_ns);
+            stamped = true;
         }
-    }
-    // Device suspended: the audio thread is holding position, so the playhead
-    // holds honestly at the integer cursor. Re-anchoring continuously through
-    // the outage makes resume extrapolate from the held position and wall-clock
-    // now, with no forward jump or snap-back in either direction. The anchor
-    // takes the heard-instant form like every other — held cursor at `now`
-    // plus the heard offset, which is identically 0 while the rate reads 0.
-    // (Unreachable mid-session on JACK, whose rate callback stores the new
-    // nonzero rate; session-ending on AAudio, whose disconnect lowers the
-    // flag with the rate.)
+        return stamp;
+    };
+
     if (state.output_rate.load(std::memory_order_relaxed) == 0) {
+        // Device suspended: the audio thread is holding position, so the
+        // playhead holds honestly at the integer cursor. Re-anchoring
+        // continuously through the outage makes resume extrapolate from the
+        // held position and wall-clock now, with no forward jump or snap-back
+        // in either direction. The anchor takes the heard-instant form like
+        // every other — held cursor at `now` plus the heard offset, which is
+        // identically 0 while the rate reads 0. (Unreachable mid-session on
+        // JACK, whose rate callback stores the new nonzero rate; session-
+        // ending on AAudio, whose disconnect lowers the flag with the rate.)
         const int64_t cur = state.cursor.load(std::memory_order_relaxed);
-        const int64_t offset = heard_offset_ns(state);
-        store_anchor(state, HeardAnchor{cur, steady_now_ns() + offset, offset});
-        return cur + off;
+        o.anchor    = HeardAnchor{cur, now_ns + offset_ns, offset_ns};
+        o.re_anchor = true;
+        o.predicted = static_cast<double>(cur);
+    } else {
+        HeardAnchor a{
+            state.anchor_sample.load(std::memory_order_relaxed),
+            state.anchor_ns.load(std::memory_order_relaxed),
+            state.anchor_offset_ns.load(std::memory_order_relaxed)};
+        bool awaiting_seat = false;
+        if (a.heard_ns == 0) {
+            // THE LAUNCH LATCH. Before the seat, the line RESTS at the
+            // published start (a.sample). Once the audio thread has stamped
+            // and consumed the pending, the anchor becomes the seat's stamp
+            // at its heard instant — derived here, written exactly once per
+            // session by the first storing reader to see it. NO BACKWARD
+            // STEP: before the latch every read returns `start`; after it,
+            // the anchor's heard instant is in the future by the heard offset
+            // (plus however much of the seating fill has already been stamped
+            // past), so predict_position extrapolates backward from it to a
+            // position at or below `start` and floors it there — still
+            // `start` — and only once `now` passes the instant the first
+            // frame is heard does the line move. Both regimes are monotone in
+            // `now`, the anchor is written once, and the floor never lets the
+            // second dip under the first, so no paint can show a position
+            // earlier than the previous paint's. (A stamp the seating fill
+            // has already advanced past its seat — the main thread's first
+            // read landing after that fill ended — names the same line: the
+            // fill-end stamp is the same session's position at its own port
+            // instant.)
+            if (playback_seated(state)) {
+                a           = on_stamp();
+                o.anchor    = a;
+                o.re_anchor = true;
+            } else {
+                awaiting_seat = true;
+            }
+        } else if (a.offset_ns != offset_ns) {
+            // THE LATENCY EPOCH (the field's comment, playback_common.h): the
+            // figure has moved under a standing anchor — a quantum change on
+            // JACK — so re-anchor from the latest cycle stamp exactly as a
+            // resync does, and the step the line takes is the latency delta,
+            // once. The hold's deadline below is this same stamp at this
+            // same offset, so from this read on the two are one epoch.
+            a           = on_stamp();
+            o.anchor    = a;
+            o.re_anchor = true;
+        }
+        o.predicted = awaiting_seat
+            ? static_cast<double>(a.sample)
+            : predict_position(state, a.sample, a.heard_ns, now_ns);
     }
-    int64_t a_sample = state.anchor_sample.load(std::memory_order_relaxed);
-    int64_t a_ns     = state.anchor_ns.load(std::memory_order_relaxed);
-    if (a_ns == 0) {
-        // THE LAUNCH LATCH. Before the seat, the line RESTS at the published
-        // start (a_sample). Once the audio thread has stamped and consumed
-        // the pending, the anchor becomes the seat's stamp at its heard
-        // instant — written exactly once per session, here. NO BACKWARD
-        // STEP: before the latch every read returns `start`; after it, the
-        // anchor's heard instant is in the future by the heard offset (plus
-        // however much of the seating fill has already been stamped past),
-        // so predict_position extrapolates backward from it to a position at
-        // or below `start` and floors it there — still `start` — and only
-        // once `now` passes the instant the first frame is heard does the
-        // line move. Both regimes are monotone in `now`, the anchor is
-        // written once, and the floor never lets the second dip under the
-        // first, so no paint can show a position earlier than the previous
-        // paint's. (A stamp the seating fill has already advanced past its
-        // seat — the main thread's first read landing after that fill ended
-        // — names the same line: the fill-end stamp is the same session's
-        // position at its own port instant.)
-        if (!playback_seated(state)) return a_sample + off;
-        const HeardAnchor a = anchor_on_stamp(state);
-        a_sample = a.sample;
-        a_ns     = a.heard_ns;
-    } else if (heard_offset_ns(state) !=
-               state.anchor_offset_ns.load(std::memory_order_relaxed)) {
-        // THE LATENCY EPOCH (the field's comment, playback_common.h): the
-        // figure has moved under a standing anchor — a quantum change on
-        // JACK — so re-anchor from the latest cycle stamp exactly as a resync
-        // does, and the step the line takes is the latency delta, once. From
-        // here the anchor and the natural-end deadline read one epoch: the
-        // deadline is that same stamp plus the live offset (playback_natural_
-        // end_holding), which is precisely the anchor just stored.
-        const HeardAnchor a = anchor_on_stamp(state);
-        a_sample = a.sample;
-        a_ns     = a.heard_ns;
-    }
-    const double predicted =
-        predict_position(state, a_sample, a_ns, steady_now_ns());
-    return static_cast<int64_t>(std::floor(predicted)) + off;
+
+    // THE HOLD'S END IS THE STAMP'S: the natural-end fill stamped the instant
+    // its last consumed frame entered the port, so the last sound leaves the
+    // loudspeaker at that instant plus the heard offset — exact to the fill's
+    // wake jitter, no belt needed. With a zero offset (AAudio) the hold ends
+    // within the fill's own duration of the flag's drop. The offset is the
+    // one read above and `now` the one read above, so the verdict and the
+    // position cannot straddle a notification.
+    o.holding = ended && now_ns < on_stamp().heard_ns;
+    return o;
+}
+
+// THE STORING FACES' ONE WRITE: the anchor the observation derived, if any.
+void commit_observation(GuiPlaybackState& state, const Observation& o) {
+    if (o.re_anchor) store_anchor(state, o.anchor);
+}
+
+}  // namespace
+
+bool playback_natural_end_holding(GuiPlaybackState& state) {
+    const Observation o = observe(state);
+    commit_observation(state, o);
+    return o.holding;
+}
+
+int64_t playback_cursor(GuiPlaybackState& state) {
+    // Every internal value (integer cursor, predictor anchor, end/total
+    // clamps) is buffer-local; the bound buffer's domain offset is added once
+    // at the return, so the reported position is a domain coordinate
+    // (playback.h head comment).
+    const Observation o = observe(state);
+    commit_observation(state, o);
+    return static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset;
 }
 
 double playback_cursor_precise(const GuiPlaybackState& state) {
-    // Mirrors playback_cursor branch-for-branch but returns the pre-truncation
-    // double, so it agrees with cursor() exactly at the clamped window end and
-    // is floor()-consistent with it elsewhere (the floor at `start` and the
-    // two end clamps are integers, so floor commutes with each). The domain
-    // offset is added once at each return, matching cursor()'s domain.
-    const double off = static_cast<double>(state.domain_offset);
-    {
-        const uint64_t word = state.session.load(std::memory_order_acquire);
-        if (!playback_session_playing(word) && !playback_session_ended(word)) {
-            return static_cast<double>(
-                       state.cursor.load(std::memory_order_relaxed)) + off;
-        }
-    }
-    // Device suspended: hold at the integer cursor exactly as cursor() reports.
-    // No re-anchor here — this is a side-effect-free reader; cursor(), called
-    // alongside it on the main thread, owns the continuous suspended re-anchor.
-    if (state.output_rate.load(std::memory_order_relaxed) == 0) {
-        return static_cast<double>(
-                   state.cursor.load(std::memory_order_relaxed)) + off;
-    }
-    int64_t a_sample = state.anchor_sample.load(std::memory_order_relaxed);
-    int64_t a_ns     = state.anchor_ns.load(std::memory_order_relaxed);
-    if (a_ns == 0) {
-        // The launch latch WITHOUT THE STORE — the same value cursor() would
-        // latch, a pure function of the same atomics, so the two agree
-        // whichever is asked first; cursor() owns the write.
-        if (!playback_seated(state)) return static_cast<double>(a_sample) + off;
-        const HeardAnchor a = heard_anchor_from_stamp(state);
-        a_sample = a.sample;
-        a_ns     = a.heard_ns;
-    } else if (heard_offset_ns(state) !=
-               state.anchor_offset_ns.load(std::memory_order_relaxed)) {
-        // The epoch re-anchor without the store, for the same reason.
-        const HeardAnchor a = heard_anchor_from_stamp(state);
-        a_sample = a.sample;
-        a_ns     = a.heard_ns;
-    }
-    return predict_position(state, a_sample, a_ns, steady_now_ns()) + off;
+    // The same observation WITHOUT THE STORE — the pre-truncation double, so
+    // it agrees with cursor() exactly at the clamped window end and is
+    // floor()-consistent with it elsewhere (the floor at `start` and the two
+    // end clamps are integers, so floor commutes with each); the anchor it
+    // derives is the one cursor() stores, a pure function of the same
+    // atomics. The domain offset is added once, matching cursor()'s domain.
+    return observe(state).predicted + static_cast<double>(state.domain_offset);
+}
+
+GuiPlaybackSnapshot playback_snapshot(GuiPlaybackState& state) {
+    const Observation o = observe(state);
+    commit_observation(state, o);
+    return GuiPlaybackSnapshot{
+        o.playing, o.holding,
+        static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset};
 }
 
 int64_t playback_domain_begin(const GuiPlaybackState& state) {

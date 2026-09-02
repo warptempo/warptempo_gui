@@ -41,8 +41,8 @@ struct GuiPlayback::Impl {
 
     // Incremented once at the end of every process callback invocation,
     // playing or silent. stop() uses it as a quiescence fence: after the
-    // playing flag is lowered, observing two further increments proves any
-    // callback that could have seen playing == true has exited, so the
+    // session word's playing bit is lowered, observing two further increments
+    // proves any callback that could have seen the bit up has exited, so the
     // borrowed sample buffer is no longer being read by the audio thread.
     // A DEVICE FACT, not the engine's: a JACK client's process callback keeps
     // running (silent) while the client is active, which is what makes counting
@@ -168,17 +168,23 @@ int process_callback(jack_nframes_t nframes, void* arg) {
     }
 
     // STRIDE 1: JACK hands out one contiguous buffer per port
-    // (playback_write_silence's contract). THE GATE is an acquire load of the
-    // session word's playing bit (playback_common.h).
-    if (!playback_session_playing(
-            impl->state.session.load(std::memory_order_acquire))) {
+    // (playback_write_silence's contract). THE GATE is ONE acquire load of
+    // the session word (playback_common.h): the callback gates on its playing
+    // bit and hands that same word to the render body as its terminal's
+    // expected value — the word is loaded here and nowhere later in the
+    // fill, so a stop or a publish after this load changes the word and
+    // fails the fill's terminal, and the next callback acquires and seats
+    // the new publication.
+    const uint64_t session_word =
+        impl->state.session.load(std::memory_order_acquire);
+    if (!playback_session_playing(session_word)) {
         playback_write_silence(channel_buffers.data(), channel_count, 1, 0,
                                static_cast<int64_t>(nframes));
         impl->process_cycles.fetch_add(1, std::memory_order_release);
         return 0;
     }
 
-    playback_render_block(impl->state, channel_buffers.data(), 1,
+    playback_render_block(impl->state, session_word, channel_buffers.data(), 1,
                           static_cast<int64_t>(nframes), channel_count);
     impl->process_cycles.fetch_add(1, std::memory_order_release);
     return 0;
@@ -365,8 +371,11 @@ void GuiPlayback::stop() {
     if (!impl_->client_active) return;
     // Lower the flag AND end any natural-end hold in the one word (the
     // session word's clearer inventory, playback_common.h): a fill in flight
-    // can commit no terminal once the flag is down — its exchange expects the
-    // flag up — so nothing is left to set the hold behind the fence.
+    // can commit no terminal once this has landed — its exchange expects
+    // exactly the word its gate acquired, playing bit up, and this fetch_and
+    // changed that word — so nothing is left to set the hold behind the
+    // fence, and a fill that passed its gate before this lowering renders
+    // one more block and abandons its terminal.
     impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
                                    std::memory_order_seq_cst);
     // Quiescence fence. At most one process callback is in flight at a
@@ -395,6 +404,11 @@ bool GuiPlayback::is_playing() const {
 bool GuiPlayback::natural_end_holding() const {
     if (!impl_) return false;
     return playback_natural_end_holding(impl_->state);
+}
+
+GuiPlaybackSnapshot GuiPlayback::snapshot() const {
+    if (!impl_) return GuiPlaybackSnapshot{};
+    return playback_snapshot(impl_->state);
 }
 
 // THE CLIENT THAT NEVER CAME UP, and on this backend that is the whole
