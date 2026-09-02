@@ -425,21 +425,38 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // four bounded plays and the render player's own launch all publish through
 // this one body.
 //
+// THE DISPLAY'S OWN LATENCY IS COMPENSATED TOO (architect 2026-09-02, the
+// deep dive's item B: "a self-measuring application that estimates the
+// offset and applies it uniformly"). It is the audio latency's twin on the
+// far side of the paint: a frame painted at pre-paint time reaches the panel
+// one to two refresh periods later — under labwc ~2 periods, ~33 ms at 60 Hz,
+// which the old audio lead had partly hidden and the compensation above
+// exposed, the line reading BEHIND the sound by that much. So the predictor's
+// POSITION is read `display_lead_ns` AHEAD of `now` (the field's contract,
+// playback_common.h; the one read is at `observe`) — where the sound will be
+// when the pixel lights — with the figure the platform measures: the Wayland
+// backend requests wp_presentation feedback on every content commit, stamped
+// with the pre-paint instant, and keeps a 30-frame mean of presented − stamped
+// (GuiPlatform::display_lead_ns; the fallback where the compositor offers no
+// feedback is 2 × the window's output's refresh period). The natural-end
+// hold's deadline keeps the bare clock — the sound really is still in the
+// device's queue for that long — so the line reaches the window's end one
+// lead ahead of the hold's end, and lights exactly as the sound ends.
+//
 // WHAT REMAINS, honestly: the DAC's own pipeline — its USB transfer and
 // digital-filter delay, a few milliseconds, constant, and outside anything
-// the graph reports (the K5 Pro adds no DSP); the DISPLAY's own latency — a
-// frame painted at pre-paint time reaches the panel one to two refresh
-// periods later (compositor plus scanout, ~16–33 ms at 60 Hz), which the old
-// audio lead partly hid, so to a critical eye the line may now read a frame
-// BEHIND the sound — the remedy, if he wants one, is a single authored lead
-// constant on the PAINT side (the platform already receives the output's
-// refresh from wl_output.mode), proposed as a later one-number retune and
-// deliberately not part of this arc; and the TABLET, whose predictor keeps
-// the whole uncompensated lead by ruling — its AAudio backend reports no
-// figure (the asymmetry at that Impl), so only the seat move reaches it.
-// A wrong figure shows as the line running ahead (too small) or behind (too
-// large) by the error; the JACK backend prints the figure to stderr whenever
-// it changes, so a surprising number is visible at launch.
+// the graph reports (the K5 Pro adds no DSP); the FRAME GRID — a position is
+// painted once per refresh, so the line is where the sound is at the moment
+// its pixel lights and up to a period stale a moment later, ± half a period
+// (8 ms at 60 Hz) that no lead can remove; and the TABLET, whose predictor
+// keeps the whole uncompensated audio lead by ruling — its AAudio backend
+// reports no figure (the asymmetry at that Impl), so only the seat move
+// reaches it, and its display lead is 0 by the same ruling (a lead over an
+// uncompensated lead would double-count; the record is at the Android
+// backend's display_lead_ns). A wrong audio figure shows as the line running
+// ahead (too small) or behind (too large) by the error, a wrong display
+// figure the other way round; both backends print their figure to stderr
+// whenever it changes, so a surprising number is visible at launch.
 //
 // THE PUBLISH ITSELF anchors at (start, 0) — "await the seat" — and the
 // observation's latch turns the seat's stamp into the launch anchor once
@@ -525,6 +542,10 @@ void playback_resync_predictor(GuiPlaybackState& state) {
     if (!stamp_is_sessions(s, state.session.load(std::memory_order_acquire)))
         return;
     store_anchor(state, heard_anchor(s, heard_offset_ns(state)));
+}
+
+void playback_set_display_lead_ns(GuiPlaybackState& state, int64_t lead_ns) {
+    state.display_lead_ns = lead_ns;
 }
 
 bool playback_is_playing(const GuiPlaybackState& state) {
@@ -709,9 +730,16 @@ Observation observe(const GuiPlaybackState& state) {
             o.anchor    = a;
             o.re_anchor = true;
         }
+        // THE DISPLAY LEAD'S ONE READ (the field's contract, playback_common.
+        // h): the POSITION is predicted `display_lead_ns` ahead of `now` —
+        // where the sound WILL be when the pixel painted from it turns into
+        // light — while `now_ns` itself stays the bare clock for the hold's
+        // verdict below. The clamp at the window's end inside
+        // predict_position bounds an over-prediction at the buffer's end.
         o.predicted = awaiting_seat
             ? static_cast<double>(a.sample)
-            : predict_position(state, a.sample, a.heard_ns, now_ns);
+            : predict_position(state, a.sample, a.heard_ns,
+                               now_ns + state.display_lead_ns);
     }
 
     // THE HOLD'S END IS THE STAMP'S: the natural-end fill stamped the instant

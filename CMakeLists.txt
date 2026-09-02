@@ -321,6 +321,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/relative-pointer/relative-pointer-unstable-v1.xml
+        ${WAYLAND_PROTOCOLS_DATADIR}/stable/presentation-time/presentation-time.xml
     )
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/wayland-generated)
     set(WAYLAND_GENERATED_SOURCES "")

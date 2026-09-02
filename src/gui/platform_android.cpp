@@ -1712,6 +1712,30 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
 }
 
 // ---------------------------------------------------------------------------
+// The display lead (contract at platform_wayland.h)
+// ---------------------------------------------------------------------------
+
+// ZERO, BY RULING (architect 2026-09-02, the deep dive's item I record-only).
+// The Wayland twin measures the interval from the pre-paint hook to the
+// pixels' light through wp_presentation and reads the predictor that far
+// ahead. This backend's display is no faster — a lock/unlockAndPost producer
+// sits behind SurfaceFlinger's triple buffering, two to three 90 Hz periods —
+// but its AUDIO side is uncompensated by ruling: the AAudio backend reports no
+// output latency (playback_aaudio.cpp's Impl records why — the car's Bluetooth
+// route is large, variable and unreported), so the tablet's predictor still
+// carries the whole audio lead, and the line already reads AHEAD of the sound
+// there. A display lead on top would add to that lead rather than cancel one,
+// double-counting against the audio figure this platform never subtracts.
+// When the tablet's audio latency is itself compensated, this is where its
+// display lead goes — and there is no feedback road for it on the
+// lock/unlockAndPost path (EGL frame timestamps need an EGLSurface;
+// Choreographer timelines describe the next frame, not this one's light), so
+// the figure would be the fallback's shape, k × the pinned 90 Hz period.
+int64_t GuiPlatform::display_lead_ns() const {
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
 // The car's two seam members (contracts at platform_wayland.h)
 // ---------------------------------------------------------------------------
 

@@ -515,6 +515,49 @@ public:
     // focus (MainActivity.mediaState).
     void publish_media_state(const GuiMediaState& state);
 
+    // -- THE DISPLAY LEAD (architect 2026-09-02) -------------------------
+    //
+    // HOW LONG AFTER THE PRE-PAINT HOOK SAMPLES THE PLAYBACK PREDICTOR DO THE
+    // PIXELS IT PAINTS TURN INTO LIGHT, in nanoseconds — the display's own
+    // latency, the twin of the audio device's output latency the predictor
+    // already compensates (playback_common.h). The consumer is main.cpp's
+    // pre-paint hook, which hands the figure to the predictor once per painted
+    // frame (GuiPlayback::set_display_lead_ns), and the predictor reads its
+    // POSITION that far ahead of `now` — and nothing else: the natural-end
+    // hold's deadline keeps the bare clock (the one read site is at `observe`,
+    // playback_common.cpp). The sign is the whole point: a line drawn where
+    // the sound IS at paint time reaches the panel one to two refresh periods
+    // later and reads BEHIND the sound by that much (~33 ms at 60 Hz under
+    // labwc, 13–33 px at the working zoom); drawn where the sound WILL BE when
+    // the pixel lights, it reads on the sound.
+    //
+    // ON THIS BACKEND IT IS SELF-MEASURED through wp_presentation, the
+    // compositor's presentation feedback (the globals block below): every
+    // content commit carries a feedback request stamped with the instant the
+    // pre-paint hook began, the compositor answers with the instant that
+    // commit turned into light, and the figure is a 30-frame moving mean of
+    // the difference (Kodi's window; the ring is at the state block). Until the
+    // first sample arrives, where the global is absent, or where its clock is
+    // not CLOCK_MONOTONIC (the predictor's clock — the two must share a domain),
+    // it is the FALLBACK: 2 × the refresh period of THE OUTPUT THE WINDOW IS ON
+    // (k = 2: wlroots repaints right after vblank and sends the frame callback
+    // after that composite has run, so a commit made in the callback waits a
+    // further period — sway's author measured "a little less than 2 frames",
+    // and labwc has no max_render_time knob to shorten it), 60 Hz when no
+    // output is known. The measured figure and the fallback are each announced
+    // once on stderr beside the JACK latency line, and the mean again whenever
+    // it moves by a millisecond, so the number is seen at every launch. Main
+    // thread only; no on-screen surface, no settings key.
+    //
+    // ANDROID ANSWERS A CONSTANT 0, and that is a ruling rather than a gap
+    // (the record is at that backend's body): the AAudio backend reports no
+    // output latency by ruling — the car's Bluetooth route is large, variable
+    // and unreported — so the tablet's predictor still carries the WHOLE
+    // uncompensated audio lead, and a display lead added on top of it would
+    // double-count against that. Record-only there until the tablet's audio
+    // latency is itself compensated.
+    int64_t display_lead_ns() const;
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -539,9 +582,13 @@ private:
     // 2026-08-02, both on the same reasoning (architect): labwc always
     // advertises them, so an absence is a broken environment rather than a
     // degraded one — running undecorated, or with copy and paste silently dead
-    // in every text editor, is not a behavior anybody wanted. wl_output_ is
-    // best-effort (absence falls back to a 60 Hz tick). The ruled OPTIONAL list
-    // is exactly TWO, and both live in the pointer-capture block below.
+    // in every text editor, is not a behavior anybody wanted. EVERY wl_output
+    // the registry names is bound, best-effort (`outputs_` below; no output
+    // with a mode falls back to a 60 Hz tick). The ruled OPTIONAL list is
+    // exactly THREE: the two pointer-capture managers in their block below,
+    // and wp_presentation here (2026-09-02, the display lead's measuring
+    // instrument — the sixth bound global; absence degrades to the lead's
+    // fallback figure, announced by one stderr line at init).
     struct wl_display*    wl_display_     = nullptr;
     struct wl_registry*   wl_registry_    = nullptr;
     struct wl_compositor* wl_compositor_  = nullptr;
@@ -549,8 +596,85 @@ private:
     struct xdg_wm_base*   xdg_wm_base_    = nullptr;
     struct zxdg_decoration_manager_v1* xdg_decoration_manager_ = nullptr;
     struct wl_data_device_manager*     wl_data_device_manager_ = nullptr;
-    struct wl_output*     wl_output_      = nullptr;
-    uint32_t              output_global_name_ = 0;
+
+    // -- Outputs: every wl_output, and THE ONE THE WINDOW IS ON --
+    // One record per advertised wl_output (bound at v2 — the mode event is
+    // all this program reads; no name, no description), kept while the global
+    // stands and destroyed at its registry removal. `refresh_mhz` is that
+    // output's latest CURRENT mode, 0 until one arrives. `entered` mirrors
+    // wl_surface.enter/leave for the main surface: true while the compositor
+    // says the window is (at least partly) on this output.
+    //
+    // THE SELECTION RULE (2026-09-02, replacing "the first output advertised"
+    // — a coin flip on a laptop with a 60 Hz panel and a 120 Hz external,
+    // which cost redraw density on the external and would have been a 2× error
+    // in the display lead's fallback): `window_output_` is THE OUTPUT THE
+    // WINDOW IS ON — the MOST RECENT wl_surface.enter, so a window spanning
+    // two outputs follows the one it was last seen entering; on the LEAVE of
+    // the selected output the selection falls to any other output still
+    // entered, else stays where it was, keeping the last figure (a window on
+    // no output — minimized, or mid-move — has no better answer); a removed
+    // output leaves the selection the same way. Before the first enter (the
+    // initial configure and the first paint precede it) the selection is
+    // seeded with the first output bound, exactly the old rule, so the tick
+    // starts on a real figure. `output_refresh_mhz_` below is always the
+    // selected output's refresh, re-derived by `select_window_output` at every
+    // edge — enter, leave, a mode change on the selected output, a removal —
+    // and every change re-arms the tick.
+    struct OutputRecord {
+        struct wl_output* output      = nullptr;
+        uint32_t          global_name = 0;
+        int               refresh_mhz = 0;
+        bool              entered     = false;
+    };
+    std::vector<OutputRecord> outputs_;
+    struct wl_output*         window_output_ = nullptr;
+
+    // -- wp_presentation: the display lead's instrument (display_lead_ns) --
+    // Bound at v1 (the `presented` event this reads is v1's; the proxy is
+    // OPTIONAL — see the protocol classes above). `presentation_clock_ok_`
+    // records that the compositor's clock_id event named CLOCK_MONOTONIC, the
+    // predictor's own clock (steady_clock on glibc/Linux), so `presented`'s
+    // timestamp and the pre-paint stamp are subtracted in one domain with no
+    // conversion; any other clock leaves the global bound but UNUSED —
+    // treated as absent, said once on stderr — since a lead measured across
+    // two clocks is not a measurement.
+    struct wp_presentation* wp_presentation_        = nullptr;
+    bool                    presentation_clock_ok_  = false;
+
+    // ONE FEEDBACK OBJECT PER CONTENT COMMIT, requested BEFORE that commit
+    // (the protocol's shape; paint_one_frame's order), several possibly
+    // outstanding at once, so each carries ITS OWN pre-paint stamp in its own
+    // user data rather than on this singleton — a stamp on the platform would
+    // be overwritten by the next paint before the compositor answered for
+    // this one. The record owns nothing but the stamp and its proxy; both
+    // listener arms (presented, discarded) destroy the proxy and the record,
+    // and shutdown destroys whatever is still outstanding.
+    struct PresentationFeedback {
+        GuiPlatform*                     self      = nullptr;
+        struct wp_presentation_feedback* proxy     = nullptr;
+        int64_t                          sample_ns = 0;
+    };
+    std::vector<PresentationFeedback*> presentation_feedbacks_;
+
+    // THE 30-FRAME MOVING MEAN of (presented − sampled), Kodi's window: long
+    // enough to average the compositor's per-frame jitter, short enough to
+    // follow a change (a window moved to the 120 Hz output settles in half a
+    // second). A RING rather than a bare running sum, because a moving mean
+    // must DROP its oldest sample and only the ring knows which one that is;
+    // the sum is kept beside it so the mean is one division. `count` grows to
+    // the window and stays there; `next` is the slot the next sample
+    // overwrites. The mean is published from the FIRST sample (one measured
+    // frame already beats the fallback's guess), announced on stderr when the
+    // window first fills and again whenever it moves a millisecond from the
+    // figure last announced (`presentation_lead_announced_ns_`, -1 until the
+    // first announcement).
+    static constexpr int kDisplayLeadWindow = 30;
+    int64_t presentation_samples_[kDisplayLeadWindow] = {};
+    int     presentation_sample_count_ = 0;
+    int     presentation_sample_next_  = 0;
+    int64_t presentation_sample_sum_   = 0;
+    int64_t presentation_lead_announced_ns_ = -1;
 
     // -- Surface objects --
     struct wl_surface*       wl_surface_       = nullptr;
@@ -613,10 +737,11 @@ private:
     // additional damage without producing a spurious extra commit.
     bool in_pre_paint_ = false;
 
-    // The bound single wl_output's latest CURRENT mode, in millihertz.
-    // Replaced on mode changes and cleared on output removal. Zero means no
-    // output advertised a usable mode; detect_refresh_rate_ms() then falls
-    // back to 60 Hz.
+    // THE WINDOW'S OUTPUT'S latest CURRENT mode, in millihertz — the selected
+    // record's figure (the selection rule at `outputs_`), re-derived at every
+    // output edge by select_window_output. Zero means no output has reported
+    // a usable mode yet; detect_refresh_rate_ms() then falls back to 60 Hz,
+    // and so does the display lead's fallback period.
     int  output_refresh_mhz_ = 0;
 
     // -- Idle-tick timing --
@@ -796,11 +921,45 @@ private:
     // while there is no wl_pointer.
     void apply_cursor_kind();
     ShmBuffer* acquire_free_buffer();
+    // THE FRAME REQUEST'S TWO SHAPES (2026-09-02). request_frame_callback
+    // issues wl_surface.frame and NOTHING ELSE — the request is double-
+    // buffered surface state and rides whatever commit follows, which in
+    // paint_one_frame is the content commit itself (frame → feedback → damage
+    // → attach → ONE commit, the conventional order; two commits per painted
+    // frame in the reverse order until this day). schedule_frame_callback is
+    // the STANDALONE form — the request plus a commit of its own — for the
+    // callers that have no content to attach and still need the request sent:
+    // the empty-damage and both-buffers-busy returns inside paint_one_frame,
+    // invalidate_region's first damage after an idle stretch, and a
+    // reconfigure with nothing pending. Both are no-ops while a callback is in
+    // flight.
+    void request_frame_callback();
     void schedule_frame_callback();
     void paint_one_frame();
     void destroy_wayland_state();
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
+
+    // -- Output helpers --
+    // The record for a wl_output proxy, or null for one this program never
+    // bound (a cursor surface's output events never reach here; the main
+    // surface's enter names only outputs the registry named).
+    OutputRecord* find_output(struct wl_output* output);
+    // THE ONE WRITER of output_refresh_mhz_: apply the selection rule (at
+    // `outputs_`) to `window_output_` and, when the figure moved, re-arm the
+    // tick. Called at every output edge.
+    void select_window_output();
+
+    // -- Presentation helpers --
+    // Request one wp_presentation_feedback for the content commit that
+    // follows, stamped with `sample_ns`; a no-op while the global is absent or
+    // its clock unusable. The stderr announcements and the ring are at the
+    // presented handler.
+    void request_presentation_feedback(int64_t sample_ns);
+    // The one teardown of a feedback record: unlist it, destroy its proxy,
+    // free it. Both terminal arms end here; shutdown runs it over the rest.
+    void finish_presentation_feedback(PresentationFeedback* fb);
+    void destroy_presentation_feedbacks();
 
     // -- Clipboard helpers --
     // Create the wl_data_device once both the manager and the seat exist. Both
@@ -825,8 +984,18 @@ private:
     void on_registry_global(struct wl_registry* r, uint32_t name,
                             const char* interface, uint32_t version);
     void on_registry_global_remove(uint32_t name);
-    void on_output_mode(uint32_t flags, int32_t width, int32_t height,
-                        int32_t refresh_mhz);
+    void on_output_mode(struct wl_output* output, uint32_t flags,
+                        int32_t width, int32_t height, int32_t refresh_mhz);
+    // wl_surface.enter / leave on the MAIN surface (the selection rule at
+    // `outputs_`).
+    void on_surface_enter(struct wl_output* output);
+    void on_surface_leave(struct wl_output* output);
+    // wp_presentation.clock_id, and the feedback's two terminal arms.
+    void on_presentation_clock_id(uint32_t clk_id);
+    void on_presentation_presented(PresentationFeedback* fb,
+                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo,
+                                   uint32_t tv_nsec, uint32_t flags);
+    void on_presentation_discarded(PresentationFeedback* fb);
     void on_xdg_surface_configure(struct xdg_surface* xs, uint32_t serial);
     void on_toplevel_configure(int32_t width, int32_t height,
                                struct wl_array* states);

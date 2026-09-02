@@ -284,6 +284,24 @@ struct GuiPlaybackState {
     // output_rate (clear_after_failed_init, shutdown).
     std::atomic<int64_t> output_latency_frames{0};
 
+    // THE DISPLAY LEAD IN NANOSECONDS (architect 2026-09-02): how far AHEAD of
+    // `now` the predictor's POSITION is read, so that the playhead the paint
+    // draws from that position lands where the sound will be when the pixel
+    // turns into light — the display's own latency, the twin of the output
+    // latency above on the far side of the paint. The platform owns the
+    // figure (GuiPlatform::display_lead_ns: the Wayland backend measures it
+    // per frame through the compositor's presentation feedback, the Android
+    // backend answers 0 by ruling), and main.cpp's pre-paint hook writes it
+    // here once per painted frame through the setter below, ahead of every
+    // predictor read that frame makes. IT REACHES THE POSITION ALONE: the
+    // one read site is `observe`'s predict_position call (playback_common.
+    // cpp), and the natural-end hold's deadline beside it keeps the bare
+    // `now` — a lead on the shared clock would end the hold early by the
+    // lead, the sound still in the device's queue. Main thread only, written
+    // and read there, like the anchor; not a device fact of the audio engine,
+    // so bind and rebind leave it standing.
+    int64_t display_lead_ns = 0;
+
     // THE CYCLE STAMP — (stamp_cursor, stamp_ns, stamp_generation): a source
     // position, the steady_clock ns at which that position ENTERS THE OUTPUT
     // PORT, and THE GENERATION OF THE SESSION IT BELONGS TO, published by the
@@ -472,6 +490,10 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 
 void   playback_resync_predictor(GuiPlaybackState& state);
 bool   playback_is_playing(const GuiPlaybackState& state);
+
+// set_display_lead_ns's whole body: the field's contract is at
+// GuiPlaybackState::display_lead_ns. Main thread only.
+void   playback_set_display_lead_ns(GuiPlaybackState& state, int64_t lead_ns);
 
 // THE PREDICTOR'S READERS ARE ONE OBSERVATION (2026-09-01, the epoch
 // reconciled ahead of the hold): the four below are thin faces over one

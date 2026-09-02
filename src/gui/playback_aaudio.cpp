@@ -592,6 +592,11 @@ bool GuiPlayback::device_unavailable() const {
            impl_->stream == nullptr;
 }
 
+void GuiPlayback::set_display_lead_ns(int64_t lead_ns) {
+    if (!impl_) return;
+    playback_set_display_lead_ns(impl_->state, lead_ns);
+}
+
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);

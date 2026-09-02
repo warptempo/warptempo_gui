@@ -2706,6 +2706,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, gui, viewport);
 
+        // THE DISPLAY LEAD, handed to the predictor once per painted frame
+        // (architect 2026-09-02; the figure's contract is at
+        // GuiPlatform::display_lead_ns, its read at `observe`,
+        // playback_common.cpp): the Wayland backend stamps this frame's
+        // pre-paint instant just before firing this hook and measures how
+        // long its pixels take to light (Android answers 0 by ruling), and
+        // every predictor read from here on — the scanner sample below, and
+        // the render player's tick, which reads cursor() for its clock and
+        // scrub under the early return that follows and so sees the figure
+        // the last painted frame set — is that far ahead of `now`, so the
+        // line lands on the sound when the pixel does. Above every return,
+        // for exactly that second reader.
+        playback.set_display_lead_ns(gui.display_lead_ns());
+
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
         // project's: the scanner sampling below would move the waveform's

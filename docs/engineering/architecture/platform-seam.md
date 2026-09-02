@@ -14,14 +14,17 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (75 declarations as of 2026-08-30 — 13 `using` aliases and 62
+  public API (76 declarations as of 2026-09-02 — 13 `using` aliases and 63
   members including the constructor and destructor — counted as the
   semicolon-terminated declarations in the `public:` section of each header
   with `//` comments and blank lines stripped, and the identity proved by
   diffing those two stripped sections, which come out line-for-line equal; the
   count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
   mirror's discovery — Synchronize is told its destination by the device
-  config's `sync_path` now, so neither backend goes looking for a volume;
+  config's `sync_path` now, so neither backend goes looking for a volume —
+  and ROSE BY ONE on 2026-09-02 with `display_lead_ns`, the display lead the
+  playback predictor is read ahead by (the Playback seam below: measured on
+  Wayland, 0 by ruling on Android);
   there is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
@@ -32,7 +35,11 @@ contract. The port split them:
   one hook a backend never fires — and `publish_media_state`, a no-op body
   there — The car, below) are the fourth and fifth):
   `platform_wayland.{h,cpp}`
-  (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap → `GuiKey`) and
+  (Wayland/xkb/cursor/shm/clipboard/pointer-lock/presentation feedback, keymap
+  → `GuiKey`; the protocol classes — five REQUIRED globals, every `wl_output`
+  best-effort, and exactly THREE OPTIONAL protocols: pointer-constraints,
+  relative-pointer and, since 2026-09-02, `wp_presentation` — are stated once
+  at `platform_wayland.h`'s globals block) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
   selects the header; every consumer includes it and changes nothing (NINE translation units and headers today, re-grepped 2026-08-29 — the number is a consequence of the seam, not a fact about it, so nothing here keeps a list).
@@ -53,7 +60,11 @@ contract. The port split them:
   provenance sentences (measured compositor behavior, labwc's repeat delay)
   stay verbatim.
 - **C — the loop contract**: ONE periodic timerfd at half the refresh
-  period is the ONE wakeup; the two software deadlines (key repeat, the
+  period — on Wayland the refresh of THE OUTPUT THE WINDOW IS ON, every
+  `wl_output` bound and `wl_surface.enter`/`leave` selecting among them (the
+  most recent enter wins; the rule is at `outputs_`, `platform_wayland.h`;
+  until 2026-09-02 it was the first output the registry named, a coin flip
+  on a 60 Hz panel beside a 120 Hz external) — is the ONE wakeup; the two software deadlines (key repeat, the
   touch window) are POLLED against it in a fixed order — `on_tick` →
   `input_.tick()` (= `maybe_fire_repeat` then `maybe_resolve_touch_window`)
   → worker completions in registration order → the settled hook →
@@ -155,8 +166,39 @@ drag coordinates floor instead of truncating.
   compare against the word they loaded. So on the laptop the
   line rests on the launch frame until the first sound, tracks the ear to
   the crystal skew between resyncs (a resync's step is the drift alone),
-  and vanishes with the sound; what remains is the DAC's own few-ms
-  pipeline and the display's own frame or two, both recorded at
+  and vanishes with the sound. THE DISPLAY'S OWN LATENCY IS COMPENSATED TOO
+  (architect 2026-09-02, "a self-measuring application that estimates the
+  offset and applies it uniformly"): a frame painted at pre-paint time turns
+  into light one to two refresh periods later (~2 under labwc, ~33 ms at
+  60 Hz), which the old audio lead had partly hidden and the audio
+  compensation exposed — the line reading BEHIND the sound by that much. So
+  the seam carries `display_lead_ns()`, and the predictor's POSITION is read
+  that far AHEAD of `now` (the one read at `observe`, `playback_common.cpp`;
+  the natural-end hold's deadline keeps the bare clock — a lead on the shared
+  clock would end the hold early by the lead). LAPTOP ONLY, and the figure is
+  MEASURED: the Wayland backend binds `wp_presentation` (the third optional
+  protocol) and, on every content commit — now the conventional frame
+  request → feedback → damage → attach → ONE commit, the second empty commit
+  per frame retired with the reorder — requests a presentation feedback
+  stamped with the pre-paint instant; `presented` answers with the instant
+  the pixels lit, and a 30-frame moving mean of the difference (Kodi's
+  window) is the lead, published from the first sample; `discarded` drops
+  the sample. The FALLBACK where the global is absent or its clock is not
+  `CLOCK_MONOTONIC` (the predictor's own, so no conversion stands between
+  the two stamps) is 2 × the refresh period of the window's own output
+  (section C above owns which output that is), 60 Hz when none is known.
+  One stderr line beside the JACK latency line says the figure — the
+  fallback once at init, the measured mean when its window first fills and
+  again whenever it moves by a millisecond. `main.cpp`'s pre-paint hook
+  hands the figure to the predictor once per painted frame
+  (`GuiPlayback::set_display_lead_ns`), above every reader that frame has.
+  ANDROID ANSWERS 0 BY RULING (the deep dive's item I, record-only): the
+  tablet's audio latency is uncompensated by ruling, so its predictor
+  already runs AHEAD of the sound by the whole audio lead, and a display
+  lead on top would double-count against a figure that platform never
+  subtracts; there is no feedback road on the lock/unlockAndPost path
+  either. What remains on the laptop is the DAC's own few-ms pipeline and
+  the frame grid's ± half a period, both recorded at
   `playback_publish_play` (`playback_common.cpp`).
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
