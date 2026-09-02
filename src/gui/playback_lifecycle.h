@@ -253,13 +253,15 @@ struct GuiPlaybackLifecycle {
     // preflight has already asked both ahead of the act (so a refusal here is
     // unreachable in practice and would merely end the act).
     // ONE CALLER: GuiAbAudition::launch_phase (ab_audition.cpp), which owns the
-    // sequence this play is one step of and re-arms the sequence only on
-    // true. A live session never launches (the caller always arrives stopped —
-    // the tick's natural end or the act's own tab switch precede every call).
-    // ITS SEED IS FOLLOW'S, ALWAYS (architect 2026-09-01): this entry names
-    // itself to the launch body as the act's play, so the centered pin — which
-    // the act disregards whole — never seeds one of the four plays. Nothing
-    // else about the launch differs.
+    // sequence this play is one step of, WRITES THE PHASE BEFORE CALLING HERE
+    // and clears it again on false. A live session never launches (the caller
+    // always arrives stopped — the tick's natural end or the act's own tab
+    // switch precede every call).
+    // ITS SEED IS FOLLOW'S, ALWAYS (architect 2026-09-01): this entry runs no
+    // sequence clear, so the launch body's seed fork finds the act's phase
+    // standing and centered_pin_engaged answers false there — the centered
+    // pin, which the act disregards whole, never seeds one of the four plays.
+    // Nothing else about the launch differs.
     bool launch_bounded_audition(int64_t start, int64_t span);
 
     // Reseek the active playback session to a new starting sample, keeping
@@ -310,16 +312,20 @@ private:
     // Returns whether it launched. Callers (toggle_playback's play edge,
     // scrub_launch_at) run the defensive follow-override clear before
     // delegating. Since 2026-08-26 this is a thin caller of
-    // launch_playback_window below, the end being the only thing it adds.
+    // launch_playback_window below, adding the end and — since 2026-09-01 —
+    // THE USER-LAUNCH CLEAR of the A/B audition sequence ahead of the
+    // delegation (owner (2) of the edge inventory at GuiAuditionSequence): a
+    // launch of the user's own transport is a fresh session, refused or not,
+    // and this entry is the only road into the body that is not the act's.
     bool launch_playback_from(int64_t launch_pos);
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
     // definition): validate `start`, seed the scanner, and play [start, end).
     // Every launch OF THE PROJECT'S WAVEFORM ends here — the view-end launch
     // above and the bounded audition — so the gates, the scanner seed, the
-    // follow check and the launch damage are written once. It also ends the
-    // A/B audition sequence at its head (the launch-body clear, the edge
-    // inventory at GuiAuditionSequence): a launch is a fresh session, whoever
-    // asked.
+    // follow check and the launch damage are written once. It clears no
+    // sequence: the view-end entry has already cleared it for a user launch,
+    // and the bounded audition arrives with the act's phase standing, which is
+    // how the body's seed fork knows the act (the contract at the definition).
     // THE PRODUCT HAS A SECOND LAUNCH BODY SINCE 2026-08-28, and it is
     // recorded here as well as at its own head: the RENDER PLAYER's
     // (GuiRenderPlayer::play_wav / toggle_pause / seek_to, render_player.h)
@@ -329,13 +335,10 @@ private:
     // does not move, the scanner never runs, and the item's domain is the
     // buffer's own. The two share the ONE STOP BODY above, which carries the
     // player's fork.
-    // `ab_audition_play` — is this launch one of the A/B audition's four
-    // bounded plays? TRUE from launch_bounded_audition alone, and its one
-    // effect is the SEED FORK: the act disregards the centered pin whole
-    // (architect 2026-09-01, centered_pin_engaged in app_state.h), so its
-    // plays seed like centered=false. The caller must say so because the
-    // sequence is already Idle by the time the body could ask — the full
-    // argument is at the fork itself.
-    bool launch_playback_window(int64_t start, int64_t end,
-                                bool ab_audition_play);
+    // THE SEED FORK reads centered_pin_engaged (app_state.h) with no term of
+    // its own: the act disregards the centered pin whole (architect
+    // 2026-09-01), and the predicate sees the act here because its phase is
+    // standing by the time the body asks — the four-case argument is at the
+    // fork itself.
+    bool launch_playback_window(int64_t start, int64_t end);
 };

@@ -74,20 +74,22 @@ struct GuiInputHandler;
 // four, which is the opposite of what a fine-tuning listen wants. Nothing
 // here implements it: the pin's four engagement sites read ONE predicate,
 // centered_pin_engaged (app_state.h), which answers false for as long as
-// `phase` stands — plus one term at the launch seed for the act's own plays,
-// which reach that body with the sequence already cleared. The lamp is
-// untouched (this act writes no field and it reports the persisted
-// preference), and the pin re-engages at the act's end, on the resting cursor
-// `c` has already centered.
+// `phase` stands — the launch seed included, since launch_phase writes the
+// phase BEFORE it launches and the act's road into the launch body runs no
+// clear (the flag that named the act by its entry for the first hours of
+// 2026-09-01 retired that evening). The lamp is untouched (this act writes no
+// field and it reports the persisted preference), and the pin re-engages at
+// the act's end, on the resting cursor `c` has already centered.
 //
 // ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
 // CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at
 // GuiAuditionSequence), so every one of the three calls sits in a window where
 // the sequence is already Idle — the press-time pair before the first launch
-// (the refusal guard has returned by then), and the switch-back call after the
-// switch and BEFORE arm_rest, which is the same reason the switch itself must
-// precede the arm. A call placed after an arm would wipe the rest it just
-// armed and silently end the act.
+// (the refusal guard has returned by then, and launch_phase's own phase write
+// comes after both), and the switch-back call after the switch and BEFORE
+// arm_rest, which is the same reason the switch itself must precede the arm.
+// A call placed after an arm — or after launch_phase's write — would wipe the
+// phase just written and silently end the act.
 //
 // SEQUENCING IS PACED AND TAKES NO TIMER OF ITS OWN: the audio thread ends a
 // play, the tick observes it (the same natural-end branch every audition ends
@@ -130,7 +132,8 @@ struct GuiInputHandler;
 // already acting, so no return to the starting tab. A REST IS INTERRUPTED
 // EXACTLY AS A PLAY IS: no clearing owner tests for live playback on the way
 // in (the stop body's clear sits ahead of its own nothing-to-do guard, the
-// launch body's at its head), so a stop, a Space or a scrub that lands in one
+// user launch's ahead of its entry's delegation — launch_playback_from, since
+// 2026-09-01), so a stop, a Space or a scrub that lands in one
 // of the rests ends the act just as it would mid-play — a Space landing in a
 // rest reaching the stop body rather than the launch body since the fork became
 // transport-live, which is the same end by the same owner. Every path is a
@@ -236,10 +239,11 @@ struct GuiAbAudition {
     // tick costs one enum compare — the clock is read only past that. It reads
     // monotonic_ms() itself rather than taking a `now`, so the caller need not
     // sample a clock on every tick for a state that is almost never standing.
-    // The rest is cleared BEFORE the launch is attempted, so a launch refusal
-    // ends the act (the interrupt rule's own answer) instead of leaving a due
-    // rest to retry on every tick; a success re-arms the sequence for the play
-    // now live, through launch_phase as every launch does.
+    // The rest is cleared BEFORE the launch is attempted, so a refusal ahead
+    // of launch_phase's own write ends the act (the interrupt rule's own
+    // answer) instead of leaving a due rest to retry on every tick;
+    // launch_phase then writes the play's phase ahead of its launch and clears
+    // it again on a refusal, as every launch of the act's does.
     // ONE CALLER: main.cpp's on_tick, above its playing-only guard — a rest has
     // nothing playing, so it must be sampled ahead of that return — and beside
     // the platform's own deadline samplers on the same timerfd expiry.
@@ -252,10 +256,15 @@ private:
     // Press-time readiness of ONE tab's launch frame: the preview gate in
     // target view, then the launch body's own playable predicate on the frame.
     bool tab_launch_ready(int64_t frame) const;
-    // Launch one phase's play from the active tab's resting playhead; on
-    // success the sequence is armed with `phase`, waiting = false (the play
-    // half's non-Idle writer). Returns whether it launched; a refusal leaves
-    // the act ended (the launch body cleared it) and the tab where it is.
+    // Launch one phase's play from the active tab's resting playhead. THE
+    // SEQUENCE IS WRITTEN WITH `phase`, waiting = false, BEFORE THE LAUNCH
+    // (the play half's non-Idle writer; 2026-09-01 — it followed a true
+    // return until then), so the launch body finds the act standing and its
+    // seed fork disregards the centered pin through centered_pin_engaged
+    // alone; called only where the sequence is Idle (start past its guard,
+    // fire_if_due past its clear). Returns whether it launched; a refusal
+    // clears the sequence again, so the act is ended and the tab stays where
+    // it is.
     bool launch_phase(GuiAuditionSequence::Phase phase, char home_tab);
     // Arm the REST that precedes `phase`: the sequence takes that phase with
     // waiting = true and a deadline `gap_ms` out (the rest half's non-Idle

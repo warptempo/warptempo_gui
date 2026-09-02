@@ -238,11 +238,14 @@ void GuiAbAudition::fire_if_due() {
     const Phase phase    = seq.phase;
     const char  home_tab = seq.home_tab;
     // END THE REST BEFORE THE LAUNCH IS ATTEMPTED, and read the two fields
-    // above first: launch_phase re-arms the sequence only on success, and a
-    // refusal must leave the act ENDED — a due rest left standing would be
-    // re-tried on every tick from here on. (The launch body's own head clear
-    // would cover the success path, but not the arm the refusal returns
-    // before.)
+    // above first: this is the FIRED edge, the rest's phase (waiting = true)
+    // giving way to the play's (waiting = false), and launch_phase writes the
+    // play's phase itself before it launches and clears it again on a
+    // refusal. The clear here still matters for the one refusal launch_phase
+    // takes BEFORE its write — the preview gate — which must leave the act
+    // ENDED rather than a due rest re-tried on every tick from here on. (The
+    // launch body clears nothing since 2026-09-01; the user launches' clear is
+    // launch_playback_from's, which the act's road never passes.)
     clear_audition_sequence(app);
     launch_phase(phase, home_tab);
 }
@@ -264,17 +267,39 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     }
     // From the active tab's RESTING playhead — read, never written.
     const int64_t start = app.playhead_cursor_sample;
-    if (!playback_lifecycle.launch_bounded_audition(start,
-                                                    audition_span_frames())) {
-        return false;
-    }
-    // THE PLAY HALF'S NON-IDLE WRITE, strictly after the launch body returned
-    // true (its head cleared the sequence; this re-arms it for the play now
-    // live). waiting = false is the whole difference from arm_rest's write:
-    // the phase named here is SOUNDING, not owed.
+    // THE PLAY HALF'S NON-IDLE WRITE, AHEAD OF THE LAUNCH (architect
+    // 2026-09-01; it followed a true return until then, the launch body's head
+    // clear having wiped whatever stood): the launch body reads the act off
+    // this standing phase — its seed fork asks centered_pin_engaged, which
+    // answers false while the act stands, so the play seeds through follow's
+    // arm as the act requires — and the body clears no sequence on this road
+    // (launch_bounded_audition runs none; the user launches' clear is
+    // launch_playback_from's). The sequence is Idle at this line by both
+    // callers' construction — start() past its running guard, fire_if_due past
+    // its clear — so this is a write onto Idle, not a re-arm. Nothing between
+    // here and the launch body paints or dispatches, so the phase standing a
+    // call earlier reaches no face and no fork. waiting = false is the whole
+    // difference from arm_rest's write: the phase named here is SOUNDING, not
+    // owed. Both `c` calls the act makes ahead of its first play precede this
+    // write (start), and the switch-back call precedes the arm (the advance),
+    // so the header's ordering rule holds unchanged.
     app.audition_sequence.phase         = phase;
     app.audition_sequence.home_tab      = home_tab;
     app.audition_sequence.waiting       = false;
     app.audition_sequence.launch_due_ms = 0;
+    if (!playback_lifecycle.launch_bounded_audition(start,
+                                                    audition_span_frames())) {
+        // A REFUSED LAUNCH ENDS THE ACT, as it always did — the tab staying
+        // where it is, the interrupt rule's own answer. The one spelling of
+        // "the act is over" is used, so the clear's side effect runs: the
+        // phase written above is non-Idle, so the derivation memory's cursor
+        // term is voided. From fire_if_due that void already stood (its own
+        // clear ended a standing rest); from start() it is new to this path
+        // and inert in effect — the act's tab switch just changed the
+        // memory's tab term without a paint between, so the next engaged
+        // pre-paint was already due.
+        clear_audition_sequence(app);
+        return false;
+    }
     return true;
 }

@@ -314,10 +314,26 @@ int64_t GuiPlaybackLifecycle::active_view_play_end() const {
 // follow-override clear before delegating, so it precedes validation exactly
 // once either way. Everything else is the one launch body's, below.
 bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
-    // Not the A/B audition's play: this is the user's own transport, so the
-    // centered pin seeds it wherever it is engaged (the fork at the body).
-    return launch_playback_window(launch_pos, active_view_play_end(),
-                                  /*ab_audition_play=*/false);
+    // THE USER-LAUNCH CLEAR (architect 2026-08-26 at the launch body's head;
+    // moved up to this entry 2026-09-01): every launch of the user's own
+    // transport begins a fresh session, so the A/B audition sequence ends
+    // here whoever asked and whether or not the body below refuses — a scrub
+    // launched DURING ONE OF THE ACT'S RESTS, or inside the sub-tick window
+    // after a bounded play's natural end (bare Space reads `phase != Idle` as
+    // transport-live and takes the stop side there; the scrub's own fork reads
+    // the audio thread's flag alone, so it is the launch that reaches this
+    // entry with the act standing), can then never be taken for the act's own
+    // play when IT ends. It sits ahead of the delegation exactly as both
+    // callers' defensive follow-override clear sits ahead of validation, so a
+    // REFUSED user launch still ends a standing act — the guarantee the head
+    // clear gave, one call up. THIS ENTRY IS THE ONLY ROAD INTO THE BODY THAT
+    // IS NOT THE ACT'S (the body's two callers are this and
+    // launch_bounded_audition), and the act's own launches need no clear: the
+    // act IS the standing phase, written by GuiAbAudition::launch_phase before
+    // its launch so the body's seed fork can read it. The edge inventory is at
+    // GuiAuditionSequence (app_state.h), owner (2).
+    clear_audition_sequence(app);
+    return launch_playback_window(launch_pos, active_view_play_end());
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -340,11 +356,14 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     const int64_t view_end = active_view_play_end();
     if (start >= view_end - 1) return false;
     const int64_t end = std::min(start + span, view_end);
-    // THE ACT'S OWN PLAY SAYS SO (2026-09-01): this entry is the A/B
-    // audition's alone (one caller, GuiAbAudition::launch_phase), and the
-    // launch body's seed fork reads the fact from here because the sequence is
-    // already Idle by the time it could ask (the argument is at that fork).
-    return launch_playback_window(start, end, /*ab_audition_play=*/true);
+    // NO SEQUENCE CLEAR ON THIS ROAD (2026-09-01): this entry is the A/B
+    // audition's alone (one caller, GuiAbAudition::launch_phase), which
+    // arrives with the phase it is launching ALREADY WRITTEN, and the launch
+    // body's seed fork reads the act off that standing phase through
+    // centered_pin_engaged. The clear that every user launch takes is the
+    // view-end entry's (launch_playback_from), the one road into the body
+    // that is not the act's.
+    return launch_playback_window(start, end);
 }
 
 // THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
@@ -373,17 +392,21 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // extra multiplier on top would defeat it. That reasoning outlived the feature:
 // the key retired, so every view plays at the source's own rate and there is
 // nothing left to force.)
-bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
-                                                  bool ab_audition_play) {
-    // THE LAUNCH-BODY CLEAR (architect 2026-08-26): every launch begins a
-    // fresh session, so the A/B audition sequence ends here whoever asked and
-    // whether or not the launch below refuses — a plain Space or a scrub
-    // launched in the sub-tick window after a bounded play's natural end can
-    // then never be taken for the act's own play when IT ends. The act's own
-    // launch passes through this same line and re-arms once this returns true
-    // (GuiAbAudition::launch_phase). The edge inventory is at
-    // GuiAuditionSequence.
-    clear_audition_sequence(app);
+bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
+    // THE A/B AUDITION IS NAMED BY ITS STATE HERE, NOT BY ITS ENTRY (architect
+    // 2026-09-01): this body clears no sequence. A user launch arrives with
+    // the sequence already Idle — the view-end entry launch_playback_from
+    // clears it ahead of its delegation (the clear lived at this head from
+    // 2026-08-26 until then) — and the act's own launch arrives with the phase
+    // it is launching ALREADY STANDING (GuiAbAudition::launch_phase writes it
+    // before calling launch_bounded_audition and clears it again on a false
+    // return), so `phase != Idle` at this body means exactly "this is one of
+    // the act's four plays", which the seed fork below reads through
+    // centered_pin_engaged like every other engagement site. Nothing between
+    // that write and this body paints or dispatches, so the phase standing one
+    // call earlier changes no face and no fork (redesign_button_glyph_swapped
+    // and toggle_playback read it at their own times). The edge inventory is
+    // at GuiAuditionSequence (app_state.h).
     // Both `start` (playback.play()'s launch bound) and the scanner's
     // launch position below are in the active PAINT domain
     // (full-target-frame in target view; source-frame otherwise)
@@ -486,17 +509,20 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // the act disregarding the pin whole): each of its four launches must seed
     // exactly as it would with centered=false, or a play launched after the
     // user has panned or after `c` left the camera elsewhere would snap back
-    // to centre mid-act. THIS IS THE ONE ENGAGEMENT SITE WHERE
-    // centered_pin_engaged CANNOT SEE THE ACT, and the parameter is why: BOTH
-    // roads into this body arrive with the sequence already Idle — the head
-    // clear above ends whatever stood, and the act's own launches were already
-    // Idle before it (GuiAbAudition::fire_if_due clears the rest before
-    // launching, and the act's first play is launched before anything is
-    // armed). So the act is named by its ENTRY, launch_bounded_audition, whose
-    // one caller is GuiAbAudition::launch_phase; the predicate still leads,
-    // both to keep the lamp's one question in one shape and so a future
-    // reordering that DOES leave the phase standing here is answered already.
-    if (centered_pin_engaged(app) && !ab_audition_play)
+    // to centre mid-act. The predicate sees the act on its own here, as at
+    // the pin's other engagement sites, because the act's phase STANDS at
+    // this line (the head comment) — the explicit per-launch flag that named
+    // the act by its entry for the first hours of 2026-09-01 retired that
+    // evening. THE FOUR CASES, each the verdict the flag gave: (1) a user
+    // launch with no act standing — the entry's clear is a no-op at Idle and
+    // the pin answers the preference; (2) a user launch during one of the
+    // act's rests — the entry's clear ended the rest before this body, and
+    // the pin answers the preference; (3) a user launch in the sub-tick window
+    // after a bounded play's natural end — the same clear ended the act, the
+    // same preference answers; (4) the act's own launch — the phase was
+    // written before launch_bounded_audition was called and no clear ran, so
+    // the predicate answers false and follow's arm seeds the play.
+    if (centered_pin_engaged(app))
         viewport.derive_centered_viewport();
     else
         viewport.follow_scroll_if_needed();

@@ -4184,11 +4184,13 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //
 // THE EDGES, complete:
 //   * WRITTEN NON-IDLE at TWO sites, one per half:
-//     THE PLAY, GuiAbAudition::launch_phase, after its bounded launch has
-//     returned true (waiting = false). A refused launch writes nothing, so a
-//     phase whose play could not start (a playhead at or past the domain end,
-//     a preview that went stale) simply ends the act — silently, the tab
-//     staying where it is.
+//     THE PLAY, GuiAbAudition::launch_phase, BEFORE its bounded launch is
+//     called (waiting = false; since 2026-09-01 — it followed a true return
+//     until then), so the launch body's seed fork finds the act standing and
+//     centered_pin_engaged answers false there on its own. A refused launch
+//     clears the sequence again, so a phase whose play could not start (a
+//     playhead at or past the domain end, a preview that went stale) simply
+//     ends the act — silently, the tab staying where it is.
 //     THE REST, GuiAbAudition::advance_after_natural_end, which arms the NEXT
 //     phase with waiting = true and its deadline (edge below).
 //   * ADVANCED at ONE site: the tick's natural-end branch (main.cpp), which
@@ -4208,12 +4210,15 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //   * CLEARED TO IDLE at FOUR OWNERS ACROSS EIGHT CALL SITES (re-derived by
 //     grepping every clear_audition_sequence call), so no interrupt path can
 //     forget it. A REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners
-//     every interrupt route ends up in — the stop body and the launch body —
-//     neither test for live playback (the stop body's clear sits AHEAD of its
-//     own nothing-to-do guard), so a stop or a launch that finds silence still
-//     ends the act. (The grep's NINTH call is not an owner and not an
-//     interrupt: GuiAbAudition::fire_if_due ends the REST it is about to
-//     launch, the FIRED edge above.)
+//     every interrupt route ends up in — the stop body and the user launch's
+//     entry — neither test for live playback (the stop body's clear sits
+//     AHEAD of its own nothing-to-do guard), so a stop or a launch that finds
+//     silence still ends the act. (The grep's NINTH and TENTH calls are not
+//     owners and not interrupts, both the act's own machinery:
+//     GuiAbAudition::fire_if_due ends the REST it is about to launch, the
+//     FIRED edge above, and GuiAbAudition::launch_phase ends the PLAY it
+//     wrote when the launch refuses, the refused-launch end of the PLAY edge
+//     above.)
 //     THE CLEAR CARRIES ONE SIDE EFFECT since 2026-09-01, and it is the
 //     centered pin's: the act disregards the pin whole, so a clear that ends a
 //     STANDING act voids the derivation memory's cursor term and lets the
@@ -4232,13 +4237,20 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         undo/redo's tab restore, the settings editor's tab key), the `h`
 //         view's entry, the S/T flip, every trim write, the scrub's stop half,
 //         and the tick's natural end itself (which then advances).
-//     (2) THE ONE LAUNCH BODY, GuiPlaybackLifecycle::launch_playback_window,
-//         at its head, refused or not: every launch begins a fresh session, so
-//         a plain Space or a scrub launched DURING ONE OF THE RESTS — or
-//         inside the sub-tick window between a play's natural end and the tick
-//         that observes it — can never be mistaken for the act's own play at
-//         ITS natural end. The act's own launch runs through the same head
-//         (fire_if_due's, at the rest's end) and re-arms after it returns.
+//     (2) THE VIEW-END LAUNCH ENTRY, GuiPlaybackLifecycle::launch_playback_from,
+//         ahead of its delegation to the one launch body, refused or not
+//         (2026-09-01; the launch body's own head from 2026-08-26 until then):
+//         every launch of the user's own transport begins a fresh session, so
+//         a scrub launched DURING ONE OF THE RESTS — or inside the sub-tick
+//         window between a play's natural end and the tick that observes it
+//         (bare Space takes the stop side there, reading `phase != Idle` as
+//         transport-live) — can never be mistaken for the act's own play at
+//         ITS natural end. EVERY NON-ACT LAUNCH PASSES THROUGH THIS ENTRY (its
+//         two callers are Space's play edge and the scrub launch, and the
+//         launch body's only other caller is launch_bounded_audition, the
+//         act's own), and the act's launch needs no clear because the act IS
+//         the standing phase: launch_phase writes it before launching, so the
+//         launch body's seed fork reads the act off the state.
 //     (3) THE TARGET_RENDER CLEARS, three of them, because those bodies
 //         deactivate the scanner without the stop body and the tick's
 //         natural-end branch therefore never sees their session end: trigger()'s
@@ -9029,10 +9041,10 @@ inline bool transport_session_live(const AppState& a) {
 //   * the pre-paint hook's RESTING half and its PLAYING half (main.cpp), the
 //     pin's one derivation point;
 //   * the LAUNCH SEED's fork (GuiPlaybackLifecycle::launch_playback_window),
-//     which carries ONE TERM OF ITS OWN for the act's four launches — the one
-//     place this predicate cannot see the act, because both roads into that
-//     body arrive with the sequence already cleared; the reason is at the
-//     site;
+//     an ordinary engagement site since the evening of 2026-09-01: the act's
+//     phase stands there (GuiAbAudition::launch_phase writes it before the
+//     launch, and the act's road runs no clear), while a user launch arrives
+//     cleared by its own entry; the four-case argument is at the fork;
 //   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, so a `y` pressed
 //     mid-act records the preference and lights the lamp while deriving
 //     nothing, and the derivation body is never called under a standing act.
@@ -9816,11 +9828,13 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 // on the resting cursor `c` has already centered, so the re-engagement is
 // ordinarily invisible and only ever corrects a camera something did move.
 // INSIDE THE STANDING GUARD, so the funnel's many idle calls — every stop,
-// every launch, the `h` entry, every trim write — cost one enum compare and
-// change nothing; the guard also means the only non-END write it fires on is
-// GuiAbAudition::fire_if_due's (the rest it is about to launch), which is
+// every user launch, the `h` entry, every trim write — cost one enum compare
+// and change nothing; the guard also means the only non-END write it fires on
+// is GuiAbAudition::fire_if_due's (the rest it is about to launch), which is
 // harmless: the pin is off for the play that follows and the void simply
-// stands until the act really ends.
+// stands until the act really ends. (launch_phase's clear on a refused launch
+// IS an end — the phase it wrote a moment earlier stands — and the void it
+// fires is the re-engagement the pin is owed there.)
 inline void clear_audition_sequence(AppState& a) {
     if (a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle)
         a.centered_derived_cursor = -1;
