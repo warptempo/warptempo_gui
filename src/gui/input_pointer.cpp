@@ -1616,7 +1616,10 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // launch road with no outer gate of its own; a later click at a launchable
 // frame launches.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
-    if (playback.is_playing()) {
+    // Live TO THE EAR (playback_sounding, playback.h): the engine's
+    // natural-end hold — the flag down, the last frames still sounding and
+    // the line still moving — stops here exactly as a live session does.
+    if (playback_sounding(playback)) {
         // The pure stop, through the standing stop machinery — side-effect-
         // clean here (the scrub never moved the cursor) and the owner of the
         // scanner's visible-identity teardown. `frame` is deliberately unused
@@ -3149,7 +3152,7 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
             viewport.invalidate_all();
         }
         const int64_t sample = place_playhead_at_click_column(
-            x - area.x, playback.is_playing(), app.playhead_cursor_sample);
+            x - area.x, playback_sounding(playback), app.playhead_cursor_sample);
         if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
         return;
     }
@@ -3160,7 +3163,7 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // formers' press-entry capture (the placement body's contract). THE HOLD IS
     // THE FINGER'S ONLY ROUTE TO A SWEEP — a finger has no modifier — and it
     // survives in full for that reason (architect 2026-08-18).
-    place_playhead_and_arm_region(x - area.x, x, y, playback.is_playing(),
+    place_playhead_and_arm_region(x - area.x, x, y, playback_sounding(playback),
                                   app.playhead_cursor_sample);
 }
 
@@ -5432,8 +5435,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // gated
         // on was_playing && sample != playhead_at_entry. Capture the entry
         // state up front, AHEAD OF EVERY STOP below, so all the downstream
-        // branches see the same snapshot.
-        const bool was_playing = playback.is_playing();
+        // branches see the same snapshot. LIVE TO THE EAR (playback_sounding,
+        // playback.h): a session in its natural-end hold — the flag down, the
+        // last frames still sounding and the line still moving — reads as
+        // playing here, so a click in those frames reseeks and plays on from
+        // the column as it would have a moment earlier.
+        const bool was_playing = playback_sounding(playback);
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
 
         // Clicks in iter/BPM mode route through the unified marker
@@ -6247,12 +6254,15 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
             // mode's placement-press shape.
             viewport.invalidate_all();
         }
-        place_playhead_at_click_column(press_x - area.x, playback.is_playing(),
+        place_playhead_at_click_column(press_x - area.x,
+                                       playback_sounding(playback),
                                        app.playhead_cursor_sample);
         return;
     }
     selection.clear_selection();
-    place_playhead_at_click_column(press_x - area.x, playback.is_playing(),
+    // Live TO THE EAR (playback_sounding, playback.h — the press-time
+    // capture's own reading, one owner for both).
+    place_playhead_at_click_column(press_x - area.x, playback_sounding(playback),
                                    app.playhead_cursor_sample);
 }
 
@@ -8100,7 +8110,7 @@ bool GuiInputHandler::handle_history_mode_press(
             viewport.invalidate_all();
         }
         const int64_t sample = place_playhead_at_click_column(
-            x - area.x, playback.is_playing(), app.playhead_cursor_sample);
+            x - area.x, playback_sounding(playback), app.playhead_cursor_sample);
         if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
         return true;
     }

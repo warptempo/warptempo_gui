@@ -92,6 +92,24 @@ const char* sharing_mode_name(int32_t m) {
 struct GuiPlayback::Impl {
     // The portable engine (playback_common.h). Everything else in this struct
     // is AAudio's own.
+    //
+    // THE OUTPUT LATENCY IS NOT COMPENSATED HERE — the recorded asymmetry
+    // (architect 2026-09-01). The engine's predictor anchors every session at
+    // heard instants by adding `state.output_latency_frames` to each port
+    // instant, and this backend NEVER WRITES that word: it stays 0, so the
+    // heard offset is 0 and the tablet's line leads the sound by the route's
+    // real latency, as it did before the laptop was compensated. The reason
+    // is the route: in the car the tablet plays over Bluetooth, whose latency
+    // is large, variable and unreported to the stream, so any figure this
+    // backend could publish (getTimestamp, the framework's own latency
+    // estimate) would be a guess that is wrong most of the time, and a line
+    // running BEHIND the sound by a wrong guess is the one failure the
+    // compensation must not produce. What DOES reach this backend, through the
+    // shared body, is the SEAT: the launch anchor is the instant the data
+    // callback absorbed the restart rather than the publish instant — at
+    // most one burst later (about 2 ms), and the truer of the two on both
+    // devices — and the natural-end hold, which with a zero offset ends
+    // within the ending burst's own duration of the flag's drop.
     GuiPlaybackState state;
 
     // MAIN THREAD ONLY (the head comment's threading block). `started` is
@@ -466,10 +484,20 @@ void GuiPlayback::stop() {
     // lifecycle at the head of this file.
     impl_->state.playing.store(false, std::memory_order_seq_cst);
     fence_quiesced(*impl_);
+    // A stop ends the natural-end hold (the field's clearer inventory,
+    // playback_common.h): behind the fence, so no fill is left to set it —
+    // and the fence's early returns (no stream, never started, a dead stream)
+    // are all states with no callback running either.
+    impl_->state.ended_naturally.store(false, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
+}
+
+bool GuiPlayback::natural_end_holding() const {
+    if (!impl_) return false;
+    return playback_natural_end_holding(impl_->state);
 }
 
 // THE THREE WAYS THIS DEVICE CANNOT SOUND (contract at the declaration), and

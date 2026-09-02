@@ -113,17 +113,28 @@ drag coordinates floor instead of truncating.
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback
   left to count) — and `stop()` touches neither device. NOTHING LOOPS
-  holds on both. THE OUTPUT LATENCY IS UNCOMPENSATED ON BOTH BACKENDS AND
-  THAT IS ACCEPTED (architect 2026-09-01): the predictor anchors at the
-  PUBLISH instant, so at launch the drawn playhead runs ahead of the heard
-  position by the wait to the first filling callback plus the device's
-  queued frames, but a resync re-anchors to the read cursor at an arbitrary
-  main-thread `now` rather than reproducing that offset, so drift is
-  corrected while the lead itself is RE-ROLLED inside
-  [latency, latency + one period] at every resync, every launch road sharing
-  the same band; the reasoning is at `playback_publish_play`
-  (`playback_common.cpp`) and a latency-aware predictor that would centre
-  the band on zero is under design.
+  holds on both. THE PREDICTOR ANCHORS AT HEARD INSTANTS (architect
+  2026-09-01 — the morning's record had the output latency uncompensated
+  and accepted; the evening's arc compensated it): every anchor is
+  (sample, the instant that sample leaves the loudspeaker), built from the
+  audio thread's cycle stamp — (read cursor, the instant its frame enters
+  the port), published under a seqlock at the seat and at every fill's end
+  — plus ONE per-session constant, the device's reported output latency
+  (`output_latency_frames`). THE CONSTANT IS THE JACK HALF'S: `playback.cpp`
+  registers the latency and buffer-size callbacks before `jack_activate`,
+  reads the port range once after the auto-connect, takes the max over both
+  ports and prints the figure to stderr whenever it changes. AAUDIO'S IS
+  ZERO BY RULING — the asymmetry, recorded at its `Impl`: the car's route is
+  Bluetooth, whose latency is large, variable and unreported, so the tablet
+  keeps the uncompensated lead and gets only the seat move (the launch
+  anchor at the absorbing burst rather than the publish, ≤ one burst) and
+  the natural-end hold (the scanner outlives `playing` by the heard offset,
+  which is the ending burst's own duration there). So on the laptop the
+  line rests on the launch frame until the first sound, tracks the ear to
+  the crystal skew between resyncs (a resync's step is the drift alone),
+  and vanishes with the sound; what remains is the DAC's own few-ms
+  pipeline and the display's own frame or two, both recorded at
+  `playback_publish_play` (`playback_common.cpp`).
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FOUR keys it stamps are per-DEVICE preferences

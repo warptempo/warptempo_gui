@@ -1341,10 +1341,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
-        // Both refusals write NOTHING, so a press inside the sub-tick window
-        // between a natural end and the tick that deactivates the scanner
-        // leaves that scanner exactly as it found it — the tick's end-of-audio
-        // branch has no is_updating gate and deactivates it on its own.
+        // Both refusals write NOTHING, so a press inside the natural-end hold
+        // or the sub-tick window after it, before the tick deactivates the
+        // scanner, leaves that scanner exactly as it found it — the tick's
+        // end-of-audio branch has no is_updating gate and deactivates it on
+        // its own. (A Space meant as a STOP in those last frames, in target
+        // view with the preview not ready — an un-stopped mutator having
+        // landed inside them — is answered by this card instead; the sound
+        // is over a moment later either way.)
         // THE PREDICATE IS GuiTargetRender::preview_ready (2026-08-26), the
         // one owner both this edge and the A/B audition's gate read.
         if (app.active_audio_view == 'T' &&

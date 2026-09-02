@@ -61,6 +61,29 @@
 // backward jump to miss — playback runs [start, end) once and stops at the
 // natural end.
 //
+// EVERY ANCHOR IS A HEARD INSTANT (architect 2026-09-01): the pair is
+// (sample, the steady_clock instant that sample leaves the loudspeaker), and
+// one per-session constant — the device's reported output latency,
+// `output_latency_frames` at the output rate, the JACK backend's figure and
+// AAudio's zero by ruling — is added at every anchor write. The audio thread
+// supplies the instants: at the top of each fill it reads the clock once and
+// publishes, under a generation seqlock, the pair (read cursor, the instant
+// that cursor's frame enters the port) — the SEAT when a fill absorbs a
+// restart, the fill-end pair on every fill (playback_common.h, the cycle
+// stamp). The launch anchor is the seat's stamp plus the constant, latched
+// once by cursor()'s first read after the seat (the publish anchors at
+// (start, "await the seat") and the line RESTS on the launch frame until the
+// first sound is heard — never a backward step); every resync anchors at
+// the latest stamp plus the constant, so a resync's step is the wall-clock
+// DRIFT since the last anchor and nothing else — neither the latency nor the
+// period-wide phase residual the old `now` anchoring re-rolled. THE
+// NATURAL-END HOLD is the same constant at the far end: the render body
+// lowers `playing` at the window's end and sets `ended_naturally` beside it,
+// cursor() keeps extrapolating (clamped at the end) while natural_end_holding()
+// answers true — until the last frame the ending fill consumed has been heard
+// — and the run loop's tick tears the scanner down only then, so the line
+// vanishes when the sound does. is_playing() is untouched by the hold.
+//
 // Two alternatives were considered and rejected. A free-running predictor
 // with no resync is insufficient for medium-zoom playback
 // over windows long enough for steady_clock vs sample-clock skew to
@@ -68,16 +91,22 @@
 // with main-thread extrapolation against the latest publish is
 // rejected on perceptual grounds: a 100 Hz resync cadence at audio-buffer
 // rate produces a periodic high-frequency signal that the user is
-// sensitive to, even at sub-sample per-resync amplitudes.
+// sensitive to, even at sub-sample per-resync amplitudes. (The cycle stamp
+// above is that publish's DATA without its cadence: the main thread reads it
+// only at the resync events, never per frame, so motion between resyncs
+// stays the smooth wall-clock line.) A JACK-clock predictor — jack_frame_time
+// as the clock, every resync a no-op on JACK — was set aside for the same
+// smoothness reason and to keep a JACK-only clock out of the shared body.
 //
 // The masking criterion for the chosen design is single-frame: each
-// resync's discontinuity (bounded by one audio buffer's worth of samples)
-// must land in the same monitor frame as the viewport reflow it is
+// resync's discontinuity — the accumulated drift since the last anchor, now
+// that the anchor carries the heard instant — must land in the same monitor
+// frame as the viewport reflow it is
 // co-located with. Future predictor work must preserve this constraint
 // or argue explicitly to overturn it. The masking criterion holds across
 // all zoom levels because drift visibility scales inversely with
 // viewport-event frequency, keeping per-event accumulated drift sub-pixel
-// at every zoom and per-event buffer-staleness snap masked by the user 
+// at every zoom and the snap masked by the user
 // motion at the resync site.
 class GuiPlayback {
 public:
@@ -122,19 +151,31 @@ public:
     void stop();
 
     // Re-anchor the free-running cursor predictor at the audio thread's
-    // current cursor and the current steady_clock time. Call from the main
+    // current cursor and the instant that cursor is HEARD — its cycle stamp
+    // plus the device's reported latency (the design note). Call from the main
     // thread at events where a small visible discontinuity is acceptable
     // (jumps, viewport reflows) so the predictor remains a
-    // smooth linear function of wall-clock between resyncs. Safe to call
-    // when not playing — the next play() will overwrite the anchor.
+    // smooth linear function of wall-clock between resyncs; the step is the
+    // drift since the last anchor. Safe to call when not playing — the next
+    // play() will overwrite the anchor — and a no-op on a session the audio
+    // thread has not seated yet (the launch anchor is the seat's to latch).
     void resync_predictor();
 
     // Snapshot accessors. Safe from the main thread. During a graph suspension,
     // cursor() holds at the last audio position rather than extrapolating.
     // cursor() reports the DOMAIN position: the internal buffer-local cursor
-    // plus the bound buffer's domain offset.
+    // plus the bound buffer's domain offset. Through the natural-end hold
+    // (below) cursor() goes on extrapolating to the window's end after
+    // is_playing() has dropped.
     bool    is_playing() const;
     int64_t cursor()     const;
+
+    // THE NATURAL-END HOLD (the design note): true from the render body's
+    // natural end — is_playing() already false — until the last frame it
+    // queued has been heard. The run loop's tick keeps the scanner through it
+    // and takes the one stop body when it ends; every stop road clears it at
+    // once. False while playing and after any stop. Main thread only.
+    bool    natural_end_holding() const;
 
     // THERE IS NO DEVICE TO PLAY ON (2026-08-28, the render player's rule):
     // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
@@ -199,3 +240,18 @@ public:
 private:
     std::unique_ptr<Impl> impl_;
 };
+
+// IS THE TRANSPORT LIVE TO THE EAR — playing, or in the natural-end hold with
+// its last frames still leaving the loudspeaker. THE READERS THAT MEAN "is
+// the sound still going" ask this (2026-09-01): bare Space's stop/play fork,
+// the waveform scrub's stop arm, and the placement press's `was_playing`
+// capture, whose keep-alive reseek plays on from the click; a press in the
+// hold's last few frames then STOPS or RESEEKS as it would have a moment
+// earlier, instead of launching over a session the face still shows as live.
+// The readers that mean "is the audio thread inside the buffer" — the
+// conditional stops ahead of a rebind, the quiescence reasoning — keep
+// is_playing(), which the hold does not touch. ONE OWNER, so the two terms
+// are never spelled apart.
+inline bool playback_sounding(const GuiPlayback& playback) {
+    return playback.is_playing() || playback.natural_end_holding();
+}

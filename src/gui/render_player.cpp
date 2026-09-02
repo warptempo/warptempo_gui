@@ -610,6 +610,15 @@ void GuiRenderPlayer::toggle_pause() {
         // the stop body (whose fence is the one stop); the body's player fork
         // moves the transport to PAUSED — at whatever frame the cursor holds,
         // the item's start included — and damages the row.
+        // THE RESUME POINT IS THE HEARD POSITION (2026-09-01, the accepted
+        // honest artefact): the predictor is latency-compensated on the
+        // laptop, so this reads where the sound WAS at the press — the clock
+        // and the scrub showed exactly that — while the frames already
+        // rendered into the port and the sink play out after the flag drops.
+        // A resume therefore REPEATS the ~35 ms that sounded after the
+        // press, where the uncompensated prediction (a period and a latency
+        // ahead of the ear) made it gapless by accident. On the tablet the
+        // prediction keeps its lead and the resume is as it was.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         return;
@@ -903,7 +912,16 @@ void GuiRenderPlayer::tick() {
         status("No audio device to play the wav");
         return;
     }
-    if (!playback.is_playing()) {
+    // THE NATURAL END IS THE ENGINE'S DEFERRED ONE (2026-09-01): the hold
+    // belongs to every session, the player's included, so the flag's drop
+    // starts nothing here while natural_end_holding() stands — cursor() goes
+    // on to the item's end through it, and the clock and the scrub below
+    // follow it there — and on_natural_end runs once the last sound has
+    // been heard, the main window's tick's own shape. Every OTHER road out of
+    // LIVE (the pause, the dead-device arm above, the close, the rebind ahead
+    // of the next item) takes the stop body at once, whose fence clears the
+    // hold; a pause inside the hold parks the item where the ear had it.
+    if (!playback_sounding(playback)) {
         on_natural_end();
         return;
     }

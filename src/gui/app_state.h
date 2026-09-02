@@ -4462,11 +4462,14 @@ struct AppState {
     // non-playing window in which these value fields are valid, and the rule
     // has no exceptions. Natural end-of-playback takes the same deactivation
     // every manual stop takes — literally the same call since 2026-07-30: the tick
-    // sees the atomic playing flag drop and calls stop_playback_if_playing, which
+    // sees the atomic playing flag drop, keeps the scanner through the
+    // engine's NATURAL-END HOLD (GuiPlayback::natural_end_holding — the last
+    // frames the ending fill queued are still leaving the loudspeaker, and
+    // cursor() extrapolates to the window's end through it; since
+    // 2026-09-01), and then calls stop_playback_if_playing, which
     // takes the quiescence fence, clears the flag and damages the waveform area, so
-    // the line simply vanishes from wherever the predictor last drew it (a few
-    // pixels short of the exclusive end bound — the accepted delta of not holding
-    // the endpoint).
+    // the line simply vanishes from wherever the predictor last drew it — the
+    // window's end, the sound ending there too.
     // The launch seed (launch_playback_window, the ONE launch body under every
     // launch in the product — Space's toggle and the scrub launch through the
     // view-end entry launch_playback_from, and the A/B audition's four plays
@@ -9011,11 +9014,12 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // actionability owner playhead_end_jump_actionable, which their face and the
 // jump acts' refusals read (a live session keeps all five buttons lit: a
 // press then stops, or stops and steps, never nothing). The play/stop
-// FORK bare Space takes reads the same phase term with playback.is_playing()
-// as its other term — the audio callback's own flag, on a different clock
-// from the tick-cleared scanner bit — and the sub-tick disagreement that
-// buys is recorded at GuiPlaybackLifecycle::toggle_playback; it is not
-// folded in here because a face must read what the painter reads.
+// FORK bare Space takes reads the same phase term with playback_sounding()
+// as its other term — the audio callback's own flag plus the engine's
+// natural-end hold, on a different clock from the tick-cleared scanner bit —
+// and the sub-tick disagreement that buys is recorded at
+// GuiPlaybackLifecycle::toggle_playback; it is not folded in here because a
+// face must read what the painter reads.
 inline bool transport_session_live(const AppState& a) {
     return a.playhead_scanner_active ||
            a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
@@ -11590,9 +11594,10 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         // never lie about live state. The fork bare Space takes
         // (GuiPlaybackLifecycle::toggle_playback) reads this SAME phase term,
         // which is what keeps the glyph honest through every rest; its OTHER
-        // term is its own — playhead_scanner_active here, playback.is_playing()
-        // there — and the two can disagree for a sub-tick natural-end window
-        // that predates this act (accepted cost, recorded at the fork).
+        // term is its own — playhead_scanner_active here, playback_sounding()
+        // there — and the two can disagree for a sub-tick window after the
+        // natural-end hold's end that predates this act (accepted cost,
+        // recorded at the fork).
         case RedesignButton::TransportPlayStop:
             return transport_session_live(a);
         default:

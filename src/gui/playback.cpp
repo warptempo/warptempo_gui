@@ -4,6 +4,7 @@
 
 #include <jack/jack.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cerrno>
@@ -18,7 +19,9 @@
 // playback_common.{h,cpp}, shared verbatim with the AAudio backend
 // (playback_aaudio.cpp); the split and its rationale are stated once at the
 // head of playback_common.h. What lives here is the JACK client: opening and
-// closing it, its two callbacks, and stop()'s quiescence fence.
+// closing it, its four callbacks (process, sample rate, buffer size, latency),
+// the output latency figure the last two keep current, and stop()'s
+// quiescence fence.
 //
 // THIS FILE IS NOT IN THE ANDROID TARGET: exactly one of this file and
 // playback_aaudio.cpp is compiled into a given binary, the same one-arm-per-
@@ -47,6 +50,14 @@ struct GuiPlayback::Impl {
     // same way, its stream likewise staying started between plays
     // (playback_aaudio.cpp's lifecycle block).
     std::atomic<uint64_t> process_cycles{0};
+
+    // The graph's buffer size (the quantum), seeded before activation from
+    // jack_get_buffer_size — which the header allows only there — and kept
+    // current by the buffer-size callback, whose promise is exactly that it
+    // fires on every change. Read for the latency line; the figure itself
+    // contains the quantum as a term, which is why a quantum change re-reads
+    // it (refresh_output_latency).
+    std::atomic<uint32_t> buffer_frames{0};
 };
 
 int sample_rate_callback(jack_nframes_t nframes, void* arg) {
@@ -54,6 +65,88 @@ int sample_rate_callback(jack_nframes_t nframes, void* arg) {
     if (impl) {
         impl->state.output_rate.store(static_cast<uint32_t>(nframes),
                                       std::memory_order_relaxed);
+    }
+    return 0;
+}
+
+// THE OUTPUT LATENCY FIGURE (architect 2026-09-01): read each port's playback
+// latency range and publish the MAX over both ports' max into the engine's
+// `output_latency_frames` — the constant every predictor anchor adds
+// (playback_common.h). What the range holds is what the server propagated to
+// our port from the sink it feeds (pipewire-jack converts the port's
+// downstream latency into frames at the graph rate, WITH THE CURRENT QUANTUM
+// AS A TERM — on the architect's rig the quantum plus the USB sink's headroom,
+// 1024 + 512), zero before the port is connected. MAX, not min: on the
+// ordinary patch — two ports into one sink — the two are equal, and with a
+// fan-out to sinks of different latency no single line is right for both
+// loudspeakers, so the line keeps the one invariant the compensation rests on
+// (it never runs ahead of ANY sound) and the log names both numbers. THREE
+// CALLERS: the latency callback (pipewire fires it after a connect or
+// disconnect and after any latency change), the buffer-size callback (a
+// quantum change moves the figure's quantum term; pipewire recomputes the
+// latency in the same notification drain, but the header promises the buffer
+// callback on every server and nothing about the latency one firing for a
+// buffer change, so both re-read through this one body), and one direct read
+// after init's auto-connect, so the first session is compensated even if the
+// connect notification lands late (the callback overwrites it when it does).
+// The two callbacks run on JACK's non-RT notification thread: atomics and
+// stderr only. ONE LINE ON EVERY CHANGE: a surprising number is visible at
+// launch, and a wrong figure shows as the line running ahead (too small) or
+// behind (too large) by the error.
+void refresh_output_latency(GuiPlayback::Impl& impl) {
+    jack_nframes_t lo = 0, hi = 0;
+    bool any = false;
+    for (jack_port_t* port : impl.ports) {
+        if (!port) continue;
+        jack_latency_range_t range{};
+        jack_port_get_latency_range(port, JackPlaybackLatency, &range);
+        if (!any) {
+            lo = range.min;
+            hi = range.max;
+            any = true;
+        } else {
+            lo = std::min(lo, range.min);
+            hi = std::max(hi, range.max);
+        }
+    }
+    const int64_t frames = any ? static_cast<int64_t>(hi) : 0;
+    const int64_t previous = impl.state.output_latency_frames.exchange(
+        frames, std::memory_order_relaxed);
+    if (previous == frames) return;
+    const uint32_t rate = impl.state.output_rate.load(std::memory_order_relaxed);
+    const double ms = rate == 0 ? 0.0
+                                : static_cast<double>(frames) * 1000.0 /
+                                      static_cast<double>(rate);
+    const uint32_t buffer = impl.buffer_frames.load(std::memory_order_relaxed);
+    if (lo == hi) {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK playback latency: %lld frames (%.1f ms at %u), "
+            "buffer %u\n",
+            static_cast<long long>(frames), ms, rate, buffer);
+    } else {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK playback latency: %lld frames (%.1f ms at %u), "
+            "buffer %u, range %u..%u\n",
+            static_cast<long long>(frames), ms, rate, buffer,
+            static_cast<unsigned>(lo), static_cast<unsigned>(hi));
+    }
+}
+
+// Output ports only, so this client never SETS a latency; the callback is
+// registered purely to be told when to re-read (jack.h's own guidance for a
+// client that wants jack_port_get_latency_range to mean something). Only the
+// playback mode concerns an output port.
+void latency_callback(jack_latency_callback_mode_t mode, void* arg) {
+    auto* impl = static_cast<GuiPlayback::Impl*>(arg);
+    if (impl && mode == JackPlaybackLatency) refresh_output_latency(*impl);
+}
+
+int buffer_size_callback(jack_nframes_t nframes, void* arg) {
+    auto* impl = static_cast<GuiPlayback::Impl*>(arg);
+    if (impl) {
+        impl->buffer_frames.store(static_cast<uint32_t>(nframes),
+                                  std::memory_order_relaxed);
+        refresh_output_latency(*impl);
     }
     return 0;
 }
@@ -95,6 +188,8 @@ void clear_after_failed_init(GuiPlayback::Impl& impl) {
     }
     impl.client_active = false;
     impl.state.output_rate.store(0, std::memory_order_relaxed);
+    impl.state.output_latency_frames.store(0, std::memory_order_relaxed);
+    impl.buffer_frames.store(0, std::memory_order_relaxed);
     impl.ports.fill(nullptr);
     playback_clear_binding(impl.state);
     impl.process_cycles.store(0, std::memory_order_relaxed);
@@ -150,6 +245,33 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         clear_after_failed_init(*impl_);
         return false;
     }
+
+    // The two latency-figure callbacks, registered here because BOTH refuse
+    // on an active client (jack.h says so for the buffer-size one; pipewire-
+    // jack's latency setter refuses the same way), and the buffer size seeded
+    // where the header allows the direct read — before activation. A
+    // registration failure takes the same road as the other two.
+    if (jack_set_latency_callback(impl_->client,
+                                  latency_callback,
+                                  impl_.get()) != 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK latency callback setup failed; "
+            "playback disabled. Verify pipewire-jack is running.\n");
+        clear_after_failed_init(*impl_);
+        return false;
+    }
+    if (jack_set_buffer_size_callback(impl_->client,
+                                      buffer_size_callback,
+                                      impl_.get()) != 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: JACK buffer-size callback setup failed; "
+            "playback disabled. Verify pipewire-jack is running.\n");
+        clear_after_failed_init(*impl_);
+        return false;
+    }
+    impl_->buffer_frames.store(
+        static_cast<uint32_t>(jack_get_buffer_size(impl_->client)),
+        std::memory_order_relaxed);
 
     for (int c = 0; c < channels; ++c) {
         char name[32];
@@ -213,6 +335,11 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         jack_free(physical_ports);
     }
 
+    // The figure's direct read, after the connects (a port's range is zero
+    // until it is connected): the first session is compensated whether or not
+    // the connect notification has been drained yet.
+    refresh_output_latency(*impl_);
+
     std::fprintf(stderr,
         "warptempo_gui: Audio backend: JACK direct, graph_sample_rate=%u, "
         "source_sample_rate=%d, channels=%d\n",
@@ -251,10 +378,18 @@ void GuiPlayback::stop() {
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    // A stop ends the natural-end hold (the field's clearer inventory,
+    // playback_common.h): behind the fence, so no fill is left to set it.
+    impl_->state.ended_naturally.store(false, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
+}
+
+bool GuiPlayback::natural_end_holding() const {
+    if (!impl_) return false;
+    return playback_natural_end_holding(impl_->state);
 }
 
 // THE CLIENT THAT NEVER CAME UP, and on this backend that is the whole
@@ -318,6 +453,8 @@ void GuiPlayback::shutdown() {
         impl_->client = nullptr;
     }
     impl_->state.output_rate.store(0, std::memory_order_relaxed);
+    impl_->state.output_latency_frames.store(0, std::memory_order_relaxed);
+    impl_->buffer_frames.store(0, std::memory_order_relaxed);
     impl_->ports.fill(nullptr);
     playback_clear_binding(impl_->state);
 }

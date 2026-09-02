@@ -2501,10 +2501,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
 
-        const bool ma_playing = playback.is_playing();
+        // THE FLAG AND THE HOLD, read apart (2026-09-01): `ma_playing` is
+        // the audio thread's own flag, which drops at the natural end — and
+        // the fence/bypass reasoning below is stated on it. `ma_sounding`
+        // adds the NATURAL-END HOLD (GuiPlayback::natural_end_holding, the
+        // engine's ended_naturally bit): the flag has dropped but the last
+        // frames the ending fill queued are still leaving the loudspeaker,
+        // and cursor() goes on extrapolating to the window's end for exactly
+        // that long, so the heartbeat runs through it and the stop body waits
+        // for it.
+        const bool ma_playing  = playback.is_playing();
+        const bool ma_sounding = ma_playing || playback.natural_end_holding();
         if (!app.playhead_scanner_active && !ma_playing) return;
 
-        if (ma_playing) {
+        if (ma_sounding) {
             // Heartbeat: invalidate the scanner column at the current
             // model position so the paint cycle keeps running. The
             // pre-paint hook reads the predictor at paint time and adds
@@ -2556,14 +2566,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return;
         }
 
-        // Playing was true last tick, now false — natural end. Deactivate the
+        // Playing was true, now false, AND THE SOUND HAS ENDED — the natural
+        // end. Deactivate the
         // scanner THIS tick, through the same call Space's stop edge makes:
         // a stopped scanner is deactivated immediately and there is no
         // non-playing window in which its value fields are valid (contract at
         // app_state.h's scanner block). The scanner's last-painted pixels are
         // damaged by the call, so the line vanishes from wherever the predictor
-        // last drew it — a few pixels short of the exclusive end bound, the
-        // accepted delta.
+        // last drew it — at the window's end, since 2026-09-01: THE HOLD
+        // ABOVE kept this branch from running while the engine's
+        // natural_end_holding() stood, i.e. from the flag's drop until the
+        // last frame the ending fill consumed had been heard (its cycle stamp
+        // plus the reported latency), and cursor() extrapolated to the end
+        // through it; before that day the line vanished the moment the flag
+        // dropped, latency-and-a-fraction-of-a-period short of the last
+        // sound. The hold is the ENGINE's and belongs to every session (the
+        // render player's tick reads the same deferred end); every OTHER stop
+        // road — Space, a modal open, the S/T flip, a scrub, a trim write —
+        // takes the stop body at once, whose fence path clears the hold.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
         // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
         // hand-spelled pair this branch and Space's stop edge both carried
@@ -2593,10 +2613,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // `is_playing()`-gated stop and rebind UNFENCED. Taking the fence here, at
         // the stop edge, closes it at the source — the Space-symmetric design, and
         // the reason the rebind sites keep their conditional stops rather than
-        // becoming unconditional. Cost: the fence blocks the tick for up to ~2 JACK
-        // periods, once per playback session, which is precisely what Space's stop
-        // edge has always paid. stop() is idempotent on an already-flag-stopped
-        // session — it re-stores the same false and then just waits.
+        // becoming unconditional. THE HOLD DOES NOT REOPEN THE BYPASS: through
+        // it `playing` is false and the scanner flag is still TRUE, so the stop
+        // body's guard PROCEEDS for any road that reaches it (an S/T flip inside
+        // the hold fences and clears exactly as one inside the old sub-tick
+        // window did), and only this branch's own deferral stands between the
+        // flag's drop and the fence — a deferral during which the callback
+        // takes its silence arm and reads no sample, and which every road
+        // that means a stop ends at once. Cost: the fence blocks the tick for up
+        // to ~2 JACK periods, once per playback session, which is precisely what
+        // Space's stop edge has always paid. stop() is idempotent on an
+        // already-flag-stopped session — it re-stores the same false and then
+        // just waits.
         //
         // NO OUTER `if (app.playhead_scanner_active)` IS NEEDED: reaching this line
         // means the early return above did not fire and `ma_playing` is false, so the
@@ -2615,7 +2643,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // this same tick body, which is where the launch now happens. A play that
         // was not the act's hands over Idle and the advance does nothing; the
         // natural end of the act's LAST play hands over HomeSecond and the
-        // advance arms nothing. The stop body's own call is unchanged: the
+        // advance arms nothing. THE RESTS BEGIN AT THE SOUND'S TRUE END since
+        // the hold (2026-09-01): this branch — and so the advance and the rest
+        // it arms — runs once the play's last frames have been heard, not at
+        // the flag's drop, so each pause the architect paced is a pause
+        // between SOUNDS, which is what the constants' own note says it is.
+        // The stop body's own call is unchanged: the
         // fence-before-flag-clear ordering above is exactly what the next
         // launch relies on too, a rebind-safe, quiesced device under the fresh
         // play().
@@ -2645,7 +2678,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner off a buffer the waveform does not show. The player's
         // position is read by its painter and damaged by its own tick.
         if (app.render_player.active) return;
-        if (!playback.is_playing()) {
+        // PLAYING OR IN THE NATURAL-END HOLD takes the scanner advance below:
+        // through the hold cursor() goes on extrapolating to the window's end
+        // while the sound's last frames leave the loudspeaker (the tick's
+        // `ma_sounding`), so the line runs to the end instead of freezing
+        // where the flag dropped.
+        if (!playback_sounding(playback)) {
             // THE CENTERED DERIVATION'S RESTING HALF (architect 2026-08-31,
             // R11) — the pre-paint hook is the pin's ONE derivation point
             // (the ownership statement is at derive_centered_viewport,
@@ -2675,8 +2713,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // chase's own aiming rule below: a former carrying the playhead
             // mid-drag must not have the waveform recentered under it; the
             // release's landing re-derives on the next frame. The scanner
-            // gate keeps the one-tick window between a natural end's flag
-            // drop and the tick's stop body reading a stale scanner.
+            // gate keeps the one-tick window between the natural-end hold's
+            // end and the tick's stop body from reading a stale scanner.
             // AND THE PIN'S OWN ENGAGEMENT LEADS THE TERMS since 2026-09-01
             // (centered_pin_engaged, app_state.h — the lamp's bit was read
             // direct here until the A/B audition began disregarding it): the
