@@ -487,9 +487,10 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     }
     if (!impl_->stream && !open_stream(*impl_)) return;
 
-    // Publish FIRST, start SECOND: the range/anchor/pending-start block is
-    // what the callback's acquire gate is waiting to see, and a refused range
-    // must not spin the device up at all.
+    // Publish FIRST, start SECOND: the command packet, the main thread's
+    // window mirror and cursor, the await-seat anchor and the session word
+    // that releases them are what the callback's acquire gate is waiting to
+    // see, and a refused range must not spin the device up at all.
     if (!playback_publish_play(impl_->state, start_sample, end_sample)) return;
 
     // THE DISCONNECT OUTRANKS THE PUBLISH (2026-09-01). The dead check at the

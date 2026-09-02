@@ -342,21 +342,35 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     store_anchor(state, HeardAnchor{0, 0, 0});
     state.start_sample.store(0, std::memory_order_relaxed);
     state.end_sample.store(0, std::memory_order_relaxed);
-    // The whole session word, generation included, and the command packet
-    // with it (no packet stands until a publish writes one): no callback runs
-    // here (the backend binds before it opens its device), which is also
-    // what admits the audio-thread-private resets.
+    // The whole session word, generation included, the command packet with it
+    // (no packet stands until a publish writes one) AND THE CYCLE STAMP: no
+    // callback runs here (the backend binds before it opens its device), which
+    // is what admits the audio-thread-private resets and what makes bind the
+    // stamp's one non-audio-thread writer — with no concurrent writer and no
+    // concurrent reader there is nothing to order against, so the four words
+    // are stored plainly and `stamp_gen` goes back to an EVEN value (a write in
+    // progress is impossible here), which the next reader accepts at once.
+    // THE STAMP MUST BE RESET WITH THE WORD because bind returns the session
+    // generation to 0 and init() is reusable (it opens with an idempotent
+    // shutdown()): a second init() on the same object for a new source would
+    // otherwise leave the old source's generation-1 stamp standing for the new
+    // source's own first publish — also generation 1 — to latch as its seat.
+    // Together the two resets are what makes the stamp field's claim true:
+    // no stamp carries a generation a new publish could use.
     state.session.store(0, std::memory_order_relaxed);
     state.command_seq.store(0, std::memory_order_relaxed);
     state.command_start.store(0, std::memory_order_relaxed);
     state.command_end.store(0, std::memory_order_relaxed);
+    state.stamp_gen.store(0, std::memory_order_relaxed);
+    state.stamp_cursor.store(0, std::memory_order_relaxed);
+    state.stamp_ns.store(0, std::memory_order_relaxed);
+    state.stamp_generation.store(0, std::memory_order_relaxed);
     state.active_generation = 0;
     state.active_end        = 0;
     state.fractional_cursor = 0.0;
     state.output_rate.store(0, std::memory_order_relaxed);
     // (output_latency_frames is the backend's device fact, zeroed where it
-    // zeroes output_rate; the cycle stamp is never reset — the fields'
-    // comments, playback_common.h.)
+    // zeroes output_rate — the field's comment, playback_common.h.)
 
     if (channels != 2) {
         // The extraction's FIFTH deviation from the old JACK body (android/
@@ -435,9 +449,10 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample) {
     if (!state.samples || state.total_frames <= 0) return false;
     // Domain -> buffer-local at the API boundary (playback.h head comment).
-    // Everything below — the clamps, the early returns, the published
-    // cursor/anchor/pending-start atomics — is buffer-local, exactly as
-    // before the offset moved in here.
+    // Everything below — the clamps, the early returns, the command packet
+    // this publishes, the main thread's window mirror and cursor beside it,
+    // and the await-seat anchor — is buffer-local, exactly as before the
+    // offset moved in here.
     start_sample -= state.domain_offset;
     end_sample   -= state.domain_offset;
     if (start_sample < 0) start_sample = 0;

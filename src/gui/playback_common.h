@@ -307,9 +307,19 @@ struct GuiPlaybackState {
     // word — the predictor's launch latch and every resync ask exactly that
     // before they anchor (`observe` and playback_resync_predictor,
     // playback_common.cpp). The predictor's anchor writers read it and add
-    // the heard offset; the hold reads it for its deadline. Never reset:
-    // every reader compares its generation to the word's, and a publish
-    // makes a generation no stamp yet carries, so a stale stamp is never
+    // the heard offset; the hold reads it for its deadline. THE AUDIO THREAD
+    // IS ITS ONLY WRITER WHILE A CALLBACK CAN RUN, and BIND is the one other
+    // (playback_bind_and_validate, playback_common.cpp), safe precisely
+    // because no callback exists there — the backend binds before it opens its
+    // device — so bind stores the four words plainly, `stamp_gen` back to an
+    // even value. WHY BIND RESETS THEM: it also returns the session generation
+    // to 0, and init() is reusable (an idempotent shutdown() at its head), so a
+    // stamp left from the previous source would carry a generation the next
+    // source's FIRST publish makes again, and the launch latch would accept it
+    // as that publish's seat. With bind resetting, NO STAMP CARRIES A
+    // GENERATION A NEW PUBLISH COULD USE — within a session's life because
+    // every publish makes a generation no stamp yet carries, across init()s
+    // because the stamp starts over with the word — so a stale stamp is never
     // anchored to.
     //
     // THE SEQLOCK'S ORDERING (the classic shape, all four words atomics so a
