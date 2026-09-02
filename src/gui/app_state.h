@@ -619,10 +619,29 @@ struct UndoHistory {
     //     max(0, size - n) and reads the WHOLE stack — conservative in the safe
     //     direction only (it can over-report dirty, never under-report it), and
     //     the next save rebinds the reference.
+    // THE BELT (architect 2026-09-02): a reference standing AT distance 0 when
+    // the top pops named the LIVE state the merged press has just walked away
+    // from — the merge wrote no entry, and the pop takes the only entry
+    // between that state and the one now live — so after the pop it names no
+    // state on the timeline, exactly the class the field's own comment calls
+    // an orphan (a reference the timeline no longer reaches; recompute_dirty's
+    // invalid branch marks everything dirty until the next save rebinds it).
+    // Stepping it to +1 instead would point one redo AHEAD over a redo stack
+    // the burst's first push emptied, and the walk over that empty range reads
+    // CLEAN — the lie R-2 found. The arithmetic OWES ITSELF this arm whatever
+    // reaches it; what does reach it is nothing today: distance 0 under a
+    // valid stamp is unreachable since the save clears the stamp at
+    // Undo::note_saved (a save inside a burst then ends it, and the next press
+    // pushes, moving the reference to −1 before any merge can pop), every
+    // other road to distance 0 — the load's reset, push()'s session-only
+    // collapse, a restore, this pop itself — clears the stamp or empties the
+    // stack in the same act.
     void pop_undo_top_with_saved_ref() {
         if (undo_stack.empty()) return;   // defensive
         undo_stack.pop_back();
-        if (saved_valid) saved_distance += 1;
+        if (!saved_valid) return;
+        if (saved_distance == 0) saved_valid    = false;
+        else                     saved_distance += 1;
     }
 
     void mark_saved() {

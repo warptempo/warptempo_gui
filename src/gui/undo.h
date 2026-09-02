@@ -54,6 +54,12 @@ struct GuiInputHandler;
 // preview stay per-press and unchanged — only the redundant history push is
 // suppressed, and a single Ctrl+Z reverts the whole burst.
 // Presses BEYOND the window are separate entries, as they always were.
+// AND A SAVE ENDS THE BURST (architect 2026-09-02): Ctrl+S moves the saved
+// reference onto the burst's LIVE state without touching a stack top, and a
+// merge after it would rewrite that very state with no entry between it and
+// the file — the dot reading clean over a store that differs from disk. So the
+// save clears the stamp at the owner (Undo::note_saved, the save's one tail)
+// and the next press opens its own entry; the derivation is at note_saved.
 // AND A BURST THAT NETS TO ZERO POPS ITS OWN ENTRY (architect 2026-09-01, the
 // byte-equal pop): a merge skips the push and skipped the push sites' NET
 // CHANGE gate with it, so a tap Right then a tap Left inside the window left an
@@ -250,6 +256,23 @@ struct Undo {
     // verdicted against an entry that has since moved. A no-op on
     // an empty stack (defensive).
     void refresh_coalesced_touched_live(std::vector<int> touched_live);
+    // THE SAVE'S ONE TAIL (architect 2026-09-02): rebind the saved reference to
+    // the current timeline position (UndoHistory::mark_saved — neither stack
+    // is touched, so Ctrl+Z still reverts the last op), CLEAR the coalescing
+    // stamp, and re-derive the dirty flags. The stamp clear is the point: a
+    // save is the one act that moves the saved reference without changing a
+    // stack top, and a merge after it would mutate the store with no push —
+    // the reference staying at the burst's live state while the store walks
+    // away from the file, and the byte-equal pop then stepping it onto a redo
+    // entry that does not exist. With the stamp cleared the next eligible press
+    // opens its own entry and the dot comes back on. CALLERS, one: GuiSaveOps::
+    // save, on its success path — the Save-and-Commit prelude reaches it
+    // through that same owner. THE FILE LOAD NEEDS NO CALL: it resets the
+    // history whole (UndoHistory::reset, file_loader.cpp), and the surviving
+    // stamp is inert against an empty stack until a push helper clears it
+    // (coalesce_gesture's non-empty-stack guard); a reopen constructs a fresh
+    // Undo per project (main.cpp). The definition carries the derivation.
+    void note_saved();
 
   private:
     // THE COALESCING STAMP — the whole coalescing state, session-only and never
@@ -259,14 +282,18 @@ struct Undo {
     // doubles as the stamp's VALIDITY bit (None = no burst to merge into). A press
     // merges only into a burst of its
     // OWN kind, which is what keeps a nudge burst and a tempo-step burst separate.
-    // THREE writers: record_gesture stamps it at each eligible commit; every route
-    // that changes the undo-stack top CLEARS it — the four push helpers plus the
-    // do_undo/do_redo restore core, so a stale stamp cannot outlive the entry it
-    // named; and coalesce_gesture itself clears it when the arriving press is
-    // PHYSICAL, so a press that then refuses for a reason its button cannot
-    // show leaves nothing behind — a press refused AT A WALL never reaches the
-    // call at all since 2026-08-31 (both reasons, and the face rule that
-    // divides them, are stated at coalesce_gesture's definition).
+    // FOUR writers: record_gesture stamps it at each eligible commit; every route
+    // that changes the undo-stack top OR THE SAVED REFERENCE CLEARS it — the
+    // four push helpers plus the do_undo/do_redo restore core (the stack top),
+    // so a stale stamp cannot outlive the entry it named, and note_saved (the
+    // reference, since 2026-09-02), so a merge cannot rewrite the state the
+    // file was just written from — the file load resets the history whole and
+    // needs no clear (the stamp is inert against an empty stack, see
+    // note_saved); and coalesce_gesture itself clears it when the arriving
+    // press is PHYSICAL, so a press that then refuses for a reason its button
+    // cannot show leaves nothing behind — a press refused AT A WALL never
+    // reaches the call at all since 2026-08-31 (both reasons, and the face rule
+    // that divides them, are stated at coalesce_gesture's definition).
     GestureKind last_gesture_kind_ = GestureKind::None;
     // The last ACCEPTED coalesce event's instant, read ONLY by the tap arm.
     // steady_clock: monotonic, immune to a wall-clock step. The default-

@@ -7,8 +7,9 @@
 // Save-pipeline operations, extracted from main.cpp's
 // save_markers lambda. Coordinates the three on-disk writes
 // (.warpmarkers, .phaseresetmarkers, .settings) and the per-save
-// bookkeeping (active-tab snapshot refresh, history mark_saved,
-// dirty-flag refold). The .warpmarkers write is the primary
+// bookkeeping (active-tab snapshot refresh, then Undo::note_saved — the
+// history's mark_saved, the coalescing stamp's clear and the dirty-flag
+// refold, one tail). The .warpmarkers write is the primary
 // target; the .phaseresetmarkers write is a sibling; the .settings
 // write is required too, so any of the three failures keeps the save dirty.
 //

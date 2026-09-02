@@ -267,7 +267,14 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo
     // core, one line each — so a valid stamp can never coexist with a foreign stack
     // top, and that is what lets BOTH arms assume the top of the undo stack is the
-    // burst's own entry (refresh_coalesced_touched_live's precondition).
+    // burst's own entry (refresh_coalesced_touched_live's precondition). AND SO
+    // DOES EVERY CHANGE OF THE SAVED REFERENCE (note_saved, 2026-09-02): the
+    // save moves the reference onto the burst's live state without touching a
+    // stack top, and a merge behind it would rewrite that state with no entry
+    // between it and the file — so a valid stamp can never coexist with a
+    // reference the burst has moved either, and both arms may also assume the
+    // saved reference sits where the burst's own push left it (the pop belt at
+    // UndoHistory::pop_undo_top_with_saved_ref rests on that).
     const bool stamp_matches =
         last_gesture_kind_ == kind && !app.history.undo_stack.empty();
 
@@ -339,10 +346,13 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     push, or the last merge — physical or synthesized), so a run of
             //     taps extends press by press rather than racing one deadline from
             //     the first;
-            //   * THE SUBJECT STILL STANDS. Nothing disarms anything between two
-            //     taps: a marker click, a Tab jump, a shift-range extension or a
-            //     Ctrl+Tab can all run in the gap and push NOTHING, leaving the
-            //     stamp and the stack top untouched. Without this test the second
+            //   * THE SUBJECT STILL STANDS. Almost nothing disarms anything
+            //     between two taps: a marker click, a Tab jump, a shift-range
+            //     extension or a Ctrl+Tab can all run in the gap and push
+            //     NOTHING, leaving the stamp and the stack top untouched (the
+            //     one gap act that DOES disarm is the SAVE, which clears the
+            //     stamp at note_saved because it moves the saved reference —
+            //     no subject term could see that). Without this test the second
             //     tap would merge a DIFFERENT marker's nudge into the first
             //     marker's entry and then overwrite that entry's touched_live
             //     hints — one Ctrl+Z reverting two unrelated edits, which is the
@@ -516,6 +526,39 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     last_gesture_tab_        = app.active_tab_view;
     last_gesture_audio_view_ = app.active_audio_view;
     last_gesture_selection_  = app.selected_markers;
+}
+
+void Undo::note_saved() {
+    // THE SAVE ENDS THE TAP WINDOW (architect 2026-09-02, the four-tier
+    // review's R-2). The tap arm's merge test reads the clock and the three
+    // subject terms, and a Ctrl+S changes none of them and no stack top — so
+    // before this a save inside a burst left the stamp standing, and the next
+    // press inside kTapCoalesceMs MERGED: the store mutated with no push, the
+    // reference (just rebound to 0, the burst's live state) stayed at 0, and
+    // recompute_dirty read CLEAN over a store that no longer matched the file.
+    // The byte-equal pop then gave the wobble a second face — Right, save,
+    // Left popped the entry and stepped the reference 0 → +1 over an EMPTY
+    // redo stack, clean again with the file holding the post-Right state —
+    // and Ctrl+Q read the flag and exited with no prompt.
+    //
+    // THE FIX IS ONE CLEAR AT THE OWNER, beside the reference move it belongs
+    // to, so no caller can move the reference and forget the stamp: the next
+    // eligible press finds no burst to merge into and PUSHES the pre-press
+    // snapshot — the state the file holds — and the reference steps to −1
+    // under push()'s own arithmetic, the dot coming back on. A synthesized
+    // repeat cannot follow a save inside its own burst at all (the save is a
+    // key press, and a key press disarms both hold producers — layer (1) at
+    // maybe_fire_repeat and the set_on_key hook the button hold dies on), and
+    // one that somehow did would find the stamp None and push likewise. A save
+    // is a deliberate act between taps, so the entry it opens is the honest
+    // history anyway. Neither stack is touched: Ctrl+Z still reverts the last
+    // op, and the ONE undo entry a merged run had stays one.
+    app.history.mark_saved();
+    last_gesture_kind_ = GestureKind::None;
+    // THE DOT IS RE-DERIVED HERE, by the owner that moved the reference — the
+    // same shape as the byte-equal pop above. recompute_dirty pushes the flag
+    // to the window title itself, so the save requests no damage.
+    recompute_dirty();
 }
 
 void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {

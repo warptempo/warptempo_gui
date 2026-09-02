@@ -116,14 +116,18 @@ bool GuiSaveOps::save() {
     }
 
     // Save rebinds the saved reference to the current timeline position
-    // without touching either stack — undo still reverts the last op.
+    // without touching either stack — undo still reverts the last op — AND
+    // ENDS THE UNDO TAP WINDOW (Undo::note_saved, the one tail, 2026-09-02):
+    // the reference move and the coalescing stamp's clear are one act at the
+    // undo owner, so a nudge tap after this save opens its own entry instead
+    // of merging into the entry the reference now rests on and reading clean
+    // over a store that differs from the file.
     //
     // NO DAMAGE ON THE CLEAN EDGE (2026-08-01): the dirty state's only display
     // was the bottom row's dot, and the dot moved to the WINDOW TITLE, which the
-    // compositor repaints on its own. recompute_dirty pushes the new flag to the
-    // title itself, so the repaint this used to request has nothing left to
-    // redraw.
-    app.history.mark_saved();
-    undo.recompute_dirty();
+    // compositor repaints on its own. recompute_dirty (note_saved's tail) pushes
+    // the new flag to the title itself, so the repaint this used to request has
+    // nothing left to redraw.
+    undo.note_saved();
     return true;
 }

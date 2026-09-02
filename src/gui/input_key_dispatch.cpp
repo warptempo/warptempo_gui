@@ -2989,7 +2989,8 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // the bytes on disk were exactly a save's and the title bar still carried the
 // dirty dot. So the prelude below is the REAL Ctrl+S, through its one owner
 // (GuiSaveOps::save — the same three atomic writes beside the source, the same
-// per-write stderr, the same mark_saved + recompute_dirty tail), never a second
+// per-write stderr, the same note_saved tail — the reference move, the
+// coalescing stamp's clear and the dirty refold), never a second
 // writer or a partial imitation of it.
 //
 // A FAILED SAVE REFUSES THE WHOLE ACT, and by construction rather than by
