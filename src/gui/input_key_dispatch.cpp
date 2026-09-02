@@ -4390,6 +4390,45 @@ void GuiInputHandler::run_iteration_sweep_render() {
 }
 
 // Render-trigger chords. See the declaration for the chord list.
+void GuiInputHandler::card_trim_fallback_if_any() {
+    // THE ARCHIVAL HALF OF ITEM L (architect 2026-09-02). do_render prints the
+    // "…; rendering untrimmed" line from the WORKER thread, which is the
+    // engineering log and nothing the user sees: the deliverable comes out the
+    // full length of the piece while the trim bar goes on painting the hairline
+    // window that produced it. The strictness ruling's test is what shows, and
+    // what shows here would mislead — so the press answers with a sentence.
+    //
+    // AT THE COMMAND, NOT AT THE DISPATCH. Both chords may PARK behind a
+    // running render (kill_running_render_and_park) and reach
+    // dispatch_single_archival_render only when the worker drains; carding at
+    // the dispatcher would therefore fire once for a direct press and once
+    // more for the parked one, and a park that is later replaced by a newer
+    // command would card for a render that never ran. One press, one card, at
+    // the site that reads the live trim to build the request.
+    //
+    // ONE CARD PER PRESS, NO EDGE — the deliberate-press rule (notifications.h):
+    // a second Ctrl+Alt+R under the same tiny window is a second explicit
+    // command producing a second untrimmed deliverable, and it gets its own
+    // card. The PREVIEW's edge gate exists because its dispatches are not
+    // presses at all (last_dispatch_trim_fell_back_, target_render.h).
+    //
+    // THE TWO SWEEPS ARE NOT CARDED, and the asymmetry is deliberate rather
+    // than an omission. A sweep cell rewrites the warp markers per cell, so the
+    // map its plan_trim consults is NOT the live one this verdict reads: at
+    // tempo x scale near the threshold some cells fall back and some do not,
+    // and a card raised from the live state would be an assertion about cells
+    // it cannot see — the truthfulness rule refuses that more firmly than it
+    // asks for the card. The honest alternative is a per-cell verdict, which is
+    // the worker's, and that is N cards for one act. The sweeps keep
+    // do_render's per-cell stderr line; their output is disposable `tmp/` batch
+    // material the architect auditions in the render player, where the length
+    // of the cell is the answer.
+    if (target_render.trim_would_fall_back()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kTrimFallbackCard);
+    }
+}
+
 bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                                                   GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -4446,6 +4485,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
+
+        // The deliverable this press produces may be the WHOLE piece under a
+        // hairline trim bar; say so once, here (definition above).
+        card_trim_fallback_if_any();
 
         if (async_renderer.is_busy()) {
             // A render dispatch kills the running render. Park this command;
@@ -4542,6 +4585,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
+
+        // The cell this press produces may be the WHOLE piece under a hairline
+        // trim bar — the same recipe, so the same answer (definition above).
+        card_trim_fallback_if_any();
 
         // Same single-dispatch path as Ctrl+Alt+R: kill the running render and
         // park (newest-wins) when busy, else dispatch now.

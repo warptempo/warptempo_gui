@@ -409,6 +409,51 @@ void GuiTargetRender::dispatch_render_now() {
     // starts from a clean slate.
     app.queue_cancel_requested = false;
 
+    // ONE VERDICT PER DISPATCH, TAKEN HERE — the header's own words, now the
+    // code's shape. All three rungs below (the render cache's hit, the
+    // archival artifact's, and the synthesis miss) stamp the same anchor from
+    // the same trim pair, and nothing between this line and any of them
+    // mutates app.trim (the fingerprint build, the cache lookup and the
+    // artifact read are all reads), so hoisting the call costs nothing — the
+    // map lookup ran once per dispatch before too, only farther down — and
+    // leaves exactly one place where the pair is asked. "Live state IS the
+    // request state" therefore still holds at every stamp below.
+    const BufferStartVerdict verdict =
+        compute_buffer_start_frame_for(app.trim.begin_frame,
+                                       app.trim.end_frame);
+
+    // THE FALLBACK'S CARD (architect 2026-09-02, deep dive item L), at the ONE
+    // OUTERMOST SITE EVERY TARGET-VIEW DISPATCH PASSES THROUGH. It has to be
+    // here rather than at any rung: a cache hit, an archival artifact hit and a
+    // fresh render all serve the FULL, untrimmed buffer under the fallback, so
+    // a card wired to the synthesis path alone would go quiet for exactly the
+    // repeat dispatches the user is most likely to be watching. What the
+    // screen shows meanwhile is the hairline window he drew — the trim bar and
+    // the waveform overlay derive from the resting bounds — so this is the
+    // "what shows would mislead" half of the success rule, not a silent-refusal
+    // exemption (messaging.md).
+    //
+    // THE REACHABLE PRODUCER IS THE SUB-SAMPLE SPAN. compute_buffer_start_frame_for
+    // carries two fallbacks and this cards both with one sentence, because the
+    // sentence names the OUTCOME: only "Trim target span rounds below one
+    // output sample" is reachable from a resting store (a 1-3 frame window
+    // under a fast tempo x scale), while "Trim end at or before trim begin" is
+    // the breach mirror of validate_trim_frames' check order, which a committed
+    // sub-window can never rest in.
+    //
+    // THE RISING EDGE, not the dispatch (the full reasoning is at
+    // last_dispatch_trim_fell_back_): a standing tiny window re-dispatches on
+    // every output-affecting edit, and one card per keystroke is the flood the
+    // ruling's "one card per deliberate act" excludes. THE STDERR LINES ARE
+    // UNCHANGED and stay per-dispatch — the two rungs below print their own,
+    // do_render prints the synthesis path's — because that signal is the
+    // engineering log, where a repeat IS information.
+    if (verdict.trim_fell_back && !last_dispatch_trim_fell_back_) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kTrimFallbackCard);
+    }
+    last_dispatch_trim_fell_back_ = verdict.trim_fell_back;
+
     // The preview always proceeds from here: the parser resolver normalizes
     // ambiguous marker arrangements to tempo 1.00 at resolve time (one
     // stderr line per timestamp), so there is no store state to refuse; a
@@ -436,10 +481,8 @@ void GuiTargetRender::dispatch_render_now() {
         // Hit: target_buffer now holds the cached audio. Mirror
         // on_render_done()'s Success tail with no async render; in_flight_
         // stays false since no worker round trip is pending. Live state IS the
-        // request state on this synchronous rung, so the stamp is exact.
-        const BufferStartVerdict verdict =
-            compute_buffer_start_frame_for(app.trim.begin_frame,
-                                           app.trim.end_frame);
+        // request state on this synchronous rung, so the dispatch's own verdict
+        // is exact here.
         dispatched_buffer_start_frame_ = verdict.start_frame;
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
@@ -490,10 +533,7 @@ void GuiTargetRender::dispatch_render_now() {
         if (stat_artifact_identity(artifact_candidate, post_read) &&
             post_read == candidate_identity) {
             // Live state IS the request state on this synchronous rung,
-            // so the stamp is exact.
-            const BufferStartVerdict verdict =
-                compute_buffer_start_frame_for(app.trim.begin_frame,
-                                               app.trim.end_frame);
+            // so the dispatch's own verdict is exact here.
             dispatched_buffer_start_frame_ = verdict.start_frame;
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this
@@ -556,11 +596,10 @@ void GuiTargetRender::dispatch_render_now() {
     // may have drifted mid-render. No fallback print here even when the
     // verdict says fell-back: this fresh dispatch runs do_render, whose own
     // trim-plan block prints the one line per resolve — printing at this
-    // stamp too would double it.
-    dispatched_buffer_start_frame_ =
-        compute_buffer_start_frame_for(app.trim.begin_frame,
-                                       app.trim.end_frame)
-            .start_frame;
+    // stamp too would double it. (The CARD is the dispatch's, raised at the top
+    // of this body for all three rungs alike; only the stderr line forks by
+    // rung.)
+    dispatched_buffer_start_frame_ = verdict.start_frame;
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
@@ -694,6 +733,16 @@ void GuiTargetRender::complete_successful_buffer() {
     }
 }
 
+bool GuiTargetRender::trim_would_fall_back() const {
+    // The archival commands' one line of it — contract at the declaration.
+    // Deliberately a thin read of the verdict owner below and not a second
+    // test: the anchor, the reuse rungs' stderr lines, the preview's card and
+    // this all consume ONE computation of the survival rule.
+    return compute_buffer_start_frame_for(app.trim.begin_frame,
+                                          app.trim.end_frame)
+        .trim_fell_back;
+}
+
 GuiTargetRender::BufferStartVerdict
 GuiTargetRender::compute_buffer_start_frame_for(
     int64_t begin_frame, int64_t end_frame) const {
@@ -724,9 +773,11 @@ GuiTargetRender::compute_buffer_start_frame_for(
     //   - a SUB-SAMPLE span: llrint(T_e) - llrint(T_b) < 1 (validate_trim_frames'
     //     span rule), reachable for a narrow sub-window under a fast tempo.
     //     Past-EOF is adversarial load-fatal.
-    // trim_fell_back carries either outcome to the reuse rungs' diagnostic,
-    // and fallback_reason names which one so the printed line matches the
-    // orchestrators' vocabulary. Callers pass the trim pair the produced
+    // trim_fell_back carries either outcome to its THREE readers — the reuse
+    // rungs' stderr diagnostic, the dispatch's own card (dispatch_render_now,
+    // on the rising edge) and the archival chords' (trim_would_fall_back
+    // above) — and fallback_reason names which one so the printed line matches
+    // the orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no
     // buffer-frames gate: the buffer may still be empty at the stamp.
     if (!trim_window_is_full(begin_frame, end_frame, audio.total_frames()) &&

@@ -171,6 +171,24 @@ struct GuiTargetRender {
         return !is_updating() && app.target_buffer_frames > 0;
     }
 
+    // WOULD THE LIVE TRIM PAIR FALL BACK? — the archival commands' read of the
+    // verdict below, and the reason it is public. Ctrl+Alt+R and
+    // Ctrl+Alt+Shift+R build their request from the LIVE stores and the LIVE
+    // trim, so this answers exactly what the worker's own plan_trim will decide
+    // for that request; the two chords card kTrimFallbackCard on it at the
+    // press (input_key_dispatch.cpp, where the whole rationale sits) rather
+    // than leaving the outcome to do_render's worker-thread stderr line. It
+    // asks compute_buffer_start_frame_for and nothing else — THE ONE VERDICT
+    // OWNER on this thread, so no second arithmetic implementation exists to
+    // drift from the orchestrators'.
+    //
+    // View-independent, so a source-view press answers as truthfully as a
+    // target-view one: the map it consults (target_view_warp_frame_map_cached)
+    // is keyed on the warp store's generation, the scale and the audio
+    // identity, never on active_audio_view, and snapshot_current_authoring_state
+    // already reads it from source view for the same reason.
+    bool trim_would_fall_back() const;
+
     // True iff app.target_buffer is potentially stale relative to the current
     // engine input (set by trigger() on any output-affecting mutation, cleared
     // after the completion rebind). Consulted by the archival on_done tail to
@@ -263,6 +281,14 @@ private:
     // byte-for-byte; it points at a string literal (static lifetime), set
     // alongside trim_fell_back, and stays null when the render is trimmed or
     // full.
+    //
+    // trim_fell_back HAS THREE READERS (2026-09-02, deep dive item L): the two
+    // reuse rungs' stderr lines, the PREVIEW'S CARD at the top of
+    // dispatch_render_now (kTrimFallbackCard on this flag's rising edge, the
+    // one outermost site every target-view dispatch passes through) and the
+    // ARCHIVAL CHORDS' card through trim_would_fall_back above. Only the
+    // stderr readers consult fallback_reason: the card names the outcome, not
+    // the producer.
     struct BufferStartVerdict {
         int64_t     start_frame = 0;
         bool        trim_fell_back = false;
@@ -299,6 +325,30 @@ private:
     // store before its commit — from mislabeling a buffer with a bound its
     // samples never embodied.
     int64_t dispatched_buffer_start_frame_ = 0;
+
+    // THE PREVIEW CARD'S EDGE (architect 2026-09-02, deep dive item L): the
+    // trim_fell_back verdict of the PREVIOUS dispatch, so dispatch_render_now
+    // cards kTrimFallbackCard on the RISING edge alone — it fell back now and
+    // did not at the dispatch before it.
+    //
+    // WHY AN EDGE HERE AND A PLAIN PRESS COUNT ON THE ARCHIVAL CHORDS: the
+    // ruling is one card per deliberate act, and a preview dispatch is not one.
+    // trigger() fires from every output-affecting mutation — a held arrow's
+    // synthesized repeats, a marker drag's per-motion commits, a settings
+    // commit, undo/redo, a tab switch — and each one re-dispatches under a
+    // trim window that has not changed. The notification layer stacks
+    // duplicates for everything that is not a held input's own repeat
+    // (notifications.h), and these dispatches reach it off the render road
+    // rather than through on_key, so they would read that bit false and stack
+    // one card per keystroke. The edge answers the only thing the user has not
+    // already been told: that the window he has just made is one the render
+    // cannot honor.
+    //
+    // It is the LAST DISPATCH'S verdict and nothing more — the acts that skip a
+    // dispatch entirely (ensure_ready's clean path, a T->S flip) leave it
+    // standing on purpose, exactly as dispatched_buffer_start_frame_ keeps the
+    // anchor of the production that is actually bound.
+    bool last_dispatch_trim_fell_back_ = false;
 
     // THE RUN STATE, the whole of it — two fields. last_trigger_time_ is written
     // by trigger()'s top alone and read by trigger() and tick_updating_hold;

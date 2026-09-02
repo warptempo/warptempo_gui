@@ -2365,6 +2365,16 @@ private:
     // dispatch site must call this after build_render_request.
     void attach_shared_render_resources(RenderRequest& req);
 
+    // THE TRIM FALLBACK'S CARD ON THE ARCHIVAL ROAD (architect 2026-09-02,
+    // deep dive item L): raise kTrimFallbackCard when the live trim pair is a
+    // proper sub-window plan_trim will refuse, so the render this press
+    // produces is the FULL, untrimmed piece under a hairline trim bar. Called
+    // by the two archival CHORDS, whose requests carry the live stores and the
+    // live trim verbatim — the full rationale, and the recorded asymmetry that
+    // keeps the two SWEEPS out of it, are at the definition
+    // (input_key_dispatch.cpp).
+    void card_trim_fallback_if_any();
+
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
     // cell into `<source parent>/tmp/<N>_bpm/`. The

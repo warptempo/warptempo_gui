@@ -275,6 +275,27 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 inline constexpr const char* kTargetPreviewNotReadyCard =
     "Wait for the target preview to finish rendering";
 
+// THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02, deep dive item L) — a
+// proper sub-window whose TARGET span rounds below one output sample, which
+// plan_trim refuses and every orchestrator answers by rendering the FULL,
+// untrimmed piece (render-pipeline.md's trim section). The trim bar and the
+// waveform overlay go on painting the hairline window the user drew, so the
+// screen says "this span" while the audio is the whole movement — the shape
+// the strictness ruling's "what shows would mislead" test cards. A MINIMUM
+// TRIM SIZE WAS THE ALTERNATIVE AND IS REJECTED (2026-08-19,
+// normalization-and-boundaries.md: kMinTrimSpanFrames quantized the shift+drag
+// unpleasantly and was retired one day after it landed) — the sweep authors
+// exactly the span it draws and the outcome is announced instead.
+//
+// TWO TRANSLATION UNITS RAISE IT, which is why it is homed here: the preview's
+// own dispatch (target_render.cpp, once per rising edge of the verdict) and
+// the two archival commands (input_key_dispatch.cpp, once per press). It names
+// the OUTCOME rather than either producer, so the one sentence covers both
+// plan_trim refusals the verdict carries (only the sub-sample span is
+// reachable from a resting store; the crossed pair is the breach mirror).
+inline constexpr const char* kTrimFallbackCard =
+    "Trim window too small to render; rendered untrimmed";
+
 // AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
 // sweep; the rule is stated once in messaging.md's card section, over the one
 // statement of the product's text rules at paint_handler.cpp's menu-row
