@@ -2206,6 +2206,12 @@ private:
     struct ActiveBatch {
         std::vector<RenderRequest> reqs;
         std::string                label;
+        // The one folder every cell of this batch publishes into, read off the
+        // first request at the start (the sweeps compose one folder per batch
+        // and stamp it on every cell). It outlives the requests, which are
+        // moved onto the worker one at a time, so the batch's TAIL can still
+        // ask whether the folder ended up empty — see dispatch_next_batch_entry.
+        std::string                folder;
         int                        next_index = 0;
         int                        rendered   = 0;
         bool                       active     = false;
@@ -2272,9 +2278,14 @@ private:
                             std::string batch_label);
 
     // Worker-completion callback for batched entries. Increments counters,
-    // observes cancellation, and either dispatches the next entry or
-    // finalizes the batch (clear progress text, log summary).
-    void on_batch_entry_complete(RenderOutcome outcome);
+    // observes cancellation, removes a FAILED cell's own partial output, and
+    // either dispatches the next entry or finalizes the batch (clear progress
+    // text, log summary). The cell's folder and basename are the dispatch's,
+    // captured before the request was moved onto the worker: they name the
+    // files this cell was to write, which is what a failure removes.
+    void on_batch_entry_complete(RenderOutcome outcome,
+                                 const std::string& cell_folder,
+                                 const std::string& cell_basename);
 
     // Dispatch reqs[batch_.next_index] (or finalize when out of range / on
     // cancel). Caller must have already mutated batch_ so next_index points

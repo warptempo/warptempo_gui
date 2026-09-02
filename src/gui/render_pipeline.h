@@ -16,7 +16,8 @@
 //   - Success:   pipeline ran to completion; final output exists on disk.
 //   - Failed:    early-return error path (warp-frame-map build, engine/render,
 //                output write/publish, or rename); diagnostics already on
-//                stderr.
+//                stderr, and the same sentence handed back through
+//                do_render's `failure_reason` out-parameter for the card.
 //   - Cancelled: the cancel token was observed mid-pipeline; partial output
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
@@ -199,9 +200,23 @@ struct RenderRequest {
 // exactly this render's session even when a copy outlives the render (the
 // cache writer thread holds one). The queue walker uses the outcome to count
 // successes and to detect mid-render cancellation.
+//
+// THE FAILURE'S REASON TRAVELS WITH THE OUTCOME (architect 2026-09-02): a
+// failed archival render says its reason on a notification card, so the
+// sentence the stderr line carries must reach the GUI thread as well. Every
+// Failed return composes its reason ONCE, through do_render's own `fail`
+// helper, which prints the `Render error:` line and stores the same string
+// here — one composition, so the terminal and the card cannot disagree.
+// Nullable and OPTIONAL: a caller that wants no reason passes nothing (the
+// pointer is written only on a Failed return, and never on Success or
+// Cancelled, so the string a caller hands in keeps whatever it held on those
+// two outcomes — GuiAsyncRenderer clears it per dispatch for that reason).
+// The card's own wording is the caller's: this is the reason clause alone,
+// with no leading category word and no trailing period.
 RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token =
-                            nullptr);
+                            nullptr,
+                        std::string* failure_reason = nullptr);
 
 // Output-path composition (render_output_directory / render_output_stem /
 // compose_render_output_path) lives parser-side in render_output_naming.h so

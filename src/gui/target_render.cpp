@@ -578,8 +578,12 @@ void GuiTargetRender::dispatch_render_now() {
     req.source_load_size = audio.source_load_size();
     req.source_load_mtime = audio.source_load_mtime();
 
+    // The completion's reason clause is the ARCHIVAL road's (a failed
+    // deliverable names its reason on its card); the preview's own failure
+    // card is the one fixed sentence `Target render failed`, so this arm reads
+    // the outcome alone.
     async_renderer.dispatch(std::move(req),
-        [this](RenderOutcome o) { on_render_done(o); });
+        [this](RenderOutcome o, const std::string&) { on_render_done(o); });
 }
 
 void GuiTargetRender::on_render_done(RenderOutcome outcome) {

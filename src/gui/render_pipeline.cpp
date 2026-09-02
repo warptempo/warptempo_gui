@@ -70,10 +70,30 @@ RenderRequest build_render_request(std::string source_audio_path,
 }
 
 RenderOutcome do_render(const RenderRequest& req,
-                        std::shared_ptr<const std::atomic<bool>> cancel_token) {
+                        std::shared_ptr<const std::atomic<bool>> cancel_token,
+                        std::string* failure_reason) {
     // Raw view for the pipeline body; the owning token itself travels only
     // into insert_master_floats, whose writer thread outlives this call.
     const std::atomic<bool>* cancel_flag = cancel_token.get();
+
+    // THE ONE FAILURE COMPOSER (architect 2026-09-02, the failed render's
+    // card). Every Failed return in this function goes through here: the
+    // reason is built once, printed on this pipeline's one `Render error:`
+    // line and handed back through the out-parameter for the GUI's card, so
+    // the terminal and the card carry the same words and neither can drift
+    // from the other. The reason is the CLAUSE alone — no category word, no
+    // trailing period — because each surface adds its own ("Render error: "
+    // here, "Render failed: " on the card, where the appended-reason rule
+    // lowercases the initial). Cleanup is the SITE's, not this helper's: what
+    // has to be unwound differs per site (a staging file, a just-published wav,
+    // the sidecars this render created), and folding it in here would run the
+    // wrong unwind for whichever site it did not fit.
+    auto fail = [failure_reason](const std::string& reason) -> RenderOutcome {
+        std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
+                     reason.c_str());
+        if (failure_reason) *failure_reason = reason;
+        return RenderOutcome::Failed;
+    };
 
     // --- Read settings (typed; the live app.engine_settings is mutated
     // through strict-validated authoring paths, so every field is in
@@ -85,10 +105,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // --- Probe source audio for sample rate / total frames. ---
     auto src_info = audio_probe(req.source_audio_path);
     if (!src_info) {
-        std::fprintf(stderr,
-            "warptempo_gui: Render error: open failed for '%s': %s\n",
-            req.source_audio_path.c_str(), src_info.error().c_str());
-        return RenderOutcome::Failed;
+        return fail("open failed for '" + req.source_audio_path + "': " +
+                    src_info.error());
     }
 
     const long sample_rate  = src_info->sample_rate;
@@ -105,9 +123,7 @@ RenderOutcome do_render(const RenderRequest& req,
             slice_to_phase_reset_markers(req.phase_resets), sample_rate,
             total_frames);
     if (!phase_reset_source_frames_r) {
-        std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
-                     phase_reset_source_frames_r.error().c_str());
-        return RenderOutcome::Failed;
+        return fail(phase_reset_source_frames_r.error());
     }
     const std::vector<double>& phase_reset_source_frames =
         *phase_reset_source_frames_r;
@@ -129,10 +145,7 @@ RenderOutcome do_render(const RenderRequest& req,
     auto rfull = build_warp_frame_map(
         resolved_warp_markers, scale, sample_rate, total_frames);
     if (!rfull) {
-        std::fprintf(stderr,
-            "warptempo_gui: Render error: map build failed: %s\n",
-            rfull.error().c_str());
-        return RenderOutcome::Failed;
+        return fail("map build failed: " + rfull.error());
     }
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*rfull);
@@ -187,12 +200,9 @@ RenderOutcome do_render(const RenderRequest& req,
         if (std::filesystem::exists(candidate, ec) &&
             std::filesystem::equivalent(candidate,
                                         req.source_audio_path, ec)) {
-            std::fprintf(stderr,
-                "warptempo_gui: Render error: output '%s' resolves to "
-                "the source audio file; refusing to overwrite the "
-                "source. Change the title setting.\n",
-                candidate.string().c_str());
-            return RenderOutcome::Failed;
+            return fail("output '" + candidate.string() + "' resolves to "
+                        "the source audio file; refusing to overwrite the "
+                        "source. Change the title setting.");
         }
     }
 
@@ -317,10 +327,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 const bool exists = std::filesystem::exists(path, ec);
                 return ec ? true : exists;
             };
+            // The reason is composed and recorded through the one failure
+            // composer here rather than at the two `!sidecars.ok` returns:
+            // this is the site that knows WHICH sidecar failed, and those two
+            // sites know only that one did. `fail`'s Failed return is
+            // discarded — what is wanted from it is the line and the record;
+            // the unwind and the return are the callers'.
             auto note_failure = [&](const std::filesystem::path& path) {
-                std::fprintf(stderr,
-                    "warptempo_gui: Render error: write failed for '%s'\n",
-                    path.string().c_str());
+                fail("write failed for '" + path.string() + "'");
                 result.ok = false;
             };
             auto note_created = [&](const std::filesystem::path& path,
@@ -528,10 +542,8 @@ RenderOutcome do_render(const RenderRequest& req,
     if (auto v = validate_render_projection(
             engine_output_frames, encoded_frames, source_channels_probe,
             /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
-        std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
-                     v.error().c_str());
         cleanup_all();
-        return RenderOutcome::Failed;
+        return fail(v.error());
     }
 
     // The deliverable's folder is created here when it is missing, the batch
@@ -547,11 +559,9 @@ RenderOutcome do_render(const RenderRequest& req,
         std::error_code mkec;
         std::filesystem::create_directories(output_path.parent_path(), mkec);
         if (mkec) {
-            std::fprintf(stderr,
-                "warptempo_gui: Render error: could not create '%s': %s\n",
-                output_path.parent_path().string().c_str(),
-                mkec.message().c_str());
-            return RenderOutcome::Failed;
+            return fail("could not create '" +
+                        output_path.parent_path().string() + "': " +
+                        mkec.message());
         }
     }
 
@@ -598,6 +608,8 @@ RenderOutcome do_render(const RenderRequest& req,
         LoadInPlaceCriticalSidecars sidecars =
             publish_load_in_place_critical_batch_sidecars();
         if (!sidecars.ok) {
+            // The line and the card's reason were composed inside the writer,
+            // at the site that knows which sidecar failed (note_failure).
             remove_created_load_in_place_sidecars(sidecars.created_paths);
             cleanup_all();
             return RenderOutcome::Failed;
@@ -626,6 +638,7 @@ RenderOutcome do_render(const RenderRequest& req,
         LoadInPlaceCriticalSidecars sidecars =
             publish_load_in_place_critical_batch_sidecars();
         if (!sidecars.ok) {
+            // Reason already composed and recorded by note_failure, above.
             remove_created_load_in_place_sidecars(sidecars.created_paths);
             remove_newly_published_wav();
             cleanup_all();
@@ -815,19 +828,19 @@ RenderOutcome do_render(const RenderRequest& req,
             ? &trim_plan->pre.source_frame_schedule
             : nullptr;
 
+        // The engine reports no reason of its own (EngineResult is a tristate),
+        // so "engine failed" is the whole of what this failure can say — the
+        // engine's own diagnostics, where it has any, are already on stderr.
         auto handle_eng = [&](EngineResult r) -> RenderOutcome {
             if (r == EngineResult::Success)   return RenderOutcome::Success;
             cleanup_all();
             return (r == EngineResult::Cancelled)
                 ? RenderOutcome::Cancelled
-                : RenderOutcome::Failed;
+                : fail("engine failed");
         };
 
         const EngineResult er = run_warptempo_engine(ep, cancel_flag);
         if (er != EngineResult::Success) {
-            if (er == EngineResult::Failed) {
-                std::fprintf(stderr, "warptempo_gui: Render error: engine failed\n");
-            }
             return handle_eng(er);
         }
         if (cancel_requested()) return cancelled_outcome();
@@ -845,10 +858,8 @@ RenderOutcome do_render(const RenderRequest& req,
             req.output_buffer ? std::string() : staging_output_path,
             cancel_flag);
         if (!fin) {
-            std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
-                         fin.error().c_str());
             cleanup_all();
-            return RenderOutcome::Failed;
+            return fail(fin.error());
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
@@ -890,13 +901,11 @@ RenderOutcome do_render(const RenderRequest& req,
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (ec) {
-                std::fprintf(stderr,
-                    "warptempo_gui: Render error: rename failed for '%s' -> "
-                    "'%s': %s\n",
-                    staging_output_path.c_str(), final_output_path.c_str(),
-                    ec.message().c_str());
+                const std::string reason =
+                    "rename failed for '" + staging_output_path + "' -> '" +
+                    final_output_path + "': " + ec.message();
                 cleanup_all();
-                return RenderOutcome::Failed;
+                return fail(reason);
             }
             // Populate the render cache with the canonical bytes that were
             // just published. The insert races nothing: the rename above

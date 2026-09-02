@@ -2,6 +2,8 @@
 
 #include "directory_walk.h"     // the one non-throwing listing walk
 #include "phaseresetmarkers.h"
+#include "render_cache.h"          // fingerprint_sidecar_path
+#include "render_output_naming.h"  // the deliverable's path composition
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "time_format.h"
@@ -51,6 +53,56 @@ GuiInputHandler::max_renders_batch_index(
         }
     });
     return scan;
+}
+
+// THE FAILED RENDER'S OWN REMOVAL (architect 2026-09-02) — one body, two
+// subjects: the deliverable pair in `render/` and a batch cell's file set
+// under its `tmp/` folder. Every path is COMPOSED from its own owner
+// (compose_render_output_path, render_staging_path, fingerprint_sidecar_path,
+// and the entry sidecar triple's extensions, spelled as the load road spells
+// them) and never found by walking the folder: a failure removes what THIS
+// render was to write and nothing that happens to sit beside it.
+//
+// A MISSING FILE IS THE ORDINARY CASE, not an error — most failures return
+// before anything is written, and do_render unwinds a good deal of the rest
+// itself — so a `remove` that finds nothing is silent. A removal that FAILS
+// is one stderr line and nothing else: it is a defensive arm (the folder is
+// the product's own, under the project the user just rendered from), and the
+// card the caller raises has already said the render failed.
+static void remove_failed_render_files(
+        const std::vector<std::filesystem::path>& paths) {
+    for (const std::filesystem::path& p : paths) {
+        std::error_code ec;
+        std::filesystem::remove(p, ec);
+        if (ec) {
+            std::fprintf(stderr,
+                "warptempo_gui: Could not remove '%s': %s\n",
+                p.string().c_str(), ec.message().c_str());
+        }
+    }
+}
+
+// A failed CELL's whole file set: the wav, its staging sibling, the
+// fingerprint attestation, and the three load-in-place sidecars do_render
+// writes beside a batch wav (render_pipeline.cpp's
+// publish_load_in_place_critical_batch_sidecars is where they are authored;
+// the load road composes the same triple, input_key_dispatch.cpp). Composed
+// from the cell's folder and basename, which the dispatch captures before the
+// request is moved onto the worker.
+static void remove_failed_batch_cell(const std::string& batch_folder,
+                                     const std::string& batch_basename) {
+    if (batch_folder.empty() || batch_basename.empty()) return;
+    const std::filesystem::path folder(batch_folder);
+    const std::filesystem::path wav =
+        compose_render_output_path(folder, batch_basename);
+    remove_failed_render_files({
+        wav,
+        std::filesystem::path(render_staging_path(wav.string())),
+        std::filesystem::path(fingerprint_sidecar_path(wav.string())),
+        folder / (batch_basename + ".warpmarkers"),
+        folder / (batch_basename + ".phaseresetmarkers"),
+        folder / (batch_basename + ".settings"),
+    });
 }
 
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
@@ -395,6 +447,19 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     // is the deliverable arm, and Ctrl+Alt+Shift+R's miscellaneous cell, which
     // arrives here with its folder late-bound, is not.
     const bool publishes_deliverable = req.batch_folder.empty();
+    // THE PAIR THIS REQUEST WOULD PUBLISH, composed from the REQUEST's own
+    // settings and read before the move for the same reason the flag above is:
+    // the failure arm below removes what this render was to write, and a title
+    // edited in the settings editor while the render ran must not redirect that
+    // removal onto a pair this render never touched. (The Success prune reads
+    // the LIVE title instead, and deliberately: its definition is "the current
+    // title's deliverable and nothing else" — see the prune's own note.)
+    const std::filesystem::path deliverable_wav =
+        publishes_deliverable
+            ? compose_render_output_path(
+                  render_output_directory(req.source_audio_path),
+                  render_output_stem(req.engine_settings))
+            : std::filesystem::path();
     // THE MESSAGE IS PARKED, NOT SHOWN (architect 2026-08-08). do_render's three
     // reuse rungs are ahead of all engine work by design, so a dispatch says
     // nothing about whether anything will be rendered: an up-to-date artifact, a
@@ -405,7 +470,8 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     park_render_status("Rendering...");
     req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
-        [this, publishes_deliverable](RenderOutcome o) {
+        [this, publishes_deliverable, deliverable_wav](
+                RenderOutcome o, const std::string& failure_reason) {
             const bool success = (o == RenderOutcome::Success);
             if (o == RenderOutcome::Cancelled) {
                 std::fprintf(stderr, "warptempo_gui: Render cancelled\n");
@@ -429,8 +495,74 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             // for the next deliverable's prune. Only Success prunes — a killed or failed
             // render published nothing — and only the deliverable arm: a batch
             // cell lands in `tmp/`, a different folder, never pruned.
+            //
+            // THE THREE OUTCOMES ANSWER THE DELIVERABLE FOLDER DIFFERENTLY
+            // (architect 2026-09-02), and the split is the whole ruling:
+            //   SUCCESS   prunes — the folder holds the current title's pair
+            //             and nothing else.
+            //   FAILED    DELETES THE PAIR THIS RENDER WAS TO PUBLISH — "the
+            //             missing audio is the clue". The standing file is
+            //             stale BY CONSTRUCTION: a render only reaches engine
+            //             work past the up-to-date rung, which means the
+            //             fingerprint on disk did not match this recipe, so
+            //             what survives a failure is a deliverable that no
+            //             longer matches the authored state and would be
+            //             mirrored to the stick as if it did. Silence plus a
+            //             plausible wav is the shape that misleads; an absent
+            //             wav cannot.
+            //   CANCELLED leaves it alone — a cancel is the user's own
+            //             deliberate act, he knows the deliverable is the old
+            //             one, and taking his audio away for a keypress he
+            //             meant would be the product deciding for him.
+            // (Deletion AT DISPATCH was weighed and not chosen — "no need to
+            // overthink": a render that succeeds replaces the pair anyway, and
+            // a cancel would then have destroyed it for nothing.)
             if (success && publishes_deliverable) {
                 prune_render_folder(app.source_audio_path, app.engine_settings);
+            }
+            if (o == RenderOutcome::Failed) {
+                // THE REMOVAL IS THE DELIVERABLE ARM'S ALONE. A FAILED
+                // MISCELLANEOUS CELL — this dispatcher's other subject —
+                // removes nothing: its output lands in `tmp/`, which is
+                // transient by ruling and taken wholesale at the next
+                // load-in-place's trash, and no mirror ships a cell as a
+                // deliverable. (A sweep's cells are the one `tmp/` case that
+                // IS removed, at on_batch_entry_complete, because a sweep
+                // leaves a folder of them to walk.)
+                if (publishes_deliverable) {
+                    // The pair, composed at dispatch: the wav this request
+                    // named and its `.fingerprint` sibling through the sidecar
+                    // path's one owner (render_cache.h), never a second
+                    // spelling of the extension. The staging sibling rides
+                    // with them — do_render unlinks its own on nearly every
+                    // failure path, and one left by an earlier crash is this
+                    // render's own file by name.
+                    remove_failed_render_files({
+                        deliverable_wav,
+                        std::filesystem::path(
+                            render_staging_path(deliverable_wav.string())),
+                        std::filesystem::path(fingerprint_sidecar_path(
+                            deliverable_wav.string())),
+                    });
+                }
+                // THE FAILURE'S CARD (architect 2026-09-02): a background act
+                // the user was not watching finishing badly is an EVENT
+                // (messaging.md), and until now a failed archival render
+                // cleared the state cell to the same blank a rung-served
+                // success shows. The reason is do_render's own sentence,
+                // appended under the appended-reason rule — lowercased initial
+                // through the one composer, the system's words left as they
+                // arrive. A Failed return with no composed reason (there is no
+                // such site today) says the bare sentence rather than a
+                // dangling colon. BOTH ARMS CARD: the deliverable's failure and
+                // the miscellaneous cell's alike, each an explicit command of
+                // his that produced nothing.
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    failure_reason.empty()
+                        ? std::string("Render failed")
+                        : "Render failed: " +
+                              lowercase_initial(failure_reason));
             }
             // On success, re-establish a cold/stale target buffer (see
             // maybe_reestablish_target_buffer for the full rationale).
@@ -479,6 +611,10 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
 
     batch_.reqs       = std::move(reqs);
     batch_.label      = std::move(batch_label);
+    // Every cell of a batch carries the same folder (each sweep composes one
+    // and stamps it on all of its requests), so the first request names it for
+    // the whole run — kept because the requests are moved out one by one.
+    batch_.folder     = batch_.reqs.front().batch_folder;
     batch_.next_index = 0;
     batch_.rendered   = 0;
     batch_.active     = true;
@@ -507,11 +643,45 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             std::fprintf(stderr,
                 "warptempo_gui: %s: Rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
+            // A SHORT SWEEP SAYS SO (architect 2026-09-02). The stderr line
+            // stays whole; the card is the sweep's own answer on screen, since
+            // a run that produced fewer cells than it counted up to looks
+            // exactly like one that produced them all — the progress line is
+            // gone by then either way. A COMPLETE sweep says nothing (a
+            // render's completion is not notified), and a CANCELLED one says
+            // nothing either: the cancel is his deliberate act, and the state
+            // cell going blank at the press is its answer.
+            if (batch_.rendered < total) {
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "Rendered " + std::to_string(batch_.rendered) +
+                        " of " + std::to_string(total));
+            }
+            // AND A SWEEP THAT LEFT NOTHING LEAVES NO FOLDER. Each failed cell
+            // has already removed its own files (on_batch_entry_complete), so
+            // an empty folder here is a batch whose every cell failed — the
+            // `3_bpm/` the dispatcher created before the first cell ran. It is
+            // removed HERE rather than at the failing cell precisely because
+            // do_render does NOT create a batch folder: taking it away
+            // mid-sweep would fail every cell that followed. A cancelled sweep
+            // keeps its folder, the standing ruling that a killed session may
+            // leave partial batch folders (tmp/ is transient).
+            if (!batch_.folder.empty()) {
+                const std::filesystem::path folder(batch_.folder);
+                std::error_code ec;
+                if (std::filesystem::is_directory(folder, ec) &&
+                    std::filesystem::is_empty(folder, ec) && !ec) {
+                    // Through the same removal body the cells use, so a
+                    // refusal reports on the one stderr line they share.
+                    remove_failed_render_files({folder});
+                }
+            }
         }
         // A finished batch just leaves its artifacts on disk; nothing
         // auto-opens. The user presses `l` to listen or `'` to load an
         // entry in place by name.
         batch_.active = false;
+        batch_.folder.clear();
         batch_.reqs.clear();
         batch_.reqs.shrink_to_fit();
         finalize_render_run();
@@ -559,15 +729,38 @@ void GuiInputHandler::dispatch_next_batch_entry() {
 
     RenderRequest req = std::move(batch_.reqs[batch_.next_index]);
     req.synthesis_started = &synthesis_started_;
+    // The cell's own names, read BEFORE the request is moved onto the worker
+    // (a moved-from request names nothing): they are what a failed cell's
+    // removal composes its paths from.
+    const std::string cell_folder   = req.batch_folder;
+    const std::string cell_basename = req.batch_basename;
     async_renderer.dispatch(std::move(req),
-        [this](RenderOutcome o) { on_batch_entry_complete(o); });
+        [this, cell_folder, cell_basename](RenderOutcome o,
+                                           const std::string&) {
+            on_batch_entry_complete(o, cell_folder, cell_basename);
+        });
 }
 
-void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
+void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome,
+                                              const std::string& cell_folder,
+                                              const std::string& cell_basename) {
     if (!batch_.active) return;
 
     if (outcome == RenderOutcome::Success)   ++batch_.rendered;
     if (outcome == RenderOutcome::Cancelled) app.queue_cancel_requested = true;
+    if (outcome == RenderOutcome::Failed) {
+        // A FAILED CELL'S PARTIAL OUTPUT GOES WITH IT (architect 2026-09-02),
+        // the deliverable's rule one folder over: what a failure leaves under
+        // `tmp/` is a cell that does not render the recipe its name and its
+        // sidecars claim — the `'` load in place would apply that recipe, and
+        // the player would offer the wav. do_render unwinds much of this
+        // itself (it removes what IT created before returning Failed); the
+        // removal here is the whole set by composition, so a cell that
+        // inherited an older run's files under the same name goes too. The
+        // CELL'S OWN card is not raised: a sweep's answer is the tail's
+        // "Rendered N of M", one sentence for a run of up to 391 cells.
+        remove_failed_batch_cell(cell_folder, cell_basename);
+    }
 
     ++batch_.next_index;
     dispatch_next_batch_entry();

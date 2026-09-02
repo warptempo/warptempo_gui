@@ -113,8 +113,13 @@ void GuiAsyncRenderer::worker_loop() {
             cancel_token = session_cancel_;
         }
 
-        // Execute the render synchronously on this worker thread.
-        RenderOutcome outcome = do_render(req, std::move(cancel_token));
+        // Execute the render synchronously on this worker thread. The reason
+        // slot is cleared FIRST so a failure's sentence can never be the
+        // previous session's: do_render writes it only on a Failed return, so
+        // a Success or a Cancel leaves whatever was there.
+        last_failure_reason_.clear();
+        RenderOutcome outcome =
+            do_render(req, std::move(cancel_token), &last_failure_reason_);
         last_outcome_ = outcome;
 
         state_.store(static_cast<int>(State::CompletionPending));
@@ -140,6 +145,9 @@ void GuiAsyncRenderer::on_completion_event() {
     }
 
     const RenderOutcome outcome = last_outcome_;
+    // Taken beside the outcome, before the state goes Idle and a fresh
+    // dispatch may reach the worker's own clear of the slot.
+    const std::string reason = last_failure_reason_;
     DoneCallback cb;
     {
         std::lock_guard<std::mutex> lk(mtx_);
@@ -147,5 +155,5 @@ void GuiAsyncRenderer::on_completion_event() {
         on_done_ = nullptr;
         state_.store(static_cast<int>(State::Idle));
     }
-    if (cb) cb(outcome);
+    if (cb) cb(outcome, reason);
 }
