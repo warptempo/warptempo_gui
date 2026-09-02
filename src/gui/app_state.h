@@ -4214,6 +4214,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     ends the act. (The grep's NINTH call is not an owner and not an
 //     interrupt: GuiAbAudition::fire_if_due ends the REST it is about to
 //     launch, the FIRED edge above.)
+//     THE CLEAR CARRIES ONE SIDE EFFECT since 2026-09-01, and it is the
+//     centered pin's: the act disregards the pin whole, so a clear that ends a
+//     STANDING act voids the derivation memory's cursor term and lets the
+//     resting hook re-pin. The reasoning is at clear_audition_sequence; no
+//     owner has anything to do about it.
 //     (1) THE ONE STOP BODY, GuiPlaybackLifecycle::stop_playback_if_playing,
 //         which clears it BEFORE its own nothing-to-do guard — so a stop that
 //         finds nothing playing still ends a RESTING act. Every caller of
@@ -4378,6 +4383,13 @@ struct AppState {
     // statement there); the pin SHARES follow's suppression bit above — an
     // aiming pan during playback takes the camera from BOTH autonomous
     // movers for the session, the same truth the bit has always told.
+    //
+    // THIS FIELD IS THE PREFERENCE, NOT THE ENGAGEMENT (architect 2026-09-01):
+    // the A/B audition disregards the pin for its whole duration, so every
+    // site that asks "is the pin ON right now" reads centered_pin_engaged
+    // (below, where the two reader classes are inventoried) and this field is
+    // read direct only by the lamp's face, the settings editor, the load and
+    // the sidecar writers — the preference the act never changes.
     bool    centered_mode          = false;
 
     // The centered derivation's memory — WHAT THE LAST DERIVATION WAS MADE
@@ -4400,10 +4412,13 @@ struct AppState {
     // triple-only memory left the camera parked on the scanner's last
     // position under a lit lamp. Remembering the subject makes the
     // playing->resting transition ITSELF due at the next pre-paint, which
-    // catches EVERY stop road — Space's stop, the natural end, the bounded
-    // audition's last play, the target-view freeze — with no recenter call
-    // scattered into any of them (each of those roads already damages, so a
-    // frame follows). A session whose pin was suppressed by a manual pan
+    // catches EVERY stop road — Space's stop, the natural end, the
+    // target-view freeze — with no recenter call scattered into any of them
+    // (each of those roads already damages, so a frame follows). THE A/B
+    // AUDITION'S LAST PLAY WAS A FOURTH ROAD HERE UNTIL 2026-09-01: the act
+    // disregards the pin whole now, so its plays never derive and never stamp
+    // a SCANNER subject for this term to catch — its own end is carried by the
+    // void below instead. A session whose pin was suppressed by a manual pan
     // during playback re-pins at that stop too: the suppression is the
     // SESSION's (the stop body clears the bit), and the resting half has
     // never consulted it.
@@ -4412,6 +4427,15 @@ struct AppState {
     // cursor or the (tab, audio view, cursor) triple has MOVED since — which
     // is what lets a manual pan at rest simply work, the next playhead change
     // (or view change) re-pinning. Session scratch, never serialized.
+    //
+    // AN A/B AUDITION VOIDS IT (architect 2026-09-01): no derivation runs
+    // while the act stands — the pin is disengaged for its whole duration —
+    // so the memory left over from before it no longer describes the camera
+    // the act's own `c` (or a follow page-turn, or a manual pan) has moved,
+    // and at the act's end it can still MATCH the live four terms exactly.
+    // clear_audition_sequence therefore voids the cursor term at every write
+    // that ends a standing act, which is the pin's re-engagement edge; the
+    // reasoning is at that funnel.
     int64_t centered_derived_cursor = -1;
     char    centered_derived_tab        = 0;
     char    centered_derived_audio_view = 0;
@@ -8985,6 +9009,44 @@ inline bool transport_session_live(const AppState& a) {
            a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
 }
 
+// IS THE CENTERED PIN ENGAGED — the `y` lamp's PREFERENCE (a.centered_mode,
+// contract at the field) narrowed by the one act that disregards it (architect
+// 2026-09-01: "A/B audition mode (Shift+Space) should disregard the centered
+// toggle, i.e. consider it false"). The audition is a fine-tuning listen that
+// opens each half with the `c` command on its tab; under a lit lamp the camera
+// would then scroll the waveform under a static line for each of the four
+// bounded plays. So WHILE THE SEQUENCE STANDS THE PIN IS OFF — in a play or in
+// one of its rests alike, `phase` being the act's one running bit across both
+// halves — and the plays behave exactly as they do with centered=false: `c`
+// frames, the scanner walks across a static viewport, and follow's own edge
+// check applies as it always did. THE PREFERENCE IS UNTOUCHED: the act writes
+// no field, the lamp stays lit (it reports what is persisted), and the pin
+// re-engages the moment the sequence ends — the memory's own void at that end
+// makes the next pre-paint due (clear_audition_sequence).
+//
+// FOUR READERS, the pin's ENGAGEMENT sites and nothing else (grep
+// `centered_mode`, whole tree, 2026-09-01):
+//   * the pre-paint hook's RESTING half and its PLAYING half (main.cpp), the
+//     pin's one derivation point;
+//   * the LAUNCH SEED's fork (GuiPlaybackLifecycle::launch_playback_window),
+//     which carries ONE TERM OF ITS OWN for the act's four launches — the one
+//     place this predicate cannot see the act, because both roads into that
+//     body arrive with the sequence already cleared; the reason is at the
+//     site;
+//   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, so a `y` pressed
+//     mid-act records the preference and lights the lamp while deriving
+//     nothing, and the derivation body is never called under a standing act.
+// EVERY OTHER READER OF centered_mode IS THE PREFERENCE and reads the field
+// direct: the lamp's face (redesign_button_selected's IconCentered arm), the
+// settings editor's unchanged-compare and `centered=` commit
+// (settings_editor.cpp), the load (file_loader.cpp) and the four sidecar
+// writers (settings_io.cpp's snapshot, save_ops.cpp, input_render_dispatch.cpp,
+// history_diff.cpp).
+inline bool centered_pin_engaged(const AppState& a) {
+    return a.centered_mode &&
+           a.audition_sequence.phase == GuiAuditionSequence::Phase::Idle;
+}
+
 // WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
 // `delta_px` painted columns away (±1 bare, ±3 shifted, ±10 with ctrl since
 // 2026-08-31, the step ladder at arrow_step_magnitude in gui_input.h; it has
@@ -9740,7 +9802,28 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 // same reset. Idempotent and a no-op at Idle, which is why the owners that
 // carry a guard of their own — the stop body, trigger()'s freeze — can call it
 // ahead of that guard.
+// AND IT IS THE CENTERED PIN'S RE-ENGAGEMENT EDGE (architect 2026-09-01): the
+// pin is disengaged for the act's whole duration (centered_pin_engaged), so NO
+// derivation runs while it stands and the derivation memory still describes
+// the camera from BEFORE it — while the act's own `c` on each half, a follow
+// page-turn or a manual pan have moved that camera since. At the act's end the
+// memory can match the live four terms exactly (the act returns to the tab it
+// started on, switches no audio view and moves no resting cursor), and the
+// resting hook would then not re-derive at all: the lamp would stay lit over
+// an un-pinned picture until the next playhead or view change. Voiding the
+// CURSOR term — -1, the load's own "no derivation stands" sentinel, and never
+// a real cursor value — makes the next engaged pre-paint due, which re-derives
+// on the resting cursor `c` has already centered, so the re-engagement is
+// ordinarily invisible and only ever corrects a camera something did move.
+// INSIDE THE STANDING GUARD, so the funnel's many idle calls — every stop,
+// every launch, the `h` entry, every trim write — cost one enum compare and
+// change nothing; the guard also means the only non-END write it fires on is
+// GuiAbAudition::fire_if_due's (the rest it is about to launch), which is
+// harmless: the pin is off for the play that follows and the void simply
+// stands until the act really ends.
 inline void clear_audition_sequence(AppState& a) {
+    if (a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle)
+        a.centered_derived_cursor = -1;
     a.audition_sequence = GuiAuditionSequence{};
 }
 

@@ -2664,9 +2664,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // EDGE: a stop swaps the painted playhead from the scanner back
             // to the cursor while all three of those are unchanged, so the
             // last derivation's subject being the SCANNER is itself due here
-            // and every stop road (Space's stop, the natural end, the bounded
-            // audition's last play, the target-view freeze) re-centers on the
-            // resting cursor in the frame its own damage already produces.
+            // and every stop road (Space's stop, the natural end, the
+            // target-view freeze) re-centers on the resting cursor in the
+            // frame its own damage already produces — the A/B audition's last
+            // play having left that list on 2026-09-01, its plays deriving
+            // nothing to stamp and its end coming due through the memory's
+            // own void instead (clear_audition_sequence).
             // The memory is written by the derivation body, not here.
             // PAUSED while a pointer gesture or a finger is live, the follow
             // chase's own aiming rule below: a former carrying the playhead
@@ -2674,7 +2677,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // release's landing re-derives on the next frame. The scanner
             // gate keeps the one-tick window between a natural end's flag
             // drop and the tick's stop body reading a stale scanner.
-            if (app.centered_mode && !app.playhead_scanner_active &&
+            // AND THE PIN'S OWN ENGAGEMENT LEADS THE TERMS since 2026-09-01
+            // (centered_pin_engaged, app_state.h — the lamp's bit was read
+            // direct here until the A/B audition began disregarding it): the
+            // act's three rests are resting frames like any other, and the pin
+            // must not derive in them.
+            if (centered_pin_engaged(app) && !app.playhead_scanner_active &&
                 !any_pointer_gesture_active(app) &&
                 !gui.touch_contact_active() &&
                 (app.centered_derived_scanner ||
@@ -2773,8 +2781,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // autonomous movers), the chase's aiming pause (a live gesture or
         // finger), or the derivation CLAMPED at the song's ends, where the
         // playhead walks off-center across a wall-parked viewport.
+        // THE FIFTH QUIET CASE IS THE A/B AUDITION (architect 2026-09-01):
+        // centered_pin_engaged (app_state.h) leads the terms here as it does
+        // at the resting half, so the act's four bounded plays scroll no
+        // camera and take the narrow pair below exactly as they do with the
+        // lamp unlit — which is what "the audition disregards the toggle"
+        // means for the plays themselves.
         bool centered_recentered = false;
-        if (app.centered_mode && !app.follow_overridden_for_session &&
+        if (centered_pin_engaged(app) && !app.follow_overridden_for_session &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active()) {
             centered_recentered = viewport.derive_centered_viewport();
         }

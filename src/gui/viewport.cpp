@@ -736,7 +736,13 @@ void Viewport::center_viewport_on_playhead() {
 // off->on edge, so the invariant starts holding at the toggle), the settings
 // editor's `centered=` commit through that same chokepoint, and the launch
 // seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it. THIS BODY ALSO OWNS THE DERIVATION
+// where follow would left-edge-align it. ALL FOUR ASK ONE PREDICATE SINCE
+// 2026-09-01 — centered_pin_engaged (app_state.h), the lamp's preference
+// narrowed by the A/B audition, which disregards the pin for its whole
+// duration — so no caller reads the lamp's field direct and nothing derives
+// while that act stands; the launch seed carries one term of its own for the
+// act's own four plays, the reason at that site.
+// THIS BODY ALSO OWNS THE DERIVATION
 // MEMORY the resting hook edge-triggers on (the four `centered_derived_*`
 // fields, app_state.h): it stamps the subject and the state it derived
 // against, so every caller is truthful without a stamp of its own.
@@ -813,7 +819,9 @@ void Viewport::invalidate_all() {
 // the scanner always issues forth visible (Space's cursor launch and the A/B
 // audition's play, which launches from the same resting cursor, can both be
 // offscreen; a scrub click is a visible column already, so the launch call
-// no-ops there).
+// no-ops there). Since 2026-09-01 the audition's four plays take THIS arm
+// whatever the centered lamp says — the act disregards the pin whole — while
+// every other launch takes it only where the pin is not engaged.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;

@@ -314,7 +314,10 @@ int64_t GuiPlaybackLifecycle::active_view_play_end() const {
 // follow-override clear before delegating, so it precedes validation exactly
 // once either way. Everything else is the one launch body's, below.
 bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
-    return launch_playback_window(launch_pos, active_view_play_end());
+    // Not the A/B audition's play: this is the user's own transport, so the
+    // centered pin seeds it wherever it is engaged (the fork at the body).
+    return launch_playback_window(launch_pos, active_view_play_end(),
+                                  /*ab_audition_play=*/false);
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -337,7 +340,11 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     const int64_t view_end = active_view_play_end();
     if (start >= view_end - 1) return false;
     const int64_t end = std::min(start + span, view_end);
-    return launch_playback_window(start, end);
+    // THE ACT'S OWN PLAY SAYS SO (2026-09-01): this entry is the A/B
+    // audition's alone (one caller, GuiAbAudition::launch_phase), and the
+    // launch body's seed fork reads the fact from here because the sequence is
+    // already Idle by the time it could ask (the argument is at that fork).
+    return launch_playback_window(start, end, /*ab_audition_play=*/true);
 }
 
 // THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
@@ -366,7 +373,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // extra multiplier on top would defeat it. That reasoning outlived the feature:
 // the key retired, so every view plays at the source's own rate and there is
 // nothing left to force.)
-bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
+bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
+                                                  bool ab_audition_play) {
     // THE LAUNCH-BODY CLEAR (architect 2026-08-26): every launch begins a
     // fresh session, so the A/B audition sequence ends here whoever asked and
     // whether or not the launch below refuses — a plain Space or a scrub
@@ -474,8 +482,24 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // reason the follow-shape check is unconditional here — the launch edges
     // clear the pan suppression before this line, so a new session always
     // starts pinned.
-    if (app.centered_mode) viewport.derive_centered_viewport();
-    else                   viewport.follow_scroll_if_needed();
+    // THE A/B AUDITION'S OWN PLAYS TAKE FOLLOW'S ARM (architect 2026-09-01,
+    // the act disregarding the pin whole): each of its four launches must seed
+    // exactly as it would with centered=false, or a play launched after the
+    // user has panned or after `c` left the camera elsewhere would snap back
+    // to centre mid-act. THIS IS THE ONE ENGAGEMENT SITE WHERE
+    // centered_pin_engaged CANNOT SEE THE ACT, and the parameter is why: BOTH
+    // roads into this body arrive with the sequence already Idle — the head
+    // clear above ends whatever stood, and the act's own launches were already
+    // Idle before it (GuiAbAudition::fire_if_due clears the rest before
+    // launching, and the act's first play is launched before anything is
+    // armed). So the act is named by its ENTRY, launch_bounded_audition, whose
+    // one caller is GuiAbAudition::launch_phase; the predicate still leads,
+    // both to keep the lamp's one question in one shape and so a future
+    // reordering that DOES leave the phase standing here is answered already.
+    if (centered_pin_engaged(app) && !ab_audition_play)
+        viewport.derive_centered_viewport();
+    else
+        viewport.follow_scroll_if_needed();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
@@ -600,7 +624,13 @@ void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
 void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
     const bool was_off = !app.centered_mode;
     app.centered_mode = desired;
-    if (was_off && app.centered_mode) {
+    // THE EDGE READS THE ENGAGEMENT, NOT THE FIELD (architect 2026-09-01): a
+    // `y` pressed while an A/B audition stands records the preference and
+    // lights the lamp — the act never writes this field — but derives nothing,
+    // so the derivation body is never called under a standing act and the pin
+    // starts holding when the act ends, which the memory's own void at the
+    // sequence's end makes due (clear_audition_sequence, app_state.h).
+    if (was_off && centered_pin_engaged(app)) {
         // THE TOGGLE ITSELF RECENTERS — the invariant starts holding at the
         // press, not at the next playhead change. During live playback the
         // explicit enable clears a prior pan suppression exactly as follow's

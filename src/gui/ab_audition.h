@@ -66,6 +66,20 @@ struct GuiInputHandler;
 // last one deciding the plate that frame. Each half is therefore read at the
 // working zoom, centered, whatever level the tab was left at.
 //
+// AND THE ACT DISREGARDS THE CENTERED LAMP (architect 2026-09-01: "A/B
+// audition mode (Shift+Space) should disregard the centered toggle, i.e.
+// consider it false"). `c` frames each half and the four plays then walk a
+// STATIC viewport, the way they do with the lamp unlit — under the pin the
+// camera would instead scroll the waveform under a fixed line for each of the
+// four, which is the opposite of what a fine-tuning listen wants. Nothing
+// here implements it: the pin's four engagement sites read ONE predicate,
+// centered_pin_engaged (app_state.h), which answers false for as long as
+// `phase` stands — plus one term at the launch seed for the act's own plays,
+// which reach that body with the sequence already cleared. The lamp is
+// untouched (this act writes no field and it reports the persisted
+// preference), and the pin re-engages at the act's end, on the resting cursor
+// `c` has already centered.
+//
 // ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
 // CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at
 // GuiAuditionSequence), so every one of the three calls sits in a window where

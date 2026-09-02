@@ -256,6 +256,10 @@ struct GuiPlaybackLifecycle {
     // sequence this play is one step of and re-arms the sequence only on
     // true. A live session never launches (the caller always arrives stopped —
     // the tick's natural end or the act's own tab switch precede every call).
+    // ITS SEED IS FOLLOW'S, ALWAYS (architect 2026-09-01): this entry names
+    // itself to the launch body as the act's play, so the centered pin — which
+    // the act disregards whole — never seeds one of the four plays. Nothing
+    // else about the launch differs.
     bool launch_bounded_audition(int64_t start, int64_t span);
 
     // Reseek the active playback session to a new starting sample, keeping
@@ -289,7 +293,9 @@ struct GuiPlaybackLifecycle {
     // off→on edge recenters IMMEDIATELY through the one derivation body — the
     // invariant starts holding at the toggle — and during live playback also
     // clears the manual-pan suppression and resyncs, follow's own re-engage
-    // shape.
+    // shape. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S (2026-09-01):
+    // with an A/B audition standing the field is set and the lamp lights, but
+    // nothing derives until the act ends.
     void set_centered_mode(bool desired);
 
 private:
@@ -323,5 +329,13 @@ private:
     // does not move, the scanner never runs, and the item's domain is the
     // buffer's own. The two share the ONE STOP BODY above, which carries the
     // player's fork.
-    bool launch_playback_window(int64_t start, int64_t end);
+    // `ab_audition_play` — is this launch one of the A/B audition's four
+    // bounded plays? TRUE from launch_bounded_audition alone, and its one
+    // effect is the SEED FORK: the act disregards the centered pin whole
+    // (architect 2026-09-01, centered_pin_engaged in app_state.h), so its
+    // plays seed like centered=false. The caller must say so because the
+    // sequence is already Idle by the time the body could ask — the full
+    // argument is at the fork itself.
+    bool launch_playback_window(int64_t start, int64_t end,
+                                bool ab_audition_play);
 };
