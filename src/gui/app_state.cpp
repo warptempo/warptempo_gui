@@ -620,20 +620,33 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
     // asked for, and a caller wanting the bin's FAR boundary asks at x + 1
     // (the header's contract, the edge-END drag its one caller).
     //
-    // IT IS EXACT IN SOURCE VIEW AND EXACT UP TO ONE QUANTIZATION IN TARGET
-    // VIEW (the claim weakened after codex round 2, 2026-09-02): the origin
-    // x*spp is generally FRACTIONAL, and the target-view arm below must hand
-    // its consumers a whole active-domain frame, so it snaps that origin to a
-    // whole SOURCE frame before mapping forward. The snap can cross the bin's
-    // lower boundary — spp 10.3, column 1, origin 10.3, nearbyint 10 — and the
-    // returned coordinate's own rounded inverse then floors one column LEFT of
-    // the column asked for. ONE COLUMN AT MOST, at a lane where one column is
-    // the whole song over the lane's width (thousands of frames), and the two
-    // callers are unharmed: the box pan measures a GRAB OFFSET through this
-    // same reading and so cancels it, and the teleport centres on a position
-    // whose own column is not re-derived. What the quantization does bound is
-    // the ROUND-TRIP CLAIM — see the invariant at apply_overview_drag_at
-    // (input_pointer.cpp), which states the same one-column slack.
+    // THE ROUND TRIP IS BOUNDED BY THE ORIGIN'S WHOLE-FRAME QUANTIZATION, NOT
+    // EXACT (the claim weakened after codex round 2 and given its real bound
+    // after round 3, 2026-09-02, which found the one-column figure too small).
+    // The origin x*spp is generally FRACTIONAL and becomes a WHOLE SOURCE FRAME
+    // under banker's rounding wherever a consumer needs one — inside the
+    // target-view arm below, which must hand back a whole ACTIVE-domain frame,
+    // and at the teleport's and the box pan's own nearbyint in source view,
+    // where this function itself rounds nothing (the edge drag keeps the double
+    // through its span-to-level fit). That snap can cross the bin's lower or
+    // upper boundary — spp 10.3, column 1, origin 10.3, nearbyint 10 — so the
+    // returned coordinate's own rounded inverse lands WITHIN ceil(1/(2*spp))
+    // COLUMNS of the column asked for, IN EITHER DIRECTION, plus in target view
+    // one whole ACTIVE frame's worth of the map's slope through
+    // source_frame_to_active_domain's own rounding.
+    //
+    // AT spp >= 1 THAT CEILING IS ONE COLUMN, and spp >= 1 is every real
+    // source: the lane is ~1000 px wide and a piece is minutes long, so one
+    // column is thousands of frames. A SOURCE SHORTER THAN THE LANE IS THE ONLY
+    // PRODUCER OF A MULTI-COLUMN MISS and it is ACCEPTED — at spp 0.1 (100
+    // frames over a 1000-column lane) column 5's origin 0.5 rounds to frame 0,
+    // whose column is 0, five LEFT, while column 6's origin 0.6 rounds to frame
+    // 1, whose column is 10, four RIGHT. No road changes for it (no fractional
+    // crossing): the box pan measures a GRAB OFFSET through this same reading
+    // and so cancels the residue, and the teleport centres on a position whose
+    // own column is not re-derived. What the quantization does bound is the
+    // ROUND-TRIP CLAIM — see the invariant at apply_overview_drag_at
+    // (input_pointer.cpp), which states the same bound.
     const double src = static_cast<double>(x - lane.x) * spp;
     if (a.active_audio_view != 'T') return src;
     // Target view: the pressed column names a SOURCE position (the lane's

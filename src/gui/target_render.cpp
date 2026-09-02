@@ -783,7 +783,9 @@ GuiTargetRender::compute_buffer_start_frame_for(
     //     Past-EOF is adversarial load-fatal.
     // trim_fell_back carries either outcome to its THREE readers — the reuse
     // rungs' stderr diagnostic, the dispatch's own card (dispatch_render_now,
-    // on the rising edge) and the archival chords' (trim_would_fall_back
+    // on the FALLBACK-SUBJECT edge — the whole {fell_back, tab, trim pair}
+    // record changing into a fallback, never the bare verdict's rising edge)
+    // and the archival chords' (trim_would_fall_back
     // above) — and fallback_reason names which one so the printed line matches
     // the orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no

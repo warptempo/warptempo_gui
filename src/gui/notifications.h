@@ -288,8 +288,13 @@ inline constexpr const char* kTargetPreviewNotReadyCard =
 // exactly the span it draws and the outcome is announced instead.
 //
 // TWO TRANSLATION UNITS RAISE IT, which is why it is homed here: the preview's
-// own dispatch (target_render.cpp, once per rising edge of the verdict) and
-// the two archival commands (input_key_dispatch.cpp, once per press). It names
+// own dispatch (target_render.cpp, once per FALLBACK-SUBJECT edge — the whole
+// record {fell_back, tab, trim begin, trim end} changing INTO a fallback, so a
+// distinct tab or a distinct trim pair cards again under a verdict that stays
+// true, and a non-fallback dispatch re-stamps fell_back = false so re-entry
+// into the same tab and pair cards again; the contract is at
+// TrimFallbackSubject, target_render.h) and the two archival commands
+// (input_key_dispatch.cpp, once per press). It names
 // the OUTCOME rather than either producer, so the one sentence covers both
 // plan_trim refusals the verdict carries (only the sub-sample span is
 // reachable from a resting store; the crossed pair is the breach mirror).

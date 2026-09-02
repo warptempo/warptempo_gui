@@ -2542,16 +2542,23 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     // edge at the column containing the last visible frame, floor((p − 1)/spp).
     // The inverse of the first is column·spp — the bin's own origin, which is
     // why the left edge has never been wrong and why the inverse relation is
-    // the proof rather than the convention. IT IS EXACT IN SOURCE VIEW ONLY
-    // (weakened after codex round 2, 2026-09-02, which found this round trip
-    // overclaimed): in TARGET view overview_anchor_sample_at_x must hand back a
-    // whole active-domain frame, so it snaps the generally fractional origin to
-    // a whole SOURCE frame on the way — which can cross the bin's lower
-    // boundary and put the returned coordinate's own rounded inverse ONE COLUMN
-    // LEFT of the column asked for (the worked case is at that function,
-    // app_state.cpp). One column at a lane where a column is thousands of
-    // frames, on a gesture whose own outcome is a viewport the user is watching
-    // — no road changes for it. THE PAN IS UNAFFECTED BY CANCELLATION (its grab
+    // the proof rather than the convention. THE ROUND TRIP IS INVERSE UP TO THE
+    // ORIGIN'S WHOLE-FRAME QUANTIZATION, NOT EXACT (weakened after codex round
+    // 2 and bounded after round 3, 2026-09-02, which found the one-column figure
+    // too small): the generally fractional origin becomes a whole SOURCE frame
+    // under banker's rounding wherever a consumer needs one — inside
+    // overview_anchor_sample_at_x in TARGET view, which must hand back a whole
+    // active-domain frame, and at the teleport's and the pan's own nearbyint in
+    // source view — and that snap can cross the bin's lower or upper boundary,
+    // so the returned coordinate's own rounded inverse lands within
+    // ceil(1/(2*spp)) COLUMNS of the column asked for, IN EITHER DIRECTION, plus
+    // in target view one whole ACTIVE frame's worth of the map's slope. That is
+    // ONE COLUMN at spp >= 1 — every real source, a ~1000 px lane against a
+    // piece minutes long, where a column is thousands of frames — and a source
+    // SHORTER THAN THE LANE is the only producer of a multi-column miss, which
+    // is ACCEPTED (the worked cases are at that function, app_state.cpp): the
+    // gesture's own outcome is a viewport the user is watching, and no road
+    // changes for it. THE PAN IS UNAFFECTED BY CANCELLATION (its grab
     // offset is measured through this same reading), and the box painter's own
     // target-view end takes the ACTIVE-domain last frame since the same day
     // (overview_box_span), so what remains here is the quantization slack

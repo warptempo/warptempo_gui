@@ -8510,10 +8510,15 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // IT IS A PURE SCALE, NOT A HIT TEST, AND x MAY LEGITIMATELY BE lane.x + lane.w
 // (codex round 21): what it returns is the NEAR boundary of column x — the
 // ORIGIN of the bin column x IS under the lane's cell class, and so the inverse
-// of the forward floor: EXACT in source view, and in target view exact up to
-// the whole-frame quantization of that origin — at most one column left, at a
-// lane where a column is thousands of frames (the derivation is at the
-// definition, weakened there after codex round 2, 2026-09-02) — so a
+// of the forward floor UP TO THE WHOLE-FRAME QUANTIZATION OF THAT ORIGIN
+// (banker's rounding — in the target arm here, at the teleport's and the pan's
+// own nearbyint in source view): the round trip lands within ceil(1/(2*spp))
+// columns of the column asked for, in EITHER direction, plus in target view one
+// whole active frame's worth of the map's slope — ONE COLUMN at spp >= 1, which
+// is every real source (a ~1000 px lane against a piece minutes long), and a
+// source SHORTER than the lane is the only producer of a multi-column miss and
+// is accepted (the derivation and its worked cases are at the definition,
+// weakened after codex round 2 and bounded after round 3, 2026-09-02) — so a
 // caller wanting a column's FAR boundary — which is what an END bound is, the
 // box span being half-open [x0, x1) — asks at x + 1, and at the right wall that
 // is lane.w, the song end exactly. The edge-END drag is the one caller that
