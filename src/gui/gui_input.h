@@ -603,13 +603,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 
         // Play from the playhead, and the A/B audition.
         case GuiKeys::Space: return bare || sh;
-        // BARE: the render cancel, the oldest card's dismissal and the
+        // BARE ONLY: the render cancel, the notification stack's clear and the
         // top-level no-op arm that is deliberately silent — an arm all the
-        // same, so Esc is a bound key. CTRL: the whole notification stack's
-        // bulk clear (2026-09-01), claimed at the head of on_key above every
-        // gate — so no gate below can ever ask this of it, and the entry is
-        // here for the inventory's completeness rather than for a reader.
-        case GuiKeys::Escape: return bare || cl;
+        // same, so Esc is a bound key. NO MODIFIED ESCAPE BINDS ANYWHERE:
+        // Ctrl+Esc carried the stack's bulk clear for one morning of
+        // 2026-09-01 and retired that evening when bare Esc took the whole
+        // stack, one act wanting one chord.
+        case GuiKeys::Escape: return bare;
         // Open the flag editor on the focused marker.
         case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
         case GuiKeys::Delete: return bare;
@@ -648,16 +648,16 @@ static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
               "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the eight-place contract's own "
-              "arms (the oldest card's dismissal), and its top-level silence "
-              "is that arm's own, reached only with no card standing");
-static_assert(chord_is_bound(GuiKeys::Escape,
-                             GuiInputState{true, false, false}, false) &&
+              "arms (the notification stack's clear), and its top-level "
+              "silence is that arm's own, reached only with no card standing");
+static_assert(!chord_is_bound(GuiKeys::Escape,
+                              GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
                                   GuiInputState{false, true, false}, false),
-              "Ctrl+Esc is the stack's bulk clear and is ctrl-exact: no shift "
-              "spelling and no bare-shift one");
+              "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
+              "included since it retired on 2026-09-01");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&

@@ -6270,8 +6270,8 @@ struct AppState {
     // OWN. The bare-Esc inventory is the one enumerated at its dispatch point
     // (input_handler.cpp); the mode's allowlist merely stops dropping the key,
     // so the bindings that can be live in here run — the RENDER / BATCH CANCEL
-    // (a render launched before `h`) and, since 2026-08-31, THE OLDEST CARD'S
-    // DISMISSAL, the mode's own refusals being ordinary cards. The REGION HIDE
+    // (a render launched before `h`) and, since 2026-08-31, THE NOTIFICATION
+    // STACK'S CLEAR, the mode's own refusals being ordinary cards. The REGION HIDE
     // was another until 2026-08-21, when it retired.
     // Neither touches authored state, which is why admitting the key costs the
     // frozen now side nothing. With no render and no card standing, Esc is a
@@ -6496,9 +6496,10 @@ struct AppState {
     // GuiHistoryCommitWorker; its four failing verdicts come back as a
     // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that takes no
     // keyboard focus, is never TIMED out and is never BUMPED, and leaves only
-    // by a deliberate dismissal: its X on the pointer, bare Esc taking the
-    // stack's OLDEST card of any class since 2026-08-31, or Ctrl+Esc clearing
-    // the whole stack, criticals included, since 2026-09-01; it was the tab
+    // by a deliberate dismissal: its X on the pointer, or bare Esc clearing
+    // the whole stack, criticals included — the key took the stack's OLDEST
+    // card of any class from 2026-08-31 and the whole of it since 2026-09-01;
+    // it was the tab
     // row's permanent critical chip from 2026-08-09, and before that an
     // acknowledge modal), and its two ESTABLISHED ones say what they have to
     // say on stderr and raise nothing. The fourth failure is Unconfirmed,
@@ -7361,15 +7362,14 @@ struct AppState {
     //             a clock:
     //               NORMAL   leaves on its own kNotificationMs from its PUSH
     //                        (there is no later surfacing to wait for), or at
-    //                        its X, or at a bump, or at either Esc road;
+    //                        its X, or at a bump, or at bare Esc;
     //               CRITICAL is never TIMED out and never BUMPED — no clock,
     //                        ever, and no victimhood at a push — but the
     //                        keyboard dismisses it deliberately: it leaves at
-    //                        its X, at bare Esc's OLDEST-card dismissal
-    //                        (2026-08-31, which reads no class) or at
-    //                        Ctrl+Esc's clearing of the whole stack
-    //                        (2026-09-01). The four checkpoint outcomes are
-    //                        its producers.
+    //                        its X, or at bare Esc's clearing of the whole
+    //                        stack (2026-09-01, which reads no class; the arm
+    //                        took the oldest card alone from 2026-08-31). The
+    //                        four checkpoint outcomes are its producers.
     //             `paused` with `remaining_ms` is the HOVER BANK: while the
     //             pointer rests on a normal card its clock stops, the
     //             remaining time banked at hover-enter and re-armed at

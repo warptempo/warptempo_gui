@@ -48,10 +48,10 @@
 //              line have the card alone. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
-//              the clock), at its X, at a bare Esc that reaches the stack, or
-//              at Ctrl+Esc with the whole stack.
+//              the clock), at its X, or at a bare Esc that reaches the stack
+//              and takes the whole of it.
 //   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
-//              until its X, that same Esc, or Ctrl+Esc; no clock.
+//              until its X or that same Esc; no clock.
 //
 // WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion
 // ("that would get annoying"), a Synchronize that mirrored the project, a
@@ -86,8 +86,8 @@
 //     UNBOUND POINTER PRESS goes with it: a modified press the waveform, the
 //     top strip or the overlay's band binds nothing for says nothing.
 //   * TOP-LEVEL BARE ESC WITH AN EMPTY STACK — a retraction with nothing to
-//     dismiss. That arm's other half is an ACT since 2026-08-31: Esc dismisses
-//     the OLDEST card when one stands (the key is the X's keyboard twin, the
+//     dismiss. That arm's other half is an ACT since 2026-08-31: Esc clears
+//     the stack when one stands (the key is the X's bulk keyboard twin, the
 //     hit section below), and the silence is what is left when there is none.
 //     Esc inside a
 //     gate is NOT this case: Esc is a BOUND chord, so the drag gates card it
@@ -179,34 +179,35 @@
 // THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
 // THE X, AND ONLY THE X, DISMISSES A CARD ON THE POINTER — and since
 // 2026-08-31 THAT X HAS A KEYBOARD TWIN, bare Esc at the tail of its own
-// ranking, which dismisses the stack's OLDEST card. The succession is exact
-// and the 2026-08-29 ruling is untouched: it says where a PRESS may land on a
-// card (the X's box and nothing else, one rule for finger and mouse), and the
-// key lands on no card at all. THE TWO DIFFER IN RANK, deliberately: the X's
-// claim sits ABOVE EVERY VEIL because a card must be dismissable under any
-// modal, while Esc sits UNDER all of them — every other Esc place is earlier
-// in the dispatch, so the key reaches the stack only when nothing modal
-// stands and no render is in flight (the EIGHT places are enumerated at
-// on_key, input_handler.cpp; the arm itself is handle_plain_bare_keys').
-// OLDEST, NOT NEWEST, in his own reasoning: clearing the top would let the
-// bottom card stick around preferentially, so the key empties the stack from
-// the back the way the clock does. It reads no class — a critical card is
-// dismissed like any other, exactly as the X takes any class.
+// ranking, WHICH CLEARS THE WHOLE STACK, CRITICALS INCLUDED (architect
+// 2026-09-01). The succession is exact and the 2026-08-29 ruling is
+// untouched: it says where a PRESS may land on a card (the X's box and
+// nothing else, one rule for finger and mouse), and the key lands on no card
+// at all. THE TWO DIFFER IN RANK, deliberately: the X's claim sits ABOVE
+// EVERY VEIL because a card must be dismissable under any modal, while Esc
+// sits UNDER all of them — every other Esc place is earlier in the dispatch,
+// so the key reaches the stack only when nothing modal stands and no render
+// is in flight (the EIGHT places are enumerated at on_key,
+// input_handler.cpp; the arm itself is handle_plain_bare_keys').
+// It reads no class — a critical card is dismissed like any other, exactly as
+// the X takes any class — so the key is the one act that reaches a critical
+// card without a pointer, and it therefore clears exactly what the CLOCK
+// never touches (a critical card has none). That asymmetry is deliberate and
+// is the record a reversal would start from: if the criticals should survive
+// the key, dismiss_all is the one line to change.
 //
-// AND CTRL+ESC IS THE BULK FORM (architect 2026-09-01): the whole stack at
-// once, CRITICALS INCLUDED — the explicit chord is what the X would be if it
-// were pressed on every card, and it therefore clears exactly what the CLOCK
-// never touches (a critical card has none). That is the record a reversal
-// would start from: if the criticals should survive the chord, this is the one
-// line to change. IT SITS AT THE OPPOSITE END OF THE RANKING FROM ITS BARE
-// SIBLING — bound at the HEAD of on_key, above every gate, editor, player,
-// picker and prompt, because a card must be dismissable under any modal and
-// the chord is aimed at nothing else, while bare Esc sits under all of them.
-// One-shot (repeat_eligible names no Escape shape in any state), read-only-
-// legal and `h`-legal for the same reason: it authors nothing and reads no
-// tab. With an EMPTY STACK it is silent — the state it asks for is already
-// true and visibly so, which is the already-at-state class the strictness
-// ruling leaves silent.
+// THE ARM'S OWN SUCCESSION, in two rulings a day apart: it was born
+// 2026-08-31 taking the stack's OLDEST card alone — clearing the top would
+// have let the bottom card stick around preferentially, so the key emptied
+// the stack from the back the way the clock does, one press per card — and a
+// BULK FORM, Ctrl+Esc, was bound beside it at the head of on_key on the
+// morning of 2026-09-01 to reach a whole stack from under any modal. THE
+// CHORD RETIRED THE SAME EVENING and its act moved onto the bare key: "Esc
+// should clear all notifications", one act wanting one chord rather than two
+// roads onto it. Ctrl+Esc is unbound-silent now like every other modified
+// Escape, and the bare key's rank is unchanged — it is still the LAST of the
+// eight places, under every modal, so a standing surface takes the press for
+// its own close and the stack waits.
 //
 // The pointer's own rule, unchanged: on both backends, a press on the
 // card's BODY is consumed whole — arms nothing, moves nothing, lands no
@@ -489,17 +490,16 @@ struct GuiNotifications {
     // ruling and its one bit are at the site and at the head of this file.
     void notify(AppState::NotificationClass cls, std::string text);
 
-    // THE X's ACT, AND BARE ESC's ON THE OLDEST CARD (2026-08-31): remove the
-    // card whatever its class and state, and drop the hover if it was this
-    // card's. The two roads differ only in how they name the card — the X by
-    // the published rect under the pointer, Esc by the stack's back — and the
-    // live test below is asked of the argument either way.
+    // THE X's ACT, and the pointer's alone: remove the named card whatever its
+    // class and state, and drop the hover if it was this card's. The card is
+    // named by the published rect under the pointer, and the live test below
+    // is asked of that argument.
     void dismiss(uint64_t id);
 
-    // CTRL+ESC's ACT (2026-09-01): the whole stack, CRITICALS INCLUDED, and
-    // the hover with it. An empty stack is a silent nothing — no damage, no
-    // card. The reasoning and the reversal record are at the hit section
-    // above.
+    // BARE ESC's ACT (2026-09-01, superseding the 2026-08-31 arm that took the
+    // OLDEST card alone): the whole stack, CRITICALS INCLUDED, and the hover
+    // with it. An empty stack is a silent nothing — no damage, no card. The
+    // reasoning and the reversal record are at the hit section above.
     void dismiss_all();
 
     // THE CLOCK, on the run loop's deadline tick: retire every normal card

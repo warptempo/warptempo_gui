@@ -149,36 +149,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // CTRL+ESC CLEARS THE WHOLE NOTIFICATION STACK, CRITICALS INCLUDED
-    // (architect 2026-09-01) — the X's BULK FORM, and the one act that reaches
-    // a critical card from the keyboard. It is bound HERE, at the very head of
-    // the dispatch and above every gate below it, for the reason the X's own
-    // pointer claim sits above every veil: A CARD MUST BE DISMISSABLE UNDER ANY
-    // MODAL, and this chord is aimed at nothing but the stack — it authors
-    // nothing, reads no tab, opens and closes no surface, so no prompt, editor,
-    // player, picker, dropdown, drag or loading state has anything to protect
-    // from it. Landing it here is also the seam with the FEWEST EDITS: the
-    // player's and the picker's routers are each "the whole vocabulary" while
-    // they stand and would otherwise have had to enumerate it beside Ctrl+S and
-    // Ctrl+Q, and the four gates below would each have needed a hole.
-    //
-    // IT IS THE OPPOSITE END OF THE RANKING FROM ITS BARE SIBLING, deliberately
-    // (the eight-place Esc contract further down is UNTOUCHED — bare Esc still
-    // dismisses the OLDEST card at the tail of that ranking and nothing here
-    // moves it): the explicit chord is a decision and outranks everything, the
-    // bare key is a retraction and yields to everything.
-    //
-    // CTRL-EXACT, one-shot (repeat_eligible names no Escape shape in any
-    // state), read-only-legal and `h`-legal — the gates it sits above are the
-    // gates that would have refused it. WITH AN EMPTY STACK IT IS SILENT: the
-    // state it asks for is already true and the stack is what the user is
-    // looking at, so it is the already-at-state silence rather than a refusal
-    // (the act's own body owns that, dismiss_all).
-    if (ctrl && !shift && !alt && key == GuiKeys::Escape) {
-        notifications.dismiss_all();
-        return;
-    }
-
     // The modal prompt (painted on the bottom row since 2026-08-13) owns input while
     // active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
@@ -428,11 +398,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+Q (hand on the close routing, which is what tears the edit down)
     // exactly as they would with no drag in flight. A text drag is not a navigation
     // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
-    // modifier-exact: the ONE modified Escape this product binds — Ctrl+Esc,
-    // the notification stack's bulk clear since 2026-09-01 — is claimed at the
-    // head of this function and never arrives here, and every other carries no
-    // binding anywhere, so a modified Escape is swallowed here like any other
-    // key rather than ending the drag.
+    // modifier-exact: NO MODIFIED ESCAPE BINDS ANYWHERE in this product (the
+    // one that did, Ctrl+Esc, retired on 2026-09-01 when bare Esc took the
+    // notification stack whole), so a modified Escape has nothing to be an
+    // escape hatch FOR and is swallowed here like any other key rather than
+    // ending the drag.
     // THIS DRAG KEEPS ITS Esc HATCH while the POINTER gestures below lost theirs
     // (they have no cancel at all — the rule is at the drag-modal gate): the hatch
     // FINALIZES the text selection, restoring nothing, and the Esc it falls
@@ -853,8 +823,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → the render/batch cancel (and the editor /
-    //                              prompt closes), then the oldest notification
-    //                              card if none of those is standing — the
+    //                              prompt closes), then the whole notification
+    //                              stack if none of those is standing — the
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
     //                              running and no card standing is a plain
@@ -1182,14 +1152,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       it did not move again when the `h` view's own picker retired
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
-    //   (e) THE NOTIFICATION STACK'S OLDEST CARD (architect 2026-08-31) — the
-    //       LAST rung, at the bare-key tail (handle_plain_bare_keys' Escape
-    //       arm, input_key_dispatch.cpp, where the reasoning lives): a press
-    //       none of the seven above claims dismisses the card at the BOTTOM of
-    //       the stack, whatever its class, and with no card standing the arm
-    //       is the ruled silence it has always been. It is the X's keyboard
-    //       twin and it is RANKED rather than privileged — the X's own pointer
-    //       claim sits above every veil, this key under all of them.
+    //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
+    //       the 2026-08-31 arm that took the oldest card alone) — the LAST
+    //       rung, at the bare-key tail (handle_plain_bare_keys' Escape arm,
+    //       input_key_dispatch.cpp, where the reasoning lives): a press none
+    //       of the seven above claims clears every card, whatever its class,
+    //       and with no card standing the arm is the ruled silence it has
+    //       always been. It is the X's BULK keyboard twin and it is RANKED
+    //       rather than privileged — the X's own pointer claim sits above
+    //       every veil, this key under all of them.
     // A SIXTH PLACE STOOD BETWEEN (c2) AND (d) AND IS RETIRED: THE REGION HIDE
     // (joined 2026-07-30, retired 2026-08-21 — bare `[` is the one manual road
     // onto and off the overlay; the retirement is argued at the site it stood at,
@@ -1220,15 +1191,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the music, a marker touched, a sweep ended (the rule is at
     // clear_region_highlight, input_handler.h).
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
-    // is place (e) — the oldest card's dismissal, and an explicit no-op with no
-    // card standing (handle_plain_bare_keys) — the one place the press ends.
-    // THE EIGHT PLACES ARE BARE ESC'S AND THE COUNT IS ITS OWN: CTRL+ESC
-    // (2026-09-01, the notification stack's bulk clear) is a DIFFERENT CHORD and
-    // adds no place to this list — it is claimed at the very head of this
-    // function, above every one of the eight, and is the bare key's opposite end
-    // of the ranking rather than a ninth rung of it (the ruling is at that arm
-    // and at notifications.h). Every OTHER modified Escape remains unbound
-    // everywhere, at every Escape reader.
+    // is place (e) — the stack's clear, and an explicit no-op with no card
+    // standing (handle_plain_bare_keys) — the one place the press ends.
+    // THE EIGHT PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
+    // every Escape reader. CTRL+ESC IS THE RETIREMENT RECORD: it was bound at
+    // the very head of this function on the morning of 2026-09-01 to clear the
+    // whole notification stack from above every gate, a DIFFERENT CHORD that
+    // added no place to this list, and it retired that evening when place (e)
+    // took the whole stack itself — one act wants one chord, and two roads onto
+    // it is a second road (the ruling is at that arm and at notifications.h).
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {

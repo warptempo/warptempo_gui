@@ -173,9 +173,8 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     //   - a CRITICAL one, by the ruling: it is never TIMED out and never
     //     BUMPED whatever the count, so the walk skips it and a stack of
     //     criticals alone simply keeps growing (what does take one down is a
-    //     DELIBERATE dismissal — its X, bare Esc's oldest-card dismissal or
-    //     Ctrl+Esc's clearing of the whole stack — and none of those is this
-    //     walk);
+    //     DELIBERATE dismissal — its X on the pointer, or bare Esc clearing
+    //     the whole stack — and neither of those is this walk);
     //   - THE CARD JUST PUSHED, at index 0: it is the answer to the act the
     //     user has this moment performed, and bumping it would make that act
     //     silent — which is reachable, not theoretical (the capacity is 4 at
@@ -233,17 +232,20 @@ void GuiNotifications::dismiss(uint64_t id) {
 }
 
 void GuiNotifications::dismiss_all() {
-    // CTRL+ESC (architect 2026-09-01): the X pressed on every card at once,
-    // CRITICALS INCLUDED. It is the one act that reaches a critical card
-    // without a pointer — the clock never does, and the bump skips them — and
-    // that is deliberate: an explicit chord is a decision, where a timeout
-    // would be an accident. THE HOVER GOES WITH THEM, because the card it
-    // named is gone and a banked life on a vanished card would be a leak.
+    // BARE ESC (architect 2026-09-01, "Esc should clear all notifications"):
+    // the X pressed on every card at once, CRITICALS INCLUDED. It is the one
+    // act that reaches a critical card without a pointer — the clock never
+    // does, and the bump skips them — and that is deliberate: a deliberate
+    // press is a decision, where a timeout would be an accident. THE HOVER
+    // GOES WITH THEM, because the card it named is gone and a banked life on a
+    // vanished card would be a leak. The arm took the OLDEST card alone from
+    // 2026-08-31, and Ctrl+Esc carried this bulk act for one morning before
+    // the key absorbed it and the chord retired.
     //
     // AN EMPTY STACK DAMAGES NOTHING AND SAYS NOTHING: the state asked for is
     // already true and visibly so (the stack is what the user is looking at),
     // which is the already-at-state silence the strictness ruling leaves
-    // standing, exactly as bare Esc's own arm has.
+    // standing, and it is the arm's own silence at its dispatch site too.
     if (app.notifications.cards.empty()) return;
     if (app.notifications.hovered_id != 0) set_hover(0, false);
     app.notifications.cards.clear();

@@ -386,15 +386,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
-    // Bare Escape only, and the one MODIFIED Escape this product binds needs no
-    // admission here: CTRL+ESC (the notification stack's bulk clear, 2026-09-01)
-    // is claimed at the very HEAD of on_key, above this gate and every other, so
-    // it never arrives to be allowed or refused — which is also why it is
-    // read-only-legal without a term. Every other modified Escape carries no
-    // binding anywhere and so has nothing to be admitted FOR.
+    // Bare Escape only, and no modified Escape needs an admission here because
+    // none of them binds anywhere (Ctrl+Esc, the one that did, retired on
+    // 2026-09-01 when bare Esc took the notification stack whole), so a
+    // modified Escape has nothing to be admitted FOR.
     // WHAT BARE Esc IS ADMITTED FOR: the RENDER /
-    // BATCH CANCEL and, since 2026-08-31, THE OLDEST NOTIFICATION CARD'S
-    // DISMISSAL at the bare tail — the two of Esc's places that reach this
+    // BATCH CANCEL and, since 2026-08-31, THE NOTIFICATION STACK'S CLEAR at
+    // the bare tail — the two of Esc's places that reach this
     // gate. Neither mutates anything
     // persistent, so both are read-only-safe like every one of Esc's bindings (the
     // authoritative enumeration is at its dispatch point in on_key,
@@ -2127,10 +2125,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             combination, so no Esc reaches it. The
 //                             view's exits are unchanged, and `h` is still the
 //                             key that leaves. With no render running a bare
-//                             Esc falls to the card dismissal (the oldest
-//                             standing card, if one is standing) exactly as it
-//                             does everywhere else, and is a consumed nothing
-//                             only where that too finds nothing to dismiss.
+//                             Esc falls to the card dismissal (the whole
+//                             notification stack, if any card is standing)
+//                             exactly as it does everywhere else, and is a
+//                             consumed nothing only where that too finds
+//                             nothing to dismiss.
 //
 // WHILE THAT EDITOR IS OPEN THIS GATE IS NOT REACHED AT ALL: the keyboard-modal
 // editor gate sits ABOVE the mode in on_key, so the editor owns every key its
@@ -7380,17 +7379,21 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape:
-        // ESC CLEARS THE OLDEST CARD (architect 2026-08-31), at the tail of
-        // its own ranking and nowhere else: every one of Esc's other places
-        // is EARLIER in on_key, so reaching this arm means nothing modal is
-        // standing and no render is in flight, and the last thing the press
-        // can be aimed at is the stack. THE OLDEST, not the newest — his
-        // reasoning: clearing the top would let the bottom card stick around
-        // preferentially, so the key empties the stack the way the clock
-        // does, from the back. A CRITICAL CARD IS DISMISSED LIKE ANY OTHER:
-        // Esc is the X's keyboard twin and the X takes any class, so this arm
-        // reads no class either (the bump is the act that skips criticals,
-        // and it is not this one).
+        // ESC CLEARS THE WHOLE NOTIFICATION STACK (architect 2026-09-01), at
+        // the tail of its own ranking and nowhere else: every one of Esc's
+        // other places is EARLIER in on_key, so reaching this arm means
+        // nothing modal is standing and no render is in flight, and the last
+        // thing the press can be aimed at is the stack. It is the X's BULK
+        // keyboard twin — the X pressed on every card at once — and it READS
+        // NO CLASS: a critical card goes with the rest, exactly as the X takes
+        // any class (the bump is the act that skips criticals, and it is not
+        // this one), which makes this the one act that reaches a critical card
+        // without a pointer. THE SUCCESSION: the arm was born 2026-08-31
+        // dismissing the stack's OLDEST card one press at a time, and the
+        // whole stack has been its act since 2026-09-01, when the bulk clear
+        // it duplicated (Ctrl+Esc, bound at on_key's head for one morning)
+        // retired — one act wants one chord, and the bare key is the one the
+        // hand already reaches for.
         //
         // WITH NO CARDS THE ARM IS THE RULED SILENCE (architect 2026-08-30):
         // a press that finds nothing to dismiss means "never mind" and is
@@ -7403,8 +7406,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // key sits UNDER all of them — a standing prompt, editor, player or
         // picker takes the press for its own close, and the card waits for
         // its clock, its X, or an Esc once that surface is down.
-        if (!app.notifications.cards.empty())
-            notifications.dismiss(app.notifications.cards.back().id);
+        notifications.dismiss_all();
         break;
     case GuiKeys::Left:
         // THE BARE FORM OF THE WAVEFORM-LANE STEP — one painted column back,
