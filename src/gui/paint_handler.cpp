@@ -5573,6 +5573,11 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
             // 1px outline: two horizontals across the span's content band,
             // two verticals down it. A 1px-wide span degenerates to one
             // vertical (the rects coincide — cairo draws them once over).
+            // The right outline sits at x1 − 1, the column CONTAINING the last
+            // visible frame under the lane's cell class (declared above
+            // overview_samples_per_pixel, app_state.cpp — the same class the
+            // tick below takes, which is what keeps the tick inside this
+            // outline while the playhead is inside the viewport).
             cairo_rectangle(cr, bx, band.y, bw, 1);
             cairo_rectangle(cr, bx, band.y + band.h - 1, bw, 1);
             cairo_rectangle(cr, bx, band.y, 1, band.h);

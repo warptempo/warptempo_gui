@@ -8479,14 +8479,22 @@ inline int keyboard_slot_max_height_px(const AppState& a) {
 // the whole PIECE — audio.total_frames() over the lane's width — in EVERY
 // view; target-domain values map through the warp frame map before they meet
 // this scale. Returns 0.0 on degenerate geometry (no lane width / no audio).
+//
+// THE LANE IS A CELL LANE and the declaration of that class — the one place
+// the lane says whether its columns are bins or lattice points, and therefore
+// whether a frame takes floor or nearbyint on its way to a column — is the
+// block above this function's definition (app_state.cpp, architect
+// 2026-09-02). The tick and the box below both take it; the waveform's own
+// columns are the other class (POINTS, nearbyint) and are untouched by it.
 double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The lane column (offset from the lane's x) the tick painter draws an
-// ACTIVE-DOMAIN position at: nearbyint the position, inverse-map it to its
-// source frame in target view (the memoized active_domain_to_source_frame),
-// divide by the lane scale, clamp into [0, lane.w - 1]. Shared by
-// paint_overview_strip and the two per-frame scanner damage sites (main.cpp)
-// so the damaged column IS the painted one. Returns -1 on degenerate
-// geometry.
+// ACTIVE-DOMAIN position at: nearbyint the position (the GRID class — a frame
+// is a point on the sample grid), inverse-map it to its source frame in target
+// view (the memoized active_domain_to_source_frame), then take THE COLUMN THAT
+// CONTAINS that frame (floor by the lane's cell class), clamped into
+// [0, lane.w - 1]. Shared by paint_overview_strip and the two per-frame
+// scanner damage sites (main.cpp) so the damaged column IS the painted one.
+// Returns -1 on degenerate geometry.
 int overview_tick_column(const AppState& a, const GuiAudio& audio,
                          double active_position);
 // The SONG POSITION at window x on the overview lane: (x - lane.x) * the
@@ -8500,7 +8508,9 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
 // box pan's grab-offset seat in the press router, whose x is inside the lane
 // already, the claim's own rect having admitted it.
 // IT IS A PURE SCALE, NOT A HIT TEST, AND x MAY LEGITIMATELY BE lane.x + lane.w
-// (codex round 21): what it returns is the NEAR boundary of column x, so a
+// (codex round 21): what it returns is the NEAR boundary of column x — the
+// ORIGIN of the bin column x IS under the lane's cell class, and so the exact
+// inverse of the forward floor — so a
 // caller wanting a column's FAR boundary — which is what an END bound is, the
 // box span being half-open [x0, x1) — asks at x + 1, and at the right wall that
 // is lane.w, the song end exactly. The edge-END drag is the one caller that
@@ -8528,6 +8538,11 @@ bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
 // span [*x0, *x1): the LIVE viewport's span (start through
 // viewport_end_sample at the current spp over the effective width),
 // inverse-mapped to source columns in target view, wall-clamped, >= 1px.
+// BOTH EDGES TAKE THE LANE'S CELL CLASS: *x0 is the column CONTAINING the
+// first visible frame and *x1 is the column containing the LAST visible one
+// plus one, which is what makes the tick's own column fall inside this span
+// whenever the playhead is inside the viewport (the proof is at the class's
+// declaration, app_state.cpp).
 // Returns false on degenerate geometry (no lane, no audio, no waveform
 // width) with the outputs untouched.
 bool overview_box_span(const AppState& a, const GuiAudio& audio,

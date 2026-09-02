@@ -513,6 +513,56 @@ int value_source_marker(const AppState& app, int64_t total_frames) {
 // paint_overview_strip — so the scale is audio.total_frames() over the lane's
 // width, and active-domain values pass through the memoized warp-map
 // translators (warp_frame_map_view) on their way to or from it.
+//
+// THE OVERVIEW LANE IS A CELL LANE (architect 2026-09-02, one rounding rule
+// per class: GRID points take nearbyint, CELLS take the containing-pixel rule,
+// which the 2026-08-25 ruling fixed as FLOOR — and THE LANE DECLARES WHICH
+// CLASS IT IS, once, here, for the tick and the box alike). It is a PARTITION,
+// not a lattice: the lane's `lane.w` columns cut the whole piece into bins of
+// `spp` source frames each, so a source frame s does not name a NEAREST column
+// — it names THE COLUMN THAT CONTAINS IT, floor(s / spp)
+// (overview_column_containing below). The picture underneath already reads
+// that way: the bars draw column c as the half-open source interval
+// [c*spp, (c+1)*spp) (render_waveform's carried-endpoint chain, whose edges are
+// quantized to whole frames with nearbyint — a sub-frame difference from the
+// exact boundaries here, invisible where one column is thousands of frames),
+// and so does the inverse road, overview_anchor_sample_at_x returning
+// column * spp, the bin's own origin.
+//
+// WHAT THE CLASS BUYS is the containment two independent nearest-point
+// roundings could not give. The defect it closes: the tick rounded the
+// playhead and the box rounded its two viewport endpoints, so with the
+// playhead INSIDE the viewport (p < vp_end) nearbyint(p / spp) could equal
+// nearbyint(vp_end / spp) = x1 — one column right of the box's own right
+// outline, which the painter draws at x1 - 1. Under the cell class the tick is
+// floor(p / spp) and the box is [floor(vp_start / spp),
+// floor((vp_end - 1) / spp) + 1) — the column containing the LAST VISIBLE
+// frame, plus one, the span staying half-open — and floor is monotone, so
+// vp_start <= p <= vp_end - 1 gives x0 <= tick <= x1 - 1: A PLAYHEAD INSIDE
+// THE VIEWPORT IS INSIDE THE PAINTED BOX BY CONSTRUCTION. The proof is stated
+// in the SOURCE domain, which is where both readings land; in target view both
+// pass through the same strictly increasing warp map (the tempo and marker
+// scales are bounded away from zero), so the ordering that carries it survives
+// the crossing.
+//
+// THE WAVEFORM'S OWN COLUMNS ARE THE OTHER CLASS AND DO NOT MOVE: the
+// authoring lattice is a grid of POINTS (g(c) = nearbyint(c * spp)), where the
+// nearest one is the right answer, and every column rule there stays
+// nearbyint. Two axes, two classes, each declared where it lives.
+
+// THE LANE'S CELL RULE ON THE LANE'S OWN AXIS: which column contains this
+// source frame. It is the SAME RULE as containing_pixel (input_core.h) — a
+// cell covers [n, n+1) of its unit and a coordinate names the cell containing
+// it, floor, never the nearest boundary — and deliberately not a call to it:
+// that owner is the INPUT layer's, for the one conversion from a fractional
+// SURFACE coordinate to a window pixel (its inventory is the mouse's, the
+// capture ledger's and the touch machine's deliveries), and this layer neither
+// includes input_core.h nor hands it a coordinate of that kind. The unit here
+// is spp source frames rather than one pixel. A pure scale, not a hit test:
+// the two callers own the lane clamps.
+static int overview_column_containing(double src_frame, double spp) {
+    return static_cast<int>(std::floor(src_frame / spp));
+}
 
 double overview_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
     const GuiRect lane = top_overview_row_area(a);
@@ -526,10 +576,13 @@ int overview_tick_column(const AppState& a, const GuiAudio& audio,
     const GuiRect lane = top_overview_row_area(a);
     const double spp = overview_samples_per_pixel(a, audio);
     if (spp <= 0.0) return -1;
+    // TWO STEPS, TWO CLASSES. POSITION -> FRAME is the GRID class and keeps
+    // nearbyint: a frame is a point on the sample grid, and the scanner's
+    // fractional position names the nearest one. FRAME -> COLUMN is the lane's
+    // CELL class (the block above overview_samples_per_pixel).
     const int64_t active = static_cast<int64_t>(std::nearbyint(active_position));
     const int64_t src = active_domain_to_source_frame(a, audio, active);
-    int col = static_cast<int>(
-        std::nearbyint(static_cast<double>(src) / spp));
+    int col = overview_column_containing(static_cast<double>(src), spp);
     if (col < 0) col = 0;
     if (col > lane.w - 1) col = lane.w - 1;
     return col;
@@ -540,6 +593,13 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
     const GuiRect lane = top_overview_row_area(a);
     const double spp = overview_samples_per_pixel(a, audio);
     if (spp <= 0.0) return 0.0;
+    // THE EXACT INVERSE OF THE LANE'S CELL RULE: column c covers the source
+    // frames [c*spp, (c+1)*spp), and this returns that bin's ORIGIN — the
+    // frame the column's first pixel of ink stands for. Unchanged by the
+    // 2026-09-02 class declaration, which is what makes it the inverse: the
+    // forward rule floors, so the origin is the one point that maps back to
+    // the column asked for, and a caller wanting the bin's FAR boundary asks
+    // at x + 1 (the header's contract, the edge-END drag its one caller).
     const double src = static_cast<double>(x - lane.x) * spp;
     if (a.active_audio_view != 'T') return src;
     // Target view: the pressed column names a SOURCE position (the lane's
@@ -606,10 +666,17 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
     const int64_t total = audio.total_frames();
     if (src_b < 0) src_b = 0;
     if (src_e > total) src_e = total;
-    int x0 = static_cast<int>(
-        std::nearbyint(static_cast<double>(src_b) / spp_ov));
-    int x1 = static_cast<int>(
-        std::nearbyint(static_cast<double>(src_e) / spp_ov));
+    // THE LANE'S CELL CLASS ON BOTH EDGES (the block above
+    // overview_samples_per_pixel): the begin column CONTAINS the first visible
+    // frame, and the end is the column containing the LAST visible frame plus
+    // one, so the span stays half-open [x0, x1) and the painter's right outline
+    // at x1 - 1 is that last frame's own column. src_e is exclusive, so the
+    // last visible frame is src_e - 1; a degenerate span (src_e <= src_b) has
+    // no last frame and takes the >= 1px floor below like any other.
+    int x0 = overview_column_containing(static_cast<double>(src_b), spp_ov);
+    int x1 = src_e > src_b
+        ? overview_column_containing(static_cast<double>(src_e - 1), spp_ov) + 1
+        : x0 + 1;
     if (x0 < 0) x0 = 0;
     if (x0 > lane.w - 1) x0 = lane.w - 1;
     if (x1 > lane.w) x1 = lane.w;

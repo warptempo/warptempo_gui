@@ -2534,13 +2534,20 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     const int cx = std::clamp(x, lane.x, lane.x + lane.w - 1);
     // THE RIGHT EDGE READS THE COLUMN'S FAR BOUNDARY, AND THAT IS WHAT MAKES
     // THE INVERSE AGREE WITH THE PAINTER AT BOTH WALLS (codex round 21). The
-    // invariant: overview_box_span's span is HALF-OPEN [x0, x1), so a viewport
-    // BEGIN at song position p paints at column round(p/spp) and a viewport END
-    // at p paints its visible edge at round(p/spp) − 1. The inverse of the first
-    // is column·spp — exact, which is why the left edge has never been wrong and
+    // invariant: overview_box_span's span is HALF-OPEN [x0, x1) over a CELL
+    // lane (the class is declared above overview_samples_per_pixel,
+    // app_state.cpp — both box edges took a nearest-point rounding until
+    // 2026-09-02), so a viewport BEGIN at song position p paints at the column
+    // CONTAINING p, floor(p/spp), and a viewport END at p paints its visible
+    // edge at the column containing the last visible frame, floor((p − 1)/spp).
+    // The inverse of the first is column·spp — the bin's own origin, exact,
+    // which is why the left edge has never been wrong and
     // why its exactness is the proof rather than the convention. The inverse of
-    // the second is (column + 1)·spp, and asking the ONE mapping at cx + 1 IS
-    // that inverse: the far boundary of column cx is the near boundary of
+    // the second is (column + 1)·spp — the first frame PAST the bin, so the
+    // last frame inside the span is one below it and falls in that same bin,
+    // which is the edge the painter draws — and asking the ONE mapping at
+    // cx + 1 IS that inverse: the far boundary of column cx is the near
+    // boundary of
     // cx + 1. Reading it at cx instead treated the last pixel as the ORIGIN of
     // the final bin while the painter treats it as the END wall, so a right edge
     // dragged fully right topped out at total − spp — one overview column short
