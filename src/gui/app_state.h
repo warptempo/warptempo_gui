@@ -5553,7 +5553,8 @@ struct AppState {
     // dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps it only
     // on a rect that fully covers THE STANDING TENANT'S BAND — two different
     // rects: the overlay's is the CEILING BAND every time it stands (from the
-    // waveform's midpoint down, whatever its listing's length, R35) while the
+    // MENU ROW'S FOOT down since 2026-09-02, whatever its listing's length —
+    // R35's fixed height at the architect's new ceiling) while the
     // keyboard's is its four key rows, and with neither standing the band to
     // cover is the slot's tallest, which is what the hide's own damage draws
     // — and then paints whichever tenant stands, so neither painter can claim
@@ -8451,22 +8452,32 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 }
 
 // THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top edge a
-// tenant may reach — TO THE MIDDLE OF THE WAVEFORM and no further (architect
-// 2026-08-28, R33: "from the bottom strip up to the middle of the waveform",
-// the four-row band his dummy folders showed to be too short). THE WAVEFORM'S
-// OWN MIDPOINT is what is read, through the vertical stack's one geometry
-// owner (waveform_area, main.cpp) — the window's vertical midpoint is the
-// same pixel wherever the centering is feasible, and where it is not (a short
-// window, both flexible gaps floored at 0) the waveform's own middle is the
-// honest half of the ruling. Zero on a degenerate stack, which every consumer
-// already reads as "no room".
+// tenant may reach — TO THE MENU ROW'S FOOT and no further (architect
+// 2026-09-02: "media player should take up the whole window up to (but not
+// including) the first row (File, etc)"). The lane read is row 1's WHOLE rect,
+// margin included, so the menu row itself is never covered and everything
+// below it is — the tab row, the icon row, the overview strip, the trim bar,
+// the ruler, the marker lane and the waveform entire. Zero on a degenerate
+// stack, which every consumer already reads as "no room".
+//
+// THE FIXED-HEIGHT HALF OF R35 STANDS AND ITS MIDPOINT HALF DOES NOT
+// (architect 2026-08-28, R33/R35: "from the bottom strip up to the middle of
+// the waveform"; "it's not a fluid height — it's always a fixed height"). What
+// that ruling settled was that the band does NOT grow and shrink with its
+// listing, and that is unchanged: a short listing leaves ground and a long one
+// scrolls, whatever the ceiling is. Only WHERE the ceiling sits moved, from the
+// waveform's own midpoint to row 1's foot, so the panel is the window under the
+// menu row rather than a band over the waveform's lower part.
 //
 // ONLY THE OVERLAY IS CAPPED BY IT: the keyboard's height is its four key
 // rows, authored, and it is deliberately not clamped here — a band that
-// scaled past this ceiling would be a keyboard with a row missing.
+// scaled past this ceiling would be a keyboard with a row missing. (That
+// sentence is what keeps the on-screen keyboard exactly where it was under
+// today's taller ceiling: onscreen_keyboard::surface_height_px reads no term
+// of this function.)
 inline int keyboard_slot_max_height_px(const AppState& a) {
-    const GuiRect wave    = waveform_area(a);
-    const int     ceiling = wave.y + wave.h / 2;
+    const GuiRect menu    = top_menu_row_area(a);
+    const int     ceiling = menu.y + menu.h;
     const int     floor_y = bottom_row_area(a).y;
     return floor_y > ceiling ? floor_y - ceiling : 0;
 }
@@ -10027,6 +10038,36 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
 // restates none of its terms.
 bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
+// WHICH MENU ANCHORS ARE DEAD IN THE STANDING MODE — ONE OWNER for a question
+// two modes now ask, and the one place the answer is spelled (architect
+// 2026-09-02, with the folder overlay taking the window under row 1: "only
+// File should remain lit (as in history mode)"). FILE IS ALWAYS LIVE and the
+// other three anchors are dead under EITHER mode; a button that is not an
+// anchor gets no opinion here at all — its own arm answers it.
+//
+// The `h` view's half is the older one and its criterion is the one that
+// generalises: an anchor whose every row the mode consumes would open onto
+// nothing, and Settings' rows reach the settings editor by a DIRECT call that
+// meets no gate at all. Under the OVERLAY the same three are dead for the same
+// two reasons read one mode over — the panel's veil consumes every press
+// outside the band and the modal row, so every Edit and Iterations row would
+// be a chord that dies at the player's or the picker's key router, and
+// Settings' direct call must not open an editor under the band. File's three
+// rows all WORK under the panel (Quit through the close road, which takes the
+// panel down at its head; Open project, which closes the player and opens the
+// picker; Synchronize, which is read-only-legal and stops no playback), which
+// is exactly what makes its face honest.
+//
+// ITS THREE READERS: history_mode_disables_button's anchor arms (the `h`
+// view's face), toggle_dropdown's guard (the OPEN, both modes) and
+// redesign_button_enabled's overlay arm (the panel's face). No fourth copy of
+// the set exists.
+inline bool menu_anchor_dead_in_mode(const AppState& a, RedesignButton b) {
+    if (!redesign_button_is_menu_anchor(b)) return false;
+    if (b == RedesignButton::File) return false;
+    return a.history_mode.active || folder_overlay_stands(a);
+}
+
 // (THE MODE-COLLAPSING ROSTER'S PREDICATE — redesign_button_collapsed, which
 // answered "does the icon row's walk SKIP this button" — IS DELETED, architect
 // 2026-08-14: "no more hiding/showing icons in top icon row". It carried two
@@ -10498,16 +10539,24 @@ inline bool redesign_button_enabled(const AppState& a,
                                     const GuiPlayback& playback,
                                     const GuiTargetRender& target_render,
                                     RedesignButton b) {
-    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER, whichever content owns it
-    // (architect 2026-08-28, the ruled exception recorded above the
-    // signature: "everything else greys as in the `h` view"). Under the
-    // PLAYER and under the PICKER the pointer rule is the veil (every
-    // press outside the overlay band and the modal row is consumed —
-    // render_player_active and picker_active, input_handler.h), and this
-    // line is the face that says so for both. It is ranked first, above the
-    // `h` partition, so a band standing over any state greys everything that
-    // partition would have lit.
-    if (folder_overlay_stands(a)) return false;
+    // THE FOLDER OVERLAY GREYS EVERY ROSTER BUTTON BUT THE FILE ANCHOR,
+    // whichever content owns it (architect 2026-08-28, the ruled exception
+    // recorded above the signature: "everything else greys as in the `h`
+    // view"; narrowed 2026-09-02, when the panel took the window under row 1:
+    // "only File should remain lit (as in history mode)"). Under the PLAYER
+    // and under the PICKER the pointer rule is the veil (every press outside
+    // the overlay band, the modal row and the LIVE menu anchor is consumed —
+    // render_player_active and picker_active, input_handler.h), and this line
+    // is the face that says so for both. It is ranked first, above the `h`
+    // partition, so a band standing over any state greys everything that
+    // partition would have lit — except that the anchors' half of the two
+    // partitions is now ONE predicate (menu_anchor_dead_in_mode, above), so
+    // the panel's answer and the view's cannot disagree about which menus
+    // open.
+    if (folder_overlay_stands(a)) {
+        return redesign_button_is_menu_anchor(b) &&
+               !menu_anchor_dead_in_mode(a, b);
+    }
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and

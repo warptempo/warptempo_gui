@@ -182,17 +182,48 @@ inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
 inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 
+// THE ACCENT'S UNFOCUSED FACE — Breeze's INACTIVE selection blue, ARCHITECT-
+// NAMED 2026-09-02: "breeze blue should change to #1b4155 when window loses
+// focus (inactive color, the scrub already does this — not sure if it's the
+// same color but it's at least similar)". It is NOT the scrub's own
+// kScrubPlayedInactive #1d3847, which he measured off his 16:46 shot of a
+// Breeze slider: two Breeze roles that read alike and are not the same value,
+// so they stay two constants under the standing numerically-close-is-not-the-
+// same rule (kRedesignRowGroundUnfocused states it). A HARD SWAP, no fade,
+// like every other window_activated face.
+//
+// ITS SCOPE IS THE FOLDER OVERLAY'S PANEL AND THE MODAL ROW IT OWNS — the
+// highlighted row's band and its list-focused outline, and the modal buttons'
+// ACTIVE-FOCUS outline — and it is the FOURTH reader class of
+// AppState::window_activated after rows 1 and 2 (the ground) and the scrub
+// (its played groove). WHAT IT DOES NOT TOUCH: the hover faces on either
+// surface. A hover is a promise that the pointer can act, and a pointer over
+// an unfocused window still can — so kFolderRowHover, kFolderRowHoverOutline,
+// kFolderRowHoverSelected and the modal row's hovered / armed / pressed
+// accents all keep the live blue. The icon row's lamps, the tab row, the view
+// bar and the flag editor's selection band are outside the ruling entirely.
+inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
+
 // THE UNFOCUSED GROUND for rows 1 and 2 (architect 2026-07-31, from live use).
 // The crops' #292c30 is Breeze's FOCUSED header shade; when the WINDOW LOSES
 // KEYBOARD FOCUS the header darkens to #202326, tracking the labwc titlebar
 // above it, which darkens on the same edge. A HARD SWAP — no transition, no
-// fade — driven by AppState::window_activated, and it moves the GROUND ONLY:
-// separators, border lines, the accent, labels and icons all keep their colors.
-// NO ROW BELOW ROW 2 SWAPS: row 3's ground and every row below it sit on
+// fade — driven by AppState::window_activated, and ON THESE TWO ROWS it moves
+// the GROUND ONLY: separators, border lines, the accent, labels and icons all
+// keep their colors here.
+// NO OTHER ROW'S GROUND SWAPS: row 3's ground and every row below it sit on
 // kRedesignContentGround, itself the unfocused shade, so the swap has nothing
 // to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
 // hours on 2026-08-13, under a ruling the architect withdrew the same day —
 // the record is at the row-3 block below.)
+//
+// WHAT ELSE READS THE FLAG, re-grepped rather than inherited: the PLAY-SCRUB's
+// played groove (2026-08-28, the block at kScrubPlayed below) and, since
+// 2026-09-02, the FOLDER OVERLAY's panel and the modal row it owns, whose
+// accent takes kRedesignAccentInactive above. So "no row below row 2 swaps",
+// true of the GROUND when it was written, is no longer true of the window:
+// what row 1 and row 2 own is the unfocused ground, and the accent's own
+// unfocused face is the panel's.
 //
 // NOTE it coincides with kBackground and with kRedesignContentGround (all
 // three sample the same Breeze Window color) and is nonetheless its OWN
@@ -1471,7 +1502,11 @@ inline constexpr double kIconCornerRadiusPx = 5.0;
 // #46494c, handle fill #292c30 — "and the 16:46 shot's dimmed blue is the
 // UNFOCUSED face the scrub takes when the window loses focus". So THE SCRUB
 // IS THE THIRD SURFACE THAT READS AppState::window_activated, after rows 1
-// and 2, and it is the only one that reads it below the waveform.
+// and 2. It was the only one that read it below the waveform until 2026-09-02,
+// when the folder overlay's panel and the modal row's active-focus outline
+// took kRedesignAccentInactive (the block at that constant); this one is still
+// the only reader of the flag that swaps a GROOVE rather than an accent, and
+// its inactive blue is its own measured value, not that constant.
 //
 // THE OUTLINES SHIP AS THE COMPOSITED EDGE ROWS THEY PAINT, not as the alphas
 // Breeze strokes them with — the palette is FULLY OPAQUE by ruling. Breeze

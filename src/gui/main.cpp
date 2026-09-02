@@ -1852,14 +1852,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // hook's reason: a protocol edge that changes what should be on screen and
     // carries no other event to repaint it.
     // TOP-STRIP damage is the exact rect — rows 1 and 2 read the flag for
-    // their ground, and both live there — PLUS THE MODAL ROW WHILE THE RENDER
-    // PLAYER STANDS (2026-08-28): the play-scrub is the flag's THIRD reader
-    // and the only one below the waveform, its played groove taking the
-    // focused blue or the dimmed one (architect R29). THE READERS ARE THREE
-    // AND THE DAMAGE IS TWO RECTS, re-grepped at this line rather than
-    // inherited; the row's rect is spent only while the player owns it,
-    // because that is the only state in which anything down there reads the
-    // flag at all.
+    // their ground, and both live there — PLUS THE MODAL ROW (2026-08-28: the
+    // play-scrub's played groove takes the focused blue or the dimmed one,
+    // architect R29) PLUS THE FOLDER OVERLAY'S PANEL WHILE IT STANDS
+    // (2026-09-02: the highlighted row's band and its list-focused outline
+    // take kRedesignAccentInactive, and so does the modal row's active-focus
+    // outline). THE READER CLASSES ARE FOUR AND THE DAMAGE IS THREE RECTS,
+    // re-grepped at this line rather than inherited. The modal row's rect is
+    // spent whenever a modal owns that row — the focus outline is every
+    // owner's, not the player's — and the panel's only while the panel is
+    // there to paint.
     // THE MIRROR IS SEEDED HERE AND KEPT BY THE HOOK, and the seed is what a
     // REOPEN needs (2026-08-28): the loop builds a FRESH AppState per project
     // (gui_main's contract, platform.h) whose window_activated is born false,
@@ -1875,7 +1877,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.set_activation_changed_hook([&] {
         app.window_activated = gui.window_activated();
         viewport.invalidate_top_strip();
-        if (app.render_player.active) viewport.invalidate_modal_dialog_area();
+        if (app.modal_dialog.valid) viewport.invalidate_modal_dialog_area();
+        if (folder_overlay::stands(app))
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
     });
 
     // THE PLATFORM'S CONSUMED KEYBOARD EDGES (codex round 4, 2026-08-11):

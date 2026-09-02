@@ -286,10 +286,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // dropdown (a popup cannot be open while it stands — the veil consumes
     // the anchors' presses, and `l` under a popup dies at the gate above),
     // and above everything else: while the mode stands ITS ROUTER IS THE
-    // WHOLE VOCABULARY (the contract at route_render_player_key), and only
-    // Ctrl+S and Ctrl+Q fall through to the ordinary dispatch — Ctrl+S to the
-    // save, which touches no transport, and Ctrl+Q with the player already
-    // closed, so the quit road runs on the ordinary state. No editor and no
+    // WHOLE VOCABULARY (the contract at route_render_player_key), and FOUR
+    // chords fall through to the ordinary dispatch — Ctrl+S to the save, which
+    // touches no transport; Ctrl+Q with the player already closed, so the quit
+    // road runs on the ordinary state; and, since 2026-09-02, Ctrl+O and bare
+    // `\`, the File menu's other two rows, which are reachable from the menu
+    // in here because the File anchor stays lit under the panel — the key and
+    // the row answering alike. No editor and no
     // gesture of any OTHER surface can stand under it (its opener refuses
     // under every editor; the veil arms none), so the gates below never
     // contend with it — its own two arms are this block's business, below.
@@ -326,8 +329,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // R22/R23): the field-less Open project picker over the folder
     // overlay, at the player's rank (the two never stand together) and with
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
-    // (route_picker_key), Ctrl+Q the one fall-through (with the picker
-    // already closed by the close road), Ctrl+S consumed by the router as the
+    // (route_picker_key), Ctrl+Q and bare `\` its two fall-throughs (the quit
+    // road with the picker already closed by it; Synchronize because the File
+    // anchor is lit under the panel since 2026-09-02, so its row works in here
+    // and its key must too — while Ctrl+O stays consumed and silent, this
+    // picker being what that chord asks for), Ctrl+S consumed by the router as the
     // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
     // which must not open over a picker). The gesture clause is the player's
     // own: the overlay's row press arm is a member of

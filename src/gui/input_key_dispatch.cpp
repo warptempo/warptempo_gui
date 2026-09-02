@@ -5763,29 +5763,26 @@ void GuiInputHandler::open_project_picker() {
     // whose teardown joins the prefetch and the commit worker with everything
     // else per project. What the act still refuses in here is what it refuses
     // everywhere: a publishing checkpoint, at open_project_commit.)
-    // The render player is a modal MODE, not one of the editors the predicate
-    // above answers for, so it refuses on its own term: a reopen would tear
-    // the player's item and its bound buffer down from under it. Both roads
-    // already refuse earlier — Ctrl+O is consumed by the player's key router,
-    // and the veil consumes a press on the File anchor so the row is
-    // unreachable — and this line is the opener's own, in the shape the two
-    // guards above it are: the gate lives with the act it refuses. A standing
-    // picker refuses the same way (its router consumes Ctrl+O, its veil the
-    // anchor).
-    //
-    // AND THE PLAYER SAYS SO WHILE THE PICKER DOES NOT (architect
-    // 2026-08-30): the player is a mode the user has to be told to leave,
-    // and the picker IS this act — a second Open project over a standing
-    // picker asks for what is already on screen, which is the settings
-    // editor's own already-open silence. Both key roads are answered
-    // earlier anyway (each router consumes Ctrl+O in its own catch-all
-    // sentence); what reaches here is the File menu's row under a
-    // pointer-transparent surface.
-    if (render_player_active()) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Close the render player first");
-        return;
-    }
+    // THE RENDER PLAYER IS CLOSED, NOT TOLD TO CLOSE (architect 2026-09-02,
+    // with the File anchor staying lit under the panel): the row and the chord
+    // are reachable in there now — the anchor is admitted through the player's
+    // veil and route_render_player_key lets Ctrl+O fall through — so a face
+    // that opens a menu whose row then refuses would be the face promising
+    // more than the act delivers. The two modes never stand together, and
+    // CLOSE-THEN-OPEN is what keeps that true: `close()` is the one close body
+    // (it rebinds the VIEW's buffer before freeing the item's, so the reopen
+    // this may lead to never tears a bound buffer out from under the engine),
+    // and the picker then opens on the ordinary state. The refusal it replaces
+    // — "Close the render player first", 2026-08-30 to 2026-09-02, the one of
+    // the four gates here that ever spoke — is retired with the reason it
+    // rested on.
+    if (render_player_active()) render_player.close();
+    // A STANDING PICKER IS STILL SILENT: the picker IS this act, so a second
+    // Open project over one asks for what is already on screen — the settings
+    // editor's own already-open silence, and a one-dimensional refusal at the
+    // state it refuses on. Its key road answers earlier (route_picker_key
+    // consumes Ctrl+O in its catch-all); what reaches here is the File menu's
+    // row, raised over the picker's own band.
     if (picker_active()) return;
     if (app.loading) return;
 
@@ -6070,11 +6067,20 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         save_ops.save();
         return true;
     }
-    // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
+    // THE TWO FALL-THROUGHS: Ctrl+Q falls through to the ordinary quit road,
     // which takes the picker down at its head (GuiPrompt::request_close) —
     // the same step the compositor's close takes, stated once there rather
-    // than here, so the two roads cannot drift.
+    // than here, so the two roads cannot drift; and BARE BACKSLASH since
+    // 2026-09-02, the player's own admission one mode over — the File anchor
+    // is lit under the panel, so Synchronize's row works in here and its key
+    // must answer the same way. CTRL+O IS DELIBERATELY NOT ONE: it is this
+    // very act, and a second Open project over a standing picker asks for what
+    // is on screen, so it falls to the modified catch-all below and is
+    // consumed SILENTLY — the one-dimensional refusal at the state it refuses
+    // on, which is also what the File row answers with (open_project_picker's
+    // picker arm returns without a word).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+    if (is_sync_external_key(key, mods)) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
     // ring route, whose list arm the player and the picker share. A
@@ -6837,13 +6843,24 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
 
-    // THE TWO FALL-THROUGHS: Ctrl+S saves with the player standing (no
-    // transport is touched); Ctrl+Q falls through to the ordinary quit road,
-    // which takes the player down at its head (GuiPrompt::request_close) — the
-    // same step the compositor's close takes, stated once there rather than
-    // here, so the two roads cannot drift.
+    // THE FOUR FALL-THROUGHS, WHICH ARE THE FILE MENU'S THREE ROWS PLUS THE
+    // SAVE: Ctrl+S saves with the player standing (no transport is touched);
+    // Ctrl+Q falls through to the ordinary quit road, which takes the player
+    // down at its head (GuiPrompt::request_close) — the same step the
+    // compositor's close takes, stated once there rather than here, so the two
+    // roads cannot drift; and since 2026-09-02 CTRL+O and BARE BACKSLASH join
+    // them, because the File anchor stays LIT under the panel (architect: "only
+    // File should remain lit") and THE KEY AND THE ROW MUST AGREE — a row that
+    // works from the menu and a chord the router eats would be one act with two
+    // answers. Ctrl+O reaches open_project_picker, which CLOSES the player and
+    // opens the picker (the two never stand together); `\` reaches
+    // synchronize_to_external_storage, which is read-only-legal, runs on its own
+    // worker and stops no playback — a playing item is a reader of files the
+    // mirror only reads.
     if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+    if (is_open_project_key(key, mods)) return false;
+    if (is_sync_external_key(key, mods)) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, buttons…] through the one modal
     // ring route, whose player arm owns the list's membership.

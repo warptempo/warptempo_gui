@@ -206,6 +206,24 @@ GuiColor redesign_row_ground(const AppState& app) {
                                 : kRedesignRowGroundUnfocused;
 }
 
+// THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
+// SELECTED or FOCUSED wear right now" (architect 2026-09-02: "breeze blue
+// should change to #1b4155 when window loses focus"). Its two readers are the
+// folder overlay's panel (the highlighted row's band and its list-focused
+// outline) and the modal row's ACTIVE-FOCUS outline, which is the row the
+// panel's two owners take whole; the provenance, the scope and what is
+// deliberately NOT in it are at kRedesignAccentInactive (render.h).
+//
+// IT IS A FORK ON THE FLAG AND NOTHING ELSE — no owner term, no surface term.
+// A focus ring is a claim about where the KEYBOARD is, and an unfocused window
+// has no keyboard, so the same dimming is honest on every button of that row
+// whichever of its four owners is standing. What must NOT read it is a HOVER:
+// the pointer can still act on an unfocused window, so those faces keep
+// kRedesignAccent at their own sites.
+GuiColor accent_for_focus(const AppState& app) {
+    return app.window_activated ? kRedesignAccent : kRedesignAccentInactive;
+}
+
 // ROW 1, measured off the two 46x30 crops
 // (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png). The row
 // height itself lives in render.h as kMenuRowHeightPx, because main.cpp's lane
@@ -7167,9 +7185,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     : lit ? kRedesignSelectedFill
                           : kModalFocusFill,
             kRedesignContentGround, keep);
+        // THE OUTLINE'S ACCENT FORKS ON THE WINDOW'S FOCUS AT THE FOCUS TERM
+        // ALONE (architect 2026-09-02, arriving through the render player,
+        // whose panel takes the window under row 1): a KEYBOARD focus ring on
+        // an unfocused window wears Breeze's inactive blue, through the one
+        // fork accent_for_focus above, while the POINTER's three claims —
+        // hovered, armed, pressed — keep the live accent, the pointer being
+        // able to act on an unfocused window. The order below is what makes
+        // that split exact: a hovered ACTIVE focus is still a pointer claim
+        // and takes the live blue, which is the same reading as the block
+        // above's "active focus plus hover is identical to active focus".
         const GuiColor line = mix_color(
-            (hovered || armed || pressed || active_focus)
+            (hovered || armed || pressed)
                 ? kRedesignAccent
+                : active_focus ? accent_for_focus(app)
                 : focused ? kModalFocusLinePassive
                           : kRedesignLine,
             kRedesignContentGround, keep);
@@ -7431,9 +7460,10 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
     // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is the
-    // CEILING BAND every time it stands — from the waveform's midpoint down,
-    // whatever its listing's length (R35) — and the keyboard's is its four key
-    // rows, so "the band" is a question with two answers and the bit describes
+    // CEILING BAND every time it stands — the whole window under row 1 since
+    // 2026-09-02, whatever its listing's length (R35's fixed height, the
+    // architect's new ceiling) — and the keyboard's is its four key rows, so
+    // "the band" is a question with two answers and the bit describes
     // the pixels THIS frame may have written. With NEITHER standing the band
     // to cover is the slot's tallest — the hide's own damage, which is what
     // has to erase the departed tenant.
@@ -7565,6 +7595,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const int    glyph  = folder_overlay::row_icon_px();
     const int    gap    = folder_overlay::row_icon_gap_px();
     const int    inset  = folder_overlay::row_icon_inset_px();
+    // THE HIGHLIGHT'S BLUE DIMS WITH THE WINDOW (architect 2026-09-02), through
+    // the one fork accent_for_focus above: the band and the list-focused
+    // outline are the SELECTION, and a selection in an unfocused window wears
+    // Breeze's inactive blue. The two HOVER faces below do not — a hover is a
+    // promise the pointer can act, and it still can — and the hovered+
+    // highlighted face is the hover's own lift of this band, so it goes with
+    // the hover rather than with the swap.
+    const GuiColor accent = accent_for_focus(app);
 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
@@ -7593,7 +7631,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // through it.
             const bool lit = pressed || highlighted;
             const GuiColor fill =
-                lit     ? (hovered ? kFolderRowHoverSelected : kRedesignAccent)
+                lit     ? (hovered ? kFolderRowHoverSelected : accent)
                         : kFolderRowHover;
             // THE OUTLINE: the ring's focus strength on the highlighted row
             // (the modal's own two lines), the hover frame on a hovered row
@@ -7601,7 +7639,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // faces do not wear.
             const GuiColor* line = nullptr;
             if (highlighted) {
-                line = ov.list_focused ? &kRedesignAccent
+                line = ov.list_focused ? &accent
                                        : &kModalFocusLinePassive;
             } else if (hovered) {
                 line = &kFolderRowHoverOutline;
@@ -7977,12 +8015,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
         //      since 2026-08-28, one tenant at a time), whose opaque ground
-        //      covers the waveform area's lower part and so follows every
-        //      waveform pass above. Which is why those passes do not paint
+        //      covers the waveform area's lower part (the keyboard) or the
+        //      WHOLE WINDOW UNDER ROW 1 (the overlay, since 2026-09-02 — so
+        //      steps 3 through 11 all end up under it) and so follows every
+        //      pass above. Which is why the WAVEFORM passes do not paint
         //      there at all: they are gated and clipped on the waveform's
         //      PAINTED rect while either tenant stands
         //      (onscreen_keyboard::waveform_paint_area, read just above this
-        //      block).
+        //      block), which the overlay's band reduces to a ZERO-HEIGHT rect
+        //      — it starts above the waveform's own top. THE LANES ARE NOT
+        //      SPARED THAT WAY and deliberately so: rows 2..7 paint their
+        //      exposure as they always have and the panel then covers them,
+        //      because their painters own the roster's HIT RECTS and a row
+        //      that skipped a frame would strand them (the reasoning is at
+        //      step 3). The overdraw is a mode's cost, paid only while the
+        //      panel stands.
         //  13. the flag editor's box, then THE NOTIFICATION CARDS
         //      (paint_notifications, 2026-08-29 — the top-right stack, above
         //      every lane and the keyboard slot), then the dropdown — the
@@ -8110,11 +8157,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder
     // overlay since 2026-08-28 — one band, one tenant at a time), between the
     // waveform passes above and the three floating surfaces below — which is
-    // exactly where it sits in the picture. It OVERLAYS the waveform area's
-    // lower part with its own opaque ground, so it must follow every pass
-    // that paints there (the plate, the region ink, the stems, the scanner,
-    // the anchor) and precede the flag editor's box, the dropdown and the
-    // modal, none of which it overlaps anyway. It is OUTSIDE the loading /
+    // exactly where it sits in the picture. It OVERLAYS the waveform with its
+    // own opaque ground — the area's lower part under the keyboard, and THE
+    // WHOLE WINDOW UNDER ROW 1 under the overlay since 2026-09-02, rows 2..7
+    // included — so it must follow every pass that paints there (the top
+    // button rows, the overview strip, the plate, the region ink, the trim,
+    // the ruler, the flags, the stems, the scanner, the anchor) and precede
+    // the flag editor's box, the dropdown and the modal, which float over it
+    // by design. It is OUTSIDE the loading /
     // total>0 branch above for the flag editor's own reason: an editor can
     // stand with no audio loaded, and the keyboard must stand with it.
     //

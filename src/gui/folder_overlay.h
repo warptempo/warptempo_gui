@@ -22,11 +22,13 @@
 // icon and a name (an UP row, `..`, was a third kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, standing from the waveform's midpoint down to the bottom
-// row — over the waveform area's lower part, which the waveform's passes then
-// do not paint
+// full window width, standing from THE MENU ROW'S FOOT down to the bottom row
+// (architect 2026-09-02: "media player should take up the whole window up to
+// (but not including) the first row (File, etc)") — so rows 2..7 and the
+// whole waveform are under it, the waveform's own passes then painting nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
-// whose clip reads the STANDING one's own rect). The architect's ruling (R3):
+// whose clip reads the STANDING one's own rect, and which this band reduces to
+// a zero-height rect) while the top rows paint and are covered. The architect's ruling (R3):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
 // space, and no use of the panel needs typing. So THE OVERLAY AND THE
@@ -45,16 +47,18 @@
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
 //     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
-//     EXTENT, every time it stands: from the MIDDLE OF THE WAVEFORM
+//     EXTENT, every time it stands: from THE MENU ROW'S FOOT
 //     (keyboard_slot_max_height_px, the same header) down to the bottom row,
 //     whatever the listing's length — architect 2026-08-28, R35: "we should
-//     automatically make the height from the midpoint of the waveform down so
-//     that it's not a fluid height — it's always a fixed height". A SHORT
-//     LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one scrolls.
-//     This retired the growing half of R33 (which read "it grows with its
-//     content up to that cap, then scrolls") the same day, the panel having
-//     jumped under the pointer as the listings changed size; the CEILING is
-//     R33's own and unmoved. The content's height stays the SCROLL CLAMP's
+//     automatically make the height ... so that it's not a fluid height —
+//     it's always a fixed height", and 2026-09-02 for where that fixed height
+//     starts: "the whole window up to (but not including) the first row". A
+//     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
+//     scrolls. R35 retired the growing half of R33 (which read "it grows with
+//     its content up to that cap, then scrolls") the same day, the panel
+//     having jumped under the pointer as the listings changed size; that half
+//     stands, and only WHERE the ceiling sits has moved — from R33's waveform
+//     midpoint to row 1's foot. The content's height stays the SCROLL CLAMP's
 //     input and is nothing else's.
 //   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
 //     2px gap between boxes, the same corner radius, the same 22px glyph
