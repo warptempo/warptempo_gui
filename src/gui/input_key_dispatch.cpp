@@ -61,8 +61,12 @@ namespace {
 // (open_history_commit_editor), which met the bit as an allowlist admission
 // term until the architect ruled a gate's membership the chord's alone and the
 // refusal became the act's to say.
+// ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
+// shape): the sentence is the instruction, exactly as its sibling
+// kTargetPreviewNotReadyCard already was. It read "A checkpoint is still
+// publishing; try again when it finishes" until that day.
 constexpr const char* kCheckpointPublishing =
-    "A checkpoint is still publishing; try again when it finishes";
+    "Wait for the checkpoint to finish publishing";
 
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
@@ -3217,15 +3221,17 @@ void GuiInputHandler::on_history_checkpoint_complete(
     case GuiHistoryCommitOutcome::Unconfirmed:
         // NOTHING WAS ESTABLISHED HERE, and the card says exactly that. (The
         // chip's fill-only-an-empty-slot condition is gone with the slot: a
-        // standing "committed; push failed" card is not overwritten by this
+        // standing "committed but not pushed" card is not overwritten by this
         // one, both stand, and the actionable text is not lost to the vaguer
         // one.)
         notifications.notify(AppState::NotificationClass::Critical, "Checkpoint could not be confirmed");
         break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
         // The commit landed and the push did not. The fix is `git push` in the
-        // terminal; the card stands until the user closes it.
-        notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed; push failed");
+        // terminal; the card stands until the user closes it. ONE CLAUSE like
+        // its three siblings (2026-09-01): it read "Checkpoint committed; push
+        // failed", the one semicolon among the four verdicts.
+        notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed but not pushed");
         break;
     }
 }
@@ -3358,9 +3364,14 @@ void GuiInputHandler::run_history_revert() {
         }
         if (auto defect =
                 in_place_load_wall_defect(restored_warp, restored_phase)) {
+            // AN APPENDED REASON IS LOWERCASE (the rule and its one owner
+            // lowercase_initial are at notifications.h): the wall defect is a
+            // sentence at its frozen producer because two consumers use it
+            // WHOLE, and this seam is one of the four that append it.
+            const std::string reason = lowercase_initial(*defect);
             std::fprintf(stderr,
-                "warptempo_gui: Revert refused: %s\n", defect->c_str());
-            notifications.notify(AppState::NotificationClass::Normal, "Revert refused: " + *defect);
+                "warptempo_gui: Revert refused: %s\n", reason.c_str());
+            notifications.notify(AppState::NotificationClass::Normal, "Revert refused: " + reason);
             return;
         }
     }
@@ -4189,12 +4200,19 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // silent one. The sentence was unchanged by that move; the 2026-08-31
         // rebrand renamed its subject alone ("Iteration sweep" -> the menu
         // row's "Grid iterations", kSeriesPopupItems).
+        //
+        // ONE CLAUSE, ONE NUMBER, NO PERIOD (architect 2026-09-01, the
+        // capitalization sweep's sentence-shape rule — messaging.md's card
+        // section). It was the product's only TWO-SENTENCE card, said the cap
+        // twice and closed with an instruction ("more than N cells (cap N).
+        // Narrow the marker brackets and retry."), which was the retired
+        // dismiss-only
+        // modal's shape rather than a card's: the fix is implied by the reason
+        // and HELP already tells the user to narrow the brackets.
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "Grid iterations refused: more than " +
-            std::to_string(kMaxIterSweepCells) +
-            " cells (cap " + std::to_string(kMaxIterSweepCells) +
-            "). Narrow the marker brackets and retry.");
+            "Grid iterations refused: the marker brackets make more than " +
+            std::to_string(kMaxIterSweepCells) + " cells");
         return;
     }
 
@@ -4327,18 +4345,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // naming what the two numerals count, and "render" fell out of it
     // because the sentence already leads with "Rendering". (It was plain
     // "iterations" from 2026-08-29, when the architect made the label the
-    // counted noun, and "render" before that.) It stays
-    // LOWERCASE because it is a shared ROUTING/CATEGORY LABEL rather than
-    // sentence-initial prose in either surface: the GUI sentence leads
-    // with its own "Rendering", and in the summary it fills the tag slot
-    // ahead of the message proper, whose own first word takes the capital
-    // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries"). Its
-    // position
-    // after the "warptempo_gui: " prefix is NOT the reason — the
-    // 2026-08-02 terminal pass looks past the program-name prefix when it
-    // locates that first prose word. Contrast the BPM batch's label, whose
-    // acronym capitalizes everywhere; the "iterations" both now share takes
-    // the same lowercase for the same reason.
+    // counted noun, and "render" before that.) It falls mid-sentence in both
+    // surfaces and so is lowercase by the sentence-case rule itself, no
+    // exception to anything (the product's text rules are stated once at
+    // paint_handler.cpp's menu-row block); the BPM batch's twin label
+    // capitalizes its acronym and lowercases its noun for the same reason.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully
         // built batch for the worker-idle pump.
@@ -4702,7 +4713,12 @@ void GuiInputHandler::apply_recipe_in_place(
 // view's own load acts' form, so the product's load-in-place roads answer
 // alike. First-error-only holds by construction (each arm returns), and the
 // card names the file the BASENAME RULE's way (messaging.md) — the cell's own
-// id or a sidecar's file name, never a full path. Returns true after the
+// id, or a sidecar through shown_project_path (device_config.h), the SAME
+// folder-and-file composer the loaders and the dry run use, never a full path
+// — SINGLE-QUOTED like every other name in a sentence. Until 2026-09-01 this
+// family wrote the id bare and the sidecar as a bare `.filename()`, which was
+// the product's second path form on a card and its one unquoted name beside
+// quoted ones. Returns true after the
 // recipe is applied and tmp/ wiped, and the caller then says nothing at all.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
@@ -4744,16 +4760,16 @@ bool GuiInputHandler::load_render_entry_in_place(
     // -- Read + validate every input BEFORE touching a store. --
     std::error_code ec;
     if (!std::filesystem::is_regular_file(e.wav_path, ec)) {
-        return refuse("the wav for " + render_entry_id(e) +
-                          " is missing or is not a regular file",
+        return refuse("the wav for '" + render_entry_id(e) +
+                          "' is missing or is not a regular file",
                       e.wav_path);
     }
 
     const std::filesystem::path sidecar = renders_dir.settings_path(e);
     const auto settings = read_settings_file(sidecar.string());
     if (!settings) {
-        return refuse("invalid settings in " +
-                          sidecar.filename().string() + ": " +
+        return refuse("invalid settings in '" +
+                          shown_project_path(sidecar) + "': " +
                           settings.error(),
                       sidecar);
     }
@@ -4766,8 +4782,8 @@ bool GuiInputHandler::load_render_entry_in_place(
             e.batch_folder / (e.basename + ".warpmarkers");
         auto r = m.load(wm.string());
         if (!r) {
-            return refuse("invalid warp markers in " +
-                              wm.filename().string() + ": " + r.error(),
+            return refuse("invalid warp markers in '" +
+                              shown_project_path(wm) + "': " + r.error(),
                           wm);
         }
         src_warp = m.markers();
@@ -4778,8 +4794,8 @@ bool GuiInputHandler::load_render_entry_in_place(
             e.batch_folder / (e.basename + ".phaseresetmarkers");
         auto r = t.load(tm.string());
         if (!r) {
-            return refuse("invalid phase reset markers in " +
-                              tm.filename().string() + ": " + r.error(),
+            return refuse("invalid phase reset markers in '" +
+                              shown_project_path(tm) + "': " + r.error(),
                           tm);
         }
         src_phase_resets = t.markers();
@@ -4792,8 +4808,12 @@ bool GuiInputHandler::load_render_entry_in_place(
     // would write them, and the next launch would refuse the file. The
     // refusal is WHOLE — not a dropped marker — and names its cause on both
     // surfaces like every other arm here.
+    // The defect is a sentence at its frozen producer (two consumers use it
+    // whole) and this is an APPENDING seam, so it lowercases through the one
+    // owner lowercase_initial like its three siblings — notifications.h states
+    // the rule, and every other reason handed to `refuse` is already lowercase.
     if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
-        return refuse(*defect, {});
+        return refuse(lowercase_initial(*defect), {});
     }
 
     // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
@@ -5002,9 +5022,11 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     // reasoning). The refusal is WHOLE and names its cause on stderr and on a
     // notification card like every other arm here.
     if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
+        // Appended, so lowercase through the one owner (notifications.h).
+        const std::string reason = lowercase_initial(*defect);
         std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: %s\n", defect->c_str());
-        notifications.notify(AppState::NotificationClass::Normal, "Load in place refused: " + *defect);
+            "warptempo_gui: Load in place refused: %s\n", reason.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, "Load in place refused: " + reason);
         return false;
     }
 
@@ -5876,7 +5898,7 @@ void GuiInputHandler::open_project_commit(int index) {
 // "overengineered; I don't really need it"): `,` and `.` already walk the
 // members and the lane already shows the one the walk stands on, so the key
 // raises THE CONFIRMATION straight away — the render player's own prompt body
-// with the walk member as its subject, "Load `<member label>` in place?",
+// with the walk member as its subject, "Load '<member label>' in place?",
 // OK / Cancel with Enter answering OK.
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
@@ -5911,7 +5933,7 @@ void GuiInputHandler::history_load_in_place() {
     // FIRST button takes the passive focus, this prompt's own choice on both
     // its subjects (PromptInitialFocus).
     app.prompt.present(
-        "Load `" + app.history_mode.member_label(member) + "` in place?",
+        "Load '" + app.history_mode.member_label(member) + "' in place?",
         {'o', '\x1b'},
         {"OK", "Cancel"},
         DialogTrigger::LOAD_IN_PLACE_CONFIRM,
@@ -7101,10 +7123,12 @@ void GuiInputHandler::render_player_load_in_place() {
         // and NEITHER CAN BE HIGHLIGHTED ANY MORE — the deliverable left the
         // listing when the player moved inside tmp/, and `..` became the Up
         // button on the modal row — so a FOLDER ROW is the whole of what can
-        // reach this arm.
+        // reach this arm. ONE CLAUSE since 2026-09-01 (the sentence-shape
+        // rule): it read "Only a render can be loaded in place; a folder
+        // carries no recipe", one fact told twice across a semicolon.
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "Only a render can be loaded in place; a folder carries no recipe");
+            "A folder carries no recipe to load in place");
         return;
     }
     // A modal surface is opening over a possibly live transport: PAUSE it
@@ -7115,7 +7139,10 @@ void GuiInputHandler::render_player_load_in_place() {
         render_player.toggle_pause();
     app.render_player.pending_load = *entry;
     // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
-    // renders_dir.h), OK / Cancel — Cancel the Escape sentinel LAST like every
+    // renders_dir.h) and SINGLE-QUOTED like every other name in a sentence
+    // (2026-09-01, the product's one quoting form on cards and prompts alike;
+    // both raisers of this prompt body wore backticks until that day),
+    // OK / Cancel — Cancel the Escape sentinel LAST like every
     // prompt's, so Esc's own answer is derived rather than declared; `o` is
     // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
@@ -7126,7 +7153,7 @@ void GuiInputHandler::render_player_load_in_place() {
     // `h` view's `'` raises on its viewed member, so the two `'` load roads
     // answer alike by construction. Through
     // PromptState::present, the one raise route, so the painted gate holds.
-    app.prompt.present("Load `" + render_entry_id(*entry) + "` in place?",
+    app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
                        {'o', '\x1b'},
                        {"OK", "Cancel"},
                        DialogTrigger::LOAD_IN_PLACE_CONFIRM,

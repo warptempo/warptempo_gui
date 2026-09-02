@@ -658,7 +658,7 @@ std::string read_history_branch_tip_sha(const std::string& source_audio_path);
 //
 // `ok` FALSE IS A READ THAT DID NOT ANSWER, never a history that is empty. The
 // two are the arc's whole reason for this type: an empty history is the ruled
-// empty success — the view opens at `0/0` and Save and Commit is live — while a
+// empty success — the view opens at `0/0` and Save and commit is live — while a
 // read this program could not get an answer out of knows NOTHING about the
 // piece's history, and reading that silence as "no checkpoints" would establish
 // an empty walk, latch the head delta commit-worthy and let the act publish
@@ -836,7 +836,7 @@ public:
     // `repo_root()` is the absolute, canonical root every git call this session
     // makes runs against (architect 2026-08-11 — derived from the loaded source,
     // never compiled in). It is what the view's two mutating routes take: the `'`
-    // load-in-place hands it to load_commit_sidecars_strict, and Save and Commit
+    // load-in-place hands it to load_commit_sidecars_strict, and Save and commit
     // carries it onto the checkpoint worker.
     const std::string& repo_root() const { return repo_root_; }
     const std::string& sidecar_base_name() const { return base_name_; }
@@ -1220,7 +1220,7 @@ enum class GuiHistoryCommitOutcome {
 // IT CREATES NO DIRECTORY AND NEEDS NONE: `project_directory` is the folder the
 // SOURCE is sitting in, so it exists by construction. The first checkpoint of a
 // brand-new piece is still an ordinary act of this view — put the piece in its
-// own folder under `projects/` and Save and Commit does the rest — exactly as
+// own folder under `projects/` and Save and commit does the rest — exactly as
 // the first checkpoint after a schema change is.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,

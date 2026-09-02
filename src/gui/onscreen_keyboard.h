@@ -272,7 +272,16 @@ inline constexpr GuiKey keysym_of(char base) {
 // label. The function keys wore Breeze glyphs for a day and read OVERSIZED
 // beside the letter caps — a 22-unit icon scaled to the key's own height next
 // to a 12pt letter — and there is plenty of horizontal room on a full-width
-// row, so they say what they do instead.
+// row, so they wear words.
+//
+// AND THE WORD A FUNCTION KEY WEARS IS THE KEY'S NAME (planner 2026-09-01,
+// under the capitalization sweep's universal-rules spine): all five say what
+// they ARE — Shift, Backspace, Return, Esc, Tab — in the product's one key
+// spelling, which is Qt's and so kdenlive's (spell_chord's head, gui_input.h).
+// They said what they DO from 2026-08-27, which is why "Return" read "Enter"
+// and the Escape key read "Cancel"; the Enter cap took its name that day, and
+// leaving one act-named cap beside four key-named ones would have been the
+// kind of exception this product no longer keeps. ONE RULE FOR THE FIVE.
 //
 // This function is the ONE OWNER of the words. It answers the cap for every key
 // that has one that is not simply its own character: the five function keys
@@ -284,13 +293,13 @@ inline constexpr GuiKey keysym_of(char base) {
 // painter spells it out of the table's own `ch` through the one case
 // derivation above.
 //
-// THE CAPS THAT NAME A KEY ARE SPELLED THE PRODUCT'S ONE WAY (architect
-// 2026-09-01), which is Qt's and so kdenlive's: "Return" — not "Enter", the
-// word stamped on the plastic, which this cap read until that day — beside
-// Shift, Backspace, Tab and Space, which Qt spells the same. THE ESCAPE KEY'S
-// "Cancel" IS NOT IN THAT CLASS and is deliberately left alone: it names what
-// the key DOES to the editor standing over it, the button convention, rather
-// than naming the key at all.
+// THE CAPS ARE SPELLED THE PRODUCT'S ONE WAY (architect 2026-09-01), which is
+// Qt's and so kdenlive's: "Return" — not "Enter", the word stamped on the
+// plastic, which this cap read until that day — and "Esc", which read "Cancel"
+// until the same evening's ruling closed the one act-named cap out (it named
+// what the key DOES to the editor standing over it, the button convention);
+// Shift, Backspace, Tab and Space Qt spells the same as this keyboard always
+// did.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — kRedesignSelectedFill under a
@@ -302,7 +311,7 @@ inline const char* cap_word(const KeyDef& k, bool symbol_layer) {
         case Role::Shift:       return "Shift";
         case Role::Backspace:   return "Backspace";
         case Role::Enter:       return "Return";
-        case Role::Escape:      return "Cancel";
+        case Role::Escape:      return "Esc";
         case Role::Tab:         return "Tab";
         case Role::LayerToggle: return symbol_layer ? "abc" : "&123";
         case Role::Character:   return k.ch == ' ' ? "Space" : nullptr;

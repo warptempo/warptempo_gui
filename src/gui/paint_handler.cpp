@@ -230,14 +230,35 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // gap where one exists; row 2's 2px invisible separator is the only one in the
 // redesign so far, and row 1 was never given one).
 //
-// EVERY GUI-FACING STRING CARRIES PROPER CAPITALIZATION (architect 2026-08-01,
-// generalizing the row-by-row carve-out that started here): labels are proper
-// nouns/labels, messages and prose are sentence case. THE CASE SPLIT IS OVER
-// (2026-08-02): the terminal round landed, so stderr/stdout prose follows the
-// same rule and there is ONE rule for both surfaces. What STAYS lowercase is
-// user-authored data (marker labels, titles, filenames), literal settings KEY
-// names shown as keys, and the routing/filename tokens that are data rather
-// than prose.
+// THE PRODUCT'S TEXT RULES, STATED ONCE AND HERE (architect 2026-08-01,
+// generalizing the row-by-row carve-out that started at this row; completed
+// 2026-09-01 by the capitalization sweep, which retired every declared
+// exception the domain had left — universal rules, no exceptions, an exception
+// in user-facing text being the sign that the thing carrying it is poorly
+// designed). Every other site states its own class and points here.
+//
+//   * LABELS, TOOLTIPS, MENU ITEMS, CARDS AND PROMPTS ARE SENTENCE CASE —
+//     "Save and commit", "Center on focus", "Add to selection". The one
+//     title-case exception ("Save and Commit", 2026-08-04) is retired.
+//   * ACRONYMS KEEP THEIR CAPS wherever they fall ("BPM iterations", "GUI
+//     scale", "URL").
+//   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
+//     literal settings and config KEY names shown as keys ("sync_path is not
+//     set"), and the routing/category tokens that are data rather than prose.
+//   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Return, Backspace,
+//     PgUp, PgDown, Space, Tab, Home, End — with a BARE LETTER UPPERCASE and
+//     punctuation naming the CAP rather than the stamped symbol ("Shift+[").
+//     The spelling's one owner is spell_chord's head (gui_input.h).
+//   * AN APPENDED REASON IS LOWERCASE: "<Act> refused: <reason>" is ONE
+//     sentence, so its tail starts no second one. A producer whose string is
+//     ever used WHOLE is itself a sentence and capitalizes at that producer;
+//     the system's own words (`ec.message()`, `strerror`) arrive capitalized
+//     and are the accepted class. The card-side statement is messaging.md's,
+//     and the one seam helper is lowercase_initial (notifications.h).
+//
+// THE CASE SPLIT IS OVER (2026-08-02): the terminal round landed, so
+// stderr/stdout prose follows the same rules and there is ONE set for both
+// surfaces.
 struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
@@ -2548,7 +2569,7 @@ constexpr TransportRowDef kTransportGroup[] = {
 // acts that complete.
 //
 // THE GROUP IS SIX since 2026-08-19, the MARKER MEASURE seated between Toggle
-// inherit and Add to Selection (bare `/`, minuet-scales: notes climbing a staff
+// inherit and Add to selection (bare `/`, minuet-scales: notes climbing a staff
 // — it wore edit-comment's speech balloon for the one day the field was a free
 // text comment, and the architect swapped the glyph with the grammar on
 // 2026-08-20). It is an act like the four above it, not a mode, so it wears no
@@ -2576,7 +2597,7 @@ constexpr TransportRowDef kTransportGroup[] = {
 // that afternoon in the slot after Toggle inherit, on a coder's reading of his
 // first ask "beside Toggle inherit", and he moved it to the group's tail the
 // same day: the four verbs and the two editor openers keep their run, and this
-// button joins Add to Selection at the end, the two members that reach a
+// button joins Add to selection at the end, the two members that reach a
 // marker without authoring it. It is the group's one member the READ-ONLY LOCK
 // does not grey (its two chords author nothing) and the second on this row to
 // admit SHIFT, whose twin is the jump to the marker the value came from.
@@ -2882,7 +2903,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ACCEPTED under the crop-at-the-floor allowance recorded at
     // kMinWindowWidthPx rather than answered: 640 is a floor no real host of
     // this product uses (the rig was 1024, the laptop 1920). The Marker Measure
-    // button took 34 of the 40 that Add to Selection left on 2026-08-18, the
+    // button took 34 of the 40 that Add to selection left on 2026-08-18, the
     // EDIT FLAG BUTTON took 34 more on 2026-08-27 and the COPY VALUE button
     // another 34 on 2026-08-29 — the block's ONE
     // dimension that moves when this group gains a box, which is why the

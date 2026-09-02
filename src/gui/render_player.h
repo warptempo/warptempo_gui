@@ -663,7 +663,7 @@ private:
     // the status chain's transient tier until then). Its callers are the
     // decode road's refusals (the probe's, the allocation ceiling's, the
     // read's, the rate-and-channel equality twice, "This wav holds no
-    // samples"), "No audio device; the wav cannot be played" and the opener's
+    // samples"), "No audio device to play the wav" and the opener's
     // "Nothing to play: no renders under tmp/" — every one a
     // sentence answering an act, none a state. Kept as a thin call rather than
     // deleted so the player's refusals stay one grep.

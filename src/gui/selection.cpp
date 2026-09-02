@@ -163,7 +163,7 @@ void Selection::clear_selection() {
     // (Both clears sit ABOVE the already-empty early return below, so a
     // redundant clear still ends the mode — `p`, Ctrl+Tab and the load path
     // all reach this body with nothing selected. NO SELECTION MUTATOR DAMAGES
-    // THE BOTTOM ROW, so the Add to Selection button's lamp is repainted by
+    // THE BOTTOM ROW, so the Add to selection button's lamp is repainted by
     // the roster's per-tick face comparator (main.cpp), which is that face's
     // standing owner for every bit that moves without a damage call.)
     if (app.selected_markers.empty() && app.last_selected_marker == -1)

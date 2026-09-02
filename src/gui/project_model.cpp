@@ -132,7 +132,10 @@ std::expected<GuiProjectSource, std::string> resolve_project(
         }
         for (const std::string& stem : wav_stems) {
             if (stem != sidecar_stem) {
-                return std::unexpected("Move `" + stem + ".wav` into render/");
+                // Single-quoted like its five sibling refusals in this
+                // function (2026-09-01, the product's one quoting form); the
+                // IMPERATIVE stays — this refusal IS the instruction.
+                return std::unexpected("Move '" + stem + ".wav' into render/");
             }
         }
         return make(sidecar_stem);

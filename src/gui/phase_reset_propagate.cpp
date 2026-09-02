@@ -262,9 +262,14 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // through PromptState::present, the one raise route — which clears the
     // PAINTED bit, so the confirmation cannot be answered before it is on the
     // screen (the rule is at PromptState).
+    // ONE QUESTION AND NOTHING AFTER IT (architect 2026-09-01, the
+    // capitalization sweep's sentence shape): the consequence rides inside the
+    // question rather than in a period-terminated statement behind it, which
+    // is what this prompt carried ("… matching blocks? Existing phase resets
+    // in matched ranges will be cleared.").
     app.prompt.present(
-        "Paste phase resets into matching blocks? "
-        "Existing phase resets in matched ranges will be cleared.",
+        "Paste phase resets into matching blocks, "
+        "clearing the ones already there?",
         {'y', '\x1b'},
         {"Yes", "Cancel"},
         DialogTrigger::PASTE_CONFIRM,

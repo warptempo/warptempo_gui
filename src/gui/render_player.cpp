@@ -895,7 +895,9 @@ void GuiRenderPlayer::tick() {
         // the next Space reopens the device by the backend's own rule.
         rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
-        status("No audio device; the wav cannot be played");
+        // ONE CLAUSE (2026-09-01, the capitalization sweep's sentence
+        // shape): it read "No audio device; the wav cannot be played".
+        status("No audio device to play the wav");
         return;
     }
     if (!playback.is_playing()) {

@@ -1201,6 +1201,12 @@ std::string normalize_repo_url(const std::string& raw) {
 // destination this guard blesses, pinned or not. Closing it needs a different
 // question asked of the config (an enumeration of the url.* rules), which is a
 // mechanism this arc has not been asked for.
+// ITS SIX REASONS ARE LOWERCASE, like every other reason in this file: both of
+// its consumers APPEND (the mode's entry composes "History is unavailable: " and
+// the push composes stderr's "Push refused: "), and an appended reason does not
+// start a second sentence — the rule is stated once in messaging.md's card
+// section, over the product's one statement of the text rules at
+// paint_handler.cpp's menu-row block. They were capitalized until 2026-09-01.
 bool clone_is_projects_home(const std::string& repo_root,
                             const std::string& projects_repo,
                             std::string&       reason,
@@ -1209,17 +1215,17 @@ bool clone_is_projects_home(const std::string& repo_root,
     if (destination != nullptr) destination->clear();
     const std::string setting_norm = normalize_repo_url(projects_repo);
     if (setting_norm.empty()) {
-        reason = "The projects_repo setting is empty";
+        reason = "the projects_repo setting is empty";
         return false;
     }
 
     std::string remote_raw;
     if (!git_output(repo_root, {"remote", "get-url", "origin"}, remote_raw)) {
-        reason = "The clone at " + repo_root + " has no 'origin' remote";
+        reason = "the clone at " + repo_root + " has no 'origin' remote";
         return false;
     }
     if (normalize_repo_url(remote_raw) != setting_norm) {
-        reason = "The projects_repo setting names '" + projects_repo +
+        reason = "the projects_repo setting names '" + projects_repo +
                  "' but the clone at " + repo_root + " has origin '" +
                  trim_trailing_ws(remote_raw) + "'";
         return false;
@@ -1228,7 +1234,7 @@ bool clone_is_projects_home(const std::string& repo_root,
     std::string push_raw;
     if (!git_output(repo_root, {"remote", "get-url", "--push", "--all", "origin"},
                     push_raw)) {
-        reason = "The clone at " + repo_root +
+        reason = "the clone at " + repo_root +
                  " states no push URL for 'origin'";
         return false;
     }
@@ -1237,7 +1243,7 @@ bool clone_is_projects_home(const std::string& repo_root,
         const std::string one = trim_trailing_ws(line);
         if (one.empty()) continue;
         if (normalize_repo_url(one) != setting_norm) {
-            reason = "The projects_repo setting names '" + projects_repo +
+            reason = "the projects_repo setting names '" + projects_repo +
                      "' but the clone at " + repo_root +
                      " pushes 'origin' to '" + one + "'";
             return false;
@@ -1245,7 +1251,7 @@ bool clone_is_projects_home(const std::string& repo_root,
         if (first_push_url.empty()) first_push_url = one;
     }
     if (first_push_url.empty()) {
-        reason = "The clone at " + repo_root +
+        reason = "the clone at " + repo_root +
                  " states no usable push URL for 'origin'";
         return false;
     }
@@ -1922,7 +1928,7 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
         const std::string& source_audio_path) {
     GuiHistoryRepoRoot r;
     if (source_audio_path.empty()) {
-        r.reason = "No source is loaded";
+        r.reason = "no source is loaded";
         return r;
     }
 
@@ -1931,13 +1937,13 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
         std::filesystem::path(source_audio_path), ec);
     if (ec) {
         r.read_failed = true;
-        r.reason = "Could not resolve the source's own path: " +
+        r.reason = "could not resolve the source's own path: " +
                    source_audio_path;
         return r;
     }
     const std::string dir = source.parent_path().string();
     if (dir.empty()) {
-        r.reason = "The source is not in a directory: " + source_audio_path;
+        r.reason = "the source is not in a directory: " + source_audio_path;
         return r;
     }
 
@@ -1949,12 +1955,12 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
         run_git_capture(dir, {"rev-parse", "--show-toplevel"}, out);
     if (capture != GitCapture::Ran) {
         r.read_failed = true;
-        r.reason = "Could not ask git which clone holds '" + dir + "'";
+        r.reason = "could not ask git which clone holds '" + dir + "'";
         return r;
     }
     const std::string toplevel = trim_trailing_ws(out);
     if (toplevel.empty()) {
-        r.reason = "The source's folder is not inside a git clone: " + dir;
+        r.reason = "the source's folder is not inside a git clone: " + dir;
         return r;
     }
 
@@ -1990,6 +1996,15 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // its documented empty shape whatever step got as far as filling in (the
     // folder is resolved after the base name is derived, so a late refusal has
     // something to clear).
+    //
+    // EVERY REASON IN THIS FILE IS LOWERCASE, this walk's, the scan's and
+    // resolve_repo_root_for_source's alike: each is consumed ONLY appended
+    // ("History is unavailable: <reason>", the one entry owner's card and its
+    // stderr twin), and an appended reason does not start a second sentence
+    // (messaging.md's card section states the rule). Eleven of them were
+    // capitalized until 2026-09-01, when the one that already agreed —
+    // `git named '…' as the clone holding '…', which is not a directory` —
+    // turned out to be the sibling in the right, and the family moved to it.
     auto unavailable = [&h](std::string why, bool read_failed = false) {
         h.ok = false;
         h.read_failed = read_failed;
@@ -2043,7 +2058,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // makes the filename match work on names full of periods and commas.
     h.base_name = std::filesystem::path(source_audio_path).stem().string();
     if (h.base_name.empty()) {
-        return unavailable("The source path has no base name: " +
+        return unavailable("the source path has no base name: " +
                            source_audio_path);
     }
 
@@ -2083,7 +2098,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         project_directory_of_source(h.repo_root, source_audio_path);
     if (h.project_directory.empty()) {
         return unavailable(
-            "The source is not in a folder under 'projects/': " +
+            "the source is not in a folder under 'projects/': " +
             source_audio_path);
     }
 
@@ -2182,7 +2197,7 @@ void scan_history_walk(
     // standing rule is that a success needs an OUTPUT-SHAPED WITNESS — and a
     // bare `log` has none, an executed-but-FAILED `log` and a piece with no
     // checkpoint both saying nothing at all. Reading that silence as the ruled
-    // empty history would open the view at `0/0` and light Save and Commit over
+    // empty history would open the view at `0/0` and light Save and commit over
     // a history nothing established was empty. A COUNT cannot be silent: "0" is
     // bytes git printed, and it means the walk ran and found nothing.
     //
@@ -2219,7 +2234,7 @@ void scan_history_walk(
         GuiHistoryScanResult failed;
         failed.ok = false;
         failed.unavailable_reason =
-            "Could not read the commit history for 'projects/**/" + base_name +
+            "could not read the commit history for 'projects/**/" + base_name +
             ".*'";
         on_done(std::move(failed));
         return;
@@ -2238,9 +2253,12 @@ void scan_history_walk(
     if (!git_output(repo_root, log_args, log_out)) {
         GuiHistoryScanResult failed;
         failed.ok = false;
+        // ONE CANONICAL SPELLING, NO PARENTHETICAL PLURAL (2026-09-01, the
+        // capitalization sweep): the count went with "commit(s)" — it named a
+        // number the user cannot act on, the list having failed.
         failed.unavailable_reason =
-            "Could not list the " + std::to_string(candidate_count) +
-            " commit(s) touching 'projects/**/" + base_name + ".*'";
+            "could not list the commits touching 'projects/**/" + base_name +
+            ".*'";
         on_done(std::move(failed));
         return;
     }
@@ -2266,10 +2284,9 @@ void scan_history_walk(
         GuiHistoryScanResult failed;
         failed.ok = false;
         failed.unavailable_reason =
-            "The commit history for 'projects/**/" + base_name +
+            "the commit history for 'projects/**/" + base_name +
             ".*' did not enumerate: " + std::to_string(candidate_count) +
-            " commit(s) counted, " + std::to_string(candidates.size()) +
-            " listed";
+            " counted, " + std::to_string(candidates.size()) + " listed";
         on_done(std::move(failed));
         return;
     }
@@ -3250,7 +3267,7 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // for part of 2026-08-09, while the header could still name a folder that did
 // not exist; the law that replaced those arms took it away again. THE FIRST
 // CHECKPOINT OF A NEW PIECE IS AN ORDINARY IN-APP ACT — put the piece in its own
-// folder under `projects/`, and Save and Commit does the rest with no step in a
+// folder under `projects/`, and Save and commit does the rest with no step in a
 // terminal.
 GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string& repo_root, const std::string& project_directory,
@@ -3269,7 +3286,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::string branch = current_branch_name(repo_root);
     if (branch.empty()) {
         std::fprintf(stderr,
-                     "warptempo_gui: Checkpoint refused: HEAD is detached — "
+                     "warptempo_gui: Checkpoint refused: HEAD is detached, "
                      "check out a branch in the terminal\n");
         return GuiHistoryCommitOutcome::WriteFailed;
     }
@@ -3364,7 +3381,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         if (local.empty()) {
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit; could not read "
-                         "'%s' to check whether it is pushed — check from the "
+                         "'%s' to check whether it is pushed, check from the "
                          "terminal\n",
                          source_ref.c_str());
             return GuiHistoryCommitOutcome::Unconfirmed;
@@ -3378,14 +3395,14 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         case GuiHistoryContainment::Missing:
             std::fprintf(stderr,
                          "warptempo_gui: Nothing to commit; the branch has "
-                         "unpushed commits — push from the terminal\n");
+                         "unpushed commits, push from the terminal\n");
             return GuiHistoryCommitOutcome::Unconfirmed;
         case GuiHistoryContainment::Unavailable:
             break;
         }
         std::fprintf(stderr,
                      "warptempo_gui: Nothing to commit; could not read whether "
-                     "'origin/%s' carries the branch — check from the "
+                     "'origin/%s' carries the branch, check from the "
                      "terminal\n",
                      branch.c_str());
         return GuiHistoryCommitOutcome::Unconfirmed;
@@ -3453,7 +3470,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                              "' to learn what landed");
     }
     if (landed == before) {
-        std::string why = "git commit made no commit — check the terminal; the "
+        std::string why = "git commit made no commit, check the terminal; the "
                           "written files are still in the working tree";
         std::string transport = commit_line;
         if (transport.empty()) transport = add_line;
@@ -3522,7 +3539,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         // demonstrably has not got it, which is CommittedNotPushed exactly.
         std::fprintf(stderr,
                      "warptempo_gui: Push failed: 'origin/%s' does not carry "
-                     "the checkpoint — push from the terminal\n",
+                     "the checkpoint, push from the terminal\n",
                      branch.c_str());
         return GuiHistoryCommitOutcome::CommittedNotPushed;
     case GuiHistoryContainment::Unavailable:
@@ -3530,7 +3547,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     }
     std::fprintf(stderr,
                  "warptempo_gui: Push unconfirmed: could not observe "
-                 "'origin/%s' carrying the checkpoint — check from the "
+                 "'origin/%s' carrying the checkpoint, check from the "
                  "terminal\n",
                  branch.c_str());
     return GuiHistoryCommitOutcome::Unconfirmed;

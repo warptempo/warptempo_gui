@@ -48,11 +48,12 @@ std::filesystem::path project_batch_root(const std::string& source_audio_path);
 // on screen, once, so the three cannot drift. A PATH IN A SENTENCE IS ITS
 // BASENAME (messaging.md), which here is the folder the render would have
 // gone into — `3_iterations`, `2_miscellaneous` — the only part of it the
-// user authored.
+// user authored. SINGLE-QUOTED, the product's one quoting form on a card
+// (messaging.md's card section); it wore backticks until 2026-09-01.
 inline std::string render_folder_creation_card(
         const std::filesystem::path& folder, const std::string& why) {
-    return "Could not create the render folder `" +
-           folder.filename().string() + "`: " + why;
+    return "Could not create the render folder '" +
+           folder.filename().string() + "': " + why;
 }
 
 // THE DELIVERABLE FOLDER'S PRUNE (architect 2026-08-29: "player should only

@@ -134,11 +134,15 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             // count is structurally zero. Its own line is the mode's refusal at
             // GuiHistoryDiff::init, the header refusal's shape exactly — the
             // store records, the entry prints.
+            // ONE CANONICAL SPELLING, NO PARENTHETICAL PLURAL (2026-09-01, the
+            // capitalization sweep): the noun agrees with the count, which is
+            // the whole of what this line has to say and so cannot be dropped
+            // the way the scan's own "commit(s)" was.
             if (hidden_ > 0) {
                 std::fprintf(stderr,
-                             "warptempo_gui: History hid %d commit(s) whose "
+                             "warptempo_gui: History hid %d %s whose "
                              "sidecars refuse the strict load\n",
-                             hidden_);
+                             hidden_, hidden_ == 1 ? "commit" : "commits");
             }
             break;
         }

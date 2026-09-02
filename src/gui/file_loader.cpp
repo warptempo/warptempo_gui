@@ -102,9 +102,13 @@ std::optional<std::string> source_load_dry_run(
         return "Sample rate " + std::to_string(info->sample_rate) +
                " is below the 44100 floor";
     }
+    // A PROPER SENTENCE (architect 2026-09-01, the capitalization sweep): this
+    // read "<N> channels (stereo sources only)", which opened a card with a
+    // digit and misagreed in number at one channel. Its sample-rate sibling
+    // above already had the shape.
     if (info->channels != 2) {
-        return std::to_string(info->channels) +
-               " channels (stereo sources only)";
+        return "The source is not stereo (" +
+               std::to_string(info->channels) + " channels)";
     }
     // THE DECODER'S ALLOCATION ARM, ASKED OF THE PROBED SHAPE. The decode
     // itself is deliberately not run here, but the predicate it would refuse
@@ -614,8 +618,13 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
             trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
             audio.total_frames(), audio.sample_rate());
         if (detail) {
+            // An APPENDED reason is lowercase (the rule and its one owner
+            // lowercase_initial are at notifications.h): this seam appends
+            // the frozen producer's sentence, while the dry-run card above
+            // uses that same string WHOLE and so leaves it capitalized.
             std::fprintf(stderr,
-                "warptempo_gui: Source load aborted: %s\n", detail->c_str());
+                "warptempo_gui: Source load aborted: %s\n",
+                lowercase_initial(*detail).c_str());
             gui.request_exit();
             return false;
         }

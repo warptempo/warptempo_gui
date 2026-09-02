@@ -348,7 +348,7 @@ enum class Icon {
     BboxNext,            // Next marker (Tab)
     Boost,               // Walk both tabs (Ctrl+Shift+Tab)
     // THE MARKER MEASURE BUTTON'S GLYPH, the bottom row's verb group between
-    // the Edit flag button and Add to Selection (between Toggle inherit and Add
+    // the Edit flag button and Add to selection (between Toggle inherit and Add
     // to Selection until 2026-08-27): minuet-scales, KDE Minuet's own
     // icon — three note heads climbing a five-line staff.
     //

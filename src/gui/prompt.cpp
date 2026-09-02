@@ -125,7 +125,12 @@ void GuiPrompt::activate_response(char k) {
                 // only once this text and these buttons have been painted.
                 // That is what closes the stale-rect press this rung used to
                 // leave answerable (the reasoning is at PromptState).
-                app.prompt.present("Save failed.",
+                // EVERY PROMPT IS A QUESTION (architect 2026-09-01, the
+                // capitalization sweep): this rung read "Save failed." — the
+                // one statement-with-a-period among prompts that ask
+                // ("Save unsaved changes?", "Load '…' in place?") — and now
+                // asks what its buttons answer. The response set is untouched.
+                app.prompt.present("Retry the failed save?",
                                    {'r', '\x7f', '\x1b'},
                                    {"Retry", "Discard", "Cancel"},
                                    trigger,

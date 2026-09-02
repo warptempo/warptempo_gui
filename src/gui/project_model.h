@@ -35,7 +35,7 @@
 // render_output_naming.h because both products write it; the batch cells in
 // `tmp/`, named by renders_dir.h), so a second wav beside the source is
 // a file that has not moved yet, and the refusal names the move rather than
-// guessing: "Move `<name>.wav` into render/". The folder is not opened until it
+// guessing: "Move '<name>.wav' into render/". The folder is not opened until it
 // is done. WHAT `render/` THEN KEEPS IS THE CURRENT TITLE'S DELIVERABLE ALONE
 // (prune_render_folder, renders_dir.h): a wav moved in under a PREVIOUS title
 // is deleted the first time a deliverable publishes into it (the render

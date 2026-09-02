@@ -172,8 +172,8 @@
 // guard and the playing-only guard — because a card is a message about
 // something that has already happened, so nothing the tick does below can be
 // a precondition for retiring one, while every one of those returns is a mode
-// a card can stand over (the render player's own "No audio device; the wav
-// cannot be played" card, the blank window's). It reads monotonic_ms() — the one clock every software
+// a card can stand over (the render player's own "No audio device to play
+// the wav" card, the blank window's). It reads monotonic_ms() — the one clock every software
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
 // THE HIT (architect 2026-08-29, superseding the design's tap-anywhere):
@@ -237,6 +237,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 // -- SENTENCES MORE THAN ONE TRANSLATION UNIT RAISES -------------------------
 //
@@ -247,7 +248,9 @@
 // with), and a family whose several sites share ONE translation unit keeps its
 // constant there (kKeysDuringDrag, kCheckpointPublishing; the two mode
 // routers' catch-all tails were a third until their catch-alls went silent
-// with the unbound-keys ruling).
+// with the unbound-keys ruling). The third item below is not a sentence at all
+// but the one COMPOSER several sites share, lowercase_initial, homed here for
+// the same reason.
 //
 // THE LOCK'S SENTENCE — the read-only tab, said by the three sites that KNOW
 // THEIR ACT and so need no chord in it: the Settings dropdown's own opener
@@ -270,6 +273,36 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // sentence.
 inline constexpr const char* kTargetPreviewNotReadyCard =
     "Wait for the target preview to finish rendering";
+
+// AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
+// sweep; the rule is stated once in messaging.md's card section, over the one
+// statement of the product's text rules at paint_handler.cpp's menu-row
+// block). A sentence composed as "<Act> refused: <reason>" is ONE sentence, so
+// its tail does not start a second one; a producer whose string is ever used
+// WHOLE is a sentence in its own right and capitalizes at that producer.
+//
+// THIS HELPER EXISTS FOR THE ONE FAMILY THAT IS BOTH — the past-EOF wall
+// defects (first_past_eof_wall_defect, src/parser/marker_store_validate.cpp),
+// which are used WHOLE by the picker's dry-run card and by the CLI's stderr
+// and APPENDED by four GUI seams: "Revert refused: ", the render entry load's
+// own `refuse`, the `h` view's "Load in place refused: " and the loader's
+// "Source load aborted: " (re-greped 2026-09-01 — the survey's inventory of
+// three missed the render entry's). The producer is under the parser's
+// PERMANENT HARD FREEZE, so the case moves at the APPENDING seams instead of
+// at the producer, which is also what keeps the two whole-message consumers
+// right without a second edit.
+//
+// ONE OWNER, homed here because a card composer is what asks for it and
+// notifications.h is the header every one of those seams already sees. ASCII
+// ONLY, by construction: it lowers `A`-`Z` and touches nothing else, so a
+// reason opening with a digit, a quote or a UTF-8 lead byte passes through
+// unchanged (every producer it serves is ASCII prose).
+inline std::string lowercase_initial(std::string_view s) {
+    std::string out(s);
+    if (!out.empty() && out[0] >= 'A' && out[0] <= 'Z')
+        out[0] = static_cast<char>(out[0] - 'A' + 'a');
+    return out;
+}
 
 // The card's width is its content's, clamped to [this, kNotificationMaxWidthPx
 // below]. Authored px, scaled like every other length.

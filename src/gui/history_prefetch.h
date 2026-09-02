@@ -131,7 +131,7 @@ public:
     // AND WHETHER THAT FINISH WAS AN ANSWER. A run whose `git log` capture could
     // not run ends DONE and NOT ok, carrying the one line the mode prints when
     // it refuses: an unread history is not an empty one, and with an empty walk
-    // now OPENING the view and telling Save and Commit there is everything to
+    // now OPENING the view and telling Save and commit there is everything to
     // checkpoint, the two had to stop being the same state (GuiHistoryScanResult,
     // history_diff.h, owns the ruling). Both are reset at kick(), so a later run
     // that answers clears the failure with nothing to remember.

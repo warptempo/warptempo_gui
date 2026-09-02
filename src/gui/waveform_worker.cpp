@@ -48,7 +48,7 @@ void GuiWaveformWorker::dispatch(WaveformJob job, DoneCallback on_done) {
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
             "warptempo_gui: Waveform worker dispatch while busy "
-            "(state=%d) — request dropped\n",
+            "(state=%d): request dropped\n",
             state_.load());
         return;
     }

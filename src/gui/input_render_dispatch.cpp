@@ -539,17 +539,11 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries") — the same
     // words read as a tag there, which is what lets the two surfaces keep one
     // string.
-    // THE CASE RULE, unchanged by the rewording: "BPM" is CAPITALIZED ALWAYS
-    // (architect 2026-08-02 — the acronym caps in both surfaces, which
-    // deliberately released the 2026-08-01 GUI/stderr byte-identity hold for
-    // that one token) while "iterations" stays lowercase, being a shared
-    // ROUTING/CATEGORY LABEL rather than sentence-initial prose in either
-    // surface: the GUI sentence leads with its own "Rendering", and the
-    // summary's first prose word is its "Rendered". Its position after the
-    // "warptempo_gui: " prefix is NOT the reason — the 2026-08-02 terminal
-    // pass looks past the program-name prefix when it locates that first
-    // prose word. A future label that DOES lead a sentence capitalizes at its
-    // definition, not here.
+    // THE CASE RULE, unchanged by the rewording and no exception to anything:
+    // "BPM" is an acronym and so capitalizes everywhere (architect
+    // 2026-08-02), while "iterations" falls mid-sentence in both surfaces and
+    // so is lowercase by the sentence-case rule itself (the product's text
+    // rules are stated once at paint_handler.cpp's menu-row block).
     char buf[128];
     std::snprintf(buf, sizeof(buf),
                   "Rendering %d of %d %s...",
@@ -594,10 +588,12 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // mm:ss.mmm formatter. Stored verbatim in the cell's per-entry .settings
 // bpm= field and promoted into the source .settings on the cell's
 // load-in-place.
-// DATA, NOT DISPLAY: no paint site reads this string — it is a sidecar value
-// that also feeds the render fingerprint (render_cache.cpp's EngineField::Bpm
-// arm), so its " bpm " stays lowercase where the display label capitalizes.
-// Capitalizing it would move sidecar bytes and mint fresh cache keys.
+// DATA, NOT DISPLAY, and so verbatim by the text rules' own data clause (the
+// one statement is at paint_handler.cpp's menu-row block): no paint site reads
+// this string — it is a sidecar value that also feeds the render fingerprint
+// (render_cache.cpp's EngineField::Bpm arm), so its " bpm " stays lowercase
+// where the display label capitalizes the acronym, and capitalizing it would
+// move sidecar bytes and mint fresh cache keys.
 static std::string format_bpm_descriptor(int beats, double bpm,
                                          double start_seconds,
                                          double end_seconds) {

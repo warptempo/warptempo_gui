@@ -373,11 +373,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // entries here whose chord is NOT claimed by the mode's own vocabulary
     // (the load-in-place at the group's tail is the other, since 2026-09-01):
     // it dispatches from on_key's ordinary body, BELOW the read-only gate, so
-    // a locked tab refuses the click exactly as it refuses the key. BOTH OF ITS IN-VIEW REFUSALS ARE
-    // FACELESS since 2026-08-15 — the lock's and the mode's empty-subject one —
-    // the architect having reversed the second as a per-selection blink; the
-    // click is a consumed no-op in either case, which is the roster's standing
-    // shape for a refusal. OUTSIDE the view the button is dead like its three
+    // a locked tab refuses the click exactly as it refuses the key. BOTH OF ITS
+    // IN-VIEW REFUSALS WEAR THE GREY since 2026-08-30 — the lock's and the
+    // mode's empty-subject one, both composed into this entry's own admission
+    // (history_revert_actionable) and reaching the face through the DERIVED
+    // partition, which walks the chord through this very table — so the click
+    // is consumed with no card and the grey is the message (the
+    // truthful-buttons ruling, which retired the 2026-08-15 faceless pair the
+    // architect had reversed as a per-selection blink).
+    // OUTSIDE the view the button is dead like its three
     // neighbours (2026-08-18) and there is no click to consume at all.
     {RedesignButton::HistoryRevert,
      GuiKeys::V,      false, false, false, false, true},                             // bare v
@@ -1075,7 +1079,8 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // view"), so Ctrl+S is admitted outright, this walk answers LIVE for Save, and
 // the same two terms reach the face from redesign_button_enabled's own Save arm
 // through history_checkpoint_actionable (app_state.h) — the identical grey off
-// the act's own predicate. It admits CTRL+H only while a diff flag is selected on a
+// the act's own predicate. It admits BARE `v` — the revert's chord since
+// 2026-09-01, Ctrl+H before it — only while a diff flag is selected on a
 // writable tab (history_revert_actionable), so this walk answers DEAD for
 // REVERT with an empty subject or a locked tab — AN ANSWER THE FACE READS
 // AGAIN SINCE 2026-08-30 (it read nothing from 2026-08-15 until then, when
@@ -3774,7 +3779,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // so they arm NOTHING, exactly as they did before the one-day lift model
     // (an armed marker pending is plain by construction).
     // THE MODE REACHES THIS RETURN THROUGH `toggle`, and that is INTENDED
-    // rather than tolerated (2026-08-18): while Add to Selection stands, a
+    // rather than tolerated (2026-08-18): while Add to selection stands, a
     // plain press is a ctrl press in every respect, so it must arm neither the
     // reposition DRAG nor the double-click SEED — a marker cannot be dragged
     // and a flag editor cannot be double-clicked open while the mode is

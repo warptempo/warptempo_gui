@@ -2491,7 +2491,7 @@ enum class RedesignButton {
     // before that, and its seventh for the afternoon of 2026-08-29, while the
     // Copy value button sat after Toggle inherit), seated after the Edit
     // flag button and ahead of the COPY VALUE button, which took the slot
-    // between it and Add to Selection that evening (architect 2026-08-29).
+    // between it and Add to selection that evening (architect 2026-08-29).
     // Bare `/`,
     // minuet-scales (notes climbing a staff — the speech balloon it wore for
     // the field's one free-text day was swapped with the grammar on
@@ -3719,7 +3719,7 @@ inline int drag_moved_threshold_px() {
 enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
-    // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load `<id>` in
+    // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
     // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button or
     // by bare `'` inside it, the entry parked at
@@ -4699,7 +4699,7 @@ struct AppState {
     // work." A finger cannot hold ctrl, so accumulating a selection had no
     // spelling at all on the rig.
     //
-    // SET BY ONE ROUTE — bare `k` / the bottom row's Add to Selection button,
+    // SET BY ONE ROUTE — bare `k` / the bottom row's Add to selection button,
     // which toggles it both ways (handle_mode_keys, input_key_dispatch.cpp).
     // The button's lamp reads THIS bit, so the face and the mode cannot drift.
     // SESSION SCRATCH, NEVER SERIALIZED, like shift_range_anchor beside it and
@@ -6377,7 +6377,7 @@ struct AppState {
     // "overengineered; I don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
     // one the lane is showing): the key raises the CONFIRMATION straight away,
-    // "Load `<member label>` in place?" OK / Cancel with Enter answering OK —
+    // "Load '<member label>' in place?" OK / Cancel with Enter answering OK —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
     // `pending_load_member` below) — and OK runs the walk's own act.
@@ -7524,7 +7524,7 @@ struct AppState {
     // (render_player.cpp), whose batch-folder listings carry one of these on
     // every wav row — the entry is what makes a row LOAD-IN-PLACE-CAPABLE, so
     // a FOLDER row carries none and the Load in place button refuses
-    // "Only a render can be loaded in place" on one — and
+    // "A folder carries no recipe to load in place" on one — and
     // the act that button's
     // confirmation runs (load_render_entry_in_place, input_key_dispatch.cpp).
     // (The `l` external-player spawn and the typed load prompt's own resolve
@@ -7964,8 +7964,10 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 // THE MODIFIER LINE, in the roster's own form ("Press Shift for ...", which
 // NAMES THE OTHER FUNCTION rather than saying "for more"): non-empty on
 // exactly the buttons player_button_shift_admits names, which the assert below
-// holds. It is the standing no-gesture-hints preference's same ruled
-// exception, scoped to the buttons that admit a modifier. THE LINE GOES
+// holds. It is the tooltip's own shortcut line, exactly as the roster's is and
+// with the exception framing both carried retired on the same day
+// (2026-09-01): a tooltip that names the modifier reaching its button's second
+// act is a tooltip doing its job, not a gesture hint. THE LINE GOES
 // EMPTY WHERE THE TWIN IS DEAD (architect 2026-09-01, the truthful-tooltips
 // ruling): the twins walk the TRANSPORT ITEM'S folder (first_in_item_folder /
 // last_in_item_folder — not the listed folder the band stands in, which is
@@ -10101,7 +10103,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     which is worth stating because the faces can look alike: none of its
 //     chords is admitted by the allowlist. Bare `h`, `g`, `u`, `,` and `.` are
 //     blocked VACUOUSLY — nothing the lock protects is behind any of them
-//     (class (1) below) — and bare `v` the lock really does eat. The OPENER is
+//     (class (1) below) — and bare `v` the lock really does eat INSIDE THE
+//     VIEW. The clause is load-bearing since 2026-09-01: outside the view the
+//     seven history shapes are UNBOUND (chord_is_bound takes the standing mode
+//     now), so a locked tab answers bare `v` out there with silence, exactly
+//     as a writable tab does. The OPENER is
 //     lit anyway on its own arm's terms; the two WALK RADIOS and the four
 //     COMPANIONS are greyed at rest all the same, by `a.history_mode.active`
 //     at their own arm below, which is a MODE fact and not the lock's.
@@ -11749,12 +11755,17 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
         // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
         // not "for more": a hint that does not say what it gets you is not a
-        // hint. It is also the standing no-gesture-hints preference's ONE ruled
-        // exception, scoped to exactly the buttons that admit a modifier —
-        // redesign_button_shift_admits and redesign_button_ctrl_admits own that
-        // membership and this comment does not restate it (Paste was named here
-        // until its button left with the 2026-08-20 propagate relocation, which
-        // is what a restated list costs).
+        // hint. IT IS THE TOOLTIP'S OWN SHORTCUT LINE and no exception to
+        // anything (2026-09-01, retiring the "ONE ruled exception to the
+        // no-gesture-hints preference" framing this comment carried): naming
+        // the modifier that reaches a button's own second act is what a
+        // tooltip IS — kdenlive's carry their shortcuts — while the
+        // no-gesture-hints rule targets PROSE inside a label that tells the
+        // user what to press. redesign_button_shift_admits and
+        // redesign_button_ctrl_admits own the membership and this comment does
+        // not restate it (Paste was named here until its button left with the
+        // 2026-08-20 propagate relocation, which is what a restated list
+        // costs).
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
         // THE TABS CARRY NO LOCK ANY MORE (2026-08-14): the padlock is the
@@ -11908,7 +11919,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE HISTORY GROUP'S LAST, one line: bare `'` admits no modifier.
         // THE WORDS ARE UNCHANGED AND TRUE IN EVERY STATE THE FACE IS LIT
         // (architect 2026-09-01, with the button's move to this group): the
-        // press raises "Load `<member>` in place?" on the walk member the lane
+        // press raises "Load '<member>' in place?" on the walk member the lane
         // is standing on, which is what "Load in place" says, and the face is
         // lit only in the view, with a member, on a writable tab. It was the
         // RENDER-ENTRY group's until then, where the same press opened the

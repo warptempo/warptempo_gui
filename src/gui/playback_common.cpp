@@ -345,7 +345,7 @@ void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
     // formal.
     if (state.playing.load(std::memory_order_acquire)) {
         std::fprintf(stderr,
-            "warptempo_gui: rebind_buffer called while playing — refusing "
+            "warptempo_gui: rebind_buffer called while playing, refusing "
             "to swap the audio buffer (would race the callback)\n");
         return;
     }

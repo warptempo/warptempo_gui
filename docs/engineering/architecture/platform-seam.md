@@ -259,7 +259,7 @@ deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
 symbol layer for the `/` of `12 7/8` need not go looking for the bar. The function keys wore unmodified Breeze glyphs for their first day
 and read OVERSIZED beside the letter caps — a 22-unit icon scaled to the key's
 own height beside a 12pt letter — and a full-width row has room for words, so
-they say what they do. `onscreen_keyboard::cap_word` is the words' ONE owner,
+they wear words. THE WORD A FUNCTION KEY WEARS IS THE KEY'S NAME (planner 2026-09-01, under the capitalization sweep): all five say what they ARE — Shift, Backspace, Return, Esc, Tab — in the product's one key spelling (`spell_chord`'s head, `gui_input.h`). They said what they DO from 2026-08-27, which is why the Enter cap read "Enter" and the Escape key read "Cancel"; the first took its Qt name that day and the second followed the same evening, one act-named cap beside four key-named ones being exactly the exception this product no longer keeps. `onscreen_keyboard::cap_word` is the words' ONE owner,
 the painter's icon branch is gone, and the five glyphs that surface alone read
 (keyboard-caps-disabled / keyboard-caps-enabled / keyboard-enter /
 keyboard-spacebar / edit-clear-locationbar-rtl) went with it — enumerators,
@@ -643,8 +643,8 @@ NO DEVICE PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback` gained
 sound: the AAudio disconnect latch and its refused reopen AND, on both, the
 device that never came up (an init that failed; JACK still records nothing for
 a server that vanishes mid-play) — and the render player's tick forks on it
-BEFORE its natural-end test, pausing in place with "No audio device; the wav
-cannot be played" on a notification card and a "paused" push, where before a Bluetooth drop read as a
+BEFORE its natural-end test, pausing in place with "No audio device to play the
+wav" on a notification card and a "paused" push, where before a Bluetooth drop read as a
 natural end and auto-advanced, and a laptop without pipewire-jack raced
 through the folder a wav per tick.
 

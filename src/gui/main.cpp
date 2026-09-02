@@ -168,7 +168,7 @@ namespace {
 // transport three at the left
 // pad and, flush right, the four single-marker verbs with the Edit flag
 // button, the Marker Measure, the Copy resolved value
-// button and Add to Selection behind them, the
+// button and Add to selection behind them, the
 // marker-walk three and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
@@ -2216,7 +2216,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // roster buttons (the transport three, and the right block's four
             // marker verbs with the Edit flag button, the Marker Measure, the
             // Copy resolved value button and
-            // Add to Selection behind them, three walk steps and four cardinal
+            // Add to selection behind them, three walk steps and four cardinal
             // arrows) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.

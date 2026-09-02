@@ -151,7 +151,7 @@ struct GuiPrompt {
     // has just been destroyed under it. Its ONE caller is the history
     // prefetch's FAILED-SCAN arrival (GuiInputHandler::on_history_prefetch_ready),
     // which closes the `h` view off a poll and with it clears the walk member
-    // the question names — leaving an actionable "Load `<member>` in place?"
+    // the question names — leaving an actionable "Load '<member>' in place?"
     // over the ordinary editor whose OK would find no subject and load
     // nothing, silently. This drops the question and both parked subjects
     // through the answer's own Cancel body, so a subject cannot outlive its

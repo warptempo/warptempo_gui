@@ -49,7 +49,7 @@ void GuiAsyncRenderer::dispatch(RenderRequest req, DoneCallback on_done) {
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
             "warptempo_gui: Async renderer dispatch while busy "
-            "(state=%d) — request dropped\n",
+            "(state=%d): request dropped\n",
             state_.load());
         return;
     }

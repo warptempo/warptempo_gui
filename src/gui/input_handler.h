@@ -3890,8 +3890,8 @@ private:
     // the window's foot to explain it) and
     // says "This tab is read-only" on a read-only tab (kTabReadOnlyCard, the
     // lock's own literal and this one of its three readers — the arm was
-    // silent until 2026-08-30), says "Only a render can be loaded in place; a
-    // folder carries no recipe" on any highlight that is not a load-capable
+    // silent until 2026-08-30), says "A folder carries no recipe to load in
+    // place" on any highlight that is not a load-capable
     // wav — the sentence NAMES ONLY WHAT IS REACHABLE since 2026-09-01, a
     // folder row being the whole of that set once the `..` row and the
     // deliverable left the listings (the reasoning is at the raise) — and
@@ -3909,7 +3909,7 @@ private:
     void render_player_load_in_place();
     // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29, retiring the one-day
     // history picker): bare `'` there raises THE SAME PROMPT on the VIEWED
-    // walk member — "Load `<member label>` in place?", Enter answering OK —
+    // walk member — "Load '<member label>' in place?", Enter answering OK —
     // and the OK runs that walk's own act (the fork is at
     // confirm_load_in_place, the one site of it). Its guards are the picker's
     // former ones: the mode standing, no prompt or editor, no player and no

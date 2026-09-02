@@ -380,7 +380,18 @@ inline std::string spell_modifiers(GuiInputState mods) {
 // deliberately — Return / KpEnter are one "Return" to the hand, since both
 // keysyms open the flag editor and Qt's separate "Enter" for the keypad would
 // name a second key the product does not distinguish — and IsoLeftTab IS the
-// shifted Tab keysym.
+// shifted Tab keysym. HELP KEEPS THE SPLIT IN ONE SENTENCE (planner
+// 2026-09-01): the flag editor's paragraph says "`Return` or keypad `Enter`",
+// which is Qt-correct and the one place the distinction tells the reader
+// something; nothing this speller composes ever says "Enter".
+//
+// TWO NAMES THIS TABLE DOES NOT HOLD, and cannot: the SUPER MODIFIER is
+// dropped at the platform boundary and no chord names it, so its Qt spelling —
+// `Meta`, kdenlive's own — lives in HELP alone, introduced there once as
+// "`Meta` (the Super or Logo key)" for the reader whose keycap says Super
+// (planner 2026-09-01). The PAINTED KEYBOARD'S CAPS are the other: they name
+// the same keys the same way but are their own table (onscreen_keyboard.h's
+// cap_word, which points here for the convention).
 //
 // BACKSPACE LEFT WITH THE THREE NAME-ONLY BLOCKS on 2026-08-31: it is one of
 // the keys chord_is_bound lists as deliberately absent — the editors consume

@@ -29,11 +29,12 @@ bool GuiSaveOps::save() {
     // it already has: the act saves before it dispatches, so the session is
     // CLEAN at that moment and only an edit made DURING the publish can raise
     // that prompt at all — and then the refusal below takes the prompt's
-    // existing "Save failed." / Retry rung, where one retry a moment later
+    // existing "Retry the failed save?" / Retry rung, where one retry a moment
+    // later
     // succeeds (the bit falls when the worker reports; quit's own join, which
     // blocks on the act, happens after the prompt is answered rather than
     // before it). Accepted as it stands: the window is seconds wide, the state
-    // is never lost, and Discard (the Delete key) still quits — a second failure vocabulary for
+    // is never lost, and Discard (the Del key) still quits — a second failure vocabulary for
     // "busy, try again" would be a new surface for a self-correcting wait.
     //
     // THE ACT'S OWN PRELUDE SAVE IS EXEMPT BY ORDERING, not by a flag:

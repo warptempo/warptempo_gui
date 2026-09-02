@@ -55,7 +55,7 @@ void GuiHistoryCommitWorker::dispatch(GuiHistoryCommitJob job,
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
             "warptempo_gui: Checkpoint worker dispatch while busy "
-            "(state=%d) — the request was dropped\n",
+            "(state=%d): the request was dropped\n",
             state_.load());
         return;
     }

@@ -876,7 +876,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Alt+R,            → the renders (2026-08-07): the single render
     //     Ctrl+Alt+Shift+R          or the iteration sweep, and the
     //                              miscellaneous cell. A render READS the
-    //                              authored state. (Save and Commit rode this
+    //                              authored state. (Save and commit rode this
     //                              pair into the `h` view until 2026-08-08; it
     //                              is the Ctrl+S entry's now, on that entry's
     //                              own reasoning — it publishes what the tab
