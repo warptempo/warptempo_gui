@@ -171,20 +171,28 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 }
 
 // THE OUTPUT LATENCY IS UNCOMPENSATED, AND THAT IS ACCEPTED (architect
-// 2026-09-01). The predictor is anchored HERE, at the PUBLISH instant, so the
-// drawn playhead sits AHEAD of the heard position by the wait until the
-// callback that consumes `pending_start` actually begins filling, plus the
-// device's own output latency — the frames already queued between that
-// callback and the speaker. Both terms are fixed per session on both backends
-// (the period and buffer count on the laptop, the burst and stream latency on
-// the tablet), so what this costs is a CONSTANT offset and never a drift, and
-// a RESYNC cannot see it: playback_resync_predictor below re-anchors to the
-// audio thread's own READ cursor, which is itself ahead of the speaker by
-// exactly this amount, so a resync corrects wall-clock drift alone. EVERY
-// LAUNCH ROAD SHARES IT — bare Space, the waveform scrub, the A/B audition's
-// four bounded plays and the render player's own launch all publish through
-// this one body — so no surface in the product is closer to the ear than this
-// one. A JACK-clock, latency-aware predictor is UNDER DESIGN
+// 2026-09-01). The predictor is anchored HERE, at the PUBLISH instant, so at
+// launch the drawn playhead sits AHEAD of the heard position by the wait
+// until the callback that consumes `pending_start` actually begins filling,
+// plus the device's own output latency — the frames already queued between
+// that callback and the speaker. THAT LEAD IS NOT PRESERVED ACROSS A RESYNC:
+// playback_render_block publishes `cursor` only after filling a callback
+// block, as the first frame of the NEXT fill, and playback_resync_predictor
+// below re-anchors to that cursor at an arbitrary main-thread `now` — the
+// time from `now` to the next callback's fill joins the lead, and that time
+// varies over one period at every resync. So a resync corrects wall-clock
+// DRIFT (crystal skew accumulated since the last anchor) but RE-ROLLS the
+// lead rather than reproducing it: the painted-minus-heard offset stays
+// inside [latency, latency + one period] and can land anywhere in that band
+// at each pan end, page turn or `c`. The latency figure and the period are
+// each fixed per session on both backends (the period and buffer count on
+// the laptop, the burst and stream latency on the tablet), so the BAND'S
+// WIDTH is constant even though the lead within it is not; the architect
+// accepted that band 2026-09-01. EVERY LAUNCH ROAD SHARES IT — bare Space,
+// the waveform scrub, the A/B audition's four bounded plays and the render
+// player's own launch all publish through this one body — so no surface in
+// the product is closer to the ear than this one. A JACK-clock, latency-aware
+// predictor that would CENTRE the band on zero is UNDER DESIGN
 // (tmp/latency_compensation_design.md); nothing of it is implemented here.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
                            int64_t end_sample) {

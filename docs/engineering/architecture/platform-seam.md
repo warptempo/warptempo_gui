@@ -115,11 +115,15 @@ drag coordinates floor instead of truncating.
   left to count) — and `stop()` touches neither device. NOTHING LOOPS
   holds on both. THE OUTPUT LATENCY IS UNCOMPENSATED ON BOTH BACKENDS AND
   THAT IS ACCEPTED (architect 2026-09-01): the predictor anchors at the
-  PUBLISH instant, so the drawn playhead runs ahead of the heard position by
-  a per-session CONSTANT (the wait to the first filling callback plus the
-  device's queued frames) that a resync cannot correct, every launch road
-  sharing it; the reasoning is at `playback_publish_play`
-  (`playback_common.cpp`) and a latency-aware predictor is under design.
+  PUBLISH instant, so at launch the drawn playhead runs ahead of the heard
+  position by the wait to the first filling callback plus the device's
+  queued frames, but a resync re-anchors to the read cursor at an arbitrary
+  main-thread `now` rather than reproducing that offset, so drift is
+  corrected while the lead itself is RE-ROLLED inside
+  [latency, latency + one period] at every resync, every launch road sharing
+  the same band; the reasoning is at `playback_publish_play`
+  (`playback_common.cpp`) and a latency-aware predictor that would centre
+  the band on zero is under design.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FOUR keys it stamps are per-DEVICE preferences
