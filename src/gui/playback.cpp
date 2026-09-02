@@ -392,6 +392,24 @@ void GuiPlayback::stop() {
     // and hanging visibly beats returning into a buffer the callback can
     // still be reading — callers clear, append to and reallocate the
     // target buffer the moment stop() returns.
+    // THE SECOND PRODUCER OF THAT SHAPE, observed 2026-09-01: a LIVE server
+    // with a DEAD DOWNSTREAM SINK. The DAC fell off USB with a hub, and the
+    // upgraded wireplumber left its sink node in an error state; pipewire
+    // itself stayed healthy, so our client opened, activated, auto-connected
+    // to the stale ports and was never driven — every JACK-API check passes
+    // (`client_active` true, `device_unavailable()` false), the first play
+    // published into silence with the line resting on its start frame, and
+    // the next stop road slept here forever. THE HANG IS THE INTENDED LOUD
+    // SIGNAL for it (the ruling reaffirmed that day: loud error over silent
+    // backstop — we cannot fix what we do not know about). The alternative,
+    // an IN-FLIGHT FENCE (wait only for a callback already in flight, which
+    // carries the same buffer-safety proof and returns at once with nothing
+    // in flight), was proposed by codex that night and REJECTED: its only
+    // visible effect is in exactly this adversarial case, it cannot be
+    // tested here, and it would trade a hang the user notices for silence he
+    // must diagnose. THE DIAGNOSIS ROAD: `aplay -l` shows no card for the
+    // DAC, and the pipewire user journal shows the sink node going
+    // `suspended -> error`; fix the environment and relaunch.
     const uint64_t c0 =
         impl_->process_cycles.load(std::memory_order_acquire);
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
@@ -429,7 +447,10 @@ GuiPlaybackSnapshot GuiPlayback::snapshot() const {
 // read. A device that stops mid-play on this platform is the class of rare,
 // loud fault the product does not backstop (the wind-down rule); the AAudio
 // twin has a real latch because a headphone pull and a Bluetooth drop are
-// ordinary events in the car.
+// ordinary events in the car. A CLIENT THAT CAME UP AND IS NEVER DRIVEN (the
+// live server over a dead sink, stop()'s second producer above) is that same
+// class and reads as AVAILABLE on purpose: it passes every JACK-API check
+// there is, and the fence's hang is what says so.
 bool GuiPlayback::device_unavailable() const {
     return !impl_ || !impl_->client_active;
 }
