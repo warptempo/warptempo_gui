@@ -1365,9 +1365,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the
         // phase-reset lead-in overlay has a SUBJECT, Space launches the scanner
         // kPhaseResetLeadInSamples (kN/2) output samples AHEAD of the resting
-        // playhead — past the seed grain of a reset dropped at the playhead,
-        // on the instant the drop's lead-in was derived to protect (the
-        // derivation at drop_phase_reset_lead_in_at_playhead,
+        // playhead — past the seed grain of a reset dropped at the playhead
+        // (to the schedule's rounding, the accepted residue recorded with the
+        // derivation), on the instant the drop's lead-in was derived to
+        // protect (the derivation at drop_phase_reset_lead_in_at_playhead,
         // phaseresetmarkers_ops.cpp) — without moving the cursor, so the stop
         // merely deactivates the scanner and the cursor it never touched is
         // exactly where it was. A non-destructive audition of the reset's

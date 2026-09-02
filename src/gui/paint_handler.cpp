@@ -4607,10 +4607,22 @@ static int64_t phase_reset_seed_frame_index(
 // lattice, so it STANDS STILL while the reset is nudged within one hop cell
 // and SNAPS a whole hop when the reset crosses a schedule frame's centre —
 // the moment the render's bytes actually change (two resets inside one cell
-// are one event). Its width is at most kPhaseResetLeadInSamples — exactly
-// that when the marker sits on a seed centre — and at least about
-// N/2 − R_s + 1 samples (the marker just short of the next centre); the
-// static_assert at the constant pins the maximum to the drop's offset.
+// are one event). Its width is at most kPhaseResetLeadInSamples TO THE
+// SCHEDULE'S ROUNDING — that when the marker sits on a seed centre — and at
+// least about N/2 − R_s + 1 samples (the marker just short of the next
+// centre); the static_assert at the constant pins the drop's offset to the
+// seed window's half-width, which is exact, not the painted width, which
+// carries the rounding. THE RESIDUE, ACCEPTED AND RECORDED (architect
+// 2026-09-02, "no effect on audio output; accept and record"; the arithmetic
+// and the worked case are at the drop's comment, the one prose home): the
+// engine's placement compare is on the schedule's ROUNDED window start and
+// this mirror rounds with it, so a seed centre up to half a source frame
+// past the reset still qualifies and the band can come out A SAMPLE OR TWO
+// WIDER than N/2 (codex's case — tempo 0.30, reset at source 307 — paints
+// 2049 where N/2 is 2048). NOT CLAMPED to N/2: the clamp would hide the
+// engine's geometry rather than fix it, and this band exists to depict that
+// geometry. It is the trim crop's own rounding class (the deep dive's item
+// K), and it reaches no audio.
 //
 // DAMAGE. The right edge depends on the reset's frame and on the displayed
 // map, both of which the left edge already depended on, so no new damage
@@ -4749,8 +4761,12 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         const int64_t grain_end = seed_m * kRs + kPhaseResetLeadInSamples;
         width_samples = grain_end - static_cast<int64_t>(ms);
         // ≥ 1 by construction: the seed centre's image is at most the reset's
-        // to the schedule's rounding, so grain_end − ms > N/2 − R_s. The
-        // clamp guards that rounding edge only, never a real geometry.
+        // TO THE SCHEDULE'S ROUNDING, so grain_end − ms > N/2 − R_s. The
+        // clamp guards that rounding edge only, never a real geometry. That
+        // same rounding is the residue recorded at this function's header
+        // and derived at the drop's comment: the band's other end can run a
+        // sample or two past N/2 for exactly the reason this end can fall
+        // under the marker.
         width_samples = std::max<int64_t>(1, width_samples);
     }
 

@@ -465,6 +465,11 @@ int64_t GuiPlayback::cursor() const {
     return playback_cursor(impl_->state);
 }
 
+int64_t GuiPlayback::heard_cursor() const {
+    if (!impl_) return 0;
+    return playback_heard_cursor(impl_->state);
+}
+
 double GuiPlayback::cursor_precise() const {
     if (!impl_) return 0.0;
     return playback_cursor_precise(impl_->state);

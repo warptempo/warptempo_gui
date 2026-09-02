@@ -99,10 +99,14 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // THE ENGINE IS WINDOW-CENTRED. A synthesis frame m analyses the source
 // window centred at map_target_to_source(m·R_s) and emits it around output
 // m·R_s; the parser hands the engine S − N/2 and the engine seeds the LAST
-// schedule frame whose window start ≤ S − N/2, i.e. whose CENTRE C ≤ S
-// (engine.cpp's pass 1 over stft_container.h's schedule), so C lies in
-// (S − R_a, S] and its image m·R_s in (T − R_s, T] to the schedule's
-// rounding. The seed frame re-synthesizes its window [C − N/2, C + N/2)
+// schedule frame whose window start ≤ S − N/2 — the compare being on the
+// schedule's ROUNDED start, llrint(map_target_to_source(m·R_s) − N/2)
+// (engine.cpp's pass 1 over stft_container.h's schedule) — i.e. whose
+// CENTRE C is at or just past S. TO THE SCHEDULE'S ROUNDING, C lies in
+// (S − R_a, S] and its image m·R_s in (T − R_s, T]; what "just past" and
+// "to the rounding" name is the residue recorded at the end of this
+// comment, and every "at most" below carries it.
+// The seed frame re-synthesizes its window [C − N/2, C + N/2)
 // VERBATIM — theta = phi, the SEED GRAIN — and every later frame propagates
 // from it. Measured (2026-09-02, a steady tone across a reset): the OLA
 // crossover from the old phase to the new one DIPS from C − 1.5·R_s to
@@ -117,9 +121,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // verbatim, unstretched copy, which lands off the map under a tempo change
 // (the record at synthesis.cpp's seed comment), and only outside it is P
 // placed by propagation — on the map, at PGHI quality, the new phase fully
-// established. (2) implies (1). Since C's image is at most T, the grain ends
-// at most at T + N/2, so P is outside it FOR EVERY PLACEMENT iff
-// P ≥ T + N/2 — the reset authored at least N/2 output samples before P.
+// established. (2) implies (1). Since C's image is at most T to the
+// schedule's rounding, the grain ends at most at T + N/2, so P is outside it
+// FOR EVERY PLACEMENT iff P ≥ T + N/2 — the reset authored at least N/2
+// output samples before P.
 // ONE HOP IS NOT ENOUGH: with the offset R_s, P = T + R_s while the grain
 // ends at C + 2·R_s > T + R_s for every C in (T − R_s, T], so P always sits
 // inside the seed's tail — the smearing heard at one hop (2a290c98,
@@ -129,6 +134,29 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // (paint_handler.cpp) paints exactly the region this offset clears — the
 // seed grain's remaining extent past the authored reset, ending at C's image
 // + N/2 — and Space's lead-in launch skips it (selection.cpp).
+//
+// THE ROUNDING RESIDUE, ACCEPTED AND RECORDED (architect 2026-09-02, "no
+// effect on audio output; accept and record"). The engine's placement
+// compare is on the schedule's ROUNDED window start, so a seed centre up to
+// HALF A SOURCE FRAME PAST S still qualifies:
+// llrint(map_target_to_source(m·R_s) − N/2) ≤ S − N/2 admits
+// map_target_to_source(m·R_s) ≤ S + ½, whose output image is at most
+// T + ½·dT/dS — under one output sample at unity tempo, ½/tempo in general
+// (two samples at the 0.25 bracket floor). So "C's image is at most T",
+// "the grain ends at most at T + N/2" and the "FOR EVERY PLACEMENT iff"
+// above are true TO THE SCHEDULE'S ROUNDING: the grain can end that far
+// past T + N/2 and leave P inside its last samples — at the grain's own
+// ZERO-WEIGHT EDGE, where the Hann² window has tapered to nothing. It has
+// NO EFFECT ON THE AUDIO OUTPUT and none on the drop, whose authored frame
+// is unchanged; it is the trim crop's own rounding class (the deep dive's
+// item K), one more sample of a quantity already quantized onto the
+// schedule. The worked case (codex, 2026-09-02): tempo 0.30 with a target
+// playhead P = 3071 drops at S = 307, and m = 1 qualifies —
+// llrint(0.30·1024 − 2048) = −1741 = S − 2048 — while T = 1023.33…, so the
+// seed grain ends at 3072, ONE SAMPLE PAST P, and the painted band is 2049
+// samples where N/2 is 2048. The number is NOT made quantization-aware and
+// the band is NOT clamped to N/2: a clamp would hide the engine's geometry
+// rather than fix it.
 //
 // N/2 is measured in the target/output paint domain, then mapped to a
 // source frame. kPhaseResetLeadInSamples is an exact integer and the

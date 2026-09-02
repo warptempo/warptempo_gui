@@ -637,10 +637,16 @@ private:
     // predictor's own clock (steady_clock on glibc/Linux), so `presented`'s
     // timestamp and the pre-paint stamp are subtracted in one domain with no
     // conversion; any other clock leaves the global bound but UNUSED —
-    // treated as absent, said once on stderr — since a lead measured across
-    // two clocks is not a measurement.
+    // treated as absent — since a lead measured across two clocks is not a
+    // measurement. `presentation_clock_id_` KEEPS THE ANNOUNCED VALUE so
+    // init's ONE display-lead line can name it: the handler itself prints
+    // nothing (2026-09-02 — it printed a second, figure-less warning for the
+    // same condition, against the one-line contract at display_lead_ns), and
+    // the value is meaningless unless `wp_presentation_` is bound and
+    // `presentation_clock_ok_` is false.
     struct wp_presentation* wp_presentation_        = nullptr;
     bool                    presentation_clock_ok_  = false;
+    uint32_t                presentation_clock_id_  = 0;
 
     // ONE FEEDBACK OBJECT PER CONTENT COMMIT, requested BEFORE that commit
     // (the protocol's shape; paint_one_frame's order), several possibly

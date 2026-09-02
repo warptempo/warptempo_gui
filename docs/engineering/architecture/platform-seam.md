@@ -175,7 +175,19 @@ drag coordinates floor instead of truncating.
   the seam carries `display_lead_ns()`, and the predictor's POSITION is read
   that far AHEAD of `now` (the one read at `observe`, `playback_common.cpp`;
   the natural-end hold's deadline keeps the bare clock — a lead on the shared
-  clock would end the hold early by the lead). LAPTOP ONLY, and the figure is
+  clock would end the hold early by the lead). THE LEAD IS FOR PIXELS, NOT
+  FOR STORED POSITIONS (architect 2026-09-02, converting the codex round's
+  finding on the arc): painting predicts ahead because the pixel lights after
+  the read, while a RESTING WRITE must record where the ear was — so
+  `GuiPlayback` carries a second position face, `heard_cursor()`, which is
+  `cursor()`'s own observation with the lead term zero (`observe`'s one
+  `apply_display_lead` parameter forks the position read alone, so there is
+  no second predictor), and the render player's two pauses — the live pause
+  and the dead-device pause — write `resume_frame` from it while the clock,
+  the scrub and the scanner go on painting from `cursor()`; the main
+  window's own stop parks nothing (`stop_playback_if_playing` leaves the
+  playhead untouched), so those two are the whole resting-write set.
+  LAPTOP ONLY, and the figure is
   MEASURED: the Wayland backend binds `wp_presentation` (the third optional
   protocol) and, on every content commit — now the conventional frame
   request → feedback → damage → attach → ONE commit, the second empty commit
@@ -189,7 +201,14 @@ drag coordinates floor instead of truncating.
   (section C above owns which output that is), 60 Hz when none is known.
   One stderr line beside the JACK latency line says the figure — the
   fallback once at init, the measured mean when its window first fills and
-  again whenever it moves by a millisecond. `main.cpp`'s pre-paint hook
+  again whenever it moves by a millisecond — and ONE means one: the
+  `clock_id` handler prints nothing at all and keeps the announced id for the
+  init line to name (it printed a second, figure-less warning for the
+  bad-clock condition until 2026-09-02). The line can tell the ABSENT global
+  from the UNUSABLE CLOCK because the event is in hand by then: the bind is
+  issued while the first roundtrip dispatches the registry globals, so it
+  flushes with the second roundtrip and the compositor's binding-time
+  `clock_id` reply is dispatched before that roundtrip returns. `main.cpp`'s pre-paint hook
   hands the figure to the predictor once per painted frame
   (`GuiPlayback::set_display_lead_ns`), above every reader that frame has.
   ANDROID ANSWERS 0 BY RULING (the deep dive's item I, record-only): the

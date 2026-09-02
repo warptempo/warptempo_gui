@@ -92,7 +92,8 @@
 // — until the last frame the ending fill consumed has been heard — and the
 // run loop's tick tears the scanner down only then, so the line vanishes when
 // the sound does. is_playing() is untouched by the hold. THE READERS ARE ONE
-// OBSERVATION: cursor(), cursor_precise(), natural_end_holding() and
+// OBSERVATION: cursor(), heard_cursor(), cursor_precise(),
+// natural_end_holding() and
 // snapshot() are faces over one main-thread body that reconciles the anchor
 // FIRST — re-anchoring from the stamp where the live figure differs from the
 // anchor's, and, from the first read that sees the ended bit, onto the
@@ -217,7 +218,9 @@ public:
     // tablet) and main.cpp's pre-paint hook writes it here once per painted
     // frame, ahead of that frame's cursor() / cursor_precise() reads. It
     // moves the position alone — the natural-end hold keeps the bare clock
-    // (the field's contract, playback_common.h). Main thread only; a no-op
+    // (the field's contract, playback_common.h) — and of the position faces
+    // it moves only the ones that PAINT: heard_cursor() below reads the same
+    // line at `now`. Main thread only; a no-op
     // before init.
     void set_display_lead_ns(int64_t lead_ns);
 
@@ -229,6 +232,28 @@ public:
     // is_playing() has dropped.
     bool    is_playing() const;
     int64_t cursor()     const;
+
+    // THE HEARD CURSOR — cursor() WITHOUT THE DISPLAY LEAD (architect ruling
+    // 2026-09-02, converting the codex finding that the paint-only lead had
+    // moved the render player's pause point). THE CONTRACT, one sentence per
+    // face: PAINTING PREDICTS AHEAD, because the pixel lights after the read
+    // — cursor(), cursor_precise() and the clock, the scrub and the scanner
+    // that draw from them; A RESTING WRITE RECORDS WHERE THE EAR WAS, because
+    // a stored position is content, not a picture, and must not depend on
+    // which output the window happens to be on. This is that second face.
+    // ONE BODY, ONE FORK: the shared observation takes an `apply_display_lead`
+    // parameter that reaches its position read alone (playback_common.h), so
+    // this is cursor()'s own anchor reconciliation, hold arithmetic and store
+    // with the lead term zero — never a second predictor. On Android the two
+    // answer identically (that backend's lead is 0 by ruling), as they do
+    // wherever the device is suspended and the predictor holds at the integer
+    // cursor.
+    // THE ONE READER TODAY is the render player's two resting writes — the
+    // live pause and the dead-device pause (render_player.cpp). The main
+    // window's own stop parks nothing: stop_playback_if_playing leaves
+    // `playhead_cursor_sample` untouched by design, so it needs no face here.
+    // Main thread only, and a STORING reader like cursor().
+    int64_t heard_cursor() const;
 
     // THE NATURAL-END HOLD (the design note): true from the render body's
     // natural end — is_playing() already false — until the last frame it

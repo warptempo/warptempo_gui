@@ -602,6 +602,15 @@ int64_t GuiPlayback::cursor() const {
     return playback_cursor(impl_->state);
 }
 
+// Identical to cursor() in VALUE on this backend — display_lead_ns is 0 here
+// by ruling (platform_android.cpp) — and forwarded anyway, because the seam
+// is the contract and the portable caller (the render player's pause) must
+// name the face it means on both hosts.
+int64_t GuiPlayback::heard_cursor() const {
+    if (!impl_) return 0;
+    return playback_heard_cursor(impl_->state);
+}
+
 double GuiPlayback::cursor_precise() const {
     if (!impl_) return 0.0;
     return playback_cursor_precise(impl_->state);

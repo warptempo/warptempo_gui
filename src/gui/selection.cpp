@@ -56,10 +56,12 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
 // reader inventory are at the declaration (app_state.h). It lives here
 // beside the one subject derivation it reads; kPhaseResetLeadInSamples
 // (kN/2) output samples is the drop's own subtraction inverted, so the launch
-// lands past the seed grain on the instant the drop was derived to protect
-// (the derivation at drop_phase_reset_lead_in_at_playhead,
-// phaseresetmarkers_ops.cpp) — exact arithmetic and never the painted band,
-// whose right edge snaps to the engine's hop lattice and is at most this.
+// lands on the instant the drop was derived to protect — past the seed grain
+// TO THE SCHEDULE'S ROUNDING, the accepted residue recorded with the
+// derivation at drop_phase_reset_lead_in_at_playhead,
+// phaseresetmarkers_ops.cpp. The offset's own arithmetic is exact integer
+// work, and it is never the painted band, whose right edge snaps to the
+// engine's hop lattice and is at most this to that same rounding.
 int64_t phase_reset_lead_in_launch_offset(const AppState& app,
                                           const GuiPlayback& playback) {
     return (!playback.is_playing() && overlay_subject(app).has_value())

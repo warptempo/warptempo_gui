@@ -297,7 +297,12 @@ struct GuiPlaybackState {
     // one read site is `observe`'s predict_position call (playback_common.
     // cpp), and the natural-end hold's deadline beside it keeps the bare
     // `now` — a lead on the shared clock would end the hold early by the
-    // lead, the sound still in the device's queue. Main thread only, written
+    // lead, the sound still in the device's queue. AND IT REACHES ONLY THE
+    // FACES THAT PAINT (2026-09-02): that one read site takes `observe`'s
+    // `apply_display_lead` fork, which playback_heard_cursor passes false —
+    // a RESTING WRITE (the render player's pause point) must record where
+    // the ear was, not where the next pixel will be, so it reads the same
+    // line at `now`. Main thread only, written
     // and read there, like the anchor; not a device fact of the audio engine,
     // so bind and rebind leave it standing.
     int64_t display_lead_ns = 0;
@@ -505,17 +510,27 @@ void   playback_set_display_lead_ns(GuiPlaybackState& state, int64_t lead_ns);
 // predicted position and the natural-end hold's verdict from that one
 // stamp/offset pair: through the hold the anchor IS the stamp the deadline
 // reads, so the line reaches the window's end exactly as the hold ends. THE
-// STORING READERS are playback_cursor, playback_natural_end_holding and
-// playback_snapshot — each writes the anchor the observation derived
-// (through store_anchor) before answering; playback_cursor_precise is the
-// same pure function without the write, so it agrees with them whichever is
-// asked first.
+// STORING READERS are playback_cursor, playback_heard_cursor,
+// playback_natural_end_holding and playback_snapshot — each writes the anchor
+// the observation derived (through store_anchor) before answering;
+// playback_cursor_precise is the same pure function without the write, so it
+// agrees with them whichever is asked first.
+//
+// THE OBSERVATION'S ONE PARAMETER is `apply_display_lead`, and it forks the
+// POSITION READ alone (`observe`'s own comment, playback_common.cpp): a face
+// whose answer becomes PIXELS asks for the lead, because the pixel lights
+// after the read; a face whose answer becomes a RESTING WRITE asks without
+// it, because a stored position must say where the EAR was. That is the
+// whole difference between playback_cursor and playback_heard_cursor.
 //
 // The natural-end hold's whole test (the session word's ended bit): the
 // session ended at its window's end and the last sound it queued has not yet
 // left the loudspeaker. False while playing, false after any stop.
 bool   playback_natural_end_holding(GuiPlaybackState& state);
 int64_t playback_cursor(GuiPlaybackState& state);
+// heard_cursor()'s whole body: playback_cursor with the display lead off.
+// The contract is at GuiPlayback::heard_cursor (playback.h).
+int64_t playback_heard_cursor(GuiPlaybackState& state);
 double playback_cursor_precise(const GuiPlaybackState& state);
 // The tick's read: the playing bit and the hold's verdict from ONE
 // observation (GuiPlaybackSnapshot, playback.h), stored like playback_cursor,

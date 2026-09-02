@@ -10399,11 +10399,20 @@ bool target_preview_ready(const GuiTargetRender& target_render);
 // READERS, one number: the drop's subtraction, Space's launch offset
 // (phase_reset_lead_in_launch_offset below, its inverse) and the overlay
 // band's MAXIMUM width (GuiPaintHandler::phase_reset_overlay_band — the
-// band's right edge is the seed frame's image + this, so the band is exactly
-// this wide when the reset sits on a seed centre and narrower otherwise).
+// band's right edge is the seed frame's image + this, so the band is this
+// wide when the reset sits on a seed centre and narrower otherwise). THE
+// CONSTANT IS EXACT; THE GEOMETRY IT DESCRIBES CARRIES THE SCHEDULE'S
+// ROUNDING (architect 2026-09-02, "no effect on audio output; accept and
+// record"): the engine places its seed by a compare on the ROUNDED window
+// start, so the seed grain can end a sample or two past the reset's image +
+// this and the painted band can come out that much wider — the residue's
+// arithmetic, its worked case and its acceptance are at the drop's comment,
+// the derivation's one prose home. It reaches no audio and moves no
+// authored frame.
 // The static_assert pins the identity the derivation rests on: the offset IS
 // the half-window, and the half-window IS two hops, so neither the engine's
-// geometry nor this number can move without the other.
+// geometry nor this number can move without the other. It says nothing about
+// the rounding, which is why it stays exactly as it is.
 constexpr int64_t kPhaseResetLeadInSamples = kN / 2;
 static_assert(kPhaseResetLeadInSamples == kN / 2 &&
               kPhaseResetLeadInSamples == 2 * kRs,

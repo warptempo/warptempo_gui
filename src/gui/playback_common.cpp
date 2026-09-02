@@ -441,7 +441,13 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // feedback is 2 × the window's output's refresh period). The natural-end
 // hold's deadline keeps the bare clock — the sound really is still in the
 // device's queue for that long — so the line reaches the window's end one
-// lead ahead of the hold's end, and lights exactly as the sound ends.
+// lead ahead of the hold's end, and lights exactly as the sound ends. AND
+// THE LEAD IS FOR PIXELS ALONE (architect 2026-09-02, converting the codex
+// round on this arc): a face whose answer becomes a STORED position — the
+// render player's pause point — must record where the EAR was, not where
+// the next pixel will be, so `observe` takes one `apply_display_lead`
+// parameter that forks its position read and `playback_heard_cursor` passes
+// it false. One body, one fork, no second predictor.
 //
 // WHAT REMAINS, honestly: the DAC's own pipeline — its USB transfer and
 // digital-filter delay, a few milliseconds, constant, and outside anything
@@ -615,7 +621,15 @@ struct Observation {
 // design note literal: the main thread reads the stamp at the resync events
 // and these, never per frame, so motion between resyncs stays the smooth
 // wall-clock line.
-Observation observe(const GuiPlaybackState& state) {
+// `apply_display_lead` IS THE ONE FORK AND IT IS DECLARED, NEVER DEFAULTED
+// (2026-09-02): the lead exists so that a PAINTED pixel lands where the sound
+// will be when it lights, so a face that paints asks for it (true) and a face
+// that writes a RESTING position — a pause's resume point, which must record
+// where the ear was — asks not to (false). It reaches the POSITION READ
+// below and nothing else; the anchor reconciliation, the hold's deadline and
+// every stamp read are identical either way, which is why one body serves
+// both and there is no second predictor.
+Observation observe(const GuiPlaybackState& state, bool apply_display_lead) {
     Observation o;
     // ACQUIRE on the session word: a flag read down that came from the
     // natural-end fill must see that fill's stamp (the render body stores it
@@ -734,12 +748,17 @@ Observation observe(const GuiPlaybackState& state) {
         // h): the POSITION is predicted `display_lead_ns` ahead of `now` —
         // where the sound WILL be when the pixel painted from it turns into
         // light — while `now_ns` itself stays the bare clock for the hold's
-        // verdict below. The clamp at the window's end inside
-        // predict_position bounds an over-prediction at the buffer's end.
+        // verdict below. THE UNLED CALLER PASSES ZERO HERE and nowhere else
+        // (the parameter's comment at the head of this body): the heard
+        // position is this same line read at `now`, so the two faces cannot
+        // drift apart or answer from two predictors. The clamp at the
+        // window's end inside predict_position bounds an over-prediction at
+        // the buffer's end.
+        const int64_t lead_ns =
+            apply_display_lead ? state.display_lead_ns : int64_t{0};
         o.predicted = awaiting_seat
             ? static_cast<double>(a.sample)
-            : predict_position(state, a.sample, a.heard_ns,
-                               now_ns + state.display_lead_ns);
+            : predict_position(state, a.sample, a.heard_ns, now_ns + lead_ns);
     }
 
     // THE HOLD'S END IS THE STAMP'S: the natural-end fill stamped the instant
@@ -763,7 +782,9 @@ void commit_observation(GuiPlaybackState& state, const Observation& o) {
 }  // namespace
 
 bool playback_natural_end_holding(GuiPlaybackState& state) {
-    const Observation o = observe(state);
+    // The lead reaches the position alone, and this face reads no position —
+    // `true` here is the ordinary class, not a choice that shows.
+    const Observation o = observe(state, true);
     commit_observation(state, o);
     return o.holding;
 }
@@ -773,7 +794,18 @@ int64_t playback_cursor(GuiPlaybackState& state) {
     // clamps) is buffer-local; the bound buffer's domain offset is added once
     // at the return, so the reported position is a domain coordinate
     // (playback.h head comment).
-    const Observation o = observe(state);
+    const Observation o = observe(state, true);
+    commit_observation(state, o);
+    return static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset;
+}
+
+// THE HEARD CURSOR — playback_cursor with the display lead OFF (contract at
+// GuiPlayback::heard_cursor). One observation, one anchor reconciliation, one
+// store: it is playback_cursor's own body with the fork's other value, so a
+// pause taken at the same instant as a paint records the position the paint's
+// line was drawn AHEAD of, never a second predictor's opinion of it.
+int64_t playback_heard_cursor(GuiPlaybackState& state) {
+    const Observation o = observe(state, false);
     commit_observation(state, o);
     return static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset;
 }
@@ -785,11 +817,13 @@ double playback_cursor_precise(const GuiPlaybackState& state) {
     // end clamps are integers, so floor commutes with each); the anchor it
     // derives is the one cursor() stores, a pure function of the same
     // atomics. The domain offset is added once, matching cursor()'s domain.
-    return observe(state).predicted + static_cast<double>(state.domain_offset);
+    // LED like cursor() — this is the scanner's DRAWN pixel, a paint read.
+    return observe(state, true).predicted +
+           static_cast<double>(state.domain_offset);
 }
 
 GuiPlaybackSnapshot playback_snapshot(GuiPlaybackState& state) {
-    const Observation o = observe(state);
+    const Observation o = observe(state, true);
     commit_observation(state, o);
     return GuiPlaybackSnapshot{o.playing, o.holding};
 }

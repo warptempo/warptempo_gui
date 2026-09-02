@@ -612,14 +612,28 @@ void GuiRenderPlayer::toggle_pause() {
         // the item's start included — and damages the row.
         // THE RESUME POINT IS THE HEARD POSITION (2026-09-01, the accepted
         // honest artefact): the predictor is latency-compensated on the
-        // laptop, so this reads where the sound WAS at the press — the clock
-        // and the scrub showed exactly that — while the frames already
-        // rendered into the port and the sink play out after the flag drops.
-        // A resume therefore REPEATS the ~35 ms that sounded after the
-        // press, where the uncompensated prediction (a period and a latency
-        // ahead of the ear) made it gapless by accident. On the tablet the
-        // prediction keeps its lead and the resume is as it was.
-        rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
+        // laptop, so this reads where the sound WAS at the press — while the
+        // frames already rendered into the port and the sink play out after
+        // the flag drops. A resume therefore REPEATS the ~35 ms that sounded
+        // after the press, where the uncompensated prediction (a period and
+        // a latency ahead of the ear) made it gapless by accident. On the
+        // tablet the prediction keeps its lead and the resume is as it was.
+        // AND IT READS THE UNLED FACE (architect ruling 2026-09-02,
+        // converting the codex finding): the display lead added on
+        // 2026-09-02 reaches the predictor's POSITION, so plain cursor()
+        // here would have parked ~one display lead (~33 ms at 60 Hz) PAST
+        // the last heard sound, and would have made a stored transport
+        // position depend on which output the window sits on. heard_cursor()
+        // is the same observation with the lead term zero (the contract at
+        // GuiPlayback::heard_cursor): painting predicts ahead because the
+        // pixel lights later; a resting write records where the ear was.
+        // The clock and the scrub go on painting from cursor(), led — they
+        // are pictures, and this is content. THE PROJECT'S OWN STOP NEEDS NO
+        // SUCH FACE, verified: stop_playback_if_playing parks nothing at all,
+        // leaving app.playhead_cursor_sample where the user put it, so the
+        // player's two pauses are the whole resting-write set.
+        rp.resume_frame =
+            std::clamp<int64_t>(playback.heard_cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         return;
     }
@@ -907,7 +921,15 @@ void GuiRenderPlayer::tick() {
         // what the user needs to know is that nothing will sound, not which
         // way it will not. Nothing here retries; on Android
         // the next Space reopens the device by the backend's own rule.
-        rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
+        // THE UNLED FACE FOR SYMMETRY (2026-09-02): a suspended device holds
+        // the integer cursor and the predictor extrapolates nothing, so the
+        // display lead cannot reach this value either way — but this is a
+        // RESTING WRITE like the pause above, and the two say so with the
+        // same call rather than leaving a reader to work out why one resting
+        // write reads the led face (the contract at
+        // GuiPlayback::heard_cursor).
+        rp.resume_frame =
+            std::clamp<int64_t>(playback.heard_cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         // ONE CLAUSE (2026-09-01, the capitalization sweep's sentence
         // shape): it read "No audio device; the wav cannot be played".

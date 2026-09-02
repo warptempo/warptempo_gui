@@ -766,12 +766,19 @@ bool GuiPlatform::init(int width, int height, const char* title) {
                      "warptempo_gui: No wl_output advertised; "
                      "playback tick will use 60 Hz fallback\n");
     }
-    // THE DISPLAY LEAD'S FALLBACK, announced once (the measured figure
-    // announces itself from the presented handler once its window fills). The
-    // clock_id event has arrived by now — the second roundtrip above drained
-    // the events that follow every bind, this one included — so an unusable
-    // clock is known here too. The figure printed is the one at init, the
-    // seeded output's; the lead itself follows the window's output live.
+    // THE DISPLAY LEAD'S FALLBACK, announced once AND ONLY HERE (the measured
+    // figure announces itself from the presented handler once its window
+    // fills). ONE LINE PER CONDITION is the contract (display_lead_ns's
+    // declaration), so this line carries every fact its arm has — the figure,
+    // the reason, and for the bad-clock arm the clock id the compositor named,
+    // which on_presentation_clock_id keeps rather than printing itself.
+    // The clock_id event has arrived by now — the bind is issued while the
+    // first roundtrip dispatches the registry globals, so it flushes with the
+    // second roundtrip above and the compositor's reply is dispatched before
+    // that roundtrip returns — so the two arms below really are distinguishable
+    // here: an ABSENT global versus a bound one whose clock is unusable.
+    // The figure printed is the one at init, the seeded output's; the lead
+    // itself follows the window's output live.
     if (!wp_presentation_) {
         std::fprintf(stderr,
                      "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
@@ -781,10 +788,11 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     } else if (!presentation_clock_ok_) {
         std::fprintf(stderr,
                      "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
-                     "output's refresh period; wp_presentation clock is not "
-                     "CLOCK_MONOTONIC)\n",
+                     "output's refresh period; wp_presentation clock_id %u is "
+                     "not CLOCK_MONOTONIC)\n",
                      static_cast<double>(
-                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6);
+                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6,
+                     presentation_clock_id_);
     }
     if (!pointer_constraints_ || !relative_pointer_manager_) {
         std::fprintf(stderr,
@@ -1142,6 +1150,7 @@ void GuiPlatform::destroy_wayland_state() {
         wp_presentation_destroy(wp_presentation_);
         wp_presentation_ = nullptr;
         presentation_clock_ok_ = false;
+        presentation_clock_id_ = 0;
     }
     for (OutputRecord& rec : outputs_) {
         wl_output_destroy(rec.output);  // bound at v2; release is v3
@@ -2028,13 +2037,18 @@ void GuiPlatform::on_presentation_clock_id(uint32_t clk_id) {
     // names (wlroots on DRM: CLOCK_MONOTONIC). Any other clock leaves the
     // global bound and unused — a lead subtracted across two clocks is a
     // number, not a measurement — and init's announcement then says so.
+    // IT PRINTS NOTHING (2026-09-02): the display lead's contract is ONE
+    // stderr line beside the JACK latency line (display_lead_ns's
+    // declaration, platform_wayland.h), and this arm used to add a second,
+    // figure-less warning ahead of it for the same condition. The clock id is
+    // KEPT instead, and init's single fallback line names it — which it can,
+    // because this event is dispatched before that line runs: the bind is
+    // issued while the FIRST roundtrip dispatches the registry globals, so
+    // the request flushes with the SECOND roundtrip, and the compositor's
+    // reply to it (clock_id is sent once at binding time) is delivered ahead
+    // of that roundtrip's own sync callback.
+    presentation_clock_id_ = clk_id;
     presentation_clock_ok_ = (clk_id == static_cast<uint32_t>(CLOCK_MONOTONIC));
-    if (!presentation_clock_ok_) {
-        std::fprintf(stderr,
-                     "warptempo_gui: wp_presentation clock_id %u is not "
-                     "CLOCK_MONOTONIC; display lead stays at its fallback\n",
-                     clk_id);
-    }
 }
 
 void GuiPlatform::request_presentation_feedback(int64_t sample_ns) {
