@@ -199,6 +199,39 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // post-change key beginning with the source path can equal a pre-change key
 // whose first digest happened to serialize those same bytes. Same accepted cost
 // as above.
+//
+// THE SECOND BUMP RULE — DSP IDENTITY (architect 2026-09-02; stated here as the
+// rule's authoritative home, its origin being perf_campaign_2026_07.md's
+// "Reference-byte changes are legal and ride kFingerprintVersion bumps" and the
+// §15 line "kFingerprintVersion encodes DSP recipe identity, NOT host
+// identity"). The rule above is about the key's byte SHAPE; this one is about
+// the DSP behind it. ANY REFERENCE-BYTE CHANGE BELOW THE KEY — a change that
+// alters what a given recipe renders, in src/engine/ or src/prepost/, and
+// equally in the parser's authored -> engine compilation, which the key does
+// not name either (the key carries SOURCE-domain reset frames; the S - N/2
+// emission is the parser's) — RIDES A kFingerprintVersion BUMP. The key is the
+// RECIPE and nothing about the code that turned it into samples, so a post-fix
+// key byte-equals the pre-fix key of the same recipe.
+// In-process reuse is harmless there: RenderCache lives in a per-PID directory
+// created at init and removed at shutdown (orphans swept at launch), so no
+// cache entry outlives the binary that wrote it. THE .fingerprint SIDECAR ON
+// DISK SURVIVES A REBUILD, and three rungs trust it — do_render's UP-TO-DATE
+// rung (the final_output_path compare that returns "reused_up_to_date" having
+// rendered nothing), do_render's PROJECT-ARTIFACT rung (the deliverable byte
+// copy) and GuiTargetRender's ARTIFACT rung (the deliverable read straight into
+// the target-view preview buffer), all three through
+// fingerprint_sidecar_matches below. So without the bump an engine fix serves
+// the PRE-FIX deliverable as "up to date" AND paints it as the target-view
+// preview: the fix looks like it never landed. The bump is the whole remedy —
+// a fresh namespace, every pre-bump sidecar unreachable, the same accepted
+// cost the entries above already take.
+// RECORDED RESIDUAL: the reuse is TOOLCHAIN-BLIND, since the
+// library-environment quartet retired at 19 -> 20. A sidecar written before a
+// `pacman -Syu` that moves libm or FFTW can hand back the previous toolchain's
+// bytes — the accepted inaudible class, and the reason the byte-reproducibility
+// claim in perf_campaign_2026_07.md §15 is per toolchain and per host (that
+// section's own gap: an artifact migrated from another machine poses as a
+// current recipe; re-render rather than migrate).
 constexpr uint32_t kFingerprintVersion = 20;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar

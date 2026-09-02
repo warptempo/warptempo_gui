@@ -49,7 +49,10 @@ Settled contract: two fresh renders under one fixed binary must be
 byte-identical (`cmp` null); the −120 dB figure survives only as the
 measurement floor when comparing across *reference* changes.
 Reference-byte changes are legal and ride `kFingerprintVersion` bumps
-(v9 → v14 over the campaign) so cached artifacts re-render. Every
+(v9 → v14 over the campaign) so cached artifacts re-render; that rule's
+authoritative home is the fingerprint ledger above `kFingerprintVersion`
+in `src/gui/render_cache.cpp`, which names the rungs a missed bump would
+fool. Every
 candidate had to be deterministic; all "spend the tolerance" options
 (per-render FFTW planning, entropy-seeded quiet phase, relaxed concurrent
 accumulation) were rejected at the outset.
