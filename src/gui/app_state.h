@@ -10353,7 +10353,10 @@ bool payload_eligible_marker(const AppState& app, int idx);
 // normalized ref) and the out-of-store belt. It asks NOTHING of eligibility
 // — that is payload_eligible_marker's, the gate both chords run first — so
 // the jump keeps its two cards in the act's own order and this answers the
-// second. TWO READERS: the jump and the hint. MEMOIZED SINCE codex round A
+// second, and the HINT asks the same two owners in that same order (the
+// tooltip's Copy value arm, which read this one alone until codex round B on
+// 2026-09-01 and so advertised the jump under a greyed face). TWO READERS:
+// the jump and the hint. MEMOIZED SINCE codex round A
 // (2026-09-01) on the store generation, the focus and the frame count — the
 // hint's reader is the tooltip painter, which the Wayland backend runs once
 // per damage rectangle; the cache, its key and the reasoning are at
@@ -12195,8 +12198,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // member the READ-ONLY LOCK leaves lit, both its chords being
         // navigation, and it still explains itself in the `h` view, where the
         // derived partition greys it — the tooltips-on-disabled ruling above.
-        // THE OVERLOAD DROPS THE SECOND LINE where the value names no source
-        // marker (value_source_marker, the jump's own question — 2026-09-01).
+        // THE OVERLOAD DROPS THE SECOND LINE wherever the shifted press would
+        // not jump — the jump's own two questions, payload_eligible_marker and
+        // value_source_marker, asked in the act's order (2026-09-01; the
+        // eligibility term joined the source lookup at codex round B the same
+        // day).
         case RedesignButton::IconCopyValue:
             return {"Copy resolved value (J)",
                     "Press Shift to jump to defining/previous marker."};
@@ -12533,15 +12539,24 @@ inline RedesignTooltipText redesign_button_tooltip(
                         "Press Shift to drop a phase reset in target view."};
             }
             break;
-        // COPY RESOLVED VALUE: the shift line drops where the focused value
-        // names no marker to jump to — value_source_marker, the jump's own
-        // question, wrapping the parser composer the jump calls. The composer
-        // runs ONCE PER ANSWER since codex round A (2026-09-01), the owner
-        // memoizing on the store generation, the focus and the frame count;
-        // it ran at each paint of the hint until then, which the paint path's
-        // per-damage-rectangle redraw made a real cost during playback.
+        // COPY RESOLVED VALUE: the shift line exists iff the shifted press
+        // would jump, which is BOTH of the jump's own questions asked in the
+        // jump's own order — payload_eligible_marker on the focus (the ONE
+        // gate both chords run first, and the face's own enabled term above)
+        // and then value_source_marker, which names the marker to land on or
+        // −1. Neither condition is restated here; each is read from its owner.
+        // The line was gated on the source lookup ALONE from 2026-09-01 until
+        // codex round B that same day, which advertised the jump under a
+        // GREYED face — a resolvable pass focused with iteration mode on —
+        // where Shift+`j` answers "The focused marker has no resolved value"
+        // and never jumps. The composer runs ONCE PER ANSWER since codex round
+        // A (2026-09-01), the owner memoizing on the store generation, the
+        // focus and the frame count; it ran at each paint of the hint until
+        // then, which the paint path's per-damage-rectangle redraw made a real
+        // cost during playback.
         case RedesignButton::IconCopyValue:
-            if (value_source_marker(a, total_frames) < 0)
+            if (!payload_eligible_marker(a, a.last_selected_marker) ||
+                value_source_marker(a, total_frames) < 0)
                 return {"Copy resolved value (J)", nullptr};
             break;
         default:
@@ -12572,8 +12587,9 @@ inline RedesignTooltipText redesign_button_tooltip(
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
 // on Render's iteration-mode precedent of 2026-08-02): where the admitted
 // twin is dead in the current state — the maximizer over a full window, the
-// crossing in the P column, the jump with no source, the audition's shift
-// over a standing sequence, the skips' ctrl form where the two landings
+// crossing in the P column, the jump with no eligible focus or no source,
+// the audition's shift over a standing sequence, the skips' ctrl form where
+// the two landings
 // coincide — the overload returns the one-line form, and it can return a
 // second line only on a button this walk has already bound to an admission,
 // since every overload arm either forwards the table's line or drops it.

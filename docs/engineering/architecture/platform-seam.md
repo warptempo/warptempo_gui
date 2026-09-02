@@ -113,7 +113,13 @@ drag coordinates floor instead of truncating.
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback
   left to count) — and `stop()` touches neither device. NOTHING LOOPS
-  holds on both.
+  holds on both. THE OUTPUT LATENCY IS UNCOMPENSATED ON BOTH BACKENDS AND
+  THAT IS ACCEPTED (architect 2026-09-01): the predictor anchors at the
+  PUBLISH instant, so the drawn playhead runs ahead of the heard position by
+  a per-session CONSTANT (the wait to the first filling callback plus the
+  device's queued frames) that a resync cannot correct, every launch road
+  sharing it; the reasoning is at `playback_publish_play`
+  (`playback_common.cpp`) and a latency-aware predictor is under design.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FOUR keys it stamps are per-DEVICE preferences
@@ -241,8 +247,10 @@ rect are one number by construction.
 EVERY CAP IS TEXT, on the one sans face at the product's one text size through
 the one shaping chokepoint — the letter caps, the layer toggle's `abc` / `&123`
 and the FUNCTION KEYS' WORDS alike: **Shift**, **Backspace**, **Space**,
-**Cancel**, **Enter**, **Tab**. **Backspace** is on both layers (each layer's own row 2
-ends with one), and **Space**, **Cancel** and **Enter** are on both by
+**Esc**, **Return**, **Tab** (the words are `cap_word`'s, retold here after the
+2026-09-01 capitalization sweep renamed the act-named pair — the paragraph
+below owns the ruling). **Backspace** is on both layers (each layer's own row 2
+ends with one), and **Space**, **Esc** and **Return** are on both by
 construction — row 3 is one array shared by the two. **Shift** is the LETTER
 layer's alone: the symbol layer's row 2 opens with **Tab** in its place
 (2026-08-27, with File → Open project — the one key the letter layer has no
