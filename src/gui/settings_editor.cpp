@@ -4,6 +4,7 @@
 #include "render_output_naming.h"
 #include "device_config.h"
 #include "settings_io.h"
+#include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
@@ -325,7 +326,13 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // Parked zoom is display-scratch like the persisted
             // viewport/playhead fields -- clamp_viewport_start's level-clamp
             // is the sole owner of honoring it, at tab-in.
+            // AND THE PARKED BAND'S WHOLE-SONG STATE GOES WITH IT (2026-09-02,
+            // R-17g): a typed level is a zoom write like any other, and
+            // leaving the bit standing would have the tab-in clamp pin this
+            // very value back to the ceiling (the inventory of the four clears
+            // is at ViewState::whole_song_visible).
             band.zoom_level = v;
+            band.whole_song_visible = false;
         }
         applied(); return true;
     }
@@ -612,6 +619,20 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
+    // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
+    // OLD map still stands — the subject of this commit's target-view re-land
+    // below, and the delete's own two lines in the warp family's shape (the
+    // contract at the head of warpmarkers_ops.cpp). The engine scale is a
+    // warp-map input, so a commit that moves it re-warps the target domain
+    // under a resting cursor; like the delete, this act leaves NO FOCUS to
+    // follow (the selection clears below), so the cursor's own instant is what
+    // has to survive the rewrite. active_domain_to_source_frame is the
+    // product's one inverse for a bare frame — the identity in source view,
+    // the memoized target map's inverse in target view — so this costs two
+    // compares off home and is read unconditionally.
+    const int64_t playhead_source_frame =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
@@ -663,14 +684,28 @@ void GuiSettingsEditor::commit() {
     // view so displayed == live at this command boundary. A non-scale engine key (provenance) leaves the plate
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
-    // NO RE-LAND, and none is possible: the map-change re-land that used to sit
-    // here (target view only, onto a surviving selection's focus, because the
-    // re-warp moved that focus's image out from under the cursor) died with the
-    // selection clear above — architect 2026-07-29. There is no lane and
-    // no focus after this commit, so the resting cursor is the whole playhead and
-    // it stays exactly where the user left it. The 'S' undo/redo restore's twin
-    // re-land died the same way (undo.cpp).
+    // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT (architect 2026-09-02, the
+    // four-tier review's R-17d, superseding the "NO RE-LAND, and none is
+    // possible" this site carried from 2026-07-29). That reading was the
+    // pre-2026-08-24 FOCUS argument: with the selection cleared above there is
+    // no focus whose image could be the subject, so the site concluded there
+    // was no subject at all. The DELETE had already answered it — it clears the
+    // selection too and re-lands the PLAYHEAD'S OWN MUSICAL INSTANT, captured
+    // in source frames before the rewrite (warpmarkers_ops.cpp) — and a whole-
+    // map rewrite is exactly the delete's class: keeping the cursor's NUMBER
+    // across it moves the cursor in the music, which is what the family's
+    // re-land exists to prevent, and left an edit-then-undo landing the cursor
+    // where neither the edit nor the undo put it. THROUGH THE RESEAT, never a
+    // movement owner: an image moving out from under a resting cursor is a
+    // TRANSLATION, so the trim region overlay must stand (the rule at
+    // clear_region_highlight, input_handler.h). Source view needs nothing —
+    // the identity domain, where the inverse above and this forward map are
+    // both identity and the write is the value the cursor already holds.
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        viewport.reseat_playhead_to(
+            source_frame_to_active_domain(app, audio, playhead_source_frame));
+    }
     // The trigger is unconditional by ruling — rationale recorded at
     // GuiTargetRender::trigger. Under the full-recipe key every engine-settings
     // commit moves the fingerprint, provenance (title/bpm/notes/url/cover)

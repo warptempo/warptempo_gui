@@ -3417,6 +3417,20 @@ void GuiInputHandler::run_history_revert() {
     std::vector<GuiPhaseResetMarker> phase_pre =
         phase ? app.phaseresetmarkers.markers()
               : std::vector<GuiPhaseResetMarker>{};
+
+    // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
+    // OLD map still stands — the subject of the target-view re-land at the
+    // tail (architect 2026-09-02, the four-tier review's R-17d), the delete's
+    // own two lines in the warp family's shape (the contract at the head of
+    // warpmarkers_ops.cpp). A WARP revert inserts, replaces and removes warp
+    // markers wholesale, which re-warps the target domain under a resting
+    // cursor; the act clears the selection below, so it keeps no focus whose
+    // image could be the subject and the cursor's own instant is what has to
+    // survive. Read unconditionally — the inverse is the identity in source
+    // view and two compares there — and used only on the warp arm below.
+    const int64_t playhead_source_frame =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+
     bool changed = false;
 
     // THE ACT'S COINCIDENCE MEMORY, one counter per frame: how many markers at
@@ -3589,6 +3603,24 @@ void GuiInputHandler::run_history_revert() {
         if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
         else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
+        // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
+        // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
+        // cursor's NUMBER was expressed in, and keeping that number would move
+        // the cursor in the music. THROUGH THE RESEAT and never a movement
+        // owner — an image moving out from under a resting cursor is a
+        // TRANSLATION, so the trim region overlay stands (the rule at
+        // clear_region_highlight, input_handler.h). THE PHASE ARM IS CARVED OUT
+        // BY THE MAP: phase resets are no warp-map input, so a phase revert
+        // moves no image and the cursor's number still names the same instant;
+        // a reseat there would only pay the inverse's rounding for nothing.
+        // No kick of its own: the map is memoized on the warp store's
+        // generation, so the forward translation below already reads the
+        // rewritten map, and the close below invalidates the window whole.
+        if (!phase && app.active_audio_view == 'T') {
+            viewport.reseat_playhead_to(
+                source_frame_to_active_domain(app, audio,
+                                              playhead_source_frame));
+        }
         target_render.trigger();
     }
 

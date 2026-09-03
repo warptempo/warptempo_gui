@@ -3547,7 +3547,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         // their ruled silences are untouched, and the head
         // unit's road (on_media_command -> synthesize_key) arrives as keys
         // and bypasses this line by construction.
-        if (!render_player_button_enabled(app, b.player_act)) return true;
+        if (!render_player_button_enabled(app, playback, b.player_act))
+            return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
             // plain act is HOME or END since 2026-08-31 — the main window's

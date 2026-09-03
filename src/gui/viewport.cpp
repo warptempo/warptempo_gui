@@ -233,25 +233,32 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 // outside the trim window.
 //
 // THE WRITE ALONE, WITH NO HIDE IN IT, and the callers who want it that way are
-// the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP —
-// seven, in two families:
+// the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
+// 2026-09-02 — NINE, in two families:
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
 //     the Up/Down tempo cent step (warpmarkers_ops.cpp) and, since 2026-08-25,
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
-//     warpmarkers_ops.cpp; and, since 2026-08-28, THE UNDO/REDO RESTORE
+//     warpmarkers_ops.cpp; since 2026-08-28, THE UNDO/REDO RESTORE
 //     (undo.cpp), whose settings-and-marker swap rebuilds the map under a
 //     STANDING view, before the restore flips the audio view onto the finished
-//     one. In five of the seven the focus does not change and the playhead does
-//     not leave it — the marker's IMAGE moved out from under the cursor and the
-//     cursor follows it into the new domain. That is the `t` flip's translation
-//     in another spelling, and a translation is not a movement. THE DELETE AND
-//     THE RESTORE ARE THE OTHER TWO AND THEIR SUBJECT DIFFERS: either can leave
-//     no focus at all (the delete clears the selection, and a restore whose
-//     touched set comes up empty clears it too), so what they follow into the
-//     new domain is the playhead's own musical instant, inverted to a source
-//     frame before the write.
+//     one; and since 2026-09-02 (the four-tier review's R-17d) THE TWO OTHER
+//     WHOLE-MAP REWRITES, which had kept the playhead's NUMBER where the family
+//     keeps its INSTANT — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
+//     engine scale is a warp-map input) and the `h` view's WARP REVERT
+//     (input_key_dispatch.cpp; its phase arm is carved out, phase resets being
+//     no map input). In five of the nine the focus does not change and the
+//     playhead does not leave it — the marker's IMAGE moved out from under the
+//     cursor and the cursor follows it into the new domain. That is the `t`
+//     flip's translation in another spelling, and a translation is not a
+//     movement. THE OTHER FOUR ARE THE WHOLE-STORE ACTS AND THEIR SUBJECT
+//     DIFFERS: the delete, the restore, the engine commit and the revert can
+//     each leave no focus at all (the delete, the engine commit and the revert
+//     clear the selection outright, and a restore whose touched set comes up
+//     empty clears it too), so what they follow into the new domain is the
+//     playhead's own musical instant, inverted to a source frame before the
+//     write.
 //   * THE SWEEP'S OWN PER-MOTION CARRY is NOT here and never was: it writes
 //     app.playhead_cursor_sample direct, because a keep-visible edge-align would
 //     scroll the viewport out from under a live gesture (input_pointer.cpp). The
@@ -429,6 +436,14 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
+    // A ZOOM WRITE THAT MOVES THE LEVEL LEAVES THE CEILING, so bare `0`'s
+    // whole-song state goes with it (ViewState::whole_song_visible, whose
+    // declaration owns the ruling and names all four clears). It runs BEFORE
+    // the clamp below, which pins the level to the ceiling while the bit
+    // stands — so this is what lets an explicit request through. `0`'s own
+    // zoom-out arm sets the bit after this applier returns.
+    active_view_state(app).whole_song_visible = false;
+
     app.zoom_level = new_zoom_level;
 
     // Split-playhead: during playback zoom tracks the audio under review
@@ -476,6 +491,11 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
     const bool   level_changed = (new_zoom_level != app.zoom_level);
     const int64_t old_vp       = app.viewport_start_sample;
+
+    // The whole-song state's clear, the appliers' shared rule (the inventory
+    // is at ViewState::whole_song_visible): a drag frame that moves the level
+    // has left the ceiling; a pure pan frame has not.
+    if (level_changed) active_view_state(app).whole_song_visible = false;
 
     app.zoom_level = new_zoom_level;
 
@@ -563,6 +583,12 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 
     const double  old_level = app.zoom_level;
     const int64_t old_start = app.viewport_start_sample;
+
+    // The whole-song state's clear, the appliers' shared rule (the inventory
+    // is at ViewState::whole_song_visible): a framing that moves the level has
+    // left the ceiling.
+    if (new_zoom_level != old_level)
+        active_view_state(app).whole_song_visible = false;
 
     // Set the level, then the start EXPLICITLY (the span's left edge, not a
     // playhead recenter), and funnel through the two clamp chokepoints.

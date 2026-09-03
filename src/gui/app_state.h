@@ -46,7 +46,11 @@ struct GuiTargetRender;
 // for zoom: `0` goes to full zoom-out and, pressed once already there, runs the
 // `c` command — at the level it stamped on the way out when its tab has one
 // (ViewState::zoom_recall_level, architect 2026-08-18), at the working zoom
-// when it does not — and `c` jumps to
+// when it does not. WHOLE-SONG-VISIBLE IS CARRIED AS A STATE since 2026-09-02
+// (ViewState::whole_song_visible): the ceiling moves with the window's width
+// and with the active domain's total, so the level alone could not say whether
+// `0` had been out and back, and while the state stands the level follows
+// whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
 // Tab family, which recenters on its stop, changes no zoom at all. Smaller
 // level = less file per window = more zoomed in. kMinZoom is
@@ -4100,6 +4104,38 @@ struct ViewState {
     // discontinuity in the view; it is not one now.
     std::optional<double> zoom_recall_level;
 
+    // IS THE WHOLE SONG VISIBLE — bare `0`'s own state, carried rather than
+    // recomputed from a number (architect 2026-09-02, the four-tier review's
+    // R-17g). The per-file zoom CEILING moves with the waveform's width and
+    // with the active domain's total, so "full zoom out" is not one level: a
+    // `0` in source view, then an S/T flip into the LONGER target domain,
+    // raised the ceiling out from under the level `0` had landed on, and the
+    // next `0` read itself as BELOW the ceiling — stamping that former ceiling
+    // over the magnification the user had actually been working at, so `0`
+    // `0` cycled between two ceilings instead of returning to it.
+    //
+    // ONE SETTER: run_overview_command's zoom-out arm, the same press that
+    // writes the stamp above (input_handler.cpp). WHILE IT STANDS THE LEVEL
+    // FOLLOWS THE CEILING — clamp_viewport_start, the one zoom/viewport
+    // chokepoint every geometry and domain change funnels through, re-derives
+    // the level from the live ceiling, so the S/T flip and the resize keep the
+    // picture the state names instead of leaving a stale number behind.
+    // FOUR CLEARS, and they are the zoom WRITES that leave the ceiling: the
+    // three appliers (Viewport::apply_zoom_change, apply_zoom_to_start and
+    // apply_strip_drag_zoom, each clearing exactly when the level it is
+    // assigning differs from the live one — which is what keeps the pin from
+    // fighting an explicit request, the clear running before their clamp call)
+    // and the settings editor's PARKED-band zoom write, a typed level for a
+    // tab that is not live. `0`'s own zoom-out arm sets the bit AFTER its
+    // applier has cleared it.
+    //
+    // SESSION SCRATCH, PER TAB, like the stamp above and read and written IN
+    // PLACE through active_view_state: absent from kSettingsOrder, never
+    // serialized, and needing no boundary sync in
+    // refresh_active_tab_view_from_app. A SOURCE LOAD DROPS IT with the rest
+    // of the band (both tabs are seeded from a fresh ViewState).
+    bool whole_song_visible = false;
+
     // Per-tab read-only lock. Toggled by bare `o`. IT PROTECTS THE AUTHORED
     // MUSICAL CONTENT — the two marker stores and the engine settings — AND
     // NOTHING ELSE (architect 2026-08-07): while true, the active tab admits a
@@ -4469,6 +4505,20 @@ struct AppState {
     // clear_audition_sequence therefore voids the cursor term at every write
     // that ends a standing act, which is the pin's re-engagement edge; the
     // reasoning is at that funnel.
+    //
+    // AND A RELAYOUT VOIDS IT (architect 2026-09-02, R-17f), for the same
+    // shape of reason one axis over: the four terms describe WHAT was
+    // centered, never the GEOMETRY it was centered in, so a window resize
+    // moves the waveform's width and its samples-per-pixel while every term
+    // still matches — and the resting hook, finding nothing due, left the
+    // playhead off-centre under a lit lamp until the next playhead or view
+    // change. GuiPaintHandler::on_resize voids the cursor term there.
+    //
+    // THREE VOIDS, ONE WRITER, re-grepped 2026-09-02: the derivation body
+    // Viewport::derive_centered_viewport writes all four terms and is their
+    // one writer; the voids write the CURSOR term alone to the -1 sentinel and
+    // are the source load (which drops the whole memory with the rest of the
+    // band), clear_audition_sequence's act-end edge, and the resize.
     int64_t centered_derived_cursor = -1;
     char    centered_derived_tab        = 0;
     char    centered_derived_audio_view = 0;
@@ -8210,6 +8260,26 @@ int render_player_highlight_act_row(const AppState& a);
 //   transport with no item and no usable highlight is the consumed no-op.
 //   (toggle_pause's frames < 2 belt is not mirrored: it is unreachable from
 //   a bound item, that arm's own record.)
+//   AND THE DEVICE IS A TERM OF EVERY ARM THAT SOUNDS (architect 2026-09-02,
+//   the four-tier review's R-17a, closing the asymmetry with the roster's own
+//   Play face): a device that NEVER CAME UP plays nothing on any road, so
+//   !playback.device_absent() joins the highlight's WAV arm and the whole
+//   transport tail — a paused transport RESUMES, an idle one with an item
+//   PLAYS — while the highlight's FOLDER arm keeps no term at all, open_row
+//   entering a listing without sounding anything, which is the
+//   truthful-buttons rule read exactly: a face greys iff the act would be a
+//   no-op, and going into a folder is not one. The fork is open_row's own,
+//   read without acting, so the face and the act are one decision. It is the
+//   never-came-up half alone, the same read space_launch_would_play and
+//   ab_audition_preflight_ok take (the contract is at
+//   GuiPlayback::device_absent), and NOT device_unavailable: the player's
+//   road reaches play(), which reopens a dead stream at its head, so a route
+//   that dropped mid-session is exactly what a press repairs and must not
+//   grey.
+//   THE HINT DOES NOT FORK ON THE DEVICE: render_player_button_hint names the
+//   ACT the press would run and never a reason, so a greyed Play goes on
+//   saying "Play (Space)" — the grey is the message, the roster's own shape
+//   for a device that is not there.
 //   (STOP had an arm of its own here — the no-item belt and R36's
 //   already-resting return — and it went with the button on 2026-09-01.)
 //   UP greys AT THE ROOT, which is `tmp/` itself — the act's own wall, read
@@ -8252,6 +8322,7 @@ int render_player_highlight_act_row(const AppState& a);
 // route_render_player_key consumes bare `o` and the Settings menu's opener
 // refuses — recorded rather than damaged.
 bool render_player_button_enabled(const AppState& a,
+                                  const GuiPlayback& playback,
                                   AppState::PlayerButtonAct act);
 
 // IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
@@ -9103,6 +9174,11 @@ inline bool tempo_cent_step_group_actionable(const AppState& a,
 // coincident-collapse member. Each of those is a fact about the marker's KIND
 // or its render identity rather than a wall its value rests on, each needs the
 // act's own resolution run, and each says so on a card the grey would swallow.
+// THE TOOLTIP'S MODIFIER LINE IS WHAT THAT COSTS, and it is paid at the line
+// rather than at the face (2026-09-02, R-17e): the target-view half of those
+// tails is magnitude-blind, so all three rungs card the same sentence, and the
+// Up / Down hint drops its ladder line there on that refusal's own owner
+// (tempo_cent_step_target_view_refusal). The face is untouched.
 // Defined in warpmarkers_ops.cpp beside both step arms.
 //
 // THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
@@ -9124,6 +9200,31 @@ inline bool tempo_cent_step_group_actionable(const AppState& a,
 bool tempo_cent_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           int64_t delta_cents);
+
+// WOULD A CENT STEP REFUSE ON THE FOCUS'S KIND IN TARGET VIEW — the sentence
+// it would card with, or nullptr (architect 2026-09-02, the four-tier
+// review's R-17e). It is the SINGLETON arm's target-view block lifted whole:
+// the two PAYLOAD refusals ("In target view only a marker that owns its tempo
+// can be stepped", for a pass or a label ref) and the COINCIDENT-COLLAPSE one
+// ("That marker shares its frame with another"), with source view, a GROUP
+// press and a stale focus all answering nullptr because none of them is this
+// refusal's business — the group arm's own refusals are the wall scan's, and
+// the belt says nothing by GuiOpRefusal's contract. Defined in
+// warpmarkers_ops.cpp beside the act.
+//
+// TWO READERS, and they are two because the CARD and the LINE must say the
+// same thing: GuiWarpMarkersOps::adjust_tempo_cents' target-view block, whose
+// refusal this IS, and the Up / Down buttons' MODIFIER LINE in the stateful
+// tooltip overload below, which drops where this answers non-null. That is
+// the truthful-tooltips rule applied to the one case the recorded
+// VALUE-SHAPED TAILS exception leaves lit: the face stays live and the key
+// cards, but the plain, the shifted and the ctrl press all card THIS same
+// sentence, so "Press Shift for a 3-step, Ctrl for 10." names three rungs
+// that do nothing different. It is deliberately NOT a term of
+// tempo_cent_step_direction_actionable: that predicate answers TRUE here on
+// purpose (the tails' record at its declaration), and this owner adds no face.
+const char* tempo_cent_step_target_view_refusal(const AppState& a,
+                                                const GuiAudio& audio);
 
 // IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
 // the playhead scanner is active, or the A/B audition sequence stands in any
@@ -9753,7 +9854,11 @@ inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
 // `at_ceiling` is true and `level` is what the `c` command is handed — the
 // tab's stamped recall clamped into the live window, spending as
 // kWorkingZoomLevel when nothing is stamped or the stamp cannot move the zoom
-// (the fallen-ceiling rule, argued at the act). TWO READERS:
+// (the fallen-ceiling rule, argued at the act). THE CEILING TEST READS THE
+// TAB'S WHOLE-SONG STATE FIRST since 2026-09-02 (ViewState::whole_song_visible
+// — R-17g), the number compare staying beside it for the ceilings this key
+// never produced (a short file that opens whole-song-visible, and any level
+// the clamp itself parks there). TWO READERS:
 // GuiInputHandler::run_overview_command (the act, which decides nothing of
 // its own past this) and the Full zoom out button's hint. Defined in
 // input_handler.cpp beside the act.
@@ -12627,6 +12732,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // The numbers are the ladder's (kArrowStepShift / kArrowStepCtrl,
         // gui_input.h) and this is the one place they are written as words;
         // a retune there is a retune here.
+        // THE STATEFUL OVERLOAD DROPS THIS LINE where every rung of the ladder
+        // refuses alike (2026-09-02, R-17e): Up / Down in target view on a
+        // pass, a ref or a coincident-collapse member, and Left / Right in the
+        // marker lane in T+W. Both arms read the acts' own owners; the
+        // reasoning is at those arms.
         case RedesignButton::TransportDown:
             return {"Down", "Press Shift for a 3-step, Ctrl for 10."};
         case RedesignButton::TransportUp:
@@ -12970,6 +13080,44 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {"Copy resolved value (J)", nullptr};
             break;
         }
+        // THE FOUR ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the
+        // ladder refuses alike (architect 2026-09-02, the four-tier review's
+        // R-17e): "Press Shift for a 3-step, Ctrl for 10." exists to say that
+        // a modified press does something DIFFERENT, and in the two states
+        // below the bare, the shifted and the ctrl press all raise the SAME
+        // card. Each arm reads the act's own owner and restates nothing; the
+        // word comes back from the constant table so the direction is spelled
+        // once.
+        //
+        // UP / DOWN: the target view's KIND refusal
+        // (tempo_cent_step_target_view_refusal — a pass, a label ref or a
+        // coincident-collapse member), which is magnitude-blind by
+        // construction. The BRACKET wall is deliberately not here: it is
+        // directional and magnitude-DEPENDENT — a member three cents from the
+        // max takes the bare step and refuses the ctrl one — and it GREYS the
+        // face on the bare rung anyway (tempo_cent_step_direction_actionable),
+        // so the line is owed for the twin. The GROUP arm is out for the same
+        // reason: its wall scan walls a superset as the step grows.
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportDown:
+            if (tempo_cent_step_target_view_refusal(a, audio))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
+        // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE
+        // through the home-view binding's own owner ("Markers are moved in
+        // source view", the dispatch's card) — the lane term first, because
+        // with no selection the same press is the waveform's playhead step and
+        // the binding says nothing about it. The pair's WALL is not here
+        // either: it is magnitude-INVARIANT (the proof is at
+        // horizontal_arrow_step_actionable), so a walled press greys the face
+        // for every rung and the ladder's line names nothing this test could
+        // add.
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportRight:
+            if (marker_selection_standing(a) &&
+                !active_column_authoring_allowed(a))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         default:
             break;
     }
@@ -13001,7 +13149,10 @@ inline RedesignTooltipText redesign_button_tooltip(
 // crossing in the P column, the jump with no eligible focus or no source,
 // the audition's shift over a standing sequence, the skips' ctrl form where
 // the two landings
-// coincide — the overload returns the one-line form, and it can return a
+// coincide, and since 2026-09-02 (R-17e) THE FOUR ARROWS' STEP LADDER where
+// every rung refuses alike (Up / Down on the target view's kind refusal,
+// Left / Right in the marker lane in T+W) — the overload returns the one-line
+// form, and it can return a
 // second line only on a button this walk has already bound to an admission,
 // since every overload arm either forwards the table's line or drops it.
 //

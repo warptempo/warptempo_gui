@@ -884,6 +884,26 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
     // tab) ViewState bands deliberately store zoom requests verbatim and are
     // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
+    //
+    // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
+    // 2026-09-02, R-17g; the field is ViewState::whole_song_visible, whose
+    // declaration carries the ruling, the one setter and the four clears).
+    // The per-file ceiling moves with the waveform's width and with the active
+    // domain's total, so a resize or an S/T flip into the LONGER domain leaves
+    // a level that WAS the ceiling sitting under the new one. While the active
+    // tab's bit stands, re-derive from the live ceiling here — this function
+    // being the one chokepoint every such change already funnels through — so
+    // the picture stays what bare `0` named. The zoom WRITERS clear the bit
+    // before they reach this call, so an explicit request is never fought;
+    // the live-frames guard is clamp_zoom_level's own no-op branch made
+    // explicit, so a load mid-assignment is untouched.
+    if (active_view_state(a).whole_song_visible) {
+        const int64_t live_total = live_total_frames(a, audio);
+        if (live_total > 0) {
+            a.zoom_level = effective_max_zoom_level(
+                waveform_area(a).w, live_total, audio.sample_rate());
+        }
+    }
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
 
     const int64_t visible = samples_visible(a, audio);
@@ -2769,6 +2789,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // play having left that list on 2026-09-01, its plays deriving
             // nothing to stamp and its end coming due through the memory's
             // own void instead (clear_audition_sequence).
+            // A RELAYOUT IS DUE THROUGH THAT SAME VOID since 2026-09-02
+            // (R-17f): the four terms say what was centered and never the
+            // geometry it was centered in, so a resize matches every one of
+            // them while the width and the samples-per-pixel have moved —
+            // GuiPaintHandler::on_resize voids the cursor term, and the next
+            // frame re-derives here.
             // The memory is written by the derivation body, not here.
             // PAUSED while a pointer gesture or a finger is live, the follow
             // chase's own aiming rule below: a former carrying the playhead

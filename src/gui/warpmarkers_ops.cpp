@@ -47,6 +47,13 @@
 //      clear_region_highlight, input_handler.h). The three sites that keep a
 //      focus re-land on ITS post-change image; the delete keeps none and
 //      re-lands the playhead's own musical instant instead (its site says how).
+//      THE DELETE'S FORM IS THE WHOLE-MAP REWRITE'S, and it is not this
+//      cluster's alone: the SETTINGS ENGINE COMMIT (settings_editor.cpp) and
+//      the `h` view's WARP REVERT (input_key_dispatch.cpp) took the same two
+//      lines on 2026-09-02 (the four-tier review's R-17d) — capture the
+//      instant before the rewrite, re-land after it — each site arguing its
+//      own subject. The reseat's caller inventory is one owner,
+//      Viewport::reseat_playhead_to's definition (viewport.cpp).
 //   3. target_render.trigger(), unchanged and view-independent.
 // SOURCE VIEW NEEDS NOTHING: it is the identity domain, where no image moves
 // at all — exactly the cent step's own split, and the cent step's target-view
@@ -608,36 +615,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // A stale focus is a belt against the selection layer's own
         // invariant, so it says nothing (GuiOpRefusal's contract).
         if (f < 0 || f >= static_cast<int>(mv.size())) return std::nullopt;
-        // THE TWO PAYLOAD REFUSALS SAY SO SINCE 2026-08-30, in one sentence
-        // that names the VIEW as well as the marker: in SOURCE view this very
-        // marker would be stepped (the freeze converts it), so a card that
-        // said only "it owns no tempo" would be false half the time.
-        if (mv[f].tempo_inherits || !mv[f].label_ref.empty())
-            return "In target view only a marker that owns its tempo can be "
-                   "stepped";
-        // A coincident-collapsed owner refuses too (architect 2026-07-22): a
-        // coincident group is treated as ONE marker in target view, and its
-        // members' authored tempos are render-inert — the resolver replaces
-        // every exact-frame group of 2+ effectively-enabled markers with one
-        // synthetic plain 1.00 owner. The stack is fixed at the source in warp
-        // (source) view, never adjusted from target view. Reuse the
-        // normalization-red set: it reddens (a) label-ref fallbacks, (b) passes
-        // from a ref, and (c) coincident-collapse members — the two payload
-        // checks just above have already rejected ref and pass, so for the
-        // payload-OWNER that remains, red-set membership is EXACTLY the
-        // coincident-collapse condition (the same argument the GROUP step's wall
-        // scan makes — the two cent-step arms are the red set's two consumers here
-        // since the tempo-drag predecessor walk was deleted). Before any
-        // mutation — no freeze, no undo, no dirty, the shape of the ref/pass
-        // refusals above, and carded like them since 2026-08-30.
-        const std::set<int>& red = warp_red_flag_set_cached(
-            app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames())).red;
-        // The coincident-collapse refusal SAYS SO SINCE 2026-08-30: the stack
-        // renders as one synthetic 1.00 owner, so this marker's authored
-        // tempo is render-inert and the step would be a lie.
-        if (red.count(f))
-            return "That marker shares its frame with another";
+        // THE KIND REFUSALS, THROUGH THEIR ONE OWNER since 2026-09-02 (the
+        // four-tier review's R-17e): both sentences and both tests live at
+        // tempo_cent_step_target_view_refusal below, so the CARD this press
+        // raises and the Up / Down tooltip's dropped modifier line read one
+        // decision. Before any mutation — no freeze, no undo, no dirty.
+        if (const char* refusal =
+                tempo_cent_step_target_view_refusal(app, audio))
+            return refusal;
     }
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
@@ -895,6 +880,46 @@ TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
     }
     return survivors > 0 ? TempoCentStepGroupVerdict::Steps
                          : TempoCentStepGroupVerdict::Empty;
+}
+
+// THE TARGET VIEW'S KIND REFUSAL — the contract and the readers are at the
+// declaration (app_state.h). The terms are the act's own, in the act's own
+// order: source view and a GROUP press are not this refusal's business, the
+// stale-focus belt says nothing, then the two PAYLOAD refusals and then the
+// coincident-collapse one.
+//
+// THE TWO PAYLOAD SENTENCES NAME THE VIEW as well as the marker (2026-08-30):
+// in SOURCE view this very marker would be stepped (the freeze converts it),
+// so a card that said only "it owns no tempo" would be false half the time.
+//
+// THE COLLAPSE REFUSAL (architect 2026-07-22): a coincident group is treated
+// as ONE marker in target view, and its members' authored tempos are
+// render-inert — the resolver replaces every exact-frame group of 2+
+// effectively-enabled markers with one synthetic plain 1.00 owner. The stack
+// is fixed at the source in warp (source) view, never adjusted from target
+// view. It reuses the normalization-red set, which reddens (a) label-ref
+// fallbacks, (b) passes from a ref, and (c) coincident-collapse members — the
+// two payload checks just above have already rejected ref and pass, so for the
+// payload-OWNER that remains, red-set membership is EXACTLY the
+// coincident-collapse condition (the same argument the GROUP step's wall scan
+// makes — the two cent-step arms are the red set's two consumers here since
+// the tempo-drag predecessor walk was deleted).
+const char* tempo_cent_step_target_view_refusal(const AppState& a,
+                                                const GuiAudio& audio) {
+    if (a.active_audio_view != 'T') return nullptr;
+    if (a.selected_markers.size() >= 2) return nullptr;
+    const auto& mv = a.warpmarkers.markers();
+    const int   f  = a.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv.size())) return nullptr;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
+    if (m.tempo_inherits || !m.label_ref.empty())
+        return "In target view only a marker that owns its tempo can be "
+               "stepped";
+    const std::set<int>& red = warp_red_flag_set_cached(
+        a, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).red;
+    return red.count(f) ? "That marker shares its frame with another"
+                        : nullptr;
 }
 
 // The DIRECTIONAL half of the Up / Down face, forking exactly where

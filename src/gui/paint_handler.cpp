@@ -6324,7 +6324,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.player_act = act;
             b.glyph      = true;
             b.lit        = lit;
-            b.enabled    = render_player_button_enabled(app, act);
+            b.enabled    = render_player_button_enabled(app, playback, act);
             b.icon       = icon;
             b.tooltip    = render_player_button_hint(act, hint);
             b.tooltip2   = render_player_button_shift_hint(act, hint);
@@ -8280,6 +8280,21 @@ void GuiPaintHandler::on_resize(int w, int h) {
     app.width  = w;
     app.height = h;
     if (app.loading || audio.total_frames() <= 0) return;
+
+    // A RELAYOUT VOIDS THE CENTERED DERIVATION'S CURSOR TERM (architect
+    // 2026-09-02, the four-tier review's R-17f). The memory records what the
+    // last derivation was made against — the cursor, the tab, the audio view
+    // and the subject — and NOT the geometry it centered in, so a resize under
+    // a lit lamp leaves all four terms matching while the waveform's width and
+    // the samples-per-pixel under it have both moved: the resting hook then
+    // finds nothing due and the playhead sits off-centre until the next
+    // playhead or view change. Voiding the CURSOR term alone — -1, the load's
+    // own "no derivation stands" sentinel and never a real cursor value — is
+    // the same one-line edge clear_audition_sequence makes at the act's end,
+    // and it makes the next engaged pre-paint due, which re-derives on the
+    // resting cursor in the new geometry. Unconditional: the hook reads the
+    // pin itself, so with the lamp off this writes a sentinel nothing consults.
+    app.centered_derived_cursor = -1;
 
     // A zoom level valid at the old width may exceed the per-file effective
     // ceiling at the new width. The level ceiling and the viewport clamp both

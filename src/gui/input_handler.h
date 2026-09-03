@@ -2475,7 +2475,12 @@ private:
     // fell under it) — so `0` twice is overview then back to the magnification it
     // was pressed at (architect 2026-08-18), and overview then the working zoom
     // on a tab that never stamped. THIS FUNCTION IS THE STAMP'S ONE WRITER (the
-    // field, app_state.h). The FIRST arm is a
+    // field, app_state.h) AND, SINCE 2026-09-02, THE ONE SETTER OF THE TAB'S
+    // WHOLE-SONG STATE (ViewState::whole_song_visible, R-17g): the zoom-out arm
+    // raises it beside the stamp, the clamp chokepoint then keeps the level on
+    // whatever the live ceiling becomes across a resize or an S/T flip, and the
+    // already-full-out fork reads that state rather than a number that a moved
+    // ceiling had made false. The FIRST arm is a
     // PURE VIEWPORT MOVE (architect 2026-07-30): it writes neither the selection
     // nor the region nor the playhead; the second carries `c`'s regime, stated
     // at that command. The rationale is at the definition.

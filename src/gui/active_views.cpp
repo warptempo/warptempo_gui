@@ -30,7 +30,8 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
     // live-mirror field means updating this push, that pull, and ViewState.
     // NOT EVERY ViewState MEMBER IS MIRRORED and the absent ones are not
-    // omissions: read_only and bare `0`'s zoom_recall_level are read and written
+    // omissions: read_only and bare `0`'s TWO records — zoom_recall_level and,
+    // since 2026-09-02, whole_song_visible — are read and written
     // IN PLACE through active_view_state(app), so they need no boundary sync and
     // must not be given one.
     t.trim                = app.trim;

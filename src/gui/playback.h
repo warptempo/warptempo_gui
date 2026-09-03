@@ -346,9 +346,12 @@ public:
     // identical to device_unavailable there (this backend has no latch).
     // AAudio: `!impl_ || !impl_->device_ready` — the `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
-    // Readers: the two PLAY-face predicates space_launch_would_play and
-    // ab_audition_preflight_ok; the render player's modal Play face is its
-    // intended third reader once that face gains a device term (R-17a).
+    // THREE READERS, re-grepped 2026-09-02: the two PLAY-face predicates
+    // space_launch_would_play and ab_audition_preflight_ok, and — since the
+    // four-tier review's R-17a landed that day — the render player's modal
+    // Play/Pause face, whose arm in render_player_button_enabled takes this
+    // as its LEADING term (the player's own road reaches play(), which
+    // reopens, so the latch is exactly what a press repairs there too).
     // Main thread only; a pure read.
     bool    device_absent() const;
 

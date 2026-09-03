@@ -2446,7 +2446,16 @@ OverviewCommandTarget overview_command_target(const AppState& app,
     const double full_out = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio),
         audio.sample_rate());
-    t.at_ceiling = app.zoom_level >= full_out;
+    // THE CEILING IS A STATE, NOT ONLY A NUMBER (architect 2026-09-02, R-17g):
+    // the tab's whole-song bit answers first, so a `0` that landed on the
+    // ceiling is still AT it after a resize or an S/T flip has moved that
+    // ceiling — the two events that used to make this compare read false and
+    // send the next press stamping a former ceiling over the magnification the
+    // user was working at. The number compare stays beside it for the ceilings
+    // this key never produced: a short file that OPENS whole-song-visible, and
+    // any level the clamp itself has parked there.
+    t.at_ceiling = active_view_state(app).whole_song_visible ||
+                   app.zoom_level >= full_out;
     if (!t.at_ceiling) {
         t.level = full_out;
         return t;
@@ -2472,7 +2481,8 @@ void GuiInputHandler::run_overview_command() {
     // fork between the live `c` and the history mode's own lives inside
     // run_center_command, its one owner.
     //
-    // AND `0` REMEMBERS WHERE IT CAME FROM (architect 2026-08-18): the zoom-out
+    // AND `0` REMEMBERS TWO THINGS. WHERE IT CAME FROM (architect 2026-08-18):
+    // the zoom-out
     // arm STAMPS the level it is leaving into the active tab's
     // zoom_recall_level, and the already-full-out arm spends it — the same `c`
     // command with the stamped level substituted for the working zoom, and the
@@ -2531,6 +2541,20 @@ void GuiInputHandler::run_overview_command() {
     // `>=` rather than `==`, matching Viewport::zoom_out's own ceiling test: the
     // clamp chokepoint keeps the live level at or under the ceiling, and a level
     // resting exactly on it is what "already full out" means either way.
+    // AND THAT IT IS OUT (architect 2026-09-02, R-17g): the same arm raises the
+    // tab's WHOLE-SONG STATE (ViewState::whole_song_visible), which the fork
+    // above reads ahead of the number. The number alone could not carry the
+    // trip, because the ceiling is not one level — it moves with the waveform's
+    // width and with the active domain's total, so a `0` in source view
+    // followed by an S/T flip into the LONGER target domain left the level
+    // BELOW the new ceiling, and the next `0` read itself as the zoom-out arm
+    // and stamped that former ceiling over the magnification the user was
+    // actually working at: `0` `0` then cycled between two ceilings instead of
+    // returning. While the state stands, clamp_viewport_start re-derives the
+    // level from the live ceiling, so the flip and the resize carry the picture
+    // the state names; every zoom write that moves the level clears it (the
+    // four clears are inventoried at the field).
+    //
     // THE FORK AND THE RESOLVE ARE ONE OWNER since 2026-09-01
     // (overview_command_target above), which the Full zoom out button's hint
     // reads too, so the word it says is the level this arm will hand to `c`.
@@ -2567,6 +2591,16 @@ void GuiInputHandler::run_overview_command() {
         // name full zoom-out and make the return trip a no-op.
         active_view_state(app).zoom_recall_level = app.zoom_level;
         viewport.apply_zoom_change(target.level);
+        // AND THE WHOLE-SONG STATE IS RAISED, after the applier (which clears
+        // it, as every zoom write that moves the level does — the inventory is
+        // at ViewState::whole_song_visible). THIS ARM IS ITS ONE SETTER: the
+        // state says "the whole song is visible because `0` put it there", and
+        // while it stands the one clamp chokepoint re-derives the level from
+        // whatever the live ceiling has become, so a resize or an S/T flip
+        // carries the picture instead of stranding a number under a new
+        // ceiling. The stamp above and this bit are one press's two records —
+        // where the trip came FROM, and that it is out.
+        active_view_state(app).whole_song_visible = true;
     }
 }
 

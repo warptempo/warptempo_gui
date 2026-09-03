@@ -323,6 +323,7 @@ bool render_player_last_in_item_folder_actionable(const AppState& a) {
 // and the reader inventory are at the declaration (app_state.h). Each arm
 // below is the act's own leading refusals in the act's own order.
 bool render_player_button_enabled(const AppState& a,
+                                  const GuiPlayback& playback,
                                   AppState::PlayerButtonAct act) {
     const AppState::RenderPlayer& rp = a.render_player;
     using Transport = AppState::RenderPlayer::Transport;
@@ -351,13 +352,31 @@ bool render_player_button_enabled(const AppState& a,
             if (rp.transport == Transport::Live) return true;
             return rp.transport == Transport::Paused &&
                    rp.resume_frame != rp.frames;
-        case AppState::PlayerButtonAct::PlayPause:
+        case AppState::PlayerButtonAct::PlayPause: {
             // THE HIGHLIGHT'S ARM FIRST, the act's own order since R6: a row
             // to open is an act in every transport state, so the button is
             // live even where the transport alone would have nothing to do.
-            if (render_player_highlight_act_row(a) >= 0) return true;
+            // AND THE DEVICE TERM SITS INSIDE IT, on the row's own KIND —
+            // open_row's fork read without acting (2026-09-02, R-17a): a
+            // FOLDER row ENTERS a listing and sounds nothing, so it needs no
+            // device and stays lit; the other arm is a play and takes the
+            // term. The reasoning is at the declaration.
+            if (const int row = render_player_highlight_act_row(a); row >= 0) {
+                const Row& r = a.folder_overlay.rows[static_cast<size_t>(row)];
+                if (r.kind == Row::Kind::Folder) return true;
+                return !playback.device_absent();
+            }
+            // THE TRANSPORT TAIL, EVERY ACT OF WHICH SOUNDS
+            // (transport_toggle_act: a live transport pauses, a paused one
+            // RESUMES, an idle one with an item PLAYS it) — so the
+            // never-came-up device greys the whole tail. It is not
+            // device_unavailable: the player's road reaches play(), which
+            // reopens a dead stream at its head, so a route that dropped
+            // mid-session is exactly what a press repairs.
+            if (playback.device_absent()) return false;
             if (rp.transport != Transport::Idle) return true;
             return !rp.item.empty();
+        }
         case AppState::PlayerButtonAct::Up:
             // THE ACT'S OWN WALL, through its one owner (2026-09-01): the
             // root is `tmp/` and there is nothing above it. No twin — the
