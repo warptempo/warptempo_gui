@@ -100,8 +100,8 @@ bool extract_iter_bracket(std::string& payload,
 // Flag-editor cluster: the top-strip flag editor's enter / commit / exit
 // paths, the iter grammar, and the bpm-bracket editor session, reaching
 // undo and viewport through the struct's reference members. The popup
-// eligibility and flag-text helpers (iter_popup_eligible_marker,
-// bpm_popup_eligible_marker, ...) live in
+// eligibility and flag-text helpers (iter_bracket_carrier,
+// iter_popup_eligible_marker, bpm_popup_eligible_marker, ...) live in
 // warpmarkers.h alongside effective_disabled, so this TU sees them via
 // #include "warpmarkers.h".
 
@@ -228,16 +228,24 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
     if (idx >= static_cast<int>(mv.size())) return;
     // In iteration mode the whole-flag editor opens over the
     // bracketed flag (seed = the iteration-aware composed text) and runs
-    // the widened grammar. Eligibility mirrors the display gate so pass /
-    // label_ref flags edit as plain canonical lines even with iter on.
+    // the widened grammar. THE GRAMMAR FOLLOWS THE CARRIER, NOT THE SWEEP
+    // (architect 2026-09-02, R-12): a pass / label_ref flag edits as a plain
+    // canonical line even with iter on (no bracket to carry), while a DISABLED
+    // owner edits its DORMANT bracket — the seed is composed in the Authored
+    // mode, so the bracket the flag does not paint is in the text, and a plain
+    // Return commits it back unchanged (the widened grammar writes the bounds
+    // from the text, so a seed without them would clear a bracket the user
+    // never touched). Authoring survives disablement as the measure's does;
+    // only the flag and the sweep are blind to the disabled owner.
     const bool iter_on =
         app.iteration_mode_enabled &&
         app.active_markers_view == 'W' &&
-        iter_popup_eligible_marker(mv[idx]);
+        iter_bracket_carrier(mv[idx]);
     this->enter_text_edit(
         idx,
         text_editor::Kind::FlagPayload,
-        flag_text_iter(mv, idx, iter_on),
+        flag_text_iter(mv, idx, iter_on ? IterBracketSplice::Authored
+                                        : IterBracketSplice::None),
         /*iter_grammar=*/iter_on);
 }
 
@@ -524,10 +532,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // deliberate: typed brackets gate loud, later base motion clamps silent —
     // and between them no sweep cell can leave the tempo bracket, so nothing
     // rides on a downstream backstop. The cleared/blank bracket (nullopt
-    // bounds) and any marker the sweep would skip (a pass or label_ref,
-    // ineligible per iter_popup_eligible_marker — the base the sweep reads
-    // is tempo_cents of an owning numeric marker) carry no cells, so both
-    // skip the check.
+    // bounds) and any marker that carries no bracket (a pass or label_ref —
+    // no carrier per iter_bracket_carrier; the base the sweep reads is
+    // tempo_cents of an owning numeric marker) carry no cells, so both skip
+    // the check. A DISABLED owner does NOT skip it: its bracket is dormant,
+    // not absent, and what returns to the sweep on re-enable must already be
+    // in-bracket, so the gate reads the carrier and not the sweep's own
+    // eligibility.
     if (iter_grammar && iter_lo.has_value() && iter_hi.has_value() &&
         !parsed.tempo_inherits && parsed.label_ref.empty()) {
         const int64_t base_cents = parsed.tempo_cents;
@@ -623,19 +634,22 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // generation, so the flag cache repaints the bracket regardless of
     // whether the canonical fields moved.
     //
-    // Invariant: an INELIGIBLE committed marker never keeps a bracket. A
-    // bracket exists only while iteration mode paints it and its owner is
-    // iter-eligible; a commit that makes the marker ineligible (a pass, or
-    // a &ref) clears both bounds unconditionally — regardless of
-    // iter_grammar, so a mode-off pass conversion of an undo-restored
-    // bracketed owner also drops the fields. This mirrors Ctrl+N's
-    // owner->pass / ref->pass eligibility-loss clears; undo is the sole
-    // sanctioned route that resurrects a cleared bracket.
+    // Invariant: a committed NON-CARRIER never keeps a bracket. A bracket
+    // exists only on a carrier (iter_bracket_carrier, warpmarkers.h); a
+    // commit that makes the marker a non-carrier (a pass, or a &ref) clears
+    // both bounds unconditionally — regardless of iter_grammar, so a mode-off
+    // pass conversion of an undo-restored bracketed owner also drops the
+    // fields. This mirrors Ctrl+N's owner->pass / ref->pass carrier-loss
+    // clears; undo is the sole sanctioned route that resurrects a cleared
+    // bracket. A commit that DISABLES the owner (the `#`) is no loss: the
+    // bracket stays on it dormant — off the flag and out of the sweep until
+    // re-enabled, still in this editor — which is why the test below is the
+    // carrier and not the sweep's eligibility (R-12, 2026-09-02).
     if (iter_grammar) {
         m.iter_start_cents = iter_lo;
         m.iter_end_cents   = iter_hi;
     }
-    if (!iter_popup_eligible_marker(m)) {
+    if (!iter_bracket_carrier(m)) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }

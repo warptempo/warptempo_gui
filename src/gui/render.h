@@ -2911,8 +2911,9 @@ struct MarkerStem {
 //              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
 //              CALM kMarkerFlagFill either way (the architect's explicit rule).
 //
-// `iteration_on` reaches the one composer (flag_text_iter) so the flag shows
-// exactly what the editor would seed. `cr`'s scaled font is set by this
+// `iteration_on` reaches the one composer (flag_text_iter, in its Swept mode)
+// so the flag shows exactly what the editor would seed — less a disabled
+// owner's dormant bracket, which the editor alone shows. `cr`'s scaled font is set by this
 // function (the redesign sans face at redesign_font_size_px) and restored.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
@@ -3238,13 +3239,31 @@ void render_history_diff_flags(cairo_t* cr,
                                std::vector<MarkerStem>* out_stems,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
-// Iteration-aware flag text composer. Returns the
-// plain flag text when `iteration_on` is false or the marker is iter-
-// ineligible; otherwise splices the inline `+[lo, hi]` bracket after
-// the tempo. The single canonical composer for warp flag text: the FLAG ITSELF
-// paints it (row 5, its LABEL truncated at the nine-glyph budget with the
-// bracket exempt) and the flag editor seeds from it, so what a marker shows and
-// what its editor opens with are one string by construction.
+// WHICH BRACKET THE COMPOSER SPLICES (architect 2026-09-02, the four-tier
+// review's R-12): the flag paints the bracket THE SWEEP READS and the editor
+// seeds the bracket THE MARKER CARRIES, and the two answers differ on exactly
+// one marker — an effectively disabled owner, whose bracket is DORMANT: kept
+// on the marker, absent from its flag and from the sweep's cell product,
+// present in its editor so it can be authored and seen while the marker is
+// disabled and returns whole when it is re-enabled. The two predicates are the
+// eligibility pair in warpmarkers.h (iter_popup_eligible_marker /
+// iter_bracket_carrier); the composer asks them here so that no caller
+// spells the verdict.
+enum class IterBracketSplice {
+    None,      // iteration mode off (or the P column): the plain flag text
+    Swept,     // the flag and its measured width: iter_popup_eligible_marker
+    Authored,  // the flag editor's seed: iter_bracket_carrier
+};
+
+// Iteration-aware flag text composer. Returns the plain flag text under
+// `IterBracketSplice::None` or when the marker fails the mode's predicate;
+// otherwise splices the inline `+[lo, hi]` bracket after the tempo. The single
+// canonical composer for warp flag text: the FLAG ITSELF paints it (row 5, its
+// LABEL truncated at the nine-glyph budget with the bracket exempt) and the
+// flag editor seeds from it, so what a marker shows and what its editor opens
+// with are one string by construction — save the dormant bracket of a
+// disabled owner, which the editor shows and the flag does not (the enum
+// above).
 //
 // THE OPTIONAL OUT-PAIR REPORTS THE BRACKET'S BYTE SPAN in the returned string
 // — `[*out_bracket_pos, *out_bracket_pos + *out_bracket_len)` — and is written
@@ -3256,7 +3275,7 @@ void render_history_diff_flags(cairo_t* cr,
 // otherwise produce today, but a search would be a second, weaker copy of the
 // composition rule. Callers wanting the plain string pass neither.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, bool iteration_on,
+                           int idx, IterBracketSplice splice,
                            size_t* out_bracket_pos = nullptr,
                            size_t* out_bracket_len = nullptr);
 

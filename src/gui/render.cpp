@@ -102,7 +102,7 @@ static inline double frame_to_paint_sample(
 // warp flag callers route through here so display, hit-rects, and the editor
 // seed stay in sync.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, bool iteration_on,
+                           int idx, IterBracketSplice splice,
                            size_t* out_bracket_pos,
                            size_t* out_bracket_len) {
     // "No bracket" is written FIRST and unconditionally, so every early return
@@ -111,12 +111,18 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
     if (out_bracket_len) *out_bracket_len = 0;
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
     const auto& m = markers[idx];
-    if (!iteration_on || !iter_popup_eligible_marker(m)) {
-        return flag_text(markers, idx);
+    // The mode names its predicate (the enum's contract, render.h): the flag
+    // shows what the sweep reads, the editor what the marker carries.
+    bool spliced = false;
+    switch (splice) {
+    case IterBracketSplice::None:     spliced = false; break;
+    case IterBracketSplice::Swept:    spliced = iter_popup_eligible_marker(markers, idx); break;
+    case IterBracketSplice::Authored: spliced = iter_bracket_carrier(m); break;
     }
-    // Eligible owning marker (tempo_inherits == false, no label_ref):
-    // tempo, then the bracket, then optional scale and label. Values print
-    // in the same serializer forms as flag_text.
+    if (!spliced) return flag_text(markers, idx);
+    // A carrier (tempo_inherits == false, no label_ref): tempo, then the
+    // bracket, then optional scale and label. Values print in the same
+    // serializer forms as flag_text.
     std::string text = format_tempo_cents(m.tempo_cents);
     const std::string bracket = format_iter_bracket_inline(m);
     if (out_bracket_pos) *out_bracket_pos = text.size();
@@ -1534,11 +1540,15 @@ void render_flags(cairo_t* cr,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // The ONE composer the flag paint, the editor seed and the copy payload
-        // all share, so a flag shows exactly what its editor would open with.
+        // all share, so a flag shows exactly what its editor would open with —
+        // in its Swept mode, so a disabled owner's dormant bracket stays off
+        // the flag as it stays out of the sweep (IterBracketSplice, render.h).
         // The bracket's byte span rides along because the budget must skip it.
         [&](int i) {
             FlagLabelText lt;
-            lt.text = flag_text_iter(markers, i, iteration_on,
+            lt.text = flag_text_iter(markers, i,
+                                     iteration_on ? IterBracketSplice::Swept
+                                                  : IterBracketSplice::None,
                                      &lt.exempt_pos, &lt.exempt_len);
             return lt;
         },
@@ -2005,7 +2015,10 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
     if (phase) {
         lt.text = std::string(kPhaseResetLaneToken);
     } else {
-        lt.text = flag_text_iter(app.warpmarkers.markers(), idx, iteration_on,
+        // Swept, the flag's own mode: this is the PAINTED flag's width.
+        lt.text = flag_text_iter(app.warpmarkers.markers(), idx,
+                                 iteration_on ? IterBracketSplice::Swept
+                                              : IterBracketSplice::None,
                                  &lt.exempt_pos, &lt.exempt_len);
     }
     const text_shape::ShapedRun run =

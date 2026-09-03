@@ -810,53 +810,75 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 }
 
 // Group tempo step (architect 2026-07-23): 2+ selected markers each step their
-// OWN tempo by one cent, ALL-OR-NOTHING. An ineligible member is "the wall being
-// hit before it starts to move" — if ANY selected marker is in the WALL SET the
-// whole press refuses, on its own sentence since 2026-08-30 (no partial
-// stepping, no per-member pinning). THIS
-// IS GROUP RIGIDITY, NOT A WALL POLICY (the unified wall policy, architect
-// 2026-07-30, is stated once at the head of position_nudge.h and rules that
-// SINGLETON steps clamp): per-member clamping would pool the walled members at the
-// bracket edge while the rest kept stepping, deforming the group's relative
-// values, which is precisely what a group edit must not do — the same reason the
-// deleted per-member group nudge refused the whole press. (The comment here used
-// to cite the phase-reset nudge's whole-press refusal as its precedent; that
-// gesture CLAMPS as of the unified policy, so the justification stands on group
-// rigidity alone.) The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits),
-// a ref (non-empty label_ref) — the singleton step's payload predicates — a
-// DISABLED marker (its tempo is render-filtered, so a write would be inaudible),
-// a coincident-collapsed marker (warp_red_flag_set_cached — the resolver
-// replaces the stack with one 1.00 owner, so the write is render-inert), or a
-// marker that cannot take the WHOLE step without leaving the tempo bracket
-// (the edge compare's generalization, R12 — at the bare ±1 the two are the
-// same test). Disabled and
-// collapsed are render-inert regardless of the authoring view, so they wall in
-// SOURCE view too — a DELIBERATE asymmetry with the SINGLETON step, whose
-// collapsed refusal is target-view-only and whose source-view pass/ref->owner
-// FREEZE CONVERSION stays a singleton-only act (a bulk payload conversion from
-// one keystroke is refused by design). No freeze conversion here: every stepped
-// member is already an owner, so a plain integer add is the whole mutation.
+// OWN tempo by one cent, ALL-OR-NOTHING over the members the act SEES. An
+// ineligible member is "the wall being hit before it starts to move" — if ANY
+// surviving selected marker is in the WALL SET the whole press refuses, on
+// its own sentence since 2026-08-30 (no partial stepping, no per-member
+// pinning). THIS IS GROUP RIGIDITY, NOT A WALL POLICY (the unified wall
+// policy, architect 2026-07-30, is stated once at the head of position_nudge.h
+// and rules that SINGLETON steps clamp): per-member clamping would pool the
+// walled members at the bracket edge while the rest kept stepping, deforming
+// the group's relative values, which is precisely what a group edit must not
+// do — the same reason the deleted per-member group nudge refused the whole
+// press. (The comment here used to cite the phase-reset nudge's whole-press
+// refusal as its precedent; that gesture CLAMPS as of the unified policy, so
+// the justification stands on group rigidity alone.)
+// A DISABLED MEMBER IS INVISIBLE, NOT WALLED (architect 2026-09-02, the
+// four-tier review's R-12 — the `m` BPM sweep's own rule, "a disabled marker is
+// invisible to the act", asked of this step): an effectively disabled member
+// (effective_disabled, warpmarkers.h — its own bit, or a reference whose
+// definition is disabled) is SKIPPED by both loops below, the scan's and the
+// mutation's — not counted, not stepped, every field untouched, so a marker
+// re-enabled later carries the tempo it had when it was disabled — and the
+// rigidity applies to the SURVIVORS: they step together or not at all. Until
+// that day a disabled member walled the press on the argument that its
+// render-filtered tempo made the write inaudible; the same fact is why it is
+// now passed over — an inaudible write neither deforms the group nor serves
+// it, and one disabled flag inside a selection should not veto the rest. A
+// selection whose EVERY member is invisible is the EMPTY step: it refuses on
+// the singleton's own empty-selection sentence — the step wants an enabled
+// warp marker and has none — and greys the pair on the same verdict.
+// The wall set over the survivors (VIEW-INDEPENDENT, max strict): a pass
+// (tempo_inherits), a ref (non-empty label_ref) — the singleton step's payload
+// predicates — a coincident-collapsed marker (warp_red_flag_set_cached — the
+// resolver replaces the stack with one 1.00 owner, so the write is
+// render-inert; a disabled member is never a stack survivor, so it cannot be
+// collapsed-red either), or a marker that cannot take the WHOLE step without
+// leaving the tempo bracket (the edge compare's generalization, R12 — at the
+// bare ±1 the two are the same test). Collapse is render-inert regardless of
+// the authoring view, so it walls in SOURCE view too — a DELIBERATE asymmetry
+// with the SINGLETON step, whose collapsed refusal is target-view-only, which
+// steps a disabled singleton (the one marker asked for is the one stepped),
+// and whose source-view pass/ref->owner FREEZE CONVERSION stays a
+// singleton-only act (a bulk payload conversion from one keystroke is refused
+// by design). No freeze conversion here: every stepped member is already an
+// owner, so a plain integer add is the whole mutation.
 // THE WALL SCAN AS A CONST OWNER (architect 2026-08-31, R3): the act below is
 // the first reader and the Up / Down buttons' face is the second, through the
-// composed predicate under it. It is EXTRACTED rather than mirrored — the five
+// composed predicate under it. It is EXTRACTED rather than mirrored — the
 // terms are the group's own and a face may not restate them — and it mutates
 // nothing, which is what made the extraction necessary at all: the act's scan
 // used to sit inside a body that had already asked the coalesce verdict (a
 // call with a side effect on the undo stamp), so there was no callable form.
-// Declared in app_state.h beside the face that reads it; the wall set and its
-// GROUP RIGIDITY justification are at the act.
-bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
-                                      int64_t delta_cents) {
+// It answers a three-way VERDICT since R-12 (the act forks its sentence on
+// it; the face reads the boolean wrapper, app_state.h). Declared in
+// app_state.h beside the face that reads it; the wall set and its GROUP
+// RIGIDITY justification are at the act.
+TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
+                                                        const GuiAudio& audio,
+                                                        int64_t delta_cents) {
     const auto& mv = a.warpmarkers.markers();
     const int   n  = static_cast<int>(mv.size());
     const std::set<int>& red = warp_red_flag_set_cached(
         a, audio.sample_rate(), static_cast<long>(audio.total_frames())).red;
+    int survivors = 0;
     for (int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
+        if (effective_disabled(mv, idx)) continue;   // invisible to the act
+        ++survivors;
         const GuiWarpMarker& m = mv[idx];
-        if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
-            red.count(idx))
-            return false;
+        if (m.tempo_inherits || !m.label_ref.empty() || red.count(idx))
+            return TempoCentStepGroupVerdict::Walled;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
         // bracket edge" (2026-08-31, with the step ladder — R12): the group
         // arm ADDS delta_cents raw, so with the ten-cent chord a member three
@@ -869,9 +891,10 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         // behaviour is untouched.
         if (tempo_cent_step_landing(m.tempo_cents, delta_cents) !=
             m.tempo_cents + delta_cents)
-            return false;
+            return TempoCentStepGroupVerdict::Walled;
     }
-    return true;
+    return survivors > 0 ? TempoCentStepGroupVerdict::Steps
+                         : TempoCentStepGroupVerdict::Empty;
 }
 
 // The DIRECTIONAL half of the Up / Down face, forking exactly where
@@ -919,13 +942,24 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // the screen keeps its card even where its button greys — a group step
     // would have moved every selected flag's value, so it is not the
     // one-dimensional already-at-its-state refusal that went silent that day.
-    // The sentence is one for the whole wall set (a pass, a ref, a disabled
-    // marker, a coincident-collapse member, a marker at the bracket edge)
-    // because what the press needs to know is that the GROUP could not move as
-    // a group, not which member walled — naming the member would be a second
-    // act's worth of detail for a press that changed nothing.
-    if (!tempo_cent_step_group_actionable(app, audio, delta_cents))
+    // The sentence is one for the whole wall set (a pass, a ref, a
+    // coincident-collapse member, a marker at the bracket edge) because what
+    // the press needs to know is that the GROUP could not move as a group, not
+    // which member walled — naming the member would be a second act's worth
+    // of detail for a press that changed nothing. THE EMPTY STEP HAS THE
+    // SINGLETON'S SENTENCE (R-12, 2026-09-02): a selection whose every member
+    // is effectively disabled is invisible whole, and "the step wants an
+    // enabled warp marker and has none" is the empty-selection answer
+    // tempo_cent_step_actionable already gives — one sentence for the one
+    // fact, and the Up / Down pair greys on the same verdict.
+    switch (tempo_cent_step_group_verdict(app, audio, delta_cents)) {
+    case TempoCentStepGroupVerdict::Steps:
+        break;
+    case TempoCentStepGroupVerdict::Walled:
         return "One of the selected markers cannot take this tempo change";
+    case TempoCentStepGroupVerdict::Empty:
+        return "Select a warp marker to change its tempo";
+    }
     // THE COALESCE VERDICT, now past the one refusal this act has. It is
     // computed BEFORE the invalidate inside the call (the hybrid's order rule
     // at coalesce_gesture), and `merge` is consumed below; order-independent of
@@ -942,19 +976,25 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
     std::vector<GuiWarpMarker> pre_state = mv;
-    // Apply the press's own signed cent count to each selected member — ±1
-    // bare, ±3 shifted, ±10 with ctrl (plain integer arithmetic — the
-    // structural producer discipline). None is walled (checked above, and the
-    // scan asks whether the member can take the WHOLE step), so every
-    // add stays in-bracket and actually changes the value; positions untouched,
-    // so no reorder/remap. A member's iteration bracket is never CLEARED by a
-    // tempo change, but it RIDES the new base per member (the retroactive clamp,
-    // owner clamp_iter_bracket_to_tempo_bracket in warpmarkers.h): the group's
-    // rigidity is about the stepped VALUES, and each member's cells are its own,
-    // so clamping member by member deforms no group relationship.
+    // Apply the press's own signed cent count to each SURVIVING selected
+    // member — ±1 bare, ±3 shifted, ±10 with ctrl (plain integer arithmetic —
+    // the structural producer discipline). An effectively disabled member is
+    // skipped on the SAME call the scan skipped it on (effective_disabled —
+    // the store is unchanged between the two, so the two walks see one
+    // survivor set), every field untouched; none of the survivors is walled
+    // (checked above, and the scan asks whether the member can take the WHOLE
+    // step), so every add stays in-bracket and actually changes the value;
+    // positions untouched, so no reorder/remap. A member's iteration bracket
+    // is never CLEARED by a tempo change, but it RIDES the new base per member
+    // (the retroactive clamp, owner clamp_iter_bracket_to_tempo_bracket in
+    // warpmarkers.h): the group's rigidity is about the stepped VALUES, and
+    // each member's cells are its own, so clamping member by member deforms
+    // no group relationship. The undo entry's touched hints are the
+    // survivors alone — the skipped members changed nothing.
     std::vector<int> touched;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= n) continue;
+        if (effective_disabled(mv, idx)) continue;   // invisible to the act
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
         m->tempo_cents = m->tempo_cents + delta_cents;
@@ -962,7 +1002,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         touched.push_back(idx);
     }
     // Defensive (a fully-stale selection): a belt against an invariant the
-    // selection layer keeps, so it says nothing (GuiOpRefusal's contract).
+    // selection layer keeps, so it says nothing (GuiOpRefusal's contract). The
+    // all-invisible selection never reaches it — that is the Empty verdict,
+    // refused ahead of the coalesce stamp above.
     if (touched.empty()) return std::nullopt;
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped

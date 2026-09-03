@@ -21,9 +21,11 @@ struct GuiWarpMarker : WarpMarker {
     // serialized, lost on app close, authored in the Enter flag editor and
     // surfaced ON THE FLAG ITSELF since row 5 — the flags carry text now, and
     // flag_text_iter splices the `+[lo, hi]` bracket into the label exactly
-    // while iteration mode is on (the marker-text lane that used to show it,
-    // and its hover popup, are deleted). Signed tempo deltas
-    // in integer cents —
+    // while iteration mode is on and the owner is not effectively disabled
+    // (a disabled owner's bracket is DORMANT — kept, shown in its editor
+    // alone, invisible to the flag and the sweep until re-enabled; the
+    // eligibility pair below), the marker-text lane that used to show it and
+    // its hover popup being deleted. Signed tempo deltas in integer cents —
     // the same integer-cents domain the tempo itself lives in, so the
     // sweep's per-cell base + delta is plain integer addition. nullopt
     // means "blank" (the flag shows the zero-filled `+[+0.00,+0.00]` — the one
@@ -233,13 +235,49 @@ inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
     return out;
 }
 
-// Iteration mode: which markers CARRY the bracket. An owning marker
-// (tempo_inherits=false AND no label_ref) shows it spliced into its flag label
-// while iteration mode is on; pass markers and label_ref markers are excluded;
-// disabled status does not matter. (The name is the retired hover popup's — the
-// eligibility rule outlived the surface that first displayed it.)
-inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
+// Iteration mode: which markers CAN CARRY a bracket — the STRUCTURAL half of
+// the eligibility. An owning marker (tempo_inherits=false AND no label_ref)
+// has a base tempo for the sweep's per-cell delta to ride; a pass and a
+// label_ref marker have none, so neither ever carries a bracket: every route
+// that turns a carrier into a non-carrier clears both bounds (the flag
+// editor's commit, Ctrl+N's owner->pass and ref->pass conversions —
+// toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT IS NOT SUCH A LOSS
+// (architect 2026-09-02, the four-tier review's R-12 — "a disabled marker is
+// invisible to the act", the `m` BPM sweep's own rule asked of the iteration
+// sweep): a disabled owner keeps its bracket DORMANT, never cleared, so the
+// bracket returns to the flag and to the sweep the moment the marker is
+// re-enabled. THE READERS ARE THE AUTHORING SURFACES: the flag editor's
+// widened grammar and its seed (enter_top_flag_edit — the editor of a disabled
+// owner shows and edits the dormant bracket, since authoring survives
+// disablement exactly as the measure's and the flag's own does; the bracket is
+// still gated at its commit, so what returns on re-enable is in-bracket), its
+// commit's carrier-loss clear, and the retroactive clamp below.
+inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
+}
+
+// Iteration mode: which markers THE SWEEP READS — a carrier that is not
+// effectively disabled. The disabled verdict is asked of the ONE cascade owner
+// (effective_disabled above, the resolver's own keep mask) so the sweep can
+// never count a marker the render drops: for a carrier the cascade reduces to
+// the marker's own bit today (a label ref, the only marker the cascade
+// reaches, is no carrier), and it is asked through the vector/index form all
+// the same so that a change to the cascade lands here for free and no caller
+// can hand a bare marker and lose it — which is why this is the ONE spelling
+// and the single-marker form above carries a different name. THREE READERS,
+// and a disabled owner's bracket is dormant at all three: the sweep's
+// dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
+// plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
+// neither multiplies the cell count nor names a byte-identical cell — the
+// marker's tempo is render-filtered whatever value a cell wrote into it — and
+// the flag composer (flag_text_iter, render.cpp, its Swept mode) paints no
+// bracket on a disabled flag. (The name is the retired hover popup's — the
+// eligibility rule outlived the surface that first displayed it.)
+inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
+                                       int idx) {
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return false;
+    return iter_bracket_carrier(mv[static_cast<size_t>(idx)]) &&
+           !effective_disabled(mv, idx);
 }
 
 // Iteration mode: THE ITER BRACKET RIDES ITS BASE (architect 2026-08-02).
@@ -283,11 +321,12 @@ inline void clamp_iter_bracket_to_tempo_bracket(GuiWarpMarker& m) {
     if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
         return;
     }
-    // A bracket rests only on an iter-eligible owner (iter_popup_eligible_marker
-    // above — every eligibility loss clears both bounds), and an owner's
-    // tempo_cents is in-bracket at every input surface, so lo_limit <= 0 <=
-    // hi_limit: the clamp window always contains the zero delta and can never
-    // be empty. Exact integer cents throughout, the domain the deltas live in.
+    // A bracket rests only on a carrier (iter_bracket_carrier above — every
+    // carrier loss clears both bounds; a disabled owner keeps its dormant one
+    // and is an owner still), and an owner's tempo_cents is in-bracket at
+    // every input surface, so lo_limit <= 0 <= hi_limit: the clamp window
+    // always contains the zero delta and can never be empty. Exact integer
+    // cents throughout, the domain the deltas live in.
     const int64_t lo_limit = kTempoMinCents - m.tempo_cents;
     const int64_t hi_limit = kTempoMaxCents - m.tempo_cents;
     m.iter_start_cents = std::clamp(*m.iter_start_cents, lo_limit, hi_limit);
@@ -296,13 +335,17 @@ inline void clamp_iter_bracket_to_tempo_bracket(GuiWarpMarker& m) {
 
 // BPM mode: an owning, enabled marker (owning = !tempo_inherits AND no
 // label_ref). Defined separately from iter so the two predicates can
-// diverge without cascading edits — and they now do: the bpm owner must
-// also be enabled (!m.disabled), because a disabled bpm owner was a
-// render-inert rewrite (the sweep authored a tempo onto a marker whose
-// disabled state drops it from the resolved map). For an OWNING marker
-// (the other two conjuncts) raw disabled equals effective disabled — the
-// effective-disabled cascade only reaches refs, which are excluded here —
-// so this needs no marker-vector/index threading, the plain flag suffices.
+// diverge without cascading edits. They diverged first on the disabled term
+// — the bpm owner had to be enabled (!m.disabled) while iter's did not,
+// because a disabled bpm owner was a render-inert rewrite (the sweep
+// authored a tempo onto a marker whose disabled state drops it from the
+// resolved map) — and since 2026-09-02 (R-12) both carry it, the iteration
+// sweep's through the vector/index form above. THIS ONE KEEPS THE PLAIN
+// FLAG, the recorded asymmetry: for an OWNING marker (the other two
+// conjuncts) raw disabled equals effective disabled — the effective-disabled
+// cascade only reaches refs, which are excluded here — so no marker-vector/
+// index threading is owed, and the bpm owner is asked of a marker the `m`
+// gate already holds by value.
 inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty() && !m.disabled;
 }

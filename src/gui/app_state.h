@@ -7588,8 +7588,9 @@ struct AppState {
     // (active_column_authoring_allowed, below), so a bracket is typed in
     // either view. When true, flag_text_iter splices the
     // inline `+[lo, hi]` bracket into every eligible owning marker's composed
-    // label, so the mode is visible directly on the flags (it is a flag-cache
-    // fingerprint field for exactly that reason).
+    // label — every carrier the sweep reads; a disabled owner's bracket is
+    // dormant and stays off its flag — so the mode is visible directly on the
+    // flags (it is a flag-cache fingerprint field for exactly that reason).
     bool iteration_mode_enabled = false;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
@@ -9028,28 +9029,53 @@ inline int64_t tempo_cent_step_landing(int64_t start_cents,
                       kTempoMaxCents);
 }
 
-// THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
-// selected marker could take a step of `delta_cents` — no pass, no label ref,
-// no disabled marker, no coincident-collapse member, none that would leave the
-// tempo bracket under the WHOLE step (the "already AT the bracket edge"
-// compare until the step ladder landed the same day, and the identical test at
-// the bare ±1: a member is out of bracket after one cent iff it was resting on
-// that edge). THE MAGNITUDE MATTERS HERE, unlike at the singleton — the group
-// arm adds RAW and clamping one member would pool it against its neighbours,
-// which is exactly what GROUP RIGIDITY refuses — so the ten-cent chord walls a
-// selection the one-cent chord would move. THE TWIN RULE IS ANSWERED BY
-// MONOTONICITY: a longer step in the same direction walls a SUPERSET, so the
-// BARE step the face hands this is the widest admitted answer and the button
-// greys exactly when no admitted variant would act. Defined in
-// warpmarkers_ops.cpp
-// immediately above the act, which reads it as its own whole-press refusal
+// THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): its verdict is
+// `Steps` when EVERY SURVIVING selected marker could take a step of
+// `delta_cents` — no pass, no label ref, no coincident-collapse member, none
+// that would leave the tempo bracket under the WHOLE step (the "already AT
+// the bracket edge" compare until the step ladder landed the same day, and
+// the identical test at the bare ±1: a member is out of bracket after one
+// cent iff it was resting on that edge) — `Walled` when one could not, and
+// `Empty` when nothing survives. THE SURVIVORS ARE THE MEMBERS THE ACT SEES
+// (architect 2026-09-02, the four-tier review's R-12 — "a disabled marker is
+// invisible to the act", the `m` BPM sweep's rule asked of this step): an
+// effectively disabled member (effective_disabled, warpmarkers.h — its own
+// bit, or a reference whose definition is disabled) is SKIPPED, not walled —
+// not counted, not stepped, every field untouched — and GROUP RIGIDITY is
+// applied to the survivors; a selection whose every member is invisible is
+// the EMPTY step, refused as the singleton refuses an empty selection. Until
+// that day a disabled member walled the whole press ("its tempo is
+// render-filtered, so a write would be inaudible" — true, and exactly why it
+// is now passed over instead: an inaudible write neither deforms the group
+// nor serves it). THE MAGNITUDE MATTERS HERE, unlike at the singleton — the
+// group arm adds RAW and clamping one member would pool it against its
+// neighbours, which is exactly what GROUP RIGIDITY refuses — so the ten-cent
+// chord walls a selection the one-cent chord would move. THE TWIN RULE IS
+// ANSWERED BY MONOTONICITY: a longer step in the same direction walls a
+// SUPERSET, so the BARE step the face hands this is the widest admitted answer
+// and the button greys exactly when no admitted variant would act. Defined in
+// warpmarkers_ops.cpp immediately above the act, which reads the VERDICT as
+// its own whole-press refusal, one sentence per refusing verdict
 // (adjust_tempo_cents_group, all-or-nothing by GROUP RIGIDITY — the
 // justification is at the act; the unified wall policy is at the head of
-// position_nudge.h). The 2+ arm of the directional predicate below is its
-// second reader, which is the whole point of the extraction: the face may not
-// restate five terms the act already owns.
-bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
-                                      int64_t delta_cents);
+// position_nudge.h). The 2+ arm of the directional predicate below reads the
+// boolean face, which is the whole point of the extraction: the face may not
+// restate the terms the act already owns, and the act's mutation loop skips
+// on the same `effective_disabled` call the scan skips on.
+enum class TempoCentStepGroupVerdict {
+    Steps,   // every survivor takes the whole step
+    Walled,  // a survivor is a pass, a ref, collapsed, or cannot take the step
+    Empty,   // no survivor: every selected member is effectively disabled
+};
+TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
+                                                        const GuiAudio& audio,
+                                                        int64_t delta_cents);
+inline bool tempo_cent_step_group_actionable(const AppState& a,
+                                             const GuiAudio& audio,
+                                             int64_t delta_cents) {
+    return tempo_cent_step_group_verdict(a, audio, delta_cents) ==
+           TempoCentStepGroupVerdict::Steps;
+}
 
 // WOULD A CENT STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
 // Up / Down face, asked past tempo_cent_step_actionable above (architect
@@ -10044,7 +10070,10 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
 // ONE WALK ANSWERS BOTH QUESTIONS, and neither is restated: the eligibility is
 // the sweep's own (iter_popup_eligible_marker, warpmarkers.h, CALLED rather
 // than spelled again, so a change to that predicate lands on the face for
-// free), and the cell count is the same CHECKED product the dispatch
+// free — as the disabled verdict did on 2026-09-02, R-12: a disabled owner's
+// dormant bracket is invisible here as at the dispatch, so a store whose only
+// brackets sit on disabled owners greys the button as "no ranges authored"
+// and the press cards the same), and the cell count is the same CHECKED product the dispatch
 // accumulates — refusing the instant the running total passes the cap, so no
 // overflow is possible and the cap itself is the early return. A well-formed
 // span is at most kTempoMaxCents - kTempoMinCents + 1 and the running total is
@@ -10114,8 +10143,13 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
     IterationSweepPlan plan;
     bool        any_swept = false;
     std::size_t cells     = 1;
-    for (const GuiWarpMarker& m : a.warpmarkers.markers()) {
-        if (!iter_popup_eligible_marker(m)) continue;
+    const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
+    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+        // The index form: the verdict carries effective disablement (a
+        // disabled owner's bracket is dormant and counts for nothing here,
+        // exactly as at the dispatch).
+        if (!iter_popup_eligible_marker(mv, i)) continue;
+        const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
         // An eligible marker with no bracket contributes the single zero
         // delta the dispatch gives it: a factor of one, nothing to multiply.
         if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {

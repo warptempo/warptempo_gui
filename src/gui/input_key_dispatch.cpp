@@ -4114,8 +4114,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // backstop.
 
     // Snapshot markers in timeline order (the GuiWarpMarkers store is
-    // sorted by time_frame, with ties legal). For each owning marker
-    // build its per-cell delta list in integer cents: a single 0 when
+    // sorted by time_frame, with ties legal). For each owning, enabled
+    // marker build its per-cell delta list in integer cents: a single 0 when
     // no iter range is authored, otherwise the cents enumeration from
     // iter_start_cents to iter_end_cents inclusive. Deltas and tempos
     // share the one integer-cents domain, so the per-cell base + delta
@@ -4127,7 +4127,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
     std::vector<bool>                 is_swept;
     for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
         const GuiWarpMarker& m = base_warp_markers[i];
-        if (!iter_popup_eligible_marker(m)) continue;
+        // A DISABLED OWNER IS INVISIBLE TO THE SWEEP (architect 2026-09-02,
+        // R-12, the `m` sweep's rule): the eligibility carries the effective
+        // disabled verdict, so a disabled owner's bracket — kept on it,
+        // dormant — neither multiplies the product nor names a cell, and the
+        // marker keeps its authored tempo in every cell (render-filtered
+        // either way). Re-enabling it brings the bracket back into the walk.
+        if (!iter_popup_eligible_marker(base_warp_markers, i)) continue;
         eligible_indices.push_back(i);
         const bool swept =
             m.iter_start_cents.has_value() && m.iter_end_cents.has_value();
