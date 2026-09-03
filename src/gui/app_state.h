@@ -2576,8 +2576,9 @@ enum class RedesignButton {
     //
     // ITS ENABLED ARM READS payload_eligible_marker ON THE FOCUS SINCE
     // 2026-08-30 — the ONE gate both of its chords run — so it greys on an
-    // ineligible focus (an owner, a phase reset, iteration mode, the P column,
-    // nothing focused), the architect's truthful-buttons ruling ("Any time a
+    // ineligible focus (an owner, a phase reset, a disabled marker, a member
+    // of a coincident-collapsed stack, the P column, nothing focused; the
+    // gate's terms are at its declaration), the architect's truthful-buttons ruling ("Any time a
     // button would be a no-op, grey it"). For its first day it had NO selection
     // term, the group's rule then, under the 2026-08-15 no-blink ruling (a
     // face tracking the focus would blink at every selection), which he
@@ -10631,10 +10632,31 @@ inline bool playback_launch_playable(const AppState& a,
 //     target_render.h includes this header — the class can only be
 //     forward-declared here, and the trampoline is a forwarding call, not a
 //     second spelling of the condition.
-// (payload_eligible_marker's declaration and contract sit with the hit-test
-// declarations below; it is named here ahead of them because the Copy value
-// arm reads it since 2026-08-30 and this predicate is inline in the header.)
-bool payload_eligible_marker(const AppState& app, int idx);
+// THE VALUE PAIR'S GATE ANSWERS A THREE-WAY VERDICT since 2026-09-02
+// (architect, the four-tier review's R-16): Eligible, or one of TWO refusals
+// that card in different words — NoResolvedValue (nothing focused, the P
+// column, an owner, an effectively disabled marker) and CollapsedStack (a
+// pass or a ref inside a coincident-collapsed group, whose composed value is
+// the RAW store's and not what the render applies). The acts fork their
+// sentence on it (input_key_dispatch.cpp), the Copy value face reads the
+// boolean wrapper below, and the tooltip overload forks its first line on
+// the stack verdict alone — the one grey a glance at the flag does not
+// explain. The gate's full contract is at its second declaration with the
+// hit-test declarations below; the enum and the wrapper are named here
+// ahead of them because the Copy value arm reads the wrapper and this
+// predicate is inline in the header.
+enum class PayloadEligibility { Eligible, NoResolvedValue, CollapsedStack };
+PayloadEligibility payload_eligibility(const AppState& app,
+                                       const GuiAudio& audio, int idx);
+bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
+                             int idx);
+// THE STACK REFUSAL'S ONE SENTENCE, said by both chords (their raise sites,
+// input_key_dispatch.cpp); the tooltip overload's Copy value arm restates it
+// with the accelerator appended, line1 being a literal. The other two
+// sentences are the acts' own, at their raise sites.
+inline constexpr const char* kValueInCollapsedStack =
+    "The focused marker shares its frame with another, so its value is not "
+    "what the render applies";
 // THE MARKER THE FOCUSED VALUE CAME FROM, or −1 — the jump's own question
 // (Shift+`j`, GuiInputHandler::jump_to_value_source), named 2026-09-01 so the
 // Copy value button's shift line can drop where there is nothing to jump to
@@ -11380,15 +11402,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // renders left that arm on exactly this ground the day before). ITS
         // SELECTION TERM IS payload_eligible_marker ON THE FOCUS since
         // 2026-08-30 — the ONE gate both chords run (input_key_dispatch.cpp),
-        // so an owner, a phase reset, iteration mode, the P column or nothing
-        // focused greys it exactly where the press would be a consumed no-op;
-        // for its first day it carried none, under the group's then-standing
+        // so an owner, a phase reset, a disabled marker, a member of a
+        // coincident-collapsed stack, the P column or nothing focused greys
+        // it exactly where the press would be a consumed no-op (the terms are
+        // the gate's, at its declaration; the boolean wrapper folds both of
+        // its refusals into one grey, the KEY forking the sentence); for its
+        // first day it carried none, under the group's then-standing
         // no-blink rule. The `h` VIEW greys it through the derived partition
         // at the top of this body (bare `j` is neither the mode's vocabulary
         // nor on its allowlist), and the folder overlay's first arm — nothing
         // hand-listed either way.
         case RedesignButton::IconCopyValue:
-            if (!payload_eligible_marker(a, a.last_selected_marker))
+            if (!payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
             break;
         // (THE MARKER MEASURE sat here — the row's always-on policy — from
@@ -12909,24 +12934,42 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
         // COPY RESOLVED VALUE: the shift line exists iff the shifted press
         // would jump, which is BOTH of the jump's own questions asked in the
-        // jump's own order — payload_eligible_marker on the focus (the ONE
+        // jump's own order — the eligibility verdict on the focus (the ONE
         // gate both chords run first, and the face's own enabled term above)
         // and then value_source_marker, which names the marker to land on or
         // −1. Neither condition is restated here; each is read from its owner.
-        // The line was gated on the source lookup ALONE from 2026-09-01 until
-        // codex round B that same day, which advertised the jump under a
-        // GREYED face — a resolvable pass focused with iteration mode on —
-        // where Shift+`j` answers "The focused marker has no resolved value"
-        // and never jumps. The composer runs ONCE PER ANSWER since codex round
-        // A (2026-09-01), the owner memoizing on the store generation, the
-        // focus and the frame count; it ran at each paint of the hint until
-        // then, which the paint path's per-damage-rectangle redraw made a real
-        // cost during playback.
-        case RedesignButton::IconCopyValue:
-            if (!payload_eligible_marker(a, a.last_selected_marker) ||
+        // THE STACK REFUSAL FORKS THE FIRST LINE (2026-09-02, R-16): a pass or
+        // a ref inside a coincident-collapsed group greys the face on a
+        // verdict the flag does not explain — it looks exactly like an
+        // eligible pass — so line 1 is the card's own sentence, the KEY's
+        // words under the greyed face (the Drop marker arm's shape); the
+        // other greys keep the act's name, the tooltips-on-disabled ruling's
+        // own shape, their reason being on the flag itself (an owner's
+        // number, a disabled blend, no focus at all). The line was gated on
+        // the source lookup ALONE from 2026-09-01 until codex round B that
+        // same day, which advertised the jump under a GREYED face — the
+        // example then was a resolvable pass focused with iteration mode on,
+        // a grey the gate no longer produces — where Shift+`j` answered "The
+        // focused marker has no resolved value" and never jumped. The
+        // composer runs ONCE PER ANSWER since codex round A (2026-09-01), the
+        // owner memoizing on the store generation, the focus and the frame
+        // count; it ran at each paint of the hint until then, which the paint
+        // path's per-damage-rectangle redraw made a real cost during playback.
+        case RedesignButton::IconCopyValue: {
+            const PayloadEligibility verdict =
+                payload_eligibility(a, audio, a.last_selected_marker);
+            if (verdict == PayloadEligibility::CollapsedStack) {
+                // kValueInCollapsedStack plus the accelerator — spelled here
+                // because line1 is a literal (the Drop marker arm's shape).
+                return {"The focused marker shares its frame with another, "
+                        "so its value is not what the render applies (J)",
+                        nullptr};
+            }
+            if (verdict != PayloadEligibility::Eligible ||
                 value_source_marker(a, total_frames) < 0)
                 return {"Copy resolved value (J)", nullptr};
             break;
+        }
         default:
             break;
     }
@@ -13326,18 +13369,41 @@ struct ItemViewportBasis {
 ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
 
-// Promoted from a lambda in main(). True iff the warp marker at `idx` has a
-// RESOLVED value worth reaching for — i.e. its flag does not already display a
-// numeric tempo (pass markers and label_ref markers qualify; owning markers
-// don't). Requires warp view with iteration mode off; always false in phase
-// reset view (no pass concept). ITS THREE CALLERS, re-greped 2026-08-30: the
+// Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has
+// a RESOLVED value worth reaching for — i.e. its flag does not already display
+// a numeric tempo (pass markers and label_ref markers qualify; owning markers
+// don't) — AND that value is the one the render applies. Requires warp view;
+// always NoResolvedValue in phase reset view (no pass concept). The terms, in
+// the order asked (the body, app_state.cpp): the focus and the column, the
+// cascade through the ONE owner effective_disabled (warpmarkers.h — a
+// disabled marker and a ref to a disabled definition alike, the render's
+// drops), the pass-or-ref test, and then the COLLAPSED STACK: a member of a
+// coincident-collapsed group refuses CollapsedStack (the group tempo step's
+// precedent, read from the red-flag cache's own `collapsed` subset), because
+// the composer resolves a group member against the raw store — the ruled
+// authored/display split — while the render replaces the stack with one
+// synthetic 1.00 owner. Iteration mode is NOT a term since 2026-09-02: the
+// line refusing under it was the retired readout's, carried past the
+// readout's death, and it made `j` card "no resolved value" on a marker that
+// had one (architect, the four-tier review's R-16). A ref whose definition is
+// missing entirely stays Eligible — resolved_marker_payload already yields an
+// empty string for that case and both acts refuse an empty payload, so it
+// never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-02: the
 // VALUE PAIR (2026-08-29) — bare `j`, which copies the focused marker's
 // resolved value to the system clipboard, and Shift+`j`, which jumps to the
-// marker that value came from — and since 2026-08-30 the COPY VALUE BUTTON'S
-// disabled face (redesign_button_enabled, the truthful-buttons ruling), which
-// asks it of the focus so the button greys exactly where both chords refuse.
-// It was `popup_eligible_marker` — the hover popup's name, kept
+// marker that value came from (both read the verdict and fork their card on
+// it) — the COPY VALUE BUTTON'S disabled face since 2026-08-30
+// (redesign_button_enabled, the truthful-buttons ruling; the boolean wrapper,
+// so the button greys exactly where both chords refuse), and the tooltip
+// overload's Copy value arm (the verdict, for the stack's own first line; the
+// wrapper for the shift line's drop). The audio identity is what the red-flag
+// cache keys on (sample rate and frame count), which is why the gate takes
+// it. It was `popup_eligible_marker` — the hover popup's name, kept
 // through that popup's death in row 5, through the bottom strip's readout and
 // through the one-day status bar's right cell — and it is named for what it
 // gates now that no surface DISPLAYS a resolved value at all.
-bool payload_eligible_marker(const AppState& app, int idx);
+PayloadEligibility payload_eligibility(const AppState& app,
+                                       const GuiAudio& audio, int idx);
+// The boolean face of the verdict: Eligible and nothing else.
+bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
+                             int idx);

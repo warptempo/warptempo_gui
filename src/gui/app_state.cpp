@@ -429,35 +429,61 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
     return -1;   // nothing ahead
 }
 
-bool payload_eligible_marker(const AppState& app, int idx) {
-    if (idx < 0) return false;
-    if (app.active_markers_view != 'W') return false;
-    if (app.iteration_mode_enabled) return false;
+PayloadEligibility payload_eligibility(const AppState& app,
+                                       const GuiAudio& audio, int idx) {
+    using E = PayloadEligibility;
+    if (idx < 0) return E::NoResolvedValue;
+    if (app.active_markers_view != 'W') return E::NoResolvedValue;
     const auto& mv = app.warpmarkers.markers();
-    if (idx >= static_cast<int>(mv.size())) return false;
+    if (idx >= static_cast<int>(mv.size())) return E::NoResolvedValue;
     const auto& m = mv[idx];
     // This gates the VALUE PAIR — bare `j`, which copies the focused marker's
     // resolved value, and Shift+`j`, which jumps to the marker that value
     // came from — a marker's OWN value being written on its flag regardless
-    // of eligibility. Render resolution
-    // (resolve_warp_markers_for_render) drops disabled markers outright and
-    // drops label refs whose definition is disabled (the cascade). Neither
-    // act may report a tempo the render never applies, so eligibility mirrors
-    // both drops here: a disabled marker is ineligible, and a ref to a
-    // disabled definition is ineligible. A ref whose definition is missing
-    // entirely stays eligible — resolved_marker_payload already yields an
-    // empty string for that case and both acts refuse an empty payload, so it
-    // never surfaces a stale tempo.
-    if (m.disabled) return false;
-    if (!m.label_ref.empty()) {
-        for (const auto& def : mv) {
-            if (def.label_def == m.label_ref) {
-                if (def.disabled) return false;
-                break;
-            }
-        }
-    }
-    return m.tempo_inherits || !m.label_ref.empty();
+    // of eligibility. NEITHER ACT MAY REPORT A TEMPO THE RENDER NEVER
+    // APPLIES, and the render's three ways of not applying one are the
+    // gate's three refusals past the focus and the column:
+    //   * the CASCADE — resolve_warp_markers_for_render drops a disabled
+    //     marker outright and drops a label ref whose definition is disabled
+    //     — asked of the one owner effective_disabled (warpmarkers.h), the
+    //     same call the diff lane, the sweep and the group step read; the
+    //     gate hand-rolled the walk beside it until 2026-09-02;
+    //   * an OWNER has no resolved value to reach for — its flag shows its
+    //     number — so only a pass or a ref goes on;
+    //   * the COLLAPSED STACK — a pass or a ref that is a member of a
+    //     coincident-collapsed group. The render replaces the stack with one
+    //     synthetic 1.00 owner, and the composer, by the ruled
+    //     authored/display split, resolves such a member against the RAW
+    //     store (marker_effective's second basis) — so the value it would
+    //     hand `j` is the authored owner's, which the render never applies.
+    //     The membership is the red-flag cache's own `collapsed` subset,
+    //     pass 1 of warp_red_flag_set_cached; the cache keys on the audio
+    //     identity, which is why the gate takes it. Not the whole red set:
+    //     its pass-2 members (a dangling ref, an extreme-ratio ref, a pass
+    //     whose walk ended on a ref) resolve against the projection and so
+    //     already read out as the render's own 1.00 or as the empty payload
+    //     the acts refuse — refusing them here as a stack would name the
+    //     wrong reason. This refusal carries its own sentence
+    //     (kValueInCollapsedStack); the two above share the acts' own.
+    // Iteration mode is not a term (2026-09-02, R-16): the readout-era line
+    // that refused under it survived the readout and made `j` card "no
+    // resolved value" on a marker that had one. A ref whose definition is
+    // missing entirely stays Eligible — resolved_marker_payload already
+    // yields an empty string for that case and both acts refuse an empty
+    // payload, so it never surfaces a stale tempo.
+    if (effective_disabled(mv, idx)) return E::NoResolvedValue;
+    if (!(m.tempo_inherits || !m.label_ref.empty()))
+        return E::NoResolvedValue;
+    const std::set<int>& collapsed = warp_red_flag_set_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).collapsed;
+    if (collapsed.count(idx)) return E::CollapsedStack;
+    return E::Eligible;
+}
+
+bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
+                             int idx) {
+    return payload_eligibility(app, audio, idx) == PayloadEligibility::Eligible;
 }
 
 // THE VALUE'S SOURCE MARKER — the contract and the two readers are at the

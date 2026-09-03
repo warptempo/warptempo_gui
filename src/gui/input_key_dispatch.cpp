@@ -7083,29 +7083,47 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // answers, so the value copied and the marker jumped to can never name
 // different markers.
 //
-// THE ELIGIBILITY IS THE ONE GATE, payload_eligible_marker (app_state.h):
-// warp view, iteration mode off, an enabled pass or a ref to an enabled
-// definition. An ineligible focus — an owner, a phase reset, iteration mode,
-// the `P` column, nothing focused — and an empty payload alike SAY SO ON A
-// CARD since 2026-08-30 (architect, the strictness ruling), and they say the
-// SAME words: from the user's side both are "this marker has no resolved
-// value", the difference between them being which layer discovered it. THE
-// COPY VALUE BUTTON GREYS ON THE GATE'S ANSWER since the same day
-// (redesign_button_enabled, the truthful-buttons ruling — for its first day
-// it never greyed on the selection's state, the refusal changing at
-// interaction cadence), so the gate's card is the KEY's; the empty payload
-// alone stays behind a lit face, needing the composer run, and is the one
-// refusal of the two a button lift can reach.
+// THE ELIGIBILITY IS THE ONE GATE, payload_eligibility (app_state.h): warp
+// view, an effectively enabled pass or ref (the cascade through
+// effective_disabled), and not a member of a coincident-collapsed stack — a
+// THREE-WAY VERDICT since 2026-09-02 (architect, the four-tier review's
+// R-16), because its two refusals card in different words. An ineligible
+// focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
+// focused — and an empty payload alike SAY SO ON A CARD since 2026-08-30
+// (architect, the strictness ruling), and they say the SAME words: from the
+// user's side both are "this marker has no resolved value", the difference
+// between them being which layer discovered it. A STACK MEMBER SAYS WHY
+// (R-16): its composed value is the raw owner's while the render applies the
+// stack's synthetic 1.00, so the sentence names the frame it shares
+// (kValueInCollapsedStack, app_state.h — one sentence for both chords, the
+// jump refusing on the same ground: the marker a render-inert value "came
+// from" is nowhere to stand). Iteration mode stopped being a term the same
+// day — the line was the retired readout's, and under it `j` carded "no
+// resolved value" on a marker that had one. THE COPY VALUE BUTTON GREYS ON
+// THE GATE'S ANSWER since 2026-08-30 (redesign_button_enabled, the
+// truthful-buttons ruling — for its first day it never greyed on the
+// selection's state, the refusal changing at interaction cadence), so the
+// gate's cards are the KEY's; the empty payload alone stays behind a lit
+// face, needing the composer run, and is the one refusal a button lift can
+// reach.
 
-// THE COPY'S ONE SENTENCE, said by BOTH of its refusals (2026-08-30).
+// THE COPY'S ONE SENTENCE, said by BOTH of its no-value refusals
+// (2026-08-30); the stack refusal has its own, app_state.h.
 constexpr const char* kNoResolvedValueToCopy =
     "The focused marker has no resolved value to copy";
 
 void GuiInputHandler::copy_focused_marker_value() {
-    if (!payload_eligible_marker(app, app.last_selected_marker)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kNoResolvedValueToCopy);
-        return;
+    switch (payload_eligibility(app, audio, app.last_selected_marker)) {
+        case PayloadEligibility::NoResolvedValue:
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kNoResolvedValueToCopy);
+            return;
+        case PayloadEligibility::CollapsedStack:
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kValueInCollapsedStack);
+            return;
+        case PayloadEligibility::Eligible:
+            break;
     }
     const std::string payload = resolved_marker_payload(
         slice_to_warp_markers(app.warpmarkers.markers()),
@@ -7174,14 +7192,24 @@ void GuiInputHandler::copy_focused_marker_value() {
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
 void GuiInputHandler::jump_to_value_source() {
-    if (!payload_eligible_marker(app, app.last_selected_marker)) {
-        // THE COPY'S OWN GATE, in the JUMP's words: there is no resolved
-        // value here, so there is no marker the value came from either. It
-        // says "value" and not "value to copy" because this chord copies
-        // nothing (architect 2026-08-30).
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "The focused marker has no resolved value");
-        return;
+    switch (payload_eligibility(app, audio, app.last_selected_marker)) {
+        case PayloadEligibility::NoResolvedValue:
+            // THE COPY'S OWN GATE, in the JUMP's words: there is no resolved
+            // value here, so there is no marker the value came from either.
+            // It says "value" and not "value to copy" because this chord
+            // copies nothing (architect 2026-08-30).
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "The focused marker has no resolved value");
+            return;
+        case PayloadEligibility::CollapsedStack:
+            // THE STACK'S OWN SENTENCE, the copy's verbatim: the value this
+            // marker would name a source for is one the render never
+            // applies, so there is no marker worth standing on (R-16).
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kValueInCollapsedStack);
+            return;
+        case PayloadEligibility::Eligible:
+            break;
     }
     // AN EMPTY PAYLOAD IS THE COPY'S OWN REFUSAL and the jump's too — an
     // unresolvable ref or a carve-out with no successor — and a payload that

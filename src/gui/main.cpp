@@ -1498,15 +1498,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
 
-    // payload_eligible_marker is a free function in app_state.{h,cpp}. Its two
-    // remaining callers reach it directly with the (app, idx) signature — bare
-    // `j`, which copies the focused marker's resolved value, and Shift+`j`,
-    // which jumps to the marker that value came from (both in
-    // input_key_dispatch.cpp). They are what the RESOLVED READOUT and its
-    // Ctrl+C became on 2026-08-29: no surface DISPLAYS a resolved value any
-    // more, which is why the gate lost the "popup" half of its old name. The
-    // iteration-mode part of it is documented above its declaration in
-    // app_state.h.
+    // payload_eligibility is a free function in app_state.{h,cpp} (its
+    // boolean face payload_eligible_marker beside it). The two acts reach it
+    // directly with the (app, audio, idx) signature — bare `j`, which copies
+    // the focused marker's resolved value, and Shift+`j`, which jumps to the
+    // marker that value came from (both in input_key_dispatch.cpp); the Copy
+    // value button's face and its hint are the other two readers. They are
+    // what the RESOLVED READOUT and its Ctrl+C became on 2026-08-29: no
+    // surface DISPLAYS a resolved value any more, which is why the gate lost
+    // the "popup" half of its old name. Its terms are documented above its
+    // declaration in app_state.h.
 
     // The drag and selection-shift operations are methods on the
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).

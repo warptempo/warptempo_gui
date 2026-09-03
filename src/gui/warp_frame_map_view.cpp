@@ -90,6 +90,7 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     }
 
     c.red.clear();
+    c.collapsed.clear();
     // Slice once — marker_effective and marker_effectively_disabled are
     // parser-domain and read no GUI-only fields. This resolves the COMMITTED
     // store, so a marker drag (which writes app.drag.moveable_times, not the
@@ -105,9 +106,15 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     // consumes it here at press/paint time as a pure function of the
     // committed store; a marked run reads as one red flag, matching the
     // render's single stderr line per group.
+    // The same verdict is kept apart in `collapsed` for the value pair's gate
+    // (the field's own contract, warp_frame_map_view.h).
     const std::vector<char> members = warp_coincident_collapse_members(mv);
-    for (int k = 0; k < n; ++k)
-        if (members[static_cast<size_t>(k)]) c.red.insert(k);
+    for (int k = 0; k < n; ++k) {
+        if (members[static_cast<size_t>(k)]) {
+            c.red.insert(k);
+            c.collapsed.insert(k);
+        }
+    }
 
     // Pass 2 — ref/pass 1.00 fallback: marker_effective is the silent
     // per-marker resolution the hover uses; it reports the render's

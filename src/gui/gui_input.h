@@ -841,10 +841,11 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // BOTH ARE BARE-/SHIFT-EXACT, so ctrl and alt decorations stay the strict
 // rule's consumed no-ops, and both are ONE-SHOT (repeat-ineligible: a copy
 // repeats onto itself and a jump has one destination). Their subject is the
-// SELECTION'S FOCUS, and an ineligible focus — an owner, a phase reset,
-// iteration mode, the `P` column, nothing focused — is a consumed no-op at
-// the act that says so on a card since 2026-08-30, each chord in its own
-// words (payload_eligible_marker, app_state.h). Both are
+// SELECTION'S FOCUS, and an ineligible focus — an owner, a phase reset, a
+// disabled marker, the `P` column, nothing focused, or a member of a
+// coincident-collapsed stack — is a consumed no-op at the act that says so
+// on a card since 2026-08-30, each chord in its own words and the stack in
+// its own sentence (payload_eligibility, app_state.h). Both are
 // READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits them)
 // and legal in both audio views, being navigation rather than positional
 // authoring; the `h` view refuses them at its own allowlist like every chord

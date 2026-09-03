@@ -113,6 +113,19 @@ struct WarpRedFlagCache {
     int       sample_rate  = 0;
     long      total_frames = 0;
     std::set<int> red;   // red warp-marker store indices
+    // THE COLLAPSE MEMBERS ALONE — pass 1's own subset of `red`, the
+    // classifier's verdict (warp_coincident_collapse_members) kept apart from
+    // the pass-2 fallbacks it is unioned with above. `red` answers "does the
+    // render normalize this marker"; this answers WHICH WAY, for the one
+    // reader that needs the distinction: the value pair's gate
+    // (payload_eligibility, app_state.cpp) refuses a pass or a ref that sits
+    // in a collapsed stack — the composer resolves such a member against the
+    // RAW store, the ruled authored/display split, so its value is not what
+    // the render applies — while the pass-2 fallbacks it must NOT refuse on
+    // resolve against the projection and so already read out as the render's
+    // own 1.00 (or as the empty payload). Filled in the same pass that fills
+    // `red`, under the same key; no second computation anywhere.
+    std::set<int> collapsed;
 };
 
 // Returns the warp red-flag cache entry for the app's live warp store,
