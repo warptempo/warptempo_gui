@@ -371,7 +371,11 @@ drag coordinates floor instead of truncating.
   session (one AAudio stream start per reopen, accepted). The unsaved-tab
   prompt is Ctrl+Q's own with a REOPEN target (`GuiCloseTarget`, prompt.h).
 - **Android stubs** (each named at its site with its Wayland twin):
-  clipboard over one stored string, pointer capture as no-ops (the notional-x
+  clipboard over one stored string (its `clipboard_set_text` answering FALSE
+  and `clipboard_publishes()` false since 2026-09-03, so no copy cards a
+  success there and the faces reading the static half grey — the Java
+  sliver is a road to `ClipboardManager` that is NOT BUILT, a ruling
+  pending), pointer capture as no-ops (the notional-x
   FIELD survives and tracks the finger), cursor kinds stored and never
   applied, titles. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
   BACK (architect — the tablet's BACK asks the unsaved-work question the

@@ -6411,6 +6411,26 @@ void GuiInputHandler::refresh_stats_panel_rows() {
     viewport.invalidate_rect(GuiRect{band.x, top, band.w, bot - top});
 }
 
+// THE CLIPBOARD REFUSAL'S ONE SENTENCE, for the two carded clipboard writes
+// (2026-09-03, codex on the panel's copy button): clipboard_set_text answers
+// a VERDICT — whether a claim another program can read went out (the
+// contract at the seam, platform_wayland.h / platform_android.h) — and a
+// success card on a false verdict would lie. The sentence forks on WHICH half
+// refused: a backend whose clipboard reaches no other program (the seam's
+// static capability, app.clipboard_publishes — the tablet, in the panel's
+// own idiom for its unavailable measurements) or, on a backend that can, the
+// per-press claim itself (no data device, no source, or no input-event
+// serial to ride). The editors' Ctrl+C / Ctrl+X card nothing and read no
+// verdict (apply_editor_clipboard) — an editor is its own world and its
+// in-app paste reads the store whichever way the claim went.
+static void card_clipboard_refusal(GuiNotifications& notifications,
+                                   const AppState&   app) {
+    notifications.notify(AppState::NotificationClass::Normal,
+                         app.clipboard_publishes
+                             ? "The clipboard did not take the copy"
+                             : "Copy is not available on this backend");
+}
+
 // THE WHOLE REPORT, ONTO THE SYSTEM CLIPBOARD (architect 2026-09-03). TWO
 // ROADS, ONE BODY: the modal row's **Copy to clipboard** button at its lift
 // and Ctrl+C in the router below. The panel is rare and its use is narrow —
@@ -6427,11 +6447,15 @@ void GuiInputHandler::refresh_stats_panel_rows() {
 // LINES, and a terminating newline is what makes the last one a line rather
 // than a fragment when it is pasted into an editor or a message.
 //
-// IT NEVER REFUSES, AND ITS BUTTON THEREFORE NEVER GREYS (the truthful-buttons
-// ruling): compose_av_sync_rows always yields rows — a title, the three group
-// headings and, for every unmeasured reading, the sentence saying so — and the
-// panel cannot stand without them, the opener building the first listing
-// before it returns. There is no condition to read, so the face states none.
+// THE REPORT ITSELF NEVER RUNS OUT: compose_av_sync_rows always yields rows —
+// a title, the three group headings and, for every unmeasured reading, the
+// sentence saying so — and the panel cannot stand without them, the opener
+// building the first listing before it returns. WHAT CAN REFUSE IS THE
+// CLIPBOARD (2026-09-03, codex): the write's verdict, read below, and its two
+// halves split between the face and the card by the truthful-buttons ruling —
+// the backend's static capability greys the button (paint_modal_dialog reads
+// app.clipboard_publishes; the grey is the message, and the KEY's press
+// cards), the per-press claim cards here.
 void GuiInputHandler::copy_stats_panel_report() {
     std::string report;
     for (const AppState::FolderOverlayRow& row : app.folder_overlay.rows) {
@@ -6441,7 +6465,10 @@ void GuiInputHandler::copy_stats_panel_report() {
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
     // (conventions.md's clipboard ruling, and bare `j`'s own road).
-    gui.clipboard_set_text(report);
+    if (!gui.clipboard_set_text(report)) {
+        card_clipboard_refusal(notifications, app);
+        return;
+    }
     // AND THE SUCCESS SAYS SO: a clipboard write is the one success class in
     // the product that paints nothing, so the card is the whole of what the
     // act shows (messaging.md; the sentence takes bare `j`'s shape, "Copied
@@ -7462,7 +7489,15 @@ void GuiInputHandler::copy_focused_marker_value() {
                              kNoResolvedValueToCopy);
         return;
     }
-    gui.clipboard_set_text(payload);
+    // THE WRITE'S VERDICT DECIDES THE CARD (2026-09-03): a refused claim —
+    // the tablet's process-local clipboard, or a Wayland claim with nothing
+    // to ride — says so instead of "Copied". The button's face reads the
+    // static half of the same question (redesign_button_enabled's arm, held
+    // lit by the jump twin where that is live); this is the key's own answer.
+    if (!gui.clipboard_set_text(payload)) {
+        card_clipboard_refusal(notifications, app);
+        return;
+    }
     // AND THE SUCCESS SAYS SO (architect 2026-08-30, the strictness ruling's
     // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
     // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays

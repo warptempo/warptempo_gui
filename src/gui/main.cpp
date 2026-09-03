@@ -1116,6 +1116,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the file (the callers inventory at write_device_config, device_config.h).
     app.device_config = &device_config;
     app.gui_scale     = device_config.gui_scale;
+    // THE SEAM'S STATIC CLIPBOARD CAPABILITY, mirrored for the face
+    // predicates under the seam (the field's comment, app_state.h).
+    app.clipboard_publishes = GuiPlatform::clipboard_publishes();
     app.projects_repo = device_config.projects_repo;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and

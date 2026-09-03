@@ -6353,9 +6353,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         AppState::StatsButtonAct  stats_act  = AppState::StatsButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
-        // The player row's disabled face (architect 2026-08-30) — the live
-        // predicate's answer at plan time, published on the record below;
-        // true on every other owner's buttons.
+        // The disabled face (architect 2026-08-30, the player's row) — the
+        // live predicate's answer at plan time, published on the record
+        // below. TWO OWNERS READ IT: the player's seven through
+        // render_player_button_enabled and, since 2026-09-03, the stats
+        // panel's Copy to clipboard through app.clipboard_publishes; true on
+        // every other owner's buttons.
         bool        enabled      = true;
         icons::Icon icon         = icons::Icon::MediaPlaybackStart;
         std::string tooltip;     // the player's own; empty = the composer's
@@ -6554,11 +6557,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // is a CHORD (Ctrl+C in route_stats_panel_key), so the tooltip carries
         // the product's own modifier spelling directly. One line — the button
         // admits no modified press, so there is no second line to add.
+        // ITS FACE READS THE BACKEND (2026-09-03, codex): the seam's static
+        // capability, mirrored at app.clipboard_publishes, is the one
+        // condition a face may read ahead of the press — on the tablet the
+        // clipboard reaches no other program, so the button greys and its
+        // tooltip says the press's own card sentence (tooltips-on-disabled).
+        // The per-press half of the verdict (the Wayland serial, the data
+        // device) is unknowable ahead of the press and is the CARD's
+        // (copy_stats_panel_report), never the face's. No twin keeps this
+        // face lit: the button admits no modified press.
         if (stats_up) {
             DialogButtonPlan copy;
             copy.label     = "Copy to clipboard";
             copy.stats_act = AppState::StatsButtonAct::CopyReport;
-            copy.tooltip   = "Copy to clipboard (Ctrl+C)";
+            copy.enabled   = app.clipboard_publishes;
+            copy.tooltip   = app.clipboard_publishes
+                                 ? "Copy to clipboard (Ctrl+C)"
+                                 : "Copy is not available on this backend "
+                                   "(Ctrl+C)";
             plan.push_back(std::move(copy));
         } else if (!picker_up) {
             DialogButtonPlan ok;
@@ -7696,21 +7712,27 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
-// AppState::folder_overlay. NOTHING HERE ASKS WHOSE ROWS THESE ARE EXCEPT
-// ONCE, AT THE FACE: the project picker's are all Folder rows, each taking its
-// glyph from the row's KIND and its face from the same ladder the player's
-// rows do, and the transport mark below is structurally absent under the
-// picker (the player holds no item while a picker stands) — while the owner
-// tag is read at exactly one line, the FONT selection, because the stats
-// panel's face is a property of that content and not of any row. Everything
-// else a stats row does differently is the KIND's, which is the row's own.
+// AppState::folder_overlay. TWO ROW CLASSES, ONE PREDICATE FOR BOTH THE FACE
+// AND THE PITCH: the player's and the picker's rows are BUTTON ROWS (the
+// project picker's are all Folder rows, each taking its glyph from the row's
+// KIND and its face from the same ladder the player's rows do, and the
+// transport mark below is structurally absent under the picker — the player
+// holds no item while a picker stands), while the stats panel's Text rows
+// are INERT MONOSPACE LINES — no face, no glyph, no press arm, standing at
+// the monospace line's own pitch with no gap. THE OWNER TAG DECIDES BOTH
+// HALVES THROUGH ONE PREDICATE, `folder_overlay::text_listing`: it selects
+// the font here AND forks the row height and gap in folder_overlay.h, since
+// a row shaped in one face and spaced for another would be two surfaces
+// disagreeing about one row (fc40318e). A row's KIND is what the walk reads
+// per row to skip the glyph and the face ladder, and the walk asserts the
+// two agree — a listing is homogeneous in kind.
 //
-// THE ROWS ARE BUTTONS AND THE PALETTE IS THE FILE MANAGER'S (architect
-// 2026-08-28, R31/R32, superseding the keyboard's palette this band opened
-// with): each row is the ICON ROW'S BUTTON — its box, its gap, its corner
-// radius, its glyph inset (folder_overlay.h reads all four from render.h) —
-// and its faces come off kdenlive's project bin and pcmanfm-qt's compact
-// view, which agree.
+// THE BUTTON ROWS ARE THE ICON ROW'S BUTTON AND THE PALETTE IS THE FILE
+// MANAGER'S (architect 2026-08-28, R31/R32, superseding the keyboard's
+// palette this band opened with): each such row is the ICON ROW'S BUTTON —
+// its box, its gap, its corner radius, its glyph inset (folder_overlay.h
+// reads all four from render.h) — and its faces come off kdenlive's project
+// bin and pcmanfm-qt's compact view, which agree.
 //   the GROUND, around and
 //     between the rows    -> kModalFieldGround, ONE fill across the band and
 //                            NO ALTERNATING ROWS
@@ -7731,9 +7753,10 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //                            OUTLINE: kModalFocusLinePassive while the ring
 //                            stands elsewhere, the accent while it is on the
 //                            list
-// Every row is drawn with redesign_face_box, the one path every button-like
-// surface in the product is filled and framed on, at the button's corner
-// radius. THE BAND WEARS NO TOP BORDER (architect 2026-09-03: "remove the top
+// Every BUTTON row is drawn with redesign_face_box, the one path every
+// button-like surface in the product is filled and framed on, at the
+// button's corner radius; a Text row skips it whole. THE BAND WEARS NO TOP
+// BORDER (architect 2026-09-03: "remove the top
 // border since now there is nothing above the player"): it starts at the
 // window's top edge, so the 1 px kRedesignTabLine it carried from 2026-08-29
 // — the twin of its bottom edge, which is row 8's own border-top — would frame

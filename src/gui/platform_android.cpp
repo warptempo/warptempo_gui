@@ -1788,11 +1788,15 @@ void GuiPlatform::publish_media_state(const GuiMediaState& state) {
 // Wayland twin claims the CLIPBOARD selection through wl_data_device, answers
 // the compositor's later `send` from the same store, and reads a foreign
 // selection back through a bounded pipe read. Android's system clipboard is a
-// Java object (ClipboardManager) with no NDK surface at all, so there is
-// nothing to claim and nothing to read: copy and paste work inside this
-// process and stop at its edge.
-void GuiPlatform::clipboard_set_text(const std::string& text) {
+// Java object (ClipboardManager) with no NDK surface; since the MediaSession
+// JNI landed (2026-08-28) the Java sliver IS a road to it, and that road is
+// NOT BUILT — a ruling is pending (2026-09-03). Until it is, copy and paste
+// work inside this process and stop at its edge, and set answers FALSE so no
+// carded copy claims otherwise (the editors' copy and cut card nothing and
+// ignore the verdict; their paste reads the store).
+bool GuiPlatform::clipboard_set_text(const std::string& text) {
     clipboard_text_ = text;
+    return false;
 }
 
 std::string GuiPlatform::clipboard_get_text() {

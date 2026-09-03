@@ -4770,6 +4770,19 @@ struct AppState {
     // and whose readers did not.
     std::string projects_repo = kDefaultProjectsRepo;
 
+    // WHETHER THIS BACKEND'S CLIPBOARD REACHES OTHER PROGRAMS (2026-09-03) —
+    // the seam's STATIC capability GuiPlatform::clipboard_publishes(), true
+    // on Wayland and false on Android, mirrored here ONCE per session by
+    // run_project (main.cpp) because the face predicates below sit under the
+    // seam (this header cannot include platform.h) and a face reads what the
+    // act's refusal reads. It is the ahead-of-press half of the clipboard
+    // verdict: the roster's Copy resolved value and the stats panel's Copy to
+    // clipboard read it for their faces and tooltips; the per-press half
+    // (the Wayland serial, the data device) is clipboard_set_text's verdict
+    // alone and CARDS, never greys. Cold value false: nothing is promised
+    // before the seam has said so.
+    bool clipboard_publishes = false;
+
     // THE LIVE DEVICE CONFIG, the loop's one struct (main.cpp), reached by
     // pointer: the commits that write that file (apply_gui_scale, and the
     // settings editor's one device-key body for `projects_repo=`,
@@ -11747,8 +11760,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // at the top of this body (bare `j` is neither the mode's vocabulary
         // nor on its allowlist), and the folder overlay's first arm — nothing
         // hand-listed either way.
+        // THE BACKEND TERM (2026-09-03): on a backend whose clipboard reaches
+        // no other program (a.clipboard_publishes, the seam's static
+        // capability) the plain press cards "Copy is not available on this
+        // backend" — but the SHIFTED twin, the jump, reaches no clipboard and
+        // stays live, so THE TWIN RULE holds the face lit while the jump has
+        // a marker to land on (value_source_marker, the jump's own second
+        // question) and greys it only when both halves would change nothing.
         case RedesignButton::IconCopyValue:
             if (!payload_eligible_marker(a, audio, a.last_selected_marker))
+                return false;
+            if (!a.clipboard_publishes &&
+                value_source_marker(a, total_frames) < 0)
                 return false;
             break;
         // (THE MARKER MEASURE sat here — the row's always-on policy — from
@@ -13308,8 +13331,21 @@ inline RedesignTooltipText redesign_button_tooltip(
                         nullptr};
             }
             if (verdict != PayloadEligibility::Eligible ||
-                value_source_marker(a, total_frames) < 0)
+                value_source_marker(a, total_frames) < 0) {
+                // THE BACKEND'S GREY EXPLAINS ITSELF TOO (tooltips-on-
+                // disabled): with no jump to keep the face lit, line 1 is
+                // the plain press's own card sentence.
+                if (!a.clipboard_publishes)
+                    return {"Copy is not available on this backend (J)",
+                            nullptr};
                 return {"Copy resolved value (J)", nullptr};
+            }
+            // THE BACKEND TERM UNDER A LIT FACE (2026-09-03, the Drop marker
+            // arm's shape): the jump keeps the face lit and its line, and
+            // line 1 says what the plain press will say.
+            if (!a.clipboard_publishes)
+                return {"Copy is not available on this backend (J)",
+                        "Press Shift to jump to defining/previous marker."};
             break;
         }
         // THE FOUR ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the

@@ -134,7 +134,23 @@ public:
     // string, hands it over, and keeps nothing.
     //
     // clipboard_set_text claims the selection with `text` as the payload,
-    // offered as text/plain;charset=utf-8 and text/plain.
+    // offered as text/plain;charset=utf-8 and text/plain. ITS VERDICT IS
+    // WHETHER THE CLAIM WAS ISSUED (2026-09-03, codex on the AV Sync Stats
+    // panel's copy button): TRUE only when a data device exists, the data
+    // source was created and set_selection was sent with a NON-ZERO
+    // input-event serial; FALSE otherwise, the payload still stored (so a
+    // self-paste answers with it) but the compositor having no claim to
+    // honour. The verdict is what a carded clipboard success reads — a copy
+    // that cards "Copied ..." on a refused claim would lie. It cannot see a
+    // serial the compositor REJECTS as stale (that rejection is silent on the
+    // wire), which is why every input event that can trigger a copy caches
+    // its serial (last_input_serial_).
+    //
+    // clipboard_publishes is the STATIC half of the same question, the one a
+    // FACE may read ahead of a press: whether this backend can put text
+    // anywhere another program reads. True here — the system clipboard is
+    // the wl_data_device selection. The per-press half (the serial, the data
+    // device) is the verdict's alone; a face never reads it.
     //
     // clipboard_get_text answers with that stored payload while WE hold
     // the selection (the self-paste short circuit — a same-thread
@@ -146,8 +162,9 @@ public:
     // paste" — the bytes are not filtered here, because the editor's own
     // incoming filter (text_editor::replace_selection) is the boundary that
     // validates UTF-8 well-formedness and drops control bytes.
-    void        clipboard_set_text(const std::string& text);
+    bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
+    static constexpr bool clipboard_publishes() { return true; }
 
     int width()  const;
     int height() const;
@@ -856,10 +873,17 @@ private:
     std::string            clipboard_send_text_;
     bool                   clipboard_we_own_ = false;
 
-    // Most recent serial from a keyboard event, required by
-    // wl_data_device.set_selection. Cached in on_keyboard_key: every copy is a
-    // Ctrl+C or Ctrl+X key event, so this is the triggering event's own serial
-    // at set time. Cleared when the seat goes away.
+    // THE MOST RECENT INPUT-EVENT SERIAL, required by
+    // wl_data_device.set_selection, which wlroots (labwc) VALIDATES against
+    // the seat's recent serials and silently refuses when stale or zero.
+    // Cached from EVERY accepted input event that can trigger a copy, before
+    // the event reaches the core: a keyboard key (Ctrl+C / Ctrl+X in an
+    // editor, bare `j`, the stats panel's Ctrl+C), a pointer button (a modal
+    // or roster button's lift, the Copy to clipboard button since
+    // 2026-09-03 — a pointer-only session had no serial at all until then,
+    // and a stale key serial otherwise) and a touch down / up (the Wayland
+    // touch path is the pointer's twin). Motion, axis and frame events carry
+    // no serial and cache nothing. Cleared when the seat goes away.
     uint32_t               last_input_serial_ = 0;
 
     // -- Keyboard --
@@ -1084,11 +1108,14 @@ private:
     void on_pointer_axis_value120(uint32_t axis, int32_t value120);
 
     // -- Touch handlers --
-    // The two events carrying coordinates: this half decodes the fixed-point
-    // pair and the core owns the machine. The other three (up, frame, cancel)
-    // carry nothing to decode and reach the core straight from the listener.
+    // The two events carrying coordinates decode the fixed-point pair and the
+    // core owns the machine; down and up ALSO cache their serial for the
+    // clipboard claim (last_input_serial_), which is why up has a handler of
+    // its own. Frame and cancel carry nothing to decode and no serial, and
+    // reach the core straight from the listener.
     void on_touch_down(uint32_t serial, uint32_t time, int32_t id,
                        int32_t fx, int32_t fy);
+    void on_touch_up(uint32_t serial, int32_t id);
     void on_touch_motion(uint32_t time, int32_t id, int32_t fx, int32_t fy);
 
     // -- Pointer-capture helpers --

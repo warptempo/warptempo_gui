@@ -648,7 +648,7 @@ static_assert(!chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
               "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
-              "bare Esc is bound; it is one of the eight-place contract's own "
+              "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "
               "silence is that arm's own, reached only with no card standing");
 static_assert(!chord_is_bound(GuiKeys::Escape,

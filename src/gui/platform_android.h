@@ -157,15 +157,24 @@ public:
     // THE CLIPBOARD IS THIS PROCESS'S OWN and goes no further: set stores the
     // one payload, get answers with it, and the empty string is the legal cold
     // answer every caller already handles ("nothing to paste"). Android's
-    // system clipboard is a Java surface (ClipboardManager) reachable only
-    // through JNI and is not reached; the Wayland twin's
-    // wl_data_device machinery — the selection claim, the offer bookkeeping,
-    // the bounded pipe read — has no counterpart here because there is no
-    // second client to hand bytes to. The bytes are not filtered here for the
-    // Wayland twin's reason: text_editor::replace_selection is the boundary
-    // that validates them.
-    void        clipboard_set_text(const std::string& text);
+    // system clipboard is a Java surface (ClipboardManager), NOT BUILT here —
+    // the Java sliver (MainActivity, the MediaSession's JNI road) could carry
+    // it, and a ruling on that road is pending (2026-09-03); the Wayland
+    // twin's wl_data_device machinery — the selection claim, the offer
+    // bookkeeping, the bounded pipe read — has no counterpart here. The bytes
+    // are not filtered here for the Wayland twin's reason:
+    // text_editor::replace_selection is the boundary that validates them.
+    //
+    // THE VERDICT IS FALSE, ALWAYS (the twin's contract: true only when a
+    // claim another program can read has been issued): the store still takes
+    // the text, so the editors' in-app paste keeps working, but a carded copy
+    // reads false and refuses truthfully rather than announcing a copy no
+    // other application can receive. clipboard_publishes is the same answer
+    // as a STATIC capability, the half a face may read ahead of a press: the
+    // stats panel's Copy to clipboard greys on this backend.
+    bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
+    static constexpr bool clipboard_publishes() { return false; }
 
     int width()  const;
     int height() const;

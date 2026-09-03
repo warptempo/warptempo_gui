@@ -195,7 +195,7 @@
 // EVERY VEIL because a card must be dismissable under any modal, while Esc
 // sits UNDER all of them — every other Esc place is earlier in the dispatch,
 // so the key reaches the stack only when nothing modal stands and no render
-// is in flight (the EIGHT places are enumerated at on_key,
+// is in flight (the NINE places are enumerated at on_key,
 // input_handler.cpp; the arm itself is handle_plain_bare_keys').
 // It reads no class — a critical card is dismissed like any other, exactly as
 // the X takes any class — so the key is the one act that reaches a critical
@@ -214,7 +214,7 @@
 // should clear all notifications", one act wanting one chord rather than two
 // roads onto it. Ctrl+Esc is unbound-silent now like every other modified
 // Escape, and the bare key's rank is unchanged — it is still the LAST of the
-// eight places, under every modal, so a standing surface takes the press for
+// nine places, under every modal, so a standing surface takes the press for
 // its own close and the stack waits.
 //
 // The pointer's own rule, unchanged: on both backends, a press on the

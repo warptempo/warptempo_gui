@@ -861,7 +861,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              selection/region ladder it used to serve here
     //                              is deleted, so a bare Esc with no render
     //                              running and no card standing is a plain
-    //                              no-op (the eight-place contract at its
+    //                              no-op (the nine-place contract at its
     //                              enumeration's home, input_handler.cpp's
     //                              on_key)
     //   - Ctrl+Q                 → close-prompt routing
@@ -1241,7 +1241,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is place (e) — the stack's clear, and an explicit no-op with no card
     // standing (handle_plain_bare_keys) — the one place the press ends.
-    // THE EIGHT PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
+    // THE NINE PLACES ARE BARE ESC'S AND EVERY MODIFIED ESCAPE IS UNBOUND, at
     // every Escape reader. CTRL+ESC IS THE RETIREMENT RECORD: it was bound at
     // the very head of this function on the morning of 2026-09-01 to clear the
     // whole notification stack from above every gate, a DIFFERENT CHORD that
@@ -3178,11 +3178,17 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
 bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
+        // THE VERDICT IS IGNORED HERE, DELIBERATELY: an editor's copy and cut
+        // card nothing (messaging.md — an editor is its own world), and the
+        // in-app paste below reads the platform's store, which takes the
+        // text whichever way the claim went. The two CARDED writes (bare `j`,
+        // the stats panel's report) read it; the composer is theirs
+        // (card_clipboard_refusal, input_key_dispatch.cpp).
         case text_editor::KeyAction::CopyRequested:
-            gui.clipboard_set_text(text_editor::selected_text(s));
+            (void)gui.clipboard_set_text(text_editor::selected_text(s));
             return true;
         case text_editor::KeyAction::CutRequested:
-            gui.clipboard_set_text(text_editor::selected_text(s));
+            (void)gui.clipboard_set_text(text_editor::selected_text(s));
             // An empty insert can only shrink the buffer, so this call has no
             // refusal to report (the cap's rule is at replace_selection).
             (void)text_editor::replace_selection(s, std::string());

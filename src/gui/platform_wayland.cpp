@@ -426,9 +426,9 @@ struct WaylandListeners {
                            int32_t id, wl_fixed_t x, wl_fixed_t y) {
         static_cast<GuiPlatform*>(data)->on_touch_down(serial, time, id, x, y);
     }
-    static void touch_up(void* data, struct wl_touch*, uint32_t /*serial*/,
+    static void touch_up(void* data, struct wl_touch*, uint32_t serial,
                          uint32_t /*time*/, int32_t id) {
-        static_cast<GuiPlatform*>(data)->input_.touch_up(id);
+        static_cast<GuiPlatform*>(data)->on_touch_up(serial, id);
     }
     static void touch_motion(void* data, struct wl_touch*, uint32_t time,
                              int32_t id, wl_fixed_t x, wl_fixed_t y) {
@@ -2469,13 +2469,15 @@ bool GuiPlatform::key_from_keycode(uint32_t xkb_keycode, GuiKey& out) const {
 
 void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
-    // Cache the serial for wl_data_device.set_selection. Every copy is a Ctrl+C
-    // or Ctrl+X key event, so the serial stored here IS the triggering event's
-    // own by the time clipboard_set_text runs. Cached BEFORE the xkb and
-    // release gates below so a release, a key with no keymap, and a key held
-    // under Super all keep it current — the compositor validates the serial
-    // against its input history, not against what this program did with the
-    // key.
+    // Cache the serial for wl_data_device.set_selection (the field's comment
+    // is the inventory of the events that cache): a key-triggered copy —
+    // Ctrl+C / Ctrl+X in an editor, bare `j`, the stats panel's Ctrl+C —
+    // runs synchronously under this event, so the serial stored here IS the
+    // triggering event's own by the time clipboard_set_text runs. Cached
+    // BEFORE the xkb and release gates below so a release, a key with no
+    // keymap, and a key held under Super all keep it current — the
+    // compositor validates the serial against its input history, not against
+    // what this program did with the key.
     last_input_serial_ = serial;
 
     if (!xkb_state_) return;
@@ -2599,8 +2601,17 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
                           wl_fixed_to_double(surface_y));
 }
 
-void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
+void GuiPlatform::on_pointer_button(uint32_t serial, uint32_t /*time*/,
                                     uint32_t button, uint32_t state) {
+    // Cache the serial BEFORE the delivery, as on_keyboard_key does: a
+    // button's lift runs its act synchronously under this event (the stats
+    // panel's Copy to clipboard, the roster's Copy resolved value), and the
+    // claim that act issues must ride THIS event's serial — labwc refuses a
+    // stale key serial, and a pointer-only session had none at all before
+    // 2026-09-03. Cached ahead of the translation too: an untranslated button
+    // is still the seat's most recent input, and the compositor's validation
+    // reads its own history.
+    last_input_serial_ = serial;
     GuiMouseButton mb;
     if (!translate_pointer_button(button, mb)) return;
     input_.pointer_button(mb, state == WL_POINTER_BUTTON_STATE_PRESSED);
@@ -2640,9 +2651,19 @@ void GuiPlatform::create_relative_pointer_if_ready() {
 // Touch: the unit decode, and nothing else (the phase machine is the core's)
 // ---------------------------------------------------------------------------
 
-void GuiPlatform::on_touch_down(uint32_t /*serial*/, uint32_t /*time*/,
+void GuiPlatform::on_touch_down(uint32_t serial, uint32_t /*time*/,
                                 int32_t id, int32_t fx, int32_t fy) {
+    // Down and up cache their serial for the clipboard claim exactly as the
+    // pointer button does (last_input_serial_'s inventory): a finger's lift
+    // on a button is that button's act, and a copy under it must ride the
+    // touch event's own serial.
+    last_input_serial_ = serial;
     input_.touch_down(id, wl_fixed_to_double(fx), wl_fixed_to_double(fy));
+}
+
+void GuiPlatform::on_touch_up(uint32_t serial, int32_t id) {
+    last_input_serial_ = serial;
+    input_.touch_up(id);
 }
 
 void GuiPlatform::on_touch_motion(uint32_t /*time*/, int32_t id,
@@ -3026,11 +3047,20 @@ void GuiPlatform::on_selection(struct wl_data_offer* offer) {
     }
 }
 
-void GuiPlatform::clipboard_set_text(const std::string& text) {
+bool GuiPlatform::clipboard_set_text(const std::string& text) {
     // The payload is mirrored first and unconditionally, so it is current for
     // the `send` below and for a self-paste even if the claim itself fails.
+    // THE VERDICT (contract at the declaration): false on every road that
+    // issues no claim, true once set_selection has gone out with a non-zero
+    // serial. NO SERIAL, NO CLAIM: set_selection with serial 0 is refused by
+    // wlroots and would leave a dangling source behind an ownership bit that
+    // lies to the self-paste short circuit, so the zero case returns before
+    // creating one — the payload stored, the previous claim (if any) left
+    // standing with the OLD source, which still answers `send` from the store
+    // and so hands out the new text.
     clipboard_send_text_ = text;
-    if (!wl_data_device_manager_ || !wl_data_device_) return;
+    if (!wl_data_device_manager_ || !wl_data_device_) return false;
+    if (last_input_serial_ == 0) return false;
     if (clipboard_source_) {
         // Replacing our own source. Destroying it first means the compositor's
         // answering `cancelled` can never be routed at the source that replaces
@@ -3042,7 +3072,7 @@ void GuiPlatform::clipboard_set_text(const std::string& text) {
         wl_data_device_manager_);
     if (!clipboard_source_) {
         clipboard_we_own_ = false;
-        return;
+        return false;
     }
     wl_data_source_add_listener(clipboard_source_,
                                 &s_data_source_listener, this);
@@ -3051,14 +3081,20 @@ void GuiPlatform::clipboard_set_text(const std::string& text) {
     wl_data_device_set_selection(wl_data_device_, clipboard_source_,
                                  last_input_serial_);
     clipboard_we_own_ = true;
+    return true;
 }
 
 void GuiPlatform::on_data_source_send(struct wl_data_source* /*src*/,
                                       const char* /*mime*/, int fd) {
     // Both offered mimes name the same bytes, so the requested one does not
     // change what is written. This runs only for an EXTERNAL consumer (a
-    // self-paste never reaches the pipe), and the payloads are one-line values
-    // far below a pipe buffer, so the blocking write cannot stall the loop.
+    // self-paste never reaches the pipe), and every payload is SMALL BY
+    // CONSTRUCTION — an editor's selection or a marker's resolved value
+    // (strings under the editors' per-Kind byte caps) or the AV Sync Stats
+    // panel's fixed-shape report of a few dozen short lines — all far below
+    // a pipe buffer (64 KiB on Linux), so the blocking write cannot stall the
+    // loop. The bound is the payload's SIZE, not its line count: the stats
+    // report is many lines and ends in a newline.
     //
     // THE FD IS THE CONSUMER'S, so it can vanish under us: a consumer that
     // closes its read end mid-transfer makes the write fail. That is a
