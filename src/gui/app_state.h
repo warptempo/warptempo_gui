@@ -3502,11 +3502,12 @@ inline constexpr int kSeriesPopupItemCount =
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems.
 // This row cannot refuse for any reason a user can reach anyway: THE ANCHOR
-// ITSELF is dead in the `h` history view (menu_anchor_dead_in_mode — the panel
-// is refused there, so the menu would open onto nothing) and under every
-// folder-overlay content (the same owner's first arm — the menu row stands
-// above the band greyed, kdenlive's modal admitting no menu), and under a
-// prompt or an editor the row is unreachable, the veil consuming the press.
+// ITSELF is dead in the `h` history view and under every folder-overlay
+// content (menu_anchor_dead_in_mode, whose criterion this row IS in both —
+// the panel's opener refuses under a standing player, picker or panel and in
+// the view, so HELP would open onto nothing; FILE is the one anchor those
+// modes leave live and it does not carry this row), and under a prompt or an
+// editor the row is unreachable, the veil consuming the press.
 inline constexpr CommandPopupItem kHelpPopupItems[] = {
     {"AV Sync Stats", nullptr, 0, false, false, false, false,
      GuiPopupAct::AvSyncStats},
@@ -8013,9 +8014,10 @@ struct AppState {
         // THE THREE CONTENTS (Stats joined 2026-09-03). The tag IS the standing
         // predicate (folder_overlay_stands, below), and it is the one thing the
         // open act forks on — and, since 2026-09-03, the one thing the ROW
-        // PITCH forks on (folder_overlay::text_listing: the stats panel's
-        // rows are text lines and stand at the monospace line's height, the
-        // other two contents' rows at the button's box). Everything else about
+        // PITCH AND THE FACE fork on (folder_overlay::text_listing: the stats
+        // panel's rows are monospace text lines and stand at that line's
+        // height, the other two contents' rows the sans in the button's box).
+        // Everything else about
         // the panel — the band, the scroll, the walk — is the widget's and
         // knows nothing about which content fills it.
         enum class Owner { None, Player, ProjectPicker, Stats };
@@ -8199,46 +8201,67 @@ inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }
 
-// IS THE CHROME FOCUSED? THE ONE VERDICT behind every header face that has a
-// focused and an unfocused form — the menu row's ground (redesign_row_ground,
-// paint_handler.cpp, which is also the mix TARGET of that row's disabled label
-// and of its click fill, and which fills GAP 1's band above the row in the
-// same shade) and the view bar's own background and face table (the
-// `bar_focused` term paint_menu_row hands to view_bar_face). It is the
-// window's activation AND no folder overlay standing.
+// IS THE CHROME FOCUSED? THE ONE VERDICT behind the HEADER's own faces —
+// the menu row's ground (redesign_row_ground, paint_handler.cpp, which is also
+// the mix TARGET of that row's disabled label and of its click fill, and which
+// fills GAP 1's band above the row in the same shade). IT IS THE WINDOW'S
+// ACTIVATION AND NOTHING ELSE.
+//
+// A STANDING FOLDER OVERLAY WAS A SECOND TERM HERE and is not one any more
+// (architect 2026-09-03 evening, the same breath that left the File anchor
+// live under the band: "File, Edit, Iterations, etc. looks odd disabled when
+// the player's on, especially because the title bar is still the regular one —
+// the window has focus"). The title bar the compositor draws says ACTIVATED,
+// so a whole header painted in the focus-loss ground under a modal contradicts
+// it — and with a LIVE ANCHOR standing on that row the header is not an
+// inactive surface at all. It stood for the evening of 2026-09-02, was deleted
+// for the hours of 2026-09-03 the band covered row 1 (no producer), came back
+// with the gap's move above the menu row that evening, and is gone again with
+// this ruling; what it was landed FOR now lives at view_bar_focused below,
+// which is the surface that actually needed it.
+//
+// THE `h` HISTORY VIEW WAS NEVER IN IT: a MODE is not a MODAL. The view keeps
+// the keyboard, its own allowlist including the view bar's 1/2/3, so its
+// header stays focused and its bar stays blue.
+//
+// DAMAGE: the activation hook damages the top strip (and the standing modal
+// row and panel) on every focus edge, so the one producer of this verdict
+// repaints the header on both of its edges with no damage call of its own.
+inline bool chrome_focused(const AppState& a) {
+    return a.window_activated;
+}
+
+// IS THE VIEW BAR FOCUSED? THE ROW'S RIGHT FLOAT ASKS ITS OWN QUESTION — the
+// header's verdict AND no folder overlay standing — and this is the one place
+// the second term lives (its readers are paint_menu_row's `bar_focused` local,
+// which hands it to the bar's background and to view_bar_face, so the div and
+// its three buttons cannot part).
 //
 // THE SECOND TERM IS KDENLIVE'S LOOK UNDER A MODAL (architect 2026-09-02, on
 // the view bar he had just been given its unfocused face: "top right 1/2/3
 // buttons — those look right when window loses focus but when media player/
 // picker is open they don't have the disabled background for the nonselected
 // buttons — if that was deliberate, they should have the disabled bg as that
-// is what kdenlive does with a modal"). The bar alone could not deliver it:
-// its unfocused ground #292c30 is NUMERICALLY EQUAL to the FOCUSED header
-// ground kRedesignRowGround, so while the window stayed activated under the
-// panel the bar's div and its resting buttons vanished into the header they
-// sit in. THE HEADER HAS TO GO INACTIVE WITH IT — which is the honest reading
-// anyway, the panel being the modal that holds the keyboard — and then
-// #292c30 stands out against the #202326 header exactly as it does on a real
-// focus loss, which is the look he calls right. So the two faces read ONE
-// answer and cannot part.
+// is what kdenlive does with a modal"), and it is THE ONLY WAY THOSE THREE
+// GREY: they have no dimmed face of their own (render.h's view-bar block —
+// the crops named "disabled" are the unfocused window), so the ground swap is
+// what shows that redesign_button_enabled's first arm has killed them.
 //
-// IT STOOD FOR THE EVENING OF 2026-09-02, WAS DELETED FOR THE HOURS OF
-// 2026-09-03 THE BAND COVERED ROW 1 (no producer: nothing could see the
-// header under the panel) AND IS BACK SINCE THE GAP MOVED ABOVE THE MENU ROW
-// that evening — the band starts at the tab row now, row 1 shows above it
-// under every content, and the view bar's three have no dimmed face of their
-// own (render.h's view-bar block), so this is the only way they grey.
+// IT IS THE BAR'S AND NOT THE HEADER'S SINCE 2026-09-03 EVENING, when the
+// File anchor went live under the band and the header went back to reading
+// the activation flag alone (chrome_focused above): his two sentences that
+// evening are "leave File open" and "the 1/2/3 ... can keep the greyed-out
+// disabled face they have now", and the only way to honour both is for the
+// bar to carry the modal term by itself. Its unfocused ground #292c30 is
+// NUMERICALLY EQUAL to the focused header ground, so the bar now sits one
+// shade off the row it floats on rather than reading as part of it — which is
+// exactly the separation the crops show on a real focus loss.
 //
-// THE `h` HISTORY VIEW IS NOT IN IT: a MODE is not a MODAL. The view keeps
-// the keyboard, its own allowlist including the view bar's 1/2/3, so its
-// header stays focused and its bar stays blue.
-//
-// DAMAGE: the activation hook damages the top strip (and the standing modal
-// row and panel) on every focus edge, and a panel's open and close each
-// invalidate the whole window — so both producers of this verdict repaint the
-// header on both of their edges with no damage call of their own.
-inline bool chrome_focused(const AppState& a) {
-    return a.window_activated && !folder_overlay_stands(a);
+// DAMAGE: a panel's open and close each invalidate the whole window, and the
+// activation hook damages the top strip on every focus edge, so both terms
+// repaint this bar with no damage call of its own.
+inline bool view_bar_focused(const AppState& a) {
+    return chrome_focused(a) && !folder_overlay_stands(a);
 }
 
 // THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
@@ -8839,9 +8862,10 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // so"). So the panel is EVERY LANE BUT THE MENU ROW AND THE BOTTOM ROW: the
 // tab row, the icon row, the overview strip, the trim bar, the ruler, the
 // marker lane, the waveform entire and gap 2 — and THE MENU ROW STANDS ABOVE
-// IT, VISIBLE AND DEAD (kdenlive's modal admits no menu: the face is
-// redesign_button_enabled's first arm, the anchors' own gate
-// menu_anchor_dead_in_mode's overlay term, the press the veil's). The height
+// IT, VISIBLE AND CARRYING THE `h` VIEW'S PARTITION (File live, the other
+// four anchors and the view bar dead: the face is redesign_button_enabled's
+// first arm over menu_anchor_dead_in_mode, and the press is the veil's with
+// the live anchor exempted — architect 2026-09-03 evening). The height
 // is the bottom row's top edge less the tab row's, both resolved by the lane
 // accessors on the CLAMPED window dimensions — the same geometry
 // keyboard_slot_band takes its x and width from, so the two cannot disagree
@@ -10626,10 +10650,11 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // restates none of its terms.
 bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
-// WHICH MENU ANCHORS ARE DEAD IN THE STANDING MODE — ONE OWNER for the `h`
-// history view's partition of row 1, and the one place that set is spelled.
-// FILE IS LIVE and the other three anchors are dead; a button that is not an
-// anchor gets no opinion here at all — its own arm answers it.
+// WHICH MENU ANCHORS ARE DEAD IN THE STANDING MODE — ONE OWNER for row 1's
+// partition under the `h` history view AND under the folder overlay's three
+// contents, and the one place that set is spelled. FILE IS LIVE and the other
+// FOUR anchors are dead; a button that is not an anchor gets no opinion here
+// at all — its own arm answers it.
 //
 // THE CRITERION: an anchor whose every row the mode consumes would open onto
 // nothing, which is the face promising more than the keys deliver. SETTINGS is
@@ -10643,37 +10668,49 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // (2026-08-13): its three rows — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
 // `\` — are all on the allowlist, so its menu opens onto three working rows.
 //
-// THE FOLDER OVERLAY KILLS EVERY ANCHOR, FILE INCLUDED (architect 2026-09-03,
-// twice in one day): kdenlive's modal admits no menu, so under the render
-// player, the Open project picker and the AV Sync Stats panel alike the menu
-// row STANDS ABOVE THE BAND — visible since the band's ceiling dropped to the
-// tab row's first pixel that evening — with all five anchors greyed and no
-// menu openable. The term is the FIRST arm here, before the File exception,
-// because that exception is the `h` view's partition and no partition exists
-// under a modal. (The panel left File LIT under it for the one day of
-// 2026-09-02, when the band stopped at row 1's foot, and the roster was
-// UNSEEN under it for the hours of 2026-09-03 the band ran to the window's
-// top, when this owner carried no overlay term at all.)
+// THE FOLDER OVERLAY TAKES THE SAME PARTITION AS THE `h` VIEW — FILE LIVE,
+// THE OTHER FOUR DEAD (architect 2026-09-03 evening, at his first look at the
+// closed gap: "File, Edit, Iterations, etc. looks odd disabled when the
+// player's on, especially because the title bar is still the regular one —
+// the window has focus. So leave File open, because Quit should still be
+// enabled — everything else like what we do with history: all the commands in
+// File are available in history mode. Leave that for the player, the picker
+// and the AV stats."). So the mode term is the LAST arm and File's exception
+// is asked ahead of BOTH modes: there is ONE partition, and the render
+// player, the Open project picker and the AV Sync Stats panel take it exactly
+// as the history view does. (For the hours between the gap's close that
+// evening and this ruling the overlay killed every anchor, File included —
+// kdenlive's modal admitting no menu; on 2026-09-02, when the band stopped at
+// row 1's foot, File was lit under it; and while the band ran to the window's
+// top the roster was unseen and this owner carried no overlay term at all.)
 //
-// THE FACE IS redesign_button_enabled's FIRST ARM — the whole roster greys
-// under the band, the anchors with it — and THE PRESS IS THE VEIL'S: every
-// press outside the band and the modal row is consumed before the menu-row
-// claim is reached, and on_motion's three overlay branches return before the
-// armed hover open. So this term is reached by no route today, and it stands
-// because THE ACT'S OWN GATE must read what the face reads: toggle_dropdown is
-// the one body every open route converges on (the press, the armed hover
-// open, the hover switch), and an anchor that greys on folder_overlay_stands
-// must refuse on the same predicate at its act rather than by the veil's
-// ordering alone.
+// THE CRITERION HOLDS UNDER THE BAND WITHOUT AN EXCEPTION: File's three rows
+// are Ctrl+O, bare `\` and Ctrl+Q, and under all three contents Quit falls
+// through every router to the ordinary close road and Synchronize's row calls
+// its own gated body directly, so the menu opens onto working rows. Open
+// Project is the one row the routers consume in silence there (the
+// unbound-keys ruling, each router's catch-all) — one row of three, which is
+// not "every row would open onto nothing" and so not a reason to kill the
+// anchor. The other four die under the band for their `h`-view reasons said
+// once above: Settings and Help are direct calls their acts refuse under a
+// modal, Edit and Iterations are chords every router drops.
+//
+// THE FACE IS redesign_button_enabled's FIRST ARM (which asks this owner for
+// the anchors and greys everything else under the band) and THE PRESS IS THE
+// VEIL'S, exempted for a LIVE anchor at press_on_live_menu_anchor
+// (input_pointer.cpp) — the one place the three veils let a press through to
+// the menu-row claim. THE ACT'S OWN GATE STILL READS WHAT THE FACE READS:
+// toggle_dropdown is the one body every open route converges on (the press,
+// the armed hover open, the hover switch), which is what makes the hover
+// switch off File refuse to open a dead neighbour.
 //
 // ITS TWO READERS: history_mode_disables_button's anchor arm (the face, inside
 // the `h` view) and toggle_dropdown's guard (the OPEN). No third copy of the
 // set exists.
 inline bool menu_anchor_dead_in_mode(const AppState& a, RedesignButton b) {
     if (!redesign_button_is_menu_anchor(b)) return false;
-    if (folder_overlay_stands(a)) return true;
     if (b == RedesignButton::File) return false;
-    return a.history_mode.active;
+    return folder_overlay_stands(a) || a.history_mode.active;
 }
 
 // (THE MODE-COLLAPSING ROSTER'S PREDICATE — redesign_button_collapsed, which
@@ -11173,31 +11210,37 @@ inline bool redesign_button_enabled(const AppState& a,
                                     const GuiPlayback& playback,
                                     const GuiTargetRender& target_render,
                                     RedesignButton b) {
-    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER, whichever content owns it
-    // (architect 2026-08-28, the ruled exception recorded above the
-    // signature: "everything else greys as in the `h` view"). Under the
-    // PLAYER, the PICKER and the AV SYNC STATS PANEL the pointer rule is the
-    // veil (every
-    // press outside the overlay band and the modal row is consumed —
-    // render_player_active, picker_active and stats_panel_active,
-    // input_handler.h), and this
-    // line is the face that says so for all three. It is ranked first, above the
-    // `h` partition, so a band standing over any state greys everything that
-    // partition would have lit.
+    // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER BUT THE FILE ANCHOR,
+    // whichever content owns it (architect 2026-08-28, the ruled exception
+    // recorded above the signature: "everything else greys as in the `h`
+    // view"). Under the PLAYER, the PICKER and the AV SYNC STATS PANEL the
+    // pointer rule is the veil (every press outside the overlay band and the
+    // modal row is consumed — render_player_active, picker_active and
+    // stats_panel_active, input_handler.h), and this line is the face that
+    // says so for all three. It is ranked first, above the `h` partition, so
+    // a band standing over any state greys everything that partition would
+    // have lit.
     //
-    // THE MENU ROW STANDS ABOVE THE BAND, VISIBLE AND DEAD (architect
-    // 2026-09-03: the band starts at the tab row's first pixel, so row 1 —
-    // the five anchors and the view bar — is the ONE roster lane on screen
-    // while a content stands, and this line is the face it wears: every
-    // anchor and every view button grey, with no lit-anchor exception to
-    // carve, kdenlive's modal admitting no menu). The anchors' OPEN reads the
-    // same predicate at menu_anchor_dead_in_mode's first arm, and the veil
-    // consumes the press before either is asked. (The band covered row 1
-    // whole for the hours of that day between "remove top row in file
-    // picker/media player" and the gap's move above the menu row, and this
-    // face had no viewer then; on 2026-09-02 the band stopped at row 1's foot
-    // and File alone stayed lit under it.)
-    if (folder_overlay_stands(a)) return false;
+    // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
+    // PARTITION (architect 2026-09-03 evening: the band starts at the tab
+    // row's first pixel, so row 1 — the five anchors and the view bar — is
+    // the ONE roster lane on screen while a content stands, and "everything
+    // else like what we do with history: all the commands in File are
+    // available in history mode. Leave that for the player, the picker and
+    // the AV stats"). So the answer here is the ANCHOR OWNER'S,
+    // menu_anchor_dead_in_mode, which File alone survives; every other
+    // button on the row and off it — the view bar's 1/2/3 included, whose
+    // grey shows through view_bar_focused's ground swap — is dead. The
+    // anchors' OPEN reads that same owner at toggle_dropdown's guard, and the
+    // veil consumes every press but a live anchor's
+    // (press_on_live_menu_anchor, input_pointer.cpp). (The band killed File
+    // too for the hours between the gap's close and this ruling; it covered
+    // row 1 whole earlier that day and this face had no viewer; on 2026-09-02
+    // the band stopped at row 1's foot and File alone stayed lit under it,
+    // which is the shape this ruling restores.)
+    if (folder_overlay_stands(a))
+        return redesign_button_is_menu_anchor(b) &&
+               !menu_anchor_dead_in_mode(a, b);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and

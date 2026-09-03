@@ -285,17 +285,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE RENDER PLAYER IS KEYBOARD-MODAL (2026-08-28), ranked under the
     // prompt (its load confirmation is a prompt and outranks it) and the
-    // dropdown (a popup cannot be open while it stands — the veil consumes
-    // the anchors' presses, and `l` under a popup dies at the gate above),
-    // and above everything else: while the mode stands ITS ROUTER IS THE
-    // WHOLE VOCABULARY (the contract at route_render_player_key), and only
-    // Ctrl+S and Ctrl+Q fall through to the ordinary dispatch — Ctrl+S to the
-    // save, which touches no transport, and Ctrl+Q with the player already
-    // closed, so the quit road runs on the ordinary state. (Ctrl+O and bare
-    // `\` fell through too for the one day of 2026-09-02, when the panel
-    // stopped at row 1's foot and the File menu stayed reachable under it;
-    // every anchor is dead under the band since 2026-09-03 — the menu row
-    // shows above it, greyed.) No editor and no
+    // dropdown — which since 2026-09-03 evening CAN be open over the band,
+    // the File anchor being live above it, so this rank is load-bearing and
+    // not merely tidy: while File's menu is up its own gate above admits Esc
+    // and Ctrl+Q and swallows the rest, so Esc puts the MENU away before it
+    // could reach this router and close the player. Above everything else:
+    // while the mode stands ITS ROUTER IS THE WHOLE VOCABULARY (the contract
+    // at route_render_player_key), and only Ctrl+S and Ctrl+Q fall through to
+    // the ordinary dispatch — Ctrl+S to the save, which touches no transport,
+    // and Ctrl+Q with the player already closed, so the quit road runs on the
+    // ordinary state. THE FILE MENU'S THREE ROWS AGREE WITH THAT SET, which
+    // is why it needs no more of them: Quit rides the Ctrl+Q fall-through,
+    // Synchronize's row calls its own gated body directly (the recorded
+    // exception at GuiPopupAct) and Open Project dispatches Ctrl+O, which the
+    // catch-all consumes in silence — one row of three doing nothing, which
+    // is not the "opens onto nothing" the anchor's own gate kills a menu for.
+    // (Ctrl+O and bare `\` fell through for the one day of 2026-09-02, when
+    // the rows had to agree with their chords; the direct-call row and the
+    // silence rule make that unnecessary now.) No editor and no
     // gesture of any OTHER surface can stand under it (its opener refuses
     // under every editor; the veil arms none), so the gates below never
     // contend with it — its own two arms are this block's business, below.
@@ -335,7 +342,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road), Ctrl+S consumed by the router as the
     // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
-    // which must not open over a picker). The gesture clause is the player's
+    // which must not open over a picker). The File menu above the band reads
+    // the same way it does under the player: Quit falls through, Synchronize
+    // calls its own body, Open Project is the silent no-op — and here that
+    // last one is the picker answering about itself. The gesture clause is the player's
     // own: the overlay's row press arm is a member of
     // any_pointer_gesture_active under every owner, and while it stands
     // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
@@ -359,7 +369,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // picker's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_stats_panel_key), Ctrl+Q the one fall-through (with the panel
     // already closed by the close road), Ctrl+S consumed by the router as the
-    // save. Its Up/Down SCROLL the band rather than walking a highlight, which
+    // save, and the File menu above the band reading exactly as it does under
+    // the other two. Its Up/Down SCROLL the band rather than walking a highlight, which
     // is the difference that made it a router and a modal owner of its own
     // rather than a second tenant of the picker's (the record is at
     // AppState::ModalDialogOwner). The gesture clause is the player's own: the

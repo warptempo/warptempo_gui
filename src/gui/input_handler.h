@@ -1525,13 +1525,18 @@ struct GuiInputHandler {
     //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
     //     OPEN and no modal or gesture owns the pointer, which that placement
     //     guarantees — the open-dropdown branch returns far above the tail, and
-    //     so do the prompt, the dialog editors, the folder overlay's two modes
-    //     and every live gesture —
+    //     so do the prompt, the dialog editors, the folder overlay's three
+    //     contents and every live gesture —
     //     plus ONE condition the call site restates because nothing above
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
-    //     the two held-motion producers are recorded at the call). The three
-    //     anchors the `h` view kills are refused inside toggle_dropdown
-    //     (menu_anchor_dead_in_mode), not here;
+    //     the two held-motion producers are recorded at the call). The four
+    //     anchors the `h` view and the folder overlay kill are refused inside
+    //     toggle_dropdown (menu_anchor_dead_in_mode), not here. SO THE ARMED
+    //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the three overlay
+    //     branches return above this tail — while the hover SWITCH, which
+    //     lives in the open-dropdown branch above them, is live there: File
+    //     can be opened by a press over the band and the pointer can cross to
+    //     the dead anchors, where that guard answers;
     //   * update_menu_row_exit is "the pointer left row 1, go cold", called from
     //     the TOP of on_motion so that it runs under every one of those branches
     //     too. A modal owning the pointer is a reason not to open a menu, and no
@@ -2670,13 +2675,15 @@ private:
     //       SILENTLY on the other three, a prompt veiling everything and
     //       being its own answer, a second picker being what is already on
     //       screen (the reasoning is at the arms, 2026-08-30). THE RENDER
-    //       PLAYER HAS NO ARM AT ALL since 2026-09-03: the File anchor is
-    //       dead under the band (menu_anchor_dead_in_mode's first arm), so
-    //       its row is unreachable, and Ctrl+O is consumed by the
-    //       player's own router — no road reaches this body from in there.
-    //       ("Close the render player first" stood from 2026-08-30 and a
-    //       close-then-open body replaced it for the one day the File anchor
-    //       stayed lit under the panel; both are retired.) It
+    //       PLAYER HAS NO ARM AT ALL since 2026-09-03: its own router consumes
+    //       Ctrl+O in silence, and the File menu's Open Project row IS that
+    //       chord (the row dispatches it through on_key), so no road reaches
+    //       this body from in there even with the anchor live above the band
+    //       since that evening — and the picker's and the stats panel's
+    //       routers answer the same way. ("Close the render player first"
+    //       stood from 2026-08-30 and a close-then-open body replaced it for
+    //       the one day the File anchor stayed lit under the panel; both are
+    //       retired.) It
     //       stops playback through the
     //       shared modal stop only once the picker is definitely opening,
     //       mints the session and builds the list. IT IS ADMITTED IN THE `h`
@@ -3899,10 +3906,14 @@ private:
     //
     // THE PLAYER'S ONE POINTER RULE IS THE VEIL: while the player stands every
     // press outside the folder overlay's band and the modal row is CONSUMED —
-    // the tab row's tabs, the marker lane's flags, the waveform, the menu
-    // anchors, all of it — and the roster's buttons are dead through
-    // redesign_button_enabled's first arm (their faces grey, their press
-    // claims refuse). The wheel scrolls the overlay one row per detent over
+    // the tab row's tabs, the marker lane's flags, the waveform, the four dead
+    // menu anchors, the view bar, all of it — and the roster's buttons are
+    // dead through redesign_button_enabled's first arm (their faces grey,
+    // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
+    // above the band (architect 2026-09-03 evening — the `h` view's partition
+    // extended to all three overlay contents): its press reaches the menu-row
+    // claim through press_on_live_menu_anchor, and its open menu owns the
+    // pointer from the dropdown claim as it does anywhere else. The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
     // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
     // WITH ONE ADMISSION (R37): a SHIFT press on the modal row's two skips

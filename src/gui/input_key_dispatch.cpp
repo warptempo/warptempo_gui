@@ -5880,16 +5880,16 @@ void GuiInputHandler::open_project_picker() {
     // picker stands OVER the view (its router runs ahead of the mode's gate in
     // on_key, its veil consumes the view's presses, and its band starts at the
     // tab row and covers lanes 1..6 — the diff lane with them — the waveform
-    // and gap 2, the dead menu row alone above it), a Cancel or Esc leaves
+    // and gap 2, the menu row alone above it with File live on it), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything
     // else per project. What the act still refuses in here is what it refuses
     // everywhere: a publishing checkpoint, at open_project_commit.)
     // (THE RENDER PLAYER HAS NO ARM HERE AT ALL since 2026-09-03, and this act
-    // cannot be reached under it: the File anchor is dead under the band —
-    // kdenlive's modal admits no menu, so the File row is unreachable — and
-    // Ctrl+O is
+    // cannot be reached under it: the File anchor is LIVE above the band again
+    // since that evening, so its Open Project row IS reachable — but the row
+    // is its chord, and Ctrl+O is
     // consumed by route_render_player_key's catch-all, the player's whole
     // vocabulary being its router's. Both of the arms that stood here are
     // retired with the reasons they rested on: "Close the render player
@@ -6220,11 +6220,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
     // which takes the picker down at its head (GuiPrompt::request_close) —
     // the same step the compositor's close takes, stated once there rather
-    // than here, so the two roads cannot drift. (Bare `\` was a second for the
-    // one day of 2026-09-02, when the File anchor stayed lit under the panel
-    // and Synchronize's row worked in here; every anchor is dead under the
-    // band since 2026-09-03, so no File row is reachable and the chord is
-    // consumed by the catch-all with every other one.)
+    // than here, so the two roads cannot drift. It is the File menu's Quit
+    // row too, that anchor being live above the band again since 2026-09-03
+    // evening. THE SET STAYS ONE: Synchronize's row calls its own gated body
+    // and never this router, and Ctrl+O — the Open Project row's chord, which
+    // is this very picker — is consumed by the catch-all below, the mode
+    // answering about itself in silence. (Bare `\` was a second fall-through
+    // for the one day of 2026-09-02, when every row had to be its chord.)
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
@@ -6284,9 +6286,10 @@ void GuiInputHandler::open_av_sync_stats() {
     //
     // ALL OF THEM ARE SILENT. There is no key road into this act, so nothing
     // here is a press that would owe a sentence: the anchor is UNREACHABLE
-    // under a prompt, and it is DEAD under either of the other two
-    // folder-overlay contents, under a standing panel and in the `h` view
-    // (menu_anchor_dead_in_mode's two arms). The arms stand anyway
+    // under a prompt, and the HELP anchor is DEAD under either of the other
+    // two folder-overlay contents, under a standing panel and in the `h` view
+    // (menu_anchor_dead_in_mode — File is the one anchor those modes leave
+    // live, and it does not carry this row). The arms stand anyway
     // because the gate belongs with the act it refuses — the picker's own
     // shape — not because a road takes them.
     if (app.prompt.active) return;
@@ -6527,9 +6530,11 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
     // which takes the panel down at its head (GuiPrompt::request_close) — the
     // same step the compositor's close takes, stated once there rather than
-    // here. Every anchor is dead under the panel, so no menu row is reachable
-    // under it and nothing else has a reason to fall through (the picker's
-    // own record of that reasoning is one router up).
+    // here. It is the File menu's Quit row too since 2026-09-03 evening, that
+    // anchor being live above the band on this content as on the other two;
+    // nothing else needs a fall-through, Synchronize's row calling its own
+    // gated body and Ctrl+O dying in the catch-all's silence (the picker's own
+    // record of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [band, Copy to Clipboard, Close] through
@@ -7291,12 +7296,16 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // transport is touched); Ctrl+Q falls through to the ordinary quit road,
     // which takes the player down at its head (GuiPrompt::request_close) — the
     // same step the compositor's close takes, stated once there rather than
-    // here, so the two roads cannot drift. (Ctrl+O and bare `\` were a third
-    // and a fourth for the one day of 2026-09-02, when the File anchor stayed
-    // lit under the panel and its rows had to agree with their chords; every
-    // anchor is dead under the panel since 2026-09-03 — kdenlive's modal
-    // admits no menu, and neither does this one — so both go back to the
-    // catch-all.)
+    // here, so the two roads cannot drift. IT IS ALSO THE FILE MENU'S QUIT
+    // ROW, the anchor being live above the band again since 2026-09-03
+    // evening, and on the TABLET it is the player's first quit road of any
+    // kind — there is no keyboard there and the row is now reachable.
+    // THE SET STAYS TWO: bare `\` needs no fall-through, Synchronize's row
+    // calling its own gated body directly, and Ctrl+O is the one File row
+    // this router answers with the catch-all's silence — a chord bound
+    // outside the mode and meaning nothing inside it, the unbound-keys
+    // ruling. (Both were fall-throughs for the one day of 2026-09-02, when
+    // every row had to be its chord here.)
     if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 

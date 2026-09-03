@@ -36,10 +36,17 @@
 // "remove top row in file picker/media player — kdenlive does not allow
 // ctrl+q during modal so we don't need to either" had run it to the window's
 // top for some hours) — so EVERY LANE BUT THE MENU ROW AND THE BOTTOM ROW is
-// under it, and THE MENU ROW STANDS ABOVE IT, VISIBLE AND DEAD: its five
-// anchors and its view bar grey through redesign_button_enabled's first arm,
-// the anchors' open refuses at menu_anchor_dead_in_mode's first arm and the
-// veil consumes the press, kdenlive's modal admitting no menu. The
+// under it, and THE MENU ROW STANDS ABOVE IT, VISIBLE AND CARRYING THE `h`
+// VIEW'S OWN PARTITION (architect 2026-09-03 evening: "leave File open,
+// because Quit should still be enabled — everything else like what we do with
+// history ... Leave that for the player, the picker and the AV stats"). So
+// FILE IS LIVE above the band on every content — its press exempted from the
+// three veils at press_on_live_menu_anchor, its menu opening onto Quit and
+// Synchronize — while Edit, Iterations, Settings and Help grey and refuse at
+// menu_anchor_dead_in_mode, and the view bar's 1/2/3 grey through
+// redesign_button_enabled's first arm and the bar's own inactive ground
+// (view_bar_focused). The header behind them keeps its FOCUSED ground: the
+// title bar says the window is active, so the row does too. The
 // waveform's own passes paint nothing (onscreen_keyboard::waveform_paint_area,
 // whose gate reads both tenants and whose clip reads the STANDING one's own
 // rect, and which this band reduces to a zero-height rect) while the lanes
@@ -205,16 +212,15 @@ inline int text_row_pitch_px() {
 // the project picker's holds one (their builders produce Folder and Wav rows
 // alone), so asking the standing owner loses nothing a row's kind would
 // answer. It is the OWNER TAG rather than a read of the rows for two reasons.
-// The pitch is a property of the LISTING — a text listing is lines, a button
-// listing is boxes — and not of the face: since the evening of 2026-09-03
-// every content is shaped and painted in the monospace at the clock's size
-// (the painter selects it once, unforked — the architect's first try at the
-// player's and the picker's width asymmetry, quoted there), so the face has
-// nothing to fork on and this predicate is the pitch's alone. (Until that
-// evening it selected the face too — the monospace under the stats panel,
-// the sans under the two listings — so a row could not be shaped in one face
-// and spaced for another, fc40318e; with one face on every content that
-// pairing holds by construction.) And it is a fact of the standing state and
+// The pitch is a property of the FACE the words are painted in, and the face
+// is what the painter already selects on this tag — the monospace at the
+// clock's size under the stats panel, the sans at the redesign's size
+// everywhere else — so pitch and face share ONE predicate and cannot part (a
+// row shaped sans at 16 px on a monospace line, or the reverse, would be two
+// surfaces disagreeing about one row, fc40318e). The pairing collapsed for
+// the few hours of 2026-09-03 the two listings wore the monospace too, and
+// the architect's own reversal that evening put it back — the quote is at the
+// painter's selection. And it is a fact of the standing state and
 // not of a table
 // entry, so row_rect(a, i) answers for any index — an empty table, a table
 // mid-rebuild — and paint, hit and damage read one number by reading one
