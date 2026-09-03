@@ -9999,6 +9999,119 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
     return mode.walk_index() > 0;
 }
 
+// WOULD THE GRID-ITERATION SWEEP RENDER ANYTHING? — the sweep's two
+// USER-CONSTRUCTIBLE pre-dispatch refusals asked ahead of the press (architect
+// 2026-09-02, the four-tier review's R-10). With iteration mode on, Ctrl+Alt+R
+// IS the sweep and the Render button dispatches that same chord, so a button
+// that stays lit over a store carrying no bracket at all — or over a bracket
+// product the cap refuses — promises a render the press then answers with a
+// card, which is the drift the truthful-buttons ruling exists to prevent.
+//
+// ONE WALK ANSWERS BOTH QUESTIONS, and neither is restated: the eligibility is
+// the sweep's own (iter_popup_eligible_marker, warpmarkers.h, CALLED rather
+// than spelled again, so a change to that predicate lands on the face for
+// free), and the cell count is the same CHECKED product the dispatch
+// accumulates — refusing the instant the running total passes the cap, so no
+// overflow is possible and the cap itself is the early return. A well-formed
+// span is at most kTempoMaxCents - kTempoMinCents + 1 and the running total is
+// at most the cap when it is multiplied, so the product cannot approach an
+// integer boundary.
+//
+// AN INVERTED BRACKET IS A BREACH AND DOES NOT DRIVE THE FACE. The editor
+// commit enforces start <= end and the bracket is session-only, so start > end
+// is an internal breach the dispatch refuses loudly on its own ("A marker's
+// iteration bracket runs backwards"). It is counted here as ONE swept cell —
+// swept, so the store is not "no ranges authored", and one cell, so it cannot
+// inflate the product — precisely so the face stays LIT and the press can
+// raise that card: a greyed button raises none, and a breach that greys the
+// button in silence is a breach nobody sees.
+//
+// THREE READERS: the sweep's own two refusals (run_iteration_sweep_render,
+// input_key_dispatch.cpp, which raises each sentence at its own arm), the
+// Render button's face while the mode is on and no cancel face outranks it
+// (redesign_button_enabled below), and the stateful tooltip, whose first line
+// becomes the card the greyed press would have raised. The face reads this
+// per tick while the mode stands; the walk is the warp store's, tens of
+// markers, and it allocates nothing.
+inline constexpr std::size_t kMaxIterSweepCells = 1000;
+
+// THE TWO SENTENCES, ONE SPELLING EACH. They live here rather than at the
+// dispatch that raises them because the TOOLTIP reads them too — a face, not a
+// second raiser — and notifications.h, the home for sentences several
+// translation units raise, includes this header rather than the other way
+// round. The `Hint` form is the card's sentence plus this roster's accelerator
+// (the table's own rule); the static_asserts keep the pair in step, and keep
+// the cap's spelling in step with the cap.
+inline constexpr const char* kIterSweepNoBracketCard =
+    "No iteration ranges are authored";
+inline constexpr const char* kIterSweepNoBracketHint =
+    "No iteration ranges are authored (Ctrl+Alt+R)";
+inline constexpr const char* kIterSweepOverCapCard =
+    "Grid iterations refused: the marker brackets make more than 1000 cells";
+inline constexpr const char* kIterSweepOverCapHint =
+    "Grid iterations refused: the marker brackets make more than 1000 cells "
+    "(Ctrl+Alt+R)";
+static_assert(kMaxIterSweepCells == 1000,
+              "kIterSweepOverCapCard spells the cap; move both together");
+static_assert(
+    std::string_view(kIterSweepNoBracketHint).starts_with(
+        std::string_view(kIterSweepNoBracketCard)),
+    "the hint is the card's sentence plus the accelerator");
+static_assert(
+    std::string_view(kIterSweepOverCapHint).starts_with(
+        std::string_view(kIterSweepOverCapCard)),
+    "the hint is the card's sentence plus the accelerator");
+
+enum class IterationSweepRefusal {
+    None,               // the sweep would render `cells` cells
+    NoBracketAuthored,  // no eligible marker carries a bracket at all
+    OverCellCap,        // the Cartesian product passes kMaxIterSweepCells
+};
+
+struct IterationSweepPlan {
+    IterationSweepRefusal refusal = IterationSweepRefusal::None;
+    // Exact when `refusal` is None; at the cap it is an accurate LOWER bound
+    // (the running product passed the cap before every axis was folded in),
+    // which is why the sentence says "more than <cap>" and never a total.
+    std::size_t           cells   = 0;
+};
+
+inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
+    IterationSweepPlan plan;
+    bool        any_swept = false;
+    std::size_t cells     = 1;
+    for (const GuiWarpMarker& m : a.warpmarkers.markers()) {
+        if (!iter_popup_eligible_marker(m)) continue;
+        // An eligible marker with no bracket contributes the single zero
+        // delta the dispatch gives it: a factor of one, nothing to multiply.
+        if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
+            continue;
+        }
+        any_swept = true;
+        const int64_t start = *m.iter_start_cents;
+        const int64_t end   = *m.iter_end_cents;
+        const std::size_t span =
+            start > end ? std::size_t{1}
+                        : static_cast<std::size_t>(end - start + 1);
+        cells *= span;
+        if (cells > kMaxIterSweepCells) {
+            plan.refusal = IterationSweepRefusal::OverCellCap;
+            plan.cells   = cells;
+            return plan;
+        }
+    }
+    if (!any_swept) {
+        plan.refusal = IterationSweepRefusal::NoBracketAuthored;
+        return plan;
+    }
+    plan.cells = cells;
+    return plan;
+}
+
+inline bool iteration_sweep_actionable(const AppState& a) {
+    return iteration_sweep_plan(a).refusal == IterationSweepRefusal::None;
+}
+
 // (THE MENUS' ONE PER-ITEM DISABLED STATE IS DELETED — dropdown_item_enabled,
 // 2026-08-08 to 2026-08-15, gone PRODUCER-LESS with the Navigation dropdown.
 // It answered "is this dropdown item live", and FOUR readers went through it:
@@ -11406,8 +11519,20 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Redo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.redo_stack);
+        // RENDER'S ITERATION TERM (2026-09-02, the four-tier review's R-10):
+        // with grid iterations on, this button's chord IS the sweep, so the
+        // face reads the sweep's own pre-dispatch verdict
+        // (iteration_sweep_actionable, above — no brackets authored, or a
+        // cell product past the cap) and greys where the press would only
+        // card. THE CANCEL FACE OUTRANKS IT, as it outranks the iteration
+        // hint: while a render or sweep is in flight this button IS the
+        // cancel act (the ruled chord divergence), and cancelling is always
+        // actionable whatever the store would sweep next. The mode-off
+        // render has no such term — a single render always renders.
         case RedesignButton::Render:
-            return !a.source_audio_path.empty();
+            return !a.source_audio_path.empty() &&
+                   (!a.iteration_mode_enabled || a.render_cancel_face ||
+                    iteration_sweep_actionable(a));
         // THE TWO SKIPS (2026-08-30; the succession is at their case in the
         // first switch): lit iff EITHER admitted form — the bare trim-bound
         // jump or the ctrl whole-piece jump — would change anything, through
@@ -12576,7 +12701,23 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::Render && a.render_cancel_face) {
         return {"Cancel", nullptr};
     }
+    // RENDER'S ITERATION HINT FORKS ON THE SWEEP'S OWN VERDICT (2026-09-02,
+    // the four-tier review's R-10): where the face greys, the first line is
+    // THE CARD THE PRESS WOULD HAVE RAISED had the button stayed live — Drop
+    // marker's shape one fork over, and what a dead button owes a user under
+    // the tooltips-on-disabled ruling. The predicate is the face's own, read
+    // once for the answer rather than asked twice. Both greyed forms keep the
+    // chord in the line: the button is dead, but the KEY is not, and it is the
+    // key that raises the sentence.
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
+        switch (iteration_sweep_plan(a).refusal) {
+            case IterationSweepRefusal::NoBracketAuthored:
+                return {kIterSweepNoBracketHint, nullptr};
+            case IterationSweepRefusal::OverCellCap:
+                return {kIterSweepOverCapHint, nullptr};
+            case IterationSweepRefusal::None:
+                break;
+        }
         return {"Render grid iterations (Ctrl+Alt+R)", nullptr};
     }
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):

@@ -68,6 +68,19 @@ namespace {
 constexpr const char* kCheckpointPublishing =
     "Wait for the checkpoint to finish publishing";
 
+// THE SYNCHRONIZATION-RUNNING SENTENCE, ONE LITERAL (2026-09-02, the
+// four-tier review's R-14). TWO READERS in this file — the act's own
+// single-in-flight refusal (synchronize_to_external_storage, whose sentence it
+// was) and the Open project picker's open act, which refuses a reopen for the
+// same reason it refuses one under a publishing checkpoint: the session
+// teardown JOINS this worker after forgetting its completion fd, so a reopen
+// mid-mirror freezes the GUI for as long as the stick takes and drops the
+// verdict a failing mirror owed the user. Both meet ONE bit at
+// GuiExternalSyncWorker::is_busy, so the two sites cannot disagree about what
+// "running" means; the wording is the ACT's because it names what is running.
+constexpr const char* kSyncRunning =
+    "A synchronization is already running";
+
 // Move `dir` to the DESKTOP TRASH with `gio trash`, the freedesktop trash
 // spec's ordinary command-line front end. True iff the folder is gone from
 // disk afterwards.
@@ -4150,50 +4163,37 @@ void GuiInputHandler::run_iteration_sweep_render() {
         per_marker_delta_cents.push_back(std::move(delta_cents));
     }
 
-    bool any_swept = false;
-    for (bool s : is_swept) {
-        if (s) { any_swept = true; break; }
-    }
-    if (!any_swept) {
+    // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
+    // review's R-10). Both refusals below are decided by iteration_sweep_plan
+    // (app_state.h), the ONE owner the Render button's enabled arm and its
+    // tooltip read too, so the button greys exactly where this dispatch would
+    // refuse and the sentence a greyed press would have raised is the one its
+    // hint already carries. Nothing is counted twice: the owner walks the same
+    // store through the same eligibility predicate this body does, and no
+    // hand-rolled product survives here. THE BREACH ABOVE IS NOT ITS
+    // BUSINESS — the owner counts an inverted bracket as one swept cell so the
+    // face stays lit for it, and the loud refusal is the dispatch's alone.
+    const IterationSweepPlan plan = iteration_sweep_plan(app);
+    if (plan.refusal == IterationSweepRefusal::NoBracketAuthored) {
         // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
         // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
-        // must not look like a chord that rendered silently. The Render
-        // button wears the mode's own "Render grid iterations" face here and
-        // dispatches this same chord, so the one card answers both roads.
+        // must not look like a chord that rendered silently. The card is the
+        // KEYBOARD's answer now that the Render button greys on this same
+        // verdict: the button carries the sentence on its hint instead, and a
+        // greyed press raises nothing.
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: No iter ranges "
             "authored; nothing to render\n");
         notifications.notify(AppState::NotificationClass::Normal,
-                             "No iteration ranges are authored");
+                             kIterSweepNoBracketCard);
         return;
     }
-
-    // Cap the Cartesian product before it can overflow or exhaust
-    // memory: each cell is a full archival render, so a real sweep is
-    // tens to hundreds of cells. The per-axis brackets don't bound the
-    // product — a handful of markers each with a wide bracket multiply
-    // into billions of cells, which narrows to a negative int at the
-    // reserve/enumeration site (std::length_error) or exhausts memory
-    // materializing RenderRequests. Accumulate with a CHECKED product
-    // that refuses the instant the running total exceeds the cap, so no
-    // overflow can occur (the cap sits far below any integer boundary).
-    // kMaxIterSweepCells is the architect-ruled cap.
-    constexpr size_t kMaxIterSweepCells = 1000;
-    size_t total_cells = 1;
-    bool over_cap = false;
-    for (const auto& d : per_marker_delta_cents) {
-        total_cells *= d.size();
-        if (total_cells > kMaxIterSweepCells) { over_cap = true; break; }
-    }
-    if (total_cells == 0) return;
-    if (over_cap) {
+    if (plan.refusal == IterationSweepRefusal::OverCellCap) {
         // Refuse before any allocation, batch-folder creation, request
-        // materialization, or render kill/park. `total_cells` here is an
-        // accurate lower bound on the true product (the running product
-        // already exceeded the cap before every axis was folded in), so
-        // report "more than <cap>" rather than computing the full
-        // product. Iteration mode and the brackets survive for
-        // correction — the wipe-and-exit tail below does not run.
+        // materialization, or render kill/park. Iteration mode and the
+        // brackets survive for correction — the wipe-and-exit tail below does
+        // not run. The cap, the checked product and the lower-bound reading of
+        // the count are the owner's (kMaxIterSweepCells, app_state.h).
         //
         // A NORMAL CARD (architect 2026-08-30): a refusal that answers an act
         // the user just gave is an EVENT, and events are cards
@@ -4213,12 +4213,17 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // dismiss-only
         // modal's shape rather than a card's: the fix is implied by the reason
         // and HELP already tells the user to narrow the brackets.
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            "Grid iterations refused: the marker brackets make more than " +
-            std::to_string(kMaxIterSweepCells) + " cells");
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kIterSweepOverCapCard);
         return;
     }
+
+    // The delta lists built above and the owner's count are the same product
+    // by construction — one store, one eligibility walk, one bracket
+    // arithmetic — and a zero-length list can only come from an inverted
+    // bracket, which returned at the breach. So the count is taken from the
+    // owner rather than re-accumulated, and it is at least one.
+    const size_t total_cells = plan.cells;
 
     const std::filesystem::path queue_root =
         project_batch_root(app.source_audio_path);
@@ -4256,7 +4261,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         return;
     }
 
-    // The cap check above bounds total_cells at kMaxIterSweepCells
+    // The verdict above bounds total_cells at kMaxIterSweepCells
     // (<= 1000), so this narrowing to int is exact — no truncation and
     // no negative wrap can reach the reserve/enumeration below.
     const int total = static_cast<int>(total_cells);
@@ -4465,7 +4470,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // no clause of its own for the opposite reason it needed none before — the
     // mode can now REST in target, and the arm below fires there. This is also
     // what keeps the Render button honest, its "Render grid iterations" face
-    // following the same bit from either view. The sweep's own body carries no
+    // following the same bit from either view — and since 2026-09-02 that
+    // face also greys wherever the sweep would refuse before it dispatched,
+    // both faces reading iteration_sweep_plan (app_state.h), the verdict this
+    // body's own two refusals read. The sweep's own body carries no
     // view assumption (it builds per-cell marker copies off the warp store and
     // renders are view-independent); its success-tail wipe is the granted
     // home-view-binding exception recorded at run_iteration_sweep_render.
@@ -5870,7 +5878,7 @@ void GuiInputHandler::open_project_commit(int index) {
     const std::string name =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
-    // THE THREE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
+    // THE FOUR REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
     // in the `h` view like anywhere else — they were the status chain's
     // transient tier for one day, invisible under the view's own line — and
     // the picker STAYS OPEN on every one of them, which is the answer the
@@ -5890,6 +5898,22 @@ void GuiInputHandler::open_project_commit(int index) {
     // refusals, so the answer is one line and another Enter.
     if (app.history_checkpoint_in_flight) {
         refuse(kCheckpointPublishing);
+        return;
+    }
+
+    // NOR WHILE A SYNCHRONIZATION IS RUNNING (2026-09-02, the four-tier
+    // review's R-14), the checkpoint's own reasoning one worker over and in
+    // the act's own words: the teardown JOINS this worker too (main.cpp's
+    // run_project, after it has forgotten every worker's completion fd), so a
+    // reopen mid-mirror freezes the GUI for as long as the copies take — a
+    // stick's seconds — and the verdict a FAILING mirror owed the user goes to
+    // stderr alone, invisible on the tablet. The bit is the act's own
+    // single-in-flight test (GuiExternalSyncWorker::is_busy,
+    // synchronize_to_external_storage's), asked here rather than mirrored, and
+    // it falls by itself. THE PICKER STAYS OPEN, like its other three
+    // refusals, so the answer is one line and another Enter.
+    if (external_sync_worker.is_busy()) {
+        refuse(kSyncRunning);
         return;
     }
 
@@ -6177,7 +6201,7 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // standing rule at kFilePopupItems), so a second row press while one act
     // runs is a consumed no-op that says which one it was.
     if (external_sync_worker.is_busy()) {
-        report("A synchronization is already running");
+        report(kSyncRunning);
         return;
     }
 

@@ -252,9 +252,15 @@
 // is two sentences the moment one of them is edited. Everything else stays a
 // literal where it fires (a sentence with ONE producer has nothing to agree
 // with), and a family whose several sites share ONE translation unit keeps its
-// constant there (kKeysDuringDrag, kCheckpointPublishing; the two mode
-// routers' catch-all tails were a third until their catch-alls went silent
-// with the unbound-keys ruling). The third item below is not a sentence at all
+// constant there (kKeysDuringDrag, kCheckpointPublishing and, since
+// 2026-09-02, kSyncRunning, which the Open project picker's act began raising
+// beside the mirror's own single-in-flight refusal; the two mode routers'
+// catch-all tails were a third until their catch-alls went silent with the
+// unbound-keys ruling). A THIRD HOME EXISTS for a sentence a FACE reads rather
+// than a second site raises: the grid-iteration sweep's two verdict cards live
+// at app_state.h beside iteration_sweep_plan, whose readers are the dispatch
+// that raises them and the Render button's tooltip, because this header
+// includes app_state.h and not the reverse. The third item below is not a sentence at all
 // but the one COMPOSER several sites share, lowercase_initial, homed here for
 // the same reason.
 //
