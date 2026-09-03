@@ -72,7 +72,8 @@ struct GuiMediaState {
     bool        session_active = false;
     bool        playing        = false;
     // The wav's spelling with its folder, relative to the project
-    // (`tmp/3_bpm/01.wav`, `render/<title>.wav`); empty with no item.
+    // (`tmp/3_bpm/01.wav`); empty with no item. The player has lived inside
+    // `tmp/` since 2026-09-01, so `render/` is not a spelling this carries.
     std::string title;
     // The project's name; the album is the artist on the consuming side.
     std::string artist;

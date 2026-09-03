@@ -123,8 +123,12 @@
 // FRAME GRID AT THIS TOOL'S PLAY LENGTHS: the clocks part at 10–100 ppm, so
 // 0.6–6 ms per minute, and this is a spot-check instrument for segments of
 // up to ~30 s (the trim/render design, the memory-vs-disk preview cutoff),
-// where that is 0.6–3 ms — under a pixel at the working zoom and inside the
-// ±10 ms band in which a picture/sound offset is invisible. The gain from a
+// where that is 0.6–3 ms — half a pixel to two and a half at the working
+// zoom (`c` is 1.25 ms/px), and well inside the ±10 ms band in which a
+// picture/sound offset is invisible. THE BAND IS WHAT CARRIES THE RULING,
+// not the pixel count: the drift is imperceptible because the ear and the
+// eye do not resolve it, and a couple of pixels of line at a spot-check
+// zoom is simply the same statement in the other unit. The gain from a
 // cadence exists only on the multi-minute plays the tool is not for, while
 // its cost is a per-play risk of exactly the "imperceptible" class plus
 // machinery. The event resync is kept because it is FREE, not because a play
@@ -228,8 +232,10 @@ public:
     // only once the callback has quiesced, so a stalled or dead device hangs
     // here rather than letting the caller mutate a buffer the audio thread may
     // still read. Safe to call when not playing; it still fences. Main thread
-    // only. The cursor retains its last value so the main thread can snapshot
-    // where it stopped.
+    // only. The cursor retains its last value, which is what the predictor's
+    // last observation rests on, so a main-thread read after the stop still
+    // answers where playback stopped — through heard_cursor()/cursor(), never
+    // off the atomic itself.
     void stop();
 
     // Re-anchor the free-running cursor predictor at the audio thread's

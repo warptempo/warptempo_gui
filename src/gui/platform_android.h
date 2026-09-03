@@ -49,9 +49,10 @@
 // its producer here (2026-08-29), leaving the car's hook the seam's one example
 // of it — and publish_media_state, the push back up into that
 // session's metadata and playback state, whose Wayland body is empty. The
-// seven
-// consumers (main.cpp, viewport, paint_handler, prompt, file_loader, undo,
-// input_handler) include platform.h and compile against either backend
+// NINE
+// consumers (re-greped 2026-09-02: main.cpp, viewport.cpp, paint_handler.h,
+// prompt.h, file_loader.h, undo.cpp, input_handler.h, onscreen_keyboard.h,
+// render_player.h) include platform.h and compile against either backend
 // unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
 // it is stated ONCE at its owner and pointed at from here: the input doors and
 // the capture/cursor policy belong to GuiInputCore (input_core.h), and the
@@ -375,9 +376,12 @@ public:
     // How far ahead of `now` the playback predictor is read so the painted
     // playhead lands on the sound when the pixel lights. THIS BACKEND ANSWERS
     // 0, BY RULING (2026-09-02, the reasoning at the definition): the tablet's
-    // audio latency is uncompensated by ruling, and a display lead over an
-    // uncompensated audio lead would double-count. Record-only until that
-    // changes.
+    // audio latency is uncompensated by ruling, so its line already reads
+    // ahead of the sound by that whole figure — and this display's own lag is
+    // what CANCELS most of it (the two terms net to roughly −23…+3 ms on the
+    // speaker), so a display lead here would not double a compensation, it
+    // would REMOVE the one cancellation the tablet has. Record-only until the
+    // audio side is itself compensated.
     int64_t display_lead_ns() const;
 
 private:
@@ -430,19 +434,23 @@ private:
     // inset of its own; the one thing it subtracts is kStatusBarAirPx, the air
     // it leaves between the status bar and the first row, and that subtraction
     // lives in resolve_content_rect with its reasoning at the constant
-    // (platform_android.cpp). Measured on the Tab S10 FE
-    // 2026-08-27: surface frame [0,0][2304,1440], content 2304x1387 at (0,53),
-    // i.e. the STATUS BAR ALONE. One UI's 84 px taskbar was NOT part of the
-    // rect: dumpsys reported `InsetsSource type=navigationBars
-    // frame=[0,1356][2304,1440] visible=false` and a `tappableElement` source
-    // on that same frame with visible=true, alongside
-    // `mAppBounds=(0,0-2304,1356)` — and the reading was taken with the panel
-    // DOZING (the cover shut), so the taskbar was not a visible navigation
-    // inset at that moment. WHETHER IT OVERLAYS THE BOTTOM ROW ON AN AWAKE
-    // PANEL IS OPEN (the architect's next look). If it does, the recorded next
-    // step is to read WindowInsets.Type.tappableElement()'s bottom through the
-    // Java sliver — a JNI call this side makes at each content-rect / config
-    // change — and subtract it from the rect here. Not done.
+    // (platform_android.cpp). Measured on an AWAKE Tab S10 FE 2026-08-27
+    // under the architect's own Screen zoom (override density 320): surface
+    // frame [0,0][2304,1440], content 2304x1270 at (0,74) — a 60 px status
+    // bar plus the 14 px of air this side adds above it, and a 96 px taskbar
+    // below. THE FRAMEWORK'S RECT ALREADY EXCLUDES BOTH BARS, so this backend
+    // measures none and needs no arithmetic of its own.
+    //
+    // (History, one line: an earlier reading of 2304x1387 at (0,53) showed the
+    // status bar alone, because the panel was DOZING with the cover shut and
+    // the taskbar reported no visible navigation inset then — dumpsys had it
+    // as a `tappableElement` and as `mAppBounds`, with
+    // `type=navigationBars ... visible=false`. The question that reading left
+    // open — whether the taskbar overlays the bottom row on an awake panel —
+    // is CLOSED by the measurement above: it does not, the rect excludes it.
+    // The next step recorded from the dozing reading, a JNI call handing this
+    // side `WindowInsets.Type.tappableElement()`'s bottom to subtract, is
+    // RETIRED: on an awake panel it would subtract the taskbar twice.)
     //
     // ORIGIN IS THIS BACKEND'S ALONE. Nothing above the seam knows it exists:
     // it is ADDED on the way out (present, the one blit) and SUBTRACTED on the

@@ -108,7 +108,9 @@ inline GuiFailure render_folder_creation_failure(
 // with it by construction; the sentence above is the same sentence, and it is
 // true of a stick as well as of a disk.)
 //
-// WARPTEMPO_CLI GETS NO PRUNE, the recorded asymmetry: it writes the same
+// WARPTEMPO_CLI GETS NO PRUNE — the FIRST of the CLI's four recorded
+// asymmetries, which are enumerated once at `cli_main.cpp`'s publish and
+// nowhere else: it writes the same
 // `render/<title>.wav` through the same parser owner, but it is the headless
 // insurance render and this is GUI-side machinery — a CLI render leaves a
 // previous title's deliverable standing until the GUI next PUBLISHES into the

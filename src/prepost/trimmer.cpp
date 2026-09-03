@@ -364,8 +364,12 @@ std::expected<TrimPlan, std::string> plan_trim(
     // [llrint(tgt(b)), llrint(tgt(e))), so the authored end frame e — the last
     // frame INSIDE the window by data-model.md's inclusive [0, total-1]
     // ruling, the frame End lands on and the endcap sits on — is the first
-    // frame NOT rendered, one source frame's target span (1/tempo output
-    // samples, 23 µs at 44.1 kHz). It is not fixed to map(e + 1): the trim is
+    // frame NOT rendered, one source frame's target span — 1 / (tempo ·
+    // marker_scale · settings_scale) output samples, the LOCAL SEGMENT SLOPE
+    // at e and not 1/tempo (both scales divide the segment too; corrected
+    // 2026-09-02, architect approval 2026-09-02, comment-only), of which the
+    // 23 µs at 44.1 kHz is the UNITY case — up to ~16 times that at the
+    // numeric slope ceiling, and unbounded across a label-reference segment. It is not fixed to map(e + 1): the trim is
     // already a rounded quantity here — both edges are llrint of mapped
     // positions and the pre-roll anchors on hop multiples to keep the phase
     // null past the first in-window reset — so the exclusive end is one more

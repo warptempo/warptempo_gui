@@ -117,6 +117,15 @@ private:
     // immutable for the process lifetime, so there is no on-disk re-stat.
     // load() refuses a source it cannot stat, so both fields are valid
     // whenever a source is loaded.
+    // THE STAT PRECEDES THE DECODE, and there is a hair of a window in it
+    // (recorded 2026-09-02): if the source file were REPLACED between the stat
+    // and wav_read_full's own open, this identity would name the old file
+    // while the buffer held the new samples, and a render's fingerprint would
+    // then attest the wrong pair. It is startup-only — the identity is
+    // captured once per project open and the source is immutable for the rest
+    // of the session — and it needs the architect to publish over his own
+    // source in that instant, so it is recorded rather than closed with a
+    // post-decode re-stat.
     uint64_t load_identity_size_ = 0;
     int64_t  load_identity_mtime_ = 0;
 

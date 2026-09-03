@@ -719,8 +719,10 @@ GuiRect bottom_row_content_area(const AppState& a) {
 // whole — bare `j` copies the value and Shift+`j` goes to its source.)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
-// pair — one of the TWO range owners (Viewport::trim_range is the target-view
-// half), and the reason the full window behaves exactly as the old unset state
+// pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
+// this: it is THE navigation range owner in both audio views, and this body is
+// the SOURCE-domain resolution it rests on — retold 2026-09-02.) It is the
+// reason the full window behaves exactly as the old unset state
 // did everywhere downstream. PLAYBACK IS NO LONGER A CONSUMER (2026-08-05): the
 // source-view audition plays to the SONG's end and the target-view one to the
 // bound preview buffer's, both decided at playback_lifecycle.cpp, so what this

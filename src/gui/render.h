@@ -625,9 +625,9 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // — adjacent saturated hues produce chromostereopsis, the purple appearing to
 // stand in front of the blue — and the mitigation being tried is a 1px
 // kMarkerFlagBorder column on the seam, the same dark rule that already sits
-// one column left of every flag and reads as a drop shadow there. IT IS AN
-// EXPERIMENT AND REVERTIBLE WHOLE; if it survives the glass the borderless
-// record hardens the other way. Everything else is unchanged: the flag's own
+// one column left of every flag and reads as a drop shadow there. IT SURVIVED
+// THE GLASS AND IS A STANDING RULING since 2026-09-02; the borderless record
+// above is history, kept because it is the reading someone will re-derive. Everything else is unchanged: the flag's own
 // 1px left border stands where it always did, the measure box has no right
 // border (matching the flag's own open right edge), and the top edge anatomy
 // is the flag's — a 1px edge over the fill, across the whole box.
@@ -1316,6 +1316,11 @@ inline int scaled_px(double authored, int floor_px) {
 // scale-invariant — so the lanes pack tight against the window edges and the
 // waveform. The constant survives so the gap reappears structurally if it is
 // ever un-zeroed (the strip lane-stack geometry in main.cpp carries it).
+// (IT IS READ UNSCALED at the lane stack, which is exact while it is 0.0 and
+// would be a latent bug the moment it is not: an authored length must go
+// through `scaled_px`. Recorded 2026-09-02 rather than pre-emptively wrapped —
+// the wrapper would be dead arithmetic on a zero, and un-zeroing the constant
+// is the edit that has to add it. `kRowGapPx` below carries the same note.)
 constexpr double kFlagBottomLiftPx = 0.0;
 
 // Fixed-pixel mirrored strip lane grid. G is the single tunable inter-lane gap
@@ -1325,6 +1330,8 @@ constexpr double kFlagBottomLiftPx = 0.0;
 // vanish, so lanes and strips pack tight against each other and the window
 // edges. Stays a compile-time zero under scaling — zero is
 // scale-invariant.
+// Read unscaled like its sibling above, exact at 0.0 and owing a `scaled_px`
+// the moment it is un-zeroed (the note at kFlagBottomLiftPx).
 constexpr double kRowGapPx = 0.0;
 
 // Defensive window floor (a conservative 640x480 minimum). Enforced two ways:
@@ -3154,6 +3161,15 @@ struct HistoryDiffFlag {
     // nothing about measures — and an ADDED half's measure, which the revert
     // never restores, needs no field here at all.
     std::string then_measure;
+    // NO RED CLASS TRAVELS HERE, and that is deliberate (recorded 2026-09-02,
+    // the disabled axis's sibling): the live lane's THIRD marker class — the
+    // normalization red a coincident stack or a dangling reference earns — is
+    // a verdict over the WHOLE resolved store, and a diff half is a line from
+    // one side's sidecar with no store around it to resolve against. So a
+    // checkpoint's collapsed stack paints as ordinary added/removed halves in
+    // the view and reddens only once its lines are back in the live store.
+    // The disabled axis DOES travel (the two effective bits above, 2026-08-22)
+    // because it is a property of the line itself.
 };
 
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-

@@ -499,7 +499,16 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // it at m·R_s + δ·R_s/R_a — δ·(1 − R_s/R_a) off the map: late
             // under a speed-up (up to +4.6 ms at tempo 1.20, +7.7 ms at 1.33;
             // measured +130 samples on a real onset at 1.20), early under a
-            // slow-down; the propagated frames re-converge on the map. And
+            // slow-down; the propagated frames re-converge on the map. THOSE
+            // TWO FIGURES ARE FOR δ = R_a (recorded 2026-09-02; architect
+            // approval 2026-09-02, comment-only), the farthest the AUTHORED
+            // frame itself can sit from the seed centre — pass 1 seeds within
+            // R_a of it — and not the grain's own reach: the grain runs to
+            // δ = N/2 in both directions, so its outer edges are late by
+            // 7.7 ms at tempo 1.20 already. Nothing rests on the larger
+            // figure — the drop's N/2 rule puts the protected point outside
+            // the grain entirely — but the smaller one must not be read as
+            // the grain's bound. And
             // the seed is the LAST frame whose centre ≤ the authored frame
             // (engine.cpp's pass 1), 0 to R_a before it, so "a phase reset
             // fires exactly at the authored frame" is true of WHICH frame

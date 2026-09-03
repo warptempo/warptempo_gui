@@ -1559,6 +1559,15 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // an EMPTY selection anyway" belt is RETIRED, 2026-08-18: the overlay's
 // visibility is bare `[`'s alone and that key writes no selection, so a shown
 // overlay may rest beside any selection. It was never load-bearing here.)
+// THE SCAN IS SELECT-FIRST, AND IT STAYS THAT WAY (architect 2026-09-02, the
+// four-tier review's R-12): it walks the store in ORDER and takes the first
+// marker on the frame, with no disabled term — so where a stack shares one
+// frame it can land the focus on a member the marker WALK would skip (that
+// walk skips disabled) and on the BOTTOM of a stack whose top a click would
+// grab (hit_test_flag walks backwards). Neither is a defect to fix: a
+// coincident stack is a state you delete down until it is not coincident, and
+// any other behaviour there is adversarial and unsupported. No enabled-member
+// preference was added.
 // Read-only allowed (selection and playhead are navigation). Bounds-safe by
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
@@ -2615,9 +2624,16 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     // through Viewport::apply_strip_drag_zoom with the FIXED bound as the
     // anchor at its own window column (area.w for a dragged LEFT edge whose
     // fixed partner is the viewport END, 0 for a dragged RIGHT edge whose
-    // partner is the START), so that bound stays put bit-exactly and every
-    // event takes the chokepoint's level clamp, viewport clamp, synchronous
-    // full rebuild and either-axis follow suppression.
+    // partner is the START), so that bound stays put — TO THE VIEWPORT'S OWN
+    // LATTICE SNAP, and not bit-exactly (recorded 2026-09-02): the anchored
+    // arithmetic pins the fixed bound before clamp_viewport_start snaps the
+    // start onto the fitted level's own frame grid, and that snap moves BOTH
+    // bounds by up to half a column, so the "fixed" outline can flicker by a
+    // pixel across events at a box spanning most of the song. Pre-existing,
+    // sub-pixel at ordinary box widths, and the second slack term beside the
+    // level fit's own. Every event takes the chokepoint's level clamp,
+    // viewport clamp, synchronous full rebuild and either-axis follow
+    // suppression.
     // THIS ARITHMETIC LIVES HERE AGAIN (2026-08-15): it was hoisted into a
     // shared span application for one commit, to be shared with the lane's
     // two-finger bounds gesture, and that gesture is deleted — a helper whose

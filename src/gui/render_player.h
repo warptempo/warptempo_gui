@@ -193,7 +193,9 @@ struct GuiInputHandler;
 //
 // THE ITEM IS A WAV PLAYED AS IT IS: decoded through the in-tree WAV reader
 // (wav_read_full, audio_io — called, never changed) after the PROBE has
-// confirmed it matches the device's own rate and channel count (the engine
+// confirmed it matches THE PROJECT SOURCE'S rate and channel count (`GuiAudio`,
+// which is also what the audio device was opened at, so the two coincide — but
+// the test reads the source and that is the one to state; the engine
 // never re-inits and nothing in the tree resamples; a render of this project
 // is at the source's rate by construction, so the equality check is a
 // refusal, never a conversion) and the allocation owner has passed the shape
@@ -470,7 +472,7 @@ struct GuiRenderPlayer {
     // past the end and replays from the start; an IDLE one meets seek_to's own
     // silent refusal, exactly as Home does.
     void end();
-    // Left / Right's step: 5 s at the device's rate (R6).
+    // Left / Right's step: 5 s at the project source's rate (R6).
     int64_t seek_step_frames() const;
 
     // The item position the clock and the scrub read: the engine's cursor
@@ -599,9 +601,9 @@ struct GuiRenderPlayer {
     // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last
     // push at speed 1.0. Title = the item's path relative to the project
-    // folder (`tmp/3_bpm/01.wav`, `render/<title>.wav`), artist = the
-    // project's name, duration and position in milliseconds at the device's
-    // rate (the item is at the device's rate by the decode's own equality).
+    // folder (`tmp/3_bpm/01.wav` — the player lists `tmp/` alone), artist = the
+    // project's name, duration and position in milliseconds at the project
+    // source's rate (the item is at that rate by the decode's own equality).
     void publish_media_state();
 
 private:

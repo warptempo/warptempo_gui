@@ -102,10 +102,11 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // schedule frame whose window start ≤ S − N/2 — the compare being on the
 // schedule's ROUNDED start, llrint(map_target_to_source(m·R_s) − N/2)
 // (engine.cpp's pass 1 over stft_container.h's schedule) — i.e. whose
-// CENTRE C is at or just past S. TO THE SCHEDULE'S ROUNDING, C lies in
-// (S − R_a, S] and its image m·R_s in (T − R_s, T]; what "just past" and
-// "to the rounding" name is the residue recorded at the end of this
-// comment, and every "at most" below carries it.
+// CENTRE C is at or just BEFORE S — the last frame that has not yet passed
+// it, never one beyond. TO THE SCHEDULE'S ROUNDING, C lies in (S − R_a, S]
+// and its image m·R_s in (T − R_s, T]; what "just before" and "to the
+// rounding" name is the residue recorded at the end of this comment, and
+// every "at most" below carries it.
 // The seed frame re-synthesizes its window [C − N/2, C + N/2)
 // VERBATIM — theta = phi, the SEED GRAIN — and every later frame propagates
 // from it. Measured (2026-09-02, a steady tone across a reset): the OLA

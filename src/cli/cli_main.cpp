@@ -102,6 +102,14 @@ int main(int argc, char** argv) {
     // diagnostic, which surfaces verbatim through the print below.
     // title and the applied trim come from it. ---
     //
+    // "REQUIRED" IS THIS PRODUCT'S WORD ALONE (recorded 2026-09-02; architect
+    // approval 2026-09-02, comment-only): the GUI TEMPLATES an absent sidecar
+    // at load — a new project's first open writes all three beside its wav —
+    // so a set the GUI would create from nothing is a refusal here. That is
+    // the insurance render's own shape (it authors nothing and creates no
+    // authoring state), not a divergence in the loadability verdict, which is
+    // stated for FILES THAT EXIST just below.
+    //
     // Sidecar check order here is settings -> markers -> resets -> probe,
     // while the GUI load checks probe -> audio -> markers -> settings. On a
     // file set with multiple defects the two products therefore report a
@@ -459,6 +467,20 @@ int main(int argc, char** argv) {
     // the GUI's next render into the same path re-renders instead of reusing
     // it. That is the SAFE direction — the cost is one redundant render, never
     // a stale wav served as fresh — so it is recorded rather than fixed.
+    //
+    // THE INVENTORY IS FOUR (re-greped 2026-09-02; architect approval
+    // 2026-09-02, comment-only). (1) NO PRUNE — a CLI render leaves a previous
+    // title's deliverable standing (renders_dir.h). (2) NO `.fingerprint`, the
+    // paragraph above. (3) NO FAILURE DELETION AND NO CARD: the GUI's failed
+    // archival render removes the pair it was to publish and says
+    // `Render failed: <reason>` on a card, while every failure here prints one
+    // stderr line and exits, leaving whatever stood in `render/` — right for a
+    // terminal tool, whose exit code IS its verdict. (4) NO PROJECT MODEL: the
+    // GUI resolves a project folder under `projects_path` and takes its source
+    // from the sidecar stem, while this binary renders whatever source path it
+    // is handed and reads the three sidecars beside it — no folder shape, no
+    // legacy-layout refusal, no `last_project`. Also right for an insurance
+    // render, and unstated until now.
     const std::string staging_output_path = render_staging_path(out_path);
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {

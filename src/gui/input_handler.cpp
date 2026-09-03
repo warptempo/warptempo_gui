@@ -1112,8 +1112,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // so Esc is UNBOUND there and falls through with every other key while a
     // gesture is in flight; it is NOT one of the eight), the first seven
     // earlier in this function than this point, so reaching here means the
-    // press has nothing left to do BUT the stack. THEY ARE LISTED IN RANK
-    // ORDER, outermost modal first:
+    // press has nothing left to do BUT the stack. THE LETTERING BELOW IS AN
+    // ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
+    // tests the PROMPT gate first of all, ahead of the loading gate and so
+    // ahead of the editor hatch and the editors — which is right, a prompt
+    // outranking an editor everywhere — while the letters below run
+    // editor-first. Read them as a list of the eight places, and read on_key
+    // itself for which one answers when two could:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
     //       since it can only fire while one of the editors owns the
@@ -1620,7 +1625,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (the derivation at drop_phase_reset_lead_in_at_playhead,
         // phaseresetmarkers_ops.cpp) — which composes with Space's lead-in
         // audition — drop then Space cancels the two N/2 offsets and auditions
-        // from exactly where the cursor was.
+        // from exactly where the cursor was, to the drop's own whole-frame snap
+        // (exact under a speed-up, a few output samples under a slow-down; the
+        // one-term arithmetic is at phase_reset_lead_in_launch_offset,
+        // selection.cpp).
         // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S
         // saves, and Shift+S (2026-08-28) drops a phase reset from the warp
         // column's either view — the same lead-in drop with the trip to T+P

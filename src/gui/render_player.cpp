@@ -668,7 +668,16 @@ void GuiRenderPlayer::toggle_pause() {
         // GuiPlayback::heard_cursor): painting predicts ahead because the
         // pixel lights later; a resting write records where the ear was.
         // The clock and the scrub go on painting from cursor(), led — they
-        // are pictures, and this is content. THE PROJECT'S OWN STOP NEEDS NO
+        // are pictures, and this is content. ITS ONE VISIBLE CONSEQUENCE,
+        // accepted: the picture STEPS BACK ONE LEAD AT THE PAUSE, because the
+        // last live frame painted the led position and the resting frame
+        // paints this stored unled one. On the scrub that is sub-pixel at any
+        // item length; on the clock it moves the tenths digit about one pause
+        // in thirty at 60 Hz (33 ms against a 100 ms digit). The alternative
+        // — storing the led point so the picture holds still — would park the
+        // resume past the last heard sound, which is the defect this face
+        // exists to prevent. Both pauses below share the face and the step.
+        // THE PROJECT'S OWN STOP NEEDS NO
         // SUCH FACE, verified: stop_playback_if_playing parks nothing at all,
         // leaving app.playhead_cursor_sample where the user put it, so the
         // player's two pauses are the whole resting-write set.

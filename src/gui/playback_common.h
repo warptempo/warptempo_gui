@@ -123,12 +123,18 @@ struct GuiPlaybackState {
     // Mutable playback state. `cursor` is the READ position: written once per
     // fill by the render body as the first source frame of the NEXT fill (one
     // whole buffer ahead of the block just rendered, and that block itself
-    // `output_latency_frames` ahead of the loudspeaker). It is what the
-    // resting readers snapshot — the render player's pause reads its resume
-    // point here, the natural-end fill clamps it at its window's end — and it
-    // is NOT the predictor's anchor: the predictor anchors on the cycle stamp
-    // below, which pairs this same position with the instant it enters the
-    // port.
+    // `output_latency_frames` ahead of the loudspeaker). NOTHING SNAPSHOTS IT
+    // DIRECTLY (retold 2026-09-02): every consumer, resting reads included,
+    // goes through the PREDICTOR — the render player's two pauses call
+    // GuiPlayback::heard_cursor, which is one observation with the display
+    // lead off — so what this field does here is (a) get clamped at its
+    // window's end by the natural-end fill and (b) supply the sample half of
+    // the anchor. It is NOT itself the anchor: the predictor anchors on the
+    // cycle stamp below, which pairs this same position with the instant it
+    // enters the port. ON A SUSPENDED DEVICE THE PREDICTOR EXTRAPOLATES
+    // NOTHING and the held value is what a resting read gets — one fill (and
+    // one output latency) AHEAD of the ear, the accepted shape of a pause the
+    // user could hear nothing of anyway.
     std::atomic<int64_t> cursor{0};
     // Free-running cursor predictor anchor, and EVERY ANCHOR IS A HEARD
     // INSTANT (architect 2026-09-01): the pair is (sample, the steady_clock ns
@@ -276,9 +282,10 @@ struct GuiPlaybackState {
     // `anchor_offset_ns` (that field's comment), so no anchor is ever
     // extrapolated with a figure other than the one it was built with.
     // AAUDIO NEVER WRITES IT — the recorded asymmetry (the record is at the
-    // AAudio Impl): the tablet's route is Bluetooth in the car, whose latency
-    // is large, variable and unreported to the stream, so no figure the
-    // framework could report is worth anchoring to, and the tablet's predictor
+    // AAudio Impl): the tablet's route is Bluetooth in the car, whose link
+    // delay is large and variable and is NOT carried by the figures the
+    // framework offers — they are reported and untrustworthy there rather than
+    // absent — so no figure it could report is worth anchoring to, and the tablet's predictor
     // keeps the uncompensated lead (architect 2026-09-01). A device fact, not
     // the binding's: it survives rebinds and is zeroed where the backend zeroes
     // output_rate (clear_after_failed_init, shutdown).

@@ -590,6 +590,19 @@ int value_source_marker(const AppState& app, int64_t total_frames) {
 // (x1 >= x0 + 1) and clamp both into [0, lane.w], which the tick's own clamp
 // mirrors.
 //
+// WHAT THE HYPOTHESIS IS, EXACTLY, AND THE ONE CASE IT LEAVES OUT (recorded
+// 2026-09-02): the proof's "inside the viewport" is FRAME INCLUSION,
+// vp_start <= p <= vp_end - 1, and the WAVEFORM's own idea of a visible
+// playhead is very slightly wider — render_playhead paints into column 0 for
+// a fractional pixel in [-0.5, 0), so a playhead up to half a waveform column
+// BEFORE vp_start still shows a line on the plate. In that sliver the
+// hypothesis does not hold, and the tick can sit at x0 - 1, one overview
+// column left of the box, while the eye sees the line inside the waveform.
+// Rare (a fraction of a percent of pan landings at the working zoom, more at
+// a half-song box) and derived rather than observed. It is left as it is: the
+// structural alternative — the tick reading max(p, vp_start) — would make the
+// tick lie about the playhead's own frame to agree with a half-pixel of paint.
+//
 // THE WAVEFORM'S OWN COLUMNS ARE THE OTHER CLASS AND DO NOT MOVE: the
 // authoring lattice is a grid of POINTS (g(c) = nearbyint(c * spp)), where the
 // nearest one is the right answer, and every column rule there stays

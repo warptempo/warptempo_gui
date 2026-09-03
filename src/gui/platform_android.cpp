@@ -470,7 +470,9 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 249 % and anything past it crops the rightmost history icons.
+// fit ceiling is 240 % (the icon row's walk has been 959 authored px since the
+// centered lamp joined it on 2026-08-31; the ceiling was 249 while the walk was
+// 925) and anything past it crops the rightmost history icons.
 // 250 was tried for one afternoon that same day for the finger's sake — a
 // marker flag has to be tappable without the second tap of a double-tap landing
 // on the waveform instead — and stepped back that evening: it was one step too
@@ -1726,9 +1728,15 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
 // but its AUDIO side is uncompensated by ruling: the AAudio backend reports no
 // output latency (playback_aaudio.cpp's Impl records why — the car's Bluetooth
 // route is large, variable and unreported), so the tablet's predictor still
-// carries the whole audio lead, and the line already reads AHEAD of the sound
-// there. A display lead on top would add to that lead rather than cancel one,
-// double-counting against the audio figure this platform never subtracts.
+// carries the whole audio lead, and the position it reads is AHEAD of the
+// sound by that figure. THE TWO TERMS THEN CANCEL ON THE SPEAKER, which is why
+// the zero is not a gap but the better answer: the painted line's error at the
+// moment the pixel lights is L_audio − L_display — the audio lead ahead, this
+// display's own lag behind — about 10–25 ms against 22–33 ms, so roughly
+// −23…+3 ms net, well inside what the eye reads as on the note. Adding a
+// display lead would push the position read forward by L_display and leave the
+// whole L_audio standing: it would REMOVE the one cancellation the tablet has,
+// not double a compensation this platform never made.
 // When the tablet's audio latency is itself compensated, this is where its
 // display lead goes — and there is no feedback road for it on the
 // lock/unlockAndPost path (EGL frame timestamps need an EGLSurface;

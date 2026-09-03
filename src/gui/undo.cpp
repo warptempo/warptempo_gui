@@ -461,8 +461,13 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // snapshot byte-equal to the live store, a no-op history entry that both
     // undo and redo restore invisibly" (marker_drag.cpp). A MERGED press skips
     // the push and skipped that gate with it — and a nudge pair is exactly
-    // reversible (the painted column grid is anchored at frame 0 and
-    // reorder_markers_by_time is stable, so the store comes back row for row),
+    // reversible FOR A MARKER ALREADY ON THE CURRENT COLUMN GRID (the painted
+    // grid is anchored at frame 0 and reorder_markers_by_time is stable, so
+    // the store comes back row for row; every nudge, drag and drop puts a
+    // marker there, while one loaded from file, pasted, or authored at another
+    // zoom sits OFF the grid and Right+Left lands it ON the grid, up to half a
+    // column from where it started — a real change, whose entry then correctly
+    // stays and whose dot correctly stays lit),
     // which is how a tap Right then a tap Left inside kTapCoalesceMs left the
     // burst's surviving entry byte-equal to the live store: one Ctrl+Z that
     // changed nothing at all, and a dirty dot lit over a store equal to the

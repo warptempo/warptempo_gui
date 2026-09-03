@@ -223,10 +223,19 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // tail instead of a near-zero-length deliverable. A deliverable of zero
     // samples is not renderable output, so refuse it here. Like the
     // strict-ascent validators above, this is a breach tripwire for
-    // hand-edited artifacts, unreachable from program-written input (the
-    // trimmer's closing anchor rounds to at least one sample by its
-    // validated geometry, and full maps carry the source's whole target
-    // extent); a breach would otherwise render silently wrong bytes.
+    // hand-edited artifacts (the trimmer's closing anchor rounds to at least
+    // one sample by its validated geometry, and full maps carry the source's
+    // whole target extent); a breach would otherwise render silently wrong
+    // bytes.
+    // IT IS NOT WHOLLY UNREACHABLE FROM PROGRAM-WRITTEN INPUT, recorded
+    // 2026-09-02 (architect approval 2026-09-02, comment-only): a LOAD-LEGAL
+    // source of seven frames or fewer, rendered at the tempo bracket's ×16
+    // ceiling, projects to under one output sample and lands here. The GUI
+    // then cards "Render failed: engine failed" — the engine has no reason
+    // string to hand up — and leaves a freshly created, empty `render/`
+    // behind, the folder being made above this refusal. Left as it is: a
+    // seven-frame wav is not a piece, and giving this arm its own sentence
+    // would be a frozen touch for a case nobody reaches by working.
     if (audio_stft.emit_sample_cap <= 0) {
         std::cerr << "Error: render refused: final map target of "
                   << tgt_end

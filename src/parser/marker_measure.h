@@ -110,6 +110,17 @@
 // NOT — the load-lenient, act-strict reading, so re-ordering markers can
 // never make a file refuse to load.
 //
+// THE CHAIN RESOLUTION HAS NO CONSUMER TODAY, and "the consumers" above is
+// therefore a future tense (recorded 2026-09-02; architect approval
+// 2026-09-02, comment-only). This axis was built for the SCORE-VIDEO
+// experiment, sunset whole on 2026-08-21 (marker-ui.md carries the record),
+// and no code walks a '+' chain to a rational now: the box paints the
+// AUTHORED token, the propagate copies tokens, the sidecar round-trips bytes,
+// and the one place a measure is TAKEN APART — the measure paste's offset
+// shift — reads the GRAMMAR (parse_marker_measure) and refuses to touch a '+'
+// form at all. The semantics stay stated here because they ARE what `+1/4`
+// means to whoever reads a file, and because a consumer is one walk away.
+//
 // This is a DIFFERENT AXIS from the label cascade: it runs predecessor to
 // successor down the store, never definition to ref (warpmarkers.h states
 // that separation at the no-cascade-resolver ruling).

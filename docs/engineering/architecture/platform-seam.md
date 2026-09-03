@@ -268,21 +268,28 @@ drag coordinates floor instead of truncating.
   (`GuiPlayback::set_display_lead_ns`), above every reader that frame has.
   ANDROID ANSWERS 0 BY RULING (the deep dive's item I, record-only): the
   tablet's audio latency is uncompensated by ruling, so its predictor
-  already runs AHEAD of the sound by the whole audio lead, and a display
-  lead on top would double-count against a figure that platform never
-  subtracts; there is no feedback road on the lock/unlockAndPost path
-  either. What remains on the laptop is the DAC's own few-ms pipeline and
+  already runs AHEAD of the sound by the whole audio lead — and THAT
+  PLATFORM'S OWN DISPLAY LAG IS WHAT CANCELS IT. The error at the moment the
+  pixel lights is L_audio − L_display, about 10–25 ms of audio lead against
+  22–33 ms of SurfaceFlinger lag, so roughly −23…+3 ms net on the speaker.
+  A display lead there would push the position read forward by L_display and
+  leave the whole audio lead standing: it would REMOVE the one cancellation
+  the tablet has rather than double a compensation that platform never made,
+  which is why the zero is the stronger answer and not a gap. There is no
+  feedback road on the lock/unlockAndPost path either. What remains on the laptop is the DAC's own few-ms pipeline and
   the frame grid's residue — now genuinely ± half a period, centred on zero by
   the half-period term above rather than running a whole period behind — both
   recorded at `playback_publish_play` (`playback_common.cpp`).
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The FOUR keys it stamps are per-DEVICE preferences
+  both-sides member. The FIVE keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
   and `<externalDataPath>/projects`; both stamp `kDefaultProjectsRepo` and a
-  blank `last_project`. (A FIFTH key, `audio_player`, stood here until
+  blank `last_project` AND a blank `sync_path` — neither template guesses a
+  destination for the mirror, a wrong guess aiming its creates, copies and
+  removals at a folder the user never named. (A key the template no longer stamps, `audio_player`, stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
   player, which plays a render through the product's own engine on both
@@ -311,10 +318,16 @@ drag coordinates floor instead of truncating.
   which adb pushes into with no permission granted) as the projects path.
 - **The loop contract** (`platform.h`, authoritative): ONE `GuiPlatform` per
   process, MANY `run()` calls. `gui_main` is a loop — everything ONE PER
-  PROCESS (the signals, the device config, the scale install, the platform and
-  its `init`, the render cache) outside it; everything ONE PER PROJECT
+  PROCESS (the signals, the device config, the scale install, the platform
+  object, the render cache) outside it; everything ONE PER PROJECT
   (`run_project`, main.cpp: AppState, audio, playback, the caches, the workers,
   the handlers, every callback) built inside, run, torn down in today's order.
+  `GuiPlatform::init` is the one per-process act that RUNS INSIDE the loop, in
+  the FIRST session (`run_project`, guarded by `window_up`): it takes the cold
+  window size, which is a per-project object's, and every later session
+  inherits the window standing. The scale and the touch slop are installed by
+  `gui_main` ahead of it either way, so the first configure is at the user's
+  scale.
   `run()` returns for an EXIT (`request_exit`; `exit_requested()` true) or a
   RUN STOP (`request_run_stop`, the Open project picker's reopen — the window and the
   input core stand; the stop bit is cleared at each `run()`'s head). The
@@ -660,7 +673,7 @@ band translates to a coordinate outside the window and is delivered as such,
 neither clamped nor dropped — the shape a Wayland drag past an edge already
 takes (`containing_pixel`, input_core.h); the bars' own windows take those
 touches in practice. The startup line reports both:
-`window 2304x1268 at (0,76) of surface 2304x1440, tick 5 ms`.
+`window 2304x1270 at (0,74) of surface 2304x1440, tick 5 ms`.
 
 THE RECT IS THE FRAMEWORK'S MINUS THE AIR — the backend measures no bar and
 subtracts no inset of its own, which is why nothing here names a bar height as a
@@ -838,6 +851,18 @@ nothing (no `<service>`, no `FOREGROUND_SERVICE*` / `POST_NOTIFICATIONS`, no
 `res/`). Backgrounding (`APP_CMD_LOST_FOCUS`) does not deactivate the session;
 the player standing is the one condition.
 
+"NO BACKGROUND PLAYBACK" IS BUILD SCOPE, NOT BEHAVIOUR (recorded 2026-09-02,
+the four-tier review's R-18): it says this build ships no service to keep
+sound alive properly, not that sound stops when the app goes behind. A
+BACKGROUNDED TABLET KEEPS SOUNDING — `APP_CMD_LOST_FOCUS` has no pause arm
+and the AAudio stream runs on — which is right for the car (the head unit's
+own screen is what is in front) and is simply what happens elsewhere. And THE
+MAIN WINDOW'S OWN AUDITIONS HOLD NO AUDIO FOCUS: only the render player
+requests focus, so Space and the A/B audition play beside whatever else the
+device is playing and neither ducks nor is ducked. Both are recorded rather
+than fixed; a `LOST_FOCUS` → stop-body arm is the shape if the architect ever
+wants the first of them.
+
 NO DEVICE PAUSES, IT DOES NOT ADVANCE (the same day): `GuiPlayback` gained
 `device_unavailable()` on both backends — true whenever the engine cannot
 sound: the AAudio disconnect latch and its refused reopen AND, on both, the
@@ -879,14 +904,23 @@ platform stays 35 (`WT_PLATFORM_SDK`, the only `android.jar` installed): the
 runtime gates on the stamped target, not on the jar. The
 Linux target's flags and object set are byte-identical to before the port.
 
+WHAT THE APK DOES NOT CARRY, and the one behaviour that follows (recorded
+2026-09-02, the four-tier review's R-18): GIT. The GitHub recheck shells out
+to a `git` binary, and there is none on the tablet — so bare `h` REFUSES
+there, with the entry's own `History is unavailable: <reason>` card, and the
+mode's buttons grey with it. That is not a stub or an omission to fill: the
+checkpoint workflow is the authoring laptop's, the tablet being the glass the
+work is played and judged on. HELP's history section says so, this being one
+of the few places behaviour differs by host.
+
 ## Device facts (Galaxy Tab S10 FE, SM-X520)
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 240 since the centered lamp
 made the walk 959 authored px on 2026-08-31 (249 at the 2026-08-27 Series
-relocation's 925; only 220 before
-that). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
+relocation's 925; 228 at the 1007-px row before that, and 221 for the one
+day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
 the whole icon row lands (959*2.25 = 2158 of the panel's 2304) and the layout
 is the one the redesign was drawn against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is

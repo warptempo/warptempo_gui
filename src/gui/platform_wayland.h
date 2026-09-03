@@ -571,8 +571,11 @@ public:
     // (the record is at that backend's body): the AAudio backend reports no
     // output latency by ruling — the car's Bluetooth route is large, variable
     // and unreported — so the tablet's predictor still carries the WHOLE
-    // uncompensated audio lead, and a display lead added on top of it would
-    // double-count against that. Record-only there until the tablet's audio
+    // uncompensated audio lead, and THAT PLATFORM'S OWN DISPLAY LAG IS WHAT
+    // CANCELS IT (the error at pixel-light is L_audio − L_display, roughly
+    // −23…+3 ms on the speaker). A display lead there would leave the audio
+    // lead standing alone — it would remove the cancellation rather than
+    // double a compensation. Record-only there until the tablet's audio
     // latency is itself compensated.
     int64_t display_lead_ns() const;
 
@@ -605,8 +608,11 @@ private:
     // with a mode falls back to a 60 Hz tick). The ruled OPTIONAL list is
     // exactly THREE: the two pointer-capture managers in their block below,
     // and wp_presentation here (2026-09-02, the display lead's measuring
-    // instrument — the sixth bound global; absence degrades to the lead's
-    // fallback figure, announced by one stderr line at init).
+    // instrument; absence degrades to the lead's fallback figure, announced
+    // by one stderr line at init). The bound INTERFACES are more than these
+    // classes name — every wl_output, and the seat's own children — so the
+    // count of bound globals is not a number worth stating here; what is
+    // ruled is the five required and the three optional.
     struct wl_display*    wl_display_     = nullptr;
     struct wl_registry*   wl_registry_    = nullptr;
     struct wl_compositor* wl_compositor_  = nullptr;

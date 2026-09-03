@@ -1817,7 +1817,9 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's FOUR MENU ANCHORS
-// (File, Edit, Series and Settings) plus the view bar's three, row 3's two
+// (File, Edit, Iterations and Settings — the ENUMERATOR for the third keeps
+// its `Series` spelling, the 2026-08-31 rebrand being labels and prose alone)
+// plus the view bar's three, row 3's two
 // TABS, row 4's TWENTY-SEVEN
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
@@ -2670,7 +2672,8 @@ enum class RedesignButton {
 // in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 54. Of
 // those,
 // FIFTY carry a chord in kToolbarChords and FOUR are the dropdown
-// anchors (File, Edit, Series and Settings), which is the split the chord
+// anchors (File, Edit, Iterations and Settings; the third's enumerator is
+// still spelled `Series`), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
@@ -4432,9 +4435,19 @@ struct AppState {
     //     panning away during playback was impossible with follow on (the
     //     default). A pure keyboard ZOOM is deliberately NOT a producer: it
     //     centers on the scanner during playback, so it never leaves the chase.
-    //   * the PLACEMENT (place_playhead_at_click_column, input_pointer.cpp
-    //     — the one body that writes this flag), which moves the cursor and
-    //     reseeks. THREE ROUTES REACH IT (re-derived 2026-08-12, the membership
+    //   * the PLACEMENT (place_playhead_at_click_column, input_pointer.cpp),
+    //     which moves the cursor and reseeks. IT SUPPRESSES THE CENTRED PIN
+    //     TOO, AND THAT IS RULED (architect 2026-09-02, the four-tier review's
+    //     R-9): the pin reads this same bit, so a reseek click during playback
+    //     under a lit `y` stops the centring for the session and leaves the
+    //     lamp lit. The click IS AN AIMING GESTURE and takes the camera on
+    //     follow's own precedent — "centering is not a camera for extended
+    //     listening or for moving the playhead, it is for A/B nudging with the
+    //     Shift+Space compare" — so this is one producer class with one
+    //     meaning, not follow's rule leaking onto the pin. A click that
+    //     changes no playhead still sets the bit, accepted under the same
+    //     reading. The bit's THREE true writers are this site,
+    //     scroll_viewport and apply_strip_drag_zoom (viewport.cpp). THREE ROUTES REACH IT (re-derived 2026-08-12, the membership
     //     matching reseek_keeping_alive's own at playback_lifecycle.cpp): the
     //     DEFERRED CLICK ACT at a plain navigation-surface press's motionless
     //     release (run_nav_click_act — the upper half, the ruler and the empty
@@ -4444,15 +4457,18 @@ struct AppState {
     //     producer — it returns above the placement and overrides no follow,
     //     2026-08-13), the LIVE shift former's press, and the view's own shift
     //     former.
-    // CLEARED at FOUR sites (re-derived 2026-07-30 by grepping every write, all in
+    // CLEARED at SIX sites (re-greped 2026-09-02, all in
     // playback_lifecycle.cpp): the ONE stop body, stop_playback_if_playing (both
     // stop edges — Space's and the tick's natural end — collapsed onto it, retiring
-    // the second clearer that used to sit in restore_playhead_to_lsp); the two
-    // LAUNCH edges' defensive clears, toggle_playback's play arm and
-    // scrub_launch_at, which run before their own validation so even a refused
-    // launch leaves it clear; and an explicit `f` re-enable while playing
-    // (set_follow_mode's off->on arm). So the chase resumes at the next launch,
-    // or the moment the user re-engages it.
+    // the second clearer that used to sit in restore_playhead_to_lsp); the THREE
+    // LAUNCH entries' defensive clears — toggle_playback's play arm,
+    // scrub_launch_at and launch_bounded_audition — each running
+    // before its own validation so even a refused launch leaves it clear; and
+    // the TWO LAMP RE-ENGAGEMENTS while playing, follow's off→on arm and the
+    // CENTRED lamp's (set_follow_mode and set_centered_mode). So the chase
+    // resumes at the next launch, or at either lamp's OFF→ON edge (the off
+    // edge writes nothing), so a suppressed session is recovered by
+    // re-engaging the centred pin exactly as by re-engaging follow.
     bool    follow_overridden_for_session = false;
 
     // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp (architect
@@ -5424,8 +5440,12 @@ struct AppState {
     // THE FOURTH OWNER IS THE PICKER (2026-08-28, architect R22/R23): the
     // FIELD-LESS modal over the folder overlay's list — the Open project
     // picker — whose row is **Cancel** and nothing else since 2026-08-29 (a
-    // click on a row opens it). Ranked WITH the player: a prompt outranks it
-    // (the reopen's unsaved-tab question paints over its row), and the picker
+    // click on a row opens it). Ranked WITH the player, though NOTHING EVER
+    // PAINTS OVER IT in practice (retold 2026-09-02): the one prompt it could
+    // meet is the reopen's own unsaved-tab question, and the open act closes
+    // the picker BEFORE raising it (`close_picker` then `request_close`), as
+    // the close road does at its head — so the rank is what settles a race
+    // that no road produces. The picker
     // and the player are NEVER LIVE TOGETHER (each opener refuses under the
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
@@ -8954,7 +8974,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // drag) stay SILENT, gesture-class, the unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// SEVEN CALL SITES, re-derived by grep 2026-08-31 (every one answers TRUE in
+// NINE CALL SITES, re-greped 2026-09-02 (every one answers TRUE in
 // every P-column state through this body's own P arm):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
 // (input_key_dispatch.cpp — its own warp-column test sits ahead, so `m` is
@@ -8966,8 +8986,11 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // 2026-08-31, when that predicate grew the marker's own wall term for the
 // buttons' face and a wall stopped being something this sentence may be raised
 // for), the COMPOSED PREDICATE horizontal_arrow_step_actionable (the Left /
-// Right buttons' face, which composes this rule with the wall), and the DROP
-// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm). marker_selection_verb_-
+// Right buttons' face, which composes this rule with the wall), the DROP
+// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm) and the TWO
+// TOOLTIP READERS the truthful-tooltips ruling added — the Drop button's
+// stateful fork and the arrow pair's (redesign_button_tooltip's overload),
+// each saying the card's own sentence where the act would refuse. marker_selection_verb_-
 // actionable LEFT the callers with the opening: its P-column home term
 // became structurally true and the predicate is the selection atom alone
 // (its site records the succession).
@@ -10829,10 +10852,12 @@ bool target_preview_ready(const GuiTargetRender& target_render);
 // residue's three terms, its worked case and its acceptance are at the drop's
 // comment, the derivation's one prose home. It reaches no audio and moves no
 // authored frame.
-// The static_assert pins the identity the derivation rests on: the offset IS
-// the half-window, and the half-window IS two hops, so neither the engine's
-// geometry nor this number can move without the other. It says nothing about
-// the rounding, which is why it stays exactly as it is.
+// The static_assert is a SPELLING PIN, not a geometry pin, and is worth
+// keeping as one: both conjuncts are definitional at today's constants
+// (`kRs = kN / 4`, engine_geometry.h), so what it actually catches is an edit
+// that respells this number, or `kRs`, without the other moving with it — the
+// engine's own geometry lives in the engine and no assert here can hold it.
+// It says nothing about the rounding, which is why it stays exactly as it is.
 constexpr int64_t kPhaseResetLeadInSamples = kN / 2;
 static_assert(kPhaseResetLeadInSamples == kN / 2 &&
               kPhaseResetLeadInSamples == 2 * kRs,
@@ -11169,8 +11194,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // twin rule and the closed P column coexisted — bare `s` off home
         // and the crossing already crossed — and no dead pair is left. The
         // composition stays: it is the twin rule's one spelling here, and it
-        // is what greys again if either predicate ever narrows. The
-        // occupied-frame refusal is a frame fact the lane shows.
+        // is what greys again if either predicate ever narrows. (An earlier
+        // reading here named an "occupied-frame refusal" as a second reason
+        // not to mirror: the drop HAS NO SUCH REFUSAL — `drop_marker`'s only
+        // early returns are a bad sample rate and the past-EOF wall, a
+        // coincident frame being the resolver's and the red flag's business —
+        // so the sentence is deleted rather than inherited, 2026-09-02.)
         case RedesignButton::IconMarkerDrop:
             return !active_view_state(a).read_only &&
                    (active_column_authoring_allowed(a) ||

@@ -24,9 +24,11 @@
 // the whole window before its run(), and a callback in flight paints that);
 // the timerfd and its cadence; the input core's modifier state (the physical
 // keyboard's live truth), its pointer position and focus, and its touch
-// contact bookkeeping (a finger still down on the on-screen Enter that chose
-// the project lifts into the next set as an ordinary release, which finds no
-// claim and does nothing). The worker completion fds are the per-project
+// contact bookkeeping (a finger still down on the picker row it tapped to
+// choose the project lifts into the next set as an ordinary release, which
+// finds no claim and does nothing — the picker is field-less and paints no
+// on-screen keyboard, so a row or its Cancel button is the whole surface a
+// finger can be resting on). The worker completion fds are the per-project
 // workers' own and are RE-REGISTERED by the next iteration and forgotten by
 // the teardown (each setter takes -1); the callbacks are re-installed since
 // they capture the new objects. NOTHING IS RESET FOR THE CORE'S KEY REPEAT,

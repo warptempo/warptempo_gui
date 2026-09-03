@@ -77,13 +77,30 @@ std::string render_staging_path(const std::string& final_path);
 // to the source. That is a real way to lose the source, so the predicate and
 // its three boundary refusals stay.
 //
+// WHAT THE REFUSAL DOES NOT COVER, RECORDED (architect 2026-09-02, the
+// four-tier review's R-1; architect approval 2026-09-02, comment-only): the
+// dispatcher deletes the deliverable pair on a FAILED archival render, and
+// this refusal is one of the six producers that fail BEFORE the up-to-date
+// rung — so under the inode arm's first shape (`render/` a symlink to the
+// project folder, title == the source's stem) the refusal fires and the
+// removal then resolves through that same symlink and unlinks the source.
+// It is reachable only by symlink work done outside the app after the load,
+// and it is ACCEPTED ADVERSARIAL BREAKAGE on his rubric — adversarial use
+// hardfails and we move on. The promise this predicate makes is unchanged for
+// every road the app offers: a colliding title is refused rather than
+// overwritten, at all three surfaces.
+//
 // Three boundary callers refuse a collision at their own surface: the settings
 // editor at commit (the colliding state is GUI-uncommittable), and the GUI
 // loader and the warptempo_cli loader at load (a hand-edited sidecar composing
 // the output onto the source is adversarial — refused first-error, stderr-only,
 // in both products so a file set is loadable in both or neither). The `'`
-// load-in-place needs no check of its own: entry sidecars are trusted, written
-// once from an already-checked live store (comment retold to the current
+// load-in-place roads skip THIS CHECK and nothing else (retold 2026-09-02;
+// architect approval 2026-09-02, comment-only — the older wording said they
+// "trust" the entry, which reads wider than the truth): they run the strict
+// sidecar readers and the domain walls exactly as a load does, and only the
+// collision is left unasked, because an entry's sidecars were written once
+// from an already-checked live store (comment retold to the current
 // gesture and naming, architect approval 2026-08-04). Separately, the render
 // worker is the breach backstop — its own inode-level check, not this
 // predicate: it composes batch-folder paths too and covers write-time races

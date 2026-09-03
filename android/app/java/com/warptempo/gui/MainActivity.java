@@ -34,9 +34,10 @@ import android.view.WindowManager;
  * with this call in place, at targetSdk 35 and again at 34. What this call and
  * the target DO buy is the framework reporting a real CONTENT RECT, and THAT
  * RECT ALREADY EXCLUDES BOTH BARS. Measured on an AWAKE panel under the
- * architect's own Screen zoom (override density 320): `window 2304x1268 at
- * (0,76) of surface 2304x1440` -- a 60 px status bar plus the 16 px of air the
- * native side adds above it, and a 96 px taskbar below. Nothing here has to
+ * architect's own Screen zoom (override density 320): `window 2304x1270 at
+ * (0,74) of surface 2304x1440` -- a 60 px status bar plus the 14 px of air the
+ * native side adds above it (16 for the forty-five minutes between the strip's
+ * landing and its retune on 2026-08-27), and a 96 px taskbar below. Nothing here has to
  * measure or subtract a bar. (History, one line: an earlier reading of
  * 2304x1387 at (0,53) showed the status bar alone, because the taskbar
  * reported no inset while the panel DOZED with the cover shut -- dumpsys had
@@ -102,9 +103,11 @@ import android.view.WindowManager;
  * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
  * which the native side says through mediaState(...). EACH CALLBACK IS ONE
  * INTEGER DOWN through nativeMediaCommand -- the native side queues it and
- * wakes its own loop, then turns it into the player's OWN KEYS (Space, Page
- * Up / Page Down, Left / Right), so every car button is a chord the player
- * already binds and there is no second dispatch road. onMediaButtonEvent IS
+ * wakes its own loop, then turns it into the player's OWN KEYS (Space,
+ * Home / End, Left / Right), so every car button is a chord the player
+ * already binds and there is no second dispatch road. (Previous / Next
+ * synthesized Page Up / Page Down until 2026-08-31, when the row's two skips
+ * were remapped onto Home and End.) onMediaButtonEvent IS
  * OVERRIDDEN and the keycodes are mapped here, at once, rather than left to
  * the framework's default (the reasons are at the override). Audio focus is
  * REQUESTED when a push says playing and none is held and ABANDONED when a

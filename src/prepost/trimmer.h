@@ -9,10 +9,17 @@
 #include <string>
 #include <vector>
 
-// Premise (architect-ruled). Trim is a transient inspection tool for quickly
-// rendering and auditioning a segment — not an archival deliverable. Accepted
+// Premise (architect-ruled, RETOLD 2026-09-02 — architect approval 2026-09-02,
+// comment-only). Trim is a RENDER WINDOW ON THE WAV ON EVERY ROAD, THE
+// DELIVERABLE'S INCLUDED: the older sentence here ("a transient inspection
+// tool … not an archival deliverable") was retired in render-pipeline.md and
+// is retired here with it. Accepted
 // caveats: head phase is wrong until the first phase reset marker; the tail
-// may fade over R_s multiples. The model is cut source, rebase maps, render,
+// may fade over R_s multiples — and "fade" is the ordinary case rather than
+// the bound: on a HARD EOF cut the tail measurably OVERSHOOTS instead (×1.20
+// over the last ~21 samples of a tone cut at the file's end), which is outside
+// the contract either way, is clipped by the peak limiter, and does not arise
+// on the corpus's own mastering fades. The model is cut source, rebase maps, render,
 // crop — with hop discipline so the trimmed render phase-inverts to null
 // against the full render past the first phase reset, through the last kept
 // sample (the derivation lives at plan_trim in trimmer.cpp).

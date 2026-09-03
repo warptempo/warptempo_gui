@@ -179,8 +179,14 @@ struct GuiTargetRender {
     // press (input_key_dispatch.cpp, where the whole rationale sits) rather
     // than leaving the outcome to do_render's worker-thread stderr line. It
     // asks compute_buffer_start_frame_for and nothing else — THE ONE VERDICT
-    // OWNER on this thread, so no second arithmetic implementation exists to
-    // drift from the orchestrators'.
+    // OWNER on this thread, so nothing here can drift from anything else here.
+    // ACROSS THE THREAD BOUNDARY IT IS A MIRROR, not a shared body (stated
+    // plainly 2026-09-02): the worker's answer is the trimmer's own span rule
+    // inside plan_trim, which this side cannot call — it has no plan — so
+    // this re-derives the same test from the same exact-double images through
+    // the same map. Identical BY CONSTRUCTION and kept so deliberately; there
+    // is exactly ONE such GUI-thread mirror, and adding a second reading of
+    // the same question is what the rule forbids.
     //
     // View-independent, so a source-view press answers as truthfully as a
     // target-view one: the map it consults (target_view_warp_frame_map_cached)

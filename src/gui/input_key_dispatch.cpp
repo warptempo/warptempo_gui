@@ -1897,7 +1897,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // own navigation press rather than a scrub, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
-//   - = / - (bare)          → zoom in / out
+//   - Ctrl+= / Ctrl+-      → zoom in / out (the horizontal pair since
+//                             2026-08-27)
+//   - = / - (bare)          → the WAVEFORM MAGNIFICATION step (the vertical
+//                             pair since the same day; bare is vertical,
+//                             ctrl is horizontal)
 //   - 0 (bare)              → the overview: full zoom out, or, once already
 //                             there, THE MODE'S OWN `c` (run_center_command
 //                             forks on the mode bit, so the second arm reads the
@@ -3664,7 +3668,13 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
         close_dropdown();
         return false;   // fall through to the close route
     }
-    return true;        // every other chord is inert while the popup is up
+    // Every other chord is inert while the popup is up — AND SILENT, a BOUND
+    // one included: it is a RULED silence (messaging.md's what-stays-silent
+    // list, recorded 2026-09-02), the standing prompt's own — a popup is a
+    // question on screen, its rows are the answer, and the keyboard's next act
+    // is to close it. `chord_is_bound` is deliberately not asked here, so this
+    // is not one of the gate-card sites.
+    return true;
 }
 
 // The DIALOG-HOSTED modal editors: the settings editor, the bpm editor

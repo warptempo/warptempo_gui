@@ -22,13 +22,17 @@ struct GuiTargetRender;
 // operation structs (Undo, Selection, GuiActiveViews, etc.).
 //
 // Reference list notes:
-//   - Viewport& and std::function<bool(int)>& payload_eligible_marker are
-//     deliberately omitted: paint never calls a Viewport method (geometry
-//     queries go through free functions waveform_area / top_strip_area /
-//     current_samples_per_pixel declared in app_state.h) and never calls
-//     payload_eligible_marker directly through this reference (the value
-//     pair's two acts call the free function, and paint reads it nowhere at
-//     all since the readout retired). Both omitted to avoid dead weight.
+//   - Viewport& is deliberately omitted: paint never calls a Viewport method
+//     (geometry queries go through the free functions waveform_area /
+//     top_strip_area / current_samples_per_pixel, declared in app_state.h),
+//     so the reference would be dead weight. (It was named here beside a
+//     `std::function<bool(int)>& payload_eligible_marker` until 2026-09-02:
+//     that gate is not a callback and has not been one for some time — it is
+//     the free function `payload_eligible_marker(const AppState&,
+//     const GuiAudio&, int)` over the classifier `payload_eligibility`, both
+//     declared in app_state.h — and paint reads it through neither road, the
+//     value pair's own acts and the roster's face calling the free function
+//     directly.)
 //   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
 //     for gui.invalidate_region calls. It carries no cached paint surface of
 //     its own: the playhead triangle mask, the last thing it had ever held,

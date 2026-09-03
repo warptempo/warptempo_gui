@@ -35,8 +35,10 @@ struct Viewport {
     int64_t                     trim_begin_sample() const;
     int64_t                     trim_end_sample() const;
 
-    // Worker kick: requests an immediate waveform regeneration the moment
-    // the viewport changes, instead of waiting for the next platform tick.
+    // Worker kick: requests an immediate waveform regeneration instead of
+    // waiting for the next platform tick. IT IS NO LONGER THE VIEWPORT'S OWN
+    // KICK (retold 2026-09-02): viewport changes take the SYNCHRONOUS route,
+    // and what is left of this is the fallback named below.
     // Set from main.cpp to paint_handler.maybe_enqueue_waveform_render().
     // Held as a std::function rather than a GuiPaintHandler& so viewport.cpp
     // keeps no compile-time edge to paint_handler.h. kick_waveform_render()

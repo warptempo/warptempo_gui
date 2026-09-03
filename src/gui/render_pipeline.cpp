@@ -252,7 +252,12 @@ RenderOutcome do_render(const RenderRequest& req,
     // folder name as a subdir — retrieval walks <pid>/<batch-folder-name>/
     // <stem>.* — created here (creation failure just makes the write fail into
     // the existing non-fatal skip). The DELIVERABLE (empty batch_folder)
-    // stays flat <pid>/<stem>.* — one source per process, no collision. ---
+    // stays flat <pid>/<stem>.* — one deliverable per TITLE, and the only way
+    // two of them can meet in a pid dir is the reopen loop (2026-09-02: one
+    // process now opens many projects in turn), which would need two projects
+    // whose `title` settings match. These are inert future-proofing files,
+    // swept at the next launch, so the later pair simply overwrites the
+    // earlier one and nothing rests on it. ---
     if (!req.output_buffer) {
         const std::string pid_dir = req.render_cache->process_dir();
         if (!pid_dir.empty()) {
@@ -291,9 +296,16 @@ RenderOutcome do_render(const RenderRequest& req,
     // around it — the reuse rungs, the post-engine chain, the map writes,
     // and every final-name publication — so an Esc (or a superseding
     // dispatch) that lands after the engine's last internal check can never
-    // publish a deliverable, fingerprint, or cache entry as Success. A
+    // publish a PARTIAL deliverable, fingerprint, or cache entry as Success. A
     // cancelled return unlinks the staging file; nothing has landed under a
-    // final name at any gated point. The buffer route gates twice: the
+    // final name at any gated point. WHAT IT DOES NOT PROMISE, stated exactly
+    // (recorded 2026-09-02): every gate is a CHECK BEFORE a publication, not a
+    // lock around it, so a kill arriving between the last check and the rename
+    // below produces Success and lets the prune run. That is harmless and
+    // deliberate — the file it publishes is complete and current, and the only
+    // thing lost is the cancel's own promptness — but "a killed session never
+    // publishes Success" is a statement about partial output, not about the
+    // instant the flag was set. The buffer route gates twice: the
     // cache prep threads the OWNING cancel_token into insert_master_floats
     // — the token is per-dispatch and never reset, so the writer thread's
     // own loads of it (the pre-launch drop and the post-encode re-check)

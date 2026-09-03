@@ -1385,8 +1385,9 @@ void render_flag_boxes_impl(
             // height, same 1px top edge over the fill, same aliased rectangles,
             // and no right border, exactly as the flag has none.
             //
-            // THE SEAM CARRIES A DIVIDER — AN EXPERIMENT, 2026-08-20, and it is
-            // REVERTIBLE WHOLE. The box was butted directly against the flag's
+            // THE SEAM CARRIES A DIVIDER — A STANDING RULING (2026-08-20,
+            // hardened 2026-09-02 after thirteen days on the glass; it landed
+            // as a trial). The box was butted directly against the flag's
             // fill from 2026-08-19 ("run the blue right next to the purple
             // base" — the colour change IS the boundary cue), and the architect
             // then found the two fields reading at different DEPTHS on the
@@ -1857,8 +1858,9 @@ void render_history_diff_flags(
             // never a divider — it cannot separate two things standing side by
             // side.
             //
-            // THE SEAM CARRIES A DIVIDER — AN EXPERIMENT, 2026-08-20, and it is
-            // REVERTIBLE WHOLE. The halves met fill-to-fill from this lane's
+            // THE SEAM CARRIES A DIVIDER — A STANDING RULING (2026-08-20,
+            // hardened 2026-09-02; it landed as a trial). The halves met
+            // fill-to-fill from this lane's
             // first day, on the reading that a changed pair is ONE flag and the
             // border marks where a flag starts. The architect then found the
             // pair reading at two DEPTHS on the glass: adjacent saturated hues

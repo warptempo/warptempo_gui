@@ -72,11 +72,23 @@ struct GuiFileLoader {
 // reopened
 // session's load can then fail only on a CHANGE ON DISK between this check and
 // that load, which is the adversarial class and takes load_file's own fatal
-// exit. It writes nothing and keeps nothing: every parsed value is discarded.
+// exit — WITH ONE STANDING GAP the dry-run cannot see (recorded 2026-09-02,
+// the four-tier review's R-15, ADVERSARIAL by his rubric and left as it is):
+// a NEW project whose folder is not writable passes here — nothing is
+// created at this stage, and the load's own template creation is advisory —
+// and then dies at load_file's strict read of the sidecar that was never
+// written, whose sentence names the missing file rather than the failed
+// create. An unwritable folder under his own projects path is not a
+// supported state, so no writability probe was added. It writes nothing and keeps nothing: every parsed value is discarded.
 // Returns the first refusal's one line, or nothing when the load would succeed.
 //
 // THE INVENTORY, walked in load_file's own order, each refusal through the same
-// owner the load calls, so the words are the load's words:
+// owner the load calls, so the words are the load's words — WITH ONE
+// DELIBERATE EXCEPTION, the STEREO arm, whose card is a proper sentence
+// ("The source is not stereo (N channels)") where the load's stderr line is
+// the terminal's own "N channels (stereo sources only)": a card is prose and
+// a diagnostic is not, the capitalization sweep's rule (recorded 2026-09-02;
+// the verdict is identical, only the wording differs):
 //
 //   (The peaks-cache path refusal that opened the load's own walk is DELETED,
 //   2026-09-02: it had no producer left once every source became the project

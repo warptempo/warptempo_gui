@@ -106,10 +106,12 @@ struct GuiPlayback::Impl {
     // instant, and this backend NEVER WRITES that word: it stays 0, so the
     // heard offset is 0 and the tablet's line leads the sound by the route's
     // real latency, as it did before the laptop was compensated. The reason
-    // is the route: in the car the tablet plays over Bluetooth, whose latency
-    // is large, variable and unreported to the stream, so any figure this
-    // backend could publish (getTimestamp, the framework's own latency
-    // estimate) would be a guess that is wrong most of the time, and a line
+    // is the route: in the car the tablet plays over Bluetooth, whose link
+    // delay is large and variable, and the figures the framework DOES offer
+    // (AAudioStream_getTimestamp, its own latency estimate) do not carry it —
+    // they are REPORTED AND UNTRUSTWORTHY on that route rather than absent
+    // (retold 2026-09-02), so any figure this backend published would be a
+    // guess that is wrong most of the time, and a line
     // running BEHIND the sound by a wrong guess is the one failure the
     // compensation must not produce. What DOES reach this backend, through the
     // shared body, is the SEAT: the launch anchor is the instant the data
@@ -128,8 +130,15 @@ struct GuiPlayback::Impl {
     // see there. On the tablet's own SPEAKER, where the scanner IS painted,
     // the latency is by contrast stable and reportable
     // (AAudioStream_getTimestamp, the 10–25 ms class), and the line leads the
-    // sound by that unreported figure — the laptop's pre-compensation picture
-    // in miniature. That is accepted and left whole rather than half-measured:
+    // sound by that uncompensated figure — the laptop's pre-compensation picture
+    // in miniature. WHAT THE EYE ACTUALLY GETS THERE IS SMALLER THAN THAT
+    // FIGURE, because this platform's DISPLAY lag runs the other way: the
+    // painted position is ahead by L_audio and the pixel arrives L_display
+    // late, so the error at light is L_audio − L_display — 10–25 ms against
+    // SurfaceFlinger's 22–33 ms, roughly −23…+3 ms net. That cancellation is
+    // also why the Android display lead is 0 rather than measured (the record
+    // at platform_android.cpp's display_lead_ns): a lead there would remove
+    // it. That is accepted and left whole rather than half-measured:
     // the tablet is the car's player, so its scanner accuracy on the speaker
     // is moot for this use, and publishing a figure for one route while the
     // other stays a guess would make the backend's answer depend on where the

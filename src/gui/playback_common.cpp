@@ -464,9 +464,12 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // platform_wayland.cpp); and the TABLET, whose predictor
 // keeps the whole uncompensated audio lead by ruling — its AAudio backend
 // reports no figure (the asymmetry at that Impl), so only the seat move
-// reaches it, and its display lead is 0 by the same ruling (a lead over an
-// uncompensated lead would double-count; the record is at the Android
-// backend's display_lead_ns). A wrong audio figure shows as the line running
+// reaches it, and its display lead is 0 by the same ruling — there the two
+// errors CANCEL rather than compound, the line reading ahead by the audio
+// lead and the panel's own lag putting the pixel back down on the sound
+// (L_audio − L_display, roughly −23…+3 ms on the speaker), so a display lead
+// would remove that cancellation instead of adding one; the record is at the
+// Android backend's display_lead_ns. A wrong audio figure shows as the line running
 // ahead (too small) or behind (too large) by the error, a wrong display
 // figure the other way round; both backends print their figure to stderr
 // whenever it changes, so a surprising number is visible at launch.
@@ -797,6 +800,17 @@ bool playback_natural_end_holding(GuiPlaybackState& state) {
 }
 
 int64_t playback_cursor(GuiPlaybackState& state) {
+    // THIS FLOOR IS THE ROUNDING RULE'S DECLARED EXCEPTION ON A SAMPLE INDEX,
+    // and it is declared here the way the overview lane declares its own
+    // (app_state.cpp): the digest classes a sample index as a POINT on the
+    // sample grid, taking nearbyint, and every other site in the tree does —
+    // but a PLAY POSITION is a CELL. Frame n covers the whole interval a
+    // fractional position lands in until n + 1 begins, which is exactly what
+    // the render body's own natural-end test says one layer down, so a
+    // predicted 12.9 is still frame 12 and floor is what agrees with the ear.
+    // Nothing here rounds; the "pre-truncation double" the neighbours name is
+    // this same value before the floor.
+    //
     // Every internal value (integer cursor, predictor anchor, end/total
     // clamps) is buffer-local; the bound buffer's domain offset is added once
     // at the return, so the reported position is a domain coordinate

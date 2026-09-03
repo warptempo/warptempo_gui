@@ -2756,9 +2756,13 @@ constexpr double kClockCellOffsetYPx = 1.0;
 // that distance (architect 2026-08-29): the whole air between the divider's
 // line and the first digit, which this row spends in its two halves — the
 // separator's own trailing gap above, then the cell's authored margin mirror.
-// IT HAS TWO READERS, both of them the same air said again:
-//   * the CLOCK CELL itself, above;
-//   * the RENDER PLAYER'S MODAL ROW, which reads it whole for every gap around
+// ONE SITE READS THE CONSTANT and one site spends the same air by its two
+// addends (retold 2026-09-02 — the count of two read the clock cell as a
+// reader of this name, which it is not):
+//   * the CLOCK CELL itself, above, which lays the separator's trailing gap
+//     and then the cell's own margin, i.e. these two addends in order;
+//   * the RENDER PLAYER'S MODAL ROW, the constant's one reader by name, which
+//     takes it whole for every gap around
 //     its play-scrub (left separator → scrub, scrub → clock, clock → right
 //     separator), the architect's ruling being that those gaps ARE this one:
 //     the modal row stands in row 8's lane and its clock is row 8's cell said
@@ -3567,6 +3571,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int gap      = scaled_px(kIconBtnGapPx, 1);
     const int btn      = scaled_px(kIconBtnPx);
     const int glyph_px = scaled_px(kIconGlyphPx);
+    // THE GLYPH INSET IS AN INTEGER HALF AND SITS ONE PIXEL LEFT OF CENTRE
+    // WHERE THE DIFFERENCE IS ODD (recorded 2026-09-02): both terms are
+    // already scaled, so `btn - glyph_px` is even at 100 % and at the tablet's
+    // 225 % (the two scales anyone runs) and odd at some others — 150 % and
+    // 350 % among them — where this truncating division loses the half pixel
+    // to the left and the top. It is the same recipe every icon box uses in
+    // this file, deliberately shared; a rounded half would move every glyph in
+    // the product to fix a sub-pixel bias at scales the architect does not
+    // run.
     const int inset    = (btn - glyph_px) / 2;
     // ONE NUMBER FOR ALL SIX DISTANCES (architect 2026-08-30): the boxes'
     // vertical margin is the card's every pad, so the horizontal placement

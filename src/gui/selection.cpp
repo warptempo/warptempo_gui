@@ -65,6 +65,20 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
 // own arithmetic is exact integer
 // work, and it is never the painted band, whose right edge snaps to the
 // engine's hop lattice and is at most this to that same rounding.
+//
+// WHAT "DROP THEN SPACE AUDITIONS FROM EXACTLY WHERE THE CURSOR WAS" IS
+// EXACT TO (the composition's own residue, ONE term and not the grain's
+// three): the two N/2 offsets cancel exactly, so all that separates the
+// launch from the pressed-at cursor is THE DROP'S OWN WHOLE-FRAME SNAP —
+// the authored reset is snapped to a source frame, and its target image
+// therefore sits up to half a source frame at the LOCAL SEGMENT SLOPE from
+// the point the drop was measured against. Under a speed-up (slope < 1, the
+// common direction) that is under half an OUTPUT sample and the launch is
+// exact in integer terms; under a slow-down it is ~2 output samples at tempo
+// 0.30 and ~8 at the numeric slope ceiling of 16, unbounded only across a
+// label-reference segment. The schedule's rounding is NOT part of this
+// quantity — it bears on where the engine's seed grain ends, which is what
+// the offset was derived against, not on where the launch lands.
 int64_t phase_reset_lead_in_launch_offset(const AppState& app,
                                           const GuiPlayback& playback) {
     return (!playback.is_playing() && overlay_subject(app).has_value())

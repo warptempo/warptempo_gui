@@ -221,6 +221,15 @@ std::expected<DeviceConfig, std::string> load_device_config(
                         "set"));
     }
 
+    // A FAILED STAT READS AS ABSENCE HERE, AND THAT IS ACCEPTED ADVERSARIAL
+    // (recorded 2026-09-02, the four-tier review's R-19(e)): `exists` answers
+    // false both when the file is not there and when the query itself failed
+    // (an unreadable config directory, say), and this arm then goes on to
+    // stamp the template — the opposite of `sidecar_present`'s rule one layer
+    // up, which treats a failed stat as its own refusal. It is harmless in
+    // practice: whatever broke the stat breaks the write on the next line,
+    // and startup refuses there with the system's words. Not worth a second
+    // error road on a path only a broken config home reaches.
     std::error_code ec;
     if (!std::filesystem::exists(path, ec)) {
         std::filesystem::create_directories(path.parent_path(), ec);

@@ -330,16 +330,22 @@ inline constexpr const char* kTrimFallbackCard =
 // its tail does not start a second one; a producer whose string is ever used
 // WHOLE is a sentence in its own right and capitalizes at that producer.
 //
-// THIS HELPER EXISTS FOR THE ONE FAMILY THAT IS BOTH — the past-EOF wall
+// IT WAS WRITTEN FOR THE ONE FAMILY THAT IS BOTH — the past-EOF wall
 // defects (first_past_eof_wall_defect, src/parser/marker_store_validate.cpp),
 // which are used WHOLE by the picker's dry-run card and by the CLI's stderr
 // and APPENDED by four GUI seams: "Revert refused: ", the render entry load's
 // own `refuse`, the `h` view's "Load in place refused: " and the loader's
-// "Source load aborted: " (re-greped 2026-09-01 — the survey's inventory of
-// three missed the render entry's). The producer is under the parser's
+// "Source load aborted: ". The producer is under the parser's
 // PERMANENT HARD FREEZE, so the case moves at the APPENDING seams instead of
 // at the producer, which is also what keeps the two whole-message consumers
 // right without a second edit.
+//
+// FIVE CALLERS ACROSS TWO PRODUCER FAMILIES (re-greped 2026-09-02; the
+// inventory of four was the wall defects' alone): the fifth is the FAILED
+// RENDER'S CARD (input_render_dispatch.cpp), which appends `GuiFailure`'s
+// display clause after "Render failed: ". That family is not frozen and
+// composes its own text — it takes the helper for the same reason, an
+// appended reason is lowercase, and for no other.
 //
 // ONE OWNER, homed here because a card composer is what asks for it and
 // notifications.h is the header every one of those seams already sees. ASCII

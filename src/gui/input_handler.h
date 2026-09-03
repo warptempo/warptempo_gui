@@ -2182,11 +2182,13 @@ struct GuiInputHandler {
     // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
     // (repair_last_selected + jump_playhead_to_focused_marker), the history
     // mode's re-expression walks its own diff-flag list and its own focus — so
-    // the four callers (the live `c` arm, the mode's `c` claim,
-    // run_overview_command's already-full-out arm and the A/B audition's
-    // GuiAbAudition::apply_working_zoom) share one decision instead of
+    // the FIVE call sites (re-greped 2026-09-02: the live `c` arm, the mode's
+    // `c` claim, run_overview_command's already-full-out arm, the A/B
+    // audition's GuiAbAudition::apply_working_zoom, and Shift+`j`'s jump,
+    // which calls it TWICE — once on the tab it leaves and once on the tab it
+    // lands) share one decision instead of
     // spelling it each. Rationale at the definition.
-    // PUBLIC because that fourth caller is another cluster: the audition opens
+    // PUBLIC because the audition's caller is another cluster: the audition opens
     // each of its halves with this command on the tab that half plays, run
     // inside the switch's own frame (ab_audition.h carries the rule and the
     // ordering it owes the sequence).

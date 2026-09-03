@@ -491,9 +491,16 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             // not restate it: since 2026-09-02 it LISTS `render/` and ships
             // whatever is there, so the stick follows this prune rather than
             // agreeing with it by a rule of its own (external_sync.h rule 1).
-            // A title edited in the
-            // settings editor while this render ran leaves what it published
-            // for the next deliverable's prune. Only Success prunes — a killed or failed
+            // A TITLE EDITED IN THE SETTINGS EDITOR WHILE THIS RENDER RAN
+            // TAKES THE RENDER'S OWN DELIVERABLE WITH IT, AND THAT IS
+            // ACCEPTED ADVERSARIAL (architect 2026-09-02): the pair just
+            // published carries the REQUEST's stem while this prune keeps the
+            // LIVE one, so the new pair is in `doomed` and goes at this very
+            // completion — `render/` ends empty, and a Success is silent, so
+            // nothing is said. Retitling mid-render is not a supported act
+            // (the settings editor is not meant to be driven against a
+            // running worker); no card and no policy change were taken for
+            // it. Only Success prunes — a killed or failed
             // render published nothing — and only the deliverable arm: a batch
             // cell lands in `tmp/`, a different folder, never pruned.
             //
@@ -503,14 +510,33 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             //             and nothing else.
             //   FAILED    DELETES THE PAIR THIS RENDER WAS TO PUBLISH — "the
             //             missing audio is the clue". The standing file is
-            //             stale BY CONSTRUCTION: a render only reaches engine
-            //             work past the up-to-date rung, which means the
-            //             fingerprint on disk did not match this recipe, so
-            //             what survives a failure is a deliverable that no
-            //             longer matches the authored state and would be
-            //             mirrored to the stick as if it did. Silence plus a
-            //             plausible wav is the shape that misleads; an absent
-            //             wav cannot.
+            //             stale for every failure PAST THE UP-TO-DATE RUNG:
+            //             reaching engine work at all means the fingerprint on
+            //             disk did not match this recipe, so what would
+            //             survive is a deliverable that no longer matches the
+            //             authored state and would be mirrored to the stick as
+            //             if it did. Silence plus a plausible wav is the shape
+            //             that misleads; an absent wav cannot. FOR THE SIX
+            //             PRE-RUNG PRODUCERS IT IS UNATTESTED RATHER THAN
+            //             STALE (recorded 2026-09-02): the probe, the
+            //             phase-reset assembly, the map build, the
+            //             source-collision refusal, the projection check and
+            //             the folder creation all fail before the fingerprint
+            //             is consulted, so a CURRENT pair can be deleted by a
+            //             failure that never looked at it. That is accepted —
+            //             one rule, one clue, and a re-render restores it.
+            //             THE COLLISION SHAPE IS THE ACCEPTED ADVERSARIAL EDGE
+            //             (architect 2026-09-02, the four-tier review's R-1;
+            //             his rubric: adversarial use hardfails and we move
+            //             on): with `render/` made a symlink back to the
+            //             project folder OUT OF APP and the title equal to the
+            //             source's own stem, the collision refusal fires and
+            //             this removal then resolves through that directory
+            //             symlink and unlinks the SOURCE. It reaches no
+            //             in-app road — the loader and the settings editor
+            //             both refuse a colliding title while both paths
+            //             exist — so no `equivalent` guard and no rung bit
+            //             were taken for it.
             //   CANCELLED leaves it alone — a cancel is the user's own
             //             deliberate act, he knows the deliverable is the old
             //             one, and taking his audio away for a keypress he
@@ -656,6 +682,14 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             // render's completion is not notified), and a CANCELLED one says
             // nothing either: the cancel is his deliberate act, and the state
             // cell going blank at the press is its answer.
+            // WHAT M COUNTS IS DISPATCHED CELLS (recorded 2026-09-02):
+            // `batch_.reqs` holds the cells the BUILD produced, and a cell the
+            // build itself rejected (compute_base_tempo_scale or
+            // bpm_cell_warp_markers refusing, one stderr "Rejected cell" line)
+            // never entered the vector — so it is outside M rather than a
+            // shortfall inside it. Today that is a backstop only: the flag
+            // editor pre-validates both bracket ends, so a rejection here
+            // means an authored state the editor would not have committed.
             if (batch_.rendered < total) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
