@@ -22,13 +22,17 @@
 // icon and a name (an UP row, `..`, was a third kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, standing from THE MENU ROW'S FOOT down to the bottom row
-// (architect 2026-09-02: "media player should take up the whole window up to
-// (but not including) the first row (File, etc)") — so rows 2..7 and the
-// whole waveform are under it, the waveform's own passes then painting nothing
-// (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
-// whose clip reads the STANDING one's own rect, and which this band reduces to
-// a zero-height rect) while the top rows paint and are covered. The architect's ruling (R3):
+// full window width, standing from THE WINDOW'S TOP down to the bottom row
+// (architect 2026-09-03: "remove top row in file picker/media player —
+// kdenlive does not allow ctrl+q during modal so we don't need to either") —
+// so EVERY LANE BUT THE BOTTOM ROW is under it, the menu row with its File
+// anchor and its view bar included, and the waveform's own passes paint
+// nothing (onscreen_keyboard::waveform_paint_area, whose gate reads both
+// tenants and whose clip reads the STANDING one's own rect, and which this
+// band reduces to a zero-height rect) while the lanes above paint and are
+// covered. IT WEARS NO TOP BORDER — there is nothing above it to be framed
+// off (the line it had from 2026-08-29 is retired with the ground it
+// separated the panel from). The architect's ruling (R3):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
 // space, and no use of the panel needs typing. So THE OVERLAY AND THE
@@ -47,18 +51,19 @@
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
 //     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
-//     EXTENT, every time it stands: from THE MENU ROW'S FOOT
+//     EXTENT, every time it stands: from THE WINDOW'S TOP
 //     (keyboard_slot_max_height_px, the same header) down to the bottom row,
 //     whatever the listing's length — architect 2026-08-28, R35: "we should
 //     automatically make the height ... so that it's not a fluid height —
-//     it's always a fixed height", and 2026-09-02 for where that fixed height
-//     starts: "the whole window up to (but not including) the first row". A
+//     it's always a fixed height", and 2026-09-03 for where that fixed height
+//     starts: "remove top row in file picker/media player". A
 //     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
 //     scrolls. R35 retired the growing half of R33 (which read "it grows with
 //     its content up to that cap, then scrolls") the same day, the panel
 //     having jumped under the pointer as the listings changed size; that half
-//     stands, and only WHERE the ceiling sits has moved — from R33's waveform
-//     midpoint to row 1's foot. The content's height stays the SCROLL CLAMP's
+//     stands, and only WHERE the ceiling sits has moved — R33's waveform
+//     midpoint until 2026-09-02, row 1's foot for that one day, the window's
+//     top since. The content's height stays the SCROLL CLAMP's
 //     input and is nothing else's.
 //   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
 //     2px gap between boxes, the same corner radius, the same 22px glyph
@@ -142,16 +147,16 @@ inline int row_icon_gap_px() { return scaled_px(kRowIconGapPx); }
 // text pad, which belongs to a different surface.
 inline int row_icon_inset_px() { return (row_height_px() - row_icon_px()) / 2; }
 
-// THE BAND'S TOP BORDER, its one chrome line (architect 2026-08-29): the band
-// gets the border its BOTTOM edge already wears, which is row 8's own 1 px
-// kRedesignTabLine border-top, drawn by the bottom row. So the two edges read
-// alike and the panel is a framed block instead of a ground running into the
-// waveform. It is READ from the bottom row's accessor rather than respelled
-// (one chrome line, four lanes now), and it is drawn INSIDE the band's rect:
-// the surface rect, the damage rect and the hit rect are all unchanged, and
-// the line comes out of the CONTENT'S room — the band's height is the
-// ceiling's whole extent (R35), so there is no room outside it to take.
-inline int border_h_px() { return bottom_row_border_h_px(); }
+// (THE BAND'S TOP BORDER IS RETIRED, architect 2026-09-03: "remove the top
+// border since now there is nothing above the player". It stood from
+// 2026-08-29 — the bottom row's own 1 px kRedesignTabLine, read from that
+// row's accessor so the panel's two edges read alike — and its whole reason
+// was the ground it ran into above. With the band starting at the window's
+// top there is no such ground, and a line along the window edge would frame
+// the panel off from nothing. `border_h_px` and the `content_rect` that
+// subtracted it are both deleted: THE CONTENT RECT IS THE SURFACE RECT, and
+// the rows, the scroll ceiling and the keep-visible walk all read
+// surface_rect directly.)
 
 // -- Standing ----------------------------------------------------------------
 
@@ -190,7 +195,11 @@ inline int content_height_px(const AppState& a) {
 // "the band at its ceiling" rect to remember to use. (There was one —
 // band_damage_rect, whose single reader was the player's listing rebuild — and
 // it went with the growing band that gave it its reason: a rect exists iff it
-// answers a question, and the two answers are now the same rect.)
+// answers a question, and the two answers are now the same rect.) SINCE
+// 2026-09-03 IT IS THE ROWS' BAND TOO: the top border retired with the ground
+// above it, and the content rect that subtracted that border went with it, so
+// the ground, the damage, the hit test, the rows and the scroll ceiling all
+// read this one rect.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -201,25 +210,11 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
-// THE ROWS' BAND — the surface less its top border row (above). Every geometry
-// below reads THIS and not the surface: the rows, the scroll ceiling and the
-// keep-visible walk all live under the line. The surface rect stays what the
-// painter grounds, what a damage erases and what the hit test contains, so the
-// border costs those three nothing. A degenerate band (shorter than its own
-// border) passes through unshrunk rather than inverting — the overview lane's
-// own shape.
-inline GuiRect content_rect(const AppState& a) {
-    const GuiRect surf = surface_rect(a);
-    const int b = border_h_px();
-    if (surf.h <= b) return surf;
-    return GuiRect{surf.x, surf.y + b, surf.w, surf.h - b};
-}
-
 // -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect band = content_rect(a);
+    const GuiRect band = surface_rect(a);
     return std::max(0, content_height_px(a) - band.h);
 }
 
@@ -237,7 +232,7 @@ inline void clamp_scroll(AppState& a) {
 // less the pad on both sides, at the row pitch. It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
-    const GuiRect band = content_rect(a);
+    const GuiRect band = surface_rect(a);
     const int h = row_height_px();
     const int y = band.y + pad_px() + index * (h + row_gap_px()) -
                   a.folder_overlay.scroll_px;
@@ -276,7 +271,7 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect band = content_rect(a);
+    const GuiRect band = surface_rect(a);
     const GuiRect r    = row_rect(a, index);
     const int top      = band.y + pad_px();
     const int bottom   = band.y + band.h - pad_px();

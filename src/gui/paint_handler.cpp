@@ -202,16 +202,15 @@ namespace {
 // their measured relationship in either state instead of drifting when only the
 // ground moves.
 //
-// THE VERDICT IS NOT THE ACTIVATION FLAG BUT chrome_focused (app_state.h),
-// which adds "and no folder overlay standing" — the render player or the Open
-// project picker takes the header inactive with it, kdenlive's own look under
-// a modal (architect 2026-09-02). The reasoning, the `h` view's exclusion and
-// the damage are at that owner; the VIEW BAR reads the same call, which is
-// what makes its #292c30 read as the disabled ground under the panel instead
-// of vanishing into a header that was still painting the focused #292c30.
+// THE VERDICT IS THE ACTIVATION FLAG AND NOTHING ELSE. (A standing folder
+// overlay was a second producer for the evening of 2026-09-02, through a
+// `chrome_focused` owner, so the header would go inactive with the panel the
+// way kdenlive's does under a modal. THE PANEL COVERS ROW 1 SINCE 2026-09-03
+// and nobody can see this ground while it stands, so that producer and its
+// owner are both deleted.)
 GuiColor redesign_row_ground(const AppState& app) {
-    return chrome_focused(app) ? kRedesignRowGround
-                              : kRedesignRowGroundUnfocused;
+    return app.window_activated ? kRedesignRowGround
+                                : kRedesignRowGroundUnfocused;
 }
 
 // THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
@@ -443,11 +442,6 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
     // first and the button is already focused by the time it paints. If a press
     // ever does land unfocused, this falls through to the hover/selected face
     // rather than inventing a shade the crops never showed.
-    // `focused` HAS A SECOND PRODUCER SINCE 2026-09-02 — a standing folder
-    // overlay, which puts the bar on the unfocused ground whatever the window
-    // says (the caller's `bar_focused`) — and it needs no arm of its own here:
-    // the buttons are dead under the panel and the veil consumes the press, so
-    // the same fall-through is the whole answer.
     const bool click_fill = pressed && focused;
     f.filled = click_fill || lift_fill;
     f.fill   = click_fill
@@ -1556,23 +1550,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (div_w <= 0 || btn_h <= 0) { cairo_restore(cr); return; }
 
         const int div_x = row.x + row.w - div_w;
-        // THE BAR WEARS ITS UNFOCUSED FACE UNDER THE FOLDER OVERLAY (architect
-        // 2026-09-02): while the render player or the Open project picker
-        // stands, the three view buttons are DEAD (redesign_button_enabled's
-        // overlay arm greys the whole roster but the File anchor), so the bar
-        // drops its Breeze blue for the calmer grey the unfocused window
-        // already gives it — #292c30 ground, the same two lifts over it, which
-        // is exactly the trio he named. ONE verdict, read by the ground here
-        // and by view_bar_face's `focused` term below, so the pressed interior
-        // reads the same fact; a press cannot land there anyway (the veil
-        // consumes it), and the fall-through the pressed arm already documents
-        // is what it would take.
-        // IT IS THE HEADER'S OWN VERDICT (chrome_focused, app_state.h), not a
-        // second copy: this row's ground reads the same call above, so the bar
-        // and the header it sits in go inactive together — which is what the
-        // ruling needs, the unfocused bar being NUMERICALLY EQUAL to the
-        // focused header ground.
-        const bool bar_focused = chrome_focused(app);
+        // THE BAR SWAPS ON THE WINDOW'S FOCUS ALONE, this row's own ground's
+        // verdict read one float over. (A standing folder overlay was a second
+        // producer for the evening of 2026-09-02, when the panel's ceiling was
+        // this row's foot and the bar was the one thing under a modal that
+        // still wore Breeze blue; the panel covers this row whole since
+        // 2026-09-03, so the face has no viewer and the term is deleted with
+        // `chrome_focused` itself.) ONE local, read by the ground here and by
+        // view_bar_face's `focused` term below, so the pressed interior reads
+        // the same fact.
+        const bool bar_focused = app.window_activated;
         const GuiColor bar_bg = bar_focused
                                     ? kRedesignViewBarBg
                                     : kRedesignViewBarBgUnfocused;
@@ -7270,8 +7257,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           : kModalFocusFill,
             kRedesignContentGround, keep);
         // THE OUTLINE'S ACCENT FORKS ON THE WINDOW'S FOCUS AT THE FOCUS TERM
-        // ALONE (architect 2026-09-02, arriving through the render player,
-        // whose panel takes the window under row 1): a KEYBOARD focus ring on
+        // ALONE (architect 2026-09-02, arriving through the render player's
+        // own panel): a KEYBOARD focus ring on
         // an unfocused window wears Breeze's inactive blue, through the one
         // fork accent_for_focus above, while the POINTER's three claims —
         // hovered, armed, pressed — keep the live accent, the pointer being
@@ -7544,10 +7531,10 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
     // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is the
-    // CEILING BAND every time it stands — the whole window under row 1 since
-    // 2026-09-02, whatever its listing's length (R35's fixed height, the
-    // architect's new ceiling) — and the keyboard's is its four key rows, so
-    // "the band" is a question with two answers and the bit describes
+    // CEILING BAND every time it stands — the whole window above the bottom
+    // row since 2026-09-03, whatever its listing's length (R35's fixed height,
+    // the architect's new ceiling) — and the keyboard's is its four key rows,
+    // so "the band" is a question with two answers and the bit describes
     // the pixels THIS frame may have written. With NEITHER standing the band
     // to cover is the slot's tallest — the hide's own damage, which is what
     // has to erase the departed tenant.
@@ -7609,16 +7596,14 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //                            list
 // Every row is drawn with redesign_face_box, the one path every button-like
 // surface in the product is filled and framed on, at the button's corner
-// radius. THE BAND WEARS A 1 px TOP BORDER (architect 2026-08-29), the same
-// kRedesignTabLine line its BOTTOM edge already wears — that edge being row
-// 8's own border-top, drawn by paint_bottom_strip — so the panel reads as a
-// framed block with matching edges instead of a ground running up into the
-// waveform. It is painted INSIDE the band's rect as its first row and comes
-// out of the CONTENT's room (folder_overlay::border_h_px / content_rect own
-// the geometry), so the surface rect, the damage rect and the hit rect are
-// all unchanged by it. (The band opened 2026-08-28 with NO line at its top,
-// the keyboard's own rule — the two lanes reading as one block on a shared
-// ground — which this supersedes.)
+// radius. THE BAND WEARS NO TOP BORDER (architect 2026-09-03: "remove the top
+// border since now there is nothing above the player"): it starts at the
+// window's top edge, so the 1 px kRedesignTabLine it carried from 2026-08-29
+// — the twin of its bottom edge, which is row 8's own border-top — would frame
+// the panel off from nothing. The line, folder_overlay::border_h_px and the
+// content rect that subtracted it are all deleted, and the band's ground runs
+// edge to edge. (It opened 2026-08-28 with no line at its top either, the
+// keyboard's own rule; the framed reading lived between those two dates.)
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
 // list's keyboard focus — what Enter and Load in place act on, and nothing
@@ -7649,23 +7634,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                          kModalFieldGround.b);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
-    // THE TOP BORDER, the band's first row (the block above): the bottom
-    // row's own border colour and width, aliased like every chrome line, laid
-    // over the ground before the clip so the rows below it start under the
-    // line by construction (row_rect reads content_rect, which is this band
-    // less this row).
-    {
-        const int border = folder_overlay::border_h_px();
-        if (border > 0 && border < surf.h) {
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                                 kRedesignTabLine.b);
-            cairo_rectangle(cr, surf.x, surf.y, surf.w, border);
-            cairo_fill(cr);
-            cairo_restore(cr);
-        }
-    }
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_clip(cr);
 
@@ -8100,15 +8068,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
         //      since 2026-08-28, one tenant at a time), whose opaque ground
         //      covers the waveform area's lower part (the keyboard) or the
-        //      WHOLE WINDOW UNDER ROW 1 (the overlay, since 2026-09-02 — so
-        //      steps 3 through 11 all end up under it) and so follows every
-        //      pass above. Which is why the WAVEFORM passes do not paint
-        //      there at all: they are gated and clipped on the waveform's
-        //      PAINTED rect while either tenant stands
+        //      WHOLE WINDOW ABOVE THE BOTTOM ROW (the overlay, since
+        //      2026-09-03 — so steps 3 through 11 all end up under it) and so
+        //      follows every pass above. Which is why the WAVEFORM passes do
+        //      not paint there at all: they are gated and clipped on the
+        //      waveform's PAINTED rect while either tenant stands
         //      (onscreen_keyboard::waveform_paint_area, read just above this
         //      block), which the overlay's band reduces to a ZERO-HEIGHT rect
         //      — it starts above the waveform's own top. THE LANES ARE NOT
-        //      SPARED THAT WAY and deliberately so: rows 2..7 paint their
+        //      SPARED THAT WAY and deliberately so: rows 1..7 paint their
         //      exposure as they always have and the panel then covers them,
         //      because their painters own the roster's HIT RECTS and a row
         //      that skipped a frame would strand them (the reasoning is at
@@ -8243,12 +8211,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // waveform passes above and the three floating surfaces below — which is
     // exactly where it sits in the picture. It OVERLAYS the waveform with its
     // own opaque ground — the area's lower part under the keyboard, and THE
-    // WHOLE WINDOW UNDER ROW 1 under the overlay since 2026-09-02, rows 2..7
-    // included — so it must follow every pass that paints there (the top
-    // button rows, the overview strip, the plate, the region ink, the trim,
-    // the ruler, the flags, the stems, the scanner, the anchor) and precede
-    // the flag editor's box, the dropdown and the modal, which float over it
-    // by design. It is OUTSIDE the loading /
+    // WHOLE WINDOW ABOVE THE BOTTOM ROW under the overlay since 2026-09-03,
+    // the menu row included — so it must follow every pass that paints there
+    // (the top button rows, the overview strip, the plate, the region ink, the
+    // trim, the ruler, the flags, the stems, the scanner, the anchor) and
+    // precede the flag editor's box, the dropdown and the modal, which float
+    // over it by design. It is OUTSIDE the loading /
     // total>0 branch above for the flag editor's own reason: an editor can
     // stand with no audio loaded, and the keyboard must stand with it.
     //

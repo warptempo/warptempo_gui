@@ -216,16 +216,12 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 // fade — and ON THESE TWO ROWS it moves the GROUND ONLY: separators, border
 // lines, the accent, labels and icons all keep their colors here.
 //
-// IT IS DRIVEN BY THE CHROME-FOCUS VERDICT (chrome_focused, app_state.h),
-// WHICH HAS TWO PRODUCERS: AppState::window_activated, and — since
-// 2026-09-02 — A STANDING FOLDER OVERLAY, the render player or the Open
-// project picker taking the header inactive with it, kdenlive's own look
-// under a modal (architect). The second producer is what makes the VIEW BAR's
-// own unfocused face visible at all: kRedesignViewBarBgUnfocused is
-// numerically equal to the FOCUSED kRedesignRowGround, so a bar that went
-// grey under a header that stayed focused simply vanished into it. The `h`
-// history view is NOT a producer — a mode is not a modal, and it keeps the
-// keyboard. The reasoning and the damage are at the owner.
+// IT IS DRIVEN BY AppState::window_activated AND NOTHING ELSE. (A standing
+// FOLDER OVERLAY was a second producer for the evening of 2026-09-02, through
+// a `chrome_focused` verdict, so the header would go inactive with the panel
+// the way kdenlive's does under a modal; the panel covers row 1 whole since
+// 2026-09-03 — nothing can see this ground while it stands — and both the
+// producer and the verdict are deleted.)
 // NO OTHER ROW'S GROUND SWAPS: row 3's ground and every row below it sit on
 // kRedesignContentGround, itself the unfocused shade, so the swap has nothing
 // to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
@@ -234,8 +230,8 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 //
 // WHAT ELSE READS THE FLAG, re-grepped rather than inherited: the PLAY-SCRUB's
 // played groove (2026-08-28, the block at kScrubPlayed below) and, since
-// 2026-09-02, the FOLDER OVERLAY's panel and the modal row it owns, whose
-// accent takes kRedesignAccentInactive above. So "no row below row 2 swaps",
+// 2026-09-02, the FOLDER OVERLAY's panel and every modal row's active-focus
+// ring, whose accent takes kRedesignAccentInactive above. So "no row below row 2 swaps",
 // true of the GROUND when it was written, is no longer true of the window:
 // what row 1 and row 2 own is the unfocused ground, and the accent's own
 // unfocused face is the panel's. (Row 2's own LANE died at the 2026-08-12
@@ -307,34 +303,17 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // absolute view selectors. Sampled off the nine 82x32 row_right_*.png crops,
 // each one whole "Logging" button.
 //
-// TWO BAR BACKGROUNDS AND ONE VERDICT BEHIND THE SECOND: the bar swaps
-// exactly as row 1 swaps its ground, and the swap is the same kind of thing —
-// a PAINT-ONLY variant of the whole surface. SINCE 2026-09-02 THAT VERDICT HAS
-// A SECOND PRODUCER, a standing FOLDER OVERLAY (architect: while the render
-// player or the picker stands, "the top right 1/2/3 buttons should use
-// #292c30 for unselected bg, #44464a for selected bg and #535659 for selected
-// outline") — which is this ground and the two lifts below over it, so the
-// ruling ships as the unfocused face rather than as new constants.
-//
-// THE VERDICT IS chrome_focused (app_state.h), NOT A LOCAL: the bar's
-// background, view_bar_face's `focused` term and ROW 1'S GROUND all read the
-// one call, which is what the ruling actually needs — kRedesignViewBarBg-
-// Unfocused is numerically equal to the FOCUSED kRedesignRowGround, so a bar
-// that went grey while the header stayed focused vanished into the header,
-// resting buttons and all. With the header going inactive with it, this
-// #292c30 stands out against #202326 as the disabled ground he asked for,
-// exactly as it does on a real focus loss (the local `bar_focused` of
-// 2026-09-02 morning was the two terms hand-spelled at the paint site; the
-// owner is that expression, kept in one place so the two surfaces cannot
-// part).
-//
-// The crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button,
-// and there is still no DIMMED face here — but "these three are never disabled"
-// stopped being true on 2026-09-02: redesign_button_enabled's overlay arm greys
-// the whole roster but the File anchor, so under the panel the 1/2/3 are dead
-// (no hover, no press — the veil consumes it) and THE UNFOCUSED FACE IS THEIR
-// DEAD FACE, by his ruling. Outside that panel they are never disabled, with
-// the rest of row 1 and with row 3.
+// TWO BAR BACKGROUNDS, ONE PER WINDOW-FOCUS STATE: the bar swaps on
+// app.window_activated exactly as row 1 swaps its ground, and the swap is the
+// same kind of thing — a PAINT-ONLY variant of the whole surface. (A standing
+// FOLDER OVERLAY was a second producer for the evening of 2026-09-02, when the
+// panel stopped at row 1's foot and this bar was the one thing under a modal
+// still wearing Breeze blue; the panel covers row 1 whole since 2026-09-03, so
+// the face has no viewer and the term went with the `chrome_focused` verdict
+// that carried it.) The crops named "disabled" are the UNFOCUSED WINDOW, not a
+// disabled button: these three are never disabled (redesign_button_enabled
+// returns true for them, with the rest of row 1 and with row 3), so there is
+// no dimmed face here at all.
 // (The clause used to name ROW 4 alongside them and no longer can: the icon row
 // greys for two MODES since 2026-08-15 — the `h` view and the read-only lock.
 // The view bar is untouched by either, its 1/2/3 being navigation, which is
@@ -387,12 +366,6 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 // single LSB, so the FRACTIONS ship — one relationship over both backgrounds —
 // rather than four literals that would have to be kept in step by hand. That
 // LSB is the whole cost of the derivation and it is not visible.
-// THE SAME LSB IS THE WHOLE COST OF THE 2026-09-02 UNDER-THE-PANEL RULING:
-// the architect named #44464a and #535659 there, which are the crop's own two
-// values — the frame is exact and the fill is this one red step under. No
-// constant was added for it, deliberately: a second selected-fill literal read
-// only under the panel would be two spellings of one face kept in step by
-// hand, which is the drift these fractions exist to prevent.
 //
 // FRACTION AND BASE ARE BOTH KNOBS: the base is what the bar lifts TOWARD,
 // spelled out here rather than borrowed from kRedesignLabel because it is a

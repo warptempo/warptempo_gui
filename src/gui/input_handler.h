@@ -1514,19 +1514,17 @@ struct GuiInputHandler {
     // THE TWO MOTION HALVES ARE SPLIT BECAUSE THEIR GUARD LISTS DIFFER, and that
     // is the whole reason there are two functions rather than one:
     //   * open_menu_row_anchor_on_hover is the COLD ROW'S motion answer, called
-    //     from on_motion's no-gesture tail and, since 2026-09-02, from the
-    //     FOLDER OVERLAY's two motion branches (the player's and the picker's,
-    //     which return before that tail and under which the File anchor stays
-    //     live): armed and over an anchor OPENS that menu through
-    //     toggle_dropdown. It PRESUMES NO MENU IS
-    //     OPEN and no modal or gesture owns the pointer, which those placements
-    //     guarantee — the open-dropdown branch returns far above them, and
-    //     so do the prompt, the dialog editors and every live gesture —
-    //     plus ONE condition each call site restates because nothing above
+    //     from on_motion's no-gesture tail and nowhere else: armed and over an
+    //     anchor OPENS that menu through toggle_dropdown. It PRESUMES NO MENU IS
+    //     OPEN and no modal or gesture owns the pointer, which that placement
+    //     guarantees — the open-dropdown branch returns far above the tail, and
+    //     so do the prompt, the dialog editors, the folder overlay's two modes
+    //     and every live gesture —
+    //     plus ONE condition the call site restates because nothing above
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
-    //     the two held-motion producers are recorded at the tail's call). The
-    //     three anchors the panel and the `h` view kill are refused inside
-    //     toggle_dropdown (menu_anchor_dead_in_mode), not here;
+    //     the two held-motion producers are recorded at the call). The three
+    //     anchors the `h` view kills are refused inside toggle_dropdown
+    //     (menu_anchor_dead_in_mode), not here;
     //   * update_menu_row_exit is "the pointer left row 1, go cold", called from
     //     the TOP of on_motion so that it runs under every one of those branches
     //     too. A modal owning the pointer is a reason not to open a menu, and no
@@ -2652,11 +2650,12 @@ private:
     //       SILENTLY on the other three, a prompt veiling everything and
     //       being its own answer, a second picker being what is already on
     //       screen (the reasoning is at the arms, 2026-08-30). THE RENDER
-    //       PLAYER IS NO LONGER A REFUSAL AT ALL (2026-09-02): the File
-    //       anchor stays lit under the panel and Ctrl+O falls through its
-    //       router, so the act CLOSES the player through its one close body
-    //       and goes on to open the picker — the two still never stand
-    //       together — and "Close the render player first" is retired. It
+    //       PLAYER HAS NO ARM AT ALL since 2026-09-03: the panel covers row 1,
+    //       so its File row is unreachable, and Ctrl+O is consumed by the
+    //       player's own router — no road reaches this body from in there.
+    //       ("Close the render player first" stood from 2026-08-30 and a
+    //       close-then-open body replaced it for the one day the File anchor
+    //       stayed lit under the panel; both are retired.) It
     //       stops playback through the
     //       shared modal stop only once the picker is definitely opening,
     //       mints the session and builds the list. IT IS ADMITTED IN THE `h`
@@ -2732,13 +2731,9 @@ private:
     //       scrolling to keep it visible); Esc closes; Ctrl+S saves with the
     //       picker standing (GuiSaveOps::save — the typed prompt's own
     //       contract); Ctrl+Q falls through to the close
-    //       road and BARE BACKSLASH to Synchronize (2026-09-02, the lit File
-    //       anchor's doing — its row works under the panel, so its key must).
-    //       CTRL+O IS NOT A FALL-THROUGH: it is this very act, so it is
-    //       consumed and silent, the same answer the File row gives.
-    //       EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
-    //       no-op). Returns true when consumed here, false for the two
-    //       fall-throughs.
+    //       road. EVERY OTHER CHORD IS CONSUMED (strict modifier validation's
+    //       no-op). Returns true when consumed here, false for the one
+    //       fall-through.
     //
     // No undo (a reopen discards the stack by construction, and the project
     // picker authors nothing); LEGAL ON A READ-ONLY TAB (Ctrl+O is a named
@@ -3843,14 +3838,9 @@ private:
     // place button's chord; `l` and Esc close; Ctrl+S falls through to the save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
-    // neither gesture restates the step); and CTRL+O and BARE BACKSLASH fall
-    // through too since 2026-09-02 — the File menu's other two rows, which
-    // the lit File anchor makes reachable from the pointer in here, so the
-    // chord and the row must not answer differently (Ctrl+O closes the player
-    // and opens the picker; `\` runs Synchronize, which authors nothing and
-    // stops no playback). EVERY OTHER
+    // neither gesture restates the step). EVERY OTHER
     // CHORD IS CONSUMED (strict modifier validation's no-op). Returns true
-    // when the key is consumed here, false for the four fall-throughs.
+    // when the key is consumed here, false for the two fall-throughs.
     bool route_render_player_key(GuiKey key, GuiInputState mods);
 
     // THE PLAYER'S OPENER TOGGLE for bare `l` and bare `'` outside the `h`
