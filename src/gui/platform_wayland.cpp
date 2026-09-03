@@ -3150,13 +3150,15 @@ std::string GuiPlatform::clipboard_get_text() {
 std::string GuiPlatform::read_clipboard_data(int read_fd) {
     // Bounded and non-blocking. The offering client gets one full second for
     // its whole payload — a per-poll cutoff would turn ordinary scheduler delay
-    // into a silently truncated paste — and kMaxBytes bounds a source that
-    // streams without end, hostile or merely broken. EVERY failure returns the
-    // empty string rather than what arrived so far: a partial paste is worse
-    // than no paste, and the caller reads empty as nothing to paste.
+    // into a silently truncated paste — and kClipboardMaxBytes bounds a source
+    // that streams without end, hostile or merely broken. EVERY failure returns
+    // the empty string rather than what arrived so far: a partial paste is worse
+    // than no paste, and the caller reads empty as nothing to paste. THE BOUND
+    // IS THE SEAM'S AND THE ANDROID READ ASKS THE SAME NUMBER (gui_input.h,
+    // where the constant and its Java mirror are recorded); it was a local
+    // kMaxBytes here until 2026-09-03.
     std::string out;
     fcntl(read_fd, F_SETFL, O_NONBLOCK);
-    constexpr size_t kMaxBytes = 1024u * 1024u;
     const uint64_t deadline_us = gui_monotonic_us() + 1'000'000;
     bool failed = false;
     char buf[4096];
@@ -3193,10 +3195,10 @@ std::string GuiPlatform::read_clipboard_data(int read_fd) {
         }
         if (n == 0) break;                       // EOF
         out.append(buf, static_cast<size_t>(n));
-        if (out.size() > kMaxBytes) {
+        if (out.size() > kClipboardMaxBytes) {
             std::fprintf(stderr,
                          "warptempo_gui: Clipboard payload exceeded %zu bytes; "
-                         "paste abandoned\n", kMaxBytes);
+                         "paste abandoned\n", kClipboardMaxBytes);
             failed = true;
             break;
         }

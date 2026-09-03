@@ -3473,7 +3473,7 @@ inline constexpr int kEditPopupItemCount =
 // now, the rule at redesign_button_tooltip's head) with the lamp left off; WHAT THE
 // MODE IS DOING IS ON THE SCREEN ITSELF — every warp flag grows its iteration
 // bracket the moment the mode comes on, and the Render button's own hint reads
-// "Render grid iterations" — which is the same argument that keeps
+// "Render Grid Iterations" — which is the same argument that keeps
 // refusal-predicting greys off this roster: a badge would restate what the
 // picture already says.
 inline constexpr CommandPopupItem kSeriesPopupItems[] = {
@@ -6721,7 +6721,7 @@ struct AppState {
     // refusal and the coincident-path reasoning. NEITHER RENDER CHORD is
     // admitted, so both stay consumed nothings here and the Render button wears
     // its ordinary face over the mode's disabled one; the SAVE button wears the
-    // commit icon and the tooltip "Save and commit" while the mode stands, and
+    // commit icon and the tooltip "Save and Commit" while the mode stands, and
     // reaches the act through its own chord. THE ADMISSION IS UNCONDITIONAL
     // SINCE 2026-09-01 (architect: a gate's membership is the chord's alone)
     // and the two states it used to carry are the ACT'S: with nothing to
@@ -13069,7 +13069,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //
 //   RENDER, WITH ITERATION MODE ON (and nothing live) → the SAME media-record
 //   glyph (the architect's 2026-08-12 ruling: no second render glyph, "the
-//   context makes it clear") under the one-line "Render grid iterations
+//   context makes it clear") under the one-line "Render Grid Iterations
 //   (Ctrl+Alt+R)" hint — the TOOLTIP alone forks the two idle meanings. The
 //   history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -219,6 +220,37 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
     if (mods.shift) return kArrowStepShift;
     return 1;
 }
+
+// -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03, codex) -------------
+//
+// WHAT A PASTE WILL ACCEPT FROM OUTSIDE THIS PROGRAM, IN BYTES, ON EVERY
+// BACKEND. The clipboard is the one door another application writes through,
+// so the read is the one place a hostile or merely broken producer can hand
+// the GUI's single thread an unbounded allocation; the answer is the same on
+// both roads — REFUSE THE WHOLE PAYLOAD, log one line, and hand back the
+// empty string, which every caller already reads as "nothing to paste" (a
+// paste of nothing must not delete the selection). A partial paste is worse
+// than no paste, so nothing is truncated to the bound.
+//
+// THE NUMBER IS FAR ABOVE ANY REAL PASTE and is a ceiling, not a policy: the
+// editors' own per-Kind byte caps refuse a long paste at
+// text_editor::replace_selection long before this, with a card that says so.
+// This exists for the pathological case alone.
+//
+// IT IS THE SEAM'S, NOT A BACKEND'S: platform_wayland.cpp's
+// read_clipboard_data and platform_android.cpp's clipboard_get_text both read
+// this constant (both backend headers include this one), so a retune is one
+// edit here.
+//
+// AND THERE IS A THIRD COPY THE BUILD CANNOT CHECK: MainActivity.java's
+// MAX_CLIPBOARD_BYTES refuses the same size before it encodes the clip to
+// UTF-8, so the oversized array never crosses JNI at all. THAT NUMBER IS A
+// MIRROR OF THIS ONE AND THE TWO ARE EDITED IN ONE ACT — the same rule the
+// media command table keeps (gui_media.h), and with the same reason no
+// static_assert can hold it: the APK build compiles the Java sliver against
+// no C++ header. The native check below it is the real bound; the Java one is
+// the early refusal that keeps the bytes out of the process.
+inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 
 // -- THE CHORD SPELLER (architect 2026-08-30) --------------------------------
 //

@@ -424,6 +424,16 @@ public class MainActivity extends NativeActivity {
     // would put a clipboard binder call in the way of onDestroy's release.
     private static final byte[] NO_BYTES = new byte[0];
 
+    // THE PASTE'S ONE PAYLOAD BOUND, MIRRORED FROM THE NATIVE SIDE:
+    // kClipboardMaxBytes (src/gui/gui_input.h), the same number the Wayland
+    // read has always enforced. THE TWO ARE ONE NUMBER AND ARE EDITED IN ONE
+    // ACT -- the media command table's rule (gui_media.h) for the same reason
+    // it applies there: the APK build compiles this file against no C++
+    // header, so no assert can hold them together. The native reader checks
+    // the array it is handed as well; this copy is what keeps an oversized
+    // clip from being encoded and crossing JNI at all.
+    private static final int MAX_CLIPBOARD_BYTES = 1024 * 1024;
+
     // FALSE ON ANY THROWABLE is the verdict the native side hands back to the
     // GUI, which cards "The clipboard did not take the copy" on it: some OEM
     // builds refuse setPrimaryClip with a SecurityException, and a copy that
@@ -465,7 +475,17 @@ public class MainActivity extends NativeActivity {
             if (data == null || data.getItemCount() == 0) return NO_BYTES;
             final CharSequence text = data.getItemAt(0).getText();
             if (text == null || text.length() == 0) return NO_BYTES;
-            return text.toString().getBytes(StandardCharsets.UTF_8);
+            // TWO CHECKS, THE CHEAP ONE FIRST: UTF-8 is at least one byte per
+            // char, so a char count past the bound cannot encode under it and
+            // the encoding is skipped altogether; the encoded array is then
+            // measured for the char counts that could go either way. An
+            // oversized clip is the same empty answer every other refusal is
+            // (the native reader logs the abandonment; this side keeps the
+            // bytes out of the process).
+            if (text.length() > MAX_CLIPBOARD_BYTES) return NO_BYTES;
+            final byte[] utf8 = text.toString().getBytes(StandardCharsets.UTF_8);
+            if (utf8.length > MAX_CLIPBOARD_BYTES) return NO_BYTES;
+            return utf8;
         } catch (Throwable t) {
             Log.w(TAG, "clipboard read refused", t);
             return NO_BYTES;

@@ -3178,17 +3178,52 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
 bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
-        // THE VERDICT IS IGNORED HERE, DELIBERATELY: an editor's copy and cut
-        // card nothing (messaging.md — an editor is its own world), and the
-        // in-app paste below reads the platform's store, which takes the
-        // text whichever way the claim went. The two CARDED writes (bare `j`,
-        // the stats panel's report) read it; the composer is theirs
-        // (card_clipboard_refusal, input_key_dispatch.cpp).
+        // THE COPY IGNORES THE VERDICT AND THE CUT OBEYS IT, and the two
+        // are one rule rather than an inconsistency (2026-09-03, codex).
+        //
+        // A FAILED COPY CHANGES NOTHING ON SCREEN, so it says nothing: the
+        // editor is its own world (messaging.md), the text it did not take is
+        // still sitting there selected, and the paste that follows shows the
+        // truth the moment it is asked for. The two CARDED copies are the ones
+        // whose result nothing paints at all (bare `j`, the stats panel's
+        // report).
+        //
+        // A FAILED CUT IS DIFFERENT IN KIND, because a cut is a copy AND a
+        // deletion: erasing on a refused claim would destroy the bytes with
+        // nowhere to paste them from — the clipboard did not take them and,
+        // uniquely among the editors' acts, there is no undo inside an editor
+        // to get them back. SO THE ERASE HANGS ON A TRUE VERDICT: on false the
+        // selection stays exactly as it was and the press CARDS, because a
+        // refusal that leaves the screen unchanged must say why the key did
+        // nothing (the sentence's composer is card_clipboard_refusal,
+        // input_key_dispatch.cpp; a card stacks over an editor as over
+        // anything else — the flag editor is keyboard-modal and stops
+        // nothing).
+        //
+        // WHY THE VERDICT IS THE RIGHT TEST ON BOTH BACKENDS. False means no
+        // claim went out, and a refused claim does not leave the bytes
+        // readable: Wayland writes clipboard_send_text_ before it claims, but
+        // clipboard_get_text hands that payload back only while
+        // clipboard_we_own_ stands, and a refusal never raises that bit (the
+        // failed-source arm clears it), so the paste falls through to whatever
+        // another application is offering. Android reads the system store
+        // outright once its road is open; clipboard_text_ is the ROAD-ABSENT
+        // fallback alone, and the road-absent arm answers false as well — the
+        // one case where a refusal DOES leave the text pastable in-app.
+        // THE ONE OTHER SUB-CASE where a false verdict still leaves the bytes
+        // reachable is a Wayland refusal UNDER A CLAIM WE ALREADY HOLD (an
+        // earlier copy's source still answers `send` from the updated store).
+        // Both are refused all the same: the verdict is the one thing this
+        // side can ask, and over a DELETION the conservative answer — keep the
+        // text, say so — is the right one to be wrong with.
         case text_editor::KeyAction::CopyRequested:
             (void)gui.clipboard_set_text(text_editor::selected_text(s));
             return true;
         case text_editor::KeyAction::CutRequested:
-            (void)gui.clipboard_set_text(text_editor::selected_text(s));
+            if (!gui.clipboard_set_text(text_editor::selected_text(s))) {
+                card_clipboard_refusal(notifications, "cut");
+                return true;
+            }
             // An empty insert can only shrink the buffer, so this call has no
             // refusal to report (the cap's rule is at replace_selection).
             (void)text_editor::replace_selection(s, std::string());

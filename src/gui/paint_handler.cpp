@@ -3836,7 +3836,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // in this product that could have worn one, and it does not — the label is
     // the constant act's name and the mode says what it is doing on the screen
     // itself (every warp flag grows its iteration bracket, and the Render
-    // button's hint reads "Render grid iterations"). A checkbox column would
+    // button's hint reads "Render Grid Iterations"). A checkbox column would
     // exist
     // for one row in one menu, and the roster's own no-blink argument answers
     // it: a badge would restate what the picture already shows. The full

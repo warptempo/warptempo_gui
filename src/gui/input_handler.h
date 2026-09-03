@@ -727,6 +727,13 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app);
 
+// THE CLIPBOARD REFUSAL'S ONE SENTENCE, composed for whichever write met it —
+// the verb is the act's own word ("copy", "cut"). The body and the reasoning
+// are at its definition (input_key_dispatch.cpp); it is declared here because
+// its raisers now live in two translation units, the editor's cut having
+// joined the two carded copies on 2026-09-03.
+void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
+
 // THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
 // sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3)
 // and did not come back on 2026-08-18 when the region became the trim: a sync is
@@ -2419,8 +2426,9 @@ private:
     // Wayland CLIPBOARD selection, GuiPlatform::clipboard_set_text /
     // clipboard_get_text), and the PLATFORM HOLDS THE ONLY COPY of the payload:
     // copy and cut hand the selected text straight to the compositor and keep
-    // nothing here (cut then deletes the text); paste takes whatever the system
-    // clipboard holds — our own payload while we still own the selection,
+    // nothing here (THE CUT DELETES ONLY ON A TRUE VERDICT, and cards its
+    // refusal otherwise — the reasoning is at the case); paste takes whatever
+    // the system clipboard holds — our own payload while we still own the selection,
     // another application's otherwise — and inserts it, doing NOTHING at all
     // when there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.

@@ -1877,11 +1877,21 @@ bool GuiPlatform::clipboard_set_text(const std::string& text) {
 }
 
 // THE EMPTY STRING IS THE EMPTY ANSWER — no clip, no text in it, a system
-// that withholds it, or a throw — and every caller already reads that as
-// "nothing to paste" (a paste of nothing must not delete the selection).
-// There is no self-paste short circuit and none is needed: Android's
-// clipboard is a system-owned store, so our own copy reads straight back out
-// of it, where the Wayland twin would have to read its own pipe and deadlock.
+// that withholds it, a payload past the bound, or a throw — and every caller
+// already reads that as "nothing to paste" (a paste of nothing must not
+// delete the selection). There is no self-paste short circuit and none is
+// needed: Android's clipboard is a system-owned store, so our own copy reads
+// straight back out of it, where the Wayland twin would have to read its own
+// pipe and deadlock.
+//
+// AND THE PAYLOAD IS BOUNDED HERE AS IT IS ON WAYLAND (2026-09-03, codex):
+// kClipboardMaxBytes (gui_input.h) is the seam's one number and this is its
+// second reader. THE ARRAY'S LENGTH IS ASKED BEFORE THE STRING IS RESIZED, so
+// an external clip of any size costs one jsize and not two allocations of it
+// on the single GUI/glue thread. The Java side refuses the same size FIRST
+// (MainActivity.MAX_CLIPBOARD_BYTES), so in practice nothing this big ever
+// crosses; this arm is what makes the bound true rather than trusted, since
+// the two numbers live in different builds.
 std::string GuiPlatform::clipboard_get_text() {
     if (!clipboard_road_open()) return clipboard_text_;
     JNIEnv* env = jni_env_;
@@ -1901,7 +1911,12 @@ std::string GuiPlatform::clipboard_get_text() {
     } else if (answer) {
         jbyteArray bytes = static_cast<jbyteArray>(answer);
         const jsize n = env->GetArrayLength(bytes);
-        if (n > 0) {
+        if (n > 0 && static_cast<size_t>(n) > kClipboardMaxBytes) {
+            // The Wayland road's own wording, one line, and the empty answer.
+            std::fprintf(stderr,
+                         "warptempo_gui: Clipboard payload exceeded %zu bytes; "
+                         "paste abandoned\n", kClipboardMaxBytes);
+        } else if (n > 0) {
             text.resize(static_cast<size_t>(n));
             env->GetByteArrayRegion(bytes, 0, n,
                                     reinterpret_cast<jbyte*>(text.data()));

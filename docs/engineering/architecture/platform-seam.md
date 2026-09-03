@@ -383,7 +383,15 @@ drag coordinates floor instead of truncating.
   section owns the whole ruling; the stored string survives only as the
   road-absent fallback, for a failed attach or a missing method). The static
   capability `clipboard_publishes()` went with the stub: both backends now
-  publish, so it had no producer and no face reads it. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
+  publish, so it had no producer and no face reads it. THE READ'S PAYLOAD
+  BOUND IS ONE NUMBER ACROSS THE SEAM since 2026-09-03 (codex):
+  `kClipboardMaxBytes` in gui_input.h, which both backend headers include —
+  the Wayland pipe read's own cap since it was written, and now the Android
+  read's, asked of the returned array's length before the `std::string`
+  resize, with a mirror in `MainActivity` refusing the same size before it
+  encodes anything. A third copy of a number in the Java sliver is the media
+  command table's situation and takes its rule: no build checks the two, so
+  they are edited in one act. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
   BACK (architect — the tablet's BACK asks the unsaved-work question the
   laptop's X asks). `AKEYCODE_BACK` is consumed WHOLE in `on_input_event` —
   the one KeyEvent this backend answers — and its ACTION_UP fires the seam's

@@ -2029,7 +2029,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             opens the COMMIT-TITLE EDITOR; nothing is
 //                             dispatched from here. The Save button reaches it
 //                             by synthesizing this same chord and wears the
-//                             commit icon and the tooltip "Save and commit" while
+//                             commit icon and the tooltip "Save and Commit" while
 //                             the mode stands.
 //                             THE PLAIN DISK SAVE HAS NO HOTKEY IN THE VIEW,
 //                             and that is the ruling rather than a gap: a
@@ -4519,7 +4519,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // TARGET-LEGAL): the bit alone selects the command, and target view needs
     // no clause of its own for the opposite reason it needed none before — the
     // mode can now REST in target, and the arm below fires there. This is also
-    // what keeps the Render button honest, its "Render grid iterations" face
+    // what keeps the Render button honest, its "Render Grid Iterations" face
     // following the same bit from either view — and since 2026-09-02 that
     // face also greys wherever the sweep would refuse before it dispatched,
     // both faces reading iteration_sweep_plan (app_state.h), the verdict this
@@ -6411,22 +6411,28 @@ void GuiInputHandler::refresh_stats_panel_rows() {
     viewport.invalidate_rect(GuiRect{band.x, top, band.w, bot - top});
 }
 
-// THE CLIPBOARD REFUSAL'S ONE SENTENCE, for the two carded clipboard writes
-// (2026-09-03, codex on the panel's copy button): clipboard_set_text answers
-// a VERDICT — whether a claim another program can read went out (the
-// contract at the seam, platform_wayland.h / platform_android.h) — and a
-// success card on a false verdict would lie. IT IS ONE SENTENCE AND NO
-// LONGER A FORK: it carried a second clause for backends whose clipboard
-// reached no other program, and that half died the same day the tablet's
-// ClipboardManager road landed — both backends publish, so what can refuse is
-// the per-press write alone (Wayland: no data device, no source, no
-// input-event serial to ride; Android: a missing Java method or
-// setPrimaryClip's own refusal). The editors' Ctrl+C / Ctrl+X card nothing
-// and read no verdict (apply_editor_clipboard) — an editor is its own world
-// and its in-app paste reads the clipboard whichever way the claim went.
-static void card_clipboard_refusal(GuiNotifications& notifications) {
+// THE CLIPBOARD REFUSAL'S ONE SENTENCE, for the three carded clipboard writes
+// (2026-09-03, codex on the panel's copy button; the editor's CUT joined the
+// two copies later the same day): clipboard_set_text answers a VERDICT —
+// whether a claim another program can read went out (the contract at the
+// seam, platform_wayland.h / platform_android.h) — and a success card on a
+// false verdict would lie. IT IS ONE SENTENCE AND NO LONGER A FORK: it
+// carried a second clause for backends whose clipboard reached no other
+// program, and that half died the same day the tablet's ClipboardManager road
+// landed — both backends publish, so what can refuse is the per-press write
+// alone (Wayland: no data device, no source, no input-event serial to ride;
+// Android: a missing Java method or setPrimaryClip's own refusal).
+//
+// THE VERB IS THE ONE VARIABLE and the sentence is not: "copy" for the two
+// writes below, "cut" for the editor's, so the reader is told which act the
+// clipboard turned down. THE EDITOR'S COPY STILL CARDS NOTHING — an editor is
+// its own world, a refused copy changes nothing on screen and the paste that
+// follows will show it — but a refused CUT is not silent, because its own
+// refusal is the visible thing: the selection stays (apply_editor_clipboard,
+// input_handler.cpp, where that reasoning is written out).
+void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
     notifications.notify(AppState::NotificationClass::Normal,
-                         "The clipboard did not take the copy");
+                         std::string("The clipboard did not take the ") + verb);
 }
 
 // THE WHOLE REPORT, ONTO THE SYSTEM CLIPBOARD (architect 2026-09-03). TWO
@@ -6463,7 +6469,7 @@ void GuiInputHandler::copy_stats_panel_report() {
     // string and hands it straight over, holding no copy of its own
     // (conventions.md's clipboard ruling, and bare `j`'s own road).
     if (!gui.clipboard_set_text(report)) {
-        card_clipboard_refusal(notifications);
+        card_clipboard_refusal(notifications, "copy");
         return;
     }
     // AND THE SUCCESS SAYS SO: a clipboard write is the one success class in
@@ -7491,7 +7497,7 @@ void GuiInputHandler::copy_focused_marker_value() {
     // or refusing — says so instead of "Copied". The button's face reads no
     // half of this question; it is the press's own answer, on both roads.
     if (!gui.clipboard_set_text(payload)) {
-        card_clipboard_refusal(notifications);
+        card_clipboard_refusal(notifications, "copy");
         return;
     }
     // AND THE SUCCESS SAYS SO (architect 2026-08-30, the strictness ruling's

@@ -138,10 +138,16 @@ public:
     // WHETHER THE CLAIM WAS ISSUED (2026-09-03, codex on the AV Sync Stats
     // panel's copy button): TRUE only when a data device exists, the data
     // source was created and set_selection was sent with a NON-ZERO
-    // input-event serial; FALSE otherwise, the payload still stored (so a
-    // self-paste answers with it) but the compositor having no claim to
-    // honour. The verdict is what a carded clipboard success reads — a copy
-    // that cards "Copied ..." on a refused claim would lie. It cannot see a
+    // input-event serial; FALSE otherwise, with the compositor holding no
+    // claim to honour. THE PAYLOAD IS STILL STORED on the refused road, but
+    // that does NOT make it pastable: clipboard_get_text's self-paste short
+    // circuit is gated on clipboard_we_own_, which a refusal never raises
+    // (and which the failed-source arm clears), so unless an EARLIER claim of
+    // ours is still standing the next paste reads another application's offer
+    // instead. The verdict is what a carded clipboard success reads — a copy
+    // that cards "Copied ..." on a refused claim would lie — and it is also
+    // what the EDITOR'S CUT hangs its erase on (apply_editor_clipboard, where
+    // that reasoning is written out). It cannot see a
     // serial the compositor REJECTS as stale (that rejection is silent on the
     // wire), which is why every input event that can trigger a copy caches
     // its serial (last_input_serial_).
@@ -160,8 +166,9 @@ public:
     // send-then-read over the pipe would deadlock), and otherwise performs a
     // bounded synchronous pipe read from the offering client. It returns the
     // EMPTY STRING when nothing text-shaped is on the clipboard and on every
-    // failure (no acceptable mime, pipe error, timeout, runaway payload); a
-    // partial read is never published. Callers treat empty as "nothing to
+    // failure (no acceptable mime, pipe error, timeout, a payload past
+    // kClipboardMaxBytes — gui_input.h, the seam's one bound, which the
+    // Android read asks too); a partial read is never published. Callers treat empty as "nothing to
     // paste" — the bytes are not filtered here, because the editor's own
     // incoming filter (text_editor::replace_selection) is the boundary that
     // validates UTF-8 well-formedness and drops control bytes.

@@ -176,9 +176,13 @@ public:
     // ALSO THE ROAD-ABSENT ANSWER: with the attach or a lookup failed there is
     // no road at all, and the pair then falls back to clipboard_text_, this
     // process's own one payload, so the editors' in-app paste still works
-    // while a carded copy refuses truthfully. `get` answers the empty string
-    // where there is nothing to paste, the legal cold answer every caller
-    // already handles.
+    // while a carded copy refuses truthfully — and, since the cut hangs its
+    // erase on the verdict (apply_editor_clipboard), an editor's Ctrl+X on
+    // that road refuses and keeps its text rather than trusting a store no
+    // other program can read. `get` answers the empty string where there is
+    // nothing to paste, the legal cold answer every caller already handles,
+    // and a clip past kClipboardMaxBytes (gui_input.h, the seam's one bound,
+    // mirrored in MainActivity so the bytes never cross) is one more of them.
     bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
 
