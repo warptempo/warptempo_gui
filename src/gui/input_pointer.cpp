@@ -1736,6 +1736,31 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // either: its band is inert text and its row is one Close button, so the
     // whole surface promises nothing a cursor could name.
     if (app.stats_panel.active) return GuiCursorKind::Arrow;
+    // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
+    // cursor in flag editor becomes the pointer during drag-to-highlight — it
+    // should remain the i-beam — that's what other editors do"), on the
+    // live-gesture exception's own rule and in the same member shape as the
+    // trim, overview and marker drags below: the thing being dragged is the
+    // thing the cursor names — a text selection — so the Text the field wears
+    // at rest stays TRUE for the whole gesture, read from the drag's OWN
+    // RECORD and never re-derived from the pointer's position. Position is
+    // exactly what cannot answer here: a selection drag routinely leaves the
+    // field's published rect (that is how one selects past the visible run),
+    // and widening either field test to "or a drag is live" would be the
+    // re-derivation this family forbids. The drag has ONE shape — a caret
+    // sliding through a byte run — so being live is the whole record, and it
+    // is capture-free, so there is a visible cursor to keep.
+    // IT SITS AHEAD OF THE DIALOG EDITOR'S BLANKET rather than with those
+    // three arms below, and that rank is what makes it ONE owner for BOTH
+    // editor families: the blanket answers first while a dialog editor stands
+    // and would decide its drag by position, while the marker lane's flag /
+    // measure box falls THROUGH the blanket (keyboard-modal, pointer- and
+    // wheel-transparent — conventions.md) to the box's own hover arm far
+    // below. One arm above both covers both. THE CARDS AND THE FOUR BLANKETS
+    // ABOVE STILL WIN, the rank the trim and marker drags already take under
+    // them: a card is opaque to the pointer and can be raised from a worker
+    // mid-drag, and the rest are structurally inert while a button is held.
+    if (app.editor_text_drag.active) return GuiCursorKind::Text;
     // THE VEIL'S ONE EXCEPTION IS THE FIELD (architect 2026-08-13, with the
     // Text kind). The blanket above it is unchanged in kind: a dialog editor
     // consumes every press outside its own box, so every zone this map would
@@ -1747,7 +1772,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // gesture), not an escape from the veil. The BUTTONS are the veil's other
     // reachable surface and take no cue, a button carrying none anywhere; a
     // PROMPT publishes a zero field, so it cannot reach this arm even if the
-    // return above it ever moved.
+    // return above it ever moved. THIS ARM IS THE HOVER'S ALONE since
+    // 2026-09-03: a LIVE text drag never reaches it, the live-drag Text above
+    // having answered, so a selection dragged past the field's edge keeps the
+    // I-beam instead of flipping to the Arrow this arm would give it.
     if (modal_dialog_editor_active()) {
         return rect_contains(app.modal_dialog.field, x, y)
                    ? GuiCursorKind::Text : GuiCursorKind::Arrow;
@@ -1860,6 +1888,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // top of this map — which reads trim_drag / pending_trim_drag's own record
     // — keeps their cue for the whole gesture, on that same live-gesture
     // exception and with one member fewer to remember.)
+    // (THE EDITOR TEXT DRAG IS THIS FAMILY'S FOURTH MEMBER and is answered at
+    // the top of the map rather than here — its own arm carries why.)
     if (any_pointer_gesture_active(app)) return GuiCursorKind::Arrow;
 
     // THE OPEN FLAG EDITOR'S BOX IS EDITABLE TEXT, so it wears the I-beam
@@ -1879,6 +1909,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // same painter — and covers the measure PAD deliberately NOT: that rect is
     // painted ink beside the field, not editable text, so an I-beam over it
     // would promise a caret the press does not seat.
+    // IT IS THE HOVER'S ARM ALONE: a live text drag out of this box is
+    // answered at the top of the map, by the drag's own record.
     if (rect_contains(app.flag_editor_box.box, x, y))
         return GuiCursorKind::Text;
 
