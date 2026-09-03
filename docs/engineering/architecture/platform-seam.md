@@ -439,16 +439,28 @@ item never greys. Then the destination: an EMPTY `sync_path` is the device
 saying it has none and answers `sync_path is not set` on a card — THE KEY BY
 ITS OWN SPELLING, a config key being named the way it is written in the file
 everywhere in the product — and nothing runs. Passing both, it composes the
-job — the sync root, the project name and folder, the render folder's
-deliverable wav composed exactly as a render composes it, and the `tmp/` batch
-root — and dispatches to `GuiExternalSyncWorker`; nothing says the act has
+job — the sync root, the project name and folder, and the project's TWO
+OUTPUT FOLDERS THEMSELVES, `render/` and `tmp/` (the title is not a term of the
+act: the mirror LISTS those folders, architect 2026-09-02) — and dispatches to
+`GuiExternalSyncWorker`; nothing says the act has
 started (a process line is state, and the verdict follows within seconds).
 
 THE MIRROR'S LAYOUT AND SCOPE are `external_sync.h`'s whole statement:
-`<sync_path>/<project name>/` holds the deliverable directly and each `tmp/`
-batch folder AS ITSELF (folder name and NN numbering verbatim), wav files
-only — no sidecars, no `.fingerprint`, no `peaks/`, the stick being played
-from and not authored in. Copies run first; afterward every file and folder
+`<sync_path>/<project name>/` holds every regular `.wav` out of `render/`
+directly and each `tmp/` batch folder AS ITSELF (folder name and NN numbering
+verbatim), wav files only — no sidecars, no `.fingerprint`, no `peaks/`, the
+stick being played from and not authored in. **THE SET IS THE FOLDERS' REAL
+CONTENTS** (architect 2026-09-02): the act reads `render/` the same way it
+reads a batch cell, through the one listing rule `list_wav_files`, so the stick
+equals the disk by construction. It COMPOSED `render/<live title>.wav` until
+that day, which made the mirror's set and `prune_render_folder`'s definition
+two rules that had to agree, and between a retitle and the next render they did
+not: the disk kept the old wav, the stick lost it, nothing was copied in its
+place and the act said nothing. The prune is a separate act with its own
+trigger now, and the mirror simply follows the folder — a stale pair is
+mirrored as it stands and leaves the stick on the first Synchronize after the
+prune takes it off disk. An absent `render/` is an empty set, never a refusal;
+the act creates nothing on the source side. Copies run first; afterward every file and folder
 under that one destination folder which is not in the set is deleted, so an
 act interrupted mid-way (a pulled stick, a killed process) leaves the stick
 with at most EXTRA files, never fewer. The scope is that destination folder

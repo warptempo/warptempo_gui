@@ -3205,8 +3205,8 @@ struct CommandPopupItem {
 // and the row raises the Open project picker — the folder overlay's list of
 // projects in the keyboard's band over a Cancel-alone row) and **Synchronize to external storage** under
 // it (architect
-// 2026-08-27, the deliverable and the batch cells mirrored onto the device
-// config's `sync_path` — the act is external_sync.h's, and this row is one of
+// 2026-08-27, `render/`'s contents and the batch cells mirrored onto the
+// device config's `sync_path` — the act is external_sync.h's, and this row is one of
 // TWO ROADS TO THAT ONE BODY since bare `\` joined 2026-08-31 (the chord's arm
 // in input_handler.cpp's on_key, its predicate `is_sync_external_key` in
 // gui_input.h) — the row still calls the body directly, on either platform),

@@ -12,8 +12,8 @@
                                     // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
 #include "prompt.h"          // GuiCloseTarget (the Open project picker's reopen)
-#include "render_output_naming.h"  // the deliverable's path, composed as a
-                                   // render composes it (the sync act)
+#include "render_output_naming.h"  // render_output_directory (the sync act's
+                                   // deliverable folder)
 #include "renders_dir.h"     // project_batch_root (the sync act's batch root)
 #include "history_diff.h"
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
@@ -6194,25 +6194,21 @@ void GuiInputHandler::synchronize_to_external_storage() {
         return;
     }
 
-    // THE JOB, captured whole by value on this thread. The deliverable's path
-    // is composed exactly as a render composes it (the parser's one owner), so
-    // the file the act looks for is the file Ctrl+Alt+R writes; an absent one
-    // is simply not in the set. The batch root is the GUI's own owner's.
-    //   THE SET IS THE FOLDER'S OWN CONTENTS since 2026-08-29: the
-    // deliverable's publish prunes `render/` down to exactly this one file
-    // (prune_render_folder, renders_dir.h — the render player's listing was
-    // its second trigger until the player moved inside `tmp/` on 2026-09-01),
-    // so the
-    // mirror's deletions on the stick and the prune's on disk are ONE
-    // definition rather than two that happen to agree — a previous title's
-    // deliverable is gone from both sides, not swept off the stick while it
-    // sits on disk.
+    // THE JOB, captured whole by value on this thread. TWO FOLDERS AND NO
+    // TITLE (architect 2026-09-02): the job carries `render/` and `tmp/`
+    // themselves — the deliverable folder through the parser's one owner, the
+    // batch root through the GUI's — and the act LISTS them, so the set it
+    // mirrors is the set the disk holds. The title is not a term of it: a
+    // composed `render/<title>.wav` made the mirror's set and
+    // prune_render_folder's definition (renders_dir.h) two rules that had to
+    // agree, and between a retitle and the next render they did not — the disk
+    // kept the old wav, the stick lost it and nothing was copied in its place.
+    // The prune is still what keeps the folder to one pair; it simply runs on
+    // its own trigger now, and the next Synchronize follows the folder there.
     GuiExternalSyncJob job;
     job.sync_root    = std::filesystem::path(sync_path);
     job.project_name = app.project_name;
-    job.deliverable  = compose_render_output_path(
-        render_output_directory(app.source_audio_path),
-        render_output_stem(app.engine_settings));
+    job.render_root  = render_output_directory(app.source_audio_path);
     job.batch_root   = project_batch_root(app.source_audio_path);
     // The project folder itself — the source's own parent, the project
     // model's rule — so the act can name every project-side path relative to

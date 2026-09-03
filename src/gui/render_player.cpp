@@ -51,9 +51,10 @@ void GuiRenderPlayer::status(const std::string& line) {
 // at prune_render_folder, renders_dir.h). TWO THINGS ARE DELIBERATELY
 // UNTOUCHED: the deliverable's PUBLISH ROAD — the archival render still writes
 // `render/<title>.wav` and prunes the folder at its completion — and THE
-// SYNCHRONIZE MIRROR, which still ships `render/`'s deliverable beside every
-// `tmp/` batch folder (external_sync.h). Only the PLAYER stops looking at
-// `render/`.
+// SYNCHRONIZE MIRROR, which still ships `render/`'s CONTENTS beside every
+// `tmp/` batch folder — every regular `.wav` it holds, listed rather than
+// composed from the title since 2026-09-02 (external_sync.h). Only the PLAYER
+// stops looking at `render/`.
 
 bool GuiRenderPlayer::has_playable_render() const {
     return !renders_dir.enumerate_render_entries().empty();

@@ -30,7 +30,7 @@ namespace {
 // reader knows which side failed, the root itself being just that name (it
 // was the found VOLUME's folder name until 2026-08-30 and reads exactly the
 // same, `sync_path` naming the mount folder the volume used to be:
-// `KINGSTON/550 - 1/render/x.wav`); a path in the project
+// `KINGSTON/550 - 1/x.wav`); a path in the project
 // is its path under the project folder (the folder itself its own name); and
 // anything under neither — nothing in the act composes one — falls back to
 // its filename. Lexical, like the paths themselves: every name in the act is
@@ -52,7 +52,7 @@ std::string shown(const GuiExternalSyncJob& job, const std::filesystem::path& p)
         // find it: `sync_path` is typed by hand now, and a shell's own
         // completion ends a folder in `/` — `/run/media/b/SANDISK/` has an
         // EMPTY filename() and would leave every sentence naming
-        // `/550 - 1/render/x.wav` with no root at all. The discovered mount
+        // `/550 - 1/x.wav` with no root at all. The discovered mount
         // point this replaced could never carry one, so this case is the
         // configured path's own (2026-08-30). The path itself is used
         // verbatim; only the display name walks up.
@@ -136,6 +136,46 @@ std::optional<std::string> walk_directory(const GuiExternalSyncJob&    job,
     return std::nullopt;
 }
 
+// THE LISTING RULE, ONE FOR BOTH OF THE PROJECT'S OUTPUT FOLDERS: the regular
+// `.wav` files DIRECTLY inside `dir`, in plain byte order by filename — the
+// product's one order for names on disk (project_model.h) — with no recursion
+// and no opinion about how any of them is spelled. TWO CALLERS, `render/` and
+// each batch folder under `tmp/`, so the deliverable side and the batch side
+// cannot drift into two classifications of the same question.
+//
+// WHAT IT DROPS FALLS OUT OF THE RULE rather than out of a list of exceptions:
+// a directory is not a regular file, and `.fingerprint`, `.peaks` and an
+// interrupted act's staging `<name>.wav.tmp` are not `.wav`.
+//
+// Rule 1 throughout: the root is OPTIONAL, so an absent folder is an empty set
+// and every other answer — the walk's, and each entry's own status — is the
+// refusal line the caller returns.
+std::optional<std::string> list_wav_files(
+        const GuiExternalSyncJob&           job,
+        const std::filesystem::path&        dir,
+        std::vector<std::filesystem::path>& out) {
+    if (auto fault = walk_directory(
+            job, dir, true,
+            [&](const std::filesystem::directory_entry& de)
+                    -> std::optional<std::string> {
+                std::error_code de_ec;
+                const bool is_file = de.is_regular_file(de_ec);
+                if (de_ec) return read_failure(job, de.path(), de_ec);
+                if (!is_file) return std::nullopt;
+                if (de.path().extension() != ".wav") return std::nullopt;
+                out.push_back(de.path());
+                return std::nullopt;
+            })) {
+        return fault;
+    }
+    std::sort(out.begin(), out.end(),
+              [](const std::filesystem::path& a,
+                 const std::filesystem::path& b) {
+                  return a.filename().string() < b.filename().string();
+              });
+    return std::nullopt;
+}
+
 } // namespace
 
 GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
@@ -208,27 +248,29 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
                                                      // filled once below
 
     std::error_code ec;
-    if (!job.deliverable.empty()) {
-        // Rule 1: an unrendered deliverable is ENOENT and is nothing to copy;
-        // any other answer stops the act before a single deletion.
-        const bool present =
-            std::filesystem::is_regular_file(job.deliverable, ec);
-        if (ec && ec != std::errc::no_such_file_or_directory)
-            return refuse(read_failure(job, job.deliverable, ec));
-        if (present) {
-            copies.push_back(
-                {job.deliverable, dest / job.deliverable.filename()});
-        }
-    }
+
+    // THE DELIVERABLE FOLDER'S OWN CONTENTS, listed rather than composed from
+    // the live title (rule 1's set paragraph): every regular `.wav` directly
+    // inside `render/` lands at the top of the project's folder on the stick,
+    // under its own name. An absent folder is ENOENT and an empty set — this
+    // act creates nothing on the source side — and any other answer stops the
+    // act before a single deletion.
+    std::vector<std::filesystem::path> deliverables;
+    if (auto fault = list_wav_files(job, job.render_root, deliverables))
+        return refuse(*fault);
+    for (const std::filesystem::path& wav : deliverables)
+        copies.push_back({wav, dest / wav.filename()});
 
     // THE BATCH FOLDERS, walked off the batch root itself rather than through
     // GuiRendersDir: that walk holds AppState and belongs to the GUI thread,
     // and what this act wants is simpler than what the render player wants —
     // every directory under `tmp/` and every `.wav` directly inside it, with no
     // opinion about the `N_tag` and `NN` spellings the dispatchers write. The
-    // order is plain byte order on both levels, the product's one order for
-    // names on disk (project_model.h), so a sync's copies run in the order the
-    // folders read.
+    // inner half is `list_wav_files` above, the SAME listing `render/` just
+    // took, so the act has one rule for what a wav folder holds; this level
+    // adds only the directories. The order is plain byte order on both levels,
+    // the product's one order for names on disk (project_model.h), so a sync's
+    // copies run in the order the folders read.
     std::vector<std::filesystem::path> batches;
     if (auto fault = walk_directory(
             job, job.batch_root, true,
@@ -248,26 +290,9 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
               });
     for (const std::filesystem::path& batch : batches) {
         std::vector<std::filesystem::path> wavs;
-        if (auto fault = walk_directory(
-                job, batch, true,
-                [&](const std::filesystem::directory_entry& de)
-                        -> std::optional<std::string> {
-                    std::error_code de_ec;
-                    const bool is_file = de.is_regular_file(de_ec);
-                    if (de_ec) return read_failure(job, de.path(), de_ec);
-                    if (!is_file) return std::nullopt;
-                    if (de.path().extension() != ".wav") return std::nullopt;
-                    wavs.push_back(de.path());
-                    return std::nullopt;
-                })) {
+        if (auto fault = list_wav_files(job, batch, wavs))
             return refuse(*fault);
-        }
         if (wavs.empty()) continue;   // an empty cell earns no folder on the stick
-        std::sort(wavs.begin(), wavs.end(),
-                  [](const std::filesystem::path& a,
-                     const std::filesystem::path& b) {
-                      return a.filename().string() < b.filename().string();
-                  });
         const std::filesystem::path batch_dest = dest / batch.filename();
         kept_dirs.push_back(batch_dest);
         for (const std::filesystem::path& wav : wavs)
@@ -330,9 +355,9 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // -- THE DELETIONS, AFTER -----------------------------------------------
     //
     // THE SCOPE IS `dest` AND TWO LEVELS DEEP, which is exactly the shape the
-    // copies above write: a name at the top is either the deliverable or a
-    // batch folder, and a name inside a kept batch folder is either one of its
-    // wavs or not ours. Anything else — a stray file at the top, a folder that
+    // copies above write: a name at the top is either one of `render/`'s wavs
+    // or a batch folder, and a name inside a kept batch folder is either one of
+    // its wavs or not ours. Anything else — a stray file at the top, a folder that
     // is no longer a batch, a `peaks/` or a sidecar left inside a cell, a whole
     // subtree, a staging file left by an interrupted act at a name this set no
     // longer carries — goes. No path here is composed above `dest` (rule 2,

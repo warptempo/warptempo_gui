@@ -2803,8 +2803,10 @@ private:
     // it has none, answered `sync_path is not set` on a card — the key named
     // by its own spelling — and the act ends there. Otherwise the job is
     // captured whole by value — the sync root, the
-    // project name, the project folder, the deliverable's composed path and
-    // the batch root — and the worker takes it; nothing says the act has
+    // project name, the project folder, and the project's TWO OUTPUT FOLDERS
+    // themselves, `render/` and `tmp/` (no title: the act lists them, so the
+    // set it mirrors is the set the disk holds; external_sync.h rule 1)
+    // — and the worker takes it; nothing says the act has
     // started (a process line is state, and the verdict follows within
     // seconds).
     // on_external_sync_complete: the verdict, back on the main thread through

@@ -31,12 +31,17 @@
 // THE LAYOUT, and this is its whole statement — "the earliest unambiguous
 // path". `<sync_path>/<project name>/` holds:
 //
-//   * `<title>.wav`, the DELIVERABLE, taken straight out of the project's
-//     `render/` (the path composed exactly as a render composes it,
-//     render_output_naming.h). An ABSENT deliverable is nothing to copy for
-//     it and not a refusal: a project whose deliverable has not been rendered
-//     yet simply syncs its batch cells (and says nothing, the act being
-//     silent on success since 2026-08-30 — the outcome type below).
+//   * EVERY REGULAR `.wav` DIRECTLY INSIDE the project's `render/`, at the top
+//     of the project's folder on the stick. THE SET IS THE FOLDER'S REAL
+//     CONTENTS (architect 2026-09-02) and not one path composed from the live
+//     title: what the mirror ships is what the folder holds, so the stick
+//     equals the disk by construction. An ABSENT `render/` is an EMPTY SET
+//     and not a refusal — this act creates nothing on the source side — so a
+//     project whose deliverable has not been rendered yet simply syncs its
+//     batch cells (and says nothing, the act being silent on success since
+//     2026-08-30 — the outcome type below). No recursion, no `.fingerprint`,
+//     no staging `.tmp`: the LISTING RULE IS ONE FOR BOTH FOLDERS
+//     (list_wav_files, external_sync.cpp), the same one the batch cells take.
 //   * each BATCH FOLDER out of the project's `tmp/` AS ITSELF —
 //     `<sync_path>/<project name>/1_bpm/01.wav` — the folder name and the NN
 //     numbering verbatim, because `01.wav` only means something inside its
@@ -62,9 +67,9 @@
 //
 //   1. THE MIRROR DELETES ONLY AGAINST A LISTING IT FINISHED. Every walk and
 //      every status in the act carries its error_code and answers it. An
-//      OPTIONAL root that is simply absent — a deliverable not rendered yet, a
-//      project with no `tmp/`, a batch folder gone since the listing that
-//      named it — is ENOENT and is an empty set. ANY OTHER answer, on either
+//      OPTIONAL root that is simply absent — a `render/` with nothing rendered
+//      into it yet, a project with no `tmp/`, a batch folder gone since the
+//      listing that named it — is ENOENT and is an empty set. ANY OTHER answer, on either
 //      side, ends the act with "Cannot read '<path>': <the system's own
 //      words>" BEFORE a single deletion, a destination-enumeration error
 //      included, which therefore can never report success. EVERY PATH A
@@ -85,15 +90,25 @@
 //      A read fault can therefore never arrive after a deletion has already
 //      run, and no directory_iterator is ever live while its own directory is
 //      being changed.
-//      THE SET THIS MIRRORS IS THE ONE THE DISK ALREADY HOLDS (architect
-//      2026-08-29): the deliverable's publish — the prune's ONE trigger since
-//      the render player moved inside `tmp/` on 2026-09-01, its listing having
-//      been the other — keeps `render/` to the current title's `<title>.wav` and its
-//      `.fingerprint` and nothing else (prune_render_folder, renders_dir.h), so
-//      the deliverable this act copies and the deletions it makes on the stick
-//      are ONE definition with the prune's on disk — a previous title's
-//      deliverable is not a file the mirror sweeps off the stick while it still
-//      sits in the project.
+//      THE SET THIS MIRRORS IS THE ONE THE DISK ALREADY HOLDS, AND IT IS THE
+//      FOLDER'S OWN CONTENTS (architect 2026-09-02, retelling the 2026-08-29
+//      statement this replaces). The act LISTS `render/` and copies what it
+//      finds, so what the copies write and what the deletions keep are the
+//      files the folder holds — one description of the set, read off the disk
+//      at the moment of the act. THE PRUNE IS A SEPARATE ACT WITH ITS OWN
+//      TRIGGER, the deliverable's publish (the only one since the render
+//      player moved inside `tmp/` on 2026-09-01; prune_render_folder,
+//      renders_dir.h), and IT is what keeps the folder to the current title's
+//      pair. The two need no longer agree by rule, because the mirror asks the
+//      folder rather than composing a title: a previous title's deliverable
+//      left on disk by a retitle is MIRRORED AS IT STANDS until the next
+//      Success prunes it on disk, and the next Synchronize then removes it
+//      from the stick. Stick equals disk, always.
+//      IT WAS ONE COMPOSED PATH — `render/<live title>.wav` — until
+//      2026-09-02, which made the mirror's set and the prune's definition two
+//      rules that had to agree, and between a retitle and the next render they
+//      did not: the disk still held the old wav, the stick lost it, nothing
+//      was copied in its place and the act said nothing.
 //   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
 //      claim above true by construction rather than lexically. Before anything
 //      is created or written, THE SYNC ROOT ITSELF, the project's folder under
@@ -182,9 +197,13 @@ struct GuiExternalSyncJob {
     // The project's name — the folder under `projects_path` (project_model.h),
     // and the folder this act owns under the sync root.
     std::string           project_name;
-    // `<project>/render/<title>.wav`, composed by the caller through the
-    // parser's one owner. May not exist; may be empty when no title resolves.
-    std::filesystem::path deliverable;
+    // `<project>/render`, the DELIVERABLE FOLDER (render_output_directory,
+    // render_output_naming.h — the one owner both products compose it
+    // through). May not exist, which is an empty set. THE TITLE IS NOT A TERM
+    // OF THIS ACT: the mirror LISTS this folder instead of composing a path
+    // from the live title, which is what makes the stick's contents the
+    // disk's (rule 1).
+    std::filesystem::path render_root;
     // `<project>/tmp`, the batch root (renders_dir.h). May not exist.
     std::filesystem::path batch_root;
     // The project folder itself (the source's parent, project_model.h) —

@@ -60,12 +60,15 @@ inline std::string render_folder_creation_card(
 // list a file if it matches the current title, and delete the rest also").
 //
 // THE DEFINITION: `render/` holds THE CURRENT TITLE'S DELIVERABLE AND NOTHING
-// ELSE — `<title>.wav` and its `<title>.fingerprint` — so what the Synchronize
-// mirror keeps on the stick is exactly what this keeps on disk. The two sets
-// are ONE definition, external_sync.h rule 1's, which is why a retitle no
-// longer leaves the previous title's deliverable behind for the mirror to
-// sweep off the volume on its next run. (It was for the PLAYER to list too
-// until 2026-09-01, when the player moved inside `tmp/`.)
+// ELSE — `<title>.wav` and its `<title>.fingerprint` — and THIS IS THE ONE
+// PLACE THAT DEFINITION LIVES since 2026-09-02. The Synchronize mirror does
+// not restate it: it LISTS `render/` and ships what is there (external_sync.h
+// rule 1), so the stick equals the disk whatever this prune has or has not
+// got round to. A retitle therefore leaves the previous title's pair standing
+// on both sides — mirrored as it stands, and gone from the stick on the first
+// Synchronize after this prune takes it off disk — rather than being swept
+// off the volume while it still sits in the project. (It was for the PLAYER
+// to list too until 2026-09-01, when the player moved inside `tmp/`.)
 //
 // ONE CALLER, re-derived by grep 2026-09-01 and named at the site that makes
 // it: THE DELIVERABLE'S PUBLISH (the single archival render's GUI-thread
@@ -83,9 +86,14 @@ inline std::string render_folder_creation_card(
 // (the ruling and his rationale are at the head of render_player.h). WHAT THE
 // DEFINITION LOSES IS PROMPTNESS, NOT REACH: a stale pair survives until the
 // next deliverable publishes rather than until whichever trigger came first,
-// and the Synchronize mirror — which still ships `render/`'s deliverable —
-// keeps the same definition on the stick by deleting whatever does not match
-// it, so the two sets are one definition either way.
+// and the Synchronize mirror — which ships `render/`'s CONTENTS, whatever they
+// are — carries that lateness onto the stick and clears it there on its next
+// run, so the two sides hold the same files either way. (The mirror carried a
+// COMPOSED `render/<title>.wav` until 2026-09-02 and so had to agree with this
+// prune BY RULE — and between a retitle and the next render it did not, the
+// stick losing a file the disk still held. It lists the folder now and agrees
+// with it by construction; the sentence above is the same sentence, and it is
+// true of a stick as well as of a disk.)
 //
 // WARPTEMPO_CLI GETS NO PRUNE, the recorded asymmetry: it writes the same
 // `render/<title>.wav` through the same parser owner, but it is the headless

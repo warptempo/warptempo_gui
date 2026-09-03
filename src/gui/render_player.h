@@ -106,7 +106,7 @@ struct GuiInputHandler;
 // act up(), its key twin Backspace unchanged, greying at the root through the
 // wall's one owner (render_player_up_actionable). Neither the deliverable's
 // PUBLISH road nor the SYNCHRONIZE mirror is touched — the mirror still ships
-// `render/`'s deliverable beside every batch folder; only the PLAYER stops
+// `render/`'s contents beside every batch folder; only the PLAYER stops
 // looking at it.
 // The state it moves is AppState::render_player and AppState::folder_overlay
 // (app_state.h, where every field is described); this struct owns the acts.
