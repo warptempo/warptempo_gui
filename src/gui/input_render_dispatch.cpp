@@ -743,9 +743,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // rebrand (kSeriesPopupItems): the counted noun IS the command's name, so
     // the progress line and the row the user pressed say the same thing. THE
     // WORDS ARE SHARED, THE CASE IS EACH SURFACE'S — the rows took Title Case
-    // 2026-09-03 ("Grid Iterations" / "BPM Iterations", the dropdowns' one
-    // declared exception) and this line, a card and a stderr tag, stays
-    // sentence case like every other card. The label is one string shared
+    // 2026-09-03 ("Grid Iterations" / "BPM Iterations", a menu item being a
+    // control's NAME) and this line, a card and a stderr tag, stays
+    // sentence case like every other card, a card being a DESCRIPTION (the
+    // two-class rule; paint_handler.cpp's capitalization block owns it). The label is one string shared
     // with the stderr summary above,
     // where it fills the TAG SLOT ahead of the message proper
     // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries") — the same
@@ -1057,8 +1058,9 @@ bool GuiInputHandler::render_bpm_sweep() {
     // since the 2026-08-31 rebrand, which put ONE noun through the menu row,
     // this line and the sweep's twin: the counted things ARE the menu row's
     // iterations. It is NOT the row's constant — the row says "BPM
-    // Iterations" in the dropdowns' Title Case since 2026-09-03 and this
-    // string is a card's, so they share the words and not the spelling. It read "BPM values" from 2026-08-29
+    // Iterations" in the Title Case a control's name takes since 2026-09-03
+    // and this string is a card's, a description, so they share the words and
+    // not the spelling. It read "BPM values" from 2026-08-29
     // (architect: the line says what the numbers count, and "BPM" alone named
     // a quantity rather than the cells) and plain "BPM" before that. "BPM" is
     // capitalized always (architect 2026-08-02): it is an acronym, not a

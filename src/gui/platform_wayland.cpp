@@ -2605,7 +2605,7 @@ void GuiPlatform::on_pointer_button(uint32_t serial, uint32_t /*time*/,
                                     uint32_t button, uint32_t state) {
     // Cache the serial BEFORE the delivery, as on_keyboard_key does: a
     // button's lift runs its act synchronously under this event (the stats
-    // panel's Copy to clipboard, the roster's Copy resolved value), and the
+    // panel's Copy to Clipboard, the roster's Copy resolved value), and the
     // claim that act issues must ride THIS event's serial — labwc refuses a
     // stale key serial, and a pointer-only session had none at all before
     // 2026-09-03. Cached ahead of the translation too: an untranslated button

@@ -5460,7 +5460,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // its either — its router consumes them, the list's walk being Up/Down —
     // so the two list-bearing owners share one arm.
     // THE AV SYNC STATS PANEL'S RING IS THE SAME SHAPE AGAIN (2026-09-03),
-    // [band, Copy to clipboard, Close]: its band is a list like the other two
+    // [band, Copy to Clipboard, Close]: its band is a list like the other two
     // and lands the ring at -1, the difference being only that landing there
     // shows nothing (no row is highlighted, so there is no outline to
     // strengthen) and that its
@@ -6430,7 +6430,7 @@ static void card_clipboard_refusal(GuiNotifications& notifications) {
 }
 
 // THE WHOLE REPORT, ONTO THE SYSTEM CLIPBOARD (architect 2026-09-03). TWO
-// ROADS, ONE BODY: the modal row's **Copy to clipboard** button at its lift
+// ROADS, ONE BODY: the modal row's **Copy to Clipboard** button at its lift
 // and Ctrl+C in the router below. The panel is rare and its use is narrow —
 // *"it's actually quite rare that I even wanna use this feature. It would only
 // be when I get new hardware"* — so the act is the whole report and there is
@@ -6500,7 +6500,7 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
         save_ops.save();
         return true;
     }
-    // CTRL+C COPIES THE WHOLE REPORT — the Copy to clipboard button's key twin
+    // CTRL+C COPIES THE WHOLE REPORT — the Copy to Clipboard button's key twin
     // (architect 2026-09-03). A TEXT SURFACE OWNING Ctrl+C IS THE EDITORS'
     // EXISTING PATTERN rather than an exception to the global unbinding
     // (conventions.md's clipboard ruling): the chord is unbound in ordinary
@@ -6522,7 +6522,7 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
-    // THE RING: Tab / Shift+Tab walk [band, Copy to clipboard, Close] through
+    // THE RING: Tab / Shift+Tab walk [band, Copy to Clipboard, Close] through
     // the one modal ring route, whose list arm the three list owners share. A
     // RING-FOCUSED BUTTON takes Enter and Space as its own press
     // (press-at-press, commit-at-release — the route above already armed it

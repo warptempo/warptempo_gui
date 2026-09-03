@@ -266,34 +266,48 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // generalizing the row-by-row carve-out that started at this row; completed
 // 2026-09-01 by the capitalization sweep, which retired every declared
 // exception the domain had left — universal rules, an exception in user-facing
-// text being the sign that the thing carrying it is poorly designed — and
-// joined 2026-09-03 by the ONE exception the product does declare, the
-// dropdown items' Title Case, which is not a carve-out for a surface that
-// wanted one but FIDELITY: this product's text convention IS kdenlive's, and
-// kdenlive's menu items are Title Case ("Open Recent", "Save As…"). Every
-// other site states its own class and points here.
+// text being the sign that the thing carrying it is poorly designed; joined
+// 2026-09-03 by the dropdown items' Title Case, declared that morning as the
+// ONE exception the product would allow itself; and SETTLED THE SAME EVENING,
+// when a research pass over kdenlive's own strings found the two-class rule
+// that explains them and the architect took it whole — so THE DROPDOWN ITEMS
+// STOP BEING AN EXCEPTION AND BECOME AN INSTANCE, one class of a rule that was
+// always kdenlive's, as this product's whole text convention is. Every other
+// site states its own class and points here.
 //
-//   * LABELS, TOOLTIPS, CARDS AND PROMPTS ARE SENTENCE CASE — "Save and
-//     commit", "Center on focus", "Add to selection". The one title-case
-//     exception this rule ever had ("Save and Commit", 2026-08-04) is retired,
-//     and the dropdown items' below is a different thing: a whole surface
-//     named by its source, not one label that read better shouted.
-//   * THE DROPDOWN MENUS' ITEMS ARE TITLE CASE (architect 2026-09-03,
-//     "dropdown entries should use title case, since kdenlive does") —
-//     principal words capitalized, articles, prepositions and conjunctions
-//     lowercase unless they lead: "Open Project", "Synchronize to External
-//     Storage", "Paste Phase Reset State", "Grid Iterations", "Projects
-//     Repository". IT IS THE ITEM LABELS AND NOTHING ELSE: the four menu
-//     ANCHORS are single words either way ("File", "Edit", "Iterations",
-//     "Settings"), and the same act NAMED anywhere else — a card, a tooltip,
-//     the render button's hint, a modal row's word — is that surface's own
-//     sentence case ("BPM iterations work in source view" is a card; the
-//     dropdown row above it says "BPM Iterations"). The five tables are the
-//     whole membership (kFilePopupItems, kEditPopupItems, kSeriesPopupItems,
-//     kSettingsPopupItems, kHelpPopupItems, app_state.h), and no reader
-//     compares an item's
-//     label as a string — the tables are read by index — so the spelling is
-//     free to be the menu's own.
+//   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
+//     "Synchronize to External Storage", "Paste Phase Reset State", "BPM
+//     Iterations", "AV Sync Stats"), a modal row's WORD button ("Copy to
+//     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
+//     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Trim Region ([)").
+//     The evidence is kdenlive's own: the Title Case hover on an icon button
+//     IS the QAction's name echoed back by Qt, while every tooltip kdenlive
+//     writes by hand is a sentence. A LAMP'S "Toggle <Mode> (<key>)" IS A NAME
+//     under this — Qt names a checkable action the same way ("Show Audio
+//     Thumbnails") — the lamp FACE, never the words, carrying the state.
+//   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, a tooltip that
+//     is a STATE or a REASON rather than an act ("At the trim end (End)",
+//     "Markers are placed in source view (S)", "Committing the checkpoint
+//     (Ctrl+S)"), the SECOND modifier line (always a whole sentence with
+//     terminal punctuation: "Press Shift for the A/B audition."), a card, a
+//     prompt (a question), the row-8 state cell, and a panel's row labels and
+//     prose.
+//   * SO ONE ACT SPLITS BY SURFACE, and that is the rule doing its work rather
+//     than a carve-out: a CARD naming an act stays a sentence because a card
+//     is a description ("BPM iterations work in source view"), while the
+//     TOOLTIP naming the same act is that control's name ("Render Grid
+//     Iterations (Ctrl+Alt+R)") and the dropdown row above it says "BPM
+//     Iterations". No reader compares any of these as strings — the five item
+//     tables are read by index (kFilePopupItems, kEditPopupItems,
+//     kSeriesPopupItems, kSettingsPopupItems, kHelpPopupItems, app_state.h) —
+//     so each surface is free to spell its own class.
+//   * TITLE CASE SPELLING: principal words capitalized; articles,
+//     conjunctions and prepositions of three letters or fewer lowercase unless
+//     they lead ("Copy to Clipboard", "Load in Place", "Save and Commit", "Up
+//     a Folder", "Toggle Add to Selection"); a hyphenated compound capitalizes
+//     both halves ("Toggle Read-Only (O)"); a single word is the same string
+//     in either class and settles nothing. The chord suffix "(Ctrl+S)" is not
+//     part of the name and is spelled by its own owner.
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
@@ -309,6 +323,14 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     the system's own words (`ec.message()`, `strerror`) arrive capitalized
 //     and are the accepted class. The card-side statement is messaging.md's,
 //     and the one seam helper is lowercase_initial (notifications.h).
+//
+// THE SUCCESSION IN ONE SENTENCE: sentence case with a Title Case pair
+// (2026-08-01), the pair retired for sentence case with nothing left to except
+// (2026-09-01, "Save and Commit" losing its capital C), the dropdowns carved
+// back out as the one declared exception (2026-09-03 morning), and that
+// exception generalized the same evening into the class it had always been —
+// which is what put "Save and Commit" back, a NAME this time rather than a
+// favourite.
 //
 // THE CASE SPLIT IS OVER (2026-08-02): the terminal round landed, so
 // stderr/stdout prose follows the same rules and there is ONE set for both
@@ -5843,7 +5865,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
 // (the fourth, the same day: its Cancel-alone row), the AV SYNC STATS PANEL
-// (the fifth, 2026-09-03: its Copy to clipboard · Close row) or any dialog
+// (the fifth, 2026-09-03: its Copy to Clipboard · Close row) or any dialog
 // editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
@@ -6357,7 +6379,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // live predicate's answer at plan time, published on the record
         // below. ONE OWNER READS IT, re-greped 2026-09-03: the player's seven
         // through render_player_button_enabled; true on every other owner's
-        // buttons. (The stats panel's Copy to clipboard read it for one day,
+        // buttons. (The stats panel's Copy to Clipboard read it for one day,
         // off a backend capability that is gone — the tablet's clipboard now
         // publishes too, so nothing greys that button ahead of the press.)
         bool        enabled      = true;
@@ -6537,7 +6559,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // own keys under the product's one spelling (spell_chord's head,
         // gui_input.h).
         //
-        // THE STATS PANEL'S ROW IS **Copy to clipboard · Close** (architect
+        // THE STATS PANEL'S ROW IS **Copy to Clipboard · Close** (architect
         // 2026-09-03), the picker's shape with the word its own act names: the
         // panel reads and nothing is being answered, so "Cancel" would name a
         // decision it does not ask for. Close stays LAST, the escape sentinel
@@ -6551,8 +6573,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // clipboard on the button face"). The player's row is all glyphs; the
         // three word-button owners are the prompts, the dialog editors and
         // the picker's Cancel, and this joins them — same label box, same
-        // resting outline, sentence case like every label that is not a
-        // dropdown item (the capitalization block at the head of this file).
+        // resting outline. ITS WORDS ARE A CONTROL'S NAME, so they are TITLE
+        // CASE (the two-class rule, the capitalization block at the head of
+        // this file: a name is Title Case, a description is a sentence). It
+        // read "Copy to Clipboard" for the few hours between the button
+        // landing and the rule that classed it, the product's other word
+        // buttons all being single words that settle nothing.
         // ITS HINT IS WRITTEN OUT rather than composed: the default composer
         // spells one key off `response_key`/`editor_ok`, and this button's key
         // is a CHORD (Ctrl+C in route_stats_panel_key), so the tooltip carries
@@ -6569,9 +6595,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // arises: the button admits no modified press.
         if (stats_up) {
             DialogButtonPlan copy;
-            copy.label     = "Copy to clipboard";
+            copy.label     = "Copy to Clipboard";
             copy.stats_act = AppState::StatsButtonAct::CopyReport;
-            copy.tooltip   = "Copy to clipboard (Ctrl+C)";
+            copy.tooltip   = "Copy to Clipboard (Ctrl+C)";
             plan.push_back(std::move(copy));
         } else if (!picker_up) {
             DialogButtonPlan ok;

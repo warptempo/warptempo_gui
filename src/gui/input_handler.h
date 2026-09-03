@@ -2779,7 +2779,7 @@ private:
     // -- THE AV SYNC STATS PANEL (architect 2026-09-03) --------------------
     //
     // HELP → AV SYNC STATS: the folder overlay's THIRD content, a listing of
-    // TEXT rows over a bottom row that is **Copy to clipboard · Close**. What
+    // TEXT rows over a bottom row that is **Copy to Clipboard · Close**. What
     // it shows and why the two figures mean what they do is at
     // av_sync_stats.h; what is here is the mode.
     //
@@ -2819,7 +2819,7 @@ private:
     //     Ctrl+S saves (with the checkpoint-in-flight card the picker raises);
     //     Ctrl+C copies the whole report (copy_stats_panel_report, the button's
     //     key twin); Ctrl+Q is THE ONE FALL-THROUGH; Tab / Shift+Tab walk the
-    //     ring [band, Copy to clipboard, Close]; Esc closes; Up / Down SCROLL
+    //     ring [band, Copy to Clipboard, Close]; Esc closes; Up / Down SCROLL
     //     THE BAND (there is no
     //     highlight to walk — which is exactly why this panel could not reuse
     //     route_picker_key and needed a modal owner of its own, the record
@@ -2838,7 +2838,7 @@ private:
     // callers: the opener's first listing and the tick's refresh.
     void build_stats_panel_rows();
     // THE WHOLE REPORT ONTO THE SYSTEM CLIPBOARD, and its card. TWO CALLERS,
-    // one body: the modal row's Copy to clipboard button at its lift
+    // one body: the modal row's Copy to Clipboard button at its lift
     // (dispatch_modal_dialog_button's Stats arm) and Ctrl+C in the router
     // below. It reads the overlay's own rows — no second copy of the text
     // exists — and it CANNOT REFUSE, which is why its button carries no face

@@ -881,7 +881,7 @@ private:
     // Cached from EVERY accepted input event that can trigger a copy, before
     // the event reaches the core: a keyboard key (Ctrl+C / Ctrl+X in an
     // editor, bare `j`, the stats panel's Ctrl+C), a pointer button (a modal
-    // or roster button's lift, the Copy to clipboard button since
+    // or roster button's lift, the Copy to Clipboard button since
     // 2026-09-03 — a pointer-only session had no serial at all until then,
     // and a stale key serial otherwise) and a touch down / up (the Wayland
     // touch path is the pointer's twin). Motion, axis and frame events carry
