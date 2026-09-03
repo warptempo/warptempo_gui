@@ -2829,10 +2829,12 @@ private:
     void open_av_sync_stats();
     // Compose the rows from the two live readings and seat them in the
     // overlay's table (the TABLE alone, so a refresh keeps the scroll offset
-    // and the band's press arm). Answers whether any line changed, which is
-    // what the refresh damages on. Two callers: the opener's first listing and
-    // the tick's refresh.
-    bool build_stats_panel_rows();
+    // and the band's press arm). A frame in which no line changed leaves the
+    // stored strings untouched and costs one composition — it does NOT decide
+    // whether the refresh damages, which is unconditional while the panel
+    // stands (the heartbeat's record is at refresh_stats_panel_rows). Two
+    // callers: the opener's first listing and the tick's refresh.
+    void build_stats_panel_rows();
     bool route_stats_panel_key(GuiKey key, GuiInputState mods);
     // (close_stats_panel and refresh_stats_panel_rows are declared public
     // above, beside close_picker, for GuiPrompt::request_close and for the run

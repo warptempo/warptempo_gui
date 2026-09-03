@@ -2515,11 +2515,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE AV SYNC STATS PANEL'S HEARTBEAT (architect 2026-09-03), and it
         // is the whole of "a paint per refresh while the panel stands": the
         // refresh recomposes the panel's rows from the two live readings and
-        // damages the rows' extent when a line changed, so the next frame
-        // paints — and a painted frame is a COMMIT, which is what the display
-        // instrument measures. The ring fills because the panel is on screen,
-        // and it fills at the tick's cadence, which tracks the window's own
-        // output's refresh. THE ONE READER OF THE MEASUREMENTS IS THIS LINE:
+        // damages the rows' extent EVERY TICK, whether or not a digit moved,
+        // so the next frame paints — and a painted frame is a COMMIT, which is
+        // what the display instrument measures, so a heartbeat that forked on
+        // the text would stop the ring the moment the numbers settled (the
+        // reasoning is at the body). The ring fills because the panel is
+        // on screen, and it fills at the tick's cadence, which tracks the
+        // window's own output's refresh. THE ONE READER OF THE MEASUREMENTS IS THIS LINE:
         // the body returns on its first line with the mode bit down, so with
         // the panel closed no audio port latency is read and no frame is
         // driven — the waveform scanner's own model, alive only with its

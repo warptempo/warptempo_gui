@@ -159,10 +159,20 @@ std::vector<std::string> compose_av_sync_rows(const GuiAudioStats& audio,
     // period and the first fill happens at that period's end, so the sound
     // starts 0..period behind the predictor's own anchor. So the line showing
     // P lights at (paint + D) while P is heard at (paint + L + phase): THE
-    // LINE IS EARLY BY L − D, and the phase only ever makes it earlier still.
+    // LINE IS EARLY BY L − D + phase, with phase anywhere in 0..period.
     // (This is the Android backend's own arithmetic, recorded there since
     // 2026-09-02: "the painted line's error at the moment the pixel lights is
     // L_audio − L_display".)
+    //
+    // SO THE ANSWER IS AN INTERVAL AND NOT A NUMBER: the lead lies in
+    // [L − D, L − D + period], and THE SENTENCE SPELLS THAT INTERVAL. It has
+    // THREE ARMS because the interval may lie wholly on either side of zero or
+    // STRADDLE IT — L − D = −5 ms under a 20 ms period is 5 ms after through
+    // 15 ms before, and naming only the low end's sign ("5 ms after") would be
+    // the panel failing the one thing it exists to say. THE PERIOD IS THE
+    // AUDIO HALF'S OWN FIGURE, the buffer size / frames per burst printed
+    // above (GuiAudioStats::period_frames, whose declaration owns the pickup
+    // phase's derivation) — nothing new is measured for the net line.
     rows.push_back("Net");
     const bool have_audio   = audio.present && audio.latency_known &&
                               audio.output_rate > 0;
@@ -184,15 +194,28 @@ std::vector<std::string> compose_av_sync_rows(const GuiAudioStats& audio,
         const double l_ms = ms_of_frames(audio.latency_max_frames,
                                          audio.output_rate);
         const double d_ms = ms_of_ns(display.mean_ns);
-        const double net  = l_ms - d_ms;
         const double phase = ms_of_frames(audio.period_frames,
                                           audio.output_rate);
-        rows.push_back(fmt("  The line lights %.2f ms ",
-                           net >= 0.0 ? net : -net) +
-                       (net >= 0.0 ? "before the sound is heard,"
-                                   : "after the sound is heard,"));
-        rows.push_back(fmt("  plus the pickup phase 0..%.2f ms, ", phase) +
-                       "which moves the line earlier still.");
+        // THE INTERVAL, in lead: `lo` is the pickup phase at zero and `hi` is
+        // the phase at a whole period, so lo <= hi always and the sign of each
+        // end picks the arm. Positive is EARLY (the line ahead of the sound).
+        const double lo = l_ms - d_ms;
+        const double hi = lo + phase;
+        if (lo >= 0.0) {
+            rows.push_back(fmt("  The line lights between %.2f", lo) +
+                           fmt(" and %.2f ms before", hi));
+            rows.push_back("  the sound is heard.");
+        } else if (hi <= 0.0) {
+            rows.push_back(fmt("  The line lights between %.2f", -hi) +
+                           fmt(" and %.2f ms after", -lo));
+            rows.push_back("  the sound is heard.");
+        } else {
+            rows.push_back(fmt("  The line lights between %.2f ms after", -lo) +
+                           " and");
+            rows.push_back(fmt("  %.2f ms before the sound is heard.", hi));
+        }
+        rows.push_back(fmt("  The spread is the launch's pickup phase,"
+                           " 0..%.2f ms.", phase));
     }
     return rows;
 }

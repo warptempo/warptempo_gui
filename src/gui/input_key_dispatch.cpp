@@ -6316,7 +6316,7 @@ void GuiInputHandler::open_av_sync_stats() {
     // compositor answers for a commit made under the arm — a frame or two —
     // and the per-frame refresh fills it in. (The return is the refresh's own
     // damage fork and means nothing here: the open damages the whole window.)
-    (void)build_stats_panel_rows();
+    build_stats_panel_rows();
     // A modal OPEN damages the whole window (the row's rect does not exist
     // before its first paint — the settings opener carries the rule).
     viewport.invalidate_all();
@@ -6337,19 +6337,20 @@ void GuiInputHandler::close_stats_panel() {
 // types and the one composer) and seated in the overlay's table. THE TABLE IS
 // REWRITTEN, NOT THE OVERLAY: the scroll offset, the owner tag and the press
 // arm all survive a refresh, so a band the user has scrolled stays where he
-// put it while its digits move under him. Answers whether any LINE changed,
-// which is what the refresh's damage forks on. The listing's length is stable
+// put it while its digits move under him. A FRAME IN WHICH NO LINE CHANGED
+// LEAVES THE STORED STRINGS ALONE — the text compare decides the rebuild and
+// nothing else; the refresh damages either way. The listing's length is stable
 // frame to frame in practice, but the compare is over the text and not over
 // the count, so a group that gains or loses a line (the first presented frame
-// arriving, a device coming up) redraws like any other change.
-bool GuiInputHandler::build_stats_panel_rows() {
+// arriving, a device coming up) is rewritten like any other change.
+void GuiInputHandler::build_stats_panel_rows() {
     const std::vector<std::string> lines =
         compose_av_sync_rows(playback.audio_stats(), gui.display_stats());
     AppState::FolderOverlay& ov = app.folder_overlay;
     bool changed = ov.rows.size() != lines.size();
     for (size_t i = 0; !changed && i < lines.size(); ++i)
         changed = ov.rows[i].name != lines[i];
-    if (!changed) return false;
+    if (!changed) return;
     ov.rows.clear();
     ov.rows.reserve(lines.size());
     for (const std::string& line : lines) {
@@ -6359,7 +6360,6 @@ bool GuiInputHandler::build_stats_panel_rows() {
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);
-    return true;
 }
 
 // THE PER-FRAME REFRESH, called once per run-loop tick while the panel stands
@@ -6371,14 +6371,25 @@ bool GuiInputHandler::build_stats_panel_rows() {
 // a COMMIT, so the panel must keep committing to have anything to average, and
 // the tick's own cadence (the compositor's refresh, oversampled 2x) is the
 // heartbeat — the waveform scanner's model, alive only with its subject.
+// SO THE DAMAGE IS UNCONDITIONAL UNDER THE MODE BIT, AND THAT IS THE WHOLE
+// POINT: a heartbeat that stopped when the digits stopped moving would be
+// self-defeating, because the instrument only measures COMMITTED frames — once
+// the ring were full and the mean settled, no row would change, no frame would
+// be driven, no feedback would be requested, and the "last thirty presented
+// frames" would silently freeze on the numbers that happened to be in it, with
+// a real display-latency change invisible until some unrelated damage kicked
+// the loop. The text compare therefore decides only whether the stored strings
+// are REBUILT; it never decides whether the frame happens.
 // THE DAMAGE IS THE ROWS' EXTENT AND NOT THE BAND'S: a short listing leaves
-// most of the band as ground, and repainting ground sixty times a second buys
-// nothing. The rows are compared before the damage is declared, so a frame in
-// which no digit moved costs one composition and no paint at all.
+// most of the band as ground, and repainting ground at the tick's cadence buys
+// nothing — the extent is the smallest rect that covers everything the panel
+// can change, and it is bounded by the band. The tick runs about twice per
+// painted frame and damage accumulates until the frame callback paints, so a
+// per-tick invalidate yields ONE paint per refresh, which is the contract.
 void GuiInputHandler::refresh_stats_panel_rows() {
     if (!app.stats_panel.active) return;
     const size_t was = app.folder_overlay.rows.size();
-    if (!build_stats_panel_rows()) return;
+    build_stats_panel_rows();
     const GuiRect band = folder_overlay::surface_rect(app);
     const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (band.w <= 0 || band.h <= 0 || n <= 0) return;
