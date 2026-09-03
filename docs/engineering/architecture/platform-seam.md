@@ -142,10 +142,19 @@ drag coordinates floor instead of truncating.
   fence, with the callback quiesced and the counter therefore still,
   `report_xrun_count` reads `AAudioStream_getXRunCount` and prints ONE stderr
   line — a logcat line, every diagnostic riding the redirected fd the log pump
-  drains — only when the count MOVED since the last read, a clean session
-  saying nothing; `last_xrun_count` on the `Impl` is the remembered figure and
-  dies with its stream (`close_stream` zeroes it, the next stream opening at
-  zero). It is DIAGNOSTIC ALONE — no card, no state cell, no engine behaviour
+  drains — `AAudio underruns: N this session, M since the stream opened`, only
+  when the SESSION lost something, a clean session saying nothing. THE SESSION
+  RUNS FROM THE LAUNCH, not from the previous stop (codex round D on R-18(d),
+  2026-09-02): the stream stays STARTED between plays and keeps callbacking
+  silence, so a previous-stop baseline charged every idle underrun — the whole
+  interval before the first play included — to the audio just heard. So
+  `xrun_at_launch` on the `Impl` is the SESSION'S FLOOR, `-1` meaning no
+  session standing, with THREE WRITERS: `play()`'s tail stamps the count at
+  each successful launch, `report_xrun_count` says the difference and voids the
+  floor (so a second stop with no play between says nothing), and
+  `close_stream` voids it with the stream the counter belongs to, the next
+  stream opening clean. The stream-lifetime figure rides unsubtracted in the
+  same line. It is DIAGNOSTIC ALONE — no card, no state cell, no engine behaviour
   — because an underrun is already audible and the buffer cannot grow without
   giving up the LOW_LATENCY mode the car's transport wants; what was missing
   was the ability to NAME it afterwards. THE JACK HALF HAS NO TWIN — it

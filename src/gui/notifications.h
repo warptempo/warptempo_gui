@@ -320,8 +320,13 @@ inline constexpr const char* kTargetPreviewNotReadyCard =
 // the OUTCOME rather than either producer, so the one sentence covers both
 // plan_trim refusals the verdict carries (only the sub-sample span is
 // reachable from a resting store; the crossed pair is the breach mirror).
+//
+// AND IT IS PRESENT TENSE, because no producer raises it after the fact: the
+// two archival commands card AT THE PRESS and the preview at its dispatch,
+// both ahead of the synthesis, so "rendering untrimmed" is true at every raise
+// while a past tense would assert work that has not run yet.
 inline constexpr const char* kTrimFallbackCard =
-    "Trim window too small to render; rendered untrimmed";
+    "Trim window too small to render; rendering untrimmed";
 
 // AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
 // sweep; the rule is stated once in messaging.md's card section, over the one
