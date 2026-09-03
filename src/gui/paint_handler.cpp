@@ -414,6 +414,11 @@ ViewBarFace view_bar_face(GuiColor bg, bool focused, bool hovered,
     // first and the button is already focused by the time it paints. If a press
     // ever does land unfocused, this falls through to the hover/selected face
     // rather than inventing a shade the crops never showed.
+    // `focused` HAS A SECOND PRODUCER SINCE 2026-09-02 — a standing folder
+    // overlay, which puts the bar on the unfocused ground whatever the window
+    // says (the caller's `bar_focused`) — and it needs no arm of its own here:
+    // the buttons are dead under the panel and the veil consumes the press, so
+    // the same fall-through is the whole answer.
     const bool click_fill = pressed && focused;
     f.filled = click_fill || lift_fill;
     f.fill   = click_fill
@@ -1507,7 +1512,20 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (div_w <= 0 || btn_h <= 0) { cairo_restore(cr); return; }
 
         const int div_x = row.x + row.w - div_w;
-        const GuiColor bar_bg = app.window_activated
+        // THE BAR WEARS ITS UNFOCUSED FACE UNDER THE FOLDER OVERLAY (architect
+        // 2026-09-02): while the render player or the Open project picker
+        // stands, the three view buttons are DEAD (redesign_button_enabled's
+        // overlay arm greys the whole roster but the File anchor), so the bar
+        // drops its Breeze blue for the calmer grey the unfocused window
+        // already gives it — #292c30 ground, the same two lifts over it, which
+        // is exactly the trio he named. ONE verdict, read by the ground here
+        // and by view_bar_face's `focused` term below, so the pressed interior
+        // reads the same fact; a press cannot land there anyway (the veil
+        // consumes it), and the fall-through the pressed arm already documents
+        // is what it would take.
+        const bool bar_focused =
+            app.window_activated && !folder_overlay_stands(app);
+        const GuiColor bar_bg = bar_focused
                                     ? kRedesignViewBarBg
                                     : kRedesignViewBarBgUnfocused;
         cairo_set_source_rgb(cr, bar_bg.r, bar_bg.g, bar_bg.b);
@@ -1528,7 +1546,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             const bool pressed =
                 redesign_button_pressed_face(app, kViewBarButtons[i].id);
             const ViewBarFace f =
-                view_bar_face(bar_bg, app.window_activated, face.hovered,
+                view_bar_face(bar_bg, bar_focused, face.hovered,
                               face.selected, pressed);
 
             if (f.filled || f.framed) {

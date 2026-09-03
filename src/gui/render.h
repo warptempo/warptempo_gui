@@ -192,9 +192,14 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // same rule (kRedesignRowGroundUnfocused states it). A HARD SWAP, no fade,
 // like every other window_activated face.
 //
-// ITS SCOPE IS THE FOLDER OVERLAY'S PANEL AND THE MODAL ROW IT OWNS — the
-// highlighted row's band and its list-focused outline, and the modal buttons'
-// ACTIVE-FOCUS outline — and it is the FOURTH reader class of
+// ITS SCOPE IS THE FOLDER OVERLAY'S PANEL — the highlighted row's band and its
+// list-focused outline — AND THE MODAL ROW UNDER EVERY ONE OF ITS FOUR OWNERS,
+// where it is the buttons' ACTIVE-FOCUS outline: the panel is what the ruling
+// was taken on, but the row is ONE visual role and the ring is a claim about
+// the KEYBOARD, which an unfocused window does not have, so a prompt's and a
+// dialog editor's rings dim with the player's and the picker's (the fork is on
+// the flag alone at accent_for_focus, paint_handler.cpp, and the activation
+// hook damages whichever modal row stands). It is the FOURTH reader class of
 // AppState::window_activated after rows 1 and 2 (the ground) and the scrub
 // (its played groove). WHAT IT DOES NOT TOUCH: the hover faces on either
 // surface. A hover is a promise that the pointer can act, and a pointer over
@@ -289,12 +294,25 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // absolute view selectors. Sampled off the nine 82x32 row_right_*.png crops,
 // each one whole "Logging" button.
 //
-// TWO BAR BACKGROUNDS, ONE PER WINDOW-FOCUS STATE: the bar swaps on
-// app.window_activated exactly as rows 1 and 2 swap their ground, and the swap
-// is the same kind of thing — a PAINT-ONLY variant of the whole surface. The
-// crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button: these
-// three are never disabled (redesign_button_enabled returns true for them, with
-// the rest of row 1 and with row 3), so there is no dimmed face here at all.
+// TWO BAR BACKGROUNDS, AND TWO PRODUCERS OF THE SECOND: the bar swaps on
+// window focus exactly as rows 1 and 2 swap their ground, and the swap is the
+// same kind of thing — a PAINT-ONLY variant of the whole surface. SINCE
+// 2026-09-02 A STANDING FOLDER OVERLAY IS THE OTHER PRODUCER (architect: while
+// the render player or the picker stands, "the top right 1/2/3 buttons should
+// use #292c30 for unselected bg, #44464a for selected bg and #535659 for
+// selected outline") — which is this ground and the two lifts below over it,
+// so the ruling ships as the unfocused face rather than as new constants. The
+// verdict is one local at the paint site (`bar_focused` = the window activated
+// AND no overlay standing, paint_handler.cpp), read by the ground and by
+// view_bar_face's `focused` term alike.
+//
+// The crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button,
+// and there is still no DIMMED face here — but "these three are never disabled"
+// stopped being true on 2026-09-02: redesign_button_enabled's overlay arm greys
+// the whole roster but the File anchor, so under the panel the 1/2/3 are dead
+// (no hover, no press — the veil consumes it) and THE UNFOCUSED FACE IS THEIR
+// DEAD FACE, by his ruling. Outside that panel they are never disabled, with
+// the rest of row 1 and with row 3.
 // (The clause used to name ROW 4 alongside them and no longer can: the icon row
 // greys for two MODES since 2026-08-15 — the `h` view and the read-only lock.
 // The view bar is untouched by either, its 1/2/3 being navigation, which is
@@ -347,6 +365,12 @@ inline constexpr GuiColor kRedesignViewBarBgUnfocused = hex(0x292C30);
 // single LSB, so the FRACTIONS ship — one relationship over both backgrounds —
 // rather than four literals that would have to be kept in step by hand. That
 // LSB is the whole cost of the derivation and it is not visible.
+// THE SAME LSB IS THE WHOLE COST OF THE 2026-09-02 UNDER-THE-PANEL RULING:
+// the architect named #44464a and #535659 there, which are the crop's own two
+// values — the frame is exact and the fill is this one red step under. No
+// constant was added for it, deliberately: a second selected-fill literal read
+// only under the panel would be two spellings of one face kept in step by
+// hand, which is the drift these fractions exist to prevent.
 //
 // FRACTION AND BASE ARE BOTH KNOBS: the base is what the bar lifts TOWARD,
 // spelled out here rather than borrowed from kRedesignLabel because it is a

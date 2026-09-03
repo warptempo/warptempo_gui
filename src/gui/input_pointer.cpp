@@ -9187,6 +9187,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (!redesign_button_in_menu_row(id)) continue;
                 if (redesign_button_is_menu_anchor(id)) continue;
                 if (!redesign_button_hit(app, id, mouse_x, mouse_y)) continue;
+                // A DEAD BUTTON PERFORMS NO MENU ACT (2026-09-02): the hit is
+                // GEOMETRY ALONE, and since the folder overlay's arm greys the
+                // whole roster but the File anchor, sliding off the open File
+                // popup onto a view-bar button under a standing player or
+                // picker would have closed the menu and re-armed the row from a
+                // control that answers nothing. The ENABLED term is the same
+                // one the FACE reads, so what looks dead behaves dead. The
+                // anchors need no such guard — they are skipped above, and
+                // toggle_dropdown asks the mode gate for itself.
+                if (!redesign_button_enabled(app, audio, audio.total_frames(),
+                                             playback, target_render, id))
+                    continue;
                 close_dropdown();
                 // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the
                 // other half of the same behaviour): sliding onto a view-bar
