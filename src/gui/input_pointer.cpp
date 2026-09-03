@@ -1738,8 +1738,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
     // AND SO IS THE AV SYNC STATS PANEL (2026-09-03), with less to say than
-    // either: its band is inert text and its row is one Close button, so the
-    // whole surface promises nothing a cursor could name.
+    // either: its band is inert text and its row is two word buttons (Copy
+    // to clipboard, Close), so the whole surface promises nothing a cursor
+    // could name.
     if (app.stats_panel.active) return GuiCursorKind::Arrow;
     // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
     // cursor in flag editor becomes the pointer during drag-to-highlight — it
@@ -4766,9 +4767,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE AV SYNC STATS PANEL'S VEIL (2026-09-03), the picker's shape one mode
     // over and with one fewer target: the band above is inert text (claimed
-    // for its scroll and consumed there), so the only pressable thing while
-    // the panel stands is the modal row's one Close button, and EVERY OTHER
-    // PRESS IS CONSUMED. No field, no caret claim, no text drag. The whole
+    // for its scroll and consumed there), so the only pressable things while
+    // the panel stands are the modal row's two word buttons (Copy to
+    // clipboard, Close), and EVERY OTHER PRESS IS CONSUMED. No field, no caret claim, no text drag. The whole
     // rule is stated at stats_panel_active (input_handler.h).
     if (app.stats_panel.active) {
         if (button != GuiMouseButton::Left) return;

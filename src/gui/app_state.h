@@ -7821,7 +7821,7 @@ struct AppState {
     // anyway to serve the compositor's `send` event and which owns the
     // self-paste short circuit. A second copy in AppState was pure duplication
     // with drift risk — every reader it ever had was a pass-through handing it
-    // straight back to clipboard_set_text. The three copy sites compose their
+    // straight back to clipboard_set_text. The four copy sites compose their
     // string and hand it over directly. The PHASE-RESET clipboard above is a
     // different concept and stays.)
 
