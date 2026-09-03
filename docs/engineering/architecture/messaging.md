@@ -141,7 +141,7 @@ A message that carries a filesystem path names the FILE — its basename, or the
 
 ## The words on a card
 
-The product's text rules are stated ONCE, at `paint_handler.cpp`'s menu-row block (the one statement every other site points at): sentence case for labels, tooltips, menu items, cards and prompts; acronyms keep their caps; data — marker labels, titles, filenames, settings keys — is verbatim; key names are Qt's, with a bare letter uppercase and the cap for shifted punctuation (`spell_chord`'s head, `gui_input.h`, owns the spelling). What the card surface adds is the composition rules:
+The product's text rules are stated ONCE, at `paint_handler.cpp`'s menu-row block (the one statement every other site points at): sentence case for labels, tooltips, cards and prompts, with the FOUR DROPDOWN MENUS' ITEM LABELS the one declared exception at Title Case since 2026-09-03 (kdenlive's own menu spelling; a card naming the same act stays the card's sentence case); acronyms keep their caps; data — marker labels, titles, filenames, settings keys — is verbatim; key names are Qt's, with a bare letter uppercase and the cap for shifted punctuation (`spell_chord`'s head, `gui_input.h`, owns the spelling). What the card surface adds is the composition rules:
 
 - ONE CLAUSE PER CARD, and the card is a statement, not a paragraph: no sentence-final period, no second sentence, no instruction clause after the reason, and no number said twice. A prompt, by contrast, is always a QUESTION.
 - NAMES AND PATHS ARE SINGLE-QUOTED (`'…'`), never backticked — one quoting form across cards, prompts and stderr alike.

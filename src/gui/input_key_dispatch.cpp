@@ -4254,7 +4254,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // move, its other caller (the target-view entry gate) having become a
         // silent one. The sentence was unchanged by that move; the 2026-08-31
         // rebrand renamed its subject alone ("Iteration sweep" -> the menu
-        // row's "Grid iterations", kSeriesPopupItems).
+        // row's own name, kSeriesPopupItems; the row wears Title Case since
+        // 2026-09-03 and this card keeps sentence case).
         //
         // ONE CLAUSE, ONE NUMBER, NO PERIOD (architect 2026-09-01, the
         // capitalization sweep's sentence-shape rule — messaging.md's card
@@ -6685,7 +6686,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // THE SUBJECT IS THE MENU ROW'S OWN NAME (2026-08-31 rebrand,
             // kSeriesPopupItems): this card and the BPM ladder's twin below
             // say "Grid iterations" / "BPM iterations", the words the user
-            // pressed, rather than a "mode" noun that appears nowhere else.
+            // pressed, rather than a "mode" noun that appears nowhere else —
+            // the words alone, in the cards' sentence case, the rows
+            // themselves wearing Title Case since 2026-09-03.
             notifications.notify(AppState::NotificationClass::Normal,
                                  "Grid iterations work on warp markers");
         }

@@ -1912,8 +1912,8 @@ enum class RedesignButton {
     // left float — so a new menu lands between Edit and Settings without
     // re-opening that ruling.
     //
-    // IT IS A COMMAND MENU OF TWO ROWS — "BPM iterations" (bare `m`) and
-    // "Grid iterations" (bare `i`) — and the vocabulary is the architect's
+    // IT IS A COMMAND MENU OF TWO ROWS — "BPM Iterations" (bare `m`) and
+    // "Grid Iterations" (bare `i`) — and the vocabulary is the architect's
     // (the naming record, both rounds of it, is at kSeriesPopupItems).
     // LIKE EDIT'S IT IS A
     // RELOCATION rather than an addition: IconBpm and IconIter were deleted
@@ -3092,8 +3092,10 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 
 // THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
-// LABEL (the redesign's capitalization ruling; "GUI scale" and "URL" keep their
-// acronym case) with the SETTINGS KEY the click prefills into the editor, and
+// LABEL (the dropdowns' Title Case since 2026-09-03, kdenlive's own menu
+// spelling and the one exception to sentence case — the capitalization block,
+// paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
+// with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the four
 // SIDECAR keys a hand edits (the metadata), then the four DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
@@ -3114,7 +3116,7 @@ struct SettingsPopupItem {
 // height derived from it moved at that deletion — and the item itself left with
 // ITS key 2026-08-27, when playback_speed retired whole.)
 //
-// "GUI scale" IS NOT A `.settings` KEY ANY MORE and is still here (2026-08-27):
+// "GUI Scale" IS NOT A `.settings` KEY ANY MORE and is still here (2026-08-27):
 // it moved to the per-device config (device_config.h), the settings editor is
 // still its authoring surface, and the click still prefills through the
 // ordinary recall serializer — which answers for it off the live AppState
@@ -3134,25 +3136,25 @@ struct SettingsPopupItem {
 // dropdown item being the typed route's convenience and not the act's home.
 //
 // THE DEVICE HALF IS FOUR SINCE 2026-09-02 (architect, R-22): the three
-// gesture-less device keys — `Projects repository`, `Projects path`, `Sync
-// path` — joined `GUI scale` as rows, each opening the settings editor
+// gesture-less device keys — `Projects Repository`, `Projects Path`, `Sync
+// Path` — joined `GUI Scale` as rows, each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
 // answers all four off the live struct) and committing through the device
 // config's writer under the key's own grammar (commit_device_setting,
 // settings_editor.cpp). The two path rows are the first whose Tab completion
 // is the FILESYSTEM's rather than a recall (complete_path_value). The two
 // halves are ordered SIDECAR THEN DEVICE, the one separator between them —
-// which moved `GUI scale` from the first row to the device group's head, the
+// which moved `GUI Scale` from the first row to the device group's head, the
 // group keeping kDeviceConfigKeys' own order.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},
     {"URL",                 "url",           false},
     {"Cover",               "cover",         false},
-    {"GUI scale",           "gui_scale",     true},
-    {"Projects repository", "projects_repo", false},
-    {"Projects path",       "projects_path", false},
-    {"Sync path",           "sync_path",     false},
+    {"GUI Scale",           "gui_scale",     true},
+    {"Projects Repository", "projects_repo", false},
+    {"Projects Path",       "projects_path", false},
+    {"Sync Path",           "sync_path",     false},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -3201,7 +3203,7 @@ inline constexpr int kSettingsPopupItemCount =
 // enumerator keeps its producer. A future act that genuinely cannot have a
 // chord takes this same shape.
 //
-// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open project) sat beside it while
+// IT WAS TWO UNTIL 2026-08-28: `OpenProject` (File → Open Project) sat beside it while
 // Open's chord was merely DEFERRED rather than refused, and the architect then
 // bound it to Ctrl+O — the one spelling the convention allows, bare `o` being
 // the read-only toggle and the two neighbours rather than partners. So Open is
@@ -3222,11 +3224,11 @@ struct CommandPopupItem {
 };
 
 // THE FILE DROPDOWN'S ITEMS — THREE ROWS since 2026-08-27, in two categories
-// over one separator: **Open project** first (architect 2026-08-27, the
+// over one separator: **Open Project** first (architect 2026-08-27, the
 // project model's one pointer home on both platforms; the label is the
 // architect's own, R8: "we would call it open project instead of open file",
 // and the row raises the Open project picker — the folder overlay's list of
-// projects in the keyboard's band over a Cancel-alone row) and **Synchronize to external storage** under
+// projects in the keyboard's band over a Cancel-alone row) and **Synchronize to External Storage** under
 // it (architect
 // 2026-08-27, `render/`'s contents and the batch cells mirrored onto the
 // device config's `sync_path` — the act is external_sync.h's, and this row is one of
@@ -3300,12 +3302,12 @@ struct CommandPopupItem {
 // clause, and a future item whose LABEL would lie in some mode needs the
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Open project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
+    {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     // The `key` field stays 0 on this row and is never read: the release
     // forks on `act` above the chord composition and calls the act itself
     // (the record is at GuiPopupAct). Its chord, bare `\`, lives on the
     // keyboard's own road and is advertised here by the accelerator alone.
-    {"Synchronize to external storage", "\\", 0, false, false, false, false,
+    {"Synchronize to External Storage", "\\", 0, false, false, false, false,
      GuiPopupAct::SyncExternal},
     {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
@@ -3353,29 +3355,29 @@ inline constexpr int kFilePopupItemCount =
 // deleted Navigation menu's one ruled exception could — the row acts, and the
 // act says what it found.
 inline constexpr CommandPopupItem kEditPopupItems[] = {
-    {"Copy phase resets",      "Ctrl+P",           GuiKeys::P,
+    {"Copy Phase Resets",      "Ctrl+P",           GuiKeys::P,
      true,  false, false, false},
-    {"Paste phase resets",     "Ctrl+Alt+P",       GuiKeys::P,
+    {"Paste Phase Resets",     "Ctrl+Alt+P",       GuiKeys::P,
      true,  false, true,  false},
-    {"Paste phase reset state", "Ctrl+Alt+Shift+P", GuiKeys::P,
+    {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
      true,  true,  true,  false},
-    {"Copy measures",          "Ctrl+/",           GuiKeys::Slash,
+    {"Copy Measures",          "Ctrl+/",           GuiKeys::Slash,
      true,  false, false, true},
-    {"Paste measures",         "Ctrl+Alt+/",       GuiKeys::Slash,
+    {"Paste Measures",         "Ctrl+Alt+/",       GuiKeys::Slash,
      true,  false, true,  false},
 };
 inline constexpr int kEditPopupItemCount =
     static_cast<int>(std::size(kEditPopupItems));
 
 // THE ITERATIONS DROPDOWN'S ITEMS (architect 2026-08-27) — THE TWO SWEEP
-// MODES, one category and no separator: "BPM iterations" (bare `m`, the BPM
-// sweep's editor) and "Grid iterations" (bare `i`, the iteration-mode toggle).
+// MODES, one category and no separator: "BPM Iterations" (bare `m`, the BPM
+// sweep's editor) and "Grid Iterations" (bare `i`, the iteration-mode toggle).
 //
 // THE VOCABULARY IS THE ARCHITECT'S SECOND ONE (2026-08-31, rebranding his own
 // 2026-08-27 naming): the anchor was "Series" over rows "BPM" and
 // "Iterations" — one word for what the two rows had in common, a BPM SERIES
 // and a SERIES OF ITERATIONS, chosen over "Sweep" and "Group". It is
-// "Iterations" over "BPM iterations" and "Grid iterations" now, so the anchor
+// "Iterations" over "BPM Iterations" and "Grid Iterations" now, so the anchor
 // and both rows say the SAME NOUN and the row word says only which axis is
 // swept: BPM values, or the Cartesian GRID of the markers' inline brackets
 // ("grid is the catchiest; matrix is a bit pretentious"; "brackets", "value"
@@ -3431,8 +3433,8 @@ inline constexpr int kEditPopupItemCount =
 // refusal-predicting greys off this roster: a badge would restate what the
 // picture already says.
 inline constexpr CommandPopupItem kSeriesPopupItems[] = {
-    {"BPM iterations",  "M", GuiKeys::M, false, false, false, false},
-    {"Grid iterations", "I", GuiKeys::I, false, false, false, false},
+    {"BPM Iterations",  "M", GuiKeys::M, false, false, false, false},
+    {"Grid Iterations", "I", GuiKeys::I, false, false, false, false},
 };
 inline constexpr int kSeriesPopupItemCount =
     static_cast<int>(std::size(kSeriesPopupItems));
@@ -12818,7 +12820,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
 // "Render grid iterations" now, because the mode's own name is the menu row
-// "Grid iterations" and a name used mid-sentence is sentence case (the
+// "Grid Iterations" and a name used mid-sentence is sentence case, the row's
+// own Title Case being the dropdowns' alone (the
 // vocabulary's owner is kSeriesPopupItems). Each is a chord
 // whose MEANING is selected by a mode bit, and the button's hint says
 // whichever command it currently is:

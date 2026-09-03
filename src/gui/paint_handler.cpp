@@ -259,15 +259,36 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // THE PRODUCT'S TEXT RULES, STATED ONCE AND HERE (architect 2026-08-01,
 // generalizing the row-by-row carve-out that started at this row; completed
 // 2026-09-01 by the capitalization sweep, which retired every declared
-// exception the domain had left — universal rules, no exceptions, an exception
-// in user-facing text being the sign that the thing carrying it is poorly
-// designed). Every other site states its own class and points here.
+// exception the domain had left — universal rules, an exception in user-facing
+// text being the sign that the thing carrying it is poorly designed — and
+// joined 2026-09-03 by the ONE exception the product does declare, the
+// dropdown items' Title Case, which is not a carve-out for a surface that
+// wanted one but FIDELITY: this product's text convention IS kdenlive's, and
+// kdenlive's menu items are Title Case ("Open Recent", "Save As…"). Every
+// other site states its own class and points here.
 //
-//   * LABELS, TOOLTIPS, MENU ITEMS, CARDS AND PROMPTS ARE SENTENCE CASE —
-//     "Save and commit", "Center on focus", "Add to selection". The one
-//     title-case exception ("Save and Commit", 2026-08-04) is retired.
-//   * ACRONYMS KEEP THEIR CAPS wherever they fall ("BPM iterations", "GUI
-//     scale", "URL").
+//   * LABELS, TOOLTIPS, CARDS AND PROMPTS ARE SENTENCE CASE — "Save and
+//     commit", "Center on focus", "Add to selection". The one title-case
+//     exception this rule ever had ("Save and Commit", 2026-08-04) is retired,
+//     and the dropdown items' below is a different thing: a whole surface
+//     named by its source, not one label that read better shouted.
+//   * THE DROPDOWN MENUS' ITEMS ARE TITLE CASE (architect 2026-09-03,
+//     "dropdown entries should use title case, since kdenlive does") —
+//     principal words capitalized, articles, prepositions and conjunctions
+//     lowercase unless they lead: "Open Project", "Synchronize to External
+//     Storage", "Paste Phase Reset State", "Grid Iterations", "Projects
+//     Repository". IT IS THE ITEM LABELS AND NOTHING ELSE: the four menu
+//     ANCHORS are single words either way ("File", "Edit", "Iterations",
+//     "Settings"), and the same act NAMED anywhere else — a card, a tooltip,
+//     the render button's hint, a modal row's word — is that surface's own
+//     sentence case ("BPM iterations work in source view" is a card; the
+//     dropdown row above it says "BPM Iterations"). The four tables are the
+//     whole membership (kFilePopupItems, kEditPopupItems, kSeriesPopupItems,
+//     kSettingsPopupItems, app_state.h), and no reader compares an item's
+//     label as a string — the tables are read by index — so the spelling is
+//     free to be the menu's own.
+//   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
+//     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
 //     literal settings and config KEY names shown as keys ("sync_path is not
 //     set"), and the routing/category tokens that are data rather than prose.
@@ -323,7 +344,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // (architect 2026-08-03): File and Edit lead as the standard pair, the
     // application's own menus follow, and Settings paints last in the left
     // float — so this landed in front of it without re-opening that ruling.
-    // A COMMAND MENU of TWO rows, "BPM iterations" and "Grid iterations", and
+    // A COMMAND MENU of TWO rows, "BPM Iterations" and "Grid Iterations", and
     // a RELOCATION:
     // IconBpm and IconIter were deleted from the icon row in the same ruling,
     // so this menu is those two commands' one pointer home rather than a
@@ -1106,10 +1127,19 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // (content = 57 indent + widest label + [13 gap + widest accelerator] + 30
 // right margin − 8 chrome, at 100%):
 //
-//   File       "Synchronize to external storage" | "Ctrl+Q"   -> content
-//   Iterations "BPM iterations" | "M"                         -> 209   FLOOR
-//   Settings   "Projects repository" (no column)              -> estimate FLOOR
-//   Edit       "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
+//   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
+//   Iterations "BPM Iterations" | "M"                         -> 209   FLOOR
+//   Settings   "Projects Repository" (no column)              -> estimate FLOOR
+//   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P" -> 374   content
+//
+// EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels
+// carried until 2026-09-03, when the dropdown items took Title Case (the one
+// declared exception, stated at this file's capitalization block). A capital
+// for a lowercase letter is a few px per word, so each row's ink moved by
+// single digits and NO VERDICT MOVED: the painter takes the larger of floor
+// and content at every paint, so the columns above say which TERM wins, and
+// re-measuring an ink width that was never the deciding quantity would buy
+// nothing.
 //
 // THE SETTINGS MENU LEFT THE FLOOR ON 2026-08-26, when "Waveform magnification
 // level" joined its roster and took the widest-label slot at 209px (the item's
@@ -1117,7 +1147,7 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // and this is what it grew into): its content asked 288 at 100%, past the
 // 242, so that popup DERIVED at every scale — 296px wide with its chrome —
 // and the +42 did not land on it. THAT ROW LEFT 2026-09-02 (R-23) and three
-// device-key rows joined (R-22), the widest label now "Projects repository"
+// device-key rows joined (R-22), the widest label now "Projects Repository"
 // — some 19 characters against the 28 that asked 209, so by the same
 // advance-width method the content sits under the 242 and the FLOOR is the
 // width again; unmeasured, and it does not have to be: the painter takes the
@@ -1125,9 +1155,9 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // only which term it is.
 //
 // WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: ITERATIONS, two rows of
-// "BPM iterations"/"Grid iterations" beside single letters. THE 2026-08-31
+// "BPM Iterations"/"Grid Iterations" beside single letters. THE 2026-08-31
 // REBRAND WIDENED BOTH ROWS AND THE FLOOR STILL WINS: the widest label is
-// "BPM iterations" at 104px (the advance-width method this file's collision
+// "BPM Iterations" at 104px (the advance-width method this file's collision
 // note uses), for a content ask of 209 — the pre-rebrand pair, "BPM" and
 // "Iterations", asked 171. It is still under 242, so the
 // floor IS its width — which is what gives a two-row menu a box that reads as a
@@ -1138,7 +1168,7 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //
 // FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
 // when the table above was written and asked 168; it carries THREE rows now —
-// "Open project" | "Ctrl+O", "Synchronize to external storage" | "\\" (its
+// "Open Project" | "Ctrl+O", "Synchronize to External Storage" | "\\" (its
 // accelerator since 2026-08-31; the row was chord-less before it) and
 // "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
 // run puts its content past the 242, so that popup is DERIVED at every scale
@@ -3718,7 +3748,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // and the accelerator's right margin.
     //
     // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD: the
-    // ITERATIONS menu's "Grid iterations" row toggles a MODE, which is the
+    // ITERATIONS menu's "Grid Iterations" row toggles a MODE, which is the
     // first item
     // in this product that could have worn one, and it does not — the label is
     // the constant act's name and the mode says what it is doing on the screen
@@ -3806,7 +3836,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // The authored minimum applies to both — it is the item box's floor and the
     // reason a menu of short labels still reads as a menu. It gave the FILE
     // menu its whole width while its rows were short, and stopped doing so on
-    // 2026-08-27, when "Synchronize to external storage" joined its rows and
+    // 2026-08-27, when "Synchronize to External Storage" joined its rows and
     // its own content won; the expression is unchanged either way, the floor
     // and the shaped run simply trading which one wins. (The deleted NAVIGATION
     // menu's long labels never reached the floor either, which is how the two

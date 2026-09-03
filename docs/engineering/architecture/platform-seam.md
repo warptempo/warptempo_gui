@@ -433,12 +433,12 @@ below owns the ruling). **Backspace** is on both layers (each layer's own row 2
 ends with one), and **Space**, **Esc** and **Return** are on both by
 construction — row 3 is one array shared by the two. **Shift** is the LETTER
 layer's alone: the symbol layer's row 2 opens with **Tab** in its place
-(2026-08-27, with File → Open project — the one key the letter layer has no
+(2026-08-27, with File → Open Project — the one key the letter layer has no
 room for, and what the product's prompts COMPLETE on; a bare `GuiKeys::Tab`
 through the same `synthesize_key` road; the blank role is deleted with its last
 slot). IT IS NO LONGER THE OPEN PROMPT'S GLASS ROAD: that prompt's PICKER
 landed 2026-08-28 and takes this keyboard's own band, so the glass gesture is
-File → Open project, tap the row — the tap's lift both highlights and opens
+File → Open Project, tap the row — the tap's lift both highlights and opens
 it, the row's Cancel button its only other reach — and typing a name is the
 laptop's.
 The key stays for every OTHER prompt's completion and ring walk.
