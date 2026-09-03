@@ -172,6 +172,13 @@ void GuiTargetRender::trigger() {
     // nothing but a parallel classification surface. (A fingerprint-gated
     // design existed briefly and was removed by this ruling.)
     is_dirty_ = true;
+    // THE ONE WRITER OF THE DIRTY GENERATION (the contract at the two counters,
+    // target_render.h): this mutation is a new generation, whatever the view
+    // and whatever the dispatch below turns out to do — a source-view trigger
+    // bumps it WITHOUT stamping a dispatch, which is exactly how a later S→T
+    // ensure_ready tells a render still in flight for the pre-edit recipe
+    // from one that will land this state.
+    ++dirty_generation_;
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
     if (app.active_audio_view != 'T') {
@@ -257,6 +264,12 @@ void GuiTargetRender::trigger() {
     // label is now stamped only where the update really becomes a wait: the
     // busy branch just below, and dispatch_render_now's synthesis miss.
     pending_ = true;
+    // THE ONE STAMP OF THE DISPATCHED GENERATION: from this line a dispatch
+    // stands for the generation the mutation above made — parked in pending_
+    // on the busy branch, handed to the worker (or resolved on a reuse rung)
+    // by dispatch_render_now on the idle one — and ensure_ready honours it
+    // instead of redispatching (the contract at the counters, target_render.h).
+    dispatched_generation_ = dirty_generation_;
     if (async_renderer.is_busy()) {
         // Worker is mid-render on some other output. Cancel; the existing
         // on_done path will call maybe_dispatch_pending() once the worker
@@ -644,6 +657,44 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // gating checks this to refuse Space.
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
+        // THE RE-PUMP BELOW IS WHAT MAKES ensure_ready'S GENERATION GUARD SAFE
+        // (architect 2026-09-02, R-8): a cancelled render whose successor is
+        // parked in pending_ for the current generation dispatches from
+        // maybe_dispatch_pending at the tail of this callback, so an
+        // ensure_ready that honoured that pending_ instead of redispatching
+        // still gets its render. Every state the guard can meet, with
+        // in_flight_ just fallen here or standing elsewhere (D = is_dirty_,
+        // F = in_flight_, P = pending_, G = dispatched_generation_ equals
+        // dirty_generation_), and what lands the buffer:
+        //
+        //   D=0                  clean rebind in ensure_ready; no dispatch.
+        //   D=1 F=0 P=0 (any G)  nothing stands: ensure_ready -> trigger()
+        //                        -> a fresh dispatch (the archival-kill road
+        //                        ends here too: the killed preview's
+        //                        completion pumps the parked command, whose
+        //                        own completion re-runs
+        //                        maybe_reestablish_target_buffer).
+        //   D=1 F=0 P=1 G=1      honoured; this re-pump (or the archival
+        //                        session's finalize pump) dispatches it.
+        //   D=1 F=0 P=1 G=0      impossible: pending_ is only ever raised
+        //                        with the stamp, and every later generation
+        //                        re-stamps on its way to raising it again;
+        //                        the T->S void drops pending_ in the same
+        //                        body.
+        //   D=1 F=1 P=0 G=1      honoured; that render's Success rebinds
+        //                        (or, killed by an archival dispatch, lands
+        //                        by the F=0 P=0 row after the command).
+        //   D=1 F=1 P=1 G=1      honoured; the busy-branch cancel is under
+        //                        way and this re-pump dispatches pending_.
+        //   D=1 F=1 P=* G=0      an older recipe in flight (a source-view
+        //                        edit bumped the generation, or the T->S leg
+        //                        voided the stamp): ensure_ready -> trigger()
+        //                        -> busy -> cancel + a re-stamped pending_,
+        //                        and this re-pump dispatches it.
+        //
+        // A Failed completion is the F=0 P=* rows: the bit falls, the
+        // buffer is empty, and the next ensure_ready dispatches or honours
+        // pending_ exactly as above.
     } else {
         // The one preview outcome the user was not watching for: a card
         // beside the stderr line (2026-08-29). Cancelled says nothing — it is
@@ -879,10 +930,44 @@ void GuiTargetRender::ensure_ready() {
         return;
     }
 
-    // Dirty or empty buffer: dispatch fresh. trigger() re-sets the bit
-    // (already true here by construction) and runs the
-    // cancel-clear-dispatch sequence. Identical body to the original S→T
-    // eager-dispatch path that this method replaces.
+    // A DISPATCH ALREADY STANDS FOR THIS GENERATION (architect 2026-09-02,
+    // R-8): the render that will make the buffer current is in flight or
+    // parked in pending_, stamped with the very generation the last mutation
+    // made, so this entry has nothing to add. Its completion lands the buffer
+    // and rebinds through complete_successful_buffer — which binds whenever
+    // the view is target and the player is down, and every caller reaching
+    // this arm has the player down or never up. Calling trigger() here would
+    // find the worker busy, cancel that render, park pending_ again and
+    // redispatch the SAME recipe after the cancelled completion: the load-in-
+    // place-then-close double dispatch, the S→T tail's and
+    // maybe_reestablish_target_buffer's alike. WHAT STILL HAPPENS ON THIS ROAD:
+    // the "Updating..." label is already up (the standing dispatch stamped it
+    // where it went asynchronous), queue_cancel_requested was set by the
+    // trigger that raised the dispatch, and the audition clear trigger() would
+    // run is owed by nothing here — the S→T flip and the player's close both
+    // took the one stop body ahead of this call, and the reestablish caller
+    // never reaches here with a dispatch standing (it gates on
+    // !is_updating()). THE PLAYER'S CLOSE IS MEMORY-SAFE WHILE WAITING
+    // (re-verified 2026-09-02 at GuiRenderPlayer::close): it binds the SOURCE
+    // directly, ahead of this fork and behind its stop, precisely because
+    // this arm may leave the engine without a target bind until the
+    // completion, and only after the fork returns does it free the item's
+    // buffer — so the engine never points at freed memory whether this arm
+    // waits, dispatches or rebinds.
+    //
+    // AN OLDER GENERATION IN FLIGHT IS NOT HONOURED: its recipe predates the
+    // mutation (a source-view edit bumped the generation without a stamp, or
+    // the T→S leg voided the stamp of the render it cancelled), so the fall-
+    // through below replaces it. The state table for every combination this
+    // guard can meet is at on_render_done's Cancelled branch, the road that
+    // re-pumps pending_.
+    if (dispatch_stands_for_current_generation()) {
+        return;
+    }
+
+    // Dirty or empty buffer with nothing standing for it: dispatch fresh.
+    // trigger() re-sets the bit (already true here by construction), makes a
+    // new generation, stamps it and runs the cancel-clear-dispatch sequence.
     trigger();
 }
 
@@ -897,6 +982,15 @@ void GuiTargetRender::cancel_in_flight_update() {
         async_renderer.request_cancel();
     }
     pending_ = false;
+    // THE STAMP IS VOIDED WITH THE DISPATCH: pending_ falls here, but in_flight_
+    // falls only when the cancelled render's completion arrives, and until then
+    // a generation-equal stamp would let ensure_ready's guard see that
+    // navigated-away-from render as standing — and honour it, when its
+    // Cancelled completion re-pumps a pending_ this line just dropped and so
+    // lands nothing. Zero equals no generation (construction is 1), so the
+    // next target-view entry dispatches again through trigger() whatever the
+    // in-flight bit still says (the contract at the counters, target_render.h).
+    dispatched_generation_ = 0;
     // A CONTEXT-ENDING clear (the T→S exit): the target view the label belongs
     // to is going away, so any run goes with it and this clear is unheld.
     run_active_ = false;

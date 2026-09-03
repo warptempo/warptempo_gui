@@ -207,15 +207,24 @@ struct GuiTargetRender {
     // leaving target view. No-op when nothing is updating.
     void cancel_in_flight_update();
 
-    // Target-view entry hook. Called from sites that *enter* target view
-    // (the S→T toggle). If the target buffer is current (is_dirty_ == false
-    // and frames > 0),
-    // rebinds playback to the existing buffer with no dispatch. Otherwise
-    // falls through to trigger() to cancel-clear-dispatch a fresh render.
-    // No-op in source view. Distinct from trigger() in semantics:
+    // Target-view entry hook. Called from every site that RE-ENTERS or
+    // RE-EXPRESSES target view — the S→T toggle's tail, the render player's
+    // close (the same fork verbatim), maybe_reestablish_target_buffer after an
+    // archival completion, and the end of the file load. If the target buffer
+    // is current (is_dirty_ == false and frames > 0), rebinds playback to the
+    // existing buffer with no dispatch. If it is dirty but A DISPATCH ALREADY
+    // STANDS FOR THE CURRENT DIRTY GENERATION (dispatch_stands_for_current_generation
+    // below — in flight or pending, stamped with the generation the last
+    // mutation made), does nothing: that dispatch's completion lands this very
+    // generation and rebinds, and a second trigger() here would only cancel it
+    // and redispatch an identical render one worker round trip later (the
+    // load-then-close double dispatch, architect 2026-09-02). Otherwise —
+    // dirty with nothing standing, or with only an OLDER generation's render
+    // in flight — falls through to trigger() to cancel-clear-dispatch a fresh
+    // render. No-op in source view. Distinct from trigger() in semantics:
     // trigger() is "an edit happened, the buffer is now stale";
     // ensure_ready() is "we just entered target view, is the buffer
-    // current?".
+    // current, or on its way?".
     void ensure_ready();
 
     // Per-iteration hook for the "Updating..." label's RUN HOLD: the end that
@@ -427,4 +436,46 @@ private:
     // construction the buffer is empty and no render has run, so the
     // first ensure_ready() must dispatch.
     bool is_dirty_  = true;
+
+    // THE DIRTY GENERATION AND THE DISPATCHED GENERATION (architect 2026-09-02,
+    // the four-tier review's R-8). is_dirty_ alone cannot tell "stale, and
+    // nothing is doing anything about it" from "stale, and the render that
+    // will make it current is already on its way", so ensure_ready used to
+    // call trigger() in both cases — and on every mutate-then-re-enter road
+    // (a load in place followed by the player's close, the S→T tail behind a
+    // trigger, maybe_reestablish_target_buffer) the second trigger() found the
+    // worker busy with the FIRST dispatch, cancelled it, parked pending_, and
+    // the cancelled completion redispatched an identical render. The buffer
+    // was never wrong; the preview landed one worker round trip late.
+    //
+    // dirty_generation_ COUNTS THE MUTATIONS: it is incremented at the ONE
+    // writer that sets is_dirty_ true (trigger()'s top — every
+    // output-affecting mutation site calls it, the 2026-07-17 unconditional-
+    // trigger ruling; re-grepped 2026-09-02: no other site writes the bit
+    // true). Construction is generation 1, the buffer's own initial dirtiness.
+    //
+    // dispatched_generation_ IS THE GENERATION THE STANDING DISPATCH IS FOR:
+    // stamped with dirty_generation_ at trigger()'s pending_ = true, the one
+    // line every dispatch passes — the idle path dispatches from it at once
+    // and the busy path parks it there for maybe_dispatch_pending, so the
+    // synthesis hand-off in dispatch_render_now and the pending_ arm both
+    // inherit this stamp (dispatch_render_now's two callers are that idle path
+    // and the pump, and no trigger() can intervene between the stamp and
+    // either without re-stamping). Zero means no dispatch was ever stamped.
+    // VOIDED at cancel_in_flight_update (the T→S leg): the cancelled render's
+    // in_flight_ bit only falls at its completion, so the stamp is what keeps
+    // the guard from seeing that navigated-away-from render as standing.
+    //
+    // "A DISPATCH STANDS FOR THE CURRENT GENERATION" means exactly:
+    //     (in_flight_ || pending_) && dispatched_generation_ == dirty_generation_
+    // — the one predicate below, ensure_ready's one reader. A render of an
+    // OLDER generation in flight is NOT honoured: its completion would bind
+    // the pre-mutation recipe, so ensure_ready still replaces it through
+    // trigger() exactly as before.
+    uint64_t dirty_generation_      = 1;
+    uint64_t dispatched_generation_ = 0;
+    bool dispatch_stands_for_current_generation() const {
+        return (in_flight_ || pending_) &&
+               dispatched_generation_ == dirty_generation_;
+    }
 };

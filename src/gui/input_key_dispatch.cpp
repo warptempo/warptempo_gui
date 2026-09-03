@@ -7247,9 +7247,15 @@ void GuiInputHandler::confirm_load_in_place() {
         const AppState::RenderEntry entry = *app.render_player.pending_load;
         app.render_player.pending_load.reset();
         if (load_render_entry_in_place(entry)) {
-            // SUCCESS CLOSES THE PLAYER: the close's re-express rebinds the
-            // view's buffer (the load's own trigger() already dispatched the
-            // target preview where the view is target), then frees the item.
+            // SUCCESS CLOSES THE PLAYER: the close binds the source, then its
+            // re-express fork hands the engine the VIEW's buffer, then frees
+            // the item. In SOURCE view that fork rebinds source.wav; in TARGET
+            // view the load's own trigger() has already dispatched (or
+            // parked) the preview for the generation this load made, so the
+            // fork's ensure_ready HONOURS that standing dispatch and its
+            // completion rebinds — it no longer cancels and redispatches the
+            // identical render (architect 2026-09-02, R-8; the guard and its
+            // state table at GuiTargetRender).
             render_player.close();
             return;
         }

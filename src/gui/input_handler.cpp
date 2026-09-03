@@ -3569,9 +3569,11 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
         // S → T: ensure playback is bound to a current target buffer.
         // ensure_ready short-circuits to a clean rebind if no edits
         // have invalidated the cached buffer since the last successful
-        // render; otherwise it falls through to trigger()'s cancel-
-        // clear-dispatch sequence so a fresh render runs against the
-        // current engine input.
+        // render; waits when a dispatch already stands for the current
+        // dirty generation (its completion rebinds — the generation guard
+        // at GuiTargetRender, 2026-09-02); otherwise it falls through to
+        // trigger()'s cancel-clear-dispatch sequence so a fresh render
+        // runs against the current engine input.
         target_render.ensure_ready();
     } else {
         // T → S: cancel any in-flight target render and rebind
