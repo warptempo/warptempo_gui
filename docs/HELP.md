@@ -247,7 +247,7 @@ The menu row sits at the very top and the bottom toolbar along the very bottom e
 - `Tab` moves the keyboard around the ring of field and buttons, `Shift+Tab` the other way; in a field with something to complete, `Tab` completes first and walks the ring only when there was nothing to complete. `Return` or `Space` presses the focused button. A prompt opens with its *last* button focused — the one `Esc` would pick, so `Return` takes the safe answer — with one exception: the load-in-place confirmation opens on `OK`, because a load is one `Ctrl+Z` away.
 - The two chords that reach through any of them are `Ctrl+S` (saves; the surface stays) and `Ctrl+Q` (abandons it, then the usual close routing).
 
-`Ctrl+S` saves all sidecar files. `Ctrl+Q` closes the window, routing through the unsaved-changes prompt when the session is dirty. On the tablet the system's own Back — gesture or button — is that same command; being killed from the task switcher is not, and asks nothing, so answer the question rather than swiping the app away.
+`Ctrl+S` saves all sidecar files; if one of them cannot be written — a full disk, a permission the folder no longer gives — a notification names the file it could not write, the work stays unsaved, and the asterisk stays in the title, so `Ctrl+Q` still offers to retry. `Ctrl+Q` closes the window, routing through the unsaved-changes prompt when the session is dirty. On the tablet the system's own Back — gesture or button — is that same command; being killed from the task switcher is not, and asks nothing, so answer the question rather than swiping the app away.
 
 ### Menus
 

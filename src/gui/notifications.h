@@ -58,7 +58,12 @@
 // propagate walk that pasted what it had, and THE SAVE — an act that did what
 // was asked says nothing, its result being on screen, the save's being the
 // dirty mark leaving the window title (architect 2026-08-30: "the disc
-// writes — there is something that paints, the dirty dot goes away").
+// writes — there is something that paints, the dirty dot goes away"). THE
+// SAVE'S FAILURE IS A CARD, that ruling having been about the SUCCESS
+// (architect 2026-09-02): a write that did not happen leaves the dirty mark
+// exactly where the press found it, so the three write arms and the
+// numeric-locale refusal say so themselves at the one save owner
+// (save_ops.cpp), every caller inheriting the sentence.
 // THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
 // invariant that an accepted press shows something): NOTHING PAINTS A
 // CLIPBOARD, and since the resolved readout retired nothing paints a resolved

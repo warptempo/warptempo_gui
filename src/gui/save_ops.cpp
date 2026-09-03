@@ -5,6 +5,30 @@
 #include <clocale>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <string>
+
+namespace {
+
+// THE SAVE'S OWN FAILURE SENTENCE, one composer for the three write arms
+// (architect 2026-09-02): a deliberate Ctrl+S that could not write is answered
+// with words rather than with a dirty dot that simply stays lit, which is what
+// the strictness ruling asks of every refusal that has a reason
+// (messaging.md). ONE CLAUSE, and the file is named THE BASENAME RULE'S WAY —
+// the bare filename, not the folder-and-file form the loaders' composer
+// produces (shown_project_path, device_config.h), because these three paths
+// are the OPEN project's own sidecars: the folder is the one the window title
+// already names, so the file alone identifies which of the three writes fell
+// over. The stderr line each arm prints keeps the FULL path for the terminal.
+void card_write_failure(GuiNotifications& notifications,
+                        const std::string& path) {
+    notifications.notify(
+        AppState::NotificationClass::Normal,
+        "Save failed: could not write '" +
+            std::filesystem::path(path).filename().string() + "'");
+}
+
+}  // namespace
 
 bool GuiSaveOps::save() {
     // NO SAVE WHILE A CHECKPOINT IS PUBLISHING (architect 2026-08-08). The
@@ -42,9 +66,14 @@ bool GuiSaveOps::save() {
     // cpp — save, capture, close, dispatch, in that order), so the save that is
     // part of the act runs while nothing is in flight.
     //
-    // SILENT, and the face is the message: the Save button reads "Committing..."
-    // and is disabled off this same bit (redesign_button_enabled, app_state.h),
-    // so a refusal here is a consumed nothing the user was already told about.
+    // SILENT, and the face is the message — THIS ARM ALONE (architect
+    // 2026-09-02, ruling the write arms and the locale arm below onto cards):
+    // the Save button reads "Committing..." and is disabled off this same bit
+    // (redesign_button_enabled, app_state.h), so a refusal here is a consumed
+    // nothing the user was already told about. The one state that reads the
+    // roster as unreadable says it itself: the picker's Ctrl+S arm asks this
+    // bit ahead of the call and raises the picker's own sentence
+    // (route_picker_key, input_key_dispatch.cpp).
     if (app.history_checkpoint_in_flight) return false;
 
     // Startup's locale_check.h tripwire covers launch; this catches a
@@ -56,9 +85,17 @@ bool GuiSaveOps::save() {
             "warptempo_gui: Numeric locale is '%s', not 'C'; refusing to save "
             "(sidecar numbers would be written corrupted)\n",
             lc ? lc : "(null)");
+        // A CARD TOO (architect 2026-09-02): the press is deliberate and
+        // nothing else on screen would answer it — the dirty mark simply
+        // stays. The stderr line keeps the offending locale; the card is the
+        // one clause, the locale itself being no help to the user reading it.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Save refused: the numeric locale is not C");
         return false;
     }
 
+    // THE BELT WITH NO PRODUCER stays silent (validation_topology.md): a loaded
+    // project always has this path, and a save is unreachable before the load.
     if (app.warpmarkers_path.empty()) return false;
     // Capture the active tab's current values before any writes — both
     // the .warpmarkers and .settings paths see a consistent snapshot.
@@ -70,14 +107,15 @@ bool GuiSaveOps::save() {
     // earlier one has renamed, disk holds a mixed-generation set until the
     // next save. Accepted — the non-adversarial single user reaches this only
     // on a real disk/IO fault, which is non-silent (the failing write prints
-    // its path and `dirty` survives below, so the unsaved-work prompt offers
-    // retry). A true fix would need one combined project file, a frozen-parser
-    // change out of scope for this tool.
+    // its path on stderr AND cards its basename, and `dirty` survives below,
+    // so the unsaved-work prompt offers retry). A true fix would need one
+    // combined project file, a frozen-parser change out of scope for this tool.
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         std::fprintf(stderr,
             "warptempo_gui: Save failed: %s\n",
             app.warpmarkers_path.c_str());
+        card_write_failure(notifications, app.warpmarkers_path);
         return false;
     }
 
@@ -90,6 +128,7 @@ bool GuiSaveOps::save() {
             std::fprintf(stderr,
                 "warptempo_gui: phase_reset save failed: %s\n",
                 app.phaseresetmarkers_path.c_str());
+            card_write_failure(notifications, app.phaseresetmarkers_path);
             return false;
         }
     }
@@ -111,6 +150,7 @@ bool GuiSaveOps::save() {
             std::fprintf(stderr,
                 "warptempo_gui: Settings save failed: %s\n",
                 app.settings_path.c_str());
+            card_write_failure(notifications, app.settings_path);
             return false;
         }
     }

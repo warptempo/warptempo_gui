@@ -10283,7 +10283,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     from racing a concurrent save of the same three paths. Its OTHER refusal
 //     — a numeric locale that is no longer "C" — is deliberately NOT here: that
 //     is a mid-session dynamic fault, not stable state, and greying a button on
-//     it would hide the one stderr line that reports it.
+//     it would hide the stderr line and (since 2026-09-02) the card that report
+//     it. Neither does its THIRD class, a write that failed: a face cannot
+//     predict a disk, so the save answers that one with a card at the arm that
+//     met it (save_ops.cpp).
 //   * Render takes Ctrl+Alt+R's own first line, an empty source_audio_path. Its
 //     history-view grey needs no arm here and never did: in the view both render
 //     chords are off the allowlist (2026-08-08), so the mode line at the top of

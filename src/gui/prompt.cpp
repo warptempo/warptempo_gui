@@ -130,6 +130,10 @@ void GuiPrompt::activate_response(char k) {
                 // one statement-with-a-period among prompts that ask
                 // ("Save unsaved changes?", "Load '…' in place?") — and now
                 // asks what its buttons answer. The response set is untouched.
+                // IT CARRIES NO REASON AND RAISES NO CARD (2026-09-02): the
+                // save owner cards WHICH file it could not write at the arm
+                // that met the fault (save_ops.cpp), so this rung inherits
+                // that sentence and asks the one thing only it knows to ask.
                 app.prompt.present("Retry the failed save?",
                                    {'r', '\x7f', '\x1b'},
                                    {"Retry", "Discard", "Cancel"},

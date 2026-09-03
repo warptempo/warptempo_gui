@@ -1245,7 +1245,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               target_render, active_views,
                                               playback_lifecycle,
                                               notifications, selection);
-    GuiSaveOps save_ops(app, undo, active_views);
+    GuiSaveOps save_ops(app, undo, active_views, notifications);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle,
                      render_player);

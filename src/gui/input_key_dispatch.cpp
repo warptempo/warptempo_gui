@@ -3052,6 +3052,10 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
         return;
     }
 
+    // THE SAVE SAYS WHY, THE ACT SAYS WHAT IT COST: the owner cards the write
+    // it could not do (save_ops.cpp, 2026-09-02), so this prelude raises no
+    // second card and keeps the stderr line that names what did NOT happen —
+    // the commit — for the terminal.
     if (!save_ops.save()) {
         std::fprintf(stderr,
             "warptempo_gui: Save and commit refused: the save failed, so "
@@ -6056,9 +6060,13 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // with open_project_commit's identical refusal. Elsewhere that same
     // refusal is silent because the Save button reads "Committing..." and is
     // the message; under the picker the whole roster is greyed and unreadable
-    // as state, so nothing else answers the press. The save owner's OTHER
-    // refusals (a corrupted numeric locale, no sidecar path) are adversarial
-    // and startup-class and keep their stderr line.
+    // as state, so nothing else answers the press. THE SAVE OWNER'S OTHER
+    // REFUSALS SAY THEMSELVES since 2026-09-02: the three write arms and the
+    // numeric-locale arm raise their own card from inside save() (save_ops.cpp
+    // — one composer, every caller inheriting it), so this arm asks about
+    // nothing but the bit it can answer better than the owner can, and the
+    // picker composes no second sentence for a failure. The empty-sidecar-path
+    // belt keeps its silence, having no producer.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
         if (app.history_checkpoint_in_flight) {
             notifications.notify(AppState::NotificationClass::Normal,
