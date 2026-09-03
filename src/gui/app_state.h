@@ -4569,9 +4569,11 @@ struct AppState {
     // sees the session word's playing bit drop and calls
     // stop_playback_if_playing, which
     // takes the quiescence fence, clears the flag and damages the waveform area, so
-    // the line simply vanishes from wherever the predictor last drew it — one
-    // output latency ahead of the last sound, the same lead the launch has
-    // (playback.h's design note, architect 2026-09-03). A hold that kept the
+    // the line simply vanishes from wherever the predictor last drew it — ahead
+    // of the last sound by the output latency plus the ending fill's own valid
+    // prefix, the near end of the lead the launch carries at the far end
+    // (playback.h's design note and the arithmetic at the session word,
+    // playback_common.h; architect 2026-09-03). A hold that kept the
     // line alive until that sound had been heard stood here for two days and
     // went with the playback leads.
     // The launch seed (launch_playback_window, the ONE launch body under every

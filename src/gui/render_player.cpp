@@ -653,12 +653,21 @@ void GuiRenderPlayer::toggle_pause() {
         // THE RESUME POINT IS THE PREDICTOR'S POSITION, the one the picture
         // was drawn from — there is no second reading of the line to choose
         // between (architect 2026-09-03). The predictor is uncompensated, so
-        // that position is AHEAD of the ear by the device's output latency,
-        // and a resume therefore skips the frames that were already in the
-        // port when the press landed. That is the same lead every other
-        // surface carries and it is the ruling (playback.h's design note); a
-        // lead-free second face existed for a day to park this write behind
-        // the ear and went with the leads. The clock and the scrub paint from
+        // that position is AHEAD of the ear and a resume skips the run
+        // between the two. HOW FAR AHEAD DEPENDS ON THE ANCHOR: the player
+        // never resyncs — `resync_predictor` fires on the waveform camera's
+        // own events and the player displays no waveform — so its anchor is
+        // always the LAUNCH's, the publish instant, and the position leads
+        // the ear by the launch's pickup phase (0 to one callback period,
+        // re-rolled per launch) PLUS the device's output latency; the
+        // phase-sized part of what a resume skips had not reached the port at
+        // all when the press landed. After a resync the anchor is a real port
+        // instant (the cycle stamp) and that phase term is gone, leaving the
+        // latency alone. That is the same lead every other surface carries
+        // and it is the ruling (playback.h's design note, the launch
+        // arithmetic at playback_publish_play); a lead-free second face
+        // existed for a day to park this write behind the ear and went with
+        // the leads. The clock and the scrub paint from
         // the same call, so the picture does not step at the pause.
         // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
         // stop_playback_if_playing leaves app.playhead_cursor_sample where
@@ -972,9 +981,11 @@ void GuiRenderPlayer::tick() {
     // (a deferred end that waited for the last queued frame to be heard stood
     // here for two days and went with the playback leads, 2026-09-03): the
     // render body lowers the playing bit when the fill reaches the item's
-    // end, and the walk to the next item starts there — one output latency
-    // before the last sound leaves the speaker, the same lead every other
-    // surface carries. Every OTHER road out of LIVE (the pause, the
+    // end, and the walk to the next item starts there — ahead of the last
+    // sound leaving the speaker by the device's output latency PLUS that
+    // fill's own valid prefix (the arithmetic at the session word,
+    // playback_common.h), the near end of the lead every other surface
+    // carries. Every OTHER road out of LIVE (the pause, the
     // dead-device arm above, the close, the rebind ahead of the next item)
     // takes the stop body at once.
     if (!playback.is_playing()) {

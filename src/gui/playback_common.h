@@ -218,10 +218,15 @@ struct GuiPlaybackState {
     // THE TERMINAL ENDS THE SESSION OUTRIGHT: the fill that read past
     // `end_sample` lowers the playing bit and that is the whole of it. The
     // scanner's life is the flag's life — the run loop's tick tears it down
-    // on the first read of a lowered flag — so the drawn line stops one
-    // output latency BEFORE the sound does, the near end of the same lead the
-    // launch has at the far end (the anchor's comment above, and the record
-    // at playback_publish_play). A hold that kept the line alive until the
+    // on the first read of a lowered flag — so the drawn line stops BEFORE
+    // the sound does, by the device's output latency PLUS THE ENDING FILL'S
+    // OWN VALID PREFIX: this fill placed `n` frames (0 to one callback
+    // period) before it met the window's end, so the last of them is heard
+    // `n / output_rate` after the fill's first, while the bit comes down as
+    // soon as the buffer is built. That is the near end of the lead the
+    // launch carries at the far end, close in size but NOT the same quantity
+    // — the launch's extra term is its pickup phase, not an ending prefix
+    // (the anchor's comment above, and the record at playback_publish_play). A hold that kept the line alive until the
     // last queued frame had been heard rode bit 1 of this word for two days
     // and was rolled back with the leads on 2026-09-03.
     //

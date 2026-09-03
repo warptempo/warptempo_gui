@@ -2546,9 +2546,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // behind it: a natural-end hold that kept the scanner alive until the
         // last queued frame had been heard stood here for two days and went
         // with the playback leads on 2026-09-03 (playback.h's design note),
-        // so the line stops when the FILL ends, one output latency before the
-        // sound does — the near end of the lead the launch has at the far
-        // end, and the ruling.
+        // so the line stops when the FILL ends — ahead of the last sound by the
+        // output latency plus that fill's own valid prefix, the arithmetic
+        // being stated at the natural-end branch below — the near end of the
+        // lead the launch carries at the far end, and the ruling.
         const bool ma_playing = playback.is_playing();
         if (!app.playhead_scanner_active && !ma_playing) return;
 
@@ -2611,10 +2612,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // app_state.h's scanner block). The scanner's last-painted pixels are
         // damaged by the call, so the line vanishes from wherever the
         // predictor last drew it — which is where the ending FILL left the
-        // read cursor, one output latency and a fraction of a period ahead of
-        // the last sound: the line goes out slightly before the sound does,
-        // the same lead the launch has, and the accepted shape (playback.h's
-        // design note, architect 2026-09-03). No cursor is written into the
+        // read cursor. The flag comes down as that buffer is built, while the
+        // last frame the fill placed is heard one output latency plus that
+        // fill's own valid prefix later (`n / output_rate`, 0 to one callback
+        // period), and THE DISAPPEARANCE ITSELF LANDS ON THIS TICK'S PAINT, a
+        // further tick-and-paint after the flag: the line goes out slightly
+        // before the sound does. It is the near end of the lead the launch
+        // carries at the far end — close in size, but not the same quantity,
+        // the launch's extra term being its pickup phase — and the accepted
+        // shape (playback.h's design note, architect 2026-09-03). No cursor is written into the
         // scanner here, since a deactivated scanner is never painted again
         // (the scanner block, app_state.h) and a value written for no reader
         // is residue. Every OTHER stop road — Space, a modal open, the S/T

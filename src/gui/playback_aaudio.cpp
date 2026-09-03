@@ -238,8 +238,8 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // end and tears the scanner down through the product's one stop body. A
     // fill in flight that reaches its natural end after this finds the word
     // changed under its gate's value and abandons its terminal (the word's
-    // comment, playback_common.h), so a live session's disconnect never
-    // raises the hold; and the next reopen (the launch press's, or play()'s
+    // comment, playback_common.h), so the lowering this arm performs is the
+    // one that stands; and the next reopen (the launch press's, or play()'s
     // own head) closes this stream, and play() publishes a fresh generation,
     // so no session is left stranded behind the lowered flag.
     //
@@ -598,10 +598,13 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // carded, and the player's road reads device_unavailable at its tick.
     if (!reopen_stream_if_dead(*impl_)) return;
 
-    // Publish FIRST, start SECOND: the command packet, the main thread's
-    // window mirror and cursor, the await-seat anchor and the session word
-    // that releases them are what the callback's acquire gate is waiting to
-    // see, and a refused range must not spin the device up at all.
+    // Publish FIRST, start SECOND: the command packet and the session word
+    // that releases it are what the callback's acquire gate is waiting to
+    // see, and a refused range must not spin the device up at all. The main
+    // thread's window mirror, its cursor and the launch anchor — the publish
+    // instant, nothing waiting on a seat — are predictor state the callback
+    // never reads; a fill consumes only the packet its own generation
+    // qualifies.
     if (!playback_publish_play(impl_->state, start_sample, end_sample)) return;
 
     // THE DISCONNECT OUTRANKS THE PUBLISH (2026-09-01). The dead check at the

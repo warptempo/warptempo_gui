@@ -186,7 +186,10 @@ drag coordinates floor instead of truncating.
   waveform scrub, the A/B audition's four bounded plays and the render
   player's own launch all publish through that one body — and the line goes
   out at the far end the same way, `is_playing()` dropping when the FILL
-  ends, one output latency before the last sound does. THE POSITION SURFACE
+  ends: ahead of the last sound by the output latency PLUS that ending fill's
+  own valid prefix (the frames it placed before it met the window's end, 0 to
+  one callback period), which is the near end of the launch's lead rather than
+  the same quantity. THE POSITION SURFACE
   IS TWO FACES OF ONE OBSERVATION and nothing more:
   `cursor()`, the domain integer every consumer's change detection rides, and
   `cursor_precise()`, its pre-truncation double for the sub-frame scanner.
