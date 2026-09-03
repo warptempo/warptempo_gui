@@ -135,7 +135,22 @@ drag coordinates floor instead of truncating.
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback
   left to count) — and `stop()` touches neither device. NOTHING LOOPS
-  holds on both. THE PREDICTOR ANCHORS AT HEARD INSTANTS (architect
+  holds on both. AAUDIO'S `stop()` SAYS THE SESSION'S UNDERRUN COUNT
+  (architect 2026-09-02, the four-tier review's R-18(d)): at the tail of that
+  fence, with the callback quiesced and the counter therefore still,
+  `report_xrun_count` reads `AAudioStream_getXRunCount` and prints ONE stderr
+  line — a logcat line, every diagnostic riding the redirected fd the log pump
+  drains — only when the count MOVED since the last read, a clean session
+  saying nothing; `last_xrun_count` on the `Impl` is the remembered figure and
+  dies with its stream (`close_stream` zeroes it, the next stream opening at
+  zero). It is DIAGNOSTIC ALONE — no card, no state cell, no engine behaviour
+  — because an underrun is already audible and the buffer cannot grow without
+  giving up the LOW_LATENCY mode the car's transport wants; what was missing
+  was the ability to NAME it afterwards. THE JACK HALF HAS NO TWIN — it
+  registers no `jack_set_xrun_callback` and says nothing — the recorded
+  asymmetry: the laptop's graph is the architect's own and its xruns are
+  already visible in the server's own output, while the tablet's stream is
+  inside a phone the app is the only window onto. THE PREDICTOR ANCHORS AT HEARD INSTANTS (architect
   2026-09-01 — the morning's record had the output latency uncompensated
   and accepted; the evening's arc compensated it): every anchor is
   (sample, the instant that sample leaves the loudspeaker), built from the
@@ -217,14 +232,29 @@ drag coordinates floor instead of truncating.
   per frame retired with the reorder — requests a presentation feedback
   stamped with the pre-paint instant; `presented` answers with the instant
   the pixels lit, and a 30-frame moving mean of the difference (Kodi's
-  window) is the lead, published from the first sample; `discarded` drops
-  the sample. The FALLBACK where the global is absent or its clock is not
+  window) is the TRANSPORT term, published from the first sample; `discarded`
+  drops the sample. The FALLBACK where the global is absent or its clock is not
   `CLOCK_MONOTONIC` (the predictor's own, so no conversion stands between
   the two stamps) is 2 × the refresh period of the window's own output
   (section C above owns which output that is), 60 Hz when none is known.
-  One stderr line beside the JACK latency line says the figure — the
-  fallback once at init, the measured mean when its window first fills and
-  again whenever it moves by a millisecond — and ONE means one: the
+  BOTH ARMS THEN ADD HALF THE SELECTED OUTPUT'S REFRESH PERIOD (architect
+  2026-09-02, the four-tier review's R-20 — `half_refresh_period_ns`,
+  `platform_wayland.cpp`, the term's one owner): a position is painted once
+  per refresh and HELD for a whole period, so a lead carrying the transport
+  alone leaves a sample-and-hold residue of 0..P BEHIND the sound and never
+  ahead, and half a period more centres it at −P/2..+P/2 — half the frames on
+  the forgiving side, ±8 ms at 60 Hz, under the JND either way. Centring is
+  the best any lead can do, the grid being the display's own quantization
+  rather than a latency, which is the sentence `playback_common.cpp`'s honesty
+  block now tells in place of "± half a period that no lead can remove". A
+  refresh of 0 (no output has reported a mode) adds NOTHING: the term is the
+  selected output's real period or it is not a measurement, the fallback's own
+  60 Hz guess being a transport figure and not a grid.
+  One stderr line beside the JACK latency line says the figure — THE PUBLISHED
+  LEAD, both terms together — the fallback once at init, the measured figure
+  when its window first fills and again whenever THE MEAN moves by a
+  millisecond (the threshold is the measurement's, since the mean is what
+  moves) — and ONE means one: the
   `clock_id` handler prints nothing at all and keeps the announced id for the
   init line to name (it printed a second, figure-less warning for the
   bad-clock condition until 2026-09-02). The line can tell the ABSENT global
@@ -240,8 +270,9 @@ drag coordinates floor instead of truncating.
   lead on top would double-count against a figure that platform never
   subtracts; there is no feedback road on the lock/unlockAndPost path
   either. What remains on the laptop is the DAC's own few-ms pipeline and
-  the frame grid's ± half a period, both recorded at
-  `playback_publish_play` (`playback_common.cpp`).
+  the frame grid's residue — now genuinely ± half a period, centred on zero by
+  the half-period term above rather than running a whole period behind — both
+  recorded at `playback_publish_play` (`playback_common.cpp`).
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FOUR keys it stamps are per-DEVICE preferences
@@ -323,10 +354,13 @@ drag coordinates floor instead of truncating.
   activity — which is the mechanism BACK already left the app by (the key arm
   returned 0 and the system's default finished the activity), measured on the
   tablet (`android/NOTES.md`).
-- **Key repeat on Android** is hard-coded `set_repeat_info(30, kHoldBeatMs)`
+- **Key repeat on Android** is hard-coded `set_repeat_info(25, kHoldBeatMs)`
   (architect 2026-08-23: labwc's numbers by convention; the platform
-  advertises none). Hardware keyboards are out of scope; the owned painted
-  keyboard reaches the core through `synthesize_key`.
+  advertises none) — his `rc.xml`'s `<repeatRate>` 25 beside the
+  `<repeatDelay>` 575 that IS `kHoldBeatMs`. THE RATE READ 30 UNTIL 2026-09-02,
+  a number the convention sentence did not support, corrected under the
+  four-tier review's R-18(a). Hardware keyboards are out of scope; the owned
+  painted keyboard reaches the core through `synthesize_key`.
 
 ## The on-screen keyboard
 
@@ -787,7 +821,13 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   the band first (render-player.md's car section owns the split); it is
   "Android's one imposed interrupt", and it always pauses. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
-  default, so a navigation prompt ducks rather than pauses.
+  default, so a navigation prompt ducks rather than pauses — and THE LISTENER
+  HAS NO CAN_DUCK ARM, deleted 2026-09-02 under the four-tier review's R-18(e):
+  `setWillPauseWhenDucked` is left false, so the system lowers the volume
+  itself and never calls the listener for
+  `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`; the arm that stood there forwarded it
+  as a TRANSIENT LOSS, which pauses — the stated policy's opposite in a case
+  with no producer. It falls to `default` now, so the absence is the policy.
 
 THIS PHASE IS A MediaSession ALONE, by ruling: no notification, no foreground
 service, no background playback, no lock-screen transport — the tablet is a

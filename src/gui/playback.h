@@ -246,9 +246,9 @@ public:
     // THE DISPLAY LEAD (architect 2026-09-02): how far ahead of `now` the
     // predictor's POSITION is read, so the painted playhead lands where the
     // sound will be when its pixel turns into light. The platform owns the
-    // figure (GuiPlatform::display_lead_ns — measured through the
-    // compositor's presentation feedback on the laptop, 0 by ruling on the
-    // tablet) and main.cpp's pre-paint hook writes it here once per painted
+    // figure (GuiPlatform::display_lead_ns — the compositor's presentation
+    // feedback plus the frame grid's half period on the laptop, 0 by ruling
+    // on the tablet) and main.cpp's pre-paint hook writes it here once per painted
     // frame, ahead of that frame's cursor() / cursor_precise() reads. It
     // moves the position alone — the natural-end hold keeps the bare clock
     // (the field's contract, playback_common.h) — and of the position faces

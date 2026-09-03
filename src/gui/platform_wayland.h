@@ -531,7 +531,9 @@ public:
     // labwc, 13–33 px at the working zoom); drawn where the sound WILL BE when
     // the pixel lights, it reads on the sound.
     //
-    // ON THIS BACKEND IT IS SELF-MEASURED through wp_presentation, the
+    // ON THIS BACKEND IT IS TWO TERMS, THE TRANSPORT AND THE FRAME GRID.
+    //
+    // THE TRANSPORT TERM IS SELF-MEASURED through wp_presentation, the
     // compositor's presentation feedback (the globals block below): every
     // content commit carries a feedback request stamped with the instant the
     // pre-paint hook began, the compositor answers with the instant that
@@ -544,9 +546,25 @@ public:
     // after that composite has run, so a commit made in the callback waits a
     // further period — sway's author measured "a little less than 2 frames",
     // and labwc has no max_render_time knob to shorten it), 60 Hz when no
-    // output is known. The measured figure and the fallback are each announced
+    // output is known.
+    //
+    // THE FRAME GRID'S HALF PERIOD IS ADDED TO BOTH ARMS (architect
+    // 2026-09-02, the four-tier review's R-20): a position is painted once per
+    // refresh and HELD for a whole period, so a lead carrying the transport
+    // alone leaves a sample-and-hold residue of 0..P BEHIND the sound — one
+    // sided, never ahead. Half the SELECTED output's period more centres it at
+    // −P/2..+P/2, half the frames on the forgiving side, 8 ms at 60 Hz and
+    // under the JND either way; a 0 refresh (no output has reported a mode)
+    // adds nothing, the term being that output's real period or no measurement
+    // at all. The body's own reason is at half_refresh_period_ns
+    // (platform_wayland.cpp). Centring is the best any lead can do here — the
+    // grid is the display's quantization, not a latency — which is the one
+    // sentence playback_common.cpp's honesty block now tells.
+    //
+    // The measured figure and the fallback are each announced
     // once on stderr beside the JACK latency line, and the mean again whenever
-    // it moves by a millisecond, so the number is seen at every launch. Main
+    // it moves by a millisecond, so the number is seen at every launch; the
+    // line names the PUBLISHED lead, both terms together. Main
     // thread only; no on-screen surface, no settings key.
     //
     // ANDROID ANSWERS A CONSTANT 0, and that is a ruling rather than a gap

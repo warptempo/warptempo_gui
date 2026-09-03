@@ -157,6 +157,15 @@ struct GuiPlayback::Impl {
     // STARTED between plays and so keeps calling its callback. Written by the
     // callback thread with release, read by the main thread with acquire.
     std::atomic<uint64_t> callback_cycles{0};
+
+    // THE UNDERRUN COUNT LAST REPORTED, main thread only — two sites, both
+    // there: report_xrun_count (stop()'s tail) reads and advances it, and
+    // close_stream zeroes it with the stream it belongs to. The stream's own
+    // counter is cumulative
+    // and monotonic for the stream's life, so what a session is worth is the
+    // DIFFERENCE, which is why the figure is kept rather than read fresh each
+    // time. Diagnostic only: no card, no state, no behaviour reads it.
+    int32_t last_xrun_count = 0;
 };
 
 namespace {
@@ -362,6 +371,10 @@ void close_stream(GuiPlayback::Impl& impl) {
     impl.state.output_rate.store(0, std::memory_order_relaxed);
     impl.stream_dead.store(false, std::memory_order_relaxed);
     impl.stream_error.store(0, std::memory_order_relaxed);
+    // The underrun counter belongs to the STREAM: the next one opens at zero,
+    // so the remembered figure goes with this one (stop()'s tail, the count's
+    // one other site).
+    impl.last_xrun_count = 0;
     // THE FILE'S ONE requestStop, and it is here because the stream is being
     // CLOSED (shutdown, or the dead-stream reopen) — never between plays. The
     // close is the stronger fence anyway: it blocks until the callback thread
@@ -494,6 +507,40 @@ bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     return true;
 }
 
+// THE UNDERRUN COUNT, SAID ONCE PER SESSION THAT HAD ONE (the four-tier
+// review's R-18(d), architect 2026-09-02). AAudio's own counter is the only
+// evidence this backend has that its buffer — burst × 2, one burst of slack —
+// lost a callback to a scheduling hiccup, and until now nothing read it: an
+// underrun on this platform was simply an audible tick nobody could account
+// for afterwards. So stop() reads it at the tail of its fence, once the
+// callback has quiesced and the figure has stopped moving, and prints ONE
+// stderr line — which on this backend IS a logcat line, every diagnostic
+// going down the redirected fd the log pump drains (platform_android.cpp's
+// logcat sink) — WHEN THE COUNT MOVED since the last read, so a clean session
+// says nothing at all. The delta is the session's; the remembered figure is
+// the stream's and dies with it (close_stream).
+//
+// A DIAGNOSTIC AND NOTHING MORE: no notification card, no state cell, no
+// engine behaviour. An underrun is already audible, and the product cannot
+// grow the buffer without giving up the LOW_LATENCY mode the car's transport
+// wants — so the honest answer is to be able to name what happened, not to
+// react to it. A negative return (the call unimplemented on a path, an
+// invalid stream) is not a count and is dropped.
+void report_xrun_count(GuiPlayback::Impl& impl) {
+    if (!impl.stream) return;
+    const int32_t count = AAudioStream_getXRunCount(impl.stream);
+    // The counter only ever RISES for a live stream, so one test covers the
+    // clean session and the non-count alike: anything at or below the figure
+    // last said is either no news or not a count.
+    if (count <= impl.last_xrun_count) return;
+    std::fprintf(stderr,
+        "warptempo_gui: AAudio underruns: %d this session (%d for the "
+        "stream)\n",
+        static_cast<int>(count - impl.last_xrun_count),
+        static_cast<int>(count));
+    impl.last_xrun_count = count;
+}
+
 }  // namespace
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
@@ -601,10 +648,14 @@ void GuiPlayback::stop() {
     // playing bit up, and this fetch_and changed that word) — then fence on
     // the callback counter (fence_quiesced):
     // the stream keeps running and the callback keeps writing silence, which
-    // is the whole of the no-click lifecycle at the head of this file.
+    // is the whole of the no-click lifecycle at the head of this file. Then,
+    // with the callback quiesced and its counter therefore still, the session's
+    // UNDERRUN COUNT is said if it moved (report_xrun_count, above — a logcat
+    // line and nothing else).
     impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
                                    std::memory_order_seq_cst);
     fence_quiesced(*impl_);
+    report_xrun_count(*impl_);
 }
 
 bool GuiPlayback::is_playing() const {

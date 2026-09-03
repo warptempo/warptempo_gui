@@ -470,6 +470,16 @@ public class MainActivity extends NativeActivity {
     // keeps it (GAIN returns it), and each is forwarded so the native side
     // pauses; GAIN is forwarded and the native side does nothing with it --
     // NOTHING RECOVERS BY ITSELF, the user presses play.
+    //
+    // THERE IS NO CAN_DUCK ARM, and its absence is the policy (2026-09-02,
+    // the four-tier review's R-18(e)). Ducking is the framework's, as the
+    // request above says: with setWillPauseWhenDucked left false the system
+    // lowers this app's volume itself and never calls this listener for
+    // AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK. The arm that stood here forwarded it
+    // as a transient loss, which PAUSES -- the opposite of the stated policy,
+    // in a case with no producer. It falls to `default` now, so a framework
+    // that ever did deliver it would duck the music rather than stop it, which
+    // is what a navigation prompt over this player should do.
     private final class FocusListener
             implements AudioManager.OnAudioFocusChangeListener {
         @Override
@@ -480,7 +490,6 @@ public class MainActivity extends NativeActivity {
                     nativeMediaCommand(MEDIA_FOCUS_LOST, 0L);
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                     nativeMediaCommand(MEDIA_FOCUS_LOST_TRANSIENT, 0L);
                     break;
                 case AudioManager.AUDIOFOCUS_GAIN:

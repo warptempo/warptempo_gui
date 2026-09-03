@@ -541,10 +541,13 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // wl_keyboard.repeat_info counterpart and no system setting a native app
     // can read — so the numbers are labwc's own, taken BY CONVENTION: the
     // delay is kHoldBeatMs (575, gui_input.h, the same constant every product
-    // hold threshold reads) and the rate is 30 Hz, a 33 ms period. They pace
+    // hold threshold reads) and the rate is 25 Hz, a 40 ms period — labwc's
+    // own <repeatRate>, the twin of the <repeatDelay> kHoldBeatMs matches
+    // (it read 30 until 2026-09-02, when the four-tier review found the
+    // number was not the convention the sentence claimed). They pace
     // the chrome buttons' hold-repeat through key_repeat_period_ms(), and
     // whatever on-screen keyboard this backend comes to own.
-    input_.set_repeat_info(30, kHoldBeatMs);
+    input_.set_repeat_info(25, kHoldBeatMs);
 
     // THE CORE'S CODEPOINT REFILL, the one probe pointing DOWNWARD across the
     // seam (contract at GuiInputCore::set_codepoint_probe). The Wayland

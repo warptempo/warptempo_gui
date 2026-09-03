@@ -2744,7 +2744,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // GuiPlatform::display_lead_ns, its read at `observe`,
         // playback_common.cpp): the Wayland backend stamps this frame's
         // pre-paint instant just before firing this hook and measures how
-        // long its pixels take to light (Android answers 0 by ruling), and
+        // long its pixels take to light, adding half a refresh period so the
+        // frame grid's own residue is centred rather than one-sided (Android
+        // answers 0 by ruling), and
         // every predictor read from here on — the scanner sample below, and
         // the render player's tick, which reads cursor() for its clock and
         // scrub under the early return that follows and so sees the figure
