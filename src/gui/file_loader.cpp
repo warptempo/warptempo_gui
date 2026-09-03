@@ -17,7 +17,9 @@
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
@@ -144,36 +146,50 @@ std::optional<GuiFailure> source_load_dry_run(
     // read as "the load will write the template" (a new project passes
     // trivially). A stat that fails is its own refusal, in the system's words.
     // Fresh stores and a fresh SettingsFile, discarded at the return.
+    //
+    // EACH REFUSAL NAMES THE FILE ONCE (the four-tier review's R-11 rule,
+    // failure.h: the diagnostic carries the full path, the card the project's
+    // folder-and-file form, and neither is parsed out of the other). The
+    // strict loaders' own open and read refusals name the path the composer
+    // below already names — it handed them that very path — so they publish
+    // their words apart from it (`path_free_reason`, the granted frozen touch
+    // of 2026-09-02) and this composer takes the words alone; a line-numbered
+    // parse error carries no path and its whole sentence is the reason. One
+    // lambda for the three readers, so the choice cannot drift between them.
     GuiWarpMarkers       warp;
     GuiPhaseResetMarkers phase_resets;
     SettingsTrim tab_a_trim;
     SettingsTrim tab_b_trim;
+    std::optional<std::string> load_reason;
+    const auto sidecar_failure = [&load_reason](
+            std::string_view before, const std::filesystem::path& file,
+            const std::string& composed) {
+        return path_failure(before, file, shown_project_path(file),
+                            ": " + (load_reason ? *load_reason : composed));
+    };
     auto wm_here = sidecar_present(wm_path);
     if (!wm_here) return wm_here.error();
     if (*wm_here) {
-        if (auto r = warp.load(wm_path.string()); !r) {
-            return path_failure("Invalid warp markers in ", wm_path,
-                                shown_project_path(wm_path),
-                                ": " + r.error());
+        if (auto r = warp.load(wm_path.string(), &load_reason); !r) {
+            return sidecar_failure("Invalid warp markers in ", wm_path,
+                                   r.error());
         }
     }
     auto tm_here = sidecar_present(tm_path);
     if (!tm_here) return tm_here.error();
     if (*tm_here) {
-        if (auto r = phase_resets.load(tm_path.string()); !r) {
-            return path_failure("Invalid phase reset markers in ", tm_path,
-                                shown_project_path(tm_path),
-                                ": " + r.error());
+        if (auto r = phase_resets.load(tm_path.string(), &load_reason); !r) {
+            return sidecar_failure("Invalid phase reset markers in ", tm_path,
+                                   r.error());
         }
     }
     auto set_here = sidecar_present(set_path);
     if (!set_here) return set_here.error();
     if (*set_here) {
-        auto sf = read_settings_file(set_path.string());
+        auto sf = read_settings_file(set_path.string(), &load_reason);
         if (!sf) {
-            return path_failure("Invalid settings in ", set_path,
-                                shown_project_path(set_path),
-                                ": " + sf.error());
+            return sidecar_failure("Invalid settings in ", set_path,
+                                   sf.error());
         }
         if (auto collision = render_output_source_collision(sf->engine, path)) {
             return two_path_failure(

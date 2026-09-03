@@ -83,8 +83,19 @@ struct WarpMarker {
 // bound, or the bare separator with nothing after it — is GUI-unproducible and
 // load-fatal like any other adversarial line. This is the
 // canonical .warpmarkers reader for both the GUI store and the headless CLI.
+//
+// `path_free_reason`, when given, receives THE PATH-BEARING REFUSALS' WORDS
+// WITH NO PATH IN THEM — "cannot open file", "read error in file" — while the
+// returned string stays the composed sentence it always was (architect
+// approval 2026-09-02, the granted frozen touch; the rationale is at the
+// composing lambda). It is written by those two arms alone, so its presence
+// tells a caller that this refusal named the file it handed in and lets that
+// caller name the file ONCE, its own way, on a card; a line-numbered parse
+// error leaves it untouched. The CLI passes nothing and its stderr line is
+// byte-identical.
 std::expected<std::vector<WarpMarker>, std::string>
-parse_warpmarkers_file(const std::string& path);
+parse_warpmarkers_file(const std::string& path,
+                       std::optional<std::string>* path_free_reason = nullptr);
 
 namespace warpmarkers_internal {
 

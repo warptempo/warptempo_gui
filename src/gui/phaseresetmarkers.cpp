@@ -5,11 +5,14 @@
 
 #include <sstream>
 
-std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
+std::expected<void, std::string> GuiPhaseResetMarkers::load(
+        const std::string& path,
+        std::optional<std::string>* path_free_reason) {
     // The parse fills each serialized PhaseResetMarker base; the shared
     // load_impl (clear-bump-parse-upcast) copies it into a
-    // GuiPhaseResetMarker (no extra fields today).
-    return load_impl(path, parse_phaseresetmarkers_file);
+    // GuiPhaseResetMarker (no extra fields today). The path-free reason rides
+    // through to the parser untouched.
+    return load_impl(path, parse_phaseresetmarkers_file, path_free_reason);
 }
 
 // Serializer contract: this serialization performs no ordering validation.

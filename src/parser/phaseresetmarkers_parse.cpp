@@ -37,13 +37,26 @@ std::expected<PhaseResetMarker, std::string> parse_line(const std::string& raw) 
 } // namespace
 
 std::expected<std::vector<PhaseResetMarker>, std::string>
-parse_phaseresetmarkers_file(const std::string& path) {
+parse_phaseresetmarkers_file(const std::string& path,
+                             std::optional<std::string>* path_free_reason) {
     auto fail = warptempo_parse::prefix_line_error;
     std::vector<PhaseResetMarker> markers;
 
+    // The warp column's own shape, for the warp column's reasons (architect
+    // approval 2026-09-02, the granted frozen touch; the rationale is stated
+    // once at warpmarkers_parse.cpp's lambda): the two refusals that name the
+    // path compose their sentence here and publish the words apart from it,
+    // so a card's composer — which already names this file, having handed it
+    // in — says the words once and the file once, and the returned string is
+    // unchanged by construction.
+    const auto path_refusal = [&](const char* words) {
+        if (path_free_reason) *path_free_reason = words;
+        return std::unexpected<std::string>(words + (": " + path));
+    };
+
     std::ifstream f(path);
     if (!f.is_open())
-        return std::unexpected("cannot open file: " + path);
+        return path_refusal("cannot open file");
 
     std::vector<std::string> raw_lines;
     {
@@ -56,7 +69,7 @@ parse_phaseresetmarkers_file(const std::string& path) {
     // error, checked here before the parsing walk so a read that failed after
     // a valid prefix can never yield a silently shortened marker list.
     if (f.bad())
-        return std::unexpected("read error in file: " + path);
+        return path_refusal("read error in file");
 
     int64_t last_time = -1;
 

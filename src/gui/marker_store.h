@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -94,13 +95,20 @@ protected:
     // default-constructed GuiM by upcast assignment (no slicing on the way
     // in — the GUI-only fields, where the type has any, keep their
     // session defaults).
+    //
+    // `path_free_reason` is the parsers' out-parameter, passed straight
+    // through: both columns' loaders publish an open or read refusal's words
+    // with no path in them there, and this shape is what lets the two
+    // concrete load()s share one body while carrying it (the contract is at
+    // parse_warpmarkers_file, warpmarkers_parse.h).
     template <typename ParseFn>
-    std::expected<void, std::string> load_impl(const std::string& path,
-                                               ParseFn&& parse) {
+    std::expected<void, std::string> load_impl(
+            const std::string& path, ParseFn&& parse,
+            std::optional<std::string>* path_free_reason) {
         markers_.clear();
         ++generation_;
 
-        auto r = parse(path);
+        auto r = parse(path, path_free_reason);
         if (!r) return std::unexpected(std::move(r.error()));
 
         markers_.reserve(r->size());

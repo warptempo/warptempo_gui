@@ -281,13 +281,34 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
 } // namespace warpmarkers_internal
 
 std::expected<std::vector<WarpMarker>, std::string>
-parse_warpmarkers_file(const std::string& path) {
+parse_warpmarkers_file(const std::string& path,
+                       std::optional<std::string>* path_free_reason) {
     auto fail = warptempo_parse::prefix_line_error;
     std::vector<WarpMarker> markers;
 
+    // THE TWO REFUSALS THAT NAME THE PATH COMPOSE THEIR SENTENCE HERE AND
+    // PUBLISH THEIR WORDS APART FROM IT (architect approval 2026-09-02, the
+    // granted frozen touch): a GUI card is one clipped line that names a file
+    // by its basename, and its composer already names this very file — the
+    // one it handed in — so appending the composed sentence printed the path
+    // twice, in two spellings, and the history road's card exposed a scratch
+    // filename the user cannot act on. Pulling the path back out of the
+    // English would be the parsing the two-clause rule forbids (a path may
+    // hold a quote or a colon), so the words travel beside the sentence
+    // instead. The returned string is unchanged by construction — one
+    // composition, both readers — which is what keeps warptempo_cli's own
+    // line byte-identical. The reason is PATH-FREE, not path-bearing: its
+    // presence is also how a caller tells an open or read refusal (the path
+    // is the loader's subject) from a line-numbered parse error (no path in
+    // it at all), and the path a caller would name is the one it passed.
+    const auto path_refusal = [&](const char* words) {
+        if (path_free_reason) *path_free_reason = words;
+        return std::unexpected<std::string>(words + (": " + path));
+    };
+
     std::ifstream f(path);
     if (!f.is_open())
-        return std::unexpected("cannot open file: " + path);
+        return path_refusal("cannot open file");
 
     std::vector<std::string> raw_lines;
     {
@@ -300,7 +321,7 @@ parse_warpmarkers_file(const std::string& path) {
     // error, checked here before the parsing walk so a read that failed after
     // a valid prefix can never yield a silently shortened marker list.
     if (f.bad())
-        return std::unexpected("read error in file: " + path);
+        return path_refusal("read error in file");
 
     // ----- Build markers ---------------------------------------------------
 

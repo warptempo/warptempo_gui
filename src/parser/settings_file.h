@@ -261,8 +261,17 @@ struct SettingsFile {
 // file is an error (the GUI writes the template before its first read; the
 // CLI checks existence with its own message first). Errors carry a
 // "line N: " prefix where a line is at fault; callers add the path context.
+//
+// `path_free_reason` is the marker loaders' out-parameter, with their
+// contract (warpmarkers_parse.h; architect approval 2026-09-02, the granted
+// frozen touch): when given, THE ONE REFUSAL THAT NAMES THE PATH — the
+// unopenable file — writes its words with no path in them there ("could not
+// open"), while the returned string stays the composed sentence, so the CLI's
+// line is byte-identical and a card's composer, which already names this
+// file, can name it once. A line-numbered schema error leaves it untouched.
 std::expected<SettingsFile, std::string> read_settings_file(
-    const std::string& path);
+    const std::string& path,
+    std::optional<std::string>* path_free_reason = nullptr);
 
 // Strict line scanner for the settings format. The whole-file reader —
 // read_settings_file (`.settings`) — builds on this: it owns the lexical

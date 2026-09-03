@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -45,5 +46,14 @@ struct PhaseResetMarker {
 // like any other adversarial line. On the first malformed line, or an
 // unopenable file, returns a one-line diagnostic (line-tagged where
 // line-specific). Canonical reader for the GUI store and the headless CLI.
+//
+// `path_free_reason` is the warp column's own out-parameter, with the warp
+// column's contract (warpmarkers_parse.h; architect approval 2026-09-02, the
+// granted frozen touch): when given, the two refusals that name the path —
+// and only those — write their words with no path in them there, while the
+// returned string stays the composed sentence, so the CLI's line is
+// byte-identical and a card's composer can name the file once, its own way.
 std::expected<std::vector<PhaseResetMarker>, std::string>
-parse_phaseresetmarkers_file(const std::string& path);
+parse_phaseresetmarkers_file(
+    const std::string& path,
+    std::optional<std::string>* path_free_reason = nullptr);

@@ -382,12 +382,27 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
 }  // namespace warptempo_settings
 
 std::expected<SettingsFile, std::string> read_settings_file(
-        const std::string& path) {
+        const std::string& path,
+        std::optional<std::string>* path_free_reason) {
     SettingsFile out;
+
+    // The marker loaders' shape, for their reasons (architect approval
+    // 2026-09-02, the granted frozen touch; the rationale is stated once at
+    // warpmarkers_parse.cpp's lambda): the ONE refusal here that names the
+    // path composes its sentence and publishes its words apart from it, so a
+    // card's composer — which already names this file, having handed it in —
+    // says the words once and the file once. The returned string is unchanged
+    // by construction, which is what leaves warptempo_cli's line untouched.
+    // Every other refusal below is the line scanner's, line-numbered and
+    // naming no path, and leaves the out-parameter alone.
+    const auto path_refusal = [&](const char* words) {
+        if (path_free_reason) *path_free_reason = words;
+        return std::unexpected<std::string>(words + (" '" + path + "'"));
+    };
 
     std::ifstream f(path);
     if (!f) {
-        return std::unexpected("could not open '" + path + "'");
+        return path_refusal("could not open");
     }
 
     auto scan = warptempo_settings::scan_settings_file(

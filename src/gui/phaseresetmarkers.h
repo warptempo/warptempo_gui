@@ -4,6 +4,7 @@
 #include "phaseresetmarkers_parse.h"
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,7 +33,13 @@ public:
     // one-line error; a missing/unopenable file is a failure (the sidecar is
     // created at source load and required at every load boundary; the empty
     // file is the no-resets form). No throw.
-    std::expected<void, std::string> load(const std::string& path);
+    //
+    // `path_free_reason` is the parser's own out-parameter, passed through
+    // unread — the warp column's contract exactly
+    // (parse_phaseresetmarkers_file, phaseresetmarkers_parse.h).
+    std::expected<void, std::string> load(
+        const std::string& path,
+        std::optional<std::string>* path_free_reason = nullptr);
 
     // Writes the canonical form to `path`. Atomic: writes to <path>.tmp,
     // fsyncs, then renames. Preserves existing permissions or uses 0644 if

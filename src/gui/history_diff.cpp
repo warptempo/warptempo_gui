@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -1832,29 +1833,50 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     // The three STRICT WHOLE-FILE LOADERS are the judges, in the render-entry
     // load-in-place's own order, each refusal naming the committed path and
     // the SHA. First error only, by construction: every arm returns.
-    auto settings = read_settings_file(settings_file.string());
+    //
+    // THE NAME IN THESE SENTENCES IS THE COMMITTED SIDECAR, NEVER THE SCRATCH
+    // FILE (the staging rationale above, and the four-tier review's R-11 rule
+    // in failure.h). A loader's open or read refusal names the path it was
+    // handed — here the per-call scratch copy, an implementation detail of
+    // this call that exists for microseconds and that the user cannot act on
+    // — so appending its composed sentence put that temp filename on the card.
+    // The loaders publish those refusals' WORDS apart from the path
+    // (`path_free_reason`, the granted frozen touch of 2026-09-02) and these
+    // arms take the words alone, so the only file any of them names is the
+    // committed one, repo-relative, on both clauses; a line-numbered parse
+    // error carries no path and its whole sentence is the reason. Both
+    // clauses stay the same words, which is why these are plain_failure: no
+    // path on this disk reaches them.
+    std::optional<std::string> load_reason;
+    const auto load_words = [&load_reason](const std::string& composed) {
+        return load_reason ? *load_reason : composed;
+    };
+
+    auto settings = read_settings_file(settings_file.string(), &load_reason);
     if (!settings) {
         return refuse("invalid settings in '" + snap.settings.path +
-                      "' at commit " + snap.sha + ": " + settings.error());
+                      "' at commit " + snap.sha + ": " +
+                      load_words(settings.error()));
     }
     out.settings = std::move(*settings);
 
     {
         GuiWarpMarkers m;
-        auto r = m.load(warp_file.string());
+        auto r = m.load(warp_file.string(), &load_reason);
         if (!r) {
             return refuse("invalid warp markers in '" + snap.warpmarkers.path +
-                          "' at commit " + snap.sha + ": " + r.error());
+                          "' at commit " + snap.sha + ": " +
+                          load_words(r.error()));
         }
         out.warp_markers = m.markers();
     }
     {
         GuiPhaseResetMarkers t;
-        auto r = t.load(phase_reset_file.string());
+        auto r = t.load(phase_reset_file.string(), &load_reason);
         if (!r) {
             return refuse("invalid phase reset markers in '" +
                           snap.phaseresetmarkers.path + "' at commit " +
-                          snap.sha + ": " + r.error());
+                          snap.sha + ": " + load_words(r.error()));
         }
         out.phase_reset_markers = t.markers();
     }

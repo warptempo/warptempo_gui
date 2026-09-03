@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -101,7 +102,14 @@ public:
     // markers. The first malformed line aborts the parse and returns a
     // one-line error; a missing/unopenable file is a failure (callers that
     // treat absence as "no markers" check existence first). No throw.
-    std::expected<void, std::string> load(const std::string& path);
+    //
+    // `path_free_reason` is the parser's own out-parameter, passed through
+    // unread: an unopenable or unreadable file writes its words with no path
+    // in them there, so a caller composing a card names the file once, its
+    // own way (parse_warpmarkers_file, warpmarkers_parse.h).
+    std::expected<void, std::string> load(
+        const std::string& path,
+        std::optional<std::string>* path_free_reason = nullptr);
 
     // Writes the canonical form to `path`. Atomic: writes to
     // <path>.tmp, fsyncs, then renames. Preserves existing permissions or

@@ -7,11 +7,14 @@
 
 #include <sstream>
 
-std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
+std::expected<void, std::string> GuiWarpMarkers::load(
+        const std::string& path,
+        std::optional<std::string>* path_free_reason) {
     // The parse fills each serialized WarpMarker base; the shared load_impl
     // (clear-bump-parse-upcast) copies it into a GuiWarpMarker whose
-    // session-only iter/bpm fields keep their defaults.
-    return load_impl(path, parse_warpmarkers_file);
+    // session-only iter/bpm fields keep their defaults. The path-free reason
+    // rides through to the parser untouched.
+    return load_impl(path, parse_warpmarkers_file, path_free_reason);
 }
 
 // Serializer contract: this serialization performs no ordering validation.

@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <unordered_map>
@@ -4887,12 +4888,26 @@ bool GuiInputHandler::load_render_entry_in_place(
                       e.wav_path);
     }
 
+    // THE STRICT LOADERS' REFUSALS NAME THE CELL'S FILE ONCE (the four-tier
+    // review's R-11 rule, failure.h): each arm below already names the file
+    // the project's folder-and-file way in its own clause, and `refuse` puts
+    // the FULL path on the stderr line, so an open or read refusal — which
+    // names the very path this road handed the loader — contributes its WORDS
+    // alone through `path_free_reason` (the granted frozen touch of
+    // 2026-09-02) instead of its composed sentence, which would have printed
+    // the path a second time in a second spelling. A line-numbered parse
+    // error carries no path and its whole sentence is the reason.
+    std::optional<std::string> load_reason;
+    const auto load_words = [&load_reason](const std::string& composed) {
+        return load_reason ? *load_reason : composed;
+    };
+
     const std::filesystem::path sidecar = renders_dir.settings_path(e);
-    const auto settings = read_settings_file(sidecar.string());
+    const auto settings = read_settings_file(sidecar.string(), &load_reason);
     if (!settings) {
         return refuse("invalid settings in '" +
                           shown_project_path(sidecar) + "': " +
-                          settings.error(),
+                          load_words(settings.error()),
                       sidecar);
     }
 
@@ -4902,10 +4917,11 @@ bool GuiInputHandler::load_render_entry_in_place(
         GuiWarpMarkers m;
         const std::filesystem::path wm =
             e.batch_folder / (e.basename + ".warpmarkers");
-        auto r = m.load(wm.string());
+        auto r = m.load(wm.string(), &load_reason);
         if (!r) {
             return refuse("invalid warp markers in '" +
-                              shown_project_path(wm) + "': " + r.error(),
+                              shown_project_path(wm) + "': " +
+                              load_words(r.error()),
                           wm);
         }
         src_warp = m.markers();
@@ -4914,10 +4930,11 @@ bool GuiInputHandler::load_render_entry_in_place(
         GuiPhaseResetMarkers t;
         const std::filesystem::path tm =
             e.batch_folder / (e.basename + ".phaseresetmarkers");
-        auto r = t.load(tm.string());
+        auto r = t.load(tm.string(), &load_reason);
         if (!r) {
             return refuse("invalid phase reset markers in '" +
-                              shown_project_path(tm) + "': " + r.error(),
+                              shown_project_path(tm) + "': " +
+                              load_words(r.error()),
                           tm);
         }
         src_phase_resets = t.markers();
