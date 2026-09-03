@@ -432,9 +432,27 @@ std::expected<FinishRenderStatus, std::string> finish_render(
         std::vector<float>& buffer, int channels, int sample_rate,
         const PostTrim* post_trim,
         const std::string& output_wav_path,
-        const std::atomic<bool>* cancel_flag) {
+        const std::atomic<bool>* cancel_flag,
+        std::optional<FinishRenderSinkFailure>* sink_failure) {
     const auto cancelled = [&]() {
         return cancel_flag && cancel_flag->load();
+    };
+    // The three sink refusals compose their sentence HERE, from the parts,
+    // and hand the parts back where the caller asked for them (architect
+    // approval 2026-09-02, the granted frozen touch): the GUI card names the
+    // file the project's way with the writer's words after it, the terminal
+    // keeps the full path, and a caller that had only the composed sentence
+    // could reach the words only by parsing English around a path that may
+    // itself hold a quote or a colon. The returned string is unchanged by
+    // construction — one composition, both readers.
+    const auto sink_refusal = [&](const char* before,
+                                  const std::string& words) {
+        const std::string after = ": " + words;
+        if (sink_failure) {
+            *sink_failure = FinishRenderSinkFailure{before, output_wav_path,
+                                                    after};
+        }
+        return std::unexpected(before + ("'" + output_wav_path + "'") + after);
     };
     // Output-buffer contract, validated once before the crop, the limiter,
     // and sink selection so every route below may assume a well-shaped,
@@ -495,18 +513,15 @@ std::expected<FinishRenderStatus, std::string> finish_render(
     auto writer = WavWriter::open_file(output_wav_path, channels,
                                        sample_rate);
     if (!writer) {
-        return std::unexpected("Could not open output '" + output_wav_path +
-                               "': " + writer.error());
+        return sink_refusal("Could not open output ", writer.error());
     }
     const int64_t frames = static_cast<int64_t>(
         buffer.size() / static_cast<size_t>(channels));
     if (auto ok = writer->write_frames(buffer.data(), frames); !ok) {
-        return std::unexpected("Could not write output '" + output_wav_path +
-                               "': " + ok.error());
+        return sink_refusal("Could not write output ", ok.error());
     }
     if (auto closed = writer->close(); !closed) {
-        return std::unexpected("Could not close output '" + output_wav_path +
-                               "': " + closed.error());
+        return sink_refusal("Could not close output ", closed.error());
     }
     return FinishRenderStatus::Completed;
 }

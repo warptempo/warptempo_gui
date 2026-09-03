@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -158,8 +159,29 @@ std::expected<void, std::string> validate_render_projection(
 // Returns the completion status on success, else the failure message
 // (open/write/close detail); callers add their own context prefix.
 enum class FinishRenderStatus { Completed, Cancelled };
+
+// THE SINK'S FAILURE, APART (architect approval 2026-09-02). The three
+// encode refusals are the only failures here that carry a PATH, and a caller
+// that shows them on two surfaces needs the parts rather than the sentence:
+// the GUI's card names the file the project's way and appends the writer's
+// own words, while the terminal keeps the full path, and neither surface may
+// be derived by parsing the other's English (a path may hold a quote or a
+// colon). So the composed sentence stays the returned error, byte-identical
+// to what it always was, and these three parts — which compose it exactly as
+// `before + '\'' + path + '\'' + after` — ride an optional out-parameter for
+// the caller that wants to spell it differently. `after` carries the writer's
+// words with their ": " separator, and the struct is written ONLY by the
+// three sink refusals: every other failure in the chain is a shape breach
+// naming no path, and leaves the optional empty.
+struct FinishRenderSinkFailure {
+    std::string before;  // "Could not write output " — the act, up to the path
+    std::string path;    // output_wav_path, unquoted
+    std::string after;   // ": " + the writer's own words
+};
+
 std::expected<FinishRenderStatus, std::string> finish_render(
     std::vector<float>& buffer, int channels, int sample_rate,
     const PostTrim* post_trim,
     const std::string& output_wav_path,
-    const std::atomic<bool>* cancel_flag = nullptr);
+    const std::atomic<bool>* cancel_flag = nullptr,
+    std::optional<FinishRenderSinkFailure>* sink_failure = nullptr);

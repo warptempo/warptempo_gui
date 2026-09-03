@@ -878,35 +878,33 @@ RenderOutcome do_render(const RenderRequest& req,
         // route. One implementation shared with warptempo_cli, so the CLI
         // stays byte-identical to the GUI by construction (the CLI passes no
         // cancel flag, so its chain always completes).
+        std::optional<FinishRenderSinkFailure> sink_failure;
         auto fin = finish_render(
             *out_buf, src_ch, src_sr,
             trim_plan ? &trim_plan->post : nullptr,
             req.output_buffer ? std::string() : staging_output_path,
-            cancel_flag);
+            cancel_flag, &sink_failure);
         if (!fin) {
             cleanup_all();
-            // THE ENCODE'S SENTENCE IS THE FROZEN PREPOST'S (finish_render,
-            // trimmer.cpp): on the disk route it bundles the staging path
-            // and the writer's words into one string — "Could not open/
-            // write/close output '<full path>': <words>" — and pulling the
-            // words back out of it would be parsing the composed English,
-            // which the two-clause rule forbids. So the diagnostic is that
-            // sentence verbatim (the stderr line unchanged), and the display
-            // is composed here from what THIS site holds, the staging path,
-            // naming the file and the act without the writer's words. THE
-            // SYSTEM'S WORDS ARE MISSING FROM THIS ONE CARD until the frozen
-            // producer hands them over apart from the path (a granted touch
-            // the architect has not been asked for; recorded 2026-09-02). The
-            // buffer route passes no path and its refusals are shape
-            // breaches with none in them — the same words on both surfaces.
-            if (req.output_buffer) return fail_words(fin.error());
-            GuiFailure f;
-            f.diagnostic = fin.error();
-            f.display    = "could not write '" +
-                           shown_project_path(
-                               std::filesystem::path(staging_output_path)) +
-                           "'";
-            return fail(std::move(f));
+            // THE ENCODE'S REFUSAL COMES BACK IN PARTS (the frozen
+            // finish_render's out-parameter, trimmer.h — the granted touch of
+            // 2026-09-02): its three sink failures hand over the act clause,
+            // the staging path and the writer's own words apart, so this site
+            // composes the two clauses exactly as every other failure on this
+            // road does — the full path on the diagnostic, the project's
+            // folder-and-file form on the display, the system's words after
+            // it on both — through path_failure, with no English parsed out
+            // of the composed sentence. The stderr line is byte-identical to
+            // the sentence finish_render returns, that string being the same
+            // composition of the same three parts. Every OTHER refusal in the
+            // chain is a shape breach naming no path (the output-buffer
+            // contract, the post-trim crop), and the buffer route reaches only
+            // those — the same words on both surfaces.
+            if (!sink_failure) return fail_words(fin.error());
+            const std::filesystem::path sink(sink_failure->path);
+            return fail(path_failure(sink_failure->before, sink,
+                                     shown_project_path(sink),
+                                     sink_failure->after));
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
