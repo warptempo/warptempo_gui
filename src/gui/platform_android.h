@@ -1,4 +1,5 @@
 #pragma once
+#include "av_sync_stats.h"
 #include "device_config.h"
 #include "gui_input.h"
 #include "gui_media.h"
@@ -371,6 +372,19 @@ public:
     // method lookup and the three drop rules — is stated at the definitions.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
+
+    // -- THE AV SYNC PANEL'S DISPLAY HALF (contract at platform_wayland.h,
+    // which owns it) -----------------------------------------------------
+    // The arm is a NO-OP here and the reading answers `available` false, which
+    // is a fact about the platform rather than a gap: there is no presentation
+    // feedback road on the lock/unlockAndPost path (EGL frame timestamps need
+    // an EGLSurface; Choreographer timelines describe the NEXT frame, not this
+    // one's light), so nothing on this backend can say when a commit turned
+    // into light. The panel prints "not available on this backend" and, with
+    // the audio half unreported here too (playback_aaudio.cpp's audio_stats),
+    // no net line at all.
+    void set_display_measurement(bool on);
+    GuiDisplayStats display_stats() const;
 
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,

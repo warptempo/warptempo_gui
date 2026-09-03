@@ -1,11 +1,16 @@
 #pragma once
 
 // THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, and the OPEN PROJECT PICKER's valid project folders. (A
-// third stood for one day, the `h` view's history picker; it was retired
-// 2026-08-29 as overengineered, that view's `'` raising its confirmation on
-// the viewed member with no list at all.) Which one fills it is
+// 2026-08-28). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
+// and their wavs, the OPEN PROJECT PICKER's valid project folders, and — since
+// 2026-09-03 — the AV SYNC STATS PANEL's text lines (Help → AV Sync Stats,
+// av_sync_stats.h), the first content whose rows are INERT: no glyph, no
+// highlight, no act, the band scrolling and consuming presses under it as it
+// does under any content. (A fourth stood for one day, the `h` view's history
+// picker; it was retired 2026-08-29 as overengineered, that view's `'` raising
+// its confirmation on the viewed member with no list at all — and the TEXT
+// KIND it introduced is what the stats panel produces now.) Which one fills it
+// is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate
 // (folder_overlay_stands, app_state.h; stands() below forwards to it). This
 // header is the panel's ONE OWNER of everything that is not pixels, a press
@@ -19,7 +24,8 @@
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
 // WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name (an UP row, `..`, was a third kind until 2026-09-01, when
+// icon and a name, and TEXT rows, which are a line and nothing else (an UP
+// row, `..`, was a fourth kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
 // full window width, standing from THE WINDOW'S TOP down to the bottom row
@@ -94,7 +100,8 @@
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):
 // under the PLAYER an open enters a folder or plays a wav; under
-// the PROJECT PICKER it reopens the row's project. Enter on the highlight is
+// the PROJECT PICKER it reopens the row's project; under the STATS PANEL there
+// is no open and no highlight at all, its rows being inert. Enter on the highlight is
 // the keyboard's own click and reaches the same fork, which is at
 // the press router and the key routers, never here — the panel knows rows,
 // not projects.
@@ -131,10 +138,13 @@ inline constexpr double kRowIconGapPx = 8.0;
 
 // THE ROW BOX: the button's box, the button's between-boxes gap, the button's
 // glyph. A folder row wears icons::Icon::Folder and a wav row
-// icons::Icon::AudioXWav. Every row has one: the glyph-less TEXT kind went
-// with the history picker (2026-08-29), and the UP kind — which wore the
-// folder glyph, naming a folder — with the player's move inside `tmp/`
-// (2026-09-01).
+// icons::Icon::AudioXWav. NOT EVERY ROW HAS ONE: the glyph-less TEXT kind,
+// which went with the history picker on 2026-08-29, is BACK WITH A PRODUCER
+// since 2026-09-03 — the AV sync stats panel's every row — and its text starts
+// where the glyph would have, at the button's own inset. (The UP kind, which
+// wore the folder glyph because it named a folder, went with the player's move
+// inside `tmp/` on 2026-09-01 and has no producer.) The BOX is the same
+// whatever the kind: a row is a wide button.
 inline int row_height_px()   { return scaled_px(kIconBtnPx, 1); }
 inline int row_gap_px()      { return scaled_px(kIconBtnGapPx, 1); }
 inline int pad_px()          { return scaled_px(kPanelPadPx); }
@@ -204,8 +214,9 @@ inline int content_height_px(const AppState& a) {
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
 // rows in it — no content can stand empty anyway (the player refuses with
-// "Nothing to play: no renders under tmp/" and the project picker
-// always lists at least the project that is open).
+// "Nothing to play: no renders under tmp/", the project picker
+// always lists at least the project that is open, and the stats panel's rows
+// are composed rather than enumerated, so it always has some).
 inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }

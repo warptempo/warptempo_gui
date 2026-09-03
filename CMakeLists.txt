@@ -129,6 +129,11 @@ set(WARPTEMPO_GUI_SOURCES
     # predictor, the domain/bind/speed logic). Shared: each backend arm
     # below carries only its device mechanics over this one engine.
     src/gui/playback_common.cpp
+    # THE AV SYNC PANEL'S TEXT (architect 2026-09-03): the one composer that
+    # turns the audio device's and the display's readings into the panel's
+    # rows. GUI-only — warptempo_cli paints nothing and measures nothing — and
+    # portable: both backends fill the same two structs.
+    src/gui/av_sync_stats.cpp
     src/gui/render_pipeline.cpp
     src/gui/warp_frame_map_view.cpp
     src/gui/viewport.cpp
@@ -321,6 +326,13 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml
         ${WAYLAND_PROTOCOLS_DATADIR}/unstable/relative-pointer/relative-pointer-unstable-v1.xml
+        # THE AV SYNC PANEL'S DISPLAY INSTRUMENT (architect 2026-09-03):
+        # wp_presentation, whose feedback says when a commit turned into light.
+        # It is OPTIONAL at runtime and the feedback is requested only while
+        # the panel stands (platform_wayland.h's set_display_measurement). The
+        # line stood 2026-09-02..09-03 for the display lead and came back with
+        # the panel.
+        ${WAYLAND_PROTOCOLS_DATADIR}/stable/presentation-time/presentation-time.xml
     )
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/wayland-generated)
     set(WAYLAND_GENERATED_SOURCES "")

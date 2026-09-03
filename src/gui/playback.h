@@ -1,4 +1,6 @@
 #pragma once
+#include "av_sync_stats.h"   // GuiAudioStats (the AV sync panel's audio half)
+
 #include <cstdint>
 #include <memory>
 
@@ -271,6 +273,25 @@ public:
     // reopens, so the latch is exactly what a press repairs there too).
     // Main thread only; a pure read.
     bool    device_absent() const;
+
+    // WHAT THE DEVICE SAYS ABOUT ITSELF, READ ON DEMAND (architect 2026-09-03,
+    // Help → AV Sync Stats). The backend's own name, its rate, its period and
+    // — where the platform reports a trustworthy one — its OUTPUT LATENCY, the
+    // figure the panel's net line needs (the type and the derivation are at
+    // av_sync_stats.h). ONE CALLER: the panel's per-frame row refresh, which
+    // runs only while the panel stands, so with the panel down nothing here is
+    // asked and nothing is read.
+    //
+    // A PLAIN QUERY, NOT A CACHED ATOMIC, and that is the shape the ruling
+    // asked for: a latency instrument lived on the JACK backend from
+    // 2026-09-01 to 2026-09-03 — port latency ranges pushed in by a latency
+    // callback, cached, and printed on every change — and went with the
+    // playback leads it fed. JACK asks the client and both ports here, on the
+    // main thread, at the moment the panel asks. AAUDIO REPORTS NO LATENCY
+    // (`latency_known` false): the car's Bluetooth route is large, variable
+    // and unreported, and the framework's figures do not carry it — the record
+    // is at that backend's Impl. Main thread only; a pure read.
+    GuiAudioStats audio_stats() const;
 
     // THE REOPEN AT THE PRESS (architect 2026-09-02, the four-tier review's
     // R-3). Asked at a LAUNCH press by the three launch gates —

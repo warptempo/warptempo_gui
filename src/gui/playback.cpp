@@ -21,15 +21,17 @@
 // closing it, its two callbacks (process, sample rate), and stop()'s
 // quiescence fence.
 //
-// THIS BACKEND MEASURES NOTHING (architect 2026-09-03). A latency instrument
-// lived here for two days — the port latency ranges read through a latency
-// and a buffer-size callback, cached in the engine and printed to stderr on
-// every change, to be added to the predictor's anchors — and went with the
-// playback leads it was built for: the line is the raw predictor again
-// (playback_common.cpp's record above playback_publish_play), and a
-// measurement the user did not ask for is not printed. A later AV-sync panel
-// reads the ranges ON DEMAND, which is a different shape from a cached
-// atomic; nothing is kept standing for it here.
+// THIS BACKEND MEASURES NOTHING ON ITS OWN (architect 2026-09-03). A latency
+// instrument lived here for two days — the port latency ranges read through a
+// latency and a buffer-size callback, cached in the engine and printed to
+// stderr on every change, to be added to the predictor's anchors — and went
+// with the playback leads it was built for: the line is the raw predictor
+// again (playback_common.cpp's record above playback_publish_play), and a
+// measurement the user did not ask for is not printed. THE AV SYNC PANEL
+// READS THE RANGES ON DEMAND instead (audio_stats below, the same day's
+// ruling): a plain query while the panel stands, which is a different shape
+// from a cached atomic — nothing is kept standing for it here, no callback is
+// registered for it, and with the panel down not one of those calls is made.
 //
 // THIS FILE IS NOT IN THE ANDROID TARGET: exactly one of this file and
 // playback_aaudio.cpp is compiled into a given binary, the same one-arm-per-
@@ -343,6 +345,45 @@ bool GuiPlayback::ensure_device_available_for_play() {
 // here, so the two reads are one expression.
 bool GuiPlayback::device_absent() const {
     return !impl_ || !impl_->client_active;
+}
+
+// WHAT JACK SAYS ABOUT ITSELF, ASKED AT THE MOMENT THE PANEL ASKS (the
+// contract at the declaration). Four plain client queries and nothing kept:
+// the graph rate off the engine's own field (the sample-rate callback keeps it
+// current for the render body anyway), the buffer size, and each output port's
+// PLAYBACK latency range — the interval between the engine handing a frame to
+// the port and that frame being heard, which is the net line's L. THE RANGE IS
+// MERGED OVER BOTH PORTS, min of the mins and max of the maxes: a port may
+// feed sinks of different depth, and the two ends are what the panel prints
+// when they differ. A client that never came up answers `present` false and
+// the panel says so on one line.
+GuiAudioStats GuiPlayback::audio_stats() const {
+    GuiAudioStats st;
+    st.backend = GuiAudioBackendKind::Jack;
+    if (!impl_ || !impl_->client_active || !impl_->client) return st;
+    st.present     = true;
+    st.output_rate =
+        static_cast<int>(impl_->state.output_rate.load(std::memory_order_relaxed));
+    st.period_frames =
+        static_cast<int>(jack_get_buffer_size(impl_->client));
+    // `buffer_frames` stays 0: on this backend the period IS the whole buffer
+    // story, and a second figure repeating it would read as a second fact.
+    for (jack_port_t* port : impl_->ports) {
+        if (!port) continue;
+        jack_latency_range_t range{};
+        jack_port_get_latency_range(port, JackPlaybackLatency, &range);
+        const int64_t lo = static_cast<int64_t>(range.min);
+        const int64_t hi = static_cast<int64_t>(range.max);
+        if (!st.latency_known) {
+            st.latency_known      = true;
+            st.latency_min_frames = lo;
+            st.latency_max_frames = hi;
+        } else {
+            if (lo < st.latency_min_frames) st.latency_min_frames = lo;
+            if (hi > st.latency_max_frames) st.latency_max_frames = hi;
+        }
+    }
+    return st;
 }
 
 int64_t GuiPlayback::cursor() const {

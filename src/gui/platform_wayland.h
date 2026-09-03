@@ -1,4 +1,5 @@
 #pragma once
+#include "av_sync_stats.h"
 #include "device_config.h"
 #include "gui_input.h"
 #include "gui_media.h"
@@ -515,6 +516,48 @@ public:
     // focus (MainActivity.mediaState).
     void publish_media_state(const GuiMediaState& state);
 
+    // -- THE AV SYNC PANEL'S DISPLAY HALF (architect 2026-09-03) -----------
+    //
+    // HOW LONG AFTER THE PRE-PAINT HOOK SAMPLES THE PLAYBACK PREDICTOR DO THE
+    // PIXELS IT PAINTS TURN INTO LIGHT — the display's own latency, the twin
+    // of the audio device's output latency (GuiPlayback::audio_stats), and
+    // the second of the two figures the panel's net line is made of (the
+    // derivation and the sign are at compose_av_sync_rows, av_sync_stats.cpp).
+    //
+    // IT IS MEASURED ONLY WHILE THE PANEL STANDS, and that is the feature
+    // rather than an optimization (the architect's ruling: "in all cases the
+    // measurements should be disabled when not explicitly requested by the
+    // user"). `set_display_measurement` is the ARM, called by the panel's open
+    // and its close and by nothing else: with it FALSE — which is every frame
+    // of every other session — paint_one_frame takes no clock stamp and
+    // requests no wp_presentation feedback at all, so no feedback object
+    // exists, the ring holds nothing and the compositor is asked for nothing.
+    // Arming and disarming both CLEAR the ring and destroy whatever is
+    // outstanding, so a panel opened twice reads its own session and never the
+    // last one's. `display_stats` is a pure read the panel makes once per
+    // frame while it is up.
+    //
+    // ON THIS BACKEND THE INSTRUMENT IS wp_presentation, the compositor's
+    // presentation feedback (the globals block below): every content commit
+    // carries a feedback request stamped with the instant the pre-paint hook
+    // began, the compositor answers with the instant that commit turned into
+    // light, and the panel prints the MEAN, MIN AND MAX of the difference over
+    // the last 30 presented frames (Kodi's window; the ring is at the state
+    // block). Where the global is absent, or where its clock is not
+    // CLOCK_MONOTONIC — the predictor's clock, and a lead measured across two
+    // clocks is a number rather than a measurement — the reading says so and
+    // the panel prints no net line. THERE IS NO FALLBACK FIGURE and no stderr
+    // line: the instrument printed two of those while the display lead lived
+    // (2026-09-02 to 2026-09-03) and both went with it — a measurement the
+    // user did not ask for is not printed, and the panel IS the instrument now.
+    //
+    // ANDROID ANSWERS `available` FALSE and its arm is a no-op, which is a
+    // fact about the platform rather than a gap: there is no feedback road on
+    // the lock/unlockAndPost path (EGL frame timestamps need an EGLSurface;
+    // Choreographer timelines describe the next frame, not this one's light).
+    void set_display_measurement(bool on);
+    GuiDisplayStats display_stats() const;
+
 private:
     // libwayland's listener tables are C structs of function pointers, so
     // dispatch lives in static functions that cast `data` to `GuiPlatform*`
@@ -542,9 +585,12 @@ private:
     // in every text editor, is not a behavior anybody wanted. EVERY wl_output
     // the registry names is bound, best-effort (`outputs_` below; no output
     // with a mode falls back to a 60 Hz tick). The ruled OPTIONAL list is
-    // exactly TWO, the two pointer-capture managers in their block below.
-    // (It was three between 2026-09-02 and 2026-09-03: wp_presentation was
-    // bound to measure the display lead, and went with the playback leads.)
+    // exactly THREE: the two pointer-capture managers in their block below,
+    // and wp_presentation, the AV sync panel's display instrument (its own
+    // block below the outputs). It was three between 2026-09-02 and
+    // 2026-09-03 as the DISPLAY LEAD's instrument, went with the playback
+    // leads that day, and came back the same day under the panel's gate —
+    // BOUND at init and never asked for a feedback while the panel is down.
     // The bound INTERFACES are more than these classes name — every
     // wl_output, and the seat's own children — so the count of bound globals
     // is not a number worth stating here; what is ruled is the five required
@@ -558,12 +604,22 @@ private:
     struct wl_data_device_manager*     wl_data_device_manager_ = nullptr;
 
     // -- Outputs: every wl_output, and THE ONE THE WINDOW IS ON --
-    // One record per advertised wl_output (bound at v2 — the mode event is
-    // all this program reads; no name, no description), kept while the global
-    // stands and destroyed at its registry removal. `refresh_mhz` is that
-    // output's latest CURRENT mode, 0 until one arrives. `entered` mirrors
-    // wl_surface.enter/leave for the main surface: true while the compositor
-    // says the window is (at least partly) on this output.
+    // One record per advertised wl_output (bound at v4 since 2026-09-03 — the
+    // MODE event is what the tick reads and the NAME event is what the AV sync
+    // panel prints; it was v2, no name, until the panel needed to say WHICH
+    // screen the commit-to-light figure belongs to on a two-monitor desk),
+    // kept while the global stands and destroyed at its registry removal.
+    // `refresh_mhz` is that output's latest CURRENT mode, 0 until one arrives.
+    // `entered` mirrors wl_surface.enter/leave for the main surface: true
+    // while the compositor says the window is (at least partly) on this
+    // output. `name` is the connector the compositor calls it ("eDP-1"), the
+    // v4 event; where the compositor is older it falls back to the GEOMETRY
+    // event's make and model, and where neither arrives it stays empty and the
+    // panel says "not known yet"; the two are separate fields so neither has
+    // to know whether the other arrived. `version` is what this proxy was
+    // bound at,
+    // and its one reader is the teardown: v3 gave wl_output a `release`
+    // request, and a v3-or-newer proxy must be released rather than destroyed.
     //
     // THE SELECTION RULE (2026-09-02, replacing "the first output advertised"
     // — a coin flip on a laptop with a 60 Hz panel and a 120 Hz external,
@@ -588,8 +644,11 @@ private:
     struct OutputRecord {
         struct wl_output* output      = nullptr;
         uint32_t          global_name = 0;
+        uint32_t          version     = 0;
         int               refresh_mhz = 0;
         bool              entered     = false;
+        std::string       name;         // wl_output.name, v4 — "eDP-1"
+        std::string       make_model;   // wl_output.geometry, v1 — the EDID's
     };
     std::vector<OutputRecord> outputs_;
     struct wl_output*         window_output_ = nullptr;
@@ -598,6 +657,67 @@ private:
     // over, not where the window is now (that is `window_output_`'s and each
     // record's `entered`).
     bool                      surface_entered_ever_ = false;
+
+    // -- wp_presentation: the AV sync panel's display instrument --
+    // (the contract is at set_display_measurement / display_stats above)
+    //
+    // Bound at v1 (the `presented` event this reads is v1's; the proxy is
+    // OPTIONAL — see the protocol classes above). `presentation_clock_ok_`
+    // records that the compositor's clock_id event named CLOCK_MONOTONIC, the
+    // predictor's own clock (steady_clock on glibc/Linux), so `presented`'s
+    // timestamp and the pre-paint stamp are subtracted in one domain with no
+    // conversion; any other clock leaves the global bound and UNUSED, and the
+    // panel prints the reason instead of a figure.
+    //
+    // BOUND AT INIT, ASKED FOR NOTHING WHILE THE PANEL IS DOWN. The two shapes
+    // the gate could have taken are bind-on-open and this one, and this one is
+    // the smaller honest shape: the MEASUREMENT is the per-commit feedback
+    // object and the ring behind it, and `display_measurement_` gates exactly
+    // those (request_presentation_feedback's first line, and the stamp
+    // paint_one_frame does not even take). Binding a global creates no
+    // measurement — it is one proxy and one clock_id event at startup — while
+    // binding it LATE would need the registry name and version cached, a
+    // bind/destroy pair, a removal arm for an unbound global, and would leave
+    // the first frames after every open unable to verify the clock before the
+    // commits they must gate. So the global lives with the other globals and
+    // the INSTRUMENT lives with the panel.
+    struct wp_presentation* wp_presentation_        = nullptr;
+    bool                    presentation_clock_ok_  = false;
+    // THE ARM (set_display_measurement): false for every frame of every
+    // session in which the panel is not standing.
+    bool                    display_measurement_    = false;
+
+    // ONE FEEDBACK OBJECT PER CONTENT COMMIT, requested BEFORE that commit
+    // (the protocol's shape; paint_one_frame's order), several possibly
+    // outstanding at once, so each carries ITS OWN pre-paint stamp in its own
+    // user data rather than on this singleton — a stamp on the platform would
+    // be overwritten by the next paint before the compositor answered for
+    // this one. The record owns nothing but the stamp and its proxy; both
+    // listener arms (presented, discarded) destroy the proxy and the record,
+    // and the disarm and shutdown destroy whatever is still outstanding.
+    struct PresentationFeedback {
+        GuiPlatform*                     self      = nullptr;
+        struct wp_presentation_feedback* proxy     = nullptr;
+        int64_t                          sample_ns = 0;
+    };
+    std::vector<PresentationFeedback*> presentation_feedbacks_;
+
+    // THE 30-FRAME WINDOW of (presented − sampled), Kodi's: long enough to
+    // average the compositor's per-frame jitter, short enough to follow a
+    // change (a window moved to the 120 Hz output settles in half a second).
+    // A RING rather than a bare running sum, because a moving mean must DROP
+    // its oldest sample and only the ring knows which one that is; the sum is
+    // kept beside it so the mean is one division, and the MIN AND MAX the
+    // panel prints are walked over the live slots (thirty compares once a
+    // frame, against keeping two more running extrema that a dropped sample
+    // could not correct). `count` grows to the window and stays there; `next`
+    // is the slot the next sample overwrites. CLEARED AT EVERY ARM AND
+    // DISARM, so a reading is always this panel session's own.
+    static constexpr int kDisplayLeadWindow = 30;
+    int64_t presentation_samples_[kDisplayLeadWindow] = {};
+    int     presentation_sample_count_ = 0;
+    int     presentation_sample_next_  = 0;
+    int64_t presentation_sample_sum_   = 0;
 
     // -- Surface objects --
     struct wl_surface*       wl_surface_       = nullptr;
@@ -862,6 +982,21 @@ private:
     int  detect_refresh_rate_ms();
     bool arm_playback_timer();
 
+    // -- Presentation helpers --
+    // Request one wp_presentation_feedback for the content commit that
+    // follows, stamped with `sample_ns`; A NO-OP WHILE THE PANEL IS DOWN (the
+    // gate's first line), and while the global is absent or its clock
+    // unusable. The ring is at the presented handler.
+    void request_presentation_feedback(int64_t sample_ns);
+    // The one teardown of a feedback record: unlist it, destroy its proxy,
+    // free it. Both terminal arms end here; the disarm and shutdown run it
+    // over the rest.
+    void finish_presentation_feedback(PresentationFeedback* fb);
+    void destroy_presentation_feedbacks();
+    // Drop every sample and every outstanding request — the arm's and the
+    // disarm's shared body.
+    void reset_display_measurement_state();
+
     // -- Output helpers --
     // The record for a wl_output proxy, or null for one this program never
     // bound (a cursor surface's output events never reach here; the main
@@ -897,6 +1032,17 @@ private:
     void on_registry_global_remove(uint32_t name);
     void on_output_mode(struct wl_output* output, uint32_t flags,
                         int32_t width, int32_t height, int32_t refresh_mhz);
+    // wl_output.geometry's make and model (the v4 name event's fallback) and
+    // wl_output.name itself — the panel's "which screen is this" line.
+    void on_output_geometry(struct wl_output* output, const char* make,
+                            const char* model);
+    void on_output_name(struct wl_output* output, const char* name);
+    // wp_presentation.clock_id, and the feedback's two terminal arms.
+    void on_presentation_clock_id(uint32_t clk_id);
+    void on_presentation_presented(PresentationFeedback* fb,
+                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo,
+                                   uint32_t tv_nsec, uint32_t flags);
+    void on_presentation_discarded(PresentationFeedback* fb);
     // wl_surface.enter / leave on the MAIN surface (the selection rule at
     // `outputs_`).
     void on_surface_enter(struct wl_output* output);

@@ -350,6 +350,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // THE AV SYNC STATS PANEL IS KEYBOARD-MODAL THE SAME WAY (2026-09-03,
+    // architect): the folder overlay's THIRD content, at the picker's rank
+    // (none of the three list owners stands with another) and with the
+    // picker's shape — ITS ROUTER IS THE WHOLE VOCABULARY
+    // (route_stats_panel_key), Ctrl+Q the one fall-through (with the panel
+    // already closed by the close road), Ctrl+S consumed by the router as the
+    // save. Its Up/Down SCROLL the band rather than walking a highlight, which
+    // is the difference that made it a router and a modal owner of its own
+    // rather than a second tenant of the picker's (the record is at
+    // AppState::ModalDialogOwner). The gesture clause is the player's own: the
+    // overlay's band arm is a member of any_pointer_gesture_active under this
+    // owner too, and while it stands every key is swallowed but the drag-modal
+    // gate's Ctrl+Q hatch.
+    if (app.stats_panel.active) {
+        if (any_pointer_gesture_active(app)) {
+            // The player's arm above, verbatim — the same gate's question
+            // asked earlier, the same sentence.
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
+                return;
+            }
+        } else if (route_stats_panel_key(key, mods)) {
+            return;
+        }
+    }
+
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
     // always false in blank state (the only blank state is the transient

@@ -1432,7 +1432,7 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's four menu anchors and
+    // writer serving the WHOLE roster — row 1's five menu anchors and
     // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
@@ -1812,6 +1812,18 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
+    // AND THE AV SYNC STATS PANEL'S, the same road one line further
+    // (2026-09-03): the one close body of the panel — it disarms the display
+    // measurement, so the close road cannot leave the instrument running
+    // behind a torn-down window. Public for that one caller, exactly as the
+    // two above are; its contract is with the panel's cluster below.
+    void close_stats_panel();
+    // AND THE PANEL'S PER-FRAME REFRESH, public for the run loop's tick, which
+    // is its ONE caller (main.cpp). It returns on its first line with the mode
+    // bit down, which is what makes the measurements gated: no reading is
+    // taken and no frame is driven while the panel is closed. Contract with
+    // the panel's cluster below.
+    void refresh_stats_panel_rows();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
@@ -2763,6 +2775,73 @@ private:
     // release's re-ask, the touch region begin, the stash's live owner) say
     // what they mean, exactly as render_player_active below does.
     bool picker_active() const { return app.picker.active; }
+
+    // -- THE AV SYNC STATS PANEL (architect 2026-09-03) --------------------
+    //
+    // HELP → AV SYNC STATS: the folder overlay's THIRD content, a listing of
+    // TEXT rows over a bottom row that is **Close** alone. What it shows and
+    // why the two figures mean what they do is at av_sync_stats.h; what is
+    // here is the mode.
+    //
+    // ONE OPENER AND ONE ROAD TO IT: the Help menu's one row, whose release
+    // calls open_av_sync_stats directly (GuiPopupAct::AvSyncStats — the act
+    // has no chord, so the gates a chord would have met live in the opener's
+    // own body, SyncExternal's shape). It refuses — silently, touching no
+    // playback — under a prompt, under any keyboard-modal editor, under the
+    // render player, under a picker, under a standing panel, in the `h`
+    // history view and during a load; past every one of those it takes the
+    // shared modal stop (stop_playback_for_modal_open, whose decision table
+    // names every dialog modal surface), raises the band and ARMS THE DISPLAY
+    // MEASUREMENT.
+    //
+    // THE MEASUREMENTS RUN ONLY WHILE IT STANDS, which is the feature and not
+    // an optimization (the architect's ruling). Three things are gated and
+    // each is gated at its own owner: the DISPLAY instrument, armed and
+    // disarmed by this pair through GuiPlatform::set_display_measurement, so
+    // no presentation feedback object is ever created with the panel down; the
+    // AUDIO read, which is a plain query refresh_stats_panel_rows makes and
+    // nothing else in the product calls; and the PER-FRAME PAINT, which is
+    // that same refresh, called from the run loop's tick under the mode bit
+    // (main.cpp) and from nowhere else.
+    //
+    //   open_av_sync_stats:       the opener (above).
+    //   close_stats_panel:        THE ONE CLOSE BODY — Esc, the Close button
+    //     and Ctrl+Q's / the compositor's close road (GuiPrompt::request_close,
+    //     beside the player's and the picker's) all pass through it. It
+    //     DISARMS the measurement, drops the overlay (the reset restores
+    //     Owner::None, which IS the band's standing predicate answering false)
+    //     and damages the whole window. A no-op when no panel stands.
+    //   refresh_stats_panel_rows: recompose the rows from the two live
+    //     readings and damage the band when a line changed. Called once per
+    //     tick while the panel stands; a no-op otherwise.
+    //   route_stats_panel_key:    THE WHOLE PLASTIC VOCABULARY while it
+    //     stands, in route_picker_key's shape and at its rank in on_key:
+    //     Ctrl+S saves (with the checkpoint-in-flight card the picker raises);
+    //     Ctrl+Q is THE ONE FALL-THROUGH; Tab / Shift+Tab walk the ring
+    //     [band, Close]; Esc closes; Up / Down SCROLL THE BAND (there is no
+    //     highlight to walk — which is exactly why this panel could not reuse
+    //     route_picker_key and needed a modal owner of its own, the record
+    //     being at AppState::ModalDialogOwner); every other bare key and every
+    //     other modified chord is consumed, silently.
+    //
+    // No undo, nothing authored, LEGAL ON A READ-ONLY TAB — it reads hardware
+    // and touches no piece.
+    void open_av_sync_stats();
+    // Compose the rows from the two live readings and seat them in the
+    // overlay's table (the TABLE alone, so a refresh keeps the scroll offset
+    // and the band's press arm). Answers whether any line changed, which is
+    // what the refresh damages on. Two callers: the opener's first listing and
+    // the tick's refresh.
+    bool build_stats_panel_rows();
+    bool route_stats_panel_key(GuiKey key, GuiInputState mods);
+    // (close_stats_panel and refresh_stats_panel_rows are declared public
+    // above, beside close_picker, for GuiPrompt::request_close and for the run
+    // loop's tick.)
+    // The panel's standing predicate, the mode bit and nothing else — named so
+    // its readers (the veil, the cursor, the hover walk, the chrome release's
+    // re-ask, the touch region begin, the stash's live owner) say what they
+    // mean, exactly as picker_active above and render_player_active below do.
+    bool stats_panel_active() const { return app.stats_panel.active; }
 
     // SYNCHRONIZE TO EXTERNAL STORAGE (architect 2026-08-27) — reached from TWO
     // places, both landing in this one body: the File menu's own row

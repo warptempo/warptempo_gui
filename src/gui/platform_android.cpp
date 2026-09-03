@@ -1717,6 +1717,21 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
 }
 
 // ---------------------------------------------------------------------------
+// The AV sync panel's display half (contract at platform_wayland.h)
+// ---------------------------------------------------------------------------
+
+// NOTHING TO ARM AND NOTHING TO READ (the reasoning is at the declaration):
+// this backend has no presentation-feedback road, so the panel's display group
+// says "not available on this backend" and its net line is not printed. When a
+// road appears — an EGLSurface with frame timestamps, say — this is where the
+// measurement goes, under the same gate the Wayland arm keeps.
+void GuiPlatform::set_display_measurement(bool /*on*/) {}
+
+GuiDisplayStats GuiPlatform::display_stats() const {
+    return GuiDisplayStats{};
+}
+
+// ---------------------------------------------------------------------------
 // The car's two seam members (contracts at platform_wayland.h)
 // ---------------------------------------------------------------------------
 

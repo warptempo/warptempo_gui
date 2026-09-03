@@ -1905,12 +1905,19 @@ enum class RedesignButton {
     //
     // THE ITERATIONS MENU IS THE FOURTH ANCHOR SINCE 2026-08-27 (architect;
     // it read "Series" until the 2026-08-31 rebrand),
-    // painted between Edit and Settings. THE ORDER RULE IS THE ROW'S OWN AND
-    // IT IS SETTINGS-LAST (architect 2026-08-03, when Settings moved behind
-    // the Navigation anchor): File and Edit lead as the standard pair, the
-    // application's own menus follow them, and Settings paints last in the
-    // left float — so a new menu lands between Edit and Settings without
-    // re-opening that ruling.
+    // painted between Edit and Settings.
+    //
+    // THE ORDER RULE IS THE ROW'S OWN, AND IT IS TWO CLAUSES SINCE 2026-09-03
+    // (architect, restating his 2026-08-03 SETTINGS-LAST ruling rather than
+    // breaking it): File and Edit lead as the standard pair, the application's
+    // own menus follow them, SETTINGS PAINTS LAST OF THE APPLICATION'S OWN
+    // MENUS, and HELP PAINTS AFTER IT as the shell's last menu — kdenlive's
+    // own order, and every other Qt application's. So a new APPLICATION menu
+    // still lands between Edit and Settings, and the one place anything paints
+    // to the right of Settings is Help. (The rule read "Settings paints last
+    // in the left float" until the Help anchor landed; the clause it lost is
+    // the one Help occupies, and the ruling it rests on — that the
+    // application's own menus end at Settings — is untouched.)
     //
     // IT IS A COMMAND MENU OF TWO ROWS — "BPM Iterations" (bare `m`) and
     // "Grid Iterations" (bare `i`) — and the vocabulary is the architect's
@@ -1921,7 +1928,17 @@ enum class RedesignButton {
     // ONE pointer home and the no-second-road doctrine is SATISFIED rather
     // than amended. The chords are untouched — bare `m` and bare `i` are what
     // the keyboard has and what the items dispatch.
-    File, Edit, Series, Settings, ViewSW, ViewTP, ViewTW,
+    // THE HELP MENU IS THE FIFTH ANCHOR SINCE 2026-09-03 (architect), painted
+    // AFTER Settings under the order rule above. Its one row is **AV Sync
+    // Stats**, the text panel that measures the audio device's output latency
+    // and the display's commit-to-light interval while it stands
+    // (av_sync_stats.h). The row CARRIES NO CHORD and takes SyncExternal's
+    // shape at GuiPopupAct — a second member of an existing class rather than
+    // a new exception — because the panel's every gate lives in its own
+    // opener. It is dead in the `h` history view, and that is the criterion
+    // working: its one row is refused there, so the anchor would open onto
+    // nothing (menu_anchor_dead_in_mode, below).
+    File, Edit, Series, Settings, Help, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -2668,11 +2685,11 @@ enum class RedesignButton {
     TransportWalkPrev, TransportWalkNext, TransportWalkBoth,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above: SEVEN in row 1, two
-// in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 54. Of
+// THE ROSTER, re-derived by counting the enumerators above: EIGHT in row 1, two
+// in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 55. Of
 // those,
-// FIFTY carry a chord in kToolbarChords and FOUR are the dropdown
-// anchors (File, Edit, Iterations and Settings; the third's enumerator is
+// FIFTY carry a chord in kToolbarChords and FIVE are the dropdown
+// anchors (File, Edit, Iterations, Settings and Help; the third's enumerator is
 // still spelled `Series`), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
@@ -2762,10 +2779,14 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
+// 55 = 54 + THE HELP ANCHOR (2026-09-03): a fifth menu anchor after Settings,
+// carrying no chord — so the roster grew by one and kToolbarChords did not,
+// which is the SERIES anchor's own 2026-08-27 shape without the two rows that
+// left with it.
 // 54 = 53 + THE CENTERED LAMP (2026-08-31, R11): IconCentered joined the zoom
 // group beside Follow with bare `y`, one box and one 2px gap on the icon row's
 // walk and no new separator.
-inline constexpr int kRedesignButtonCount = 54;
+inline constexpr int kRedesignButtonCount = 55;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2795,10 +2816,11 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
 // not a dropdown anchor CLOSES it, because only one button in that row is lit at
 // a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
-// inherited: row 1 is SEVEN buttons and FOUR of them are anchors, so the close
+// inherited: row 1 is EIGHT buttons and FIVE of them are anchors, so the close
 // rule covers THE VIEW BAR'S THREE alone — the same three it covered while
-// Navigation was a third anchor, since EDIT became one (2026-08-20) and since
-// SERIES became a fourth (2026-08-27). It was "Quit or the view bar's three"
+// Navigation was a third anchor, since EDIT became one (2026-08-20), since
+// SERIES became a fourth (2026-08-27) and since HELP became a fifth
+// (2026-09-03). It was "Quit or the view bar's three"
 // while the Quit button
 // existed; the Navigation anchor's 2026-08-15 deletion moved this membership
 // not at all and neither Edit's arrival nor Series's moved it either, an anchor
@@ -2820,6 +2842,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Edit:
         case RedesignButton::Series:
         case RedesignButton::Settings:
+        case RedesignButton::Help:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
@@ -3048,10 +3071,11 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // once every one of its seven rows had a button of its own. That the count has
 // been two, three, two and three again without a single route changing is the
 // shape's own proof: nothing here counts menus. EDIT joined 2026-08-20 with the
-// propagate relocation and cost the shape nothing either, and SERIES joined
-// 2026-08-27 with the BPM/iteration relocation — a fourth value in a field
-// that holds one, which is the whole of what a new menu costs here.
-enum class DropdownMenu { None, File, Edit, Series, Settings };
+// propagate relocation and cost the shape nothing either, SERIES joined
+// 2026-08-27 with the BPM/iteration relocation, and HELP joined 2026-09-03
+// with the AV sync panel — a fifth value in a field that holds one, which is
+// the whole of what a new menu costs here.
+enum class DropdownMenu { None, File, Edit, Series, Settings, Help };
 
 // EVERY MENU THERE IS, in one place, so the routes that must walk them all —
 // the press claim's anchor test, the hover switch, the armed hover open — walk
@@ -3059,7 +3083,7 @@ enum class DropdownMenu { None, File, Edit, Series, Settings };
 // it is the closed state, not a menu.
 inline constexpr DropdownMenu kDropdownMenus[] = {
     DropdownMenu::File, DropdownMenu::Edit, DropdownMenu::Series,
-    DropdownMenu::Settings,
+    DropdownMenu::Settings, DropdownMenu::Help,
 };
 
 // WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
@@ -3071,6 +3095,7 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
         case DropdownMenu::File:     return RedesignButton::File;
         case DropdownMenu::Edit:     return RedesignButton::Edit;
         case DropdownMenu::Series:   return RedesignButton::Series;
+        case DropdownMenu::Help:     return RedesignButton::Help;
         case DropdownMenu::Settings:
         case DropdownMenu::None:     break;
     }
@@ -3164,8 +3189,9 @@ inline constexpr int kSettingsPopupItemCount =
 // the accelerator column's text, the chord the release dispatches through
 // on_key, and where a category parts.
 //
-// IT HAS THREE INSTANCES SINCE 2026-08-27 — the FILE table below
-// (2026-08-13), the EDIT one beside it (2026-08-20) and SERIES (2026-08-27) —
+// IT HAS FOUR INSTANCES SINCE 2026-09-03 — the FILE table below
+// (2026-08-13), the EDIT one beside it (2026-08-20), SERIES (2026-08-27) and
+// HELP (2026-09-03, the one instance whose rows carry NO accelerator at all) —
 // and it was always going to grow them: it was
 // two from 2026-08-02 until 2026-08-15 (NAVIGATION was the other, and the
 // first — this row type is its shape, which File then landed on with no edit to
@@ -3210,7 +3236,21 @@ inline constexpr int kSettingsPopupItemCount =
 // an ordinary `Chord` row now, dispatching through on_key like Quit, and the
 // enumerator is deleted rather than left producer-less. A future act that
 // genuinely cannot have a chord takes SyncExternal's shape.
-enum class GuiPopupAct : uint8_t { Chord, SyncExternal };
+//
+// AND ONE DID, 2026-09-03: `AvSyncStats`, the Help menu's one row, is a SECOND
+// MEMBER OF THAT CLASS AND NOT A NEW EXCEPTION. The AV sync panel is opened
+// from that row and from nowhere else — no chord spells it, the convention
+// having no room for one that would not collide, and none is wanted: the panel
+// is a hardware check reached a handful of times, which is what a menu is for.
+// Its opener carries in its own body every gate a chord would have met (the
+// modal refusals, the `h` view, the loading state — GuiInputHandler::
+// open_av_sync_stats), which is exactly what made a chord-less row possible in
+// SyncExternal's case, and its `key` field stays unread the same way, the
+// release forking on `act` above the chord composition. The difference from
+// Synchronize is only that this act has no second road: Synchronize's bare `\`
+// arrived later and both roads reach one body, while this one has the menu row
+// alone.
+enum class GuiPopupAct : uint8_t { Chord, SyncExternal, AvSyncStats };
 
 struct CommandPopupItem {
     const char* label;
@@ -3439,6 +3479,35 @@ inline constexpr CommandPopupItem kSeriesPopupItems[] = {
 inline constexpr int kSeriesPopupItemCount =
     static_cast<int>(std::size(kSeriesPopupItems));
 
+// THE HELP DROPDOWN'S ITEMS (architect 2026-09-03) — ONE ROW, **AV Sync
+// Stats**, Title Case like every other dropdown item (the one exception to
+// sentence case, stated at paint_handler.cpp's capitalization block) and the
+// architect's own words for the panel. "Synchronize" was taken by the USB
+// stick's mirror act, so the title says what the panel measures instead of
+// what it does.
+//
+// IT CARRIES NO ACCELERATOR AT ALL, and the width rule reads that off the ROWS
+// rather than off the menu (paint_dropdown's optional column term): a null
+// `hotkey` on every row means no accelerator column, which is the SETTINGS
+// menu's shape arrived at from the other side — that menu has no chords
+// because its rows open an editor, this one because its row's act has no chord
+// (the record is at GuiPopupAct). So `key` and the three modifier bits below
+// are all zero and all unread; the release forks on `act` and calls the panel's
+// opener directly.
+//
+// AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems.
+// This row cannot refuse for any reason a user can reach anyway: THE ANCHOR
+// ITSELF is dead in the `h` history view (menu_anchor_dead_in_mode — the panel
+// is refused there, so the menu would open onto nothing), and under a prompt,
+// an editor or either of the folder overlay's other two contents the row is
+// unreachable, the panel covering row 1 whole.
+inline constexpr CommandPopupItem kHelpPopupItems[] = {
+    {"AV Sync Stats", nullptr, 0, false, false, false, false,
+     GuiPopupAct::AvSyncStats},
+};
+inline constexpr int kHelpPopupItemCount =
+    static_cast<int>(std::size(kHelpPopupItems));
+
 // (THE NAVIGATION DROPDOWN'S ITEMS ARE DELETED — architect 2026-08-15. From
 // 2026-08-02 kNavigationPopupItems held SEVEN rows in two categories over one
 // separator: "Zoom in" `=`, "Zoom out" `-`, "Overview" `0` and "Center on focus"
@@ -3476,7 +3545,7 @@ inline constexpr int kSeriesPopupItemCount =
 // not "the menus that happen to be long".)
 inline constexpr int kDropdownMaxItemCount =
     std::max({kFilePopupItemCount, kEditPopupItemCount, kSeriesPopupItemCount,
-              kSettingsPopupItemCount});
+              kSettingsPopupItemCount, kHelpPopupItemCount});
 
 // IS THIS A COMMAND MENU? The two kinds of menu differ in what a row DOES — a
 // settings key to prefill, a chord to dispatch — and this names the second kind
@@ -3486,7 +3555,7 @@ inline constexpr int kDropdownMaxItemCount =
 // release forks on, and Edit landed on it 2026-08-20 exactly as anticipated.
 inline constexpr bool dropdown_is_command_menu(DropdownMenu m) {
     return m == DropdownMenu::File || m == DropdownMenu::Edit ||
-           m == DropdownMenu::Series;
+           m == DropdownMenu::Series || m == DropdownMenu::Help;
 }
 // THE COMMAND ROW ITSELF — the ONE place that maps a command menu to its table,
 // read by the shared view below and by the release body that dispatches the
@@ -3503,6 +3572,8 @@ inline constexpr const CommandPopupItem& command_popup_item(DropdownMenu m,
         return kEditPopupItems[static_cast<size_t>(i)];
     if (m == DropdownMenu::Series)
         return kSeriesPopupItems[static_cast<size_t>(i)];
+    if (m == DropdownMenu::Help)
+        return kHelpPopupItems[static_cast<size_t>(i)];
     return kFilePopupItems[static_cast<size_t>(i)];
 }
 
@@ -3522,6 +3593,7 @@ inline constexpr int dropdown_item_count(DropdownMenu m) {
         case DropdownMenu::Edit:     return kEditPopupItemCount;
         case DropdownMenu::Series:   return kSeriesPopupItemCount;
         case DropdownMenu::Settings: return kSettingsPopupItemCount;
+        case DropdownMenu::Help:     return kHelpPopupItemCount;
         case DropdownMenu::None:     break;
     }
     return 0;
@@ -5454,7 +5526,23 @@ struct AppState {
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free.
-    enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker };
+    // THE FIFTH OWNER IS THE AV SYNC STATS PANEL (2026-09-03, architect): the
+    // folder overlay's THIRD content — a listing of TEXT rows, no highlight and
+    // no act — over a row that is **Close** alone, flush RIGHT under the
+    // alignment rule (a list's buttons go right). IT IS A FIFTH OWNER RATHER
+    // THAN A REUSE OF THE PICKER'S, and the test that decided it is the
+    // picker's own: reuse was preferable if the picker's router and veil served
+    // unchanged. THE VEIL DOES; THE ROUTER DOES NOT — route_picker_key binds
+    // Enter to picker_open_highlight and Up/Down to picker_move_highlight, and
+    // this panel has no highlight to open or walk (its Up/Down SCROLL the
+    // band) — and reuse would additionally make `picker_active()` answer true
+    // for a thing that is not a picker, a predicate read by the veil, the
+    // cursor map, the hover walk, the chrome release's re-ask, the touch region
+    // begin and the stash's live ladder. It is ranked WITH the player and the
+    // picker: the three list owners never stand together (each opener refuses
+    // under the others) and none stands beside an editor, so the order among
+    // the three is free.
+    enum class ModalDialogOwner { None, Prompt, Editor, Player, Picker, Stats };
     // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
@@ -5581,14 +5669,19 @@ struct AppState {
     // WM close can raise the unsaved-work prompt over a standing editor), so
     // this and paint_modal_dialog cannot disagree about whose geometry the
     // stash holds.
-    // THE RENDER PLAYER AND THE PICKER ARE THE LOWER RANKS (2026-08-28):
-    // under the prompt, beside the editors — no two of the three can stand
-    // together, so the order among them is free, and the two mode bits are
-    // asked first only because each is cheaper than the four is_active tests.
+    // THE RENDER PLAYER, THE PICKER AND THE STATS PANEL ARE THE LOWER RANKS
+    // (2026-08-28; the panel joined 2026-09-03): under the prompt, beside the
+    // editors — no two of the four can stand together, so the order among them
+    // is free, and the three mode bits are asked first only because each is
+    // cheaper than the four is_active tests. THIS IS ONE OF THE THREE PLACES
+    // THE RANKING IS SPELLED and they must agree (paint_modal_dialog's `*_up`
+    // fork and modal_dialog_stash_current's live ladder are the others), or the
+    // owner-tag doctrine above breaks.
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
         if (render_player.active) return render_player.session;
         if (picker.active) return picker.session;
+        if (stats_panel.active) return stats_panel.session;
         return dialog_editor_session();
     }
 
@@ -7443,6 +7536,41 @@ struct AppState {
     };
     Picker picker;
 
+    // -- THE AV SYNC STATS PANEL'S WHOLE STATE (architect 2026-09-03) -------
+    //
+    // Help → AV Sync Stats: the folder overlay's THIRD content, a listing of
+    // TEXT rows saying what the audio device and the display report about
+    // themselves and, from the two, by how much the painted line leads the
+    // sound (the readings are av_sync_stats.h's, the rows are
+    // compose_av_sync_rows'). It holds NOTHING beyond the two fields below —
+    // the rows live in the overlay like every other content's, and the figures
+    // are read fresh every frame and never stored.
+    //   `active`   the mode bit — the FIFTH ModalDialogOwner (Stats) and, with
+    //              the overlay's tag, the panel's standing predicate;
+    //   `session`  its modal session id from the one counter
+    //              (text_editor::next_session_id), minted at every open.
+    //
+    // THE MEASUREMENTS RUN ONLY WHILE THIS BIT IS UP, and that is the whole
+    // point of the feature (the architect's ruling: "in all cases the
+    // measurements should be disabled when not explicitly requested by the
+    // user"). The open arms the display instrument through
+    // GuiPlatform::set_display_measurement and the close disarms it; the audio
+    // half is a plain query the per-frame refresh makes, and that refresh runs
+    // under this bit alone (GuiInputHandler::refresh_stats_panel_rows, called
+    // from the run loop's tick). With the panel down no feedback object exists,
+    // no ring turns and no port latency is read.
+    //
+    // The opener refuses under a prompt, an editor, the render player, a
+    // standing picker, a standing panel, the `h` history view and a load; the
+    // one close body is GuiInputHandler::close_stats_panel (Esc, the Close
+    // button and Ctrl+Q's road all pass through it), which resets the overlay
+    // with it. It authors nothing: no undo, no dirty, legal on a read-only tab.
+    struct StatsPanel {
+        bool     active  = false;
+        uint64_t session = 0;
+    };
+    StatsPanel stats_panel;
+
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two
     // edges — true when run_history_commit dispatches the job, false when the
@@ -7715,12 +7843,15 @@ struct AppState {
     // -- THE FOLDER OVERLAY'S WHOLE STATE (2026-08-28) ---------------------
     //
     // The keyboard-slot list panel (folder_overlay.h): ONE row table, whoever
-    // fills it. TWO CONTENTS FILL IT: the RENDER PLAYER, with the project's
-    // output folders and their wavs, and the OPEN PROJECT PICKER, with the
-    // valid project folders under `projects_path`. (A third stood for one
+    // fills it. THREE CONTENTS FILL IT: the RENDER PLAYER, with the project's
+    // output folders and their wavs; the OPEN PROJECT PICKER, with the
+    // valid project folders under `projects_path`; and, since 2026-09-03, the
+    // AV SYNC STATS PANEL, with TEXT rows that are lines and nothing else.
+    // (A fourth stood for one
     // day — the `h` view's history picker, retired 2026-08-29: "overengineered;
     // I don't really need it", the view's `'` raising its confirmation on the
-    // viewed member directly now.) Everything the panel remembers is
+    // viewed member directly now — and the TEXT kind it introduced is what the
+    // stats panel produces.) Everything the panel remembers is
     // here and nothing else is:
     //   `owner`       WHOSE CONTENT THE ROWS ARE, and THE PANEL'S ONE
     //                 STANDING PREDICATE: the overlay stands iff this is not
@@ -7730,14 +7861,18 @@ struct AppState {
     //                 None at its close; the picker writes ProjectPicker at
     //                 its open and None at every close
     //                 path (the reopen's tail included, all of them through
-    //                 close_picker). ONE ROW ACT FORKS ON IT — the OPEN, which
+    //                 close_picker); the stats panel writes Stats at its open
+    //                 and None at close_stats_panel. ONE ROW ACT FORKS ON IT —
+    //                 the OPEN, which
     //                 under the player enters a batch folder or plays a wav
     //                 (going UP is the row's act no longer: since 2026-09-01
     //                 the listings carry no `..` row and Up is a button and
     //                 Backspace) and under the picker reopens the row's
-    //                 project; the
-    //                 lift's highlight is every owner's alike (the picker's
-    //                 band IS its whole state — there is no field to feed);
+    //                 project, WHILE THE STATS PANEL HAS NO OPEN AND NO
+    //                 HIGHLIGHT AT ALL, its rows being inert; the
+    //                 lift's highlight is the other two owners' alike (the
+    //                 picker's band IS its whole state — there is no field to
+    //                 feed);
     //   `rows`        the listing, rebuilt WHOLE at every folder entry and
     //                 never kept fresh (a render completing meanwhile shows on
     //                 the next entry of its folder);
@@ -7805,15 +7940,27 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph: Folder wears the folder glyph and Wav
     // the wav glyph (the transport glyph on the item's row). A KIND EXISTS IFF
-    // A CONTENT PRODUCES IT, and this enum has lost two on that rule: the
-    // glyph-less TEXT kind carried the history picker's rows for one day and
-    // went with that content on 2026-08-29, and UP — the `..` row, the folder
-    // glyph over the parent — went on 2026-09-01, when the player moved inside
-    // `tmp/` and going up became a BUTTON on the modal row
-    // (PlayerButtonAct::Up) instead of a row in the listing. The picker never
-    // produced either.
+    // A CONTENT PRODUCES IT, which is why this enum has lost one and regained
+    // another:
+    //   * UP — the `..` row, the folder glyph over the parent — went on
+    //     2026-09-01, when the player moved inside `tmp/` and going up became a
+    //     BUTTON on the modal row (PlayerButtonAct::Up) instead of a row in the
+    //     listing. It has no producer and is not here.
+    //   * TEXT — no glyph, no act — carried the one-day history picker's rows
+    //     and went with that content on 2026-08-29. IT IS BACK WITH A PRODUCER
+    //     SINCE 2026-09-03: the AV sync stats panel's every row is one, and the
+    //     kind is what the painter reads to draw no glyph, seat the text at the
+    //     button's own inset and skip the face ladder whole.
+    // (The project picker produces neither: its rows are Folder rows.)
+    //
+    // A TEXT ROW IS INERT. It takes no hover face, no highlight face and no
+    // press arm, and the two row-act switches (folder_overlay_open_row and
+    // folder_overlay_highlight_row, input_pointer.cpp) answer nothing under its
+    // owner. What the band still does under it is what the band does anywhere:
+    // it CONSUMES a press (it is opaque) and it SCROLLS, by the wheel on
+    // plastic and by the band's own drag on glass.
     struct FolderOverlayRow {
-        enum class Kind { Folder, Wav };
+        enum class Kind { Folder, Wav, Text };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -7829,7 +7976,12 @@ struct AppState {
         bool    scrolling       = false;
     };
     struct FolderOverlay {
-        enum class Owner { None, Player, ProjectPicker };
+        // THE THREE CONTENTS (Stats joined 2026-09-03). The tag IS the standing
+        // predicate (folder_overlay_stands, below), and it is the one thing the
+        // open act forks on: everything else about the panel — the band, the
+        // row pitch, the scroll, the walk — is the widget's and knows nothing
+        // about which content fills it.
+        enum class Owner { None, Player, ProjectPicker, Stats };
         Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
         int                scroll_px     = 0;
@@ -7987,16 +8139,18 @@ struct AppState {
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
 // Every site that asks reads this one answer, and THIS IS THE INVENTORY —
-// TWELVE READERS, re-grepped 2026-08-29; no other file states a count of its
+// THIRTEEN READERS, re-grepped 2026-09-03 (the count read TWELVE from
+// 2026-08-29 and had gone stale by one); no other file states a count of its
 // own. Through folder_overlay::stands (the panel's own name for it, forwarding
 // to this): the waveform's paint gate (waveform_paint_area,
 // onscreen_keyboard.h), the slot's paint dispatch and the panel's painter
 // (paint_handler.cpp), the row press claim, the hover walk, the HOVER CLEAR's
-// damage, the press clear's damage (input_pointer.cpp), the touch pan zone's
-// carve-out and the run loop's slot reconcile (main.cpp). Directly: the wheel
-// context (input_handler.cpp), the two-finger navigation body's refusal
-// (apply_touch_nav_update — the band takes no pan and no pinch under any
-// content) and the roster's greying arm (redesign_button_enabled, below). (The on-screen keyboard's standing predicate carried
+// damage, the press clear's damage (input_pointer.cpp), the window-activation
+// damage and the run loop's slot reconcile (main.cpp). Directly: the wheel
+// context (input_handler.cpp), the touch pan zone's carve-out, the two-finger
+// navigation body's refusal (apply_touch_nav_update — the band takes no pan
+// and no pinch under any content, both input_pointer.cpp) and the roster's
+// greying arm (redesign_button_enabled, below). (The on-screen keyboard's standing predicate carried
 // its negation as a third term until 2026-08-28, when the picker stopped
 // being an editor and the term lost its producer — the record is at
 // onscreen_keyboard::stands.) (It
@@ -10372,7 +10526,11 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // nothing, which is the face promising more than the keys deliver. SETTINGS is
 // dead because its rows reach the settings editor by a DIRECT call that meets
 // no gate at all; EDIT (2026-08-20) and ITERATIONS (2026-08-27) because every
-// one of their rows is a chord the view's allowlist drops. FILE is LIVE
+// one of their rows is a chord the view's allowlist drops; and HELP
+// (2026-09-03) because its one row reaches the AV sync panel by a DIRECT call
+// the panel's own opener REFUSES in this view — Settings' case exactly, a
+// direct-call row whose act says no here — so the menu would open onto
+// nothing. That is the criterion working rather than a carve-out. FILE is LIVE
 // (2026-08-13): its three rows — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
 // `\` — are all on the allowlist, so its menu opens onto three working rows.
 //
@@ -10687,7 +10845,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     only give one. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's four anchors and row 3's tabs answer true HERE: row 1 keeps its
+//   * Row 1's five anchors and row 3's tabs answer true HERE: row 1 keeps its
 //     two faces by ruling, and a tab has no disabled face of its own. Their
 //     entries exist
 //     so the vector is total over the roster and the comparator needs no
@@ -10900,7 +11058,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // THE PANEL COVERS ROW 1 ITSELF since 2026-09-03 (architect: "remove top
     // row in file picker/media player — kdenlive does not allow ctrl+q during
     // modal so we don't need to either"), so the roster's every button — the
-    // four menu anchors with the rest — is not merely dead but UNSEEN while
+    // five menu anchors with the rest — is not merely dead but UNSEEN while
     // it stands, and there is no lit-anchor exception to carve. The face this
     // line paints is one nothing paints on screen; it stays because the
     // predicate is also what the veil's press answers read.
@@ -10978,6 +11136,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Edit:
         case RedesignButton::Series:
         case RedesignButton::Settings:
+        case RedesignButton::Help:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
@@ -11934,6 +12093,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::Edit:
         case RedesignButton::Series:
         case RedesignButton::Settings:
+        case RedesignButton::Help:
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -12381,6 +12541,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::Edit:
         case RedesignButton::Series:
         case RedesignButton::Settings:
+        case RedesignButton::Help:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:     return {nullptr, nullptr};

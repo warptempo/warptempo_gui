@@ -170,9 +170,15 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * DIALOG modal surfaces — the four dialog editors, the prompts and
-    //     the picker, all painted as the bottom row's modal since
-    //     2026-08-13 — STOP.
+    //   * DIALOG modal surfaces — the four dialog editors, the prompts, the
+    //     picker and (since 2026-09-03) the AV SYNC STATS PANEL, all painted
+    //     as the bottom row's modal since 2026-08-13 — STOP. The panel is a
+    //     hardware reading rather than an authoring surface, so it was worth
+    //     asking whether it owed the stop at all; it takes it because it is
+    //     the picker's own shape one content over — a full-window band, a
+    //     modal row and a keyboard vocabulary of its own — and because the
+    //     LINE it measures against is behind that band, so a session left
+    //     playing under it would be running with nothing to watch.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
     //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
     //     wheel-transparent), and editing flag text while listening to the

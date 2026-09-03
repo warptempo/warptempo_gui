@@ -7,9 +7,13 @@
 //
 // The two families are the product's whole face inventory: the proportional
 // sans every row shapes and paints on (12pt x gui_scale, the text_shape
-// chokepoint's subject) and the monospace the CLOCK owns — one face, two
-// cells: the row-8 clock and the render player's `<position> / <length>` on
-// the modal row, which takes the row-8 cell's size and metrics. Slant
+// chokepoint's subject) and the monospace — ONE FACE, THREE CELLS since
+// 2026-09-03 (it was two, the clock's pair, from 2026-08-28): the row-8 clock,
+// the render player's `<position> / <length>` on the modal row, which takes
+// the row-8 cell's size and metrics, and the AV SYNC STATS PANEL's rows
+// (architect 2026-09-03 — a column of figures rebuilt every frame, which a
+// proportional face would make walk under the eye; the widening's own record
+// is at paint_handler.cpp's bottom-row text block, which owns the rule). Slant
 // and weight are not parameters: every site is normal/normal, so a face is
 // named by its family and nothing else.
 //

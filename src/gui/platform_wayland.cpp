@@ -8,6 +8,7 @@
 #include <xdg-decoration-unstable-v1-client-protocol.h>
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
+#include <presentation-time-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include <linux/input-event-codes.h>
@@ -21,6 +22,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -167,6 +169,17 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
     if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
+// THE DISPLAY MEASUREMENT'S CLOCK, and it is THE PREDICTOR'S: steady_clock,
+// which on glibc/Linux is CLOCK_MONOTONIC (playback_common.cpp's steady_now_ns
+// is the same read). The pre-paint stamp taken here is subtracted from the
+// instant wp_presentation reports in ITS clock, so the two must be one domain
+// — which is what on_presentation_clock_id verifies before a single feedback
+// is requested.
+int64_t steady_now_ns() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -204,9 +217,13 @@ struct WaylandListeners {
     // `description` are v4+ and aren't dispatched at our bind version,
     // but stubs cost nothing and forward-compatibility is one less foot-
     // gun if the bind version is ever raised.
-    static void output_geometry(void*, struct wl_output*, int32_t, int32_t,
-                                int32_t, int32_t, int32_t, const char*,
-                                const char*, int32_t) {}
+    static void output_geometry(void* data, struct wl_output* output,
+                                int32_t, int32_t, int32_t, int32_t, int32_t,
+                                const char* make, const char* model,
+                                int32_t) {
+        static_cast<GuiPlatform*>(data)->on_output_geometry(output, make,
+                                                            model);
+    }
     static void output_mode(void* data, struct wl_output* output, uint32_t flags,
                             int32_t width, int32_t height, int32_t refresh_mhz) {
         static_cast<GuiPlatform*>(data)->on_output_mode(output, flags, width,
@@ -219,8 +236,38 @@ struct WaylandListeners {
     // A scale change that also changes logical window dimensions arrives via
     // xdg_toplevel.configure and takes the normal resize/cancel path.
     static void output_scale(void*, struct wl_output*, int32_t) {}
-    static void output_name(void*, struct wl_output*, const char*) {}
+    static void output_name(void* data, struct wl_output* output,
+                            const char* name) {
+        static_cast<GuiPlatform*>(data)->on_output_name(output, name);
+    }
     static void output_description(void*, struct wl_output*, const char*) {}
+
+    // wp_presentation (the AV sync panel's display instrument,
+    // platform_wayland.h).
+    static void presentation_clock_id(void* data, struct wp_presentation*,
+                                      uint32_t clk_id) {
+        static_cast<GuiPlatform*>(data)->on_presentation_clock_id(clk_id);
+    }
+
+    // wp_presentation_feedback. `data` is the feedback's OWN record (the
+    // stamp travels with the object, never on the singleton); sync_output
+    // names the output the timestamp belongs to, which this program does not
+    // read — the window's output is the surface listener's business.
+    static void feedback_sync_output(void*, struct wp_presentation_feedback*,
+                                     struct wl_output*) {}
+    static void feedback_presented(void* data, struct wp_presentation_feedback*,
+                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo,
+                                   uint32_t tv_nsec, uint32_t /*refresh*/,
+                                   uint32_t /*seq_hi*/, uint32_t /*seq_lo*/,
+                                   uint32_t flags) {
+        auto* fb = static_cast<GuiPlatform::PresentationFeedback*>(data);
+        fb->self->on_presentation_presented(fb, tv_sec_hi, tv_sec_lo, tv_nsec,
+                                            flags);
+    }
+    static void feedback_discarded(void* data, struct wp_presentation_feedback*) {
+        auto* fb = static_cast<GuiPlatform::PresentationFeedback*>(data);
+        fb->self->on_presentation_discarded(fb);
+    }
 
     // wl_surface (the MAIN surface only; the cursor surfaces carry no
     // listener). enter and leave select the window's output (the rule at
@@ -507,6 +554,16 @@ const struct wl_output_listener s_output_listener = {
     WaylandListeners::output_description,
 };
 
+const struct wp_presentation_listener s_presentation_listener = {
+    WaylandListeners::presentation_clock_id,
+};
+
+const struct wp_presentation_feedback_listener s_presentation_feedback_listener = {
+    WaylandListeners::feedback_sync_output,
+    WaylandListeners::feedback_presented,
+    WaylandListeners::feedback_discarded,
+};
+
 const struct wl_surface_listener s_surface_listener = {
     WaylandListeners::surface_enter,
     WaylandListeners::surface_leave,
@@ -680,11 +737,14 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     // THE REQUIRED GLOBALS. zxdg_decoration_manager_v1 JOINED THEM 2026-07-30
     // and wl_data_device_manager 2026-08-02 (architect, both times), leaving the
-    // ruled OPTIONAL list at exactly two: pointer-constraints and
+    // ruled OPTIONAL list at exactly three: pointer-constraints and
     // relative-pointer, whose absence has a defined degraded behavior — see
-    // the pointer-capture warning below. (It was three between 2026-09-02 and
-    // 2026-09-03, wp_presentation joining to measure the display lead and
-    // leaving with the playback leads.) labwc always advertises the decoration
+    // the pointer-capture warning below — and wp_presentation, whose absence
+    // leaves the AV sync panel's commit-to-light line saying so. NEITHER
+    // ABSENCE IS ANNOUNCED HERE any more: the panel says what it could not
+    // measure, on the surface that asked for it, and the two stderr lines
+    // this instrument printed while the display lead lived (2026-09-02 to
+    // 2026-09-03) went with that lead. labwc always advertises the decoration
     // manager, and the data device manager is CORE protocol — the same
     // wayland.xml as wl_seat, so a compositor without it is not a compositor —
     // which makes either absence a broken environment rather than a degraded
@@ -1005,6 +1065,9 @@ void GuiPlatform::destroy_wayland_state() {
         wl_callback_destroy(frame_callback_);
         frame_callback_ = nullptr;
     }
+    // Outstanding presentation feedbacks go before the surface they were
+    // requested for and before the global they came from.
+    destroy_presentation_feedbacks();
     if (xdg_toplevel_decoration_) {
         zxdg_toplevel_decoration_v1_destroy(xdg_toplevel_decoration_);
         xdg_toplevel_decoration_ = nullptr;
@@ -1055,8 +1118,15 @@ void GuiPlatform::destroy_wayland_state() {
         xdg_wm_base_destroy(xdg_wm_base_);
         xdg_wm_base_ = nullptr;
     }
+    if (wp_presentation_) {
+        wp_presentation_destroy(wp_presentation_);
+        wp_presentation_ = nullptr;
+        presentation_clock_ok_ = false;
+    }
     for (OutputRecord& rec : outputs_) {
-        wl_output_destroy(rec.output);  // bound at v2; release is v3
+        // v3 gave wl_output a `release` request (the record's `version`).
+        if (rec.version >= 3) wl_output_release(rec.output);
+        else                  wl_output_destroy(rec.output);
     }
     outputs_.clear();
     window_output_ = nullptr;
@@ -1415,6 +1485,13 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
+    // THE PRE-PAINT STAMP, taken BEFORE the hook runs and ONLY WHILE THE AV
+    // SYNC PANEL HAS ARMED THE MEASUREMENT: the display figure is measured
+    // from this instant to the instant the frame's pixels turn into light (the
+    // feedback requested below). With the panel down this is a branch not
+    // taken and no clock is read at all.
+    const int64_t sample_ns = display_measurement_ ? steady_now_ns() : 0;
+
     // Pre-paint hook: gives the application a chance to update model
     // state (e.g., re-read the playback predictor) and declare any
     // additional damage based on the freshly-updated state. The hook
@@ -1457,20 +1534,20 @@ void GuiPlatform::paint_one_frame() {
     }
     cairo_destroy(cr);
 
-    // THE COMMIT ORDER: frame request → damage → attach → ONE commit. The
-    // frame request is surface state that rides the next commit, so it is
-    // issued ahead of it and the content commit sends everything at once.
-    // Until 2026-09-02 the frame request went out on a SECOND, EMPTY commit
-    // AFTER the content commit — harmless but reversed. THE SINGLE-COMMIT
-    // ORDERING IS KEPT BY THE ARCHITECT'S RULING OF 2026-09-03 although the
-    // presentation feedback it was reordered for is gone: it was landed as a
-    // prerequisite of the display-lead measurement (a feedback must precede
-    // the commit it describes), that lead was rolled back with the playback
-    // leads, and he kept the correction on its own merits — one commit per
-    // painted frame is what the protocol's shape asks for.
+    // THE COMMIT ORDER: frame request → presentation feedback → damage →
+    // attach → ONE commit. Both requests are surface state that rides the next
+    // commit, so they are issued ahead of it and the content commit sends
+    // everything at once. Until 2026-09-02 the frame request went out on a
+    // SECOND, EMPTY commit AFTER the content commit — harmless but reversed.
+    // THE SINGLE-COMMIT ORDERING WAS LANDED AS THE FEEDBACK'S PREREQUISITE (a
+    // feedback must precede the commit it describes), OUTLIVED IT BY A DAY —
+    // the architect kept the correction on its own merits when the display
+    // lead rolled back on 2026-09-03 — and is that prerequisite again the same
+    // day, under the AV sync panel's gate.
     // paint_now's caller may already have a callback in flight; the request
     // is then a no-op and the content still commits, as before.
     request_frame_callback();
+    request_presentation_feedback(sample_ns);
 
     for (const DamageRect& d : buf->pending) {
         wl_surface_damage_buffer(wl_surface_, d.x, d.y, d.w, d.h);
@@ -1779,17 +1856,35 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
         // enter (`surface_entered_ever_`), so an output bound LATER — a
         // hot-plugged panel — never seeds, and a window that is on no output
         // right then keeps the figure of the output it was last on.
-        const uint32_t v = std::min<uint32_t>(version, 2);
+        // V4 SINCE 2026-09-03 (it was v2): v4's `name` event is the connector
+        // string the AV sync panel prints, and v3's `release` is what the
+        // teardown owes a proxy bound this high — both are handled off the
+        // record's own `version`, so an older compositor still binds at what
+        // it offers and simply reports its make and model instead.
+        const uint32_t v = std::min<uint32_t>(version, 4);
         OutputRecord rec;
         rec.output = static_cast<struct wl_output*>(
             wl_registry_bind(r, name, &wl_output_interface, v));
         rec.global_name = name;
+        rec.version     = v;
         wl_output_add_listener(rec.output, &s_output_listener, this);
         outputs_.push_back(rec);
         if (!window_output_ && !surface_entered_ever_) {
             window_output_ = rec.output;
             select_window_output();
         }
+    } else if (std::strcmp(interface, wp_presentation_interface.name) == 0) {
+        // OPTIONAL (the protocol classes, platform_wayland.h): v1 carries the
+        // `presented` event this reads; v2 only adds the feedback's
+        // `sync_output` semantics for a surface on several outputs, which this
+        // program does not read. BINDING IT MEASURES NOTHING — the instrument
+        // is the per-commit feedback, and no feedback is requested until the
+        // AV sync panel arms the measurement (set_display_measurement). Its
+        // absence leaves the panel's commit-to-light line saying so.
+        wp_presentation_ = static_cast<struct wp_presentation*>(
+            wl_registry_bind(r, name, &wp_presentation_interface, 1));
+        wp_presentation_add_listener(wp_presentation_, &s_presentation_listener,
+                                     this);
     } else if (std::strcmp(interface, wl_seat_interface.name) == 0 &&
                !wl_seat_) {
         // Cap to version 8. v4 gave us key repeat; v8 adds
@@ -1821,12 +1916,16 @@ void GuiPlatform::on_registry_global_remove(uint32_t name) {
         // figure stands. The record goes first so the selection cannot land
         // back on the proxy being destroyed.
         struct wl_output* gone = it->output;
+        const uint32_t    gone_v = it->version;
         outputs_.erase(it);
         if (window_output_ == gone) {
             window_output_ = nullptr;
             select_window_output();
         }
-        wl_output_destroy(gone);  // bound at v2; release is v3
+        // v3 gave wl_output a `release` request; a proxy bound at or above it
+        // is released, an older one destroyed (the record's `version`).
+        if (gone_v >= 3) wl_output_release(gone);
+        else             wl_output_destroy(gone);
         return;
     }
 
@@ -1861,6 +1960,32 @@ void GuiPlatform::on_output_mode(struct wl_output* output, uint32_t flags,
     // A mode change on any output other than the window's changes nothing
     // here; on the window's it re-derives the figure and re-arms the tick.
     if (output == window_output_) select_window_output();
+}
+
+// THE OUTPUT'S TWO NAMES, and the panel prefers the second. wl_output.geometry
+// is a v1 event carrying the EDID's make and model; the v4 `name` event below
+// carries the compositor's own connector string ("eDP-1"), which is what a
+// person recognizes on a two-monitor desk. Both are kept in their own field so
+// neither has to know whether the other arrived, and display_stats picks. They
+// are read by ONE surface — the AV sync panel's "which screen is this" line —
+// and by nothing else in the program.
+void GuiPlatform::on_output_geometry(struct wl_output* output,
+                                     const char* make, const char* model) {
+    OutputRecord* rec = find_output(output);
+    if (!rec) return;
+    std::string composite;
+    if (make && *make) composite += make;
+    if (model && *model) {
+        if (!composite.empty()) composite += ' ';
+        composite += model;
+    }
+    rec->make_model = std::move(composite);
+}
+
+void GuiPlatform::on_output_name(struct wl_output* output, const char* name) {
+    OutputRecord* rec = find_output(output);
+    if (!rec || !name) return;
+    rec->name = name;
 }
 
 GuiPlatform::OutputRecord* GuiPlatform::find_output(struct wl_output* output) {
@@ -1918,6 +2043,147 @@ void GuiPlatform::on_surface_leave(struct wl_output* output) {
     // keeps the last figure standing.
     window_output_ = nullptr;
     select_window_output();
+}
+
+// ---------------------------------------------------------------------------
+// wp_presentation — the AV sync panel's display instrument (the contract is at
+// set_display_measurement / display_stats, platform_wayland.h)
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::on_presentation_clock_id(uint32_t clk_id) {
+    // THE ONE DOMAIN CHECK: the predictor extrapolates in steady_clock, which
+    // is CLOCK_MONOTONIC, and `presented` reports in whatever clock this event
+    // names (wlroots on DRM: CLOCK_MONOTONIC). Any other clock leaves the
+    // global bound and unused — a figure subtracted across two clocks is a
+    // number, not a measurement — and the panel says so on its own line
+    // instead of printing it. NOTHING IS SAID ON stderr: this fired one line
+    // there while the display lead lived and the line went with the lead.
+    presentation_clock_ok_ = (clk_id == static_cast<uint32_t>(CLOCK_MONOTONIC));
+}
+
+// THE GATE, AND IT IS THE FEATURE (the ruling at set_display_measurement): with
+// the panel down this returns on its first line, so no wp_presentation_feedback
+// object is ever created and the compositor is asked for nothing.
+void GuiPlatform::request_presentation_feedback(int64_t sample_ns) {
+    if (!display_measurement_) return;
+    if (!wp_presentation_ || !presentation_clock_ok_ || !wl_surface_) return;
+    auto* fb = new PresentationFeedback;
+    fb->self      = this;
+    fb->sample_ns = sample_ns;
+    fb->proxy     = wp_presentation_feedback(wp_presentation_, wl_surface_);
+    wp_presentation_feedback_add_listener(fb->proxy,
+                                          &s_presentation_feedback_listener, fb);
+    presentation_feedbacks_.push_back(fb);
+}
+
+void GuiPlatform::destroy_presentation_feedbacks() {
+    while (!presentation_feedbacks_.empty()) {
+        finish_presentation_feedback(presentation_feedbacks_.back());
+    }
+}
+
+void GuiPlatform::reset_display_measurement_state() {
+    destroy_presentation_feedbacks();
+    presentation_sample_count_ = 0;
+    presentation_sample_next_  = 0;
+    presentation_sample_sum_   = 0;
+}
+
+// THE ARM. Both edges clear, so a panel opened a second time reads its own
+// session's frames and never the last one's, and a closed panel leaves nothing
+// outstanding for a compositor answer to land in.
+void GuiPlatform::set_display_measurement(bool on) {
+    if (display_measurement_ == on) return;
+    display_measurement_ = on;
+    reset_display_measurement_state();
+}
+
+void GuiPlatform::on_presentation_presented(PresentationFeedback* fb,
+                                            uint32_t tv_sec_hi,
+                                            uint32_t tv_sec_lo,
+                                            uint32_t tv_nsec,
+                                            uint32_t flags) {
+    // "The time when the content update turned into light the first time on
+    // the surface's main output", in the clock the clock_id check admitted.
+    // `flags` says what makes the figure trustworthy — VSYNC (the timestamp
+    // is a vblank's, not a guess) and HW_CLOCK (it came from the display
+    // hardware's clock rather than the compositor's read afterwards); labwc
+    // on DRM reports both — and is deliberately NOT gated on: a compositor
+    // reporting a softer timestamp is still reporting the frame's own
+    // presentation.
+    (void)flags;
+    const int64_t presented_ns =
+        ((static_cast<int64_t>(tv_sec_hi) << 32) |
+         static_cast<int64_t>(tv_sec_lo)) * 1000000000LL +
+        static_cast<int64_t>(tv_nsec);
+    const int64_t lead_ns = presented_ns - fb->sample_ns;
+
+    // AN ANSWER THAT OUTLIVED THE ARM CONTRIBUTES NOTHING: the disarm
+    // destroyed every outstanding record, so a feedback reaching here always
+    // belongs to a standing panel — but the bit is asked anyway, because the
+    // ring must not be re-seeded by a frame the panel did not ask for if a
+    // future road ever leaves one outstanding.
+    if (display_measurement_) {
+        // THE RING (its shape at the declaration): overwrite the oldest slot
+        // and keep the sum current; the min and max the panel prints are
+        // walked over the live slots at the read.
+        if (presentation_sample_count_ == kDisplayLeadWindow) {
+            presentation_sample_sum_ -=
+                presentation_samples_[presentation_sample_next_];
+        } else {
+            ++presentation_sample_count_;
+        }
+        presentation_samples_[presentation_sample_next_] = lead_ns;
+        presentation_sample_sum_ += lead_ns;
+        presentation_sample_next_ =
+            (presentation_sample_next_ + 1) % kDisplayLeadWindow;
+    }
+
+    finish_presentation_feedback(fb);
+}
+
+void GuiPlatform::on_presentation_discarded(PresentationFeedback* fb) {
+    // A discarded frame (never shown — superseded before the compositor
+    // presented it) contributes no sample; the object is done either way.
+    finish_presentation_feedback(fb);
+}
+
+void GuiPlatform::finish_presentation_feedback(PresentationFeedback* fb) {
+    presentation_feedbacks_.erase(
+        std::remove(presentation_feedbacks_.begin(),
+                    presentation_feedbacks_.end(), fb),
+        presentation_feedbacks_.end());
+    wp_presentation_feedback_destroy(fb->proxy);
+    delete fb;
+}
+
+// THE PANEL'S READ, once a frame while it stands and never otherwise. Pure:
+// it walks the ring's live slots for the extremes and reads the window's own
+// output for the name and the refresh.
+GuiDisplayStats GuiPlatform::display_stats() const {
+    GuiDisplayStats st;
+    st.available          = true;
+    st.instrument_present = wp_presentation_ != nullptr;
+    st.clock_ok           = presentation_clock_ok_;
+    st.window             = kDisplayLeadWindow;
+    st.refresh_mhz        = output_refresh_mhz_;
+    for (const OutputRecord& rec : outputs_) {
+        if (rec.output != window_output_) continue;
+        st.output_name = !rec.name.empty() ? rec.name : rec.make_model;
+        break;
+    }
+    st.sample_count = presentation_sample_count_;
+    if (presentation_sample_count_ > 0) {
+        st.mean_ns = presentation_sample_sum_ / presentation_sample_count_;
+        st.min_ns  = presentation_samples_[0];
+        st.max_ns  = presentation_samples_[0];
+        for (int i = 1; i < presentation_sample_count_; ++i) {
+            const int64_t v = presentation_samples_[i];
+            if (v < st.min_ns) st.min_ns = v;
+            if (v > st.max_ns) st.max_ns = v;
+        }
+    }
+    return st;
 }
 
 void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,

@@ -219,6 +219,15 @@ void GuiRenderPlayer::open_row(int index) {
             play_wav(row.path, wavs, wi);
             return;
         }
+        case Row::Kind::Text:
+            // THE PLAYER PRODUCES NO TEXT ROW (rebuild_rows builds Folder and
+            // Wav rows and nothing else): the kind belongs to the AV sync
+            // stats panel, a different content of the same widget, and this
+            // body is only ever reached under the PLAYER's own owner tag
+            // (folder_overlay_open_row's fork). The arm exists because the
+            // switch is exhaustive with no `default` — a kind that is not
+            // this content's is stated and refused, never inherited.
+            return;
     }
 }
 
@@ -282,6 +291,11 @@ int render_player_highlight_act_row(const AppState& a) {
             return ov.highlight_row;
         case Row::Kind::Wav:
             return r.path == a.render_player.item ? -1 : ov.highlight_row;
+        case Row::Kind::Text:
+            // Not this content's kind (the record is at open_row above): the
+            // player never builds one, and a row it did not build opens
+            // nothing.
+            return -1;
     }
     return -1;
 }

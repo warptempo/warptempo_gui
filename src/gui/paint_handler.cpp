@@ -31,15 +31,21 @@
 
 // -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
 //
-// THE STATUS TEXT IS SANS, AND MONOSPACE LIVES ON THE CLOCK ALONE
+// THE STATUS TEXT IS SANS, AND MONOSPACE IS A NAMED THREE-CELL SET
 // (architect 2026-08-11, HIS REVERSAL of his own 2026-08-01 absolute, "I wanted
 // to get rid of monospace altogether — the last row should be the same font as
 // the rest"): monospace is the CLOCK's — the unified bottom row's
 // centre cell (paint_bottom_row_buttons_and_clock, which owns the face, the
 // size and the cell) and, since 2026-08-28, the render player's modal clock,
-// which is that same cell said twice and takes its metrics from it. The
-// reversal is scoped to the clock and nothing else in the product may take
-// the face.
+// which is that same cell said twice and takes its metrics from it — and,
+// SINCE 2026-09-03, THE AV SYNC STATS PANEL (architect, with the panel): a
+// DELIBERATE WIDENING rather than a leak, and the reason is the one the clock's
+// own reversal turned on. The panel is a COLUMN OF FIGURES read against each
+// other — a label column and a numbers column, over rows that are rebuilt every
+// frame as the measurements move — and a proportional face would make the
+// numbers walk under the eye at 60 Hz, which is exactly the wiggle the clock
+// takes the face for. So the set is THREE CELLS, ENUMERATED HERE AND AT
+// gui_font.h, and nothing outside those three may take the face.
 //
 // EVERY STRING THE STATE CELL CARRIES — the queue/render status and the
 // history walk line — is the redesign's sans at the redesign's size, shaped
@@ -281,9 +287,10 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     "Settings"), and the same act NAMED anywhere else — a card, a tooltip,
 //     the render button's hint, a modal row's word — is that surface's own
 //     sentence case ("BPM iterations work in source view" is a card; the
-//     dropdown row above it says "BPM Iterations"). The four tables are the
+//     dropdown row above it says "BPM Iterations"). The five tables are the
 //     whole membership (kFilePopupItems, kEditPopupItems, kSeriesPopupItems,
-//     kSettingsPopupItems, app_state.h), and no reader compares an item's
+//     kSettingsPopupItems, kHelpPopupItems, app_state.h), and no reader
+//     compares an item's
 //     label as a string — the tables are read by index — so the spelling is
 //     free to be the menu's own.
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
@@ -309,14 +316,17 @@ struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
 };
-// SETTINGS SITS LAST (architect 2026-08-03, moving it behind the NAVIGATION
-// anchor that then sat between it and File). The
+// SETTINGS SITS LAST OF THE APPLICATION'S OWN MENUS AND HELP AFTER IT
+// (architect 2026-08-03 for the first clause, moving Settings behind the
+// NAVIGATION anchor that then sat between it and File; 2026-09-03 for the
+// second, with the Help anchor — kdenlive's own order, and every other Qt
+// application's). The
 // float is adjacent with no gap and the walk below is a pure shaped-run walk, so
 // the order lives HERE and in the roster enum (app_state.h, whose comment states
-// that enum order IS painted order) and in nothing else — no width, pad or
-// anchor term reads it. THE FLOAT IS TWO BUTTONS SINCE 2026-08-15, when the
-// Navigation anchor was deleted with its menu; Settings still sits last, one
-// slot earlier.
+// that enum order IS painted order and carries the rule in full) and in nothing
+// else — no width, pad or anchor term reads it. THE FLOAT IS FIVE BUTTONS
+// SINCE 2026-09-03; it was two from 2026-08-15, when the Navigation anchor was
+// deleted with its menu.
 constexpr MenuButtonDef kMenuButtons[] = {
     // THE FILE MENU (architect 2026-08-13) — the row's THIRD dropdown when it
     // landed, and one of TWO since the Navigation anchor's deletion on
@@ -364,12 +374,35 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // AppState::Dropdown. Its removal is one row here and one enumerator there;
     // no width, pad or anchor term reads this table's length.)
     {RedesignButton::Settings,   "Settings"},
+    // THE HELP MENU (architect 2026-09-03) — the row's FIFTH dropdown and the
+    // only one painted to the RIGHT of Settings, which is what the order rule
+    // above says the shell's own menu does. A COMMAND MENU of ONE row, "AV Sync
+    // Stats", and the FIRST whose row carries no accelerator at all: the act
+    // has no chord (the record is at GuiPopupAct, app_state.h), so the width
+    // rule's optional column term simply finds no hotkey and the popup is a
+    // label box — the SETTINGS menu's shape reached from the other side.
+    // ITS LABEL COSTS THE FLOAT 54px at 100% and 118 at 225%, measured on this
+    // file's own advance-width method, and the right float is untouched: the
+    // collision corner is at the LEFT float's total against the view bar's,
+    // and the note below carries what that leaves.
+    {RedesignButton::Help,       "Help"},
 };
 
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
 // Color" bar, the one row the redesign had left out) reborn as the three
 // ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3.
+//
+// THE FIFTH ANCHOR'S ROOM, measured 2026-09-03 with the Help label: the LEFT
+// float is 312 authored px at 100% (File 47 + Edit 48 + Iterations 85 +
+// Settings 78 + Help 54, each a shaped run plus 2 x 10px pad) and 692 device px
+// at the tablet's 225%; the RIGHT float below is 183 and 409. So the two meet
+// only once the window is narrower than 495 device px at 100% or 1101 at
+// 225% — the laptop's 1920 leaves 1425 of clear ground and the tablet's 2304
+// leaves 1203, and even the 640px DEFENSIVE FLOOR at 100% keeps 145. The row
+// still carries NO COLLISION RULE, which is the redesign's own answer
+// everywhere (the statement is at kMinWindowWidthPx, render.h): a window driven
+// under those figures crops, and no host of this product is near them.
 //
 // THE CSS FLOAT VOCABULARY, and this is its first RIGHT float — recorded here
 // because the model has only ever walked left-to-right before. The div's right
@@ -1373,7 +1406,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — whichever of the four anchors emitted the open
+        // well as on hover — whichever of the five anchors emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the
@@ -3050,11 +3083,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE CLOCK. Its own face on this context — the monospace face, selected
     // through the one face owner (gui_font.h) — contained by the save/restore
     // this body already opened; nothing else on the row draws text. ONE FACE,
-    // TWO CELLS since 2026-08-28: this one and the RENDER PLAYER's
-    // `<position> / <length>` on the modal row, which takes this cell's size,
-    // metrics and authored offsets so the digits never walk between them. The
-    // two never paint in the same frame — the player owns the row whole while
-    // it stands.
+    // THREE CELLS since 2026-09-03: this one, the RENDER PLAYER's
+    // `<position> / <length>` on the modal row — which takes this cell's size,
+    // metrics and authored offsets so the digits never walk between them
+    // (2026-08-28) — and the AV SYNC STATS PANEL's rows, which take the face
+    // and the size and none of this cell's geometry, being a list rather than
+    // a cell. NONE OF THE THREE EVER PAINTS IN THE SAME FRAME AS ANOTHER: the
+    // player and the panel each own the row whole while they stand, and the
+    // panel's band covers everything above it. The set's own record is at this
+    // file's bottom-row text block.
     {
         gui_select_font_face(cr, GuiFontFamily::Mono);
         const double size_px = clock_font_size_px();
@@ -5768,13 +5805,15 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
+// (the fourth, the same day: its Cancel-alone row), the AV SYNC STATS PANEL
+// (the fifth, 2026-09-03: its Close-alone row) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
+    if (app.stats_panel.active) return true;
     std::string prefix;
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
@@ -6163,11 +6202,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // the two never live together (each opener refuses under the other) and
     // neither live beside an editor.
     const bool picker_up = !prompt_up && !player_up && app.picker.active;
+    // THE AV SYNC STATS PANEL, the fifth owner (2026-09-03): the same rank
+    // again — the three list owners never stand together, each opener refusing
+    // under the other two, and none stands beside an editor. THIS IS ONE OF
+    // THE THREE PLACES THE RANKING IS SPELLED (AppState::
+    // modal_dialog_live_session and modal_dialog_stash_current are the others)
+    // and they must agree or the owner-tag doctrine breaks.
+    const bool stats_up = !prompt_up && !player_up && !picker_up &&
+                          app.stats_panel.active;
     std::string prefix;
     text_editor::State* ed =
-        (prompt_up || player_up || picker_up)
+        (prompt_up || player_up || picker_up || stats_up)
             ? nullptr : dialog_editor_to_paint(app, prefix);
-    if (!prompt_up && !player_up && !picker_up && ed == nullptr) {
+    if (!prompt_up && !player_up && !picker_up && !stats_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -6442,15 +6489,23 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // "Cancel (Esc)" follows for free, those being the two routers'
         // own keys under the product's one spelling (spell_chord's head,
         // gui_input.h).
-        if (!picker_up) {
+        //
+        // THE STATS PANEL'S ROW IS **Close** ALONE (architect 2026-09-03), the
+        // picker's one-button shape with the word its own act names: the panel
+        // reads and nothing is being answered, so "Cancel" would name a
+        // decision it does not ask for. It is the escape sentinel by
+        // construction on a one-button row, and the hint composer's
+        // "Close (Esc)" follows for free — Esc being the router's own key
+        // under the product's one spelling (spell_chord's head, gui_input.h).
+        if (!picker_up && !stats_up) {
             DialogButtonPlan ok;
             ok.label     = "OK";
             ok.editor_ok = true;
             plan.push_back(std::move(ok));
         }
-        DialogButtonPlan cancel;
-        cancel.label = "Cancel";
-        plan.push_back(std::move(cancel));
+        DialogButtonPlan last;
+        last.label = stats_up ? "Close" : "Cancel";
+        plan.push_back(std::move(last));
     }
     // EVERY BUTTON'S WIDTH, and the ONE CLUSTER'S total behind it — the total
     // is the SINGLE-CLUSTER owners' (a prompt, the picker, an editor), whose
@@ -6655,9 +6710,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         // THE CLOCK'S CELL IS MEASURED BEFORE ANYTHING IS PLACED, its width
         // being one of the fixed terms the scrub's own is what is left over.
-        // ONE FACE, TWO CELLS (2026-08-28): the row-8 clock's face, size, cell
-        // metrics and authored offsets, so the digits never walk between the
-        // project's clock and the player's.
+        // ONE FACE, THREE CELLS since 2026-09-03 (this pair since 2026-08-28;
+        // the AV sync stats panel is the third — the set's own record is at
+        // this file's bottom-row text block): the row-8 clock's face, size,
+        // cell metrics and authored offsets, so the digits never walk between
+        // the project's clock and the player's.
         gui_select_font_face(cr, GuiFontFamily::Mono);
         const double csize = clock_font_size_px();
         cairo_set_font_size(cr, csize);
@@ -6873,6 +6930,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    as its CAP, and with nothing to its left the row is that one
         //    button. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
+        buttons_x0 = buttons_x_max;
+    } else if (stats_up) {
+        // -- THE AV SYNC STATS PANEL'S ROW (architect 2026-09-03): **Close**
+        //    and nothing else, and it takes the picker's seat for the picker's
+        //    reason — THE ALIGNMENT RULE (stated in full in the branch above):
+        //    a modal carrying a FIELD OR A MESSAGE is flush left with it, and a
+        //    LIST's buttons are flush right. This owner carries neither a field
+        //    nor a message — the band above is the whole content — so its one
+        //    button starts at `buttons_x_max`, the same rightmost seat every
+        //    other owner uses as its CAP. --
+        dlg.owner  = AppState::ModalDialogOwner::Stats;
         buttons_x0 = buttons_x_max;
     } else {
         // -- The editor: the label at the left pad, then the inset field,
@@ -7558,15 +7626,19 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // -- GuiPaintHandler::paint_folder_overlay -----------------------------------
 //
 // THE KEYBOARD-SLOT LIST PANEL (2026-08-28), ONE PAINTER FOR EVERY CONTENT —
-// the render player's folders and wavs and the Open project picker's project
-// folders. Contract and gate are at the declaration; the geometry, the scroll
+// the render player's folders and wavs, the Open project picker's project
+// folders and, since 2026-09-03, the AV sync stats panel's text lines.
+// Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
-// AppState::folder_overlay. Nothing here asks WHOSE rows these are: the
-// project picker's are all Folder rows, each taking its glyph from the row's
-// KIND and its face from the same ladder the player's rows do, and the
-// transport mark below is structurally absent under the picker (the player
-// holds no item while a picker stands).
+// AppState::folder_overlay. NOTHING HERE ASKS WHOSE ROWS THESE ARE EXCEPT
+// ONCE, AT THE FACE: the project picker's are all Folder rows, each taking its
+// glyph from the row's KIND and its face from the same ladder the player's
+// rows do, and the transport mark below is structurally absent under the
+// picker (the player holds no item while a picker stands) — while the owner
+// tag is read at exactly one line, the FONT selection, because the stats
+// panel's face is a property of that content and not of any row. Everything
+// else a stats row does differently is the KIND's, which is the row's own.
 //
 // THE ROWS ARE BUTTONS AND THE PALETTE IS THE FILE MANAGER'S (architect
 // 2026-08-28, R31/R32, superseding the keyboard's palette this band opened
@@ -7637,8 +7709,26 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_clip(cr);
 
-    gui_select_font_face(cr, GuiFontFamily::Sans);
-    cairo_set_font_size(cr, redesign_font_size_px());
+    // THE FACE IS THE CONTENT'S. Two of the three contents list NAMES — files
+    // and projects — and take the redesign's sans like every other row in the
+    // product; the AV SYNC STATS PANEL takes the product's MONOSPACE at the
+    // clock's own size, because its rows are a label column beside a numbers
+    // column rebuilt every frame and a proportional face would make the digits
+    // walk (the widening is the architect's, 2026-09-03; the rule and the
+    // three-cell set are stated at this file's bottom-row text block and at
+    // gui_font.h). SHAPE WITH THE FONT YOU PAINT WITH: the handle below is
+    // taken AFTER the selection, and this painter selects once and never again
+    // — nothing after this call reads a face it did not select, so the
+    // borrowed handle stays valid for the whole walk.
+    const bool stats = app.folder_overlay.owner ==
+                       AppState::FolderOverlay::Owner::Stats;
+    if (stats) {
+        gui_select_font_face(cr, GuiFontFamily::Mono);
+        cairo_set_font_size(cr, clock_font_size_px());
+    } else {
+        gui_select_font_face(cr, GuiFontFamily::Sans);
+        cairo_set_font_size(cr, redesign_font_size_px());
+    }
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
@@ -7665,7 +7755,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             if (!rects_intersect(exposed, r)) return;
             if (!rects_intersect(surf, r)) return;
 
-            const bool highlighted = index == ov.highlight_row;
+            // A TEXT ROW IS INERT AND THE FACE LADDER SKIPS IT WHOLE
+            // (2026-09-03): no fill, no outline, no press arm — the row is a
+            // line of text on the band's own ground, and the two axes below
+            // have nothing to say about it.
+            const bool text_row =
+                row.kind == AppState::FolderOverlayRow::Kind::Text;
+            const bool highlighted = !text_row && index == ov.highlight_row;
             // NO ROW HOVERS UNDER A PROMPT. A prompt outranks both contents
             // and its veil takes the pointer, so on_motion's prompt branch
             // returns before the band's hover walk and the stored row keeps
@@ -7673,9 +7769,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // paint, for the same reason the roster's does: the hover face is
             // a promise the pointer can act, and under a prompt it cannot.
             // The raise damages the whole window, so the row goes out with it.
-            const bool hovered     = index == ov.hovered_row &&
+            const bool hovered     = !text_row && index == ov.hovered_row &&
                                      !app.prompt.active;
-            const bool pressed     = ov.press.armed && ov.press.row == index &&
+            const bool pressed     = !text_row && ov.press.armed &&
+                                     ov.press.row == index &&
                                      ov.press.inside && !ov.press.scrolling;
             // THE FACE IS TWO AXES, NOT A LADDER (R32's own table): LIT — the
             // highlight, or a live press arm promising it — and HOVERED. A
@@ -7696,20 +7793,25 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             } else if (hovered) {
                 line = &kFolderRowHoverOutline;
             }
-            redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius,
-                              (lit || hovered) ? &fill : nullptr, line);
+            if (!text_row) {
+                redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, radius,
+                                  (lit || hovered) ? &fill : nullptr, line);
+            }
 
-            // THE GLYPH, on EVERY row: the folder for folder rows, the wav
-            // for wav rows — swapped for the
-            // transport glyph on the item's row. (The glyph-less TEXT kind
-            // went with the history picker on 2026-08-29, and the UP kind —
-            // the `..` row, which wore the folder glyph because it named a
-            // folder — with the player's move inside `tmp/` on 2026-09-01.) At
-            // the BUTTON'S OWN INSET from the row's left edge and centred in
-            // its height, which are the same number: a row is a wide button
-            // and this is how a button seats its glyph.
+            // THE GLYPH: the folder for folder rows, the wav for wav rows —
+            // swapped for the transport glyph on the item's row — and NONE for
+            // a TEXT row, which names neither a folder nor a file. (The UP
+            // kind, the `..` row, wore the folder glyph because it named a
+            // folder, and went with the player's move inside `tmp/` on
+            // 2026-09-01.) At the BUTTON'S OWN INSET from the row's left edge
+            // and centred in its height, which are the same number: a row is a
+            // wide button and this is how a button seats its glyph. A TEXT
+            // ROW'S WORD STARTS WHERE THE GLYPH WOULD HAVE — the button's own
+            // inset is the row's left pad, so a glyph-less row reads as the
+            // same button family with its ink where a word button seats it.
             const int gx = r.x + inset;
-            {
+            int text_x = gx;
+            if (!text_row) {
                 icons::Icon icon = icons::Icon::Folder;
                 if (row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                     icon = (!rp.item.empty() && row.path == rp.item)
@@ -7720,8 +7822,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 icons::draw(cr, icon, static_cast<double>(gx),
                             static_cast<double>(gy),
                             static_cast<double>(glyph));
+                text_x = gx + glyph + gap;
             }
-            const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
             // in the band's ONE ink (black on the

@@ -201,6 +201,11 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     // down with it; idempotent, so the road that already closed it — the
     // Open project picker's own reopen — pays nothing.
     if (input != nullptr) input->close_picker();
+    // AND A STANDING AV SYNC STATS PANEL (2026-09-03), the same shape one mode
+    // further — one close body, close_stats_panel, which disarms the display
+    // measurement and takes the band down with it, so no road out of the
+    // window can leave the instrument running. Idempotent like the two above.
+    if (input != nullptr) input->close_stats_panel();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
     // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which

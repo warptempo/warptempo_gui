@@ -763,6 +763,32 @@ bool GuiPlayback::device_absent() const {
     return !impl_ || !impl_->device_ready;
 }
 
+// WHAT AAUDIO SAYS ABOUT ITSELF, ASKED AT THE MOMENT THE PANEL ASKS (the
+// contract at the declaration, playback.h). The granted rate, the burst the
+// stream asks for at a time — the PICKUP PHASE'S span — and the buffer it was
+// given, all plain getters on the standing stream, on the main thread.
+//
+// `latency_known` STAYS FALSE, AND THAT IS THE STANDING RECORD RATHER THAN A
+// GAP (the Impl block at the head of this file): in the car the tablet plays
+// over Bluetooth, whose link delay is large and variable, and the figures the
+// framework offers — AAudioStream_getTimestamp and its own estimate — do not
+// carry it. A figure that is right on the speaker and wrong on the route the
+// panel exists for is worse than no figure, so the panel prints no net line
+// here and says which half is missing. No Bluetooth estimate is invented.
+GuiAudioStats GuiPlayback::audio_stats() const {
+    GuiAudioStats st;
+    st.backend = GuiAudioBackendKind::AAudio;
+    if (!impl_ || !impl_->device_ready || !impl_->stream) return st;
+    st.present     = true;
+    st.output_rate =
+        static_cast<int>(impl_->state.output_rate.load(std::memory_order_relaxed));
+    st.period_frames =
+        static_cast<int>(AAudioStream_getFramesPerBurst(impl_->stream));
+    st.buffer_frames =
+        static_cast<int>(AAudioStream_getBufferSizeInFrames(impl_->stream));
+    return st;
+}
+
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);
