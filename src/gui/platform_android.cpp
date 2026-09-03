@@ -1717,36 +1717,6 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
 }
 
 // ---------------------------------------------------------------------------
-// The display lead (contract at platform_wayland.h)
-// ---------------------------------------------------------------------------
-
-// ZERO, BY RULING (architect 2026-09-02, the deep dive's item I record-only).
-// The Wayland twin measures the interval from the pre-paint hook to the
-// pixels' light through wp_presentation and reads the predictor that far
-// ahead. This backend's display is no faster — a lock/unlockAndPost producer
-// sits behind SurfaceFlinger's triple buffering, two to three 90 Hz periods —
-// but its AUDIO side is uncompensated by ruling: the AAudio backend reports no
-// output latency (playback_aaudio.cpp's Impl records why — the car's Bluetooth
-// route is large, variable and unreported), so the tablet's predictor still
-// carries the whole audio lead, and the position it reads is AHEAD of the
-// sound by that figure. THE TWO TERMS THEN CANCEL ON THE SPEAKER, which is why
-// the zero is not a gap but the better answer: the painted line's error at the
-// moment the pixel lights is L_audio − L_display — the audio lead ahead, this
-// display's own lag behind — about 10–25 ms against 22–33 ms, so roughly
-// −23…+3 ms net, well inside what the eye reads as on the note. Adding a
-// display lead would push the position read forward by L_display and leave the
-// whole L_audio standing: it would REMOVE the one cancellation the tablet has,
-// not double a compensation this platform never made.
-// When the tablet's audio latency is itself compensated, this is where its
-// display lead goes — and there is no feedback road for it on the
-// lock/unlockAndPost path (EGL frame timestamps need an EGLSurface;
-// Choreographer timelines describe the next frame, not this one's light), so
-// the figure would be the fallback's shape, k × the pinned 90 Hz period.
-int64_t GuiPlatform::display_lead_ns() const {
-    return 0;
-}
-
-// ---------------------------------------------------------------------------
 // The car's two seam members (contracts at platform_wayland.h)
 // ---------------------------------------------------------------------------
 

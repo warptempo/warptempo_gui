@@ -2031,8 +2031,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Tick: runs once per event-loop iteration. During playback, snapshots
     // the audio thread's cursor and mirrors it into the main-thread playhead,
     // invalidating just the columns and timestamp that changed. Also
-    // detects natural end-of-playback via the session word's playing bit and
-    // its natural-end hold, read together in one engine snapshot.
+    // detects natural end-of-playback via the session word's playing bit.
     gui.set_on_tick([&]() {
         // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
         // thing this body does on EVERY tick, ahead of all four of its early
@@ -2541,34 +2540,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
 
-        // THE FLAG AND THE HOLD, ONE READ (2026-09-01, the epoch reconciled
-        // ahead of the hold): `snap` is the engine's one main-thread
-        // observation (GuiPlayback::snapshot) — the session word loaded
-        // once, its playing bit and its natural-end hold answered from that
-        // load, the predictor's anchor re-anchored FIRST where the live
-        // figure had moved under it and, from the first read of the ended
-        // bit, onto the terminal stamp itself. So the teardown below can
-        // never decide on a deadline the line's anchor has not caught up
-        // with: the verdict and the line are one stamp by this one call's
-        // shape, and the line reaches the window's end exactly as the hold
-        // ends. `ma_playing` is the audio thread's own bit, which drops at
-        // the natural end — the fence/bypass reasoning below is stated on
-        // it. `ma_sounding` adds the NATURAL-END HOLD (the session word's
-        // ended bit): the bit has dropped but the last frames the ending
-        // fill queued are still leaving the loudspeaker, and cursor() goes
-        // on extrapolating to the window's end for exactly that long, so the
-        // heartbeat runs through it and the stop body waits for it. THE
-        // SNAPSHOT CARRIES NO CURSOR — the pre-paint hook owns the scanner's
-        // advance (the heartbeat's note below), so a cursor handed back here
-        // had no reader and rode the struct for one day (its record at
-        // GuiPlaybackSnapshot); the tick takes the observation for its
-        // verdict, and the anchor it stored is the one the paint then reads.
-        const GuiPlaybackSnapshot snap = playback.snapshot();
-        const bool ma_playing  = snap.playing;
-        const bool ma_sounding = ma_playing || snap.natural_end_holding;
+        // THE PLAYING BIT, ONE READ: the audio thread's own flag, which
+        // drops at the natural end — the fence/bypass reasoning below is
+        // stated on it. Nothing is read ahead of it and nothing is deferred
+        // behind it: a natural-end hold that kept the scanner alive until the
+        // last queued frame had been heard stood here for two days and went
+        // with the playback leads on 2026-09-03 (playback.h's design note),
+        // so the line stops when the FILL ends, one output latency before the
+        // sound does — the near end of the lead the launch has at the far
+        // end, and the ruling.
+        const bool ma_playing = playback.is_playing();
         if (!app.playhead_scanner_active && !ma_playing) return;
 
-        if (ma_sounding) {
+        if (ma_playing) {
             // Heartbeat: invalidate the scanner column at the current
             // model position so the paint cycle keeps running. The
             // pre-paint hook reads the predictor at paint time and adds
@@ -2620,42 +2604,21 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return;
         }
 
-        // Playing was true, now false, AND THE SOUND HAS ENDED — the natural
-        // end. Deactivate the
+        // Playing was true, now false — the natural end. Deactivate the
         // scanner THIS tick, through the same call Space's stop edge makes:
         // a stopped scanner is deactivated immediately and there is no
         // non-playing window in which its value fields are valid (contract at
         // app_state.h's scanner block). The scanner's last-painted pixels are
-        // damaged by the call, so the line vanishes from wherever the predictor
-        // last drew it — at the window's end, since 2026-09-01: THE HOLD
-        // ABOVE kept this branch from running while the engine's hold stood,
-        // i.e. from the flag's drop until the last frame the ending fill
-        // consumed had been heard (its cycle stamp plus the reported
-        // latency), and cursor() extrapolated to the end through it; before
-        // that day the line vanished the moment the flag dropped,
-        // latency-and-a-fraction-of-a-period short of the last sound. AND THE
-        // VERDICT THAT LETS THIS BRANCH RUN CARRIES THE TERMINAL STAMP'S OWN
-        // LINE: the snapshot above re-anchors the line onto the ending fill's
-        // stamp — (end, the instant the last sound is heard), at the live
-        // latency figure — from its first read of the ended bit and before it
-        // answers the hold, so the line arrives at the window's end at the
-        // deadline itself and a figure that moved inside the hold (a quantum
-        // change) moves the deadline and the line together. Until that day's
-        // second review the hold read the live figure while the anchor kept
-        // the old one, and a figure that DROPPED inside the hold could end it
-        // with the line still short of the end; until its third the line ran
-        // on the standing anchor, drifted since its last resync, and the
-        // hold's end could find it short of `end` by that drift. WHAT THIS
-        // BRANCH ERASES is the last pre-paint's pixels, at most one paint
-        // period short of the end (the display's own, recorded at
-        // playback_publish_play); no cursor is written into the scanner here,
-        // since a deactivated scanner is never painted again (the scanner
-        // block, app_state.h) and a value written for no reader is residue —
-        // which is why the snapshot carries none. The hold is the ENGINE's and
-        // belongs to every session (the render player's tick reads the same
-        // deferred end); every OTHER stop road — Space, a modal open, the S/T
-        // flip, a scrub, a trim write — takes the stop body at once, whose
-        // fence path clears the hold.
+        // damaged by the call, so the line vanishes from wherever the
+        // predictor last drew it — which is where the ending FILL left the
+        // read cursor, one output latency and a fraction of a period ahead of
+        // the last sound: the line goes out slightly before the sound does,
+        // the same lead the launch has, and the accepted shape (playback.h's
+        // design note, architect 2026-09-03). No cursor is written into the
+        // scanner here, since a deactivated scanner is never painted again
+        // (the scanner block, app_state.h) and a value written for no reader
+        // is residue. Every OTHER stop road — Space, a modal open, the S/T
+        // flip, a scrub, a trim write — takes the same stop body at once.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
         // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
         // hand-spelled pair this branch and Space's stop edge both carried
@@ -2751,32 +2714,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, gui, viewport);
 
-        // THE DISPLAY LEAD, handed to the predictor once per painted frame
-        // (architect 2026-09-02; the figure's contract is at
-        // GuiPlatform::display_lead_ns, its read at `observe`,
-        // playback_common.cpp): the Wayland backend stamps this frame's
-        // pre-paint instant just before firing this hook and measures how
-        // long its pixels take to light (Android answers 0 by ruling), and
-        // every predictor read from here on — the scanner sample below, and
-        // the render player's tick, which reads cursor() for its clock and
-        // scrub under the early return that follows and so sees the figure
-        // the last painted frame set — is that far ahead of `now`, so the
-        // line lands on the sound when the pixel does. Above every return,
-        // for exactly that second reader.
-        playback.set_display_lead_ns(gui.display_lead_ns());
-
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
         // project's: the scanner sampling below would move the waveform's
         // scanner off a buffer the waveform does not show. The player's
         // position is read by its painter and damaged by its own tick.
         if (app.render_player.active) return;
-        // PLAYING OR IN THE NATURAL-END HOLD takes the scanner advance below:
-        // through the hold cursor() goes on extrapolating to the window's end
-        // while the sound's last frames leave the loudspeaker (the tick's
-        // `ma_sounding`), so the line runs to the end instead of freezing
-        // where the flag dropped.
-        if (!playback_sounding(playback)) {
+        if (!playback.is_playing()) {
             // THE CENTERED DERIVATION'S RESTING HALF (architect 2026-08-31,
             // R11) — the pre-paint hook is the pin's ONE derivation point
             // (the ownership statement is at derive_centered_viewport,
@@ -2812,8 +2756,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // chase's own aiming rule below: a former carrying the playhead
             // mid-drag must not have the waveform recentered under it; the
             // release's landing re-derives on the next frame. The scanner
-            // gate keeps the one-tick window between the natural-end hold's
-            // end and the tick's stop body from reading a stale scanner.
+            // gate keeps the one-tick window between the flag's drop and the
+            // tick's stop body from reading a stale scanner.
             // AND THE PIN'S OWN ENGAGEMENT LEADS THE TERMS since 2026-09-01
             // (centered_pin_engaged, app_state.h — the lamp's bit was read
             // direct here until the A/B audition began disregarding it): the

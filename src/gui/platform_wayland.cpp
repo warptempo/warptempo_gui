@@ -8,7 +8,6 @@
 #include <xdg-decoration-unstable-v1-client-protocol.h>
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
-#include <presentation-time-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include <linux/input-event-codes.h>
@@ -22,7 +21,6 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -58,15 +56,12 @@
 // callback when the surface's next presentation is appropriate. The
 // compositor knows when it is ready to display a new frame and tells the
 // client directly, rather than the client inferring it from refresh rate.
-// When a frame callback fires, paint_one_frame runs: it stamps the clock,
-// invokes the pre-paint hook (where the playhead's painted position is
-// resolved from the playback predictor at paint time, so the rendered
-// position is fresh as of the paint moment), consumes the damage list,
-// paints into the next wl_shm buffer, then requests the next frame callback
-// and a presentation feedback carrying that stamp, damages, attaches and
-// commits — ONE commit per painted frame. The feedback comes back with the
-// instant those pixels turned into light, and the difference is the display
-// lead the predictor is read ahead by (display_lead_ns, platform_wayland.h).
+// When a frame callback fires, paint_one_frame runs: it invokes the pre-paint
+// hook (where the playhead's painted position is resolved from the playback
+// predictor at paint time, so the rendered position is fresh as of the paint
+// moment), consumes the damage list, paints into the next wl_shm buffer, then
+// requests the next frame callback, damages, attaches and commits — ONE commit
+// per painted frame (the ordering note is at paint_one_frame).
 //
 // The two cadences (tick and paint) drift independently. Conflating them
 // by driving the tick off frame callbacks would mean that whenever the
@@ -172,25 +167,6 @@ void note_offer_text_mime(std::string& slot, const char* mime) {
     if (text_mime_rank(mime) > text_mime_rank(slot.c_str())) slot = mime;
 }
 
-// THE DISPLAY LEAD'S CLOCK, and it is THE PREDICTOR'S: steady_clock, which on
-// glibc/Linux is CLOCK_MONOTONIC (playback_common.cpp's steady_now_ns is the
-// same read). The pre-paint stamp taken here is subtracted from the instant
-// wp_presentation reports in ITS clock, so the two must be one domain — which
-// is what on_presentation_clock_id verifies before a single feedback is
-// requested.
-int64_t steady_now_ns() {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
-// The fallback display lead's period for a refresh in millihertz: 2 × the
-// period (the k = 2 argument is at display_lead_ns's declaration), at 60 Hz
-// when no output has reported a mode.
-int64_t fallback_display_lead_ns(int refresh_mhz) {
-    const int64_t mhz = refresh_mhz > 0 ? refresh_mhz : 60000;
-    return 2 * (1000000000LL * 1000 / mhz);
-}
-
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -263,32 +239,6 @@ struct WaylandListeners {
                                                int32_t) {}
     static void surface_preferred_buffer_transform(void*, struct wl_surface*,
                                                    uint32_t) {}
-
-    // wp_presentation (the display lead's instrument, platform_wayland.h).
-    static void presentation_clock_id(void* data, struct wp_presentation*,
-                                      uint32_t clk_id) {
-        static_cast<GuiPlatform*>(data)->on_presentation_clock_id(clk_id);
-    }
-
-    // wp_presentation_feedback. `data` is the feedback's OWN record (the
-    // stamp travels with the object, never on the singleton); sync_output
-    // names the output the timestamp belongs to, which this program does not
-    // read — the window's output is the surface listener's business.
-    static void feedback_sync_output(void*, struct wp_presentation_feedback*,
-                                     struct wl_output*) {}
-    static void feedback_presented(void* data, struct wp_presentation_feedback*,
-                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo,
-                                   uint32_t tv_nsec, uint32_t /*refresh*/,
-                                   uint32_t /*seq_hi*/, uint32_t /*seq_lo*/,
-                                   uint32_t flags) {
-        auto* fb = static_cast<GuiPlatform::PresentationFeedback*>(data);
-        fb->self->on_presentation_presented(fb, tv_sec_hi, tv_sec_lo, tv_nsec,
-                                            flags);
-    }
-    static void feedback_discarded(void* data, struct wp_presentation_feedback*) {
-        auto* fb = static_cast<GuiPlatform::PresentationFeedback*>(data);
-        fb->self->on_presentation_discarded(fb);
-    }
 
     // xdg_surface
     static void xdg_surface_configure(void* data, struct xdg_surface* xs,
@@ -564,16 +514,6 @@ const struct wl_surface_listener s_surface_listener = {
     WaylandListeners::surface_preferred_buffer_transform,
 };
 
-const struct wp_presentation_listener s_presentation_listener = {
-    WaylandListeners::presentation_clock_id,
-};
-
-const struct wp_presentation_feedback_listener s_presentation_feedback_listener = {
-    WaylandListeners::feedback_sync_output,
-    WaylandListeners::feedback_presented,
-    WaylandListeners::feedback_discarded,
-};
-
 const struct xdg_surface_listener s_xdg_surface_listener = {
     WaylandListeners::xdg_surface_configure,
 };
@@ -740,11 +680,11 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     // THE REQUIRED GLOBALS. zxdg_decoration_manager_v1 JOINED THEM 2026-07-30
     // and wl_data_device_manager 2026-08-02 (architect, both times), leaving the
-    // ruled OPTIONAL list at exactly three (pointer-constraints and
-    // relative-pointer, whose absence has a defined degraded behavior — see the
-    // pointer-capture warning below — and, since 2026-09-02, wp_presentation,
-    // whose absence leaves the display lead at its fallback figure — the
-    // announcement below). labwc always advertises the decoration
+    // ruled OPTIONAL list at exactly two: pointer-constraints and
+    // relative-pointer, whose absence has a defined degraded behavior — see
+    // the pointer-capture warning below. (It was three between 2026-09-02 and
+    // 2026-09-03, wp_presentation joining to measure the display lead and
+    // leaving with the playback leads.) labwc always advertises the decoration
     // manager, and the data device manager is CORE protocol — the same
     // wayland.xml as wl_seat, so a compositor without it is not a compositor —
     // which makes either absence a broken environment rather than a degraded
@@ -766,34 +706,6 @@ bool GuiPlatform::init(int width, int height, const char* title) {
         std::fprintf(stderr,
                      "warptempo_gui: No wl_output advertised; "
                      "playback tick will use 60 Hz fallback\n");
-    }
-    // THE DISPLAY LEAD'S FALLBACK, announced once AND ONLY HERE (the measured
-    // figure announces itself from the presented handler once its window
-    // fills). ONE LINE PER CONDITION is the contract (display_lead_ns's
-    // declaration), so this line carries every fact its arm has — the figure,
-    // the reason, and for the bad-clock arm the clock id the compositor named,
-    // which on_presentation_clock_id keeps rather than printing itself.
-    // The clock_id event has arrived by now — the bind is issued while the
-    // first roundtrip dispatches the registry globals, so it flushes with the
-    // second roundtrip above and the compositor's reply is dispatched before
-    // that roundtrip returns — so the two arms below really are distinguishable
-    // here: an ABSENT global versus a bound one whose clock is unusable.
-    // The figure printed is the one at init, the seeded output's; the lead
-    // itself follows the window's output live.
-    if (!wp_presentation_) {
-        std::fprintf(stderr,
-                     "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
-                     "output's refresh period; wp_presentation absent)\n",
-                     static_cast<double>(
-                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6);
-    } else if (!presentation_clock_ok_) {
-        std::fprintf(stderr,
-                     "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
-                     "output's refresh period; wp_presentation clock_id %u is "
-                     "not CLOCK_MONOTONIC)\n",
-                     static_cast<double>(
-                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6,
-                     presentation_clock_id_);
     }
     if (!pointer_constraints_ || !relative_pointer_manager_) {
         std::fprintf(stderr,
@@ -1093,10 +1005,6 @@ void GuiPlatform::destroy_wayland_state() {
         wl_callback_destroy(frame_callback_);
         frame_callback_ = nullptr;
     }
-    // Outstanding presentation feedbacks go before the surface they were
-    // requested for and before the global they came from.
-    destroy_presentation_feedbacks();
-
     if (xdg_toplevel_decoration_) {
         zxdg_toplevel_decoration_v1_destroy(xdg_toplevel_decoration_);
         xdg_toplevel_decoration_ = nullptr;
@@ -1146,12 +1054,6 @@ void GuiPlatform::destroy_wayland_state() {
     if (xdg_wm_base_) {
         xdg_wm_base_destroy(xdg_wm_base_);
         xdg_wm_base_ = nullptr;
-    }
-    if (wp_presentation_) {
-        wp_presentation_destroy(wp_presentation_);
-        wp_presentation_ = nullptr;
-        presentation_clock_ok_ = false;
-        presentation_clock_id_ = 0;
     }
     for (OutputRecord& rec : outputs_) {
         wl_output_destroy(rec.output);  // bound at v2; release is v3
@@ -1513,13 +1415,6 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
-    // THE PRE-PAINT STAMP, taken BEFORE the hook runs because the hook is
-    // where the playback predictor is sampled: the display lead is measured
-    // from this instant to the instant the frame's pixels turn into light
-    // (the feedback requested below), so it is exactly the interval the
-    // predictor is then read ahead by (display_lead_ns).
-    const int64_t sample_ns = steady_now_ns();
-
     // Pre-paint hook: gives the application a chance to update model
     // state (e.g., re-read the playback predictor) and declare any
     // additional damage based on the freshly-updated state. The hook
@@ -1562,17 +1457,20 @@ void GuiPlatform::paint_one_frame() {
     }
     cairo_destroy(cr);
 
-    // THE COMMIT ORDER (2026-09-02): frame request → presentation feedback →
-    // damage → attach → ONE commit. The frame request and the feedback are
-    // both surface state that rides the next commit, so they are issued ahead
-    // of it and the content commit sends everything at once — until this day
-    // the frame request went out on a SECOND, empty commit after the content
-    // commit, harmless but reversed, and the feedback has to precede the
-    // commit it describes, which is what made the reorder a prerequisite.
+    // THE COMMIT ORDER: frame request → damage → attach → ONE commit. The
+    // frame request is surface state that rides the next commit, so it is
+    // issued ahead of it and the content commit sends everything at once.
+    // Until 2026-09-02 the frame request went out on a SECOND, EMPTY commit
+    // AFTER the content commit — harmless but reversed. THE SINGLE-COMMIT
+    // ORDERING IS KEPT BY THE ARCHITECT'S RULING OF 2026-09-03 although the
+    // presentation feedback it was reordered for is gone: it was landed as a
+    // prerequisite of the display-lead measurement (a feedback must precede
+    // the commit it describes), that lead was rolled back with the playback
+    // leads, and he kept the correction on its own merits — one commit per
+    // painted frame is what the protocol's shape asks for.
     // paint_now's caller may already have a callback in flight; the request
     // is then a no-op and the content still commits, as before.
     request_frame_callback();
-    request_presentation_feedback(sample_ns);
 
     for (const DamageRect& d : buf->pending) {
         wl_surface_damage_buffer(wl_surface_, d.x, d.y, d.w, d.h);
@@ -1892,17 +1790,6 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
             window_output_ = rec.output;
             select_window_output();
         }
-    } else if (std::strcmp(interface, wp_presentation_interface.name) == 0) {
-        // OPTIONAL (the protocol classes, platform_wayland.h): v1 carries the
-        // `presented` event this reads; v2 only adds the feedback's
-        // `sync_output` semantics for a surface on several outputs, which
-        // this program does not read. Absence leaves display_lead_ns at its
-        // fallback, said once at init. Feedback is requested only once the
-        // clock_id event has named CLOCK_MONOTONIC (on_presentation_clock_id).
-        wp_presentation_ = static_cast<struct wp_presentation*>(
-            wl_registry_bind(r, name, &wp_presentation_interface, 1));
-        wp_presentation_add_listener(wp_presentation_, &s_presentation_listener,
-                                     this);
     } else if (std::strcmp(interface, wl_seat_interface.name) == 0 &&
                !wl_seat_) {
         // Cap to version 8. v4 gave us key repeat; v8 adds
@@ -2031,127 +1918,6 @@ void GuiPlatform::on_surface_leave(struct wl_output* output) {
     // keeps the last figure standing.
     window_output_ = nullptr;
     select_window_output();
-}
-
-// ---------------------------------------------------------------------------
-// wp_presentation — the display lead (contract at display_lead_ns's
-// declaration, platform_wayland.h)
-// ---------------------------------------------------------------------------
-
-void GuiPlatform::on_presentation_clock_id(uint32_t clk_id) {
-    // THE ONE DOMAIN CHECK: the predictor extrapolates in steady_clock, which
-    // is CLOCK_MONOTONIC, and `presented` reports in whatever clock this event
-    // names (wlroots on DRM: CLOCK_MONOTONIC). Any other clock leaves the
-    // global bound and unused — a lead subtracted across two clocks is a
-    // number, not a measurement — and init's announcement then says so.
-    // IT PRINTS NOTHING (2026-09-02): the display lead's contract is ONE
-    // stderr line beside the JACK latency line (display_lead_ns's
-    // declaration, platform_wayland.h), and this arm used to add a second,
-    // figure-less warning ahead of it for the same condition. The clock id is
-    // KEPT instead, and init's single fallback line names it — which it can,
-    // because this event is dispatched before that line runs: the bind is
-    // issued while the FIRST roundtrip dispatches the registry globals, so
-    // the request flushes with the SECOND roundtrip, and the compositor's
-    // reply to it (clock_id is sent once at binding time) is delivered ahead
-    // of that roundtrip's own sync callback.
-    presentation_clock_id_ = clk_id;
-    presentation_clock_ok_ = (clk_id == static_cast<uint32_t>(CLOCK_MONOTONIC));
-}
-
-void GuiPlatform::request_presentation_feedback(int64_t sample_ns) {
-    if (!wp_presentation_ || !presentation_clock_ok_ || !wl_surface_) return;
-    auto* fb = new PresentationFeedback;
-    fb->self      = this;
-    fb->sample_ns = sample_ns;
-    fb->proxy     = wp_presentation_feedback(wp_presentation_, wl_surface_);
-    wp_presentation_feedback_add_listener(fb->proxy,
-                                          &s_presentation_feedback_listener, fb);
-    presentation_feedbacks_.push_back(fb);
-}
-
-void GuiPlatform::destroy_presentation_feedbacks() {
-    while (!presentation_feedbacks_.empty()) {
-        finish_presentation_feedback(presentation_feedbacks_.back());
-    }
-}
-
-void GuiPlatform::on_presentation_presented(PresentationFeedback* fb,
-                                            uint32_t tv_sec_hi,
-                                            uint32_t tv_sec_lo,
-                                            uint32_t tv_nsec,
-                                            uint32_t flags) {
-    // "The time when the content update turned into light the first time on
-    // the surface's main output", in the clock the clock_id check admitted.
-    // `flags` says what makes the figure trustworthy — VSYNC (the timestamp
-    // is a vblank's, not a guess) and HW_CLOCK (it came from the display
-    // hardware's clock rather than the compositor's read afterwards); labwc
-    // on DRM reports both — and is deliberately NOT gated on: a compositor
-    // reporting a softer timestamp is still reporting the frame's own
-    // presentation, and a mean of thirty of them still beats the fallback.
-    (void)flags;
-    const int64_t presented_ns =
-        ((static_cast<int64_t>(tv_sec_hi) << 32) |
-         static_cast<int64_t>(tv_sec_lo)) * 1000000000LL +
-        static_cast<int64_t>(tv_nsec);
-    const int64_t lead_ns = presented_ns - fb->sample_ns;
-
-    // THE RING (its shape at the declaration): overwrite the oldest slot,
-    // keep the sum current, publish the mean from the first sample.
-    if (presentation_sample_count_ == kDisplayLeadWindow) {
-        presentation_sample_sum_ -=
-            presentation_samples_[presentation_sample_next_];
-    } else {
-        ++presentation_sample_count_;
-    }
-    presentation_samples_[presentation_sample_next_] = lead_ns;
-    presentation_sample_sum_ += lead_ns;
-    presentation_sample_next_ =
-        (presentation_sample_next_ + 1) % kDisplayLeadWindow;
-
-    // THE ANNOUNCEMENT, the JACK latency line's own voice: once when the
-    // window first fills, then whenever the mean has moved a millisecond
-    // from the figure last announced (a window moved to the other output, a
-    // compositor under load) — never per frame.
-    const int64_t mean_ns = presentation_sample_sum_ / presentation_sample_count_;
-    const bool full = presentation_sample_count_ == kDisplayLeadWindow;
-    const bool moved =
-        presentation_lead_announced_ns_ >= 0 &&
-        std::llabs(mean_ns - presentation_lead_announced_ns_) >= 1000000LL;
-    if ((full && presentation_lead_announced_ns_ < 0) || moved) {
-        std::fprintf(stderr,
-                     "warptempo_gui: Display lead: %.1f ms (wp_presentation, "
-                     "%d-frame mean)\n",
-                     static_cast<double>(mean_ns) * 1e-6, kDisplayLeadWindow);
-        presentation_lead_announced_ns_ = mean_ns;
-    }
-
-    finish_presentation_feedback(fb);
-}
-
-void GuiPlatform::on_presentation_discarded(PresentationFeedback* fb) {
-    // A discarded frame (never shown — superseded before the compositor
-    // presented it) contributes no sample; the object is done either way.
-    finish_presentation_feedback(fb);
-}
-
-void GuiPlatform::finish_presentation_feedback(PresentationFeedback* fb) {
-    presentation_feedbacks_.erase(
-        std::remove(presentation_feedbacks_.begin(),
-                    presentation_feedbacks_.end(), fb),
-        presentation_feedbacks_.end());
-    wp_presentation_feedback_destroy(fb->proxy);
-    delete fb;
-}
-
-// THE PUBLISHED LEAD IS THE TRANSPORT ALONE (contract at the declaration):
-// the measured mean of presented − sampled, or the fallback where no
-// measurement stands. A frame-grid term was added to both arms for one day
-// and reversed at the architect's glass — the declaration carries that record.
-int64_t GuiPlatform::display_lead_ns() const {
-    if (presentation_sample_count_ > 0) {
-        return presentation_sample_sum_ / presentation_sample_count_;
-    }
-    return fallback_display_lead_ns(output_refresh_mhz_);
 }
 
 void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,

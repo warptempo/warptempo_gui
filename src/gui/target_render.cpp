@@ -217,14 +217,11 @@ void GuiTargetRender::trigger() {
     // Stop synchronously so the audio callback releases the buffer before
     // we (potentially) swap it underneath. The stop and its teardown stay
     // CONDITIONAL — they are the freeze's own quiescence work, which only a
-    // live session owes — while the clear above is not. A session in its
-    // NATURAL-END HOLD (the flag down, the last frames still sounding —
-    // playback.h) reads false here and owes no fence: the callback is in its
-    // silence arm, the flag's release store orders its last buffer reads
-    // before a swap (rebind_buffer's own acquire), and the tick's natural-end
-    // branch tears the scanner down when the hold ends — or, where a
-    // synchronous reuse rebinds first, the rebind ends the hold and the next
-    // tick takes the stop body.
+    // live session owes — while the clear above is not. A session that has
+    // reached its NATURAL END reads false here and owes no fence: the
+    // callback is in its silence arm, the terminal's release orders its last
+    // buffer reads before a swap (rebind_buffer's own acquire), and the
+    // tick's natural-end branch tears the scanner down.
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
@@ -999,9 +996,7 @@ void GuiTargetRender::ensure_ready() {
         // (stop_playback_if_playing, which fires on the SCANNER flag too), and — since
         // 2026-07-29 — the tick's natural-end branch, which is what closed the one
         // bypass this conditional could not see (a post-natural-end rebind with both
-        // flags false and the fence untaken; the engine's natural-end hold does not
-        // reopen it — the scanner flag stands through the hold, so the S→T flip's
-        // stop body proceeds and fences). Do not make this unconditional: it would
+        // flags false and the fence untaken). Do not make this unconditional: it would
         // pay the fence on every clean re-entry for a race the stop edges already own.
         if (playback.is_playing()) {
             playback.stop();
@@ -1147,9 +1142,7 @@ void GuiTargetRender::rebind_to_source() {
     // Conditional by design, for the reason stated at ensure_ready's twin above:
     // the rebind_buffer QUIESCENCE FENCE is taken at the stop EDGES (Space, the
     // gesture stop, and the tick's natural-end branch since 2026-07-29), so by the
-    // time a toggle reaches here a stopped session has already been fenced — a
-    // session in its natural-end hold included, the T→S flip's stop body
-    // proceeding on the scanner flag that stands through the hold.
+    // time a toggle reaches here a stopped session has already been fenced.
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;

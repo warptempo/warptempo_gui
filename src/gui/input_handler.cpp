@@ -1344,22 +1344,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
         // happened to be running before an edit, the trigger() helper
-        // already froze it, so the transport is not sounding in
+        // already froze it, so playback.is_playing() is false in
         // practice. The empty-target-buffer case (no successful target
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
-        // THE GATE READS playback_sounding, NOT is_playing (2026-09-01): a
-        // press inside the natural-end hold — a target edit having landed in
-        // the hold's last frames, trigger() leaving the hold and the scanner
-        // to the tick — is a STOP, and it must reach toggle_playback's stop
-        // fork while the Stop face shows rather than card here; only a press
-        // over a transport that is silent to the ear is a play, and only a
-        // play is what this refuses. The refusal writes NOTHING.
+        // Both refusals write NOTHING, so a press inside the sub-tick window
+        // between a natural end and the tick that deactivates the scanner
+        // leaves that scanner exactly as it found it — the tick's end-of-audio
+        // branch has no is_updating gate and deactivates it on its own.
         // THE PREDICATE IS GuiTargetRender::preview_ready (2026-08-26), the
         // one owner both this edge and the A/B audition's gate read.
         if (app.active_audio_view == 'T' &&
-            !playback_sounding(playback) &&
+            !playback.is_playing() &&
             !target_render.preview_ready()) {
             // AND IT SAYS SO (architect 2026-08-30): a Space that plays
             // nothing in target view is answered by the state that refused

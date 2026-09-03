@@ -372,18 +372,6 @@ public:
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
 
-    // -- THE DISPLAY LEAD (contract at platform_wayland.h, which owns it) --
-    // How far ahead of `now` the playback predictor is read so the painted
-    // playhead lands on the sound when the pixel lights. THIS BACKEND ANSWERS
-    // 0, BY RULING (2026-09-02, the reasoning at the definition): the tablet's
-    // audio latency is uncompensated by ruling, so its line already reads
-    // ahead of the sound by that whole figure — and this display's own lag is
-    // what CANCELS most of it (the two terms net to roughly −23…+3 ms on the
-    // speaker), so a display lead here would not double a compensation, it
-    // would REMOVE the one cancellation the tablet has. Record-only until the
-    // audio side is itself compensated.
-    int64_t display_lead_ns() const;
-
 private:
     // The glue's callback tables are C function pointers taking `android_app*`,
     // so dispatch lives in file-static functions that cast `app->userData` to

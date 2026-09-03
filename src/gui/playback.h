@@ -34,9 +34,8 @@
 //     atomics, lowers the session word's playing bit at a natural end by a
 //     generation-qualified compare-exchange (playback_common.h). No
 //     allocation, no I/O, no locks.
-//   - Main thread: calls init/play/stop/shutdown; takes snapshot() per tick
-//     (the playing bit and the natural-end hold from one observation) and
-//     cursor() / cursor_precise() per paint (the design note's one
+//   - Main thread: calls init/play/stop/shutdown; takes is_playing() per tick
+//     and cursor() / cursor_precise() per paint (the design note's one
 //     observation, below).
 //
 // PLAYBACK PLAYS THE SOURCE AT THE SOURCE'S OWN RATE. The read is fractional —
@@ -64,45 +63,25 @@
 // backward jump to miss — playback runs [start, end) once and stops at the
 // natural end.
 //
-// EVERY ANCHOR IS A HEARD INSTANT (architect 2026-09-01): the pair is
-// (sample, the steady_clock instant that sample leaves the loudspeaker), and
-// one figure — the device's reported output latency, `output_latency_frames`
-// at the output rate, the JACK backend's figure and AAudio's zero by ruling —
-// is added at every anchor write: ONE FIGURE PER EPOCH, re-anchored at the
-// change (a quantum change moves it mid-session; the reader records the
-// offset its anchor was built with and, when the live figure differs,
-// re-anchors from the latest stamp exactly as a resync does, so the cursor and
-// the natural-end deadline never mix two epochs). The audio thread
-// supplies the instants: at the top of each fill it reads the clock once and
-// publishes, under a seqlock, the stamp (read cursor, the instant that
-// cursor's frame enters the port, the session's generation) — the SEAT when
-// a fill consumes its session's command packet, the fill-end stamp on every
-// fill (playback_common.h, the cycle stamp). The launch anchor is the seat's
-// stamp plus that epoch's offset, latched once by the first predictor read
-// that finds a stamp carrying the published generation (the publish anchors
-// at (start, "await the seat") and the line RESTS on the launch frame until
-// the first sound is heard — never a backward step); every resync anchors at
-// the latest stamp plus that epoch's offset, so a resync's step is the
-// wall-clock DRIFT since the last anchor and nothing else — neither the
-// latency nor the period-wide phase residual the old `now` anchoring
-// re-rolled. THE NATURAL-END HOLD is the same figure at the far end: the
-// render body swaps the session word from playing to ended at the window's
-// end (one generation-qualified exchange, playback_common.h), cursor() keeps
-// extrapolating (clamped at the end) while natural_end_holding() answers true
-// — until the last frame the ending fill consumed has been heard — and the
-// run loop's tick tears the scanner down only then, so the line vanishes when
-// the sound does. is_playing() is untouched by the hold. THE READERS ARE ONE
-// OBSERVATION: cursor(), heard_cursor(), cursor_precise(),
-// natural_end_holding() and
-// snapshot() are faces over one main-thread body that reconciles the anchor
-// FIRST — re-anchoring from the stamp where the live figure differs from the
-// anchor's, and, from the first read that sees the ended bit, onto the
-// TERMINAL STAMP itself, (end, the instant the last sound is heard) — and
-// then forms the position and the hold's verdict from that one stamp/offset
-// pair and one clock read: through the hold the anchor IS the stamp the
-// deadline is read from, so the line reaches the window's end exactly as the
-// hold ends and a teardown decided on the verdict always has that line under
-// it (playback_common.h, the readers' block).
+// THE LINE IS THE RAW PREDICTOR AND IT LEADS THE SOUND (architect 2026-09-03,
+// after a blind comparison at his own rig against a fully compensated build).
+// play() anchors at the PUBLISH INSTANT, the position is read at the bare
+// `now`, and no latency figure of either device enters either term — so the
+// painted line lights at `press + D` (the compositor's paint-to-light delay)
+// while the sound starts at `press + phase + L_audio` (the audio thread's
+// pickup phase, 0 to one period, then the device's output latency), and the
+// two part by `L_audio − D + phase`, differently on every launch. His words
+// for it: "two continuous streams that we sort of happen to pick up here and
+// there — sometimes they match, sometimes they don't, and that's exactly what
+// they are." A compensated predictor — the anchor moved onto the audio
+// thread's first fill, the reported output latency added at every anchor
+// under a per-epoch re-anchor, a self-measured display lead added to the
+// position read, and a natural-end hold keeping the line alive until the last
+// queued frame had been heard — was built on 2026-09-01/02 and rolled back
+// whole on 2026-09-03. It is in git history; nothing in this tree reads a
+// latency figure any more. THE ONE PIECE THAT STAYED is the RESYNC'S ANCHOR
+// (below): it takes a stamp rather than the main thread's `now`, which is
+// accuracy about the same raw line, not compensation.
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
 // (architect 2026-09-02, the truthfulness deep dive's item C; the periodic
@@ -115,7 +94,12 @@
 // (reseat_playhead_to), the resize whose level moved, and the pointer ends
 // (the nav drag's and the overview drag's release and force-end, the touch
 // hard end). Grep `resync_predictor` and re-count; never inherit this number.
-// So a session that is launched and left alone — the architect's own `c`,
+// EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
+// the instant that cursor's frame enters the output port) — and not on the
+// main thread's `now`, which sat anywhere inside the period before that fill
+// and re-rolled that whole phase into the line at every pan end, page turn or
+// `c`. So a resync's step is the accumulated DRIFT alone.
+// A session that is launched and left alone — the architect's own `c`,
 // Space, no pan, and the `y` pin, which derives its camera per frame and
 // resyncs nothing (the statement is at derive_centered_viewport) — runs the
 // whole play on steady_clock against the DAC's crystal with no re-anchor at
@@ -133,10 +117,7 @@
 // its cost is a per-play risk of exactly the "imperceptible" class plus
 // machinery. The event resync is kept because it is FREE, not because a play
 // without one would be wrong: its step is the drift alone and it lands in the
-// same frame as the reflow that masks it (the criterion below). AND A LONG
-// PLAY STILL RESOLVES: the natural-end hold re-anchors onto the TERMINAL
-// STAMP, so whatever drift a multi-minute play accumulated is taken back
-// there in one step — the recorded, accepted behaviour.
+// same frame as the reflow that masks it (the criterion below).
 //
 // THE OLD PERCEPTUAL ARGUMENT IS RETIRED, NOT CARRIED. A continuous
 // audio-thread timestamp publish with main-thread extrapolation against the
@@ -156,30 +137,14 @@
 // the perceptual argument).
 //
 // The masking criterion for the chosen design is single-frame: each
-// resync's discontinuity — the accumulated drift since the last anchor, now
-// that the anchor carries the heard instant — must land in the same monitor
-// frame as the viewport reflow it is
+// resync's discontinuity — the accumulated drift since the last anchor —
+// must land in the same monitor frame as the viewport reflow it is
 // co-located with. Future predictor work must preserve this constraint
 // or argue explicitly to overturn it. The masking criterion holds across
 // all zoom levels because drift visibility scales inversely with
 // viewport-event frequency, keeping per-event accumulated drift sub-pixel
 // at every zoom and the snap masked by the user
 // motion at the resync site.
-
-// ONE OBSERVATION'S TWO ANSWERS (GuiPlayback::snapshot): the session word's
-// playing bit and the natural-end hold's verdict, from one load of the word,
-// one clock read and one latency epoch — the observation having re-anchored
-// the predictor first, so the paint that follows reads the line the verdict
-// was decided on. (A third member, the predicted cursor, rode here for the
-// day of 2026-09-01: the tick by its own ruling never wrote it into the
-// scanner — the pre-paint owns that advance — so it was a producer-only
-// field and retired that evening; the terminal decision it was added to
-// support is carried by the anchor the observation stores, not by a value
-// handed back.)
-struct GuiPlaybackSnapshot {
-    bool playing             = false;
-    bool natural_end_holding = false;
-};
 
 class GuiPlayback {
 public:
@@ -234,85 +199,31 @@ public:
     // still read. Safe to call when not playing; it still fences. Main thread
     // only. The cursor retains its last value, which is what the predictor's
     // last observation rests on, so a main-thread read after the stop still
-    // answers where playback stopped — through heard_cursor()/cursor(), never
-    // off the atomic itself.
+    // answers where playback stopped — through cursor(), never off the atomic
+    // itself.
     void stop();
 
-    // Re-anchor the free-running cursor predictor at the audio thread's
-    // current cursor and the instant that cursor is HEARD — its cycle stamp
-    // plus the device's reported latency (the design note). Call from the main
-    // thread at events where a small visible discontinuity is acceptable
-    // (jumps, viewport reflows) so the predictor remains a
-    // smooth linear function of wall-clock between resyncs; the step is the
-    // drift since the last anchor. Safe to call when not playing — the next
-    // play() will overwrite the anchor — and a no-op on a session the audio
-    // thread has not seated yet (the launch anchor is the seat's to latch).
+    // Re-anchor the free-running cursor predictor on the audio thread's cycle
+    // stamp: the read cursor at the instant its frame enters the output port
+    // (the design note). Call from the main thread at events where a small
+    // visible discontinuity is acceptable (jumps, viewport reflows) so the
+    // predictor remains a smooth linear function of wall-clock between
+    // resyncs; the step is the drift since the last anchor. Safe to call when
+    // not playing — the next play() will overwrite the anchor — and a no-op on
+    // a session whose first fill has not run (the stamp still carries the
+    // previous session's generation, and the launch anchor is already right).
     void resync_predictor();
 
-    // THE DISPLAY LEAD (architect 2026-09-02): how far ahead of `now` the
-    // predictor's POSITION is read, so the painted playhead lands where the
-    // sound will be when its pixel turns into light. The platform owns the
-    // figure (GuiPlatform::display_lead_ns — measured through the
-    // compositor's presentation feedback on the laptop, 0 by ruling on the
-    // tablet) and main.cpp's pre-paint hook writes it here once per painted
-    // frame, ahead of that frame's cursor() / cursor_precise() reads. It
-    // moves the position alone — the natural-end hold keeps the bare clock
-    // (the field's contract, playback_common.h) — and of the position faces
-    // it moves only the ones that PAINT: heard_cursor() below reads the same
-    // line at `now`. Main thread only; a no-op
-    // before init.
-    void set_display_lead_ns(int64_t lead_ns);
-
-    // Snapshot accessors. Safe from the main thread. During a graph suspension,
-    // cursor() holds at the last audio position rather than extrapolating.
-    // cursor() reports the DOMAIN position: the internal buffer-local cursor
-    // plus the bound buffer's domain offset. Through the natural-end hold
-    // (below) cursor() goes on extrapolating to the window's end after
-    // is_playing() has dropped.
+    // Snapshot accessors. Safe from the main thread. During a graph
+    // suspension, cursor() holds at the last audio position rather than
+    // extrapolating, and after a natural end or any stop it answers the read
+    // cursor at rest. cursor() reports the DOMAIN position: the internal
+    // buffer-local cursor plus the bound buffer's domain offset. IT IS THE
+    // ONE POSITION FACE — painting and resting reads take the same line at
+    // the same instant (architect 2026-09-03: a second, lead-free face lived
+    // beside it while the display lead did, and went with it).
     bool    is_playing() const;
     int64_t cursor()     const;
-
-    // THE HEARD CURSOR — cursor() WITHOUT THE DISPLAY LEAD (architect ruling
-    // 2026-09-02, converting the codex finding that the paint-only lead had
-    // moved the render player's pause point). THE CONTRACT, one sentence per
-    // face: PAINTING PREDICTS AHEAD, because the pixel lights after the read
-    // — cursor(), cursor_precise() and the clock, the scrub and the scanner
-    // that draw from them; A RESTING WRITE RECORDS WHERE THE EAR WAS, because
-    // a stored position is content, not a picture, and must not depend on
-    // which output the window happens to be on. This is that second face.
-    // ONE BODY, ONE FORK: the shared observation takes an `apply_display_lead`
-    // parameter that reaches its position read alone (playback_common.h), so
-    // this is cursor()'s own anchor reconciliation, hold arithmetic and store
-    // with the lead term zero — never a second predictor. On Android the two
-    // answer identically (that backend's lead is 0 by ruling), as they do
-    // wherever the device is suspended and the predictor holds at the integer
-    // cursor.
-    // THE ONE READER TODAY is the render player's two resting writes — the
-    // live pause and the dead-device pause (render_player.cpp). The main
-    // window's own stop parks nothing: stop_playback_if_playing leaves
-    // `playhead_cursor_sample` untouched by design, so it needs no face here.
-    // Main thread only, and a STORING reader like cursor().
-    int64_t heard_cursor() const;
-
-    // THE NATURAL-END HOLD (the design note): true from the render body's
-    // natural end — is_playing() already false — until the last frame it
-    // queued has been heard. The run loop's tick keeps the scanner through it
-    // and takes the one stop body when it ends; every stop road clears it at
-    // once. False while playing and after any stop. Main thread only. A
-    // STORING reader like cursor(): the one observation it is a face of
-    // reconciles the latency epoch before it answers (the design note).
-    bool    natural_end_holding() const;
-
-    // THE TICK'S READ — the playing bit and the hold's verdict from ONE
-    // observation (the design note): one load of the session word answers
-    // both, and the observation re-anchors the predictor first — where the
-    // live figure had moved under the anchor, and onto the terminal stamp
-    // from the first read of the ended bit — so a terminal decision taken on
-    // `natural_end_holding` can never run ahead of the re-anchor the cursor's
-    // next paint would have made, and the line it leaves under the paint
-    // reaches the window's end exactly as the hold ends. Stores like
-    // cursor(). Main thread only.
-    GuiPlaybackSnapshot snapshot() const;
 
     // THERE IS NO DEVICE TO PLAY ON (2026-08-28, the render player's rule):
     // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
@@ -397,9 +308,8 @@ public:
     // returns floor(this) clamped to the window; the two agree exactly at the
     // clamped window end. A pure reader with no side effects — the same
     // observation cursor() is, without its store: cursor(), called alongside
-    // it on the main thread, owns the graph-suspended re-anchor, the launch
-    // latch and the latency-epoch re-anchor, and this derives the same anchor
-    // without writing it. The
+    // it on the main thread, owns the graph-suspended re-anchor, and this
+    // derives the same anchor without writing it. The
     // scanner's DRAWN pixel is derived from this so a per-frame viewport rescale
     // (a strip-drag zoom) slides it smoothly instead of stepping on integer
     // frames; the integer cursor() stays the domain / change-detection anchor.
@@ -436,18 +346,3 @@ public:
 private:
     std::unique_ptr<Impl> impl_;
 };
-
-// IS THE TRANSPORT LIVE TO THE EAR — playing, or in the natural-end hold with
-// its last frames still leaving the loudspeaker. THE READERS THAT MEAN "is
-// the sound still going" ask this (2026-09-01): bare Space's stop/play fork,
-// the waveform scrub's stop arm, and the placement press's `was_playing`
-// capture, whose keep-alive reseek plays on from the click; a press in the
-// hold's last few frames then STOPS or RESEEKS as it would have a moment
-// earlier, instead of launching over a session the face still shows as live.
-// The readers that mean "is the audio thread inside the buffer" — the
-// conditional stops ahead of a rebind, the quiescence reasoning — keep
-// is_playing(), which the hold does not touch. ONE OWNER, so the two terms
-// are never spelled apart.
-inline bool playback_sounding(const GuiPlayback& playback) {
-    return playback.is_playing() || playback.natural_end_holding();
-}

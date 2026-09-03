@@ -216,8 +216,7 @@ struct GuiPlaybackLifecycle {
     // THE FORK IS "TRANSPORT-LIVE", NOT playback.is_playing(): a REST of the A/B
     // audition takes the stop arm too, the act being one transport session from
     // its first play to its last (the ruling and its face argument at the
-    // definition), and so does the engine's NATURAL-END HOLD — the flag down,
-    // the last frames still sounding (playback_sounding, playback.h).
+    // definition).
     void toggle_playback(int64_t launch_offset = 0);
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.

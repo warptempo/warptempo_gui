@@ -88,11 +88,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // THE GESTURE STOP, through its one owner. This is a
     // cursor-committing handler, exactly the caller class named at
     // stop_playback_if_playing, and its guard is the RIGHT one: a
-    // narrower `playback.is_playing()` test misses the window in which
-    // audio has reached its natural end but the scanner is still ACTIVE — the
-    // engine's natural-end hold, the last frames still sounding, and the
-    // sub-tick window after it (the tick deactivates it, and a Ctrl+Tab
-    // dispatched before that tick would
+    // narrower `playback.is_playing()` test misses the sub-tick window in which
+    // audio has reached its natural end but the scanner is still ACTIVE (the
+    // tick deactivates it, and a Ctrl+Tab dispatched before that tick would
     // carry the stopped scanner into the entering tab — the synchronous kick at
     // the tail can paint it there for one frame). The helper handles
     // !is_playing() && scanner_active and early-returns when there is nothing to

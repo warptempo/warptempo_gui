@@ -144,24 +144,19 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // THE ORDINARY TERM IS NOT SHARED, though, and that predates this act: the
     // face's is playhead_scanner_active (the GUI-side mirror, cleared by the
     // run-loop tick on natural end — main.cpp) and this arm's is
-    // playback_sounding (the audio callback's own published flag, set
-    // false at the natural end, OR the engine's natural-end hold — the flag
-    // down but the last frames still leaving the loudspeaker, through which
-    // the line still moves and the face still says Stop; since 2026-09-01,
-    // so a press in those last frames stops the sound as it would have a
-    // moment earlier). Between the hold's end and the tick's clear there is a
-    // sub-tick window where the term here already reads false but the scanner
-    // is still active: the face still says Stop while a bare press here —
-    // phase also Idle — takes the play arm below instead of the stop arm the
-    // face implies. Accepted cost, not a defect of this fork: the two terms
-    // track the same event off two different clocks, and the drift is
-    // bounded to that one window.
+    // playback.is_playing() (the audio callback's own published flag, set
+    // false at the same natural end but read here directly, no tick between).
+    // Between the callback's publish and the tick's clear there is a sub-tick
+    // window where is_playing() already reads false but the scanner is still
+    // active: the face still says Stop while a bare press here — phase also
+    // Idle — takes the play arm below instead of the stop arm the face
+    // implies. Accepted cost, not a defect of this fork: the two terms track
+    // the same event off two different clocks, and the drift is bounded to
+    // that one window.
     // stop_playback_if_playing IS EXACTLY RIGHT for the rest case: its clear
     // sits ahead of its own nothing-to-do guard, so it ends the act and then
-    // early-returns having moved no cursor and damaged nothing — and for the
-    // hold: its guard reads the scanner flag, which stands through the hold,
-    // so it fences, and the fence clears the hold.
-    if (playback_sounding(playback) ||
+    // early-returns having moved no cursor and damaged nothing.
+    if (playback.is_playing() ||
         app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
         // ONE STOP BODY (architect 2026-07-30): this edge used to hand-spell
         // playback.stop() + restore_playhead_to_lsp() while every other stop in

@@ -100,49 +100,32 @@ struct GuiPlayback::Impl {
     // The portable engine (playback_common.h). Everything else in this struct
     // is AAudio's own.
     //
-    // THE OUTPUT LATENCY IS NOT COMPENSATED HERE — the recorded asymmetry
-    // (architect 2026-09-01). The engine's predictor anchors every session at
-    // heard instants by adding `state.output_latency_frames` to each port
-    // instant, and this backend NEVER WRITES that word: it stays 0, so the
-    // heard offset is 0 and the tablet's line leads the sound by the route's
-    // real latency, as it did before the laptop was compensated. The reason
-    // is the route: in the car the tablet plays over Bluetooth, whose link
-    // delay is large and variable, and the figures the framework DOES offer
-    // (AAudioStream_getTimestamp, its own latency estimate) do not carry it —
-    // they are REPORTED AND UNTRUSTWORTHY on that route rather than absent
-    // (retold 2026-09-02), so any figure this backend published would be a
-    // guess that is wrong most of the time, and a line
-    // running BEHIND the sound by a wrong guess is the one failure the
-    // compensation must not produce. What DOES reach this backend, through the
-    // shared body, is the SEAT: the launch anchor is the instant the data
-    // callback consumed the session's command packet rather than the publish
-    // instant — at most one burst later (about 2 ms), and the truer of the
-    // two on both devices — and the natural-end hold, which with a zero
-    // offset ends within the ending burst's own duration of the flag's drop.
+    // THIS BACKEND REPORTS NO LATENCY FIGURE, and after 2026-09-03 there is
+    // nothing on the other side of that to record: neither backend
+    // compensates for anything, both run the raw predictor, and the line
+    // leads the sound by the route's own latency on both (the ruling and its
+    // arithmetic are at playback_common.cpp's record above
+    // playback_publish_play). What stays worth saying is WHY no figure would
+    // be published here even if one were wanted: in the car the tablet plays
+    // over Bluetooth, whose link delay is large and variable, and the figures
+    // the framework offers (AAudioStream_getTimestamp, its own latency
+    // estimate) do not carry it — they are REPORTED AND UNTRUSTWORTHY on that
+    // route rather than absent, so any figure would be a guess that is wrong
+    // most of the time. On the tablet's own SPEAKER the latency is by contrast
+    // stable and reportable (the 10–25 ms class), so a figure exists for one
+    // route and not the other, and an answer that depends on where the sound
+    // happens to be going is worse than no answer.
     //
-    // THE ZERO IS SCOPED TO THE ROUTE, AND THE ROUTE IT WAS RULED FOR PAINTS
-    // NO SCANNER (recorded 2026-09-02 from the truthfulness deep dive's item
-    // I, record-only — the zero stays). In the car the render player stands,
-    // and under it the waveform scanner is not sampled or painted at all
-    // (main.cpp's pre-paint hook returns above it): the only moving picture is
-    // the modal row's play-scrub and its clock, and neither is registered
-    // against a waveform, so the uncompensated lead costs nothing anyone can
-    // see there. On the tablet's own SPEAKER, where the scanner IS painted,
-    // the latency is by contrast stable and reportable
-    // (AAudioStream_getTimestamp, the 10–25 ms class), and the line leads the
-    // sound by that uncompensated figure — the laptop's pre-compensation picture
-    // in miniature. WHAT THE EYE ACTUALLY GETS THERE IS SMALLER THAN THAT
-    // FIGURE, because this platform's DISPLAY lag runs the other way: the
-    // painted position is ahead by L_audio and the pixel arrives L_display
-    // late, so the error at light is L_audio − L_display — 10–25 ms against
-    // SurfaceFlinger's 22–33 ms, roughly −23…+3 ms net. That cancellation is
-    // also why the Android display lead is 0 rather than measured (the record
-    // at platform_android.cpp's display_lead_ns): a lead there would remove
-    // it. That is accepted and left whole rather than half-measured:
-    // the tablet is the car's player, so its scanner accuracy on the speaker
-    // is moot for this use, and publishing a figure for one route while the
-    // other stays a guess would make the backend's answer depend on where the
-    // sound happens to be going.
+    // WHAT THE EYE GETS ON THIS PLATFORM is smaller than the audio lead,
+    // because the display lag runs the other way: the painted position is
+    // ahead by L_audio and the pixel arrives L_display late, so the error at
+    // light is L_audio − L_display — 10–25 ms against SurfaceFlinger's
+    // 22–33 ms, roughly −23…+3 ms net. And IN THE CAR IT COSTS NOTHING AT ALL
+    // (recorded 2026-09-02 from the truthfulness deep dive's item I): there
+    // the render player stands, and under it the waveform scanner is not
+    // sampled or painted (main.cpp's pre-paint hook returns above it) — the
+    // only moving picture is the modal row's play-scrub and its clock, neither
+    // registered against a waveform.
     GuiPlaybackState state;
 
     // MAIN THREAD ONLY (the head comment's threading block). `started` is
@@ -687,18 +670,18 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
-    // THE DEVICE IS NOT TOUCHED HERE. Lower the flag — and end any natural-end
-    // hold in the same word (the session word's clearer inventory,
-    // playback_common.h: a fill in flight can commit no terminal once this
-    // has landed — its exchange expects exactly the word its gate acquired,
-    // playing bit up, and this fetch_and changed that word) — then fence on
+    // THE DEVICE IS NOT TOUCHED HERE. Lower the playing bit, keeping the
+    // generation (the session word's comment, playback_common.h: a fill in
+    // flight can commit no terminal once this has landed — its exchange
+    // expects exactly the word its gate acquired, playing bit up, and this
+    // fetch_and changed that word) — then fence on
     // the callback counter (fence_quiesced):
     // the stream keeps running and the callback keeps writing silence, which
     // is the whole of the no-click lifecycle at the head of this file. Then,
     // with the callback quiesced and its counter therefore still, the session's
     // UNDERRUN COUNT is said if the session lost anything since play() stamped
     // its floor (report_xrun_count, above — a logcat line and nothing else).
-    impl_->state.session.fetch_and(~(kSessionPlayingBit | kSessionEndedBit),
+    impl_->state.session.fetch_and(~kSessionPlayingBit,
                                    std::memory_order_seq_cst);
     fence_quiesced(*impl_);
     report_xrun_count(*impl_);
@@ -706,16 +689,6 @@ void GuiPlayback::stop() {
 
 bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
-}
-
-bool GuiPlayback::natural_end_holding() const {
-    if (!impl_) return false;
-    return playback_natural_end_holding(impl_->state);
-}
-
-GuiPlaybackSnapshot GuiPlayback::snapshot() const {
-    if (!impl_) return GuiPlaybackSnapshot{};
-    return playback_snapshot(impl_->state);
 }
 
 // THE THREE WAYS THIS DEVICE CANNOT SOUND (contract at the declaration), and
@@ -787,23 +760,9 @@ bool GuiPlayback::device_absent() const {
     return !impl_ || !impl_->device_ready;
 }
 
-void GuiPlayback::set_display_lead_ns(int64_t lead_ns) {
-    if (!impl_) return;
-    playback_set_display_lead_ns(impl_->state, lead_ns);
-}
-
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);
-}
-
-// Identical to cursor() in VALUE on this backend — display_lead_ns is 0 here
-// by ruling (platform_android.cpp) — and forwarded anyway, because the seam
-// is the contract and the portable caller (the render player's pause) must
-// name the face it means on both hosts.
-int64_t GuiPlayback::heard_cursor() const {
-    if (!impl_) return 0;
-    return playback_heard_cursor(impl_->state);
 }
 
 double GuiPlayback::cursor_precise() const {

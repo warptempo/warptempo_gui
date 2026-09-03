@@ -556,7 +556,7 @@ void GuiRenderPlayer::play_button_act() {
     // DRIVEN IN THE PLAYER, narrowing R40's "the Play button never reads the
     // highlight, in any state" of two days before). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
-    // GO, and Space goes there whatever is sounding; the transport's own item
+    // GO, and Space goes there whatever is playing; the transport's own item
     // and an empty band fall through to transport_toggle_act below — the tail
     // this body used to hold inline, which the car's direction-named commands
     // now reach WITHOUT this fork (the reasons are at that body).
@@ -650,39 +650,22 @@ void GuiRenderPlayer::toggle_pause() {
         // the stop body (whose fence is the one stop); the body's player fork
         // moves the transport to PAUSED — at whatever frame the cursor holds,
         // the item's start included — and damages the row.
-        // THE RESUME POINT IS THE HEARD POSITION (2026-09-01, the accepted
-        // honest artefact): the predictor is latency-compensated on the
-        // laptop, so this reads where the sound WAS at the press — while the
-        // frames already rendered into the port and the sink play out after
-        // the flag drops. A resume therefore REPEATS the ~35 ms that sounded
-        // after the press, where the uncompensated prediction (a period and
-        // a latency ahead of the ear) made it gapless by accident. On the
-        // tablet the prediction keeps its lead and the resume is as it was.
-        // AND IT READS THE UNLED FACE (architect ruling 2026-09-02,
-        // converting the codex finding): the display lead added on
-        // 2026-09-02 reaches the predictor's POSITION, so plain cursor()
-        // here would have parked ~one display lead (~33 ms at 60 Hz) PAST
-        // the last heard sound, and would have made a stored transport
-        // position depend on which output the window sits on. heard_cursor()
-        // is the same observation with the lead term zero (the contract at
-        // GuiPlayback::heard_cursor): painting predicts ahead because the
-        // pixel lights later; a resting write records where the ear was.
-        // The clock and the scrub go on painting from cursor(), led — they
-        // are pictures, and this is content. ITS ONE VISIBLE CONSEQUENCE,
-        // accepted: the picture STEPS BACK ONE LEAD AT THE PAUSE, because the
-        // last live frame painted the led position and the resting frame
-        // paints this stored unled one. On the scrub that is sub-pixel at any
-        // item length; on the clock it moves the tenths digit about one pause
-        // in thirty at 60 Hz (33 ms against a 100 ms digit). The alternative
-        // — storing the led point so the picture holds still — would park the
-        // resume past the last heard sound, which is the defect this face
-        // exists to prevent. Both pauses below share the face and the step.
-        // THE PROJECT'S OWN STOP NEEDS NO
-        // SUCH FACE, verified: stop_playback_if_playing parks nothing at all,
-        // leaving app.playhead_cursor_sample where the user put it, so the
-        // player's two pauses are the whole resting-write set.
+        // THE RESUME POINT IS THE PREDICTOR'S POSITION, the one the picture
+        // was drawn from — there is no second reading of the line to choose
+        // between (architect 2026-09-03). The predictor is uncompensated, so
+        // that position is AHEAD of the ear by the device's output latency,
+        // and a resume therefore skips the frames that were already in the
+        // port when the press landed. That is the same lead every other
+        // surface carries and it is the ruling (playback.h's design note); a
+        // lead-free second face existed for a day to park this write behind
+        // the ear and went with the leads. The clock and the scrub paint from
+        // the same call, so the picture does not step at the pause.
+        // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
+        // stop_playback_if_playing leaves app.playhead_cursor_sample where
+        // the user put it, so the player's two pauses are the whole
+        // resting-write set.
         rp.resume_frame =
-            std::clamp<int64_t>(playback.heard_cursor(), 0, rp.frames);
+            std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         return;
     }
@@ -973,31 +956,28 @@ void GuiRenderPlayer::tick() {
         // PRESS reopens the device — the main window's launch gates through
         // GuiPlayback::ensure_device_available_for_play, this player's own
         // road through play()'s head check (the one reopen body, both).
-        // THE UNLED FACE FOR SYMMETRY (2026-09-02): a suspended device holds
-        // the integer cursor and the predictor extrapolates nothing, so the
-        // display lead cannot reach this value either way — but this is a
-        // RESTING WRITE like the pause above, and the two say so with the
-        // same call rather than leaving a reader to work out why one resting
-        // write reads the led face (the contract at
-        // GuiPlayback::heard_cursor).
+        // The resume point is the predictor's position, as the pause above
+        // reads it — a suspended device holds the integer cursor and
+        // extrapolates nothing, so here that is simply where the last fill
+        // left the read cursor.
         rp.resume_frame =
-            std::clamp<int64_t>(playback.heard_cursor(), 0, rp.frames);
+            std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
         // ONE CLAUSE (2026-09-01, the capitalization sweep's sentence
         // shape): it read "No audio device; the wav cannot be played".
         status("No audio device to play the wav");
         return;
     }
-    // THE NATURAL END IS THE ENGINE'S DEFERRED ONE (2026-09-01): the hold
-    // belongs to every session, the player's included, so the flag's drop
-    // starts nothing here while natural_end_holding() stands — cursor() goes
-    // on to the item's end through it, and the clock and the scrub below
-    // follow it there — and on_natural_end runs once the last sound has
-    // been heard, the main window's tick's own shape. Every OTHER road out of
-    // LIVE (the pause, the dead-device arm above, the close, the rebind ahead
-    // of the next item) takes the stop body at once, whose fence clears the
-    // hold; a pause inside the hold parks the item where the ear had it.
-    if (!playback_sounding(playback)) {
+    // THE NATURAL END IS THE FLAG'S DROP, the main window's tick's own shape
+    // (a deferred end that waited for the last queued frame to be heard stood
+    // here for two days and went with the playback leads, 2026-09-03): the
+    // render body lowers the playing bit when the fill reaches the item's
+    // end, and the walk to the next item starts there — one output latency
+    // before the last sound leaves the speaker, the same lead every other
+    // surface carries. Every OTHER road out of LIVE (the pause, the
+    // dead-device arm above, the close, the rebind ahead of the next item)
+    // takes the stop body at once.
+    if (!playback.is_playing()) {
         on_natural_end();
         return;
     }
