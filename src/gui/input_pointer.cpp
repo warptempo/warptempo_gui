@@ -1002,6 +1002,103 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
     g.ed->cursor_pos = editor_byte_index_at(g, mouse_x);
 }
 
+// -- THE AV SYNC STATS PANEL'S CLICK-TO-BYTE (architect 2026-09-03) ----------
+//
+// The panel is a READ-ONLY TEXT SURFACE and these three bodies are the whole of
+// how a surface point becomes a byte in its buffer. They are the editors' own
+// model one surface over, with two differences that come from the panel being a
+// dozen LINES rather than one field: the row comes first, and the search then
+// runs inside that row's published run.
+//
+// GEOMETRY FROM THE WIDGET, METRICS FROM THE PAINTER. The row's rect is
+// folder_overlay::row_rect — the ONE walk paint and hit already share, read
+// live so a scrolled band answers about what is on screen — while the x-to-byte
+// half reads the painter's own publication (AppState::StatsPanelRowText) and
+// never re-shapes, the displayed-basis doctrine every other field in the
+// product obeys.
+
+// Row `index`'s PAINTED TEXT EXTENT: byte 0's origin through the run's own
+// width, over the row's full height. False where the row has no publication
+// (scrolled outside the band, or before the panel's first paint) or where its
+// run is EMPTY — the panel's blank spacing rows have no extent, and a press on
+// one is a press on the band's ground.
+bool stats_panel_text_extent(const AppState& app, int index, GuiRect& out) {
+    if (app.folder_overlay.owner != AppState::FolderOverlay::Owner::Stats)
+        return false;
+    if (index < 0 ||
+        static_cast<size_t>(index) >= app.stats_panel_text.size()) return false;
+    const AppState::StatsPanelRowText& pub =
+        app.stats_panel_text[static_cast<size_t>(index)];
+    if (!pub.valid || pub.width_px <= 0.0) return false;
+    const GuiRect r  = folder_overlay::row_rect(app, index);
+    const int     x0 = static_cast<int>(std::floor(pub.text_origin_x));
+    const int     x1 = static_cast<int>(
+        std::ceil(pub.text_origin_x + pub.width_px));
+    out = GuiRect{x0, r.y, std::max(0, x1 - x0), r.h};
+    return true;
+}
+
+// The row whose text extent CONTAINS (x, y), or -1. This is the fork the press
+// takes and the zone the cursor map names, so the I-beam promises exactly the
+// gesture the press arms.
+int stats_panel_text_row_at(const AppState& app, int x, int y) {
+    if (!rect_contains(folder_overlay::surface_rect(app), x, y)) return -1;
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    for (int i = 0; i < n; ++i) {
+        GuiRect ext{};
+        if (stats_panel_text_extent(app, i, ext) && rect_contains(ext, x, y))
+            return i;
+    }
+    return -1;
+}
+
+// The row nearest `y` among the rows the band SHOWS. A point in the band's
+// vertical gaps belongs to the nearer row, and a point above the first or below
+// the last clamps onto it — which is what lets a drag that has left the band
+// go on extending through the text it can see. -1 when nothing is shown.
+int stats_panel_row_nearest(const AppState& app, int y) {
+    const GuiRect band = folder_overlay::surface_rect(app);
+    const int n = static_cast<int>(app.folder_overlay.rows.size());
+    int best = -1, best_d = 0;
+    for (int i = 0; i < n; ++i) {
+        const GuiRect r = folder_overlay::row_rect(app, i);
+        if (!rects_intersect(band, r)) continue;
+        const int d = std::abs(y - (r.y + r.h / 2));
+        if (best < 0 || d < best_d) { best = i; best_d = d; }
+    }
+    return best;
+}
+
+// A SURFACE POINT'S BYTE OFFSET IN THE PANEL'S BUFFER. Left of a row's first
+// glyph clamps to its start and right of the last to its end, which is
+// byte_index_from_shaped_x's own nearest-boundary answer at either end.
+//
+// IT CANNOT NAME A BYTE OUTSIDE THE BUFFER, and that is guarded twice rather
+// than argued: the byte is clamped against the PUBLISHED run's count (what was
+// painted) and again against the LIVE row's length (what stands now), because
+// the panel recomposes its rows every tick and a publication is by construction
+// one paint behind the tick that follows it. The sum is then clamped against
+// the buffer's own length.
+size_t stats_panel_offset_at(const AppState& app, int x, int y) {
+    const int index = stats_panel_row_nearest(app, y);
+    if (index < 0) return 0;
+    const size_t start = stats_panel_row_start(app, index);
+    const size_t live  = stats_panel_row_length(app, index);
+    size_t byte = 0;
+    if (static_cast<size_t>(index) < app.stats_panel_text.size()) {
+        const AppState::StatsPanelRowText& pub =
+            app.stats_panel_text[static_cast<size_t>(index)];
+        if (pub.valid && !pub.byte_x.empty()) {
+            const int b = text_editor::byte_index_from_shaped_x(
+                static_cast<double>(x), pub.text_origin_x, pub.byte_x);
+            byte = std::min(static_cast<size_t>(std::max(0, b)),
+                            pub.byte_count);
+        }
+    }
+    byte = std::min(byte, live);
+    return std::min(start + byte, stats_panel_buffer_length(app));
+}
+
 } // namespace
 
 // THE `h` HISTORY VIEW'S DEAD SET — the roster's ONE mode-scoped disabled-face
@@ -1717,8 +1814,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      start anything. TWO gestures are excepted, each ahead of the refusal
 //      and each on the same rule — the thing being dragged is the thing the
 //      cursor names: a live trim gesture owns the cursor (the arm below,
-//      architect 2026-08-03), and a live EDITOR TEXT DRAG owns the I-beam
-//      (the arm at the top of the body, architect 2026-09-03).
+//      architect 2026-08-03), and a live TEXT SELECTION DRAG owns the I-beam
+//      (the arm at the top of the body, architect 2026-09-03 —
+//      text_selection_drag_active, app_state.h, whose two records cover the two
+//      editor families and the AV sync stats panel's read-only text).
 GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
     // THE NOTIFICATION CARDS FIRST (2026-08-29), ahead of every refusal
@@ -1728,6 +1827,35 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // button, which carry no cue anywhere in the product.
     if (notification_card_at(app, x, y) != 0) return GuiCursorKind::Arrow;
     if (app.prompt.active) return GuiCursorKind::Arrow;
+    // A LIVE TEXT SELECTION DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
+    // cursor in flag editor becomes the pointer during drag-to-highlight — it
+    // should remain the i-beam — that's what other editors do"), on the
+    // live-gesture exception's own rule and in the same member shape as the
+    // trim, overview and marker drags below: the thing being dragged is the
+    // thing the cursor names — a text selection — so the Text the surface wears
+    // at rest stays TRUE for the whole gesture, read from the drag's OWN RECORD
+    // and never re-derived from the pointer's position. Position is exactly
+    // what cannot answer here: a selection drag routinely leaves the run it
+    // started in (that is how one selects past the visible text), and widening
+    // a rect test to "or a drag is live" would be the re-derivation this family
+    // forbids.
+    //
+    // ONE ARM, THREE SURFACES, AND THE RANK IS WHAT MAKES IT ONE. The predicate
+    // is text_selection_drag_active (app_state.h), whose two records cover the
+    // four DIALOG editors, the marker lane's flag / measure boxes and — since
+    // 2026-09-03 — the AV SYNC STATS PANEL's selectable text. It sits above the
+    // three MODE BLANKETS below and above the dialog editors' blanket further
+    // down, because each of those decides BY POSITION and would flip to the
+    // Arrow the moment the drag left the published run, while the flag box
+    // falls THROUGH the dialog blanket (keyboard-modal, pointer-transparent) to
+    // its own hover arm far below. One arm above all of them covers all of
+    // them. THE CARDS AND THE PROMPT ABOVE STILL WIN, the rank the trim and
+    // marker drags already take under them: a card is opaque to the pointer and
+    // can be raised from a worker mid-drag. Moving above the player and picker
+    // blankets changes nothing for either — neither has a field, so neither can
+    // hold a text drag. Every one of these drags is capture-free, so there is a
+    // visible cursor to keep.
+    if (text_selection_drag_active(app)) return GuiCursorKind::Text;
     // THE RENDER PLAYER IS THE ARROW EVERYWHERE (2026-08-28): its three
     // pointer surfaces — the overlay's rows, the scrub, the modal row's
     // buttons — are buttons and a list, which carry no cue anywhere in the
@@ -1737,35 +1865,19 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // overlay's rows and the modal row's one Cancel button — are a list and a
     // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
-    // AND SO IS THE AV SYNC STATS PANEL (2026-09-03), with less to say than
-    // either: its band is inert text and its row is one Close button, so the
-    // whole surface promises nothing a cursor could name.
-    if (app.stats_panel.active) return GuiCursorKind::Arrow;
-    // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
-    // cursor in flag editor becomes the pointer during drag-to-highlight — it
-    // should remain the i-beam — that's what other editors do"), on the
-    // live-gesture exception's own rule and in the same member shape as the
-    // trim, overview and marker drags below: the thing being dragged is the
-    // thing the cursor names — a text selection — so the Text the field wears
-    // at rest stays TRUE for the whole gesture, read from the drag's OWN
-    // RECORD and never re-derived from the pointer's position. Position is
-    // exactly what cannot answer here: a selection drag routinely leaves the
-    // field's published rect (that is how one selects past the visible run),
-    // and widening either field test to "or a drag is live" would be the
-    // re-derivation this family forbids. The drag has ONE shape — a caret
-    // sliding through a byte run — so being live is the whole record, and it
-    // is capture-free, so there is a visible cursor to keep.
-    // IT SITS AHEAD OF THE DIALOG EDITOR'S BLANKET rather than with those
-    // three arms below, and that rank is what makes it ONE owner for BOTH
-    // editor families: the blanket answers first while a dialog editor stands
-    // and would decide its drag by position, while the marker lane's flag /
-    // measure box falls THROUGH the blanket (keyboard-modal, pointer- and
-    // wheel-transparent — conventions.md) to the box's own hover arm far
-    // below. One arm above both covers both. THE CARDS AND THE FOUR BLANKETS
-    // ABOVE STILL WIN, the rank the trim and marker drags already take under
-    // them: a card is opaque to the pointer and can be raised from a worker
-    // mid-drag, and the rest are structurally inert while a button is held.
-    if (app.editor_text_drag.active) return GuiCursorKind::Text;
+    // THE AV SYNC STATS PANEL IS THE ARROW EVERYWHERE BUT OVER ITS TEXT
+    // (2026-09-03, when its rows became selectable). Its band is a READ-ONLY
+    // TEXT SURFACE — a press inside a row's painted extent arms the selection
+    // drag — so the I-beam names exactly those extents through the press
+    // router's own fork (stats_panel_text_row_at, one owner for the cue and the
+    // claim), and everything else the panel owns takes the Arrow: the band's
+    // ground, the pad, the blank spacing rows, and the modal row's one Close
+    // button, a button carrying no cue anywhere in the product. A LIVE drag out
+    // of the text is answered at the top of the map, by the drag's own record.
+    if (app.stats_panel.active) {
+        return stats_panel_text_row_at(app, x, y) >= 0 ? GuiCursorKind::Text
+                                                       : GuiCursorKind::Arrow;
+    }
     // THE VEIL'S ONE EXCEPTION IS THE FIELD (architect 2026-08-13, with the
     // Text kind). The blanket above it is unchanged in kind: a dialog editor
     // consumes every press outside its own box, so every zone this map would
@@ -4288,6 +4400,30 @@ bool GuiInputHandler::claim_folder_overlay_press(
         band.scroll_at_press = app.folder_overlay.scroll_px;
         band.inside          = false;
         band.scrolling       = false;
+        band.selecting       = false;
+        // AND THE ARM HAS A SECOND SHAPE OVER THE TEXT ITSELF: the panel is a
+        // READ-ONLY TEXT SURFACE (architect 2026-09-03), so a press INSIDE a
+        // row's painted text extent is a text selection drag — the anchor is
+        // seated here and the motion moves the focus. THE SAME FORK THE CURSOR
+        // MAP READS, so the I-beam the pointer was wearing promised exactly
+        // this. Everything else on the band — the ground, the pad, the blank
+        // spacing rows, a short line's empty right half — keeps the scroll arm
+        // above, which is what leaves the finger a way to scroll on glass.
+        //
+        // A MOTIONLESS PRESS COLLAPSES THE SELECTION, and it does so here
+        // rather than at the lift: anchor and focus are seated at the same
+        // byte, so a press that never moves simply leaves nothing selected.
+        // That is the ordinary click-to-deselect, and it is the deselect road —
+        // bare Esc keeps its one meaning on this surface, the panel's close.
+        if (stats_panel_text_row_at(app, x, y) >= 0) {
+            band.selecting = true;
+            const bool had = stats_panel_has_selection(app);
+            const size_t off = stats_panel_offset_at(app, x, y);
+            app.stats_panel.sel_anchor = off;
+            app.stats_panel.sel_focus  = off;
+            if (had)
+                viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        }
         return true;
     }
     const int hit = folder_overlay::row_at(app, x, y);
@@ -4311,6 +4447,24 @@ bool GuiInputHandler::claim_folder_overlay_press(
 void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;
+    // THE AV SYNC PANEL'S TEXT SELECTION DRAG TAKES NO DRAG GATE (2026-09-03),
+    // the editors' own model: a text selection begins at the press and the
+    // first pixel of motion already extends it, so there is no threshold to
+    // cross and no second thing this arm could still become. THE ANCHOR STAYS
+    // PUT and the focus follows the pointer, off the band's edges included —
+    // stats_panel_offset_at clamps onto the nearest row the band shows, which
+    // is what makes a drag past the last line select to its end. (NO AUTOSCROLL
+    // ON THE WAY: the band scrolls under a drag that started on its ground, not
+    // under one that started on its text. A selection past the visible listing
+    // is the wheel's, then the drag's.)
+    if (press.selecting) {
+        const size_t off = stats_panel_offset_at(app, x, y);
+        if (off != app.stats_panel.sel_focus) {
+            app.stats_panel.sel_focus = off;
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        }
+        return;
+    }
     if (!press.scrolling) {
         // THE DRAG GATE, the product's one crossing threshold, spelled here
         // exactly as at every other pending press: CHEBYSHEV from the press
@@ -4369,6 +4523,13 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
         viewport.invalidate_rect(folder_overlay::row_rect(app, press.row));
     // A scroll drag ends here with nothing else owed.
     if (press.scrolling) return true;
+    // AND SO DOES THE AV SYNC PANEL'S TEXT SELECTION DRAG (2026-09-03): every
+    // byte of it was committed as the pointer moved, so the release has nothing
+    // to commit and nothing to revert — the selection standing when the button
+    // comes up IS the selection. (It would fall to the row-less arm below in
+    // any case; the arm is spelled so the lift's silence is a stated answer
+    // rather than an inherited one.)
+    if (press.selecting) return true;
     // A ROW-LESS BAND ARM (the AV sync panel's) has no act either: it named no
     // row at the press and cannot name one at the lift.
     if (press.row < 0) return true;
@@ -4752,11 +4913,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
 
     // THE AV SYNC STATS PANEL'S VEIL (2026-09-03), the picker's shape one mode
-    // over and with one fewer target: the band above is inert text (claimed
-    // for its scroll and consumed there), so the only pressable thing while
-    // the panel stands is the modal row's one Close button, and EVERY OTHER
-    // PRESS IS CONSUMED. No field, no caret claim, no text drag. The whole
-    // rule is stated at stats_panel_active (input_handler.h).
+    // over: the band above is claimed and consumed at the hoisted claim, where
+    // its press is either the scroll arm or — since the rows became selectable
+    // the same day — THE TEXT SELECTION DRAG, so the only pressable thing left
+    // down here is the modal row's one Close button, and EVERY OTHER PRESS IS
+    // CONSUMED. There is no CARET claim at this rank and there never will be:
+    // the panel's text is read-only, so its drag is a selection and nothing
+    // else, and it arms one surface up with the band. The whole rule is stated
+    // at stats_panel_active (input_handler.h).
     if (app.stats_panel.active) {
         if (button != GuiMouseButton::Left) return;
         if (!mods.ctrl && !mods.shift && !mods.alt &&
@@ -7057,7 +7221,10 @@ void GuiInputHandler::finalize_active_drags() {
     // pointer-leave hook and the button-lost edge call — the row press with NO
     // act (its highlight and its open are the motionless LIFT's, and there is
     // no lift here; the row's double-click seed went with the surface itself
-    // when a click became the open act) and the scrub's marker drag with NO seek
+    // when a click became the open act; and the AV sync panel's SELECTING shape
+    // of that same arm ends with nothing owed either — every byte of a text
+    // selection was committed as the pointer moved, so a force-end simply
+    // leaves the selection standing, which is the honest answer) and the scrub's marker drag with NO seek
     // beyond the motion already applied (the seek is the release's, and the
     // sound never followed the marker). Each clear damages the face its arm
     // painted: the armed row's rect and the published scrub track, which the

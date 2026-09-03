@@ -7736,6 +7736,34 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     }
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
+    // THE STATS PANEL'S TEXT GEOMETRY IS REPUBLISHED WHOLE EVERY RUN and
+    // cleared under the other two contents, whose rows are names and take no
+    // caret (the stash's contract is at AppState::StatsPanelRowText). Sized to
+    // the LIVE row table, so an entry exists for every row the hit test can
+    // ask about and each starts invalid — the rows the walk below skips (a
+    // listing scrolled past the band's edge) stay that way, which is the same
+    // answer folder_overlay::row_at gives them.
+    if (stats) {
+        app.stats_panel_text.assign(ov.rows.size(),
+                                    AppState::StatsPanelRowText{});
+    } else if (!app.stats_panel_text.empty()) {
+        app.stats_panel_text.clear();
+    }
+    // THE SELECTION'S SPAN, read once for the whole walk: each row highlights
+    // the intersection of this range with its own byte span.
+    const size_t sel_lo = stats ? stats_panel_selection_lo(app) : 0;
+    const size_t sel_hi = stats ? stats_panel_selection_hi(app) : 0;
+    // A SELECTED NEWLINE NEEDS A WIDTH TO SHOW. The join's '\n' has no glyph
+    // and so no advance, and without this a selection running through a blank
+    // spacing row — the panel has three — would simply vanish on it and read as
+    // two selections. One SPACE in the panel's own face is that width, measured
+    // through the one shaping chokepoint like everything else here rather than
+    // authored as a number: it is the width the line break would have if it
+    // were the character it stands for.
+    const double newline_px =
+        (stats && sel_hi > sel_lo)
+            ? text_shape::shape_text_run(font, " ").width_px : 0.0;
+
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
@@ -7754,11 +7782,42 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
                  const GuiRect& r) {
+            if (!rects_intersect(surf, r)) return;
+
+            // THE STATS PANEL PUBLISHES BEFORE IT ASKS ABOUT THE DAMAGE, and
+            // that order is the whole reason the two tests were swapped
+            // (2026-09-03, with the panel's selection). PER-ROW EXPOSURE below
+            // is a PAINT economy, but the hit test asks about rows no damage
+            // happens to have crossed — a press arriving under a narrow
+            // notification-card damage would find an unpublished row and land
+            // nowhere. So every row INSIDE THE BAND is shaped and published,
+            // and only then does the exposure test decide whether it is drawn.
+            // The cost is a dozen short monospace runs on a narrow frame, which
+            // is what this panel already pays per frame for its heartbeat.
+            text_shape::ShapedRun run;
+            std::vector<double>   byte_x;
+            bool                  have_run  = false;
+            size_t                row_start = 0;
+            if (stats) {
+                run       = text_shape::shape_text_run(font, row.name);
+                byte_x    = text_shape::byte_offsets_px(run, row.name.size());
+                have_run  = true;
+                row_start = stats_panel_row_start(app, index);
+                if (static_cast<size_t>(index) < app.stats_panel_text.size()) {
+                    AppState::StatsPanelRowText& pub =
+                        app.stats_panel_text[static_cast<size_t>(index)];
+                    pub.valid         = true;
+                    pub.text_origin_x = static_cast<double>(r.x + inset);
+                    pub.width_px      = run.width_px;
+                    pub.byte_count    = row.name.size();
+                    pub.byte_x        = byte_x;
+                }
+            }
+
             // PER-ROW EXPOSURE, the keyboard's own economy: a row costs a face
             // box, a glyph and a shaped run, so a narrow damage pays only for
             // the rows it crosses.
             if (!rects_intersect(exposed, r)) return;
-            if (!rects_intersect(surf, r)) return;
 
             // A TEXT ROW IS INERT AND THE FACE LADDER SKIPS IT WHOLE
             // (2026-09-03): no fill, no outline, no press arm — the row is a
@@ -7836,8 +7895,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // gives the selected row white text, kdenlive's own band carries
             // it, and a row that changes ink with its face would be a second
             // thing to read).
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, row.name);
+            if (!have_run) run = text_shape::shape_text_run(font, row.name);
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,
@@ -7848,6 +7906,47 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
+            // THE SELECTION'S GROUND, BEHIND THE INK (the AV sync panel alone;
+            // architect 2026-09-03). THE PAIRING IS THE PRODUCT'S ONE — the
+            // accent behind the selected substring and kRedesignLabel #fcfcfc
+            // for its glyphs, "on every text surface" (the ruling is at
+            // render.h's selection block, and the four dialog editors and the
+            // marker lane's flag editor are its other readers) — and this
+            // surface needs no second show for the ink half, its resting run
+            // already painting in that label white. NO NEW COLOUR: the palette
+            // is hard-coded whole.
+            //
+            // IT IS THE PLAIN ACCENT AND NOT accent_for_focus, which is the
+            // BAND'S own fork — the highlighted ROW and the modal row's focus
+            // outline dim while the window is unfocused. This panel has no row
+            // highlight at all, and the selected substring is the text
+            // surfaces' selection, whose one pairing the editors read straight.
+            //
+            // THE SPAN IS THE INTERSECTION of the selection with this row's
+            // byte span [row_start, row_start + len], mapped through the SAME
+            // pen offsets the glyphs below are drawn at, so highlight and ink
+            // cannot describe different bytes.
+            if (stats && sel_hi > sel_lo && !byte_x.empty()) {
+                const size_t len = row.name.size();
+                const size_t end = row_start + len;
+                const size_t a = std::clamp(sel_lo, row_start, end);
+                const size_t b = std::clamp(sel_hi, row_start, end);
+                double x0 = static_cast<double>(text_x) + byte_x[a - row_start];
+                double x1 = static_cast<double>(text_x) + byte_x[b - row_start];
+                // THE JOINING NEWLINE, when the selection runs past this row's
+                // last byte and this row has one (every row but the last).
+                const bool has_newline =
+                    static_cast<size_t>(index) + 1 < ov.rows.size();
+                if (has_newline && sel_lo <= end && sel_hi > end)
+                    x1 += newline_px;
+                if (x1 > x0) {
+                    cairo_set_source_rgb(cr, kRedesignAccent.r,
+                                         kRedesignAccent.g, kRedesignAccent.b);
+                    cairo_rectangle(cr, x0, static_cast<double>(r.y),
+                                    x1 - x0, static_cast<double>(r.h));
+                    cairo_fill(cr);
+                }
+            }
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             text_shape::show_shaped_run(

@@ -6299,6 +6299,10 @@ void GuiInputHandler::open_av_sync_stats() {
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
+    // RESET-THEN-SET, so every open starts with NO SELECTION whatever the
+    // last one left (the close resets too; this makes the fresh start the
+    // opener's own statement rather than the closer's leftover).
+    app.stats_panel         = AppState::StatsPanel{};
     app.stats_panel.active  = true;
     app.stats_panel.session = text_editor::next_session_id();
     // THE OVERLAY RISES WITH THE PANEL, through the reset-then-tag idiom the
@@ -6331,6 +6335,10 @@ void GuiInputHandler::close_stats_panel() {
     gui.set_display_measurement(false);
     app.stats_panel    = AppState::StatsPanel{};
     app.folder_overlay = AppState::FolderOverlay{};
+    // The painter clears its own text stash whenever it runs under another
+    // content, but it returns on its first line with no content standing at
+    // all, so the close is what drops it here.
+    app.stats_panel_text.clear();
     viewport.invalidate_all();
 }
 
@@ -6361,6 +6369,15 @@ void GuiInputHandler::build_stats_panel_rows() {
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);
+    // AND THE SELECTION IS CLAMPED ONTO THE BUFFER IT NOW HAS. THIS IS THE ONE
+    // PLACE THE ROWS ARE REWRITTEN, so it is the one place a standing selection
+    // can be left pointing past the end of the text it was drawn around — the
+    // rule, and the visible consequence of choosing clamp over clear, are at
+    // stats_panel_clamp_selection (app_state.h). It sits under the `changed`
+    // return above by construction: an IDENTICAL rebuild never reaches here, so
+    // the common case — every frame in which no digit moved — costs nothing and
+    // leaves the selection exactly where the user put it.
+    stats_panel_clamp_selection(app);
 }
 
 // THE PER-FRAME REFRESH, called once per run-loop tick while the panel stands
@@ -6444,6 +6461,52 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
+    // THE PANEL IS A READ-ONLY TEXT SURFACE AND OWNS ITS OWN CLIPBOARD CHORDS
+    // (architect 2026-09-03). CTRL+C IS UNBOUND GLOBALLY by ruling
+    // (conventions.md), and a TEXT SURFACE OWNING IT INSIDE ITSELF is the
+    // existing pattern rather than an exception to that: text_editor.cpp
+    // already owns Ctrl+C, Ctrl+X and Ctrl+V within the six editor kinds, and
+    // this is the seventh text surface asking the same thing. THERE IS NO CUT
+    // AND NO PASTE HERE — the surface is read-only, so the other two chords
+    // fall to the silent consume below like any other unbound modified chord.
+    if (ctrl && !shift && !alt && key == GuiKeys::A) {
+        // SELECT ALL, as the editors' own Ctrl+A does. Both ends are codepoint
+        // boundaries by construction (0 and the buffer's length).
+        const size_t len = stats_panel_buffer_length(app);
+        if (app.stats_panel.sel_anchor != 0 ||
+            app.stats_panel.sel_focus != len) {
+            app.stats_panel.sel_anchor = 0;
+            app.stats_panel.sel_focus  = len;
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
+        }
+        return true;
+    }
+    if (ctrl && !shift && !alt && key == GuiKeys::C) {
+        // WITH NO SELECTION, CTRL+C COPIES THE WHOLE PANEL. This goes beyond
+        // the literal ask deliberately (architect's request: "i couldn't copy
+        // paste b/c it's not selectable"): what he reached for was THE REPORT,
+        // not a fragment, and it is also the only road that gets the whole
+        // thing in one act on GLASS, where a precise multi-line drag is hard.
+        // The two arms cost one branch and one sentence.
+        const bool whole = !stats_panel_has_selection(app);
+        const std::string text = whole ? stats_panel_buffer_text(app)
+                                       : stats_panel_selected_text(app);
+        // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes
+        // the string and hands it straight over, holding no copy of its own
+        // (conventions.md's clipboard ruling). The rows are composed rather
+        // than enumerated, so the panel always has some and `text` is never
+        // empty — there is no no-value refusal to write here.
+        gui.clipboard_set_text(text);
+        // AND THE SUCCESS SAYS SO, in bare `j`'s own shape one surface over: A
+        // CLIPBOARD WRITE IS THE ONE SUCCESS IN THE PRODUCT THAT PAINTS
+        // NOTHING, so the card is the whole of what the press shows
+        // (messaging.md).
+        notifications.notify(AppState::NotificationClass::Normal,
+                             whole ? "Copied the AV sync stats"
+                                   : "Copied the selected text");
+        return true;
+    }
+
     // THE RING: Tab / Shift+Tab walk [band, Close] through the one modal ring
     // route, whose list arm the three list owners share. A RING-FOCUSED BUTTON
     // takes Enter and Space as its own press (press-at-press,
@@ -6458,6 +6521,12 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
 
     switch (key) {
         case GuiKeys::Escape:
+            // BARE ESC CLOSES THE PANEL AND DOES NOT FIRST CLEAR A SELECTION
+            // (2026-09-03, with the selectable text). Bare Esc's meaning here
+            // is the panel's close, and giving it a second CONDITIONAL meaning
+            // on this one surface would be a rung the product's Esc inventory
+            // does not have anywhere else. A CLICK COLLAPSES A SELECTION; that
+            // is the deselect road (the press router's own arm).
             close_stats_panel();
             return true;
         case GuiKeys::Up:

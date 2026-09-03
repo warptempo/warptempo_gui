@@ -2783,6 +2783,19 @@ private:
     // why the two figures mean what they do is at av_sync_stats.h; what is
     // here is the mode.
     //
+    // AND SINCE 2026-09-03 IT IS A READ-ONLY TEXT SURFACE (architect: "i
+    // couldn't copy paste b/c it's not selectable — let's make the text
+    // selectable in a readonly field, with the ibeam cursor"). It is the one
+    // report in the product whose whole purpose is to be READ AND QUOTED, so
+    // the pointer selects across its lines, Ctrl+C copies and the cursor is the
+    // I-beam over the text. The MODEL is one buffer — the rows joined by '\n' —
+    // and two byte offsets into it (AppState::StatsPanel, with the helpers
+    // beside it); the DRAG rides the band's own press arm in its `selecting`
+    // shape; the PAINTER publishes each row's shaped metrics
+    // (AppState::StatsPanelRowText) and paints the selection's ground behind
+    // its ink. It is not a seventh text_editor kind and could not be: all six
+    // kinds are single-line FIELDS whose one incoming filter rejects newlines.
+    //
     // ONE OPENER AND ONE ROAD TO IT: the Help menu's one row, whose release
     // calls open_av_sync_stats directly (GuiPopupAct::AvSyncStats — the act
     // has no chord, so the gates a chord would have met live in the opener's
@@ -2821,15 +2834,22 @@ private:
     //     [band, Close]; Esc closes; Up / Down SCROLL THE BAND (there is no
     //     highlight to walk — which is exactly why this panel could not reuse
     //     route_picker_key and needed a modal owner of its own, the record
-    //     being at AppState::ModalDialogOwner); every other bare key and every
-    //     other modified chord is consumed, silently.
+    //     being at AppState::ModalDialogOwner); CTRL+A SELECTS ALL and CTRL+C
+    //     COPIES (the selection, or the WHOLE PANEL where none stands) and
+    //     cards its success — a text surface owning the clipboard chords
+    //     inside itself, which is text_editor.cpp's existing pattern and not an
+    //     exception to Ctrl+C being unbound globally; every other bare key and
+    //     every other modified chord is consumed, silently.
     //
     // No undo, nothing authored, LEGAL ON A READ-ONLY TAB — it reads hardware
     // and touches no piece.
     void open_av_sync_stats();
     // Compose the rows from the two live readings and seat them in the
     // overlay's table (the TABLE alone, so a refresh keeps the scroll offset
-    // and the band's press arm). A frame in which no line changed leaves the
+    // and the band's press arm). It is also the ONE PLACE A STANDING SELECTION
+    // IS CLAMPED, because it is the one place the rows are rewritten
+    // (stats_panel_clamp_selection, app_state.h, owns that rule and its
+    // consequence). A frame in which no line changed leaves the
     // stored strings untouched and costs one composition — it does NOT decide
     // whether the refresh damages, which is unconditional while the panel
     // stands (the heartbeat's record is at refresh_stats_panel_rows). Two
@@ -3586,6 +3606,19 @@ private:
     // that slide, so the cue stays true from the press to the release. It has
     // exactly ONE shape, so the record is that it is live (drag or pending
     // marker drag) and there is no kind to read.
+    // THE TEXT SELECTION DRAG JOINED THEM 2026-09-03 (architect: "the cursor in
+    // flag editor becomes the pointer during drag-to-highlight — it should
+    // remain the i-beam — that's what other editors do"), same shape, same
+    // reasoning — the thing being dragged is a text selection and Text is what
+    // names it, so the I-beam the surface wears at rest stays true from the
+    // press to the release, wherever the pointer wanders. It has exactly ONE
+    // shape, so being live is the whole record, and it is ONE ARM over THREE
+    // SURFACES: the four dialog editors, the marker lane's flag / measure boxes
+    // and the AV SYNC STATS PANEL's read-only text, whose two records
+    // text_selection_drag_active (app_state.h) is the one predicate over. The
+    // arm outranks the mode blankets and the dialog blanket, because each of
+    // those decides BY POSITION and a selection drag routinely leaves the run
+    // it started in — which is exactly the re-derivation this family forbids.
     // EVERY OTHER gesture keeps the uniform refusal — no cursor changes during
     // the region, strip or grab-pan drags (the captured two hide the cursor
     // anyway).

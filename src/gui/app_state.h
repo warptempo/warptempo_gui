@@ -5426,6 +5426,44 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
+    // THE AV SYNC STATS PANEL'S TEXT GEOMETRY, one entry per row (architect
+    // 2026-09-03, with the panel's selection). Same contract as
+    // DialogEditorText one struct up and for the same reason: the panel's rows
+    // are SELECTABLE text now, so a surface x must map to a byte, and the only
+    // faithful mapping is the painter's own shaped run — the pointer path reads
+    // this stash and never re-shapes, so the byte a drag names is the byte the
+    // pixels came from.
+    //
+    // WHY IT IS A VECTOR AND WHY IT IS PUBLISHED FOR EVERY ROW IN THE BAND
+    // rather than for the rows the damage exposed: the panel's per-row exposure
+    // economy is a PAINT economy, and a hit test asks about rows no damage
+    // happens to have crossed. So the painter shapes every row that intersects
+    // the band and publishes it, and only then asks whether to draw it — a
+    // dozen short monospace runs, which is what the panel already pays per
+    // frame for its heartbeat. A row OUTSIDE the band publishes nothing and
+    // stays `valid` false, which is the honest answer: the hit test refuses it,
+    // and folder_overlay::row_at refuses it too.
+    //
+    // `text_origin_x` is the window x of that row's byte 0 (the row rect's own
+    // left plus the button's glyph inset, which is where a Text row seats its
+    // ink) and `byte_x` holds name.size()+1 pen offsets relative to it —
+    // text_shape::byte_offsets_px', read through the one search
+    // text_editor::byte_index_from_shaped_x like every other field in the
+    // product. `byte_count` is the run's own byte count, kept so a hit taken
+    // against a publication the per-tick rebuild has since outrun clamps
+    // against what was PAINTED as well as against what now stands.
+    struct StatsPanelRowText {
+        bool                valid         = false;
+        double              text_origin_x = 0.0;
+        double              width_px      = 0.0;
+        size_t              byte_count    = 0;
+        std::vector<double> byte_x;
+    };
+    // Rewritten by the folder overlay's painter under the Stats owner and
+    // cleared under every other; empty until the panel's first paint, which is
+    // the correct pre-display state (an unpublished row takes no clicks).
+    std::vector<StatsPanelRowText> stats_panel_text;
+
     // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the four dialog
     // editors, the render player, the picker and the AV Sync Stats panel paint
     // ON THE BOTTOM ROW since
@@ -7572,9 +7610,30 @@ struct AppState {
     // one close body is GuiInputHandler::close_stats_panel (Esc, the Close
     // button and Ctrl+Q's road all pass through it), which resets the overlay
     // with it. It authors nothing: no undo, no dirty, legal on a read-only tab.
+    //
+    // THE PANEL IS A READ-ONLY TEXT SURFACE (architect 2026-09-03: "i couldn't
+    // copy paste b/c it's not selectable — let's make the text selectable in a
+    // readonly field, with the ibeam cursor"). It is the one report in the
+    // product whose whole purpose is to be READ AND QUOTED, so the pointer
+    // selects across its lines, Ctrl+C copies and Ctrl+A takes the lot. THIS IS
+    // NOT A SEVENTH text_editor KIND and could not be: all six kinds are
+    // SINGLE-LINE FIELDS whose one incoming filter rejects newlines
+    // (text_editor.h's head), and this surface is a dozen lines. So the panel
+    // carries the whole model itself, and it is two integers:
+    //   `sel_anchor` / `sel_focus`  BYTE offsets into the panel's ONE BUFFER —
+    //              the rows joined by '\n', which exists nowhere as a string
+    //              (the helpers below derive it; stats_panel_buffer_text is the
+    //              one place it is ever materialised). Equal offsets are NO
+    //              SELECTION, which is also what a motionless press leaves.
+    // The buffer's CONTENT AND LENGTH MOVE UNDER A STANDING SELECTION, because
+    // the rows are recomposed every tick to keep the measurement alive — the
+    // clamp and its consequence are at stats_panel_clamp_selection, and there
+    // is exactly one writer of these two fields' upper bound.
     struct StatsPanel {
-        bool     active  = false;
-        uint64_t session = 0;
+        bool     active     = false;
+        uint64_t session    = 0;
+        size_t   sel_anchor = 0;
+        size_t   sel_focus  = 0;
     };
     StatsPanel stats_panel;
 
@@ -7960,12 +8019,19 @@ struct AppState {
     //     button's own inset and skip the face ladder whole.
     // (The project picker produces neither: its rows are Folder rows.)
     //
-    // A TEXT ROW IS INERT. It takes no hover face, no highlight face and no
-    // press arm, and the two row-act switches (folder_overlay_open_row and
-    // folder_overlay_highlight_row, input_pointer.cpp) answer nothing under its
-    // owner. What the band still does under it is what the band does anywhere:
-    // it CONSUMES a press (it is opaque) and it SCROLLS, by the wheel on
-    // plastic and by the band's own drag on glass.
+    // A TEXT ROW IS INERT AS A ROW. It takes no hover face, no highlight face
+    // and no ROW press arm, and the two row-act switches
+    // (folder_overlay_open_row and folder_overlay_highlight_row,
+    // input_pointer.cpp) answer nothing under its owner. What the band still
+    // does under it is what the band does anywhere: it CONSUMES a press (it is
+    // opaque) and it SCROLLS, by the wheel on plastic and by the band's own
+    // drag on glass.
+    // ITS TEXT IS NOT INERT SINCE 2026-09-03: under the AV sync stats panel a
+    // press inside a row's painted text extent arms that panel's TEXT SELECTION
+    // DRAG, which rides the band's own press record in its `selecting` shape.
+    // That is the CONTENT's fork and not the kind's — the kind still says only
+    // "draw no glyph, seat the text at the button's own inset, skip the face
+    // ladder" — and a second producer of this kind would inherit none of it.
     struct FolderOverlayRow {
         enum class Kind { Folder, Wav, Text };
         Kind                       kind = Kind::Wav;
@@ -7973,6 +8039,17 @@ struct AppState {
         std::filesystem::path      path;
         std::optional<RenderEntry> entry;   // wav rows: load-capable iff set
     };
+    // THE BAND'S ONE PRESS ARM, and since 2026-09-03 it has TWO SHAPES rather
+    // than one. `selecting` is the AV sync stats panel's TEXT SELECTION DRAG:
+    // a press that landed inside a row's painted text extent, which seats the
+    // panel's anchor at once and moves its focus with the pointer. It is the
+    // arm's whole fork — a selecting arm never crosses the drag gate, never
+    // scrolls and has no act at its lift (the selection already stands from
+    // the press, the editors' own model) — and it rides THIS record rather than
+    // one of its own so that the band's membership in
+    // any_pointer_gesture_active and its clear in finalize_active_drags carry
+    // it for free. `row` stays -1 under it: the panel's rows are inert, and
+    // what the drag names is a byte, not a row.
     struct FolderOverlayPress {
         bool    armed           = false;
         int     row             = -1;
@@ -7981,6 +8058,7 @@ struct AppState {
         int     scroll_at_press = 0;
         bool    inside          = true;
         bool    scrolling       = false;
+        bool    selecting       = false;
     };
     struct FolderOverlay {
         // THE THREE CONTENTS (Stats joined 2026-09-03). The tag IS the standing
@@ -8167,6 +8245,120 @@ struct AppState {
 // the owner without inverting it.)
 inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
+}
+
+// -- THE AV SYNC STATS PANEL'S BUFFER AND ITS SELECTION (2026-09-03) ---------
+//
+// THE ROWS ARE THE LINES AND THE BUFFER IS THEIR JOIN. There is no second copy
+// of the panel's text: what the composer wrote sits in the overlay's row table
+// like every other content's, and the buffer is those names with a '\n'
+// between them. Every offset the panel holds is a BYTE index into that join,
+// and these are the only bodies that turn one into anything — a row, a
+// substring, a highlight span. The whole set is here because the model is two
+// integers over a table both the painter and the pointer path already read;
+// giving it a file of its own would put the buffer's definition somewhere the
+// row table is not.
+//
+// INDEX BY BYTE, STEP BY CODEPOINT (the standing text rule, CLAUDE.md): the
+// panel's own text is ASCII by construction but the display OUTPUT NAME comes
+// from the compositor and is not, so the clamp below walks back to a codepoint
+// boundary rather than cutting wherever the arithmetic lands.
+
+inline size_t stats_panel_row_length(const AppState& a, int index) {
+    const auto& rows = a.folder_overlay.rows;
+    if (index < 0 || static_cast<size_t>(index) >= rows.size()) return 0;
+    return rows[static_cast<size_t>(index)].name.size();
+}
+
+// Row `index`'s first byte in the buffer. Row 0 starts at 0; every later row
+// starts one past the previous row's last byte, that one byte being the '\n'
+// the join puts there. An index past the end answers the buffer's length.
+inline size_t stats_panel_row_start(const AppState& a, int index) {
+    const auto& rows = a.folder_overlay.rows;
+    const size_t n = rows.size();
+    size_t at = 0;
+    for (size_t i = 0; i < n; ++i) {
+        if (static_cast<int>(i) == index) return at;
+        at += rows[i].name.size() + 1;
+    }
+    return n == 0 ? 0 : at - 1;  // past the last row: the buffer's end
+}
+
+inline size_t stats_panel_buffer_length(const AppState& a) {
+    const auto& rows = a.folder_overlay.rows;
+    if (rows.empty()) return 0;
+    size_t len = rows.size() - 1;  // the joining newlines
+    for (const auto& r : rows) len += r.name.size();
+    return len;
+}
+
+// THE ONE PLACE THE BUFFER IS EVER MATERIALISED — the copy act's own source,
+// and the substring road the selection takes, so what is copied and what is
+// highlighted cannot describe different bytes.
+inline std::string stats_panel_buffer_text(const AppState& a) {
+    std::string out;
+    out.reserve(stats_panel_buffer_length(a));
+    bool first = true;
+    for (const auto& r : a.folder_overlay.rows) {
+        if (!first) out += '\n';
+        first = false;
+        out += r.name;
+    }
+    return out;
+}
+
+inline size_t stats_panel_selection_lo(const AppState& a) {
+    return std::min(a.stats_panel.sel_anchor, a.stats_panel.sel_focus);
+}
+inline size_t stats_panel_selection_hi(const AppState& a) {
+    return std::max(a.stats_panel.sel_anchor, a.stats_panel.sel_focus);
+}
+inline bool stats_panel_has_selection(const AppState& a) {
+    return a.stats_panel.sel_anchor != a.stats_panel.sel_focus;
+}
+
+inline std::string stats_panel_selected_text(const AppState& a) {
+    const size_t lo = stats_panel_selection_lo(a);
+    const size_t hi = stats_panel_selection_hi(a);
+    if (hi <= lo) return {};
+    const std::string buf = stats_panel_buffer_text(a);
+    if (lo >= buf.size()) return {};
+    return buf.substr(lo, std::min(hi, buf.size()) - lo);
+}
+
+// THE ONE WRITER OF THE SELECTION'S UPPER BOUND, called from the ONE place the
+// rows are rewritten (GuiInputHandler::build_stats_panel_rows). THE TRAP THIS
+// ANSWERS: the panel recomposes its rows every tick — that heartbeat is what
+// keeps the display measurement alive, since the instrument measures COMMITTED
+// frames — so the buffer's content and length move under a standing selection
+// as the figures move.
+//
+// THE RULE IS CLAMP, NOT CLEAR. An offset past the new buffer's end lands on
+// its end, and is then walked back to a codepoint boundary. So a stale offset
+// cannot be read: after this runs, both offsets are boundaries in [0, length].
+//
+// AND THE CONSEQUENCE, PLAINLY: this is a byte clamp and not a re-anchoring, so
+// when a line actually CHANGES LENGTH — a millisecond figure gaining a digit, a
+// group gaining or losing a line — a standing selection can shift by a
+// character or two against the text it was drawn around. It cannot point
+// outside the buffer and it cannot split a character, but it can slide. The
+// alternative would be to freeze the rebuild while a selection stands, and that
+// is exactly the self-defeating heartbeat the panel's own contract forbids: a
+// frozen panel would go on presenting a thirty-frame moving mean while
+// receiving nothing. The common case costs nothing at all — an IDENTICAL
+// rebuild leaves the strings alone and never reaches this body.
+inline void stats_panel_clamp_selection(AppState& a) {
+    const std::string buf = stats_panel_buffer_text(a);
+    const size_t len = buf.size();
+    auto snap = [&](size_t& off) {
+        if (off > len) off = len;
+        // Back up off a UTF-8 continuation byte (10xxxxxx) to the boundary that
+        // starts its character. Terminates at 0 by construction.
+        while (off > 0 && off < len &&
+               (static_cast<unsigned char>(buf[off]) & 0xC0) == 0x80) --off;
+    };
+    snap(a.stats_panel.sel_anchor);
+    snap(a.stats_panel.sel_focus);
 }
 
 // (THE CHROME-FOCUS VERDICT `chrome_focused` — `window_activated && !folder_
@@ -9032,6 +9224,24 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_trim_drag.active ||
            app.folder_overlay.press.armed ||
            app.render_player.scrub.armed;
+}
+
+// IS A TEXT SELECTION DRAG LIVE? THE ONE PREDICATE, and the reason the cursor
+// map needs only one arm for it (architect 2026-09-03, with the AV sync
+// panel's selectable text; the arm itself is in pointer_cursor_kind,
+// input_pointer.cpp). TWO RECORDS, ONE QUESTION: the editors' own
+// EditorTextDragState — which covers both editor families, the four dialog
+// editors and the marker lane's flag / measure boxes — and the AV sync stats
+// panel's band arm in its `selecting` shape. Both are a caret sliding through
+// a byte run and neither takes a pointer capture, so being live is the whole
+// record in either, and the cue the surface wears at rest stays TRUE for the
+// whole gesture. NOTHING RE-DERIVES IT FROM POSITION: a selection drag
+// routinely leaves the run it started in — that is how one selects past the
+// visible text — so position is exactly what cannot answer here.
+inline bool text_selection_drag_active(const AppState& app) {
+    return app.editor_text_drag.active ||
+           (app.folder_overlay.press.armed &&
+            app.folder_overlay.press.selecting);
 }
 
 // THE HOME-VIEW BINDING, NARROWED TO THE WARP COLUMN (architect 2026-08-30):
