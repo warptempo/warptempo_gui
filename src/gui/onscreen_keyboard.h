@@ -378,7 +378,8 @@ inline int surface_height_px() {
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
 // could raise one (the flag editor's double-click, the measure button — the
-// roster is dead under all three); and the touch region begin refuses under
+// roster is dead under all three but the FILE anchor above the band, whose
+// three rows open no editor); and the touch region begin refuses under
 // all three.
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record
@@ -517,7 +518,8 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // foot that day, the window's top for hours of 2026-09-03 and the tab row's
 // first pixel since that evening): its band starts ABOVE the waveform, so
 // every waveform pass is clipped out whole while it stands, and the LANES it
-// also covers (rows 2..7; the menu row stands above the band, greyed) are not
+// also covers (rows 2..7; the menu row stands above the band, File lit and the
+// other four anchors and the view bar greyed) are not
 // spared this way — their painters run and the panel covers them, because
 // they publish the roster's hit rects (the record is at the paint-order
 // block, paint_handler.cpp).

@@ -55,12 +55,14 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. FOUR roster entries are absent — row 1's FILE, EDIT, SERIES and
-// SETTINGS anchors, each of whose action is a POPUP TOGGLE, not a chord at all,
-// since no keyboard chord opens or closes a dropdown. All four are spelled at
-// their own claim, which walks kDropdownMenus rather than naming them.
+// the same ids. FIVE roster entries are absent — row 1's FILE, EDIT, SERIES
+// (the ITERATIONS label's enumerator), SETTINGS and HELP anchors (re-greped
+// 2026-09-03 against kDropdownMenus), each of whose action is a POPUP TOGGLE,
+// not a chord at all, since no keyboard chord opens or closes a dropdown. All
+// five are spelled at their own claim, which walks kDropdownMenus rather than
+// naming them.
 // THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
-// table, which is what makes "the table's length plus those four IS the
+// table, which is what makes "the table's length plus those five IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
 // The `shift` column is each button's OWN chord — THREE rows set it: Redo's
@@ -717,13 +719,15 @@ constexpr ToolbarChord kToolbarChords[] = {
 // that day it was 45 against 48: the marker walk's three in, the collapsed
 // play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
 // so its removal moved the roster and not this table — so the
-// table's length plus those two IS the roster. The check is not bookkeeping —
+// table's length plus THE FIVE ANCHORS IS the roster. The check is not
+// bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
-// drift a build error instead. (It was + 2 until 2026-08-13, when the Quit
-// button became the File menu's one item: the roster's total did not move, the
-// split did.)
+// drift a build error instead. (The addend has walked the anchor count: + 2
+// until 2026-08-13, when the Quit button became the File menu's one item — the
+// roster's total did not move, the split did — then + 3 with Edit
+// 2026-08-20, + 4 with Iterations 2026-08-27 and + 5 with Help 2026-09-03.)
 static_assert(std::size(kToolbarChords) + 5 ==
                   static_cast<std::size_t>(kRedesignButtonCount),
               "kToolbarChords must cover every RedesignButton except the "
@@ -4298,16 +4302,13 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
 bool GuiInputHandler::claim_folder_overlay_press(
         int x, int y, GuiMouseButton button, GuiInputState mods) {
     if (!folder_overlay::stands(app)) return false;
-    // AN OPEN DROPDOWN OWNS THE POINTER, THIS BAND INCLUDED (2026-09-03
-    // evening, with the File anchor left live above the band): the popup
-    // floats over every band, so a press outside it must reach the dropdown
-    // claim further down on_button_press, which closes the menu and consumes
-    // the press so nothing underneath acts. Without this the band would open
-    // a row out from under a standing menu. It is the band's own line rather
-    // than a reordering of that claim because the claim's rank against the
-    // editor gates is settled and this is the one band a popup can now stand
-    // over.
-    if (app.dropdown.open()) return false;
+    // (AN OPEN DROPDOWN OWNS THE POINTER, THIS BAND INCLUDED, and this claim
+    // no longer says so itself: the popup's claim is RANKED above this call
+    // since 2026-09-03, so a press while a menu stands never arrives here at
+    // all — it selects an item or dismisses the menu, consumed whole. The line
+    // that used to stand here, `if (app.dropdown.open()) return false;`, was
+    // the band's own half of a rule the rank now owns for every surface under
+    // the popup; the whole reasoning is at the claim, on_button_press.)
     if (button != GuiMouseButton::Left) return false;
     const GuiRect surf = folder_overlay::surface_rect(app);
     if (!rect_contains(surf, x, y)) return false;
@@ -4754,10 +4755,171 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         return;
     }
 
+    // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
+    // FLOATS over them: a press on one of its items runs that item, and a press
+    // anywhere else closes it and is CONSUMED so nothing underneath acts. The
+    // presses it does not swallow are those on the MENU BUTTONS themselves,
+    // which fall through to the band claim below: on this menu's own button the
+    // toggle closes it — the same gesture that opened it, closing it — and on the
+    // OTHER menu's button the toggle switches, closing this one as it opens that
+    // one (one popup state, so the switch is free). WHILE A FOLDER-OVERLAY
+    // CONTENT STANDS that fall-through reaches the band claim only for the LIVE
+    // anchor; a DEAD one is consumed by the veil below instead, which is the
+    // same nothing the band claim gave it (toggle_dropdown refuses a dead
+    // anchor) — the popup stays up either way.
+    //
+    // SINCE THE HOVER SWITCHES TOO (2026-08-03, on_motion), that second case is
+    // now the rare one from a real pointer: crossing onto the other button has
+    // already switched the menu, so the press landing there finds that menu open
+    // and TOGGLES IT CLOSED — the ordinary menu-bar answer for pressing the
+    // button whose menu is up. Neither route changed; they simply meet here, and
+    // a press that arrives with no motion before it still takes the switch
+    // through this claim.
+    //
+    // THE CLAIM'S RANK IS THE FIX FOR THE STRANDED ARM (2026-09-03): it sits
+    // BELOW the notification cards, the on-screen keyboard and the prompt gate
+    // — the three surfaces that outrank every band — and ABOVE EVERYTHING ELSE
+    // the pointer has: the folder overlay's band claim, its three mode veils
+    // and the modal-row arm inside each of them, the dialog editors' field and
+    // button claims and their veil. It stood under all of those until this
+    // ruling, which is what let a press on the overlay's modal row while the
+    // File menu was up reach arm_modal_dialog_press BEFORE this claim could
+    // dismiss the popup: the release then ran finish_dropdown_release first,
+    // and that body consumes every release the popup is open for without
+    // taking or clearing the arm, so the button stayed visually pressed and a
+    // LATER release over it acted with no press of its own. ONE PRESS, ONE
+    // ACT is what the rank now says: a press that dismisses the popup arms no
+    // modal button and opens no row. (Touch reaches this order too — the
+    // one-finger translation delivers an ordinary press — so the rank answers
+    // both hosts.)
+    //
+    // AND NO ARM CAN BE STANDING WHEN THE POPUP OPENS, which is why the
+    // dismissal owes no clear of its own: every producer of an open popup is a
+    // LEFT PRESS (the anchor press's toggle_dropdown at the menu-row claim
+    // below, and the hover switch under that same held button — there is no
+    // keyboard opener), a press exists only after the previous one came up,
+    // and both arms a dismissal could strand are consumed at their own release
+    // whatever it lands on (take_modal_dialog_release, take_chrome_press). The
+    // anchor press moreover arms NOTHING — it toggles instead of calling
+    // arm_redesign_press — so the very gesture that opens a menu leaves the
+    // roster and the modal row clean.
+    //
+    // MOVING ABOVE THE EDITOR GATES MOVED NO BEHAVIOR: a popup and a dialog
+    // editor are never open together. The popup opens only from a press, and
+    // while a DIALOG editor is up every press outside the box's own field and
+    // buttons dies at the veil, which has had NO EXCEPTION since 2026-08-13
+    // (the retired reach-through's record is at its own site below) — so the
+    // MENU ANCHORS are never reached and no press can open a popup under an
+    // editor. That invariant is carried by the ANCHOR claim's rank at the foot
+    // of this function, which is still under the veil, and never by this
+    // claim's. The other half is not here — the
+    // pointer-transparent FLAG editor swallows nothing, so a press does reach
+    // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
+    // that edit (the rule is stated there). Two mechanisms, one claim. (The
+    // reverse direction is closed by the keyboard gate: while the popup is open,
+    // `;` is swallowed, so the editor cannot open under it either.)
+    //
+    // THE FOLDER OVERLAY'S BAND IS UNDER IT LIKE EVERY OTHER BAND: a FILE menu
+    // can stand over the band since 2026-09-03 evening, and a press on a row
+    // while it does closes the menu rather than opening the row — this claim is
+    // what that press meets, and the band's own claim below no longer carries a
+    // popup line of its own. What still reaches those veils is the LIVE ANCHOR
+    // alone (menu_row_press_admitted, below), the menu row standing above the
+    // band. THE PANEL STILL CANNOT RISE UNDER A POPUP, which is the other
+    // direction and unchanged: every opener the three contents
+    // have — bare `l`, bare `'`, Ctrl+O, the Play renders button, the File
+    // menu's Open project row and the Help menu's AV Sync Stats row — either
+    // arrives through on_key, whose popup gate admits Esc and Ctrl+Q and
+    // swallows the rest, or is a menu row whose own release CLOSES the popup
+    // BEFORE it acts. (This claim stood BELOW the three veils for the evening
+    // of 2026-09-03 alone, and below the editor gates from the redesign until
+    // then; on 2026-09-02, with the panel's ceiling at row 1's foot, it stood
+    // above the veils and no popup could reach the band at all for the hours
+    // the anchors were all dead.)
+    if (app.dropdown.open()) {
+        // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one: only
+        // LEFT carries
+        // claims inside the popup, so any other button is CONSUMED INERT here
+        // rather than falling through to the bands underneath. (The arm dates
+        // from the right-click scrub, 2026-08-01..12; with the right button
+        // unbound it defends nothing live, and stays as the popup's shape —
+        // owning the pointer is owning every button.) The popup
+        // stays open (a non-Left press is not one of its two answers, item-arm
+        // or dismiss) and nothing acts.
+        if (button != GuiMouseButton::Left) return;
+        const AppState::Dropdown& pop = app.dropdown;
+        // WALKED, NOT NAMED (the anchor membership is derived from the menu
+        // list — app_state.h — so a menu added later needs no edit here).
+        bool on_menu_button = false;
+        for (const DropdownMenu m : kDropdownMenus) {
+            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
+                on_menu_button = true;
+                break;
+            }
+        }
+        if (!on_menu_button) {
+            const int hit = dropdown_item_at(x, y);
+            // A MODIFIED press inside the popup closes it and does nothing else:
+            // no item carries a modified binding, and leaving the popup open
+            // under a press it refused would be the worse answer.
+            const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
+            if (hit >= 0 && plain) {
+                // (A DISABLED ITEM ARMED NOTHING AND DISMISSED NOTHING,
+                // 2026-08-08 to 2026-08-15: the press was consumed where it
+                // landed and the MENU STAYED UP, kdenlive's own answer for a
+                // greyed row — pressing one is a nothing, not a dismissal — so
+                // that arm RETURNED rather than falling into the close below,
+                // which is the answer for the separator, the chrome and the
+                // box's outside: those are the popup's DEAD SPACE, and a greyed
+                // item is a row that is simply not for you. The predicate was
+                // the painter's own, so the grey face and the inert press were
+                // one fact read twice, the roster's disabled-press rule one
+                // surface out. It went producer-less with the Navigation menu
+                // — no surviving item can grey — and the arm is deleted with
+                // it; the record is at kFilePopupItems, app_state.h.)
+                // ITEMS ACT ON RELEASE — this press only ARMS one. The items
+                // were the redesign's FIRST act-on-release surface (the
+                // universal menu convention: press, slide, release on what you
+                // meant), the model the modal dialog buttons and then the
+                // whole chrome roster took on 2026-08-13. What stays the
+                // items' own is the SLIDE: the arm travels between items,
+                // where a button's arm stays on the button it pressed.
+                //
+                // THE ARM DOES NOT STAY HERE: from this press until the button
+                // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
+                // so the slide of "press, slide, release on what you meant" is
+                // literally the FACE arm moving — but the release does not act
+                // on wherever it ended: it DERIVES the acted-on item from its
+                // own coordinates under the claim (finish_dropdown_release),
+                // which the arm only paints. The bit is what tells that walk the
+                // held button belongs to this popup's gesture — it has a SECOND
+                // producer since
+                // 2026-08-03, the anchor press that opened the menu, whose drag
+                // into the box is the same gesture arriving from outside — and it
+                // is set OUTSIDE the transition test below, which is about
+                // damage.
+                app.dropdown.press_began_on_item = true;
+                if (pop.pressed_item != hit) {
+                    app.dropdown.pressed_item = hit;
+                    viewport.invalidate_top_strip();
+                    viewport.invalidate_rect(pop.rect);
+                }
+                return;
+            }
+            // Anywhere else inside the popup, or a modified press: close and
+            // consume, so nothing underneath acts.
+            close_dropdown();
+            return;
+        }
+    }
+
     // THE FOLDER OVERLAY'S BAND, claimed for EVERY content and ranked here —
-    // under the prompt gate above (a prompt outranks every surface; the
+    // under the prompt gate (a prompt outranks every surface; the
     // player's load confirmation and the reopen's unsaved-tab question paint
-    // over their own rows) and above the THREE mode veils below — the
+    // over their own rows), under the OPEN DROPDOWN'S claim just above (a
+    // standing menu owns the press before any band does, so a row press
+    // dismisses the menu instead of opening the row) and above the THREE mode
+    // veils below — the
     // player's, the picker's and the AV Sync Stats panel's, each of which
     // admits the band and its own modal row
     // and consumes the rest. The claim is opaque and owns its own button
@@ -4766,21 +4928,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (claim_folder_overlay_press(x, y, button, mods)) return;
 
     // THE ONE THING THE THREE VEILS BELOW LET THROUGH (architect 2026-09-03
-    // evening): the LIVE MENU ANCHOR — File — and, once its menu is up, every
-    // press the popup owns. The menu row stands above the band with File lit
-    // and the other four anchors dead, so its press must reach the menu-row
-    // claim at the foot of this function and its popup must reach the
-    // dropdown claim above that; both sit BELOW these veils, and this one
-    // local is what carries the press past them. ONE OWNER FOR THE ANCHOR
-    // HALF (press_on_live_menu_anchor, near the head of this file — the same
-    // enumeration the FACE and toggle_dropdown's guard read), and the popup
-    // half is the dropdown's own standing bit, which its claim then answers
-    // for: an item runs, anything else closes the menu and is consumed. What
-    // the exempted press meets on the way down is inert — no editor can stand
-    // under the band, and the modal-row arm it passes hits no button at row
-    // 1's height.
-    const bool menu_row_press_admitted =
-        app.dropdown.open() || press_on_live_menu_anchor(app, x, y);
+    // evening): the LIVE MENU ANCHOR — File. The menu row stands above the
+    // band with File lit and the other four anchors dead, so its press must
+    // reach the menu-row claim at the foot of this function, which sits BELOW
+    // these veils, and this one local is what carries it past them. ONE OWNER
+    // (press_on_live_menu_anchor, near the head of this file — the same
+    // enumeration the FACE and toggle_dropdown's guard read), so the exemption
+    // cannot part from the face. What the exempted press meets on the way down
+    // is inert — no editor can stand under the band, and the modal-row arm it
+    // passes hits no button at row 1's height.
+    //
+    // IT IS THE ANCHOR HALF ALONE. It carried `app.dropdown.open() ||` until
+    // 2026-09-03, when the OPEN POPUP was ranked above these veils and above
+    // the band claim (the rank's own site above): an open menu no longer needs
+    // the veils to let its presses through, because it has already answered
+    // every press before they run. That blanket term was the stranded-arm
+    // defect — with it, ANY coordinate was exempt while a menu stood, so a
+    // press on the overlay's modal row armed a button under a popup that
+    // should have swallowed the press whole.
+    const bool menu_row_press_admitted = press_on_live_menu_anchor(app, x, y);
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
@@ -5017,129 +5183,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press must not drive a region drag or a marker click, nor tear the
     // editor down through the top-strip flag-edit routine below.
     if (modal_dialog_editor_active()) return;
-    // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
-    // FLOATS over them: a press on one of its items runs that item, and a press
-    // anywhere else closes it and is CONSUMED so nothing underneath acts. The
-    // presses it does not swallow are those on the MENU BUTTONS themselves,
-    // which fall through to the band claim below: on this menu's own button the
-    // toggle closes it — the same gesture that opened it, closing it — and on the
-    // OTHER menu's button the toggle switches, closing this one as it opens that
-    // one (one popup state, so the switch is free).
-    //
-    // SINCE THE HOVER SWITCHES TOO (2026-08-03, on_motion), that second case is
-    // now the rare one from a real pointer: crossing onto the other button has
-    // already switched the menu, so the press landing there finds that menu open
-    // and TOGGLES IT CLOSED — the ordinary menu-bar answer for pressing the
-    // button whose menu is up. Neither route changed; they simply meet here, and
-    // a press that arrives with no motion before it still takes the switch
-    // through this claim.
-    //
-    // It sits BELOW the modal gates like every other pointer target, which is
-    // half of why a popup and an editor are never open together: the popup opens
-    // only from a press, and while a DIALOG editor is up
-    // every press outside the box's own field and buttons dies at the veil,
-    // which has had NO EXCEPTION since 2026-08-13 (the retired reach-through's
-    // record is at its own site above) — so the menu anchors are never
-    // reached and no press can open a popup under an editor.
-    // The other half is not here — the
-    // pointer-transparent FLAG editor swallows nothing, so a press does reach
-    // the menu buttons with an edit open, and toggle_dropdown's open path ENDS
-    // that edit (the rule is stated there). Two mechanisms, one claim. (The
-    // reverse direction is closed by the keyboard gate: while the popup is open,
-    // `;` is swallowed, so the editor cannot open under it either.)
-    //
-    // AND BELOW THE FOLDER OVERLAY'S THREE VEILS, WHICH EXEMPT IT: a FILE menu
-    // can stand over the band again since 2026-09-03 evening, so those veils
-    // carry `menu_row_press_admitted` — the live anchor's press and, once the
-    // menu is up, every press at all — and the press arrives here to be
-    // answered as it is anywhere else. The band itself refuses to claim while
-    // a popup is open (claim_folder_overlay_press's own first line), so this
-    // claim is what a press on a row meets, and it closes the menu rather
-    // than opening the row. THE PANEL STILL CANNOT RISE UNDER A POPUP, which
-    // is the other direction and unchanged: every opener the three contents
-    // have — bare `l`, bare `'`, Ctrl+O, the Play renders button, the File
-    // menu's Open project row and the Help menu's AV Sync Stats row — either
-    // arrives through on_key, whose popup gate admits Esc and Ctrl+Q and
-    // swallows the rest, or is a menu row whose own release CLOSES the popup
-    // BEFORE it acts. (This claim stood above those veils on 2026-09-02, when
-    // the panel's ceiling was row 1's foot and File stayed lit under it, and
-    // no popup could reach it at all for the hours the anchors were all dead.)
-    if (app.dropdown.open()) {
-        // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one: only
-        // LEFT carries
-        // claims inside the popup, so any other button is CONSUMED INERT here
-        // rather than falling through to the bands underneath. (The arm dates
-        // from the right-click scrub, 2026-08-01..12; with the right button
-        // unbound it defends nothing live, and stays as the popup's shape —
-        // owning the pointer is owning every button.) The popup
-        // stays open (a non-Left press is not one of its two answers, item-arm
-        // or dismiss) and nothing acts.
-        if (button != GuiMouseButton::Left) return;
-        const AppState::Dropdown& pop = app.dropdown;
-        // WALKED, NOT NAMED (the anchor membership is derived from the menu
-        // list — app_state.h — so a menu added later needs no edit here).
-        bool on_menu_button = false;
-        for (const DropdownMenu m : kDropdownMenus) {
-            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
-                on_menu_button = true;
-                break;
-            }
-        }
-        if (!on_menu_button) {
-            const int hit = dropdown_item_at(x, y);
-            // A MODIFIED press inside the popup closes it and does nothing else:
-            // no item carries a modified binding, and leaving the popup open
-            // under a press it refused would be the worse answer.
-            const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
-            if (hit >= 0 && plain) {
-                // (A DISABLED ITEM ARMED NOTHING AND DISMISSED NOTHING,
-                // 2026-08-08 to 2026-08-15: the press was consumed where it
-                // landed and the MENU STAYED UP, kdenlive's own answer for a
-                // greyed row — pressing one is a nothing, not a dismissal — so
-                // that arm RETURNED rather than falling into the close below,
-                // which is the answer for the separator, the chrome and the
-                // box's outside: those are the popup's DEAD SPACE, and a greyed
-                // item is a row that is simply not for you. The predicate was
-                // the painter's own, so the grey face and the inert press were
-                // one fact read twice, the roster's disabled-press rule one
-                // surface out. It went producer-less with the Navigation menu
-                // — no surviving item can grey — and the arm is deleted with
-                // it; the record is at kFilePopupItems, app_state.h.)
-                // ITEMS ACT ON RELEASE — this press only ARMS one. The items
-                // were the redesign's FIRST act-on-release surface (the
-                // universal menu convention: press, slide, release on what you
-                // meant), the model the modal dialog buttons and then the
-                // whole chrome roster took on 2026-08-13. What stays the
-                // items' own is the SLIDE: the arm travels between items,
-                // where a button's arm stays on the button it pressed.
-                //
-                // THE ARM DOES NOT STAY HERE: from this press until the button
-                // comes up it FOLLOWS THE POINTER (recompute_dropdown_hover),
-                // so the slide of "press, slide, release on what you meant" is
-                // literally the FACE arm moving — but the release does not act
-                // on wherever it ended: it DERIVES the acted-on item from its
-                // own coordinates under the claim (finish_dropdown_release),
-                // which the arm only paints. The bit is what tells that walk the
-                // held button belongs to this popup's gesture — it has a SECOND
-                // producer since
-                // 2026-08-03, the anchor press that opened the menu, whose drag
-                // into the box is the same gesture arriving from outside — and it
-                // is set OUTSIDE the transition test below, which is about
-                // damage.
-                app.dropdown.press_began_on_item = true;
-                if (pop.pressed_item != hit) {
-                    app.dropdown.pressed_item = hit;
-                    viewport.invalidate_top_strip();
-                    viewport.invalidate_rect(pop.rect);
-                }
-                return;
-            }
-            // Anywhere else inside the popup, or a modified press: close and
-            // consume, so nothing underneath acts.
-            close_dropdown();
-            return;
-        }
-    }
 
     // THE FOUR REDESIGNED BUTTON ROWS (top lanes 0..2 plus the bottom strip's
     // transport row, whose claim closes the block — the toolbar row's own
@@ -8912,11 +8955,13 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // hit IS "on the row"; the exit half above owns the band question, at the one
 // placement that can answer it for every branch.
 //
-// (The FOLDER OVERLAY's two motion branches called it too for the one day of
-// 2026-09-02, when the panel stopped at row 1's foot and left the File anchor
-// live under it. Every anchor is dead under the band since 2026-09-03 — the
-// menu row shows above it, greyed — so those branches return before this
-// tail, and toggle_dropdown's own guard would refuse the open regardless.)
+// (THE FOLDER OVERLAY'S THREE MOTION BRANCHES RETURN BEFORE THIS TAIL, which
+// is what keeps the armed hover open out of the three overlay contents. It is
+// their rank and not the anchors' faces that does it: FILE IS LIVE above the
+// band again since 2026-09-03 evening, so toggle_dropdown's guard would admit
+// it — the four dead anchors are the ones that guard refuses. The branches
+// called this tail for the one day of 2026-09-02, when the panel stopped at
+// row 1's foot.)
 void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
     if (!app.dropdown.menu_row_armed) return;
     // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the
@@ -9528,8 +9573,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     update_folder_overlay_hover(mouse_x, mouse_y);
     // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
     // the marker, and otherwise the modal buttons' hover face and the roster
-    // recompute (all-false under the veil term) run — nothing below this
-    // branch does.
+    // recompute (all-false under the veil term BUT THE LIVE FILE ANCHOR, whose
+    // face the menu row keeps above the band — 2026-09-03 evening) run —
+    // nothing below this branch does.
     if (app.render_player.active) {
         if (app.render_player.scrub.armed) {
             if (!mods.primary_button_held) {
@@ -9544,7 +9590,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // THE PICKER'S MOTION (2026-08-28): the modal buttons' hover face and the
-    // roster recompute (all-false under the veil term), nothing else — no
+    // roster recompute (all-false under the veil term but the live File
+    // anchor), nothing else — no
     // field, no drag, no scrub; the overlay's own arm and hover ran above.
     if (app.picker.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
@@ -9553,7 +9600,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // THE STATS PANEL'S MOTION (2026-09-03), the picker's shape: the modal
     // button's hover face and the roster recompute (all-false under the veil
-    // term), nothing else — the band's own arm and hover ran above.
+    // term but the live File anchor), nothing else — the band's own arm and
+    // hover ran above.
     if (app.stats_panel.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();

@@ -1476,7 +1476,8 @@ struct GuiInputHandler {
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of EVERY non-chord button — File, Edit and Settings: it closes the
+    // action of EVERY non-chord button — the five of kDropdownMenus, File,
+    // Edit, Iterations, Settings and Help (re-greped 2026-09-03): it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
     // than a rule. Its ONE refusal is the `h` history view's, and it is
@@ -1636,13 +1637,14 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled / radio refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). The three buttons
-    // outside it are row 1's File, Edit and Settings, whose action is a
+    // being a consumed nothing). The five buttons
+    // outside it are row 1's anchors — File, Edit, Iterations, Settings and
+    // Help (re-greped 2026-09-03 against kDropdownMenus) — whose action is a
     // dropdown
     // toggle — the recorded press-time exception, stated at their claim (row 1
     // had a chord button, Quit, inside it until 2026-08-13, when its act became
-    // the File menu's one item, and a THIRD anchor, Navigation, until its menu
-    // was deleted 2026-08-15).
+    // the File menu's one item, and one of the anchors was Navigation until its
+    // menu was deleted 2026-08-15).
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed
@@ -3912,8 +3914,10 @@ private:
     // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
     // above the band (architect 2026-09-03 evening — the `h` view's partition
     // extended to all three overlay contents): its press reaches the menu-row
-    // claim through press_on_live_menu_anchor, and its open menu owns the
-    // pointer from the dropdown claim as it does anywhere else. The wheel scrolls the overlay one row per detent over
+    // claim through press_on_live_menu_anchor, and its OPEN MENU then owns
+    // every press outright, the dropdown's claim ranking above this veil and
+    // above the band (so a press on a row while the menu stands dismisses the
+    // menu rather than opening the row, and arms no modal button). The wheel scrolls the overlay one row per detent over
     // the band and is consumed everywhere else; the cursor is the Arrow; the
     // tooltip dwell is the modal buttons' own. A MODIFIED PRESS IS CONSUMED
     // WITH ONE ADMISSION (R37): a SHIFT press on the modal row's two skips
@@ -3974,7 +3978,9 @@ private:
     // it the feint's inside bit), the hover walk, and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
-    // prompt gate and ABOVE the THREE mode veils (the player's, the picker's
+    // prompt gate and under the OPEN DROPDOWN'S claim (a standing menu owns
+    // every press before any band does — 2026-09-03, on_button_press), and
+    // ABOVE the THREE mode veils (the player's, the picker's
     // and the AV Sync Stats panel's), each of which admits exactly the band
     // and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.

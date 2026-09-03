@@ -1816,8 +1816,9 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's FOUR MENU ANCHORS
-// (File, Edit, Iterations and Settings — the ENUMERATOR for the third keeps
+// button the kdenlive rows carry, in painted order: row 1's FIVE MENU ANCHORS
+// (File, Edit, Iterations, Settings and Help, re-greped 2026-09-03 against
+// kDropdownMenus — the ENUMERATOR for the third keeps
 // its `Series` spelling, the 2026-08-31 rebrand being labels and prose alone)
 // plus the view bar's three, row 3's two
 // TABS, row 4's TWENTY-SEVEN
@@ -6070,11 +6071,13 @@ struct AppState {
     // was set_history_reading rather than a chord, and went with that
     // repurposing on 2026-08-18: row 3 is the A/B pair in every state, so a
     // press on a tab arms as Roster and dispatches Ctrl+Tab like any other.)
-    // (The THREE dropdown ANCHORS — File, Edit and Settings, a Navigation
-    // anchor having left 2026-08-15 and Edit having arrived 2026-08-20 — are
+    // (The FIVE dropdown ANCHORS — File, Edit, Iterations, Settings and Help,
+    // re-greped 2026-09-03 against kDropdownMenus, a Navigation anchor having
+    // left 2026-08-15 and Edit, Iterations and Help having arrived 2026-08-20,
+    // 2026-08-27 and 2026-09-03 — are
     // deliberately NOT armed: their toggle is the recorded press-time
     // exception, and the reasoning is at their press claim in on_button_press.
-    // The claim walks kDropdownMenus, so neither of those two changes touched
+    // The claim walks kDropdownMenus, so none of those changes touched
     // it or this note's membership.)
     //
     // `shift` and `ctrl` are THE PRESS-TIME MODIFIERS, carried with the arm
@@ -11029,9 +11032,12 @@ inline bool playback_launch_playable(const AppState& a,
 // term, recompute_redesign_button_hover — but that is the pointer's fact,
 // not a face state this predicate answers). THE FOLDER OVERLAY IS THE
 // EXCEPTION (architect 2026-08-28, R3: "everything else greys as in the `h`
-// view"): while the band stands — under the render player OR under the
-// picker — EVERY roster button is dead, the arm at the head of the body.
-// Both are MODES like
+// view"): while the band stands — under the render player, the picker or the
+// AV Sync Stats panel — EVERY roster button is dead BUT THE FILE ANCHOR,
+// which the menu row keeps lit above the band (architect 2026-09-03 evening;
+// the arm at the head of the body defers to menu_anchor_dead_in_mode, so the
+// other four anchors and the view bar are dead with the rest).
+// All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
 // grey is that veil's honest face rather than a second rule.
