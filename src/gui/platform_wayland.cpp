@@ -65,10 +65,8 @@
 // paints into the next wl_shm buffer, then requests the next frame callback
 // and a presentation feedback carrying that stamp, damages, attaches and
 // commits — ONE commit per painted frame. The feedback comes back with the
-// instant those pixels turned into light, and the difference is the measured
-// TRANSPORT term of the display lead the predictor is read ahead by
-// (display_lead_ns, platform_wayland.h, which publishes that term plus the
-// frame grid's half period).
+// instant those pixels turned into light, and the difference is the display
+// lead the predictor is read ahead by (display_lead_ns, platform_wayland.h).
 //
 // The two cadences (tick and paint) drift independently. Conflating them
 // by driving the tick off frame callbacks would mean that whenever the
@@ -187,29 +185,10 @@ int64_t steady_now_ns() {
 
 // The fallback display lead's period for a refresh in millihertz: 2 × the
 // period (the k = 2 argument is at display_lead_ns's declaration), at 60 Hz
-// when no output has reported a mode. This is the TRANSPORT term alone — the
-// frame grid's half period is added to both arms by half_refresh_period_ns
-// below, so neither this body nor the measured mean carries it.
+// when no output has reported a mode.
 int64_t fallback_display_lead_ns(int refresh_mhz) {
     const int64_t mhz = refresh_mhz > 0 ? refresh_mhz : 60000;
     return 2 * (1000000000LL * 1000 / mhz);
-}
-
-// THE FRAME GRID'S HALF PERIOD (architect 2026-09-02, the four-tier review's
-// R-20), added to BOTH arms of display_lead_ns. A position is painted once
-// per refresh and then held on the panel for a whole period, so a lead that
-// compensates only the transport puts the line where the sound is at the
-// instant the pixel lights and up to one period stale a moment later: the
-// sample-and-hold residue runs 0..P BEHIND, never ahead. Half a period more
-// centres it at −P/2..+P/2 — half the frames on the forgiving (ahead) side,
-// 8 ms at 60 Hz, under the JND either way — and no lead can do better than
-// centre it, the grid being the display's own quantization rather than a
-// latency. A refresh of 0 (no output has reported a mode) adds NOTHING: the
-// term is the SELECTED output's real period or it is not a measurement, and
-// the fallback's own 60 Hz guess above is a transport figure, not a grid.
-int64_t half_refresh_period_ns(int refresh_mhz) {
-    if (refresh_mhz <= 0) return 0;
-    return (1000000000LL * 1000 / refresh_mhz) / 2;
 }
 
 } // namespace
@@ -800,24 +779,20 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     // that roundtrip returns — so the two arms below really are distinguishable
     // here: an ABSENT global versus a bound one whose clock is unusable.
     // The figure printed is the one at init, the seeded output's; the lead
-    // itself follows the window's output live. It is display_lead_ns's own
-    // answer, so the number named here is the number the predictor is read
-    // ahead by — the fallback transport term AND the frame grid's half period
-    // (half_refresh_period_ns, this file's head; a 0 refresh adds no half, in
-    // which case the whole figure is the 60 Hz fallback's).
+    // itself follows the window's output live.
     if (!wp_presentation_) {
         std::fprintf(stderr,
                      "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
-                     "output's refresh period plus the frame grid's half "
-                     "period; wp_presentation absent)\n",
-                     static_cast<double>(display_lead_ns()) * 1e-6);
+                     "output's refresh period; wp_presentation absent)\n",
+                     static_cast<double>(
+                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6);
     } else if (!presentation_clock_ok_) {
         std::fprintf(stderr,
                      "warptempo_gui: Display lead: %.1f ms (fallback, 2 × the "
-                     "output's refresh period plus the frame grid's half "
-                     "period; wp_presentation clock_id %u is "
+                     "output's refresh period; wp_presentation clock_id %u is "
                      "not CLOCK_MONOTONIC)\n",
-                     static_cast<double>(display_lead_ns()) * 1e-6,
+                     static_cast<double>(
+                         fallback_display_lead_ns(output_refresh_mhz_)) * 1e-6,
                      presentation_clock_id_);
     }
     if (!pointer_constraints_ || !relative_pointer_manager_) {
@@ -1539,11 +1514,10 @@ void GuiPlatform::paint_one_frame() {
     }
 
     // THE PRE-PAINT STAMP, taken BEFORE the hook runs because the hook is
-    // where the playback predictor is sampled: the display lead's transport
-    // term is measured from this instant to the instant the frame's pixels
-    // turn into light (the feedback requested below), so it is exactly the
-    // transport interval the predictor is then read ahead by — the published
-    // lead adding the frame grid's half period to it (display_lead_ns).
+    // where the playback predictor is sampled: the display lead is measured
+    // from this instant to the instant the frame's pixels turn into light
+    // (the feedback requested below), so it is exactly the interval the
+    // predictor is then read ahead by (display_lead_ns).
     const int64_t sample_ns = steady_now_ns();
 
     // Pre-paint hook: gives the application a chance to update model
@@ -2137,11 +2111,7 @@ void GuiPlatform::on_presentation_presented(PresentationFeedback* fb,
     // THE ANNOUNCEMENT, the JACK latency line's own voice: once when the
     // window first fills, then whenever the mean has moved a millisecond
     // from the figure last announced (a window moved to the other output, a
-    // compositor under load) — never per frame. THE THRESHOLD IS THE
-    // MEASUREMENT'S: what moves is the mean, so that is what is compared and
-    // remembered, while the line names the PUBLISHED lead — the mean plus the
-    // frame grid's half period, which is what the predictor is read ahead by
-    // (display_lead_ns).
+    // compositor under load) — never per frame.
     const int64_t mean_ns = presentation_sample_sum_ / presentation_sample_count_;
     const bool full = presentation_sample_count_ == kDisplayLeadWindow;
     const bool moved =
@@ -2150,11 +2120,8 @@ void GuiPlatform::on_presentation_presented(PresentationFeedback* fb,
     if ((full && presentation_lead_announced_ns_ < 0) || moved) {
         std::fprintf(stderr,
                      "warptempo_gui: Display lead: %.1f ms (wp_presentation, "
-                     "%d-frame mean %.1f ms plus the frame grid's half "
-                     "period)\n",
-                     static_cast<double>(display_lead_ns()) * 1e-6,
-                     kDisplayLeadWindow,
-                     static_cast<double>(mean_ns) * 1e-6);
+                     "%d-frame mean)\n",
+                     static_cast<double>(mean_ns) * 1e-6, kDisplayLeadWindow);
         presentation_lead_announced_ns_ = mean_ns;
     }
 
@@ -2176,16 +2143,15 @@ void GuiPlatform::finish_presentation_feedback(PresentationFeedback* fb) {
     delete fb;
 }
 
-// THE PUBLISHED LEAD IS TWO TERMS (contract at the declaration): the
-// TRANSPORT — the measured mean of presented − sampled, or the fallback where
-// no measurement stands — plus the FRAME GRID'S HALF PERIOD, which both arms
-// take alike (half_refresh_period_ns, this file's head, owns the reason).
+// THE PUBLISHED LEAD IS THE TRANSPORT ALONE (contract at the declaration):
+// the measured mean of presented − sampled, or the fallback where no
+// measurement stands. A frame-grid term was added to both arms for one day
+// and reversed at the architect's glass — the declaration carries that record.
 int64_t GuiPlatform::display_lead_ns() const {
-    const int64_t transport_ns =
-        presentation_sample_count_ > 0
-            ? presentation_sample_sum_ / presentation_sample_count_
-            : fallback_display_lead_ns(output_refresh_mhz_);
-    return transport_ns + half_refresh_period_ns(output_refresh_mhz_);
+    if (presentation_sample_count_ > 0) {
+        return presentation_sample_sum_ / presentation_sample_count_;
+    }
+    return fallback_display_lead_ns(output_refresh_mhz_);
 }
 
 void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,

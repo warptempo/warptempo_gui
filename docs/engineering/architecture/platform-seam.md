@@ -243,29 +243,28 @@ drag coordinates floor instead of truncating.
   per frame retired with the reorder — requests a presentation feedback
   stamped with the pre-paint instant; `presented` answers with the instant
   the pixels lit, and a 30-frame moving mean of the difference (Kodi's
-  window) is the TRANSPORT term, published from the first sample; `discarded`
+  window) is the lead, published from the first sample; `discarded`
   drops the sample. The FALLBACK where the global is absent or its clock is not
   `CLOCK_MONOTONIC` (the predictor's own, so no conversion stands between
   the two stamps) is 2 × the refresh period of the window's own output
   (section C above owns which output that is), 60 Hz when none is known.
-  BOTH ARMS THEN ADD HALF THE SELECTED OUTPUT'S REFRESH PERIOD (architect
-  2026-09-02, the four-tier review's R-20 — `half_refresh_period_ns`,
-  `platform_wayland.cpp`, the term's one owner): a position is painted once
-  per refresh and HELD for a whole period, so a lead carrying the transport
-  alone leaves a sample-and-hold residue of 0..P BEHIND the sound and never
-  ahead, and half a period more centres it at −P/2..+P/2 — half the frames on
-  the forgiving side, ±8 ms at 60 Hz, under the JND either way. Centring is
-  the best any lead can do, the grid being the display's own quantization
-  rather than a latency, which is the sentence `playback_common.cpp`'s honesty
-  block now tells in place of "± half a period that no lead can remove". A
-  refresh of 0 (no output has reported a mode) adds NOTHING: the term is the
-  selected output's real period or it is not a measurement, the fallback's own
-  60 Hz guess being a transport figure and not a grid.
-  One stderr line beside the JACK latency line says the figure — THE PUBLISHED
-  LEAD, both terms together — the fallback once at init, the measured figure
-  when its window first fills and again whenever THE MEAN moves by a
-  millisecond (the threshold is the measurement's, since the mean is what
-  moves) — and ONE means one: the
+  THE FRAME GRID IS NOT A TERM, and its one-day life is the record: half the
+  selected output's refresh period was added to both arms on 2026-09-02 (the
+  four-tier review's R-20, in a term of its own that is now deleted) to CENTRE the
+  sample-and-hold residue at −P/2..+P/2 instead of the transport-only 0..P
+  behind, and the architect REVERSED IT THE NEXT DAY at his own glass
+  (2026-09-03): a two-sided residue puts the line AHEAD of the sound on half
+  the launches, up to 8 ms at 60 Hz, and he sees it — the audition's line
+  leaving "sometimes from the marker, sometimes in front of it", which reads
+  as non-determinism. A one-sided residue BEHIND is the direction perception
+  forgives least and the one he can live with, because the line then never
+  leaves ahead of the marker. The frame-aligned launch that would remove the
+  residue instead was rejected with it: it would add a VARIABLE 0..P delay to
+  the sound itself, and the audio path is untouched by any of this (press to
+  sound stays the JACK pickup wait plus the fixed device latency).
+  One stderr line beside the JACK latency line says the figure — the
+  fallback once at init, the measured mean when its window first fills and
+  again whenever it moves by a millisecond — and ONE means one: the
   `clock_id` handler prints nothing at all and keeps the announced id for the
   init line to name (it printed a second, figure-less warning for the
   bad-clock condition until 2026-09-02). The line can tell the ABSENT global
@@ -286,8 +285,7 @@ drag coordinates floor instead of truncating.
   the tablet has rather than double a compensation that platform never made,
   which is why the zero is the stronger answer and not a gap. There is no
   feedback road on the lock/unlockAndPost path either. What remains on the laptop is the DAC's own few-ms pipeline and
-  the frame grid's residue — now genuinely ± half a period, centred on zero by
-  the half-period term above rather than running a whole period behind — both
+  the frame grid's residue — 0..P behind, half a period on average — both
   recorded at `playback_publish_play` (`playback_common.cpp`).
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third

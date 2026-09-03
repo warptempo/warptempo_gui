@@ -531,9 +531,7 @@ public:
     // labwc, 13–33 px at the working zoom); drawn where the sound WILL BE when
     // the pixel lights, it reads on the sound.
     //
-    // ON THIS BACKEND IT IS TWO TERMS, THE TRANSPORT AND THE FRAME GRID.
-    //
-    // THE TRANSPORT TERM IS SELF-MEASURED through wp_presentation, the
+    // ON THIS BACKEND IT IS SELF-MEASURED through wp_presentation, the
     // compositor's presentation feedback (the globals block below): every
     // content commit carries a feedback request stamped with the instant the
     // pre-paint hook began, the compositor answers with the instant that
@@ -548,23 +546,26 @@ public:
     // and labwc has no max_render_time knob to shorten it), 60 Hz when no
     // output is known.
     //
-    // THE FRAME GRID'S HALF PERIOD IS ADDED TO BOTH ARMS (architect
-    // 2026-09-02, the four-tier review's R-20): a position is painted once per
-    // refresh and HELD for a whole period, so a lead carrying the transport
-    // alone leaves a sample-and-hold residue of 0..P BEHIND the sound — one
-    // sided, never ahead. Half the SELECTED output's period more centres it at
-    // −P/2..+P/2, half the frames on the forgiving side, 8 ms at 60 Hz and
-    // under the JND either way; a 0 refresh (no output has reported a mode)
-    // adds nothing, the term being that output's real period or no measurement
-    // at all. The body's own reason is at half_refresh_period_ns
-    // (platform_wayland.cpp). Centring is the best any lead can do here — the
-    // grid is the display's quantization, not a latency — which is the one
-    // sentence playback_common.cpp's honesty block now tells.
+    // THE FRAME GRID IS NOT A TERM HERE, and its one-day life is the record.
+    // Half the selected output's refresh period was added to both arms on
+    // 2026-09-02 (the four-tier review's R-20) to CENTRE the sample-and-hold
+    // residue: a position is painted once per refresh and HELD for a whole
+    // period, so the transport alone leaves a residue of 0..P behind the
+    // sound, and half a period more would spread it over −P/2..+P/2. The
+    // architect reversed it the next day at his own glass (2026-09-03): a
+    // two-sided residue puts the line AHEAD of the sound on half the launches,
+    // by up to 8 ms at 60 Hz, and he sees that — the audition's line leaving
+    // "sometimes from the marker, sometimes in front of it", which reads as
+    // non-determinism. ONE-SIDED BEHIND IS THE DIRECTION PERCEPTION FORGIVES
+    // LEAST AND THE ONE HE CAN LIVE WITH, because the line then never leaves
+    // ahead: it always departs from the marker. The frame-aligned launch that
+    // would remove the residue instead was rejected with it — it would add a
+    // VARIABLE 0..P delay to the sound itself. The residue's own sentence is
+    // playback_common.cpp's honesty block.
     //
     // The measured figure and the fallback are each announced
     // once on stderr beside the JACK latency line, and the mean again whenever
-    // it moves by a millisecond, so the number is seen at every launch; the
-    // line names the PUBLISHED lead, both terms together. Main
+    // it moves by a millisecond, so the number is seen at every launch. Main
     // thread only; no on-screen surface, no settings key.
     //
     // ANDROID ANSWERS A CONSTANT 0, and that is a ruling rather than a gap

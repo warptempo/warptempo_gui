@@ -438,8 +438,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // backend requests wp_presentation feedback on every content commit, stamped
 // with the pre-paint instant, and keeps a 30-frame mean of presented − stamped
 // (GuiPlatform::display_lead_ns; the fallback where the compositor offers no
-// feedback is 2 × the window's output's refresh period, and BOTH arms add
-// half that output's period for the frame grid, below). The natural-end
+// feedback is 2 × the window's output's refresh period). The natural-end
 // hold's deadline keeps the bare clock — the sound really is still in the
 // device's queue for that long — so the line reaches the window's end one
 // lead ahead of the hold's end, and lights exactly as the sound ends. AND
@@ -455,13 +454,15 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // the graph reports (the K5 Pro adds no DSP); the FRAME GRID — a position is
 // painted once per refresh and then HELD for a whole period, so the line is
 // where the sound was when its pixel lit and up to a period stale a moment
-// later, a residue no lead can REMOVE (the grid is the display's own
-// quantization, not a latency) but which the platform's lead does CENTRE:
-// half a refresh period is added to whichever transport figure it publishes,
-// so the residue runs −P/2..+P/2 rather than 0..P behind, ± 8 ms at 60 Hz
-// and half the frames on the forgiving side (architect 2026-09-02, the
-// four-tier review's R-20; the term's owner is half_refresh_period_ns,
-// platform_wayland.cpp); and the TABLET, whose predictor
+// later: a residue of 0..P BEHIND, half a period on average (8 ms at 60 Hz),
+// which no lead can remove — the grid is the display's own quantization, not
+// a latency. A CENTRING TERM WAS TRIED and reversed the next day at the
+// architect's glass (added 2026-09-02, removed 2026-09-03; the record is at
+// GuiPlatform::display_lead_ns's declaration): centring spreads the residue
+// over −P/2..+P/2, which puts the line AHEAD of the sound on half the
+// launches, and ahead is what he sees. One-sided behind is what he can live
+// with, because the line then always leaves from the marker; and the TABLET,
+// whose predictor
 // keeps the whole uncompensated audio lead by ruling — its AAudio backend
 // reports no figure (the asymmetry at that Impl), so only the seat move
 // reaches it, and its display lead is 0 by the same ruling — there the two
