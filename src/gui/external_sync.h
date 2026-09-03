@@ -1,5 +1,7 @@
 #pragma once
 
+#include "failure.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <filesystem>
@@ -80,7 +82,13 @@
 //      notification card that clips, never a full path): `<sync path's last
 //      component>/<path under it>` on the stick, the path under the
 //      project folder in the project (the one composer is `shown`,
-//      external_sync.cpp; the full path is on stderr beside it). A directory that
+//      external_sync.cpp), AND THE FULL PATH IS ON STDERR BESIDE IT — since
+//      2026-09-02 structurally, every refusal being a GuiFailure (failure.h)
+//      whose diagnostic clause carries the full path and whose display
+//      clause carries the shown one, the worker printing the first and the
+//      GUI thread carding the second; until that day both surfaces carried
+//      the one shown line and this clause was a promise the code did not
+//      keep. A directory that
 //      cannot be opened, an iterator that stops half way and a stat that is
 //      refused would each make good files on the stick look unwanted, and
 //      that is the one mistake a mirror must not make. SO THE DELETION IS TWO
@@ -263,22 +271,25 @@ struct GuiExternalSyncJob {
 // A SUCCESSFUL SYNCHRONIZATION SAYS NOTHING (architect 2026-08-30: "if it
 // succeeds, we don't necessarily need [a notice]") — the render's own
 // precedent, where a render served silently publishes silently. So `ok` true
-// carries an EMPTY `message` and raises no card; the count sentence
+// carries an EMPTY `failure` and raises no card; the count sentence
 // `Synchronized N file(s) to <path>` that stood here from 2026-08-28 is
 // deleted, not merely unraised.
 //
-// `ok` false means the act stopped where it stood and
-// `message` names the path that stopped it — the ONE thing this type still
-// says out loud, on a NORMAL notification card; WHAT IT LEFT BEHIND is the
-// head's
-// (a)(b)(c) — no deletion at all unless every copy and the whole destination
-// classification succeeded, a copy-phase failure leaving the replacements
-// completed before it standing and the failed file's previous contents whole,
-// a deletion-phase failure leaving the removals before it done and the rest
-// undone.
+// `ok` false means the act stopped where it stood and `failure` names the
+// path that stopped it — the ONE thing this type still says out loud, as the
+// TWO CLAUSES of a GuiFailure (failure.h): the worker printed the diagnostic
+// with the full path at the refusal, and the display, with the path named
+// relative to the mirror's roots, is what the GUI thread raises on a NORMAL
+// notification card. The struct rides the verdict rather than a pre-composed
+// line, so the thread that owns each surface chooses its clause. WHAT IT
+// LEFT BEHIND is the head's (a)(b)(c) — no deletion at all unless every copy
+// and the whole destination classification succeeded, a copy-phase failure
+// leaving the replacements completed before it standing and the failed
+// file's previous contents whole, a deletion-phase failure leaving the
+// removals before it done and the rest undone.
 struct GuiExternalSyncOutcome {
-    bool        ok = false;
-    std::string message;
+    bool       ok = false;
+    GuiFailure failure;
 };
 
 // THE ACT ITSELF, run on the worker thread below. Non-throwing throughout

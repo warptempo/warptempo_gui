@@ -668,4 +668,10 @@ private:
     // sentence answering an act, none a state. Kept as a thin call rather than
     // deleted so the player's refusals stay one grep.
     void status(const std::string& line);
+    // The decode road's refusals go through this one instead (2026-09-02):
+    // the same card, plus the stderr line naming the wav's FULL path beside
+    // the reader's words — the two clauses of one failure (failure.h). The
+    // contract is at the definition.
+    void refuse_decode(const std::filesystem::path& path,
+                       const std::string&           words);
 };

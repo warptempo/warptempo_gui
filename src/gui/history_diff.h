@@ -1,5 +1,6 @@
 #pragma once
 
+#include "failure.h"
 #include "phaseresetmarkers.h"
 #include "settings_file.h"
 #include "warpmarkers.h"
@@ -514,7 +515,7 @@ bool read_commit_sidecars(const std::string&         repo_root,
                           const std::string&         spelling,
                           const std::string&         base_name,
                           GuiHistoryCommitSidecars&  out,
-                          std::string&               reason);
+                          GuiFailure&                failure);
 
 // One commit's three sidecars READ AND PARSED WHOLE — what the strict gate
 // below produced when it passed. The parsed halves are what the `'` act
@@ -557,7 +558,7 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
                                  const std::string&    spelling,
                                  const std::string&    base_name,
                                  GuiHistoryCommitLoad& out,
-                                 std::string&          reason);
+                                 GuiFailure&           failure);
 
 // -- THE WALK'S GIT HALF, TAKEN OFF THE SESSION (2026-08-07) ----------------
 //
@@ -597,7 +598,7 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 struct GuiHistoryWalkHeader {
     bool        ok = false;
     bool        read_failed = false;
-    std::string unavailable_reason;
+    GuiFailure  unavailable_reason;
     std::string repo_root;
     std::string base_name;
     std::string project_directory;
@@ -624,7 +625,7 @@ struct GuiHistoryRepoRoot {
     bool        ok          = false;
     bool        read_failed = false;
     std::string path;
-    std::string reason;
+    GuiFailure  reason;
 };
 GuiHistoryRepoRoot resolve_repo_root_for_source(
     const std::string& source_audio_path);
@@ -688,7 +689,7 @@ std::string read_history_branch_tip_sha(const std::string& source_audio_path);
 // that answers.
 struct GuiHistoryScanResult {
     bool        ok = true;
-    std::string unavailable_reason;  // set iff !ok
+    GuiFailure  unavailable_reason;  // set iff !ok
     int         hidden = 0;          // the counted stderr line's number
 };
 
@@ -774,7 +775,9 @@ public:
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
     bool               available() const { return available_; }
-    const std::string& unavailable_reason() const { return unavailable_reason_; }
+    // The refusal's two clauses (GuiFailure, failure.h): init() printed the
+    // diagnostic, the entry owner cards the display.
+    const GuiFailure&  unavailable_reason() const { return unavailable_reason_; }
 
     // How many eligible commits the bound store has DELIVERED so far. It only
     // ever grows within a visit.
@@ -863,7 +866,7 @@ private:
     const std::deque<GuiHistoryCommitSidecars>& members() const;
 
     bool              available_ = false;
-    std::string       unavailable_reason_;
+    GuiFailure        unavailable_reason_;
     std::string       repo_root_;
     std::string       base_name_;
     std::string       project_directory_;

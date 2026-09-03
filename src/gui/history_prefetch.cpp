@@ -61,7 +61,7 @@ void GuiHistoryPrefetch::kick(std::string source_audio_path,
     done_    = false;
     running_ = true;
     failed_  = false;
-    failure_reason_.clear();
+    failure_reason_ = GuiFailure{};
     hidden_  = 0;
     tip_sha_.clear();
     subject_path_ = source_audio_path;

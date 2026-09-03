@@ -1,5 +1,6 @@
 #include "save_ops.h"
 
+#include "failure.h"
 #include "settings_io.h"
 
 #include <clocale>
@@ -10,22 +11,31 @@
 
 namespace {
 
-// THE SAVE'S OWN FAILURE SENTENCE, one composer for the three write arms
-// (architect 2026-09-02): a deliberate Ctrl+S that could not write is answered
-// with words rather than with a dirty dot that simply stays lit, which is what
-// the strictness ruling asks of every refusal that has a reason
-// (messaging.md). ONE CLAUSE, and the file is named THE BASENAME RULE'S WAY —
-// the bare filename, not the folder-and-file form the loaders' composer
-// produces (shown_project_path, device_config.h), because these three paths
-// are the OPEN project's own sidecars: the folder is the one the window title
-// already names, so the file alone identifies which of the three writes fell
-// over. The stderr line each arm prints keeps the FULL path for the terminal.
-void card_write_failure(GuiNotifications& notifications,
-                        const std::string& path) {
-    notifications.notify(
-        AppState::NotificationClass::Normal,
-        "Save failed: could not write '" +
-            std::filesystem::path(path).filename().string() + "'");
+// THE SAVE'S OWN FAILURE, one composer for the three write arms (architect
+// 2026-09-02; the two-clause shape the same day, the four-tier review's
+// R-11): a deliberate Ctrl+S that could not write is answered with words
+// rather than with a dirty dot that simply stays lit, which is what the
+// strictness ruling asks of every refusal that has a reason (messaging.md).
+// BOTH CLAUSES ARE COMPOSED HERE (GuiFailure, failure.h): the DIAGNOSTIC is
+// the arm's own stderr line, the tag it always printed and the FULL path
+// after it, and the DISPLAY is ONE CLAUSE naming the file THE BASENAME
+// RULE'S WAY — the bare filename, not the folder-and-file form the loaders'
+// composer produces (shown_project_path, device_config.h), because these
+// three paths are the OPEN project's own sidecars: the folder is the one the
+// window title already names, so the file alone identifies which of the
+// three writes fell over. `report` below is the one place either clause
+// reaches its surface.
+GuiFailure save_write_failure(const char* stderr_tag, const std::string& path) {
+    GuiFailure f;
+    f.diagnostic = std::string(stderr_tag) + ": " + path;
+    f.display    = "Save failed: could not write '" +
+                   std::filesystem::path(path).filename().string() + "'";
+    return f;
+}
+
+void report(GuiNotifications& notifications, const GuiFailure& f) {
+    std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+    notifications.notify(AppState::NotificationClass::Normal, f.display);
 }
 
 }  // namespace
@@ -81,16 +91,18 @@ bool GuiSaveOps::save() {
     // preserves authored sidecars instead of writing corrupted numbers.
     const char* lc = std::setlocale(LC_NUMERIC, nullptr);
     if (!lc || std::strcmp(lc, "C") != 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: Numeric locale is '%s', not 'C'; refusing to save "
-            "(sidecar numbers would be written corrupted)\n",
-            lc ? lc : "(null)");
         // A CARD TOO (architect 2026-09-02): the press is deliberate and
         // nothing else on screen would answer it — the dirty mark simply
-        // stays. The stderr line keeps the offending locale; the card is the
-        // one clause, the locale itself being no help to the user reading it.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Save refused: the numeric locale is not C");
+        // stays. The two clauses of the one failure: the stderr line keeps
+        // the offending locale, the card is the one clause, the locale
+        // itself being no help to the user reading it.
+        GuiFailure f;
+        f.diagnostic = std::string("Numeric locale is '") +
+                       (lc ? lc : "(null)") +
+                       "', not 'C'; refusing to save (sidecar numbers would "
+                       "be written corrupted)";
+        f.display    = "Save refused: the numeric locale is not C";
+        report(notifications, f);
         return false;
     }
 
@@ -112,10 +124,8 @@ bool GuiSaveOps::save() {
     // combined project file, a frozen-parser change out of scope for this tool.
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
-        std::fprintf(stderr,
-            "warptempo_gui: Save failed: %s\n",
-            app.warpmarkers_path.c_str());
-        card_write_failure(notifications, app.warpmarkers_path);
+        report(notifications,
+               save_write_failure("Save failed", app.warpmarkers_path));
         return false;
     }
 
@@ -125,10 +135,9 @@ bool GuiSaveOps::save() {
     // carry meaning.
     if (!app.phaseresetmarkers_path.empty()) {
         if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset save failed: %s\n",
-                app.phaseresetmarkers_path.c_str());
-            card_write_failure(notifications, app.phaseresetmarkers_path);
+            report(notifications,
+                   save_write_failure("phase_reset save failed",
+                                      app.phaseresetmarkers_path));
             return false;
         }
     }
@@ -147,10 +156,9 @@ bool GuiSaveOps::save() {
             app.waveform_magnification_level};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
-            std::fprintf(stderr,
-                "warptempo_gui: Settings save failed: %s\n",
-                app.settings_path.c_str());
-            card_write_failure(notifications, app.settings_path);
+            report(notifications,
+                   save_write_failure("Settings save failed",
+                                      app.settings_path));
             return false;
         }
     }

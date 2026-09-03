@@ -911,7 +911,7 @@ bool GuiInputHandler::open_history_mode_fresh() {
         // watching rather than an answer to a press.)
         notifications.notify(AppState::NotificationClass::Normal,
                              std::string(kHistoryUnavailable) + ": " +
-                                 fresh.session.unavailable_reason());
+                                 fresh.session.unavailable_reason().display);
         return false;
     }
     // THE SECOND WALK, BOUND TO THE SAME NOW SIDE (2026-08-07). It costs no git
@@ -1183,12 +1183,14 @@ void GuiInputHandler::on_history_prefetch_ready() {
     if (r.became_done && history_prefetch.run_failed()) {
         // A view closing under the user is an event he was not watching, so
         // the arrival's sentence is a notification card beside its stderr
-        // line (2026-08-29), the store's own reason appended on both.
+        // line (2026-08-29), the store's own reason appended on both — its
+        // diagnostic clause on the line, its display clause on the card
+        // (GuiFailure, failure.h).
         std::fprintf(stderr, "warptempo_gui: %s: %s\n", kHistoryUnavailable,
-                     history_prefetch.scan_failure_reason().c_str());
+                     history_prefetch.scan_failure_reason().diagnostic.c_str());
         notifications.notify(AppState::NotificationClass::Normal,
                              std::string(kHistoryUnavailable) + ": " +
-                                 history_prefetch.scan_failure_reason());
+                                 history_prefetch.scan_failure_reason().display);
         if (app.history_mode.pending_load_member)
             prompt.cancel_load_confirmation();
         finalize_active_drags();
@@ -4246,18 +4248,15 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // avoid leaving an empty folder behind.
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
-        // ONE COMPOSER FOR THE CARD, shared with the two other batch folders
-        // a render chord can fail to create (render_folder_creation_card,
-        // renders_dir.h — the basename rule is its own). The stderr line
-        // keeps the WHOLE path, which is what a terminal is for.
-        const std::string why = ec.message();
-        std::fprintf(stderr,
-            "warptempo_gui: render-iterations: Could not create "
-            "'%s': %s\n",
-            batch_folder.string().c_str(), why.c_str());
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            render_folder_creation_card(batch_folder, why));
+        // ONE COMPOSER FOR BOTH CLAUSES, shared with the two other batch
+        // folders a render chord can fail to create
+        // (render_folder_creation_failure, renders_dir.h — the basename rule
+        // is its own). The stderr line keeps the WHOLE path under this road's
+        // tag, which is what a terminal is for; the card names the folder.
+        const GuiFailure f = render_folder_creation_failure(
+            "render-iterations", batch_folder, ec);
+        std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, f.display);
         return;
     }
 
@@ -5062,12 +5061,16 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     // — an ordinary non-piece commit, a merge, a read that did not answer —
     // refuses too. Nothing is settled by a guess any more, which is the point.
     GuiHistoryCommitLoad loaded;
-    std::string          reason;
+    GuiFailure           failure;
     if (!load_commit_sidecars_strict(repo_root, sha, base_name, loaded,
-                                     reason)) {
+                                     failure)) {
+        // The two clauses of the one refusal (GuiFailure, failure.h): the
+        // line keeps every path in full, the card names the committed
+        // sidecar by its repo-relative name and a folder by its own.
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
-                     reason.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, "Load in place refused: " + reason);
+                     failure.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Load in place refused: " + failure.display);
         return false;
     }
     const SettingsFile& settings = loaded.settings;
@@ -5878,13 +5881,21 @@ void GuiInputHandler::open_project_commit(int index) {
     const std::string name =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
-    // THE FOUR REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
+    // THE FIVE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
     // in the `h` view like anywhere else — they were the status chain's
     // transient tier for one day, invisible under the view's own line — and
     // the picker STAYS OPEN on every one of them, which is the answer the
-    // user can act on: press another row, or Esc.
-    auto refuse = [&](const std::string& reason) {
-        notifications.notify(AppState::NotificationClass::Normal, reason);
+    // user can act on: press another row, or Esc. EACH IS A GuiFailure
+    // (failure.h, 2026-09-02): the card raises the display clause and the
+    // stderr line prints the diagnostic — the same words for the two state
+    // refusals and the project model's (which name folders and stems, never
+    // a path), and the FULL PATH where the dry run's clause names a file the
+    // card names by the project's folder-and-file form.
+    auto refuse = [&](const GuiFailure& failure) {
+        std::fprintf(stderr, "warptempo_gui: Open project refused: %s\n",
+                     failure.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure.display);
     };
 
     // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-29), bare `h`'s own
@@ -5897,7 +5908,7 @@ void GuiInputHandler::open_project_commit(int index) {
     // the bit falls by itself. THE PICKER STAYS OPEN, like its other two
     // refusals, so the answer is one line and another Enter.
     if (app.history_checkpoint_in_flight) {
-        refuse(kCheckpointPublishing);
+        refuse(plain_failure(kCheckpointPublishing));
         return;
     }
 
@@ -5913,7 +5924,7 @@ void GuiInputHandler::open_project_commit(int index) {
     // it falls by itself. THE PICKER STAYS OPEN, like its other three
     // refusals, so the answer is one line and another Enter.
     if (external_sync_worker.is_busy()) {
-        refuse(kSyncRunning);
+        refuse(plain_failure(kSyncRunning));
         return;
     }
 
@@ -5923,7 +5934,7 @@ void GuiInputHandler::open_project_commit(int index) {
         std::filesystem::path(app.device_config->projects_path) / name;
     auto project = resolve_project(folder);
     if (!project) {
-        refuse(project.error());
+        refuse(plain_failure(project.error()));
         return;
     }
     if (project->name == app.project_name) {
@@ -5941,8 +5952,8 @@ void GuiInputHandler::open_project_commit(int index) {
         close_picker();
         return;
     }
-    if (auto reason = source_load_dry_run(project->source)) {
-        refuse(*reason);
+    if (auto failure = source_load_dry_run(project->source)) {
+        refuse(*failure);
         return;
     }
 
@@ -6261,16 +6272,19 @@ void GuiInputHandler::synchronize_to_external_storage() {
 // A SUCCESS SAYS NOTHING (architect 2026-08-30, "if it succeeds, we don't
 // necessarily need [a notice]") — the render's own precedent, a render served
 // silently publishing silently — so only a FAILURE raises, and the worker
-// composed that sentence. It is a NORMAL card and never the critical class: a
-// failed mirror is retried by pressing the row again, while the critical
-// class is the checkpoint act's alone (the reason at the declaration). A
-// successful act carries an empty message by construction
-// (GuiExternalSyncOutcome), so this fork and that emptiness are one statement
-// and neither invents the other.
+// composed it: THIS THREAD RAISES ITS DISPLAY CLAUSE, the path named relative
+// to the mirror's roots, the worker having printed the diagnostic with the
+// full path at the refusal (GuiFailure, failure.h). It is a NORMAL card and
+// never the critical class: a failed mirror is retried by pressing the row
+// again, while the critical class is the checkpoint act's alone (the reason
+// at the declaration). A successful act carries an empty failure by
+// construction (GuiExternalSyncOutcome), so this fork and that emptiness are
+// one statement and neither invents the other.
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
     if (outcome.ok) return;
-    notifications.notify(AppState::NotificationClass::Normal, std::move(outcome.message));
+    notifications.notify(AppState::NotificationClass::Normal,
+                         std::move(outcome.failure.display));
 }
 
 // P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash

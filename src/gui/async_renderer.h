@@ -23,15 +23,18 @@
 // the worker is busy is a programming error (asserted via worker_state_).
 class GuiAsyncRenderer {
 public:
-    // THE COMPLETION CARRIES THE OUTCOME AND, ON A FAILURE, ITS REASON
+    // THE COMPLETION CARRIES THE OUTCOME AND, ON A FAILURE, THE FAILURE
     // (architect 2026-09-02): a failed archival render says its reason on a
-    // card, so do_render's own sentence has to reach the GUI thread beside the
-    // tristate. EMPTY ON SUCCESS AND ON CANCEL — the string is cleared before
-    // each dispatch and written only by a Failed return — and empty is also
-    // what a Failed return with no composed reason would give, which the card
-    // treats as "no reason to append" rather than as an anomaly.
+    // card, so do_render's own composition has to reach the GUI thread beside
+    // the tristate — AS THE STRUCT, not as a pre-composed string, so the GUI
+    // thread raises the card's clause while the worker printed the terminal's
+    // (GuiFailure, failure.h). EMPTY ON SUCCESS AND ON CANCEL — the struct is
+    // cleared before each dispatch and written only by a Failed return — and
+    // empty is also what a Failed return with no composed reason would give,
+    // which the card treats as "no reason to append" rather than as an
+    // anomaly.
     using DoneCallback =
-        std::function<void(RenderOutcome, const std::string& failure_reason)>;
+        std::function<void(RenderOutcome, const GuiFailure& failure)>;
 
     GuiAsyncRenderer();
     ~GuiAsyncRenderer();
@@ -124,13 +127,13 @@ private:
     // Completion result. Written by the worker just before signal_completion;
     // read by the GUI thread in on_completion_event.
     RenderOutcome last_outcome_ = RenderOutcome::Failed;
-    // The failure's reason, the outcome's companion and written under exactly
-    // the same discipline: cleared and then filled by the worker before
+    // The failure, the outcome's companion and written under exactly the same
+    // discipline: cleared and then filled by the worker before
     // signal_completion, read by the GUI thread once the completion event has
     // observed CompletionPending. Non-empty only for a Failed outcome
-    // (do_render writes it on no other return), so a stale reason cannot
+    // (do_render writes it on no other return), so a stale failure cannot
     // outlive its render.
-    std::string   last_failure_reason_;
+    GuiFailure    last_failure_;
 
     int completion_fd_ = -1;
 };

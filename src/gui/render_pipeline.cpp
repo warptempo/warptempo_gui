@@ -3,6 +3,7 @@
 #include "engine/engine.h"
 #include "engine/engine_geometry.h"
 #include "app_state.h"
+#include "device_config.h"   // shown_project_path, the card's name for a file
 #include "render.h"
 #include "phaseresetmarkers.h"
 #include "map_output.h"
@@ -22,6 +23,7 @@
 #include <optional>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -71,28 +73,40 @@ RenderRequest build_render_request(std::string source_audio_path,
 
 RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token,
-                        std::string* failure_reason) {
+                        GuiFailure* failure) {
     // Raw view for the pipeline body; the owning token itself travels only
     // into insert_master_floats, whose writer thread outlives this call.
     const std::atomic<bool>* cancel_flag = cancel_token.get();
 
     // THE ONE FAILURE COMPOSER (architect 2026-09-02, the failed render's
     // card). Every Failed return in this function goes through here: the
-    // reason is built once, printed on this pipeline's one `Render error:`
-    // line and handed back through the out-parameter for the GUI's card, so
-    // the terminal and the card carry the same words and neither can drift
-    // from the other. The reason is the CLAUSE alone — no category word, no
-    // trailing period — because each surface adds its own ("Render error: "
-    // here, "Render failed: " on the card, where the appended-reason rule
-    // lowercases the initial). Cleanup is the SITE's, not this helper's: what
-    // has to be unwound differs per site (a staging file, a just-published wav,
-    // the sidecars this render created), and folding it in here would run the
-    // wrong unwind for whichever site it did not fit.
-    auto fail = [failure_reason](const std::string& reason) -> RenderOutcome {
+    // failure is built once, AS TWO CLAUSES (GuiFailure, failure.h — the
+    // universal shape since the four-tier review's R-11), its diagnostic
+    // printed on this pipeline's one `Render error:` line and the whole
+    // struct handed back through the out-parameter for the GUI's card, so the
+    // terminal and the card carry two spellings of ONE composition and
+    // neither can drift from the other. The diagnostic keeps the full paths
+    // the line always carried; the display names each path THE PROJECT'S
+    // WAY — shown_project_path, the folder and the file (`render/x.wav`,
+    // `render/x.wav.tmp`, `3_bpm/01.settings`, the source under its project
+    // folder) — with the system's words after it, one clause, because the
+    // card clips at three lines and his titles alone run ~90 characters.
+    // Each clause is the reason alone — no category word, no trailing period
+    // — because each surface adds its own ("Render error: " here, "Render
+    // failed: " on the card, where the appended-reason rule lowercases the
+    // initial). `fail_words` is the no-path case, the same words on both.
+    // Cleanup is the SITE's, not this helper's: what has to be unwound
+    // differs per site (a staging file, a just-published wav, the sidecars
+    // this render created), and folding it in here would run the wrong
+    // unwind for whichever site it did not fit.
+    auto fail = [failure](GuiFailure f) -> RenderOutcome {
         std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
-                     reason.c_str());
-        if (failure_reason) *failure_reason = reason;
+                     f.diagnostic.c_str());
+        if (failure) *failure = std::move(f);
         return RenderOutcome::Failed;
+    };
+    auto fail_words = [&fail](std::string words) -> RenderOutcome {
+        return fail(plain_failure(std::move(words)));
     };
 
     // --- Read settings (typed; the live app.engine_settings is mutated
@@ -105,8 +119,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // --- Probe source audio for sample rate / total frames. ---
     auto src_info = audio_probe(req.source_audio_path);
     if (!src_info) {
-        return fail("open failed for '" + req.source_audio_path + "': " +
-                    src_info.error());
+        const std::filesystem::path src(req.source_audio_path);
+        return fail(path_failure("open failed for ", src,
+                                 shown_project_path(src),
+                                 ": " + src_info.error()));
     }
 
     const long sample_rate  = src_info->sample_rate;
@@ -123,7 +139,7 @@ RenderOutcome do_render(const RenderRequest& req,
             slice_to_phase_reset_markers(req.phase_resets), sample_rate,
             total_frames);
     if (!phase_reset_source_frames_r) {
-        return fail(phase_reset_source_frames_r.error());
+        return fail_words(phase_reset_source_frames_r.error());
     }
     const std::vector<double>& phase_reset_source_frames =
         *phase_reset_source_frames_r;
@@ -145,7 +161,7 @@ RenderOutcome do_render(const RenderRequest& req,
     auto rfull = build_warp_frame_map(
         resolved_warp_markers, scale, sample_rate, total_frames);
     if (!rfull) {
-        return fail("map build failed: " + rfull.error());
+        return fail_words("map build failed: " + rfull.error());
     }
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
         std::move(*rfull);
@@ -200,9 +216,17 @@ RenderOutcome do_render(const RenderRequest& req,
         if (std::filesystem::exists(candidate, ec) &&
             std::filesystem::equivalent(candidate,
                                         req.source_audio_path, ec)) {
-            return fail("output '" + candidate.string() + "' resolves to "
-                        "the source audio file; refusing to overwrite the "
-                        "source. Change the title setting.");
+            // The card gets the FACT in one clause (the card rules: no
+            // second sentence, no instruction after the reason — the
+            // settings editor's twin dropped its own on 2026-09-01); the
+            // stderr line keeps the refusal and the instruction it always
+            // carried, appended to the diagnostic clause alone.
+            GuiFailure f = path_failure("output ", candidate,
+                                        shown_project_path(candidate),
+                                        " resolves to the source audio file");
+            f.diagnostic += "; refusing to overwrite the source. Change the "
+                            "title setting.";
+            return fail(std::move(f));
         }
     }
 
@@ -334,7 +358,8 @@ RenderOutcome do_render(const RenderRequest& req,
             // discarded — what is wanted from it is the line and the record;
             // the unwind and the return are the callers'.
             auto note_failure = [&](const std::filesystem::path& path) {
-                fail("write failed for '" + path.string() + "'");
+                fail(path_failure("write failed for ", path,
+                                  shown_project_path(path), ""));
                 result.ok = false;
             };
             auto note_created = [&](const std::filesystem::path& path,
@@ -543,7 +568,7 @@ RenderOutcome do_render(const RenderRequest& req,
             engine_output_frames, encoded_frames, source_channels_probe,
             /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
         cleanup_all();
-        return fail(v.error());
+        return fail_words(v.error());
     }
 
     // The deliverable's folder is created here when it is missing, the batch
@@ -559,9 +584,10 @@ RenderOutcome do_render(const RenderRequest& req,
         std::error_code mkec;
         std::filesystem::create_directories(output_path.parent_path(), mkec);
         if (mkec) {
-            return fail("could not create '" +
-                        output_path.parent_path().string() + "': " +
-                        mkec.message());
+            const std::filesystem::path folder = output_path.parent_path();
+            return fail(path_failure("could not create ", folder,
+                                     shown_project_path(folder),
+                                     ": " + mkec.message()));
         }
     }
 
@@ -836,7 +862,7 @@ RenderOutcome do_render(const RenderRequest& req,
             cleanup_all();
             return (r == EngineResult::Cancelled)
                 ? RenderOutcome::Cancelled
-                : fail("engine failed");
+                : fail_words("engine failed");
         };
 
         const EngineResult er = run_warptempo_engine(ep, cancel_flag);
@@ -859,7 +885,28 @@ RenderOutcome do_render(const RenderRequest& req,
             cancel_flag);
         if (!fin) {
             cleanup_all();
-            return fail(fin.error());
+            // THE ENCODE'S SENTENCE IS THE FROZEN PREPOST'S (finish_render,
+            // trimmer.cpp): on the disk route it bundles the staging path
+            // and the writer's words into one string — "Could not open/
+            // write/close output '<full path>': <words>" — and pulling the
+            // words back out of it would be parsing the composed English,
+            // which the two-clause rule forbids. So the diagnostic is that
+            // sentence verbatim (the stderr line unchanged), and the display
+            // is composed here from what THIS site holds, the staging path,
+            // naming the file and the act without the writer's words. THE
+            // SYSTEM'S WORDS ARE MISSING FROM THIS ONE CARD until the frozen
+            // producer hands them over apart from the path (a granted touch
+            // the architect has not been asked for; recorded 2026-09-02). The
+            // buffer route passes no path and its refusals are shape
+            // breaches with none in them — the same words on both surfaces.
+            if (req.output_buffer) return fail_words(fin.error());
+            GuiFailure f;
+            f.diagnostic = fin.error();
+            f.display    = "could not write '" +
+                           shown_project_path(
+                               std::filesystem::path(staging_output_path)) +
+                           "'";
+            return fail(std::move(f));
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
@@ -901,11 +948,14 @@ RenderOutcome do_render(const RenderRequest& req,
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (ec) {
-                const std::string reason =
-                    "rename failed for '" + staging_output_path + "' -> '" +
-                    final_output_path + "': " + ec.message();
+                const std::filesystem::path staging(staging_output_path);
+                const std::filesystem::path final_path(final_output_path);
+                GuiFailure f = two_path_failure(
+                    "rename failed for ", staging,
+                    shown_project_path(staging), " -> ", final_path,
+                    shown_project_path(final_path), ": " + ec.message());
                 cleanup_all();
-                return fail(reason);
+                return fail(std::move(f));
             }
             // Populate the render cache with the canonical bytes that were
             // just published. The insert races nothing: the rename above

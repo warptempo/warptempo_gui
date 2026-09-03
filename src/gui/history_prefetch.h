@@ -141,7 +141,7 @@ public:
     // run it bound to failed, and GuiHistoryDiff::walk_finished_empty, which
     // answers false so the head delta keeps its conservative greyed face.
     bool               run_failed() const { return failed_; }
-    const std::string& scan_failure_reason() const { return failure_reason_; }
+    const GuiFailure&  scan_failure_reason() const { return failure_reason_; }
 
     // A run is in flight for the current generation (kicked, no DONE drained
     // yet). It is what makes the staleness question answerable before the
@@ -202,7 +202,7 @@ private:
     bool                                 done_    = false;
     bool                                 running_ = false;
     bool                                 failed_  = false;
-    std::string                          failure_reason_;
+    GuiFailure                           failure_reason_;
     int                                  hidden_  = 0;
     std::string                          tip_sha_;
     std::string                          subject_path_;

@@ -643,7 +643,7 @@ void GuiTargetRender::dispatch_render_now() {
     // card is the one fixed sentence `Target render failed`, so this arm reads
     // the outcome alone.
     async_renderer.dispatch(std::move(req),
-        [this](RenderOutcome o, const std::string&) { on_render_done(o); });
+        [this](RenderOutcome o, const GuiFailure&) { on_render_done(o); });
 }
 
 void GuiTargetRender::on_render_done(RenderOutcome outcome) {

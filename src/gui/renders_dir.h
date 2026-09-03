@@ -2,9 +2,11 @@
 
 #include "app_state.h"
 #include "engine_settings.h"
+#include "failure.h"
 
 #include <filesystem>
 #include <string>
+#include <system_error>
 #include <vector>
 
 // THE BATCH FOLDER (architect 2026-08-27), and this file is the one home of
@@ -40,20 +42,31 @@ inline constexpr const char* kBatchFolderName = "tmp";
 // mirrors, and the load in place's tail trashes.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
-// THE CARD'S SENTENCE WHEN A BATCH FOLDER CANNOT BE MADE (architect
-// 2026-08-30). THREE dispatchers create one under the root above — the
-// iteration sweep, the BPM sweep and the miscellaneous cell's allocator —
-// and each already prints its own tagged stderr line with the WHOLE path,
-// which is what a terminal is for. This composes the other half: the sentence
-// on screen, once, so the three cannot drift. A PATH IN A SENTENCE IS ITS
-// BASENAME (messaging.md), which here is the folder the render would have
-// gone into — `3_iterations`, `2_miscellaneous` — the only part of it the
-// user authored. SINGLE-QUOTED, the product's one quoting form on a card
-// (messaging.md's card section); it wore backticks until 2026-09-01.
-inline std::string render_folder_creation_card(
-        const std::filesystem::path& folder, const std::string& why) {
-    return "Could not create the render folder '" +
-           folder.filename().string() + "': " + why;
+// THE FAILURE WHEN A BATCH FOLDER CANNOT BE MADE (architect 2026-08-30; the
+// two-clause shape 2026-09-02, the four-tier review's R-11). THREE
+// dispatchers create one under the root above — the iteration sweep, the BPM
+// sweep and the miscellaneous cell's allocator — and each used to print its
+// own tagged stderr line beside this file's card sentence. This composes BOTH
+// halves once, so the three cannot drift on either surface (GuiFailure,
+// failure.h): the diagnostic is the tagged stderr line with the WHOLE path
+// (`render-bpm: Could not create '/…/tmp/3_bpm': Permission denied`, the text
+// each site printed before, now printed from here), and the display is the
+// card's. A PATH IN A SENTENCE IS ITS BASENAME (messaging.md), which on the
+// card is the folder the render would have gone into — `3_iterations`,
+// `2_miscellaneous` — the only part of it the user authored. SINGLE-QUOTED,
+// the product's one quoting form on a card (messaging.md's card section); it
+// wore backticks until 2026-09-01. `tag` is the road's own stderr tag, the
+// one thing the three lines differ by.
+inline GuiFailure render_folder_creation_failure(
+        const char*                  tag,
+        const std::filesystem::path& folder,
+        const std::error_code&       ec) {
+    GuiFailure f;
+    f.diagnostic = std::string(tag) + ": Could not create '" +
+                   folder.string() + "': " + ec.message();
+    f.display    = "Could not create the render folder '" +
+                   folder.filename().string() + "': " + ec.message();
+    return f;
 }
 
 // THE DELIVERABLE FOLDER'S PRUNE (architect 2026-08-29: "player should only

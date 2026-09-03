@@ -1,5 +1,6 @@
 #include "render_player.h"
 
+#include "failure.h"                // GuiFailure (the decode refusal's shape)
 #include "folder_overlay.h"
 #include "input_handler.h"          // the ring clear's one owner
                                     // (clear_modal_dialog_key_press)
@@ -9,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -29,6 +31,22 @@ void GuiRenderPlayer::damage_row() {
 
 void GuiRenderPlayer::status(const std::string& line) {
     notifications.notify(AppState::NotificationClass::Normal, line);
+}
+
+// THE DECODE'S REFUSAL, TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the
+// four-tier review's R-11): the card keeps saying the wav reader's own words
+// alone, as it always did — the subject is the highlighted row on screen, so
+// the sentence needs no name (the basename rule's own reasoning,
+// messaging.md) — and the stderr line, new with the shape, names the FULL
+// path beside those words, which is what a terminal is for. Composed here
+// from the path and the words, never by parsing either.
+void GuiRenderPlayer::refuse_decode(const std::filesystem::path& path,
+                                    const std::string&           words) {
+    GuiFailure f;
+    f.diagnostic = "Cannot play '" + path.string() + "': " + words;
+    f.display    = words;
+    std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+    status(f.display);
 }
 
 // -- The folders ----------------------------------------------------------------
@@ -412,24 +430,25 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // legitimate item — and needs only that what it binds fits the device.
     auto info = wav_probe(path.string());
     if (!info) {
-        status(info.error());
+        refuse_decode(path, info.error());
         return false;
     }
     if (info->channels != audio.channels() ||
         info->sample_rate != audio.sample_rate()) {
-        status("This wav does not have the source's sample rate and channel "
-               "count");
+        refuse_decode(path,
+                      "This wav does not have the source's sample rate and "
+                      "channel count");
         return false;
     }
     if (auto n = checked_audio_sample_count(info->frames, info->channels);
         !n) {
-        status(n.error());
+        refuse_decode(path, n.error());
         return false;
     }
     WavInfo read_info;
     auto samples = wav_read_full(path.string(), &read_info);
     if (!samples) {
-        status(samples.error());
+        refuse_decode(path, samples.error());
         return false;
     }
     // THE DECODED BUFFER'S OWN SHAPE, in the probe's words: read_info is the
@@ -441,8 +460,9 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // construction, which is what the frame count below divides by.
     if (read_info.channels != audio.channels() ||
         read_info.sample_rate != audio.sample_rate()) {
-        status("This wav does not have the source's sample rate and channel "
-               "count");
+        refuse_decode(path,
+                      "This wav does not have the source's sample rate and "
+                      "channel count");
         return false;
     }
     const int64_t frames =
@@ -451,7 +471,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
                                    static_cast<size_t>(read_info.channels))
             : 0;
     if (frames <= 0) {
-        status("This wav holds no samples");
+        refuse_decode(path, "This wav holds no samples");
         return false;
     }
 

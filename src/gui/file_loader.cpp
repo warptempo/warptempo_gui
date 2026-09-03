@@ -85,30 +85,35 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // source load — device_config.h.)
 }
 
-std::optional<std::string> source_load_dry_run(
+std::optional<GuiFailure> source_load_dry_run(
         const std::filesystem::path& source) {
-    // EVERY REASON BELOW IS A NOTIFICATION CARD'S ONE LINE — the Open project
-    // picker's third refusal — so every path in one is named by the basename
-    // rule's composer (shown_project_path, device_config.h: the project folder
-    // and the file, never the projects path). The full spelling stays in
-    // `path`, which is what the probe and the collision check are ASKED of.
+    // EVERY REASON BELOW IS TWO CLAUSES (GuiFailure, failure.h — the
+    // universal shape since 2026-09-02): the display is a NOTIFICATION
+    // CARD'S ONE LINE — the Open project picker's third refusal — so every
+    // path in it is named by the basename rule's composer
+    // (shown_project_path, device_config.h: the project folder and the file,
+    // never the projects path), while the diagnostic names the full path for
+    // the stderr line the picker prints. A reason with no path in it is the
+    // same words on both. The full spelling stays in `path`, which is what
+    // the probe and the collision check are ASKED of.
     const std::string path = source.string();
     auto info = audio_probe(path);
     if (!info) {
-        return "Source open failed for '" + shown_project_path(source) +
-               "': " + info.error();
+        return path_failure("Source open failed for ", source,
+                            shown_project_path(source), ": " + info.error());
     }
     if (info->sample_rate < 44100) {
-        return "Sample rate " + std::to_string(info->sample_rate) +
-               " is below the 44100 floor";
+        return plain_failure("Sample rate " +
+                             std::to_string(info->sample_rate) +
+                             " is below the 44100 floor");
     }
     // A PROPER SENTENCE (architect 2026-09-01, the capitalization sweep): this
     // read "<N> channels (stereo sources only)", which opened a card with a
     // digit and misagreed in number at one channel. Its sample-rate sibling
     // above already had the shape.
     if (info->channels != 2) {
-        return "The source is not stereo (" +
-               std::to_string(info->channels) + " channels)";
+        return plain_failure("The source is not stereo (" +
+                             std::to_string(info->channels) + " channels)");
     }
     // THE DECODER'S ALLOCATION ARM, ASKED OF THE PROBED SHAPE. The decode
     // itself is deliberately not run here, but the predicate it would refuse
@@ -120,8 +125,9 @@ std::optional<std::string> source_load_dry_run(
     if (auto samples = checked_audio_sample_count(info->frames,
                                                   info->channels);
         !samples) {
-        return "Source open failed for '" + shown_project_path(source) +
-               "': " + samples.error();
+        return path_failure("Source open failed for ", source,
+                            shown_project_path(source),
+                            ": " + samples.error());
     }
 
     std::filesystem::path parent = source.parent_path();
@@ -146,16 +152,18 @@ std::optional<std::string> source_load_dry_run(
     if (!wm_here) return wm_here.error();
     if (*wm_here) {
         if (auto r = warp.load(wm_path.string()); !r) {
-            return "Invalid warp markers in '" + shown_project_path(wm_path) +
-                   "': " + r.error();
+            return path_failure("Invalid warp markers in ", wm_path,
+                                shown_project_path(wm_path),
+                                ": " + r.error());
         }
     }
     auto tm_here = sidecar_present(tm_path);
     if (!tm_here) return tm_here.error();
     if (*tm_here) {
         if (auto r = phase_resets.load(tm_path.string()); !r) {
-            return "Invalid phase reset markers in '" +
-                   shown_project_path(tm_path) + "': " + r.error();
+            return path_failure("Invalid phase reset markers in ", tm_path,
+                                shown_project_path(tm_path),
+                                ": " + r.error());
         }
     }
     auto set_here = sidecar_present(set_path);
@@ -163,14 +171,16 @@ std::optional<std::string> source_load_dry_run(
     if (*set_here) {
         auto sf = read_settings_file(set_path.string());
         if (!sf) {
-            return "Invalid settings in '" + shown_project_path(set_path) +
-                   "': " + sf.error();
+            return path_failure("Invalid settings in ", set_path,
+                                shown_project_path(set_path),
+                                ": " + sf.error());
         }
         if (auto collision = render_output_source_collision(sf->engine, path)) {
-            return "Settings in '" + shown_project_path(set_path) +
-                   "' would make the render output '" +
-                   shown_project_path(*collision) +
-                   "' overwrite the source audio file";
+            return two_path_failure(
+                "Settings in ", set_path, shown_project_path(set_path),
+                " would make the render output ", *collision,
+                shown_project_path(*collision),
+                " overwrite the source audio file");
         }
         tab_a_trim = sf->tab_a.trim;
         tab_b_trim = sf->tab_b.trim;
@@ -185,7 +195,7 @@ std::optional<std::string> source_load_dry_run(
             slice_to_warp_markers(warp.markers()),
             slice_to_phase_reset_markers(phase_resets.markers()),
             tab_a_trim, tab_b_trim, info->frames, info->sample_rate)) {
-        return *defect;
+        return plain_failure(std::move(*defect));
     }
     return std::nullopt;
 }

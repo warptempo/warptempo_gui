@@ -214,16 +214,14 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
         // TWO roads allocate a cell — the Ctrl+Alt+Shift+R arm and the
         // worker-idle pump's late binding — and both refuse for exactly this
         // reason and add none of their own, so one card here is one card per
-        // press on either. The sentence is the three dispatchers' one
-        // composer (render_folder_creation_card, renders_dir.h); the stderr
-        // line keeps the whole path and its tag.
-        const std::string why = ec.message();
-        std::fprintf(stderr,
-            "warptempo_gui: render-miscellaneous: Could not create "
-            "'%s': %s\n",
-            target_folder.string().c_str(), why.c_str());
-        notifications.notify(AppState::NotificationClass::Normal,
-                             render_folder_creation_card(target_folder, why));
+        // press on either. Both clauses are the three dispatchers' one
+        // composer's (render_folder_creation_failure, renders_dir.h): the
+        // stderr line keeps the whole path under this road's tag, the card
+        // names the folder.
+        const GuiFailure f = render_folder_creation_failure(
+            "render-miscellaneous", target_folder, ec);
+        std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, f.display);
         return false;
     }
 
@@ -471,7 +469,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
         [this, publishes_deliverable, deliverable_wav](
-                RenderOutcome o, const std::string& failure_reason) {
+                RenderOutcome o, const GuiFailure& failure) {
             const bool success = (o == RenderOutcome::Success);
             if (o == RenderOutcome::Cancelled) {
                 std::fprintf(stderr, "warptempo_gui: Render cancelled\n");
@@ -552,20 +550,24 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // the user was not watching finishing badly is an EVENT
                 // (messaging.md), and until now a failed archival render
                 // cleared the state cell to the same blank a rung-served
-                // success shows. The reason is do_render's own sentence,
-                // appended under the appended-reason rule — lowercased initial
-                // through the one composer, the system's words left as they
-                // arrive. A Failed return with no composed reason (there is no
-                // such site today) says the bare sentence rather than a
-                // dangling colon. BOTH ARMS CARD: the deliverable's failure and
-                // the miscellaneous cell's alike, each an explicit command of
-                // his that produced nothing.
+                // success shows. The reason is do_render's own composition,
+                // ITS DISPLAY CLAUSE (GuiFailure, failure.h — the worker
+                // printed the diagnostic with the full paths on its `Render
+                // error:` line; this thread raises the clause whose paths are
+                // named the project's way, so the card no longer ends
+                // mid-path on his titles), appended under the appended-reason
+                // rule — lowercased initial through the one composer, the
+                // system's words left as they arrive. A Failed return with no
+                // composed reason (there is no such site today) says the bare
+                // sentence rather than a dangling colon. BOTH ARMS CARD: the
+                // deliverable's failure and the miscellaneous cell's alike,
+                // each an explicit command of his that produced nothing.
                 notifications.notify(
                     AppState::NotificationClass::Normal,
-                    failure_reason.empty()
+                    failure.display.empty()
                         ? std::string("Render failed")
                         : "Render failed: " +
-                              lowercase_initial(failure_reason));
+                              lowercase_initial(failure.display));
             }
             // On success, re-establish a cold/stale target buffer (see
             // maybe_reestablish_target_buffer for the full rationale).
@@ -739,7 +741,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     const std::string cell_basename = req.batch_basename;
     async_renderer.dispatch(std::move(req),
         [this, cell_folder, cell_basename](RenderOutcome o,
-                                           const std::string&) {
+                                           const GuiFailure&) {
             on_batch_entry_complete(o, cell_folder, cell_basename);
         });
 }
@@ -1004,15 +1006,12 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
-        // The iteration sweep's own arm, in the same shared sentence: the
+        // The iteration sweep's own arm, in the same shared composition: the
         // two sweeps fail the same way and must not answer differently.
-        const std::string why = ec.message();
-        std::fprintf(stderr,
-            "warptempo_gui: render-bpm: Could not create "
-            "'%s': %s\n",
-            batch_folder.string().c_str(), why.c_str());
-        notifications.notify(AppState::NotificationClass::Normal,
-                             render_folder_creation_card(batch_folder, why));
+        const GuiFailure f =
+            render_folder_creation_failure("render-bpm", batch_folder, ec);
+        std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, f.display);
         return false;
     }
 

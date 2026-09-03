@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
+#include "failure.h"
 #include "render_cache.h"
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
@@ -16,8 +17,8 @@
 //   - Success:   pipeline ran to completion; final output exists on disk.
 //   - Failed:    early-return error path (warp-frame-map build, engine/render,
 //                output write/publish, or rename); diagnostics already on
-//                stderr, and the same sentence handed back through
-//                do_render's `failure_reason` out-parameter for the card.
+//                stderr, and the failure's two clauses handed back through
+//                do_render's `failure` out-parameter for the card.
 //   - Cancelled: the cancel token was observed mid-pipeline; partial output
 //                cleaned up by cleanup_all; no final file on disk.
 enum class RenderOutcome { Success, Failed, Cancelled };
@@ -201,22 +202,28 @@ struct RenderRequest {
 // cache writer thread holds one). The queue walker uses the outcome to count
 // successes and to detect mid-render cancellation.
 //
-// THE FAILURE'S REASON TRAVELS WITH THE OUTCOME (architect 2026-09-02): a
-// failed archival render says its reason on a notification card, so the
-// sentence the stderr line carries must reach the GUI thread as well. Every
-// Failed return composes its reason ONCE, through do_render's own `fail`
-// helper, which prints the `Render error:` line and stores the same string
-// here — one composition, so the terminal and the card cannot disagree.
+// THE FAILURE TRAVELS WITH THE OUTCOME (architect 2026-09-02): a failed
+// archival render says its reason on a notification card, so the failure has
+// to reach the GUI thread beside the tristate. Every Failed return composes it
+// ONCE, through do_render's own `fail` helper, as the TWO CLAUSES of a
+// GuiFailure (failure.h): the helper prints the `Render error:` line from the
+// DIAGNOSTIC clause — full paths, every word, byte-identical to the line the
+// pipeline always printed — and stores the whole struct here, whose DISPLAY
+// clause is the card's: the same fact with each path named the basename
+// rule's way (shown_project_path, the project's folder-and-file form) and the
+// system's words after it, one clause. Both are built at the failure point
+// from the path and the error, never by parsing one into the other, so the
+// terminal and the card cannot disagree about which failure it was.
 // Nullable and OPTIONAL: a caller that wants no reason passes nothing (the
 // pointer is written only on a Failed return, and never on Success or
-// Cancelled, so the string a caller hands in keeps whatever it held on those
+// Cancelled, so the struct a caller hands in keeps whatever it held on those
 // two outcomes — GuiAsyncRenderer clears it per dispatch for that reason).
-// The card's own wording is the caller's: this is the reason clause alone,
+// The card's own wording is the caller's: each clause is the reason alone,
 // with no leading category word and no trailing period.
 RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token =
                             nullptr,
-                        std::string* failure_reason = nullptr);
+                        GuiFailure* failure = nullptr);
 
 // Output-path composition (render_output_directory / render_output_stem /
 // compose_render_output_path) lives parser-side in render_output_naming.h so

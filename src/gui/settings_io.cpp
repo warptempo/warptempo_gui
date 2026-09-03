@@ -232,20 +232,24 @@ bool atomic_write_string_to_path(const std::string& path,
     return true;
 }
 
-std::expected<bool, std::string> sidecar_present(
+std::expected<bool, GuiFailure> sidecar_present(
         const std::filesystem::path& p) {
     std::error_code ec;
     const bool here = std::filesystem::exists(p, ec);
     if (ec) {
-        // THE BASENAME RULE (messaging.md): this sentence is one of the Open
-        // project picker's card lines by way of source_load_dry_run, so it
-        // names the project folder and the file rather than the projects path
-        // (shown_project_path, device_config.h). ONE SENTENCE, BOTH ROADS —
-        // create_if_missing prints the same words to stderr, where the folder
-        // name is diagnosis enough: the projects path is the device config's
-        // one setting, the same for every project on the machine.
-        return std::unexpected("Cannot read '" + shown_project_path(p) +
-                               "': " + ec.message());
+        // THE TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the four-tier
+        // review's R-11): the display is one of the Open project picker's
+        // card lines by way of source_load_dry_run, so it names the project
+        // folder and the file rather than the projects path
+        // (shown_project_path, device_config.h, the basename rule); the
+        // diagnostic names the full path, and it is what both stderr roads
+        // print — the picker's line and create_if_missing's below. (Until
+        // that day one shown sentence served both surfaces, the folder name
+        // being read as diagnosis enough; the universal rule puts the full
+        // path on the terminal.)
+        return std::unexpected(path_failure("Cannot read ", p,
+                                            shown_project_path(p),
+                                            ": " + ec.message()));
     }
     return here;
 }
@@ -258,7 +262,8 @@ bool create_if_missing(const std::filesystem::path& p,
         // there nor that it is not; writing a template over an unreadable name
         // is the one thing that could destroy something. Say so and write
         // nothing — the strict reader that follows fails on the same name.
-        std::fprintf(stderr, "warptempo_gui: %s\n", here.error().c_str());
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     here.error().diagnostic.c_str());
         return false;
     }
     if (*here) return true;

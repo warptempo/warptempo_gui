@@ -111,11 +111,13 @@ struct GuiFileLoader {
 // window, a target-view restore that will not build forces source view
 // silently, and a failed playback init only disables playback.
 //
-// EVERY REASON IT RETURNS IS A NOTIFICATION CARD'S ONE LINE (the picker's
-// third refusal), so a path in one names THE PROJECT FOLDER AND THE FILE and
-// never the projects path — shown_project_path, device_config.h, the basename
-// rule's one composer (messaging.md).
-std::optional<std::string> source_load_dry_run(
+// EVERY REASON IT RETURNS IS TWO CLAUSES (GuiFailure, failure.h): the
+// display is a NOTIFICATION CARD'S ONE LINE (the picker's third refusal), so
+// a path in it names THE PROJECT FOLDER AND THE FILE and never the projects
+// path — shown_project_path, device_config.h, the basename rule's one
+// composer (messaging.md) — and the diagnostic, which the picker prints on
+// stderr, names the full path.
+std::optional<GuiFailure> source_load_dry_run(
     const std::filesystem::path& source);
 
 // Apply a parsed settings file's engine block and the scalar session prefs

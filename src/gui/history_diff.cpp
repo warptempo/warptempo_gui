@@ -1,6 +1,7 @@
 #include "history_diff.h"
 
 #include "app_state.h"
+#include "device_config.h"   // shown_project_path (the card's name for a file)
 #include "frame_format.h"
 #include "history_prefetch.h"
 #include "marker_measure.h"
@@ -1162,6 +1163,17 @@ std::string normalize_repo_url(const std::string& raw) {
     return s;
 }
 
+// HOW THE CLONE IS NAMED ON A CARD: by its folder name — the one part of its
+// canonical absolute path that is not the machine's layout, which the
+// basename rule keeps off a card (messaging.md; the full path is the
+// diagnostic clause's). A root with no leaf (a filesystem root, unreachable
+// from any real clone) falls back to its own spelling rather than to nothing.
+std::string clone_name(const std::string& repo_root) {
+    const std::string leaf =
+        std::filesystem::path(repo_root).filename().string();
+    return leaf.empty() ? repo_root : leaf;
+}
+
 // IS THIS CLONE THE CONFIGURED PROJECTS HOME — asked of the clone's FETCH url
 // and of EVERY EFFECTIVE PUSH url, both normalized against the setting. False
 // with `reason` set names the first disagreement in the user's own spellings.
@@ -1207,35 +1219,45 @@ std::string normalize_repo_url(const std::string& raw) {
 // start a second sentence — the rule is stated once in messaging.md's card
 // section, over the product's one statement of the text rules at
 // paint_handler.cpp's menu-row block. They were capitalized until 2026-09-01.
+// AND EACH IS TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the four-tier
+// review's R-11, the universal shape): the clone's FULL path on the
+// diagnostic for stderr, its folder name on the display for the card
+// (clone_name below), the setting's own spelling and the remote's URL on
+// both — those are not paths on this disk.
 bool clone_is_projects_home(const std::string& repo_root,
                             const std::string& projects_repo,
-                            std::string&       reason,
+                            GuiFailure&        reason,
                             std::string*       destination = nullptr) {
-    reason.clear();
+    reason = GuiFailure{};
     if (destination != nullptr) destination->clear();
     const std::string setting_norm = normalize_repo_url(projects_repo);
     if (setting_norm.empty()) {
-        reason = "the projects_repo setting is empty";
+        reason = plain_failure("the projects_repo setting is empty");
         return false;
     }
+    const std::filesystem::path root(repo_root);
+    const std::string shown_root = clone_name(repo_root);
 
     std::string remote_raw;
     if (!git_output(repo_root, {"remote", "get-url", "origin"}, remote_raw)) {
-        reason = "the clone at " + repo_root + " has no 'origin' remote";
+        reason = path_failure("the clone at ", root, shown_root,
+                              " has no 'origin' remote");
         return false;
     }
     if (normalize_repo_url(remote_raw) != setting_norm) {
-        reason = "the projects_repo setting names '" + projects_repo +
-                 "' but the clone at " + repo_root + " has origin '" +
-                 trim_trailing_ws(remote_raw) + "'";
+        reason = path_failure("the projects_repo setting names '" +
+                                  projects_repo + "' but the clone at ",
+                              root, shown_root,
+                              " has origin '" + trim_trailing_ws(remote_raw) +
+                                  "'");
         return false;
     }
 
     std::string push_raw;
     if (!git_output(repo_root, {"remote", "get-url", "--push", "--all", "origin"},
                     push_raw)) {
-        reason = "the clone at " + repo_root +
-                 " states no push URL for 'origin'";
+        reason = path_failure("the clone at ", root, shown_root,
+                              " states no push URL for 'origin'");
         return false;
     }
     std::string first_push_url;
@@ -1243,16 +1265,17 @@ bool clone_is_projects_home(const std::string& repo_root,
         const std::string one = trim_trailing_ws(line);
         if (one.empty()) continue;
         if (normalize_repo_url(one) != setting_norm) {
-            reason = "the projects_repo setting names '" + projects_repo +
-                     "' but the clone at " + repo_root +
-                     " pushes 'origin' to '" + one + "'";
+            reason = path_failure("the projects_repo setting names '" +
+                                      projects_repo + "' but the clone at ",
+                                  root, shown_root,
+                                  " pushes 'origin' to '" + one + "'");
             return false;
         }
         if (first_push_url.empty()) first_push_url = one;
     }
     if (first_push_url.empty()) {
-        reason = "the clone at " + repo_root +
-                 " states no usable push URL for 'origin'";
+        reason = path_failure("the clone at ", root, shown_root,
+                              " states no usable push URL for 'origin'");
         return false;
     }
     if (destination != nullptr) *destination = first_push_url;
@@ -1596,25 +1619,26 @@ bool read_commit_sidecars(const std::string&        repo_root,
                           const std::string&        spelling,
                           const std::string&        base_name,
                           GuiHistoryCommitSidecars& out,
-                          std::string&              reason) {
-    out    = GuiHistoryCommitSidecars{};
-    reason.clear();
+                          GuiFailure&               failure) {
+    out     = GuiHistoryCommitSidecars{};
+    failure = GuiFailure{};
+    // EVERY REASON HERE IS TWO CLAUSES (GuiFailure, failure.h — 2026-09-02):
+    // the committed sidecar paths are REPO-RELATIVE (`projects/<piece>/x.
+    // settings` is the blob's whole name, there is no fuller spelling of it)
+    // and read alike on both surfaces; the one path on this disk, the clone
+    // root, is named in full on the diagnostic and by its folder name on the
+    // display.
+    auto refuse = [&failure](std::string words) {
+        failure = plain_failure(std::move(words));
+        return false;
+    };
 
     // AN EMPTY ROOT WOULD MEAN THE WORKING DIRECTORY to `git -C`, which is a
     // silently different repository — so it refuses here with the other two
     // missing inputs rather than being handed to a child.
-    if (repo_root.empty()) {
-        reason = "the source's clone is not known";
-        return false;
-    }
-    if (spelling.empty()) {
-        reason = "no commit was named";
-        return false;
-    }
-    if (base_name.empty()) {
-        reason = "the source has no sidecar base name";
-        return false;
-    }
+    if (repo_root.empty()) return refuse("the source's clone is not known");
+    if (spelling.empty())  return refuse("no commit was named");
+    if (base_name.empty()) return refuse("the source has no sidecar base name");
 
     // `--verify` makes a non-resolving spelling an error rather than an echo of
     // the argument, and `^{commit}` peels whatever resolved to a commit — a tag
@@ -1622,7 +1646,9 @@ bool read_commit_sidecars(const std::string&        repo_root,
     std::string raw;
     if (!git_output(repo_root, {"rev-parse", "--verify", spelling + "^{commit}"},
                     raw)) {
-        reason = "'" + spelling + "' does not name a commit in " + repo_root;
+        failure = path_failure("'" + spelling + "' does not name a commit in ",
+                               std::filesystem::path(repo_root),
+                               clone_name(repo_root), "");
         return false;
     }
     const std::string sha = trim_trailing_ws(raw);
@@ -1630,8 +1656,7 @@ bool read_commit_sidecars(const std::string&        repo_root,
     // yields exactly one full object name, so anything else means the assumption
     // broke rather than that the user typed something odd.
     if (!is_hex40(sha)) {
-        reason = "'" + spelling + "' did not resolve to a single commit";
-        return false;
+        return refuse("'" + spelling + "' did not resolve to a single commit");
     }
     out.sha = sha;
 
@@ -1640,15 +1665,13 @@ bool read_commit_sidecars(const std::string&        repo_root,
     const GuiHistoryCommitPaths paths =
         resolve_commit_paths(repo_root, sha, base_name);
     if (paths.no_touch_evidence) {
-        reason = "commit " + short_sha(sha) + " does not touch this piece's "
-                 "sidecars";
-        return false;
+        return refuse("commit " + short_sha(sha) +
+                      " does not touch this piece's sidecars");
     }
     if (paths.ambiguous) {
-        reason = "commit " + short_sha(sha) + " changed '" + base_name +
-                 ".*' in more than one directory, so which piece it names has "
-                 "no answer";
-        return false;
+        return refuse("commit " + short_sha(sha) + " changed '" + base_name +
+                      ".*' in more than one directory, so which piece it "
+                      "names has no answer");
     }
     out.warpmarkers.path       = paths.path[0];
     out.phaseresetmarkers.path = paths.path[1];
@@ -1669,17 +1692,16 @@ bool read_commit_sidecars(const std::string&        repo_root,
     for (std::size_t e = 0; e < 3; ++e) {
         if (paths.path[e].empty()) continue;
         if (!read_snapshot_at(repo_root, sha, paths.path[e], blobs[e]->text)) {
-            reason = "could not read '" + paths.path[e] + "' at commit " +
-                     short_sha(sha);
-            return false;
+            return refuse("could not read '" + paths.path[e] +
+                          "' at commit " + short_sha(sha));
         }
         if (paths.size[e] >= 0 &&
             static_cast<long long>(blobs[e]->text.size()) != paths.size[e]) {
-            reason = "'" + paths.path[e] + "' at commit " + short_sha(sha) +
-                     " read back " + std::to_string(blobs[e]->text.size()) +
-                     " bytes where the tree lists " +
-                     std::to_string(paths.size[e]);
-            return false;
+            return refuse("'" + paths.path[e] + "' at commit " +
+                          short_sha(sha) + " read back " +
+                          std::to_string(blobs[e]->text.size()) +
+                          " bytes where the tree lists " +
+                          std::to_string(paths.size[e]));
         }
     }
     return true;
@@ -1715,12 +1737,19 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
                                  const std::string&    spelling,
                                  const std::string&    base_name,
                                  GuiHistoryCommitLoad& out,
-                                 std::string&          reason) {
-    out = GuiHistoryCommitLoad{};
-    reason.clear();
+                                 GuiFailure&           failure) {
+    out     = GuiHistoryCommitLoad{};
+    failure = GuiFailure{};
+    // The two-clause shape is read_commit_sidecars's above; the one path on
+    // this disk that any arm below names is the scratch folder, full on the
+    // diagnostic and by its leaf on the display.
+    auto refuse = [&failure](std::string words) {
+        failure = plain_failure(std::move(words));
+        return false;
+    };
 
     if (!read_commit_sidecars(repo_root, spelling, base_name,
-                              out.sidecars, reason)) {
+                              out.sidecars, failure)) {
         return false;
     }
     const GuiHistoryCommitSidecars& snap = out.sidecars;
@@ -1731,8 +1760,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     // refusal is simple ineligibility: a checkpoint that cannot be loaded is
     // not stepped to.)
     auto missing = [&](const char* ext) {
-        reason = "commit " + snap.sha + " carries no '" + base_name + ext + "'";
-        return false;
+        return refuse("commit " + snap.sha + " carries no '" + base_name +
+                      ext + "'");
     };
     if (snap.warpmarkers.path.empty())       return missing(".warpmarkers");
     if (snap.phaseresetmarkers.path.empty()) return missing(".phaseresetmarkers");
@@ -1770,13 +1799,14 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     const std::filesystem::path scratch =
         std::filesystem::temp_directory_path(ec) / leaf;
     if (ec) {
-        reason = "no temporary directory available: " + ec.message();
-        return false;
+        return refuse("no temporary directory available: " + ec.message());
     }
     ScratchDirGuard guard(scratch);
     std::filesystem::create_directories(scratch, ec);
     if (ec) {
-        reason = "could not create '" + scratch.string() + "': " + ec.message();
+        failure = path_failure("could not create ", scratch,
+                               scratch.filename().string(),
+                               ": " + ec.message());
         return false;
     }
 
@@ -1790,8 +1820,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         if (atomic_write_string_to_path(out_path.string(), blob.text)) {
             return true;
         }
-        reason = "could not stage '" + blob.path + "' from commit " + snap.sha;
-        return false;
+        return refuse("could not stage '" + blob.path + "' from commit " +
+                      snap.sha);
     };
     std::filesystem::path settings_file, warp_file, phase_reset_file;
     if (!stage(snap.settings, ".settings", settings_file))       return false;
@@ -1804,9 +1834,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     // the SHA. First error only, by construction: every arm returns.
     auto settings = read_settings_file(settings_file.string());
     if (!settings) {
-        reason = "invalid settings in '" + snap.settings.path + "' at commit " +
-                 snap.sha + ": " + settings.error();
-        return false;
+        return refuse("invalid settings in '" + snap.settings.path +
+                      "' at commit " + snap.sha + ": " + settings.error());
     }
     out.settings = std::move(*settings);
 
@@ -1814,9 +1843,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         GuiWarpMarkers m;
         auto r = m.load(warp_file.string());
         if (!r) {
-            reason = "invalid warp markers in '" + snap.warpmarkers.path +
-                     "' at commit " + snap.sha + ": " + r.error();
-            return false;
+            return refuse("invalid warp markers in '" + snap.warpmarkers.path +
+                          "' at commit " + snap.sha + ": " + r.error());
         }
         out.warp_markers = m.markers();
     }
@@ -1824,10 +1852,9 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         GuiPhaseResetMarkers t;
         auto r = t.load(phase_reset_file.string());
         if (!r) {
-            reason = "invalid phase reset markers in '" +
-                     snap.phaseresetmarkers.path + "' at commit " + snap.sha +
-                     ": " + r.error();
-            return false;
+            return refuse("invalid phase reset markers in '" +
+                          snap.phaseresetmarkers.path + "' at commit " +
+                          snap.sha + ": " + r.error());
         }
         out.phase_reset_markers = t.markers();
     }
@@ -1928,24 +1955,32 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
         const std::string& source_audio_path) {
     GuiHistoryRepoRoot r;
     if (source_audio_path.empty()) {
-        r.reason = "no source is loaded";
+        r.reason = plain_failure("no source is loaded");
         return r;
     }
 
+    // Two clauses per refusal (GuiFailure, failure.h — 2026-09-02): the
+    // source and its folder in full on the diagnostic, and on the display
+    // the source by the project's folder-and-file form (shown_project_path)
+    // and a folder by its name.
     std::error_code ec;
-    const std::filesystem::path source = std::filesystem::weakly_canonical(
-        std::filesystem::path(source_audio_path), ec);
+    const std::filesystem::path given(source_audio_path);
+    const std::filesystem::path source =
+        std::filesystem::weakly_canonical(given, ec);
     if (ec) {
         r.read_failed = true;
-        r.reason = "could not resolve the source's own path: " +
-                   source_audio_path;
+        r.reason = path_failure("could not resolve the source's own path ",
+                                given, shown_project_path(given), "");
         return r;
     }
     const std::string dir = source.parent_path().string();
     if (dir.empty()) {
-        r.reason = "the source is not in a directory: " + source_audio_path;
+        r.reason = path_failure("the source is not in a directory: ", given,
+                                shown_project_path(given), "");
         return r;
     }
+    const std::filesystem::path dir_path(dir);
+    const std::string dir_name = dir_path.filename().string();
 
     // The `-C` here is the SOURCE'S FOLDER rather than a root — this is the one
     // call in the file that runs somewhere it has not been told about, which is
@@ -1955,12 +1990,15 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
         run_git_capture(dir, {"rev-parse", "--show-toplevel"}, out);
     if (capture != GitCapture::Ran) {
         r.read_failed = true;
-        r.reason = "could not ask git which clone holds '" + dir + "'";
+        r.reason = path_failure("could not ask git which clone holds ",
+                                dir_path, dir_name, "");
         return r;
     }
     const std::string toplevel = trim_trailing_ws(out);
     if (toplevel.empty()) {
-        r.reason = "the source's folder is not inside a git clone: " + dir;
+        r.reason = path_failure(
+            "the source's folder is not inside a git clone: ", dir_path,
+            dir_name, "");
         return r;
     }
 
@@ -1970,9 +2008,10 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
     ec.clear();
     if (!canonicalized || !std::filesystem::is_directory(root, ec) || ec) {
         r.read_failed = true;
-        r.reason = "git named '" + toplevel +
-                   "' as the clone holding '" + dir +
-                   "', which is not a directory";
+        r.reason = two_path_failure(
+            "git named ", std::filesystem::path(toplevel),
+            clone_name(toplevel), " as the clone holding ", dir_path,
+            dir_name, ", which is not a directory");
         return r;
     }
 
@@ -2005,7 +2044,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // capitalized until 2026-09-01, when the one that already agreed —
     // `git named '…' as the clone holding '…', which is not a directory` —
     // turned out to be the sibling in the right, and the family moved to it.
-    auto unavailable = [&h](std::string why, bool read_failed = false) {
+    auto unavailable = [&h](GuiFailure why, bool read_failed = false) {
         h.ok = false;
         h.read_failed = read_failed;
         h.unavailable_reason = std::move(why);
@@ -2046,7 +2085,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // which the COMMIT ACT asks again immediately before its push. THIS SITE IS
     // THE MODE'S GATE; that one is the mutating boundary. Two askings because
     // the config can move between them, one owner because the question is one.
-    std::string guard_reason;
+    GuiFailure guard_reason;
     if (!clone_is_projects_home(h.repo_root, projects_repo, guard_reason)) {
         return unavailable(std::move(guard_reason));
     }
@@ -2058,8 +2097,10 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // makes the filename match work on names full of periods and commas.
     h.base_name = std::filesystem::path(source_audio_path).stem().string();
     if (h.base_name.empty()) {
-        return unavailable("the source path has no base name: " +
-                           source_audio_path);
+        const std::filesystem::path given(source_audio_path);
+        return unavailable(path_failure("the source path has no base name: ",
+                                        given, shown_project_path(given),
+                                        ""));
     }
 
     // THE SOURCE'S FOLDER IS THE PROJECT DIRECTORY, AND THAT IS THE WHOLE RULE
@@ -2097,9 +2138,10 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     h.project_directory =
         project_directory_of_source(h.repo_root, source_audio_path);
     if (h.project_directory.empty()) {
-        return unavailable(
-            "the source is not in a folder under 'projects/': " +
-            source_audio_path);
+        const std::filesystem::path given(source_audio_path);
+        return unavailable(path_failure(
+            "the source is not in a folder under 'projects/': ", given,
+            shown_project_path(given), ""));
     }
 
     h.ok = true;
@@ -2139,7 +2181,7 @@ void scan_history_walk(
     const std::string base_name   = header.base_name;
     const bool        ok          = header.ok;
     const bool        read_failed = header.read_failed;
-    const std::string header_why  = header.unavailable_reason;
+    const GuiFailure  header_why  = header.unavailable_reason;
     // The header's project_directory is deliberately not copied here: the scan
     // needs the base NAME (the pathspecs and the load gate) and nothing about
     // where the piece currently lives, each candidate's own touched directory
@@ -2233,9 +2275,9 @@ void scan_history_walk(
     if (candidate_count < 0) {
         GuiHistoryScanResult failed;
         failed.ok = false;
-        failed.unavailable_reason =
+        failed.unavailable_reason = plain_failure(
             "could not read the commit history for 'projects/**/" + base_name +
-            ".*'";
+            ".*'");
         on_done(std::move(failed));
         return;
     }
@@ -2256,9 +2298,9 @@ void scan_history_walk(
         // ONE CANONICAL SPELLING, NO PARENTHETICAL PLURAL (2026-09-01, the
         // capitalization sweep): the count went with "commit(s)" — it named a
         // number the user cannot act on, the list having failed.
-        failed.unavailable_reason =
+        failed.unavailable_reason = plain_failure(
             "could not list the commits touching 'projects/**/" + base_name +
-            ".*'";
+            ".*'");
         on_done(std::move(failed));
         return;
     }
@@ -2283,10 +2325,10 @@ void scan_history_walk(
         static_cast<long long>(candidates.size()) != candidate_count) {
         GuiHistoryScanResult failed;
         failed.ok = false;
-        failed.unavailable_reason =
+        failed.unavailable_reason = plain_failure(
             "the commit history for 'projects/**/" + base_name +
             ".*' did not enumerate: " + std::to_string(candidate_count) +
-            " counted, " + std::to_string(candidates.size()) + " listed";
+            " counted, " + std::to_string(candidates.size()) + " listed");
         on_done(std::move(failed));
         return;
     }
@@ -2317,7 +2359,7 @@ void scan_history_walk(
     for (const std::string& sha : candidates) {
         if (abandoned()) break;
         GuiHistoryCommitLoad load;
-        std::string          why;
+        GuiFailure           why;
         if (!load_commit_sidecars_strict(repo_root, sha, base_name,
                                          load, why)) {
             ++hidden;
@@ -2356,7 +2398,7 @@ bool GuiHistoryDiff::walk_finished_empty() const {
 bool GuiHistoryDiff::init(const AppState&           app,
                           const GuiHistoryPrefetch& prefetch) {
     available_ = false;
-    unavailable_reason_.clear();
+    unavailable_reason_ = GuiFailure{};
     repo_root_.clear();
     base_name_.clear();
     project_directory_.clear();
@@ -2368,7 +2410,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
 
     // Every failure arm lands here: one stderr line, and the whole session
     // left in its documented empty shape.
-    auto unavailable = [this](std::string why) {
+    auto unavailable = [this](GuiFailure why) {
         unavailable_reason_ = std::move(why);
         repo_root_.clear();
         base_name_.clear();
@@ -2381,7 +2423,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
         // appended, so the terminal and the screen cannot come to say
         // different things about one fact.
         std::fprintf(stderr, "warptempo_gui: %s: %s\n", kHistoryUnavailable,
-                     unavailable_reason_.c_str());
+                     unavailable_reason_.diagnostic.c_str());
         return false;
     };
 
@@ -3495,12 +3537,12 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // THE REFSPEC SENDS `landed` BY SHA, never `HEAD`, and nothing forces: what
     // was committed is what gets published, and a commit sitting on top of it
     // stays the user's own to push.
-    std::string guard_reason;
+    GuiFailure  guard_reason;
     std::string destination;
     if (!clone_is_projects_home(repo_root, projects_repo, guard_reason,
                                 &destination)) {
         std::fprintf(stderr, "warptempo_gui: Push refused: %s\n",
-                     guard_reason.c_str());
+                     guard_reason.diagnostic.c_str());
         return GuiHistoryCommitOutcome::CommittedNotPushed;
     }
 
