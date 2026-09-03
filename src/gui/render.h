@@ -1866,6 +1866,23 @@ inline double clock_font_size_px() {
     return kClockFontSizePt * 96.0 / 72.0 * gui_scale_factor();
 }
 
+// THE MONOSPACE FACE'S LINE HEIGHT AT A SIZE — its ascent plus its descent,
+// MEASURED off the face the face owner resolves and never an authored pixel
+// count (the clock cell's own principle, above: nothing about a monospace
+// cell is authored in pixels). It is what the AV SYNC STATS PANEL's text rows
+// stand at (folder_overlay::text_row_pitch_px reads it at clock_font_size_px
+// and rounds it to a pixel count; architect 2026-09-03, on the panel painting
+// its lines at the icon button's box: "the copy button uses single line
+// spacing (correct) but the display shows double spacing (incorrect)"). It
+// is declared here, beside the size it is measured at, because its reader is
+// cairo-free and hit-tests and damages with it; the measure needs a scaled
+// font, so it lives in paint_handler.cpp beside the clock cell's memo and is
+// keyed on the size the way that memo is. It measures the face on a private
+// surface rather than a painter's context, so the answer does not depend on
+// a frame having been painted first, and paint, hit and damage read one
+// number.
+double mono_line_height_px(double size_px);
+
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
 // (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is
 // at kMarkerFlagBorder) and confirmed against row_5_full.png, where the same

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -2866,6 +2867,39 @@ static const TransportClockMetrics& clock_cell_metrics(
 
 static double clock_cell_width_px(cairo_scaled_font_t* font, double size_px) {
     return clock_cell_metrics(font, size_px).cell_w;
+}
+
+// THE MONOSPACE LINE HEIGHT, MEMOISED ON THE SIZE like the cell above (render.h
+// declares it; the AV sync stats panel's text rows stand at it through
+// folder_overlay::text_row_pitch_px, which does the rounding). A line is the
+// face's ascent plus its descent and nothing more — a monospace line's leading
+// is inside its extents, which is why the panel's rows have no gap between
+// them. THE FACE IS SELECTED ON A PRIVATE 1x1 IMAGE SURFACE through the one
+// face owner: this file's painters borrow a context they are handed, while
+// this measure has readers that hold none — the panel's damage rect and its
+// hit test — and may ask before the panel has painted once. The paint target
+// is an image surface too on both backends, so the two contexts report the
+// same hinted extents. Single-threaded paint state, as the clock's memo is.
+struct MonoLineMetrics {
+    double px = -1.0;   // the size this was measured at
+    double h  = 0.0;    // ascent + descent at that size
+};
+static MonoLineMetrics g_mono_line_metrics;
+
+double mono_line_height_px(double size_px) {
+    if (g_mono_line_metrics.px == size_px) return g_mono_line_metrics.h;
+    cairo_surface_t* surface =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* cr = cairo_create(surface);
+    gui_select_font_face(cr, GuiFontFamily::Mono);
+    cairo_set_font_size(cr, size_px);
+    cairo_font_extents_t fe;
+    cairo_font_extents(cr, &fe);
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    g_mono_line_metrics.h  = fe.ascent + fe.descent;
+    g_mono_line_metrics.px = size_px;
+    return g_mono_line_metrics.h;
 }
 
 void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
@@ -7747,12 +7781,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // column rebuilt every frame and a proportional face would make the digits
     // walk (the widening is the architect's, 2026-09-03; the rule and the
     // three-cell set are stated at this file's bottom-row text block and at
-    // gui_font.h). SHAPE WITH THE FONT YOU PAINT WITH: the handle below is
+    // gui_font.h). THE PREDICATE IS THE ROW PITCH'S OWN
+    // (folder_overlay::text_listing): a text row stands at this face's line
+    // height, so the face and the pitch must fork on one question or a row
+    // could be shaped in one face and spaced for another. SHAPE WITH THE FONT
+    // YOU PAINT WITH: the handle below is
     // taken AFTER the selection, and this painter selects once and never again
     // — nothing after this call reads a face it did not select, so the
     // borrowed handle stays valid for the whole walk.
-    const bool stats = app.folder_overlay.owner ==
-                       AppState::FolderOverlay::Owner::Stats;
+    const bool stats = folder_overlay::text_listing(app);
     if (stats) {
         gui_select_font_face(cr, GuiFontFamily::Mono);
         cairo_set_font_size(cr, clock_font_size_px());
@@ -7789,9 +7826,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // A TEXT ROW IS INERT AND THE FACE LADDER SKIPS IT WHOLE
             // (2026-09-03): no fill, no outline, no press arm — the row is a
             // line of text on the band's own ground, and the two axes below
-            // have nothing to say about it.
+            // have nothing to say about it. Its rect `r` is already a LINE's
+            // — the monospace ascent plus descent, no gap to the next row —
+            // because the walk forks the pitch on the listing's owner
+            // (folder_overlay::text_listing), and a listing is homogeneous in
+            // kind: this assert is that fact, checked per row.
             const bool text_row =
                 row.kind == AppState::FolderOverlayRow::Kind::Text;
+            assert(text_row == stats);
             const bool highlighted = !text_row && index == ov.highlight_row;
             // NO ROW HOVERS UNDER A PROMPT. A prompt outranks every content
             // and its veil takes the pointer, so on_motion's prompt branch
@@ -7838,8 +7880,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // and centred in its height, which are the same number: a row is a
             // wide button and this is how a button seats its glyph. A TEXT
             // ROW'S WORD STARTS WHERE THE GLYPH WOULD HAVE — the button's own
-            // inset is the row's left pad, so a glyph-less row reads as the
-            // same button family with its ink where a word button seats it.
+            // inset is the row's left pad (read off the BUTTON's box, not the
+            // row's line height, so the words did not move when the pitch
+            // became the line's), so a glyph-less row reads as the same
+            // button family with its ink where a word button seats it.
             const int gx = r.x + inset;
             int text_x = gx;
             if (!text_row) {
@@ -7864,6 +7908,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // thing to read).
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
+            // The baseline is solved from the row's rect and the face's
+            // extents (redesign_baseline) for both row kinds. In a button box
+            // that centres the line in the box; in a TEXT row the box IS the
+            // line — ceil(ascent + descent) — so the formula collapses to
+            // y + ascent (rounded) at every gui_scale, and the descenders end
+            // at the row's foot, which is where the next line starts.
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,

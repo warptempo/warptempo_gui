@@ -8008,9 +8008,12 @@ struct AppState {
     struct FolderOverlay {
         // THE THREE CONTENTS (Stats joined 2026-09-03). The tag IS the standing
         // predicate (folder_overlay_stands, below), and it is the one thing the
-        // open act forks on: everything else about the panel — the band, the
-        // row pitch, the scroll, the walk — is the widget's and knows nothing
-        // about which content fills it.
+        // open act forks on — and, since 2026-09-03, the one thing the ROW
+        // PITCH forks on (folder_overlay::text_listing: the stats panel's
+        // rows are text lines and stand at the monospace line's height, the
+        // other two contents' rows at the button's box). Everything else about
+        // the panel — the band, the scroll, the walk — is the widget's and
+        // knows nothing about which content fills it.
         enum class Owner { None, Player, ProjectPicker, Stats };
         Owner              owner         = Owner::None;
         std::vector<FolderOverlayRow> rows;
