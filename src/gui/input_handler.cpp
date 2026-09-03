@@ -2995,10 +2995,12 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // B, whose two flexible gaps center the waveform): GAP 2, between the
     // waveform and the bottom row, needs no band of its own — it lies below
     // every area this probe tests, so a wheel there falls to the no-context 0
-    // exactly as the old blank foot's did — while GAP 1, between the menu row
-    // and the centered block, lies INSIDE top_strip_area and therefore JOINS THE
-    // INERT BAND LIST below, blank window ground being no more a panning surface
-    // at the top of the window than at its foot.
+    // exactly as the old blank foot's did — while GAP 1, ABOVE the menu row
+    // since 2026-09-03 (it opened between the menu row and the centered block
+    // from commit B until then; main.cpp's vertical rule is the owner), lies
+    // INSIDE top_strip_area and therefore JOINS THE INERT BAND LIST below,
+    // that band being no more a panning surface at the top of the window than
+    // the blank ground at its foot.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag

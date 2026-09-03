@@ -139,8 +139,10 @@ namespace {
 // (2026-08-12; the 2026-08-12 roster commit had taken it to six by deleting
 // the TOOLBAR ROW, row 2 of the redesign — its Save / Undo / Redo / Render are
 // the icon row's first group now) — from the window edge inward: MENU ROW (its
-// own authored menu_row_h_px(), row 1 of the kdenlive redesign, PINNED at the
-// window top), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3 —
+// own authored menu_row_h_px(), row 1 of the kdenlive redesign, SITTING ON THE
+// TAB ROW with FLEXIBLE GAP 1 ABOVE it since 2026-09-03 — it was pinned at the
+// window top with gap 1 below it from commit B until then; the vertical rule
+// below carries the ruling), then THE CENTERED BLOCK's six: TAB ROW (tab_row_h_px(), row 3 —
 // 30 content inside a 1px border at EACH edge since 2026-08-13, the top line
 // being what the row had always been missing; render.h's constant carries the
 // crops and the withdrawn ground ruling that briefly stood in its place),

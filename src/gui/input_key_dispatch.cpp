@@ -2404,7 +2404,9 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // everything, and the admitted Ctrl+Q already ends the view the same way.
     // The picker it raises stands OVER the mode — its router runs ahead of
     // this gate in on_key, its veil consumes the view's presses, and its band
-    // is the waveform's lower half, clear of the diff lane — so a Cancel or an
+    // starts at the TAB ROW's first pixel and runs to the bottom row, covering
+    // lanes 1..6 (the diff lane with them), the waveform and gap 2, with only
+    // the dead menu row standing above it — so a Cancel or an
     // Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
     // consumed no-op, which made two of the File menu's three rows dead in
@@ -5876,8 +5878,9 @@ void GuiInputHandler::open_project_picker() {
     // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
     // everything — Ctrl+Q, which is admitted, ends the view the same way. The
     // picker stands OVER the view (its router runs ahead of the mode's gate in
-    // on_key, its veil consumes the view's presses, and its band is the
-    // waveform's lower half, clear of the diff lane), a Cancel or Esc leaves
+    // on_key, its veil consumes the view's presses, and its band starts at the
+    // tab row and covers lanes 1..6 — the diff lane with them — the waveform
+    // and gap 2, the dead menu row alone above it), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything

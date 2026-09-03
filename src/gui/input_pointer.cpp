@@ -5136,15 +5136,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (rect_contains(menu_row, x, y)) {
             if (chrome_band_modifiers_refused(app, x, y, mods)) return;
             if (button == GuiMouseButton::Left) {
-                // FILE, EDIT AND SETTINGS ARE THE ROSTER'S THREE
-                // NON-CHORD BUTTONS, so they are spelled here rather than in the
-                // table: each action is a POPUP TOGGLE, which no keyboard chord
-                // performs. Their menus lead to routes the keyboard already has
-                // — the bare `;` still opens the settings editor DIRECTLY,
-                // File's one item is Ctrl+Q, and Edit's five are the propagate
-                // chords — so a
+                // THE MENU ANCHORS ARE THE ROSTER'S NON-CHORD BUTTONS —
+                // membership is kDropdownMenus (app_state.h) and this file's
+                // ONE enumeration of it is the band-claim block above; nothing
+                // is re-listed here. Each anchor's action is a POPUP TOGGLE,
+                // which no keyboard chord performs, so they take the walk below
+                // rather than a row in the chord table. Their ITEMS lead to
+                // routes the keyboard already has — the bare `;` still opens
+                // the settings editor DIRECTLY, and every File, Edit and
+                // Iterations row carries its own accelerator — so a
                 // dropdown is a pointer affordance for an existing road, never a
-                // second one. (A THIRD anchor, Navigation, was spelled here from
+                // second one; Help's one item is the sanctioned exception, an
+                // item that genuinely cannot have a chord (the record is at
+                // GuiPopupAct). (A THIRD anchor, Navigation, was spelled here from
                 // 2026-08-02 until 2026-08-15, and its deletion is what makes
                 // that principle load-bearing rather than decorative: every one
                 // of its items was a key you could press instead, and once every
@@ -6129,15 +6133,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the
-                // inter-lane gaps and any press in the FLEXIBLE GAP 1 band
-                // between the menu row and the centered block (the centering
-                // rule's window ground, the relayout's commit B: inside
+                // inter-lane gaps and any press in the FLEXIBLE GAP 1 band,
+                // which since 2026-09-03 opens ABOVE the menu row (the
+                // centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this
                 // return with no code of its own, and the cursor map's plain
                 // top-strip fall-through answers Arrow over it the same way —
                 // the band was between the icon row and the trim lane when the
-                // seventh ruling opened it and at the window's foot in
-                // between). A box under the point is a marker hit and never
+                // seventh ruling opened it, at the window's foot in between,
+                // and between the menu row and the centered block from the
+                // relayout's commit B until that day). A box under the point is a marker hit and never
                 // reaches this branch, and the OVERVIEW STRIP's lane was
                 // claimed far above.
                 return;
