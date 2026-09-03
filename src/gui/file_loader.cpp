@@ -202,22 +202,16 @@ std::optional<GuiFailure> source_load_dry_run(
 
 bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     const std::string path = project.source.string();
-    // Opening the private peaks cache is a careless wrong-file slip, so it
-    // refuses loudly at this earliest surface — a dismiss-only notice, no
-    // load. It is never silently redirected to a guessed owner path:
-    // silently doing a different operation than the one requested is
-    // correction, not refusal, and the peaks cache is derived state the user
-    // never legitimately opens. A stray `.samples` file (no live producer
-    // since the FLAC-reload source cache was retired) has no RIFF magic, so it
+    // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): the
+    // `.peaks` cache refusal that opened this body — from the era when a path
+    // could be typed at the app — had no producer left once a project's source
+    // became `resolve_project`'s own composed `<stem>.wav` on all three roads
+    // (startup's remembered/first-valid folder, the argument road, which
+    // refuses anything that is not that resolved source, and the picker's
+    // reopen), so nothing could hand this function a peaks path. A stray
+    // `.samples` or `.peaks` file reaching a future road has no RIFF magic and
     // takes the generic unknown-magic refusal below — no special-cased handling.
-    if (is_peaks_cache_path(path)) {
-        std::string msg = "'" + path +
-            "' is a waveform peaks cache; open the original source audio file "
-            "instead.";
-        std::fprintf(stderr, "warptempo_gui: %s\n", msg.c_str());
-        return false;
-    }
-
+    //
     // Preflight. Print the probe owner's diagnostic verbatim in the unified
     // shape: a malformed but recognized WAV (duplicate chunk, truncated
     // header) must not be misread as an unsupported format. The convert-once

@@ -742,10 +742,15 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         //
         // Wall the rigid delta so BOTH bounds respect their absolute walls:
         // floor 0 on each and a shared ceiling at frame EOF-1 — mapped through
-        // the displayed map (monotone, so the active-domain clamp matches the
-        // source-domain wall). This binds both bounds, so neither slides past
-        // EOF under the rigid delta. NO PARTNER WALL IS NEEDED ON THIS ARM and
-        // none is applied: the pair rides ONE shared delta, so the gap between
+        // the displayed map (monotone, so the active-domain clamp is the
+        // source-domain wall's own image). This binds both bounds, so neither
+        // slides past EOF under the rigid delta. IT IS NOT THE WHOLE WALL,
+        // THOUGH: the clamp is applied to the delta BEFORE the hop back to
+        // source, and the map-back's own rounding can carry a bound one frame
+        // past total-1 under a speed-up (the round trip is not the identity),
+        // so the source-domain wall is re-asserted on the snapped values below.
+        // NO PARTNER WALL IS NEEDED ON THIS ARM and none is applied: the pair
+        // rides ONE shared delta, so the gap between
         // the bounds is invariant for the whole gesture and they cannot approach
         // each other at all. The partner clamp the 2026-08-02 ruling added
         // belongs to the single-bound arm below — the only one that can push a
@@ -774,8 +779,21 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             map_target_to_source(static_cast<double>(ob + df), dmap));
         int64_t ne = snap_authored_frame(
             map_target_to_source(static_cast<double>(oe + df), dmap));
+        // THE SOURCE-WALL BELT, both ends (2026-09-02): the active-domain
+        // clamp above bounds the DELTA, and the hop back plus
+        // snap_authored_frame's rounding can still land a bound at total or
+        // total+1 under any speed-up — so the store would hold a value outside
+        // the shared inclusive [0, total-1] domain for the gesture's life, with
+        // only the release's own re-wall to end it. These are plain integer
+        // compares on the already-snapped values, the walls' own form
+        // everywhere: no second rounding site, and no partner term (the pair's
+        // gap is invariant, so a belt that shortens the rigid delta by a frame
+        // is the same accepted deformation the release's snap carries).
+        const int64_t source_wall = audio.total_frames() - 1;
         if (nb < 0) nb = 0;
         if (ne < 0) ne = 0;
+        if (nb > source_wall) nb = source_wall;
+        if (ne > source_wall) ne = source_wall;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;

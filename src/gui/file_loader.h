@@ -78,10 +78,11 @@ struct GuiFileLoader {
 // THE INVENTORY, walked in load_file's own order, each refusal through the same
 // owner the load calls, so the words are the load's words:
 //
-//   * the peaks-cache path refusal — NOT MIRRORED and unreachable from here:
-//     every source the project model hands over is `<stem>.wav` by that model's
-//     exact-extension rule (project_model.h), and this routine's one caller
-//     passes a resolved project's source.
+//   (The peaks-cache path refusal that opened the load's own walk is DELETED,
+//   2026-09-02: it had no producer left once every source became the project
+//   model's composed `<stem>.wav` by that model's exact-extension rule
+//   (project_model.h), which is why it was never mirrored here either.)
+//
 //   * `audio_probe` — the container magic and the malformed-but-recognized WAV
 //     diagnostics. Mirrored (the load's convert-once acquisition hint is the
 //     terminal's alone).

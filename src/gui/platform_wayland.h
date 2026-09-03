@@ -638,7 +638,12 @@ private:
     // starts on a real figure. `output_refresh_mhz_` below is always the
     // selected output's refresh, re-derived by `select_window_output` at every
     // edge — enter, leave, a mode change on the selected output, a removal —
-    // and every change re-arms the tick.
+    // and every change re-arms the tick. THE SEED IS SPENT AT THE FIRST ENTER
+    // (`surface_entered_ever_` below): once the compositor has named an output
+    // for the surface even once, a LATER bind — a hot-plugged panel — never
+    // seeds the selection, so a window that is on no output at that moment
+    // (minimized, or mid-move) keeps the figure of the output it was last on
+    // instead of taking a panel it has never been shown on.
     struct OutputRecord {
         struct wl_output* output      = nullptr;
         uint32_t          global_name = 0;
@@ -647,6 +652,11 @@ private:
     };
     std::vector<OutputRecord> outputs_;
     struct wl_output*         window_output_ = nullptr;
+    // True from the first wl_surface.enter of the run onward — it is never
+    // cleared by a leave, since what it records is that the seeding window is
+    // over, not where the window is now (that is `window_output_`'s and each
+    // record's `entered`).
+    bool                      surface_entered_ever_ = false;
 
     // -- wp_presentation: the display lead's instrument (display_lead_ns) --
     // Bound at v1 (the `presented` event this reads is v1's; the proxy is

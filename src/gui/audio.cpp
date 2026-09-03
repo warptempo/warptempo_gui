@@ -195,13 +195,6 @@ std::string owner_name_for(const std::string& source) {
     return std::filesystem::path(source).filename().string();
 }
 
-std::string lowercase(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-    return s;
-}
-
 bool stat_size_mtime(const std::string& path, int64_t& size, int64_t& mtime) {
     RenderFileIdentity identity;
     if (!stat_file_identity(path, identity) ||
@@ -713,8 +706,4 @@ std::pair<float,float> GuiAudio::get_peak_range(int channel,
         if (b > qhi) qhi = b;
     }
     return { dequantize_i16(qlo), dequantize_i16(qhi) };
-}
-
-bool is_peaks_cache_path(const std::string& path) {
-    return lowercase(std::filesystem::path(path).extension().string()) == ".peaks";
 }

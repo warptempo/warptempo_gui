@@ -62,9 +62,11 @@ contract. The port split them:
 - **C — the loop contract**: ONE periodic timerfd at half the refresh
   period — on Wayland the refresh of THE OUTPUT THE WINDOW IS ON, every
   `wl_output` bound and `wl_surface.enter`/`leave` selecting among them (the
-  most recent enter wins; the rule is at `outputs_`, `platform_wayland.h`;
-  until 2026-09-02 it was the first output the registry named, a coin flip
-  on a 60 Hz panel beside a 120 Hz external) — is the ONE wakeup; the two software deadlines (key repeat, the
+  most recent enter wins, and the first output BOUND seeds the selection
+  until the first enter and never after it, so a hot-plugged panel cannot
+  become the window's output; the rule is at `outputs_`,
+  `platform_wayland.h`; until 2026-09-02 it was the first output the registry
+  named, a coin flip on a 60 Hz panel beside a 120 Hz external) — is the ONE wakeup; the two software deadlines (key repeat, the
   touch window) are POLLED against it in a fixed order — `on_tick` →
   `input_.tick()` (= `maybe_fire_repeat` then `maybe_resolve_touch_window`)
   → worker completions in registration order → the settled hook →

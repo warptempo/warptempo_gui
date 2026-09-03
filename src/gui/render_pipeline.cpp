@@ -412,10 +412,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 // sweep cell rewrites its markers per cell, giving the cell a
                 // different (possibly shorter) target axis, and a file that
                 // names a position past its own end is wrong on its own terms
-                // whoever reads it. Viewport start sits in [0, total-1] (a start on the
-                // total's frame shows nothing) and the playhead in [0, total]
-                // (it may rest on the end exactly). target_total is this
-                // entry's map domain total.
+                // whoever reads it. BOTH POSITIONS TAKE THE SAME CEILING,
+                // `vp_hi` = target_total-1: the viewport start because a start
+                // on the total's frame shows nothing, and the playhead because
+                // [0, total-1] is the cursor's own live domain everywhere else
+                // (`clamp_playhead_to_live_domain`, app_state.h) — the one-frame
+                // wider ceiling this site used to grant the playhead alone was
+                // a second spelling of the domain three lines from the first.
+                // target_total is this entry's map domain total.
                 // Zoom passes through: the live zoom is always in the persisted
                 // vocabulary. Its trim comes from the recipe trim that shaped
                 // this render; read_only and the rest take their ViewState
@@ -434,7 +438,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 dispatch_tab.zoom_level             =
                     req.authoring.view_zoom_level;
                 dispatch_tab.playhead_cursor_sample = std::clamp<int64_t>(
-                    req.authoring.view_playhead_frame, 0, target_total);
+                    req.authoring.view_playhead_frame, 0, vp_hi);
                 dispatch_tab.trim.begin_frame = req.authoring.trim_begin_frame;
                 dispatch_tab.trim.end_frame   = req.authoring.trim_end_frame;
 

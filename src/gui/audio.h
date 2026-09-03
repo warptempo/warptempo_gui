@@ -125,5 +125,3 @@ private:
     // or by streaming over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, kCacheLevels> levels_;
 };
-
-bool is_peaks_cache_path(const std::string& path);

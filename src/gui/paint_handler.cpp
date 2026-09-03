@@ -4658,8 +4658,11 @@ static int64_t phase_reset_seed_frame_index(
 // lattice, so it STANDS STILL while the reset is nudged within one hop cell
 // and SNAPS a whole hop when the reset crosses a schedule frame's centre —
 // the moment the render's bytes actually change (two resets inside one cell
-// are one event). Its width is at most kPhaseResetLeadInSamples TO THE
-// SCHEDULE'S ROUNDING — that when the marker sits on a seed centre — and at
+// are one event). BOTH EDGES ARE PAINTED AS MAPPED COLUMNS (the column block
+// below): the far edge takes its own column from its lattice point exactly as
+// the near edge takes the marker's, so the standing-still is what the screen
+// shows and not merely what the samples do. Its width is at most
+// kPhaseResetLeadInSamples TO THE SCHEDULE'S ROUNDING — that when the marker sits on a seed centre — and at
 // least about N/2 − R_s + 1 samples (the marker just short of the next
 // centre); the static_assert at the constant pins the drop's offset to the
 // seed window's half-width, which is exact, not the painted width, which
@@ -4838,24 +4841,26 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     if (spp <= 0.0) return out;
     const double vp_start = basis.vp_start;
 
-    // Columns: left_col takes the stem renderer's own placement — the shared
-    // displayed_column_at rounding (warp_frame_map_view.h) — so the overlay's
-    // left edge stays on the marker's column.
-    // right_col is a whole-pixel offset ahead of it, so the far edge tracks
-    // the marker in lockstep instead of wobbling by independent per-endpoint
-    // rounding. width_px is the derived extent banker's-rounded to whole
-    // pixels — an approximate but rigid extent, which beats an exact but
-    // jittering one (the band is an authoring aid, not an engine point; the
-    // hop snap is the extent's own step, not this rounding's).
+    // Columns: BOTH EDGES ARE MAPPED COLUMNS, each taking its own column from
+    // the shared displayed_column_at rounding (warp_frame_map_view.h) —
+    // left_col from the marker's paint sample, which is the stem renderer's own
+    // placement, and right_col from the grain end, which is the lattice point
+    // the header derives. The two endpoints round independently and the band's
+    // painted WIDTH absorbs the difference, so the far edge sits on screen
+    // where its lattice point sits in samples: it stands still while the reset
+    // is nudged inside one hop cell and snaps a whole hop at the boundary,
+    // which is what the header's "STANDS STILL" sentence promises. (The
+    // fixed-width recipe that stood here — left_col plus the extent
+    // banker's-rounded to whole pixels — held the width rigid instead and so
+    // moved the far edge by a pixel as the marker moved inside a cell or as the
+    // view panned.)
     const int left_col = displayed_column_at(ms, vp_start, spp);
-    const int width_px = static_cast<int>(std::nearbyint(
-        static_cast<double>(width_samples) / spp));
+    const int right_col = displayed_column_at(
+        ms + static_cast<double>(width_samples), vp_start, spp);
 
-    // Too-zoomed-out: if the extent rounds below one pixel, paint nothing at
-    // all — no sliver, no clamped minimum.
-    if (width_px < 1) return out;
-
-    const int right_col = left_col + width_px;
+    // Too-zoomed-out: if the extent rounds below one pixel — both edges landing
+    // on the same column — paint nothing at all: no sliver, no clamped minimum.
+    if (right_col <= left_col) return out;
 
     // The band spans columns [left_col, right_col): the stem's own column
     // (left_col) sits inside it, and the stems paint after both of the band's

@@ -1182,6 +1182,7 @@ void GuiPlatform::destroy_wayland_state() {
     }
     outputs_.clear();
     window_output_ = nullptr;
+    surface_entered_ever_ = false;
     if (wl_shm_) {
         wl_shm_destroy(wl_shm_);
         wl_shm_ = nullptr;
@@ -1901,7 +1902,10 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
         // EVERY wl_output is bound (the record and the selection rule at
         // `outputs_`, platform_wayland.h): the window's own output is chosen
         // among them by wl_surface.enter/leave, and the first one bound seeds
-        // the selection until the first enter.
+        // the selection until the first enter. The seed is spent at that first
+        // enter (`surface_entered_ever_`), so an output bound LATER — a
+        // hot-plugged panel — never seeds, and a window that is on no output
+        // right then keeps the figure of the output it was last on.
         const uint32_t v = std::min<uint32_t>(version, 2);
         OutputRecord rec;
         rec.output = static_cast<struct wl_output*>(
@@ -1909,7 +1913,7 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
         rec.global_name = name;
         wl_output_add_listener(rec.output, &s_output_listener, this);
         outputs_.push_back(rec);
-        if (!window_output_) {
+        if (!window_output_ && !surface_entered_ever_) {
             window_output_ = rec.output;
             select_window_output();
         }
@@ -2034,7 +2038,9 @@ void GuiPlatform::on_surface_enter(struct wl_output* output) {
     if (!rec) return;
     rec->entered = true;
     // The most recent enter wins (the rule at `outputs_`): a window spanning
-    // two outputs follows the one it was last seen entering.
+    // two outputs follows the one it was last seen entering. This is also
+    // where the bind-time seed is spent, for the run's whole remainder.
+    surface_entered_ever_ = true;
     window_output_ = output;
     select_window_output();
 }
