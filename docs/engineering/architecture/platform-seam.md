@@ -14,18 +14,21 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (76 declarations as of 2026-09-02 — 13 `using` aliases and 63
-  members including the constructor and destructor — counted as the
-  semicolon-terminated declarations in the `public:` section of each header
-  with `//` comments and blank lines stripped, and the identity proved by
-  diffing those two stripped sections, which come out line-for-line equal; the
+  public API (75 declarations as of 2026-09-03 — 13 `using` aliases and 62
+  members including the constructor and destructor — counted over the
+  `public:` section of each header with `//` comments and blank lines
+  stripped: the semicolon-terminated declarations, plus the three one-line
+  inline accessors that end in `}` rather than `;`, which the count has
+  always included and which the words "semicolon-terminated" alone used to
+  leave out. The identity is proved by diffing those two stripped sections,
+  which come out line-for-line equal — 84 lines each at this writing. The
   count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
   mirror's discovery — Synchronize is told its destination by the device
   config's `sync_path` now, so neither backend goes looking for a volume —
-  and ROSE BY ONE on 2026-09-02 with `display_lead_ns`, the display lead the
-  playback predictor is read ahead by (the Playback seam below: measured on
-  Wayland, 0 by ruling on Android);
-  there is NO Android-only member any more — the on-screen keyboard's
+  ROSE BY ONE on 2026-09-02 with `display_lead_ns`, and FELL BY ONE AGAIN on
+  2026-09-03 when that member went with the playback leads (the Playback seam
+  below). Re-derive it; never decrement the number you find.
+  There is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
   answered differently, which is the seam's own shape rather than an
   exception, `device_config_defaults` is a third of the same kind,
@@ -35,11 +38,12 @@ contract. The port split them:
   one hook a backend never fires — and `publish_media_state`, a no-op body
   there — The car, below) are the fourth and fifth):
   `platform_wayland.{h,cpp}`
-  (Wayland/xkb/cursor/shm/clipboard/pointer-lock/presentation feedback, keymap
+  (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap
   → `GuiKey`; the protocol classes — five REQUIRED globals, every `wl_output`
-  best-effort, and exactly THREE OPTIONAL protocols: pointer-constraints,
-  relative-pointer and, since 2026-09-02, `wp_presentation` — are stated once
-  at `platform_wayland.h`'s globals block) and
+  best-effort, and exactly TWO OPTIONAL protocols, pointer-constraints and
+  relative-pointer — are stated once at `platform_wayland.h`'s globals block,
+  which also carries `wp_presentation`'s one-day membership of that list,
+  2026-09-02 to 2026-09-03) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
   selects the header; every consumer includes it and changes nothing (NINE translation units and headers today, re-grepped 2026-08-29 — the number is a consequence of the seam, not a fact about it, so nothing here keeps a list).
@@ -161,132 +165,94 @@ drag coordinates floor instead of truncating.
   registers no `jack_set_xrun_callback` and says nothing — the recorded
   asymmetry: the laptop's graph is the architect's own and its xruns are
   already visible in the server's own output, while the tablet's stream is
-  inside a phone the app is the only window onto. THE PREDICTOR ANCHORS AT HEARD INSTANTS (architect
-  2026-09-01 — the morning's record had the output latency uncompensated
-  and accepted; the evening's arc compensated it): every anchor is
-  (sample, the instant that sample leaves the loudspeaker), built from the
-  audio thread's cycle stamp — (read cursor, the instant its frame enters
-  the port), published under a seqlock at the seat and at every fill's end
-  — plus ONE FIGURE PER EPOCH, the device's reported output latency
-  (`output_latency_frames`), RE-ANCHORED AT THE CHANGE: the reader records
-  the offset its anchor was built with (`anchor_offset_ns`) and, when the
-  live figure differs (a quantum change mid-session), re-anchors from the
-  latest stamp exactly as a resync does, so the cursor and the natural-end
-  deadline never mix two epochs. THE FIGURE IS THE JACK HALF'S: `playback.cpp`
-  registers the latency and buffer-size callbacks before `jack_activate`,
-  reads the port range once after the auto-connect, takes the max over both
-  ports and prints the figure to stderr whenever it changes. AAUDIO'S IS
-  ZERO BY RULING — the asymmetry, recorded at its `Impl`: the car's route is
-  Bluetooth, whose latency is large, variable and unreported, so the tablet
-  keeps the uncompensated lead and gets only the seat move (the launch
-  anchor at the absorbing burst rather than the publish, ≤ one burst) and
-  the natural-end hold (the scanner outlives the session word's playing bit
-  by the heard offset, which is the ending burst's own duration there). THE
-  ZERO IS SCOPED TO THE ROUTE, AND THE ROUTE IT WAS RULED FOR PAINTS NO
-  SCANNER (architect 2026-09-02, the deep dive's item I, record-only — the
-  zero stays): in the car the render player stands, and under it the waveform
-  scanner is neither sampled nor painted (`main.cpp`'s pre-paint hook returns
-  above it), so the only moving picture is the modal row's scrub and clock,
-  neither registered against a waveform, and the uncompensated lead costs
-  nothing visible there. On the tablet's own SPEAKER, where the scanner IS
-  painted, the latency is stable and reportable (`AAudioStream_getTimestamp`,
-  the 10–25 ms class) and the line leads the sound by that unreported figure
-  — the laptop's pre-compensation picture in miniature, moot for this use
-  because the tablet is the car's player, and left whole rather than measured
-  for one route and guessed for the other. The
-  hold and the cursor are ONE OBSERVATION on both backends (`GuiPlayback::
-  snapshot`, the tick's read — the playing bit and the hold's verdict, no
-  cursor; `cursor()`, `cursor_precise()` and `natural_end_holding()` are
-  faces of the same body): the anchor is reconciled — re-built from the
-  stamp at the live figure where the epoch moved, and, from the first read
-  of the ended bit, onto the TERMINAL STAMP itself — BEFORE the hold's
-  verdict is formed from that same stamp/offset pair, so a figure that
-  moves inside the hold moves the line and the deadline together, the line
-  reaches the window's end exactly as the hold ends, and the teardown never
-  runs ahead of the re-anchor. THE WINDOW TRAVELS AS A COMMAND PACKET
-  (2026-09-01, the arc's third review): `play()` writes (start, end) under a
+  inside a phone the app is the only window onto.
+
+  THE LINE IS THE RAW PREDICTOR AND IT LEADS THE SOUND (architect
+  2026-09-03): `play()` anchors the predictor at the PUBLISH INSTANT and it
+  extrapolates in wall-clock at the source rate from there, and no latency
+  figure of either device enters the anchor or the position read. So the painted line lights at `press + D` — the
+  compositor's paint-to-light delay — while the sound starts at
+  `press + phase + L_audio`, the audio thread's pickup phase (0 to one
+  period, re-rolled at every launch) and then the device's own output
+  latency; the line therefore runs AHEAD of the ear by `L_audio − D + phase`,
+  by a different amount on every launch. THAT IS THE CHOSEN BEHAVIOUR AND NOT
+  A DEFECT LEFT STANDING: on 2026-09-03 the architect ran a blind comparison
+  at his own rig between this line and a fully compensated build and chose
+  this one — *"two continuous streams that we sort of happen to pick up here
+  and there — sometimes they match, sometimes they don't, and that's exactly
+  what they are."* The derivation and the ruling are at
+  `playback_publish_play` (`playback_common.cpp`) and in playback.h's
+  predictor design note. EVERY LAUNCH ROAD SHARES IT — bare Space, the
+  waveform scrub, the A/B audition's four bounded plays and the render
+  player's own launch all publish through that one body — and the line goes
+  out at the far end the same way, `is_playing()` dropping when the FILL
+  ends, one output latency before the last sound does. THE POSITION SURFACE
+  IS TWO FACES OF ONE OBSERVATION and nothing more:
+  `cursor()`, the domain integer every consumer's change detection rides, and
+  `cursor_precise()`, its pre-truncation double for the sub-frame scanner.
+  There is no second predictor and no second position face.
+
+  THE COMPENSATION ARC IS A PARAGRAPH OF RECORD AND NOTHING ELSE. It was
+  built 2026-09-01/02 and rolled back whole on 2026-09-03: the anchor moved
+  onto the audio thread's first fill, the device's reported output latency
+  added to every anchor under a per-epoch re-anchor, a self-measured display
+  lead added to the position read, and a natural-end hold keeping the line
+  alive until the last queued frame had been heard. THE MECHANISM IS IN GIT
+  AND NOWHERE ELSE — a reader who wants it has `git log`, and this file does
+  not re-document it. WHY IT WENT is perceptual and it is his: the
+  compensated line's START varied with the pickup phase, so the line left
+  "sometimes from the marker, sometimes in front of it", which reads as
+  non-determinism, while a deliberate constant lag read as the program
+  waiting for something. HE PERCEIVES ASYNCHRONY AT THE TOP FEW PERCENT —
+  nothing about this residue is imperceptible to him, and what stands is
+  ACCEPTED, never unnoticed. THE INSTRUMENTS WENT WITH THE LEADS on the same
+  ruling — the JACK port-latency figure with its callbacks and its stderr
+  line, and the Wayland presentation-feedback lead with its own — because the
+  product does not measure what it was not asked to measure. A follow-up arc
+  is to re-home those measurements under a panel that runs only while it
+  stands; it does not exist, and nothing in this tree is a stub for it.
+
+  WHAT STAYED IS EVERY CORRECTION, AND EACH STANDS ON ITS OWN GROUND — read
+  this list before deleting any of it as lead residue. THE WINDOW TRAVELS AS
+  A COMMAND PACKET UNDER A SEQLOCK: `play()` writes (start, end) under a
   sequence word carrying the new generation and then releases the session
-  word; a fill consumes only the packet of the generation its gate acquired
-  — one read, no retry, a rejected read meaning a newer publish the next
-  callback's gate will acquire — and keeps that window as audio-thread-
-  private state, so a publish landing mid-fill can move neither the start
-  it seated nor the end it renders against; the seat is published by the
-  cycle stamp's generation tag, which the launch latch and every resync
-  compare against the word they loaded. So on the laptop the
-  line rests on the launch frame until the first sound, tracks the ear to
-  the crystal skew between resyncs (a resync's step is the drift alone),
-  and vanishes with the sound. THE DISPLAY'S OWN LATENCY IS COMPENSATED TOO
-  (architect 2026-09-02, "a self-measuring application that estimates the
-  offset and applies it uniformly"): a frame painted at pre-paint time turns
-  into light one to two refresh periods later (~2 under labwc, ~33 ms at
-  60 Hz), which the old audio lead had partly hidden and the audio
-  compensation exposed — the line reading BEHIND the sound by that much. So
-  the seam carries `display_lead_ns()`, and the predictor's POSITION is read
-  that far AHEAD of `now` (the one read at `observe`, `playback_common.cpp`;
-  the natural-end hold's deadline keeps the bare clock — a lead on the shared
-  clock would end the hold early by the lead). THE LEAD IS FOR PIXELS, NOT
-  FOR STORED POSITIONS (architect 2026-09-02, converting the codex round's
-  finding on the arc): painting predicts ahead because the pixel lights after
-  the read, while a RESTING WRITE must record where the ear was — so
-  `GuiPlayback` carries a second position face, `heard_cursor()`, which is
-  `cursor()`'s own observation with the lead term zero (`observe`'s one
-  `apply_display_lead` parameter forks the position read alone, so there is
-  no second predictor), and the render player's two pauses — the live pause
-  and the dead-device pause — write `resume_frame` from it while the clock,
-  the scrub and the scanner go on painting from `cursor()`; the main
-  window's own stop parks nothing (`stop_playback_if_playing` leaves the
-  playhead untouched), so those two are the whole resting-write set.
-  LAPTOP ONLY, and the figure is
-  MEASURED: the Wayland backend binds `wp_presentation` (the third optional
-  protocol) and, on every content commit — now the conventional frame
-  request → feedback → damage → attach → ONE commit, the second empty commit
-  per frame retired with the reorder — requests a presentation feedback
-  stamped with the pre-paint instant; `presented` answers with the instant
-  the pixels lit, and a 30-frame moving mean of the difference (Kodi's
-  window) is the lead, published from the first sample; `discarded`
-  drops the sample. The FALLBACK where the global is absent or its clock is not
-  `CLOCK_MONOTONIC` (the predictor's own, so no conversion stands between
-  the two stamps) is 2 × the refresh period of the window's own output
-  (section C above owns which output that is), 60 Hz when none is known.
-  THE FRAME GRID IS NOT A TERM, and its one-day life is the record: half the
-  selected output's refresh period was added to both arms on 2026-09-02 (the
-  four-tier review's R-20, in a term of its own that is now deleted) to CENTRE the
-  sample-and-hold residue at −P/2..+P/2 instead of the transport-only 0..P
-  behind, and the architect REVERSED IT THE NEXT DAY at his own glass
-  (2026-09-03): a two-sided residue puts the line AHEAD of the sound on half
-  the launches, up to 8 ms at 60 Hz, and he sees it — the audition's line
-  leaving "sometimes from the marker, sometimes in front of it", which reads
-  as non-determinism. A one-sided residue BEHIND is the direction perception
-  forgives least and the one he can live with, because the line then never
-  leaves ahead of the marker. The frame-aligned launch that would remove the
-  residue instead was rejected with it: it would add a VARIABLE 0..P delay to
-  the sound itself, and the audio path is untouched by any of this (press to
-  sound stays the JACK pickup wait plus the fixed device latency).
-  One stderr line beside the JACK latency line says the figure — the
-  fallback once at init, the measured mean when its window first fills and
-  again whenever it moves by a millisecond — and ONE means one: the
-  `clock_id` handler prints nothing at all and keeps the announced id for the
-  init line to name (it printed a second, figure-less warning for the
-  bad-clock condition until 2026-09-02). The line can tell the ABSENT global
-  from the UNUSABLE CLOCK because the event is in hand by then: the bind is
-  issued while the first roundtrip dispatches the registry globals, so it
-  flushes with the second roundtrip and the compositor's binding-time
-  `clock_id` reply is dispatched before that roundtrip returns. `main.cpp`'s pre-paint hook
-  hands the figure to the predictor once per painted frame
-  (`GuiPlayback::set_display_lead_ns`), above every reader that frame has.
-  ANDROID ANSWERS 0 BY RULING (the deep dive's item I, record-only): the
-  tablet's audio latency is uncompensated by ruling, so its predictor
-  already runs AHEAD of the sound by the whole audio lead — and THAT
-  PLATFORM'S OWN DISPLAY LAG IS WHAT CANCELS IT. The error at the moment the
-  pixel lights is L_audio − L_display, about 10–25 ms of audio lead against
-  22–33 ms of SurfaceFlinger lag, so roughly −23…+3 ms net on the speaker.
-  A display lead there would push the position read forward by L_display and
-  leave the whole audio lead standing: it would REMOVE the one cancellation
-  the tablet has rather than double a compensation that platform never made,
-  which is why the zero is the stronger answer and not a gap. There is no
-  feedback road on the lock/unlockAndPost path either. What remains on the laptop is the DAC's own few-ms pipeline and
-  the frame grid's residue — 0..P behind, half a period on average — both
-  recorded at `playback_publish_play` (`playback_common.cpp`).
+  word; a fill consumes only the packet of the generation ITS OWN GATE
+  acquired — one read, no retry, a rejected read meaning a newer publish the
+  next callback's gate will acquire — and keeps that window as
+  audio-thread-private state, so a publish landing mid-fill can move neither
+  the start it seated nor the end it renders against. THE SESSION WORD AND
+  ITS GENERATION stay, with the TERMINAL qualified by the word the gate
+  acquired, and `bind` resetting the cycle stamp together with the word. THE
+  AAUDIO DISCONNECT FENCE stays. AND THE CYCLE-STAMPED READ CURSOR STAYS: the
+  audio thread publishes (the read cursor, the instant that cursor's frame
+  enters the output port) under a seqlock at every fill's end, and every
+  RESYNC anchors on that pair rather than on the main thread's `now`, which
+  sat anywhere inside the period before that fill. THE CYCLE STAMP IS AN
+  ACCURACY DEVICE, NOT A COMPENSATION — it is about the same raw line, and
+  what it buys is that a resync's step is the accumulated DRIFT alone instead
+  of re-rolling a whole pickup period into the line at every pan end, page
+  turn or `c` (playback.h's resync paragraph owns the reasoning and the call
+  sites).
+
+  THE WAYLAND SINGLE-COMMIT ORDERING STAYS TOO, by his ruling of 2026-09-03
+  although the presentation feedback it was landed for is gone: frame
+  request → damage → attach → ONE commit per painted frame, where before the
+  arc the frame request went out on a second, empty commit AFTER the content
+  commit. One commit per painted frame is what the protocol's shape asks for.
+  The record lives at `paint_one_frame` (`platform_wayland.cpp`) and belongs
+  there; this file only points at it. The multi-output binding and the
+  `wl_surface.enter` selection stay as well, serving the tick's refresh
+  period — section C above owns which output that is.
+
+  ANDROID RUNS THE SAME RAW PREDICTOR. With no compensation on either
+  backend there is no asymmetry left on this axis to record, and the seam
+  carries no latency member for either one. The tablet fact still worth
+  keeping is the ROUTE AND WHAT IT PAINTS: the car's route is Bluetooth,
+  whose latency is large, variable and unreported, and in the car the render
+  player stands, under which the waveform scanner is neither sampled nor
+  painted (`main.cpp`'s pre-paint hook returns above it) — so the only moving
+  picture there is the modal row's scrub and clock, registered against no
+  waveform.
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FIVE keys it stamps are per-DEVICE preferences
