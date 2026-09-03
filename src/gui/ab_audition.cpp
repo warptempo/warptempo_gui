@@ -57,11 +57,16 @@ bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
 // all but the act's STOP: a standing sequence is transport_session_live, which
 // the face reads ahead of this and answers with its lit STOP glyph, so a press
 // on that face always does something. It sits beside start() so the two read as
-// one; a gate added there must be added here.
+// one; a gate added there must be added here. THE DEVICE TERM IS A READ,
+// NEVER A REOPEN, AND THE READ IS THE NEVER-CAME-UP HALF (2026-09-02, the
+// truthful-buttons rule): start() asks ensure_device_available_for_play,
+// which reopens a dead AAudio stream and cards only when that fails, so this
+// asks device_absent — the one state a press cannot change — and the face
+// agrees with the act (space_launch_would_play's plain term reads the same).
 bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render) {
-    if (playback.device_unavailable()) return false;
+    if (playback.device_absent()) return false;
     return tab_launch_ready_impl(app, audio, playback, target_render,
                                  app.playhead_cursor_sample) &&
            tab_launch_ready_impl(app, audio, playback, target_render,
@@ -93,17 +98,23 @@ void GuiAbAudition::start() {
         playback_lifecycle.stop_playback_if_playing();
         return;
     }
-    // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), ahead of both
-    // tab gates and ahead of the first `c`: the act's four plays all end at the
-    // launch body's own device check, so a dead device refuses the whole act —
-    // but it would refuse it AFTER this body had zoomed one tab, switched to
-    // the other and zoomed that one too, which is exactly the "a refused act
-    // moves nothing" promise the gates below are here to keep. It is not a
-    // per-tab fact (nothing will sound on either), so it is asked once, before
-    // the pair is read at all. The sentence is the launch body's own literal,
-    // spelled once at playback_lifecycle.h; this arm returns, so the belt down
-    // there never adds a second card to the press.
-    if (playback.device_unavailable()) {
+    // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), AND THE
+    // QUESTION REOPENS IT (2026-09-02, architect — R-3: a dead AAudio stream
+    // is closed and reopened at this press through
+    // GuiPlayback::ensure_device_available_for_play, play()'s own head check
+    // hoisted, and the card comes only when that reopen failed; JACK answers
+    // its unchanged read). Ahead of both tab gates and ahead of the first
+    // `c`: the act's four plays all end at the launch body's own device
+    // check, so a dead device refuses the whole act — but it would refuse it
+    // AFTER this body had zoomed one tab, switched to the other and zoomed
+    // that one too, which is exactly the "a refused act moves nothing"
+    // promise the gates below are here to keep. It is not a per-tab fact
+    // (nothing will sound on either), so it is asked once, before the pair is
+    // read at all. The sentence is the launch body's own literal, spelled
+    // once at playback_lifecycle.h; this arm returns, so the belt down there
+    // never adds a second card to the press (its reopen finds the stream this
+    // one opened).
+    if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
         return;

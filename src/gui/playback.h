@@ -325,10 +325,53 @@ public:
     // where otherwise it would walk a folder at tick rate with nothing to play
     // it on. The JACK backend answers the never-came-up half alone; it records
     // nothing for a server that vanishes mid-play, with the reason at its
-    // definition. Main thread only, like is_playing(); on Android the next
-    // play() reopens the device by the backend's own rule and clears the
-    // answer.
+    // definition. Main thread only, like is_playing(). THIS IS THE READ AND
+    // NOTHING ELSE: it reopens nothing, so on Android a dead stream stays dead
+    // to it until a LAUNCH PRESS reopens through
+    // ensure_device_available_for_play below (or the render player's own play
+    // road reaches play(), which reopens at its head). ONE READER: the render
+    // player's tick (a dead stream mid-play must PAUSE, not advance), plus the
+    // reopen's own post-reopen read inside ensure_device_available_for_play.
+    // The launch FACES do not read it — they read device_absent below, the
+    // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
+
+    // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
+    // the reopen at the press): THE NEVER-CAME-UP HALF ALONE. The press
+    // reopens a dead stream, so only a device that never came up greys a
+    // launch button — a face that read the latch would grey Play on the
+    // tablet after every route drop while Space, the same act, reopened and
+    // played (the twin rule: a button greys only when every admitted variant
+    // would change nothing). JACK: `!impl_ || !impl_->client_active`,
+    // identical to device_unavailable there (this backend has no latch).
+    // AAudio: `!impl_ || !impl_->device_ready` — the `stream_dead` latch and
+    // the null stream are NOT terms, being exactly what the press reopens.
+    // Readers: the two PLAY-face predicates space_launch_would_play and
+    // ab_audition_preflight_ok; the render player's modal Play face is its
+    // intended third reader once that face gains a device term (R-17a).
+    // Main thread only; a pure read.
+    bool    device_absent() const;
+
+    // THE REOPEN AT THE PRESS (architect 2026-09-02, the four-tier review's
+    // R-3). Asked at a LAUNCH press by the three launch gates —
+    // toggle_playback's target pre-sum gate, GuiAbAudition::start's preflight
+    // and the launch body's belt (playback_lifecycle.cpp, ab_audition.cpp) —
+    // which card kPlaybackDeviceUnavailableCard only when this answers FALSE.
+    // JACK answers `!device_unavailable()` and touches nothing (this backend
+    // has no latch to clear — the mid-play loss is not recorded, the reason
+    // at device_unavailable's definition). AAudio closes a dead stream and
+    // reopens a dead or null one at the head — play()'s own first two lines,
+    // hoisted here so a route that dropped on the tablet (a headphone pulled,
+    // a Bluetooth route gone) comes back at the NEXT PRESS instead of leaving
+    // every main-window launch road carding forever behind a read that never
+    // reopened — and answers false only after that reopen FAILED (the latch
+    // and `device_ready` re-read after it, through device_unavailable). It
+    // does not replace play()'s own reopen or its post-publish race check:
+    // the player's road reaches play() with no gate ahead of it, and the
+    // ordering argument at play()'s second latch read rests on the head
+    // check standing there. Main thread only; non-const because it may open
+    // a device.
+    bool    ensure_device_available_for_play();
 
     // Continuous (sub-frame) counterpart of cursor(): the pre-truncation
     // extrapolated position as a double, in the SAME domain cursor() reports

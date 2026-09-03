@@ -919,8 +919,11 @@ void GuiRenderPlayer::tick() {
         // whole reason the state is stored: the next Play resumes this item at
         // that cursor rather than restarting it. ONE LINE FOR BOTH SHAPES:
         // what the user needs to know is that nothing will sound, not which
-        // way it will not. Nothing here retries; on Android
-        // the next Space reopens the device by the backend's own rule.
+        // way it will not. Nothing here retries, and this fork is a READ
+        // (device_unavailable, never the reopen): on Android the next play
+        // PRESS reopens the device — the main window's launch gates through
+        // GuiPlayback::ensure_device_available_for_play, this player's own
+        // road through play()'s head check (the one reopen body, both).
         // THE UNLED FACE FOR SYMMETRY (2026-09-02): a suspended device holds
         // the integer cursor and the predictor extrapolates nothing, so the
         // display lead cannot reach this value either way — but this is a

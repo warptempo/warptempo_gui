@@ -111,8 +111,19 @@ drag coordinates floor instead of truncating.
   to the old body with five recorded deviations. `playback.cpp` is the JACK
   device half, `playback_aaudio.cpp` the AAudio one (granted-rate open —
   48 000 on the S10 FE's speaker, natively; LOW_LATENCY granted, burst 96;
-  a disconnect marks the stream dead and the next `play()` reopens at the
-  new device's rate, no auto-resume). THE AAUDIO STREAM IS OPENED ONCE,
+  a disconnect marks the stream dead and THE NEXT LAUNCH PRESS reopens at
+  the new device's rate, no auto-resume — `GuiPlayback::
+  ensure_device_available_for_play`, a member of the playback header both
+  backends implement, not of the seam (architect 2026-09-02, the four-tier
+  review's R-3): the three main-window launch gates
+  ask it in place of the read, AAudio closes a dead stream and reopens a
+  dead or null one there — `play()`'s own head check, hoisted into the one
+  file-local body `reopen_stream_if_dead` both call — and answers false only
+  after that reopen failed, so the card comes only then; JACK answers its
+  unchanged read `!device_unavailable()`; `play()` keeps the head check and
+  its post-publish race check for the render player's ungated road; before
+  it the gates READ the latch ahead of `play()` and the tablet stayed mute
+  behind the card after every route drop). THE AAUDIO STREAM IS OPENED ONCE,
   STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS (architect 2026-08-27, on
   glass — starting a stream unmutes the device's output path and that
   transient was audible as a click at the head of every audition): it is
@@ -765,7 +776,14 @@ a server that vanishes mid-play) — and the render player's tick forks on it
 BEFORE its natural-end test, pausing in place with "No audio device to play the
 wav" on a notification card and a "paused" push, where before a Bluetooth drop read as a
 natural end and auto-advanced, and a laptop without pipewire-jack raced
-through the folder a wav per tick.
+through the folder a wav per tick. THE READ IS A READ (2026-09-02): the tick
+keeps `device_unavailable()`, which reopens nothing; the reopen is the launch
+press's, `ensure_device_available_for_play` (the playback bullet above), and
+the player's own play road reopens through `play()`'s head check as it always
+did. THE LAUNCH FACES READ THE NEVER-CAME-UP HALF ALONE, `device_absent()`
+(JACK identical to the read; AAudio `device_ready` alone, the latch not a
+term): a face must not grey what the press reopens, so a dropped route leaves
+Play lit and its press plays.
 
 ## Build and freeze posture
 

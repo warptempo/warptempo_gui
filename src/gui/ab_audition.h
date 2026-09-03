@@ -162,7 +162,10 @@ struct GuiInputHandler;
 // move, so a refusal that said nothing was indistinguishable from one):
 // A DEAD OR ABSENT DEVICE, asked once for the pair ahead of everything below
 // it because nothing will sound on either tab (the launch body's own literal,
-// kPlaybackDeviceUnavailableCard);
+// kPlaybackDeviceUnavailableCard) — and since 2026-09-02 the question REOPENS
+// a dead AAudio stream first (GuiPlayback::ensure_device_available_for_play,
+// the reopen at the press), so it cards only a device that stayed dead after
+// the reopen or never came up at all;
 // in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or
 // EITHER tab's playhead outside the bound buffer's playable range — the other
 // tab's read through its own ViewState, clamped exactly as the switch would

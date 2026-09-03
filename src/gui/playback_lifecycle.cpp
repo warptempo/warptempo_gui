@@ -183,15 +183,21 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // refused launch still leaves it cleared; the shared launch body assumes
     // its caller ran it (scrub_launch_at, the other caller, does too).
     app.follow_overridden_for_session = false;
-    // THE DEVICE IS ASKED HERE, AHEAD OF THE POSITION (2026-08-30). The launch
+    // THE DEVICE IS REOPENED HERE, AHEAD OF THE POSITION (asked 2026-08-30;
+    // a REOPEN since 2026-09-02, architect — the four-tier review's R-3: the
+    // AAudio backend reopened a dead stream inside play(), and a read ahead of
+    // play() carded forever after a route drop, so the press now reopens
+    // through GuiPlayback::ensure_device_available_for_play and cards only
+    // when the reopen FAILED; JACK's answer is the unchanged read). The launch
     // body asks it first for the same reason and would answer this press
     // correctly in source view — but the target arm below decides a POSITION
     // refusal of its own before control could reach the body, so a dead device
     // met at the domain's end would be told the wrong cause. Asked once for
     // both views because the fact is neither view's: nothing will sound. The
     // sentence is the launch body's own literal, and this arm returns, so the
-    // belt below never adds a second card to the press.
-    if (playback.device_unavailable()) {
+    // belt below never adds a second card to the press (the belt's reopen then
+    // finds the stream this one opened, a no-op).
+    if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
         return;
@@ -252,10 +258,17 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // lead-in included, which is what makes the face and the key read ONE
 // launch position. It sits here beside toggle_playback so the composition
 // and the act read as one; a gate added to the press must be added here.
+// THE DEVICE TERM IS A READ, NEVER A REOPEN, AND THE READ IS THE
+// NEVER-CAME-UP HALF (2026-09-02, the truthful-buttons rule): the press asks
+// ensure_device_available_for_play, which reopens a dead AAudio stream and
+// cards only when that fails, so the face asks device_absent — the device
+// that never came up, the one state a press cannot change — and AGREES with
+// the act: a dropped route on the tablet leaves Play lit, and its press
+// reopens and plays exactly as Space does.
 bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
                              const GuiTargetRender& target_render,
                              int64_t total_frames) {
-    if (playback.device_unavailable()) return false;
+    if (playback.device_absent()) return false;
     if (a.active_audio_view == 'T') {
         if (!target_preview_ready(target_render)) return false;
         const int64_t offset = phase_reset_lead_in_launch_offset(a, playback);
@@ -451,25 +464,32 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // no-lower-gate-but-the-domain's-own rule. A one-frame SOURCE FILE is
     // launch-inert by this gate (its render still works: the trimmer's
     // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
-    // A DEAD OR ABSENT DEVICE IS ASKED FIRST, AND SAYS SO (architect
-    // 2026-08-30): the launch below would "succeed" — the scanner would seed,
-    // the follow would scroll and play() would return — with nothing coming
-    // out of the machine, which is the one refusal the user cannot see for
-    // himself. The fact is GuiPlayback::device_unavailable's, the honest
-    // reading of "nothing will sound" on both backends and the same one the
-    // render player's tick forks on; no bit is added and nothing is latched
-    // here. The load's own stderr line stays, but it is printed once at
-    // startup and this is every press after it. Ahead of the playable gate
-    // so the sentence names the device rather than the position — and for the
-    // same reason THE TWO PRE-LAUNCH GATES ASK IT AHEAD OF THIS ONE (2026-08-30:
-    // toggle_playback's target pre-sum gate and GuiAbAudition::start's
-    // preflight, both of which decide something — a position card, a camera and
-    // a tab switch — before control could arrive here). This check is the BELT
-    // they leave standing: it is the only gate on the scrub's launch, which has
-    // no outer road at all, and each of the three returns, so exactly one card
-    // is raised per press. The sentence is kPlaybackDeviceUnavailableCard,
-    // spelled once at the header for all three.
-    if (playback.device_unavailable()) {
+    // A DEAD OR ABSENT DEVICE IS REOPENED FIRST, AND A FAILED REOPEN SAYS SO
+    // (asked 2026-08-30; a REOPEN since 2026-09-02, architect — R-3): the
+    // launch below would "succeed" — the scanner would seed, the follow would
+    // scroll and play() would return — with nothing coming out of the
+    // machine, which is the one refusal the user cannot see for himself. The
+    // question is GuiPlayback::ensure_device_available_for_play's: on AAudio
+    // it closes a dead stream and reopens it at the press (play()'s own head
+    // check, hoisted — a route drop on the tablet is undone by the next
+    // press instead of carding forever behind a read), on JACK it is the
+    // honest read of "nothing will sound" and changes nothing; either way it
+    // answers false only when nothing can sound AFTER the reopen, which is
+    // the same fact the render player's tick reads through device_unavailable
+    // — no bit is added and nothing is latched here. The load's own stderr
+    // line stays, but it is printed once at startup and this is every press
+    // after it. Ahead of the playable gate so the sentence names the device
+    // rather than the position — and for the same reason THE TWO PRE-LAUNCH
+    // GATES ASK IT AHEAD OF THIS ONE (2026-08-30: toggle_playback's target
+    // pre-sum gate and GuiAbAudition::start's preflight, both of which decide
+    // something — a position card, a camera and a tab switch — before control
+    // could arrive here). This check is the BELT they leave standing: it is
+    // the only gate on the scrub's launch, which has no outer road at all —
+    // so the scrub's reopen is this one — and each of the three returns, so
+    // exactly one card is raised per press (behind a gate that reopened, this
+    // reopen finds the stream standing and is a no-op). The sentence is
+    // kPlaybackDeviceUnavailableCard, spelled once at the header for all three.
+    if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
         return false;

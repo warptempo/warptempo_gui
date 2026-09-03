@@ -455,6 +455,24 @@ bool GuiPlayback::device_unavailable() const {
     return !impl_ || !impl_->client_active;
 }
 
+// THE PRESS'S REOPEN IS THE READ ON THIS BACKEND (contract at the
+// declaration): there is nothing to reopen — no latch is ever set here (the
+// mid-play loss is not recorded, above), and a client that never came up is
+// not brought up by a press (the init failure logged its own line and the
+// user relaunches). So the answer is exactly what the gates read before the
+// reopen existed, `!device_unavailable()`, and a press on this backend
+// changes no state.
+bool GuiPlayback::ensure_device_available_for_play() {
+    return !device_unavailable();
+}
+
+// THE FACE'S READ IS THE SAME BIT ON THIS BACKEND (contract at the
+// declaration): device_unavailable is already the never-came-up half alone
+// here, so the two reads are one expression.
+bool GuiPlayback::device_absent() const {
+    return !impl_ || !impl_->client_active;
+}
+
 void GuiPlayback::set_display_lead_ns(int64_t lead_ns) {
     if (!impl_) return;
     playback_set_display_lead_ns(impl_->state, lead_ns);

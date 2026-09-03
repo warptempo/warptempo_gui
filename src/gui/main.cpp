@@ -2691,7 +2691,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The stop body's own call is unchanged: the
         // fence-before-flag-clear ordering above is exactly what the next
         // launch relies on too, a rebind-safe, quiesced device under the fresh
-        // play().
+        // play(). A DEVICE THAT DIES MID-ACT READS HERE AS THAT PLAY'S
+        // NATURAL END (2026-09-02, recorded with the reopen-at-the-press
+        // ruling, no arm added): the AAudio disconnect lowers the playing bit
+        // exactly as a finished window does and this branch has no device
+        // fork, so the act ADVANCES ONE REST, and the next launch — the
+        // rest's fire, through the launch body's belt — reopens the device or
+        // cards; the reopen is the press's, never the tick's.
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);

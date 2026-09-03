@@ -28,8 +28,16 @@ struct GuiRenderPlayer;
 // would otherwise run `c` and switch tabs before the belt refused). Only one of
 // the three fires per press — each returns — so the shared literal is what
 // keeps one fact one sentence. It lives here rather than in notifications.h
-// because the fact is this cluster's: the reading is GuiPlayback::
-// device_unavailable's and every site that raises it is a launch road.
+// because the fact is this cluster's: the question is GuiPlayback::
+// ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
+// 2026-09-02): each of the three sites reopens a dead AAudio stream before it
+// asks, and cards only when that reopen failed, JACK answering its unchanged
+// read — and every site that raises it is a launch road. The reads: the
+// render player's tick keeps device_unavailable (a dead stream mid-play must
+// pause), and the two PLAY-face predicates (space_launch_would_play,
+// ab_audition_preflight_ok) read device_absent, the never-came-up half alone
+// — a face is a read, never a reopen, and it must not grey what the press
+// would reopen.
 inline constexpr const char* kPlaybackDeviceUnavailableCard =
     "Playback is unavailable on this device";
 

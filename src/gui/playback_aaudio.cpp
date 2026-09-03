@@ -67,7 +67,8 @@
 //     AAudio stream function, which is Google's own rule and the reason the
 //     spike used a detached thread to do its closing; this backend needs no
 //     detached thread because it does not close there at all — the next
-//     play() closes the dead stream on the main thread and reopens.
+//     launch press (ensure_device_available_for_play) or play() closes the
+//     dead stream on the main thread and reopens.
 
 namespace {
 
@@ -224,9 +225,9 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // fill in flight that reaches its natural end after this finds the word
     // changed under its gate's value and abandons its terminal (the word's
     // comment, playback_common.h), so a live session's disconnect never
-    // raises the hold; and the next play() closes this stream and publishes a
-    // fresh generation, so no session is left stranded behind the lowered
-    // flag.
+    // raises the hold; and the next reopen (the launch press's, or play()'s
+    // own head) closes this stream, and play() publishes a fresh generation,
+    // so no session is left stranded behind the lowered flag.
     //
     // THE LATCH IS PUBLISHED BEFORE THE BIT IS LOWERED, WITH A seq_cst FENCE
     // BETWEEN (2026-09-01, the disconnect outranking a concurrent publish):
@@ -242,9 +243,12 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // ordered before this fetch_and, which lowers it.
     //
     // NOTHING RECOVERS BY ITSELF: no auto-resume, no reconnect timer, no
-    // retry. The next play() closes this stream and opens a new one at the new
-    // device's own granted rate. The user presses play again — the same answer
-    // the product gives every other rare, loud fault.
+    // retry. The next LAUNCH PRESS closes this stream and opens a new one at
+    // the new device's own granted rate — the main window's three launch
+    // gates through ensure_device_available_for_play, the render player's
+    // road through play()'s own head (reopen_stream_if_dead, one body for
+    // both). The user presses play again — the same answer the product gives
+    // every other rare, loud fault.
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -253,7 +257,7 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
 
     std::fprintf(stderr,
         "warptempo_gui: AAudio stream error %d (%s); stream is dead, playback "
-        "stopped. The next play reopens the device.\n",
+        "stopped. The next play press reopens the device.\n",
         static_cast<int>(error), AAudio_convertResultToText(error));
 }
 
@@ -324,7 +328,8 @@ void fence_quiesced(GuiPlayback::Impl& impl) {
 // START THE STREAM, once per open (the lifecycle block at the head). Idempotent
 // on `started`, so the init path's start and play()'s own are one road: a start
 // refused at init is logged there and RETRIED at the next play, which owns the
-// failure arm (it closes the stream, and the play after that reopens).
+// failure arm (it closes the stream, and the next press's reopen brings a
+// fresh one).
 bool start_stream(GuiPlayback::Impl& impl) {
     if (impl.started) return true;
     if (!impl.stream) return false;
@@ -465,6 +470,25 @@ bool open_stream(GuiPlayback::Impl& impl) {
     return true;
 }
 
+// THE DEAD-STREAM REOPEN, ONE BODY FOR TWO CALLERS (the disconnect rule at the
+// error callback): a dead stream is closed and a dead or null one reopened
+// HERE, on the main thread, at the new device's own granted rate. Answers
+// whether a stream stands after it. Called at the head of play() — the
+// render player's road, which reaches play() with no gate ahead of it — and
+// by ensure_device_available_for_play, the main window's three launch gates'
+// question (architect 2026-09-02): before it the gates READ the latch ahead
+// of play() and so never let play() reopen, leaving the tablet mute behind
+// the card after every route drop. A failed reopen leaves playback disabled
+// until the next press — no retry, no timer — and, with `device_ready` still
+// true, is exactly the "no stream standing" shape device_unavailable reads.
+bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
+    if (impl.stream_dead.load(std::memory_order_acquire)) {
+        close_stream(impl);
+    }
+    if (!impl.stream && !open_stream(impl)) return false;
+    return true;
+}
+
 }  // namespace
 
 GuiPlayback::GuiPlayback() : impl_(std::make_unique<Impl>()) {}
@@ -495,14 +519,14 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     if (!impl_->device_ready) return;
 
-    // A dead stream is closed and reopened HERE, on the main thread, at the
-    // new device's own granted rate (the disconnect rule at the error
-    // callback). A failed reopen leaves playback silently disabled until the
-    // next press — no retry, no timer.
-    if (impl_->stream_dead.load(std::memory_order_acquire)) {
-        close_stream(*impl_);
-    }
-    if (!impl_->stream && !open_stream(*impl_)) return;
+    // THE HEAD CHECK: a dead stream closed and reopened (reopen_stream_if_dead,
+    // the one body the launch press's ensure_device_available_for_play also
+    // calls). It stays here even though the main window's gates have already
+    // run it at the press — the render player's play road has no gate ahead
+    // of this call, and the two-case argument below rests on this check
+    // standing at the head. A failed reopen returns silently: the gates have
+    // carded, and the player's road reads device_unavailable at its tick.
+    if (!reopen_stream_if_dead(*impl_)) return;
 
     // Publish FIRST, start SECOND: the command packet, the main thread's
     // window mirror and cursor, the await-seat anchor and the session word
@@ -526,7 +550,7 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // callback's fence, is visible to this load, and the bit is lowered
     // here. Either way the published bit comes down, and the road taken is
     // the failed start's own: lower the bit, close the dead stream, and the
-    // next play() reopens. THE THIRD LEG, which the fences do not cover: the
+    // next press reopens. THE THIRD LEG, which the fences do not cover: the
     // callback stores the latch, fences, and is preempted BEFORE its
     // fetch_and while this call sees the latch at its head, closes, reopens
     // and publishes the fresh generation — the late fetch_and would then
@@ -548,8 +572,9 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // stream was started at open and has been running ever since, so an
     // ordinary play makes no device call at all. Two paths still arrive here
     // with a stopped stream and are started by this call — the reopen just
-    // above, and an init whose own start was refused — and a refusal here
-    // disables the device until the next play reopens it.
+    // above (the head's, or the launch press's a moment earlier), and an init
+    // whose own start was refused — and a refusal here disables the device
+    // until the next press reopens it.
     if (!start_stream(*impl_)) {
         impl_->state.session.fetch_and(~kSessionPlayingBit,
                                        std::memory_order_release);
@@ -598,15 +623,41 @@ GuiPlaybackSnapshot GuiPlayback::snapshot() const {
 //  - the error callback's `stream_dead` latch — a device that went away under
 //    a running stream (a headphone pulled, a Bluetooth route dropped);
 //  - no stream standing with `device_ready` still true — what a REFUSED REOPEN
-//    leaves behind: play() closes a dead stream (clearing the latch) and
-//    returns when nothing can be opened. That is the same lost device one step
-//    later.
+//    leaves behind: the reopen (reopen_stream_if_dead, at a launch press or
+//    at play()'s head) closes a dead stream (clearing the latch) and returns
+//    when nothing can be opened. That is the same lost device one step later.
 // Answering false on any of them would let the render player's tick read the
 // silence as a natural end and walk the folder with nothing to play it on.
+// A READ ONLY (contract at the declaration): the reopen is the press's, below.
 bool GuiPlayback::device_unavailable() const {
     if (!impl_ || !impl_->device_ready) return true;
     return impl_->stream_dead.load(std::memory_order_acquire) ||
            impl_->stream == nullptr;
+}
+
+// THE PRESS'S REOPEN (contract at the declaration; architect 2026-09-02): the
+// head of play(), hoisted to the launch gates so a dead stream is reopened
+// where the main window asks its device question instead of read and carded.
+// The answer is device_unavailable's own reading taken AFTER the reopen — the
+// latch cleared by close_stream, the stream standing or not — so the gates
+// card exactly when nothing can be opened. A device that never came up
+// (`device_ready` false) is not opened by a press: init's failure logged its
+// line, play() is the documented silent no-op, and this answers false at once
+// as the read does. The error callback may still fire between this reopen and
+// play()'s publish; play()'s own head check and its post-publish fence answer
+// that, unchanged.
+bool GuiPlayback::ensure_device_available_for_play() {
+    if (!impl_ || !impl_->device_ready) return false;
+    reopen_stream_if_dead(*impl_);
+    return !device_unavailable();
+}
+
+// THE FACE'S READ (contract at the declaration): the first of
+// device_unavailable's three ways alone — init never opened a stream, or
+// shutdown() closed it. The latch and the null stream are what a launch press
+// reopens, so a face that counted them would grey a button whose press plays.
+bool GuiPlayback::device_absent() const {
+    return !impl_ || !impl_->device_ready;
 }
 
 void GuiPlayback::set_display_lead_ns(int64_t lead_ns) {
