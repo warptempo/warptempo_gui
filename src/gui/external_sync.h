@@ -61,9 +61,11 @@
 // first and deletions after, so an act interrupted part-way (a pulled stick, a
 // killed process) leaves the stick with at most EXTRA files and never fewer.
 //
-// A MIRROR THAT IS UNSURE DELETES NOTHING. Four rules say what that means and
+// A MIRROR THAT IS UNSURE DELETES NOTHING. Five rules say what that means and
 // they are stated here once, for the whole act; the body below names the rule
-// each site is serving and states none of its own.
+// each site is serving and states none of its own. (Rule 5 is the newest, and
+// it is rule 1's COPY-SIDE TWIN: a set the destination cannot hold apart is a
+// set the mirror is unsure of, so it copies nothing either.)
 //
 //   1. THE MIRROR DELETES ONLY AGAINST A LISTING IT FINISHED. Every walk and
 //      every status in the act carries its error_code and answers it. An
@@ -109,8 +111,14 @@
 //      rules that had to agree, and between a retitle and the next render they
 //      did not: the disk still held the old wav, the stick lost it, nothing
 //      was copied in its place and the act said nothing.
-//   2. NO DESTINATION SYMLINK IS EVER FOLLOWED, which is what makes the scope
-//      claim above true by construction rather than lexically. Before anything
+//   2. NO SYMLINK IS EVER FOLLOWED, ON EITHER SIDE, which is what makes the
+//      scope claim above true by construction rather than lexically. It was
+//      DESTINATION-SCOPED until 2026-09-02, when the source side joined it:
+//      the source classifiers used `is_directory` / `is_regular_file`, which
+//      FOLLOW, so a symlinked `render/`, `tmp/` or batch folder was walked
+//      and a symlinked `x.wav` was copied through — while HELP promised the
+//      act refuses a symlink rather than reading, writing or deleting through
+//      one. Before anything
 //      is created or written, THE SYNC ROOT ITSELF, the project's folder under
 //      it, every kept batch folder and every kept destination file are read
 //      with symlink_status: a name that exists and is not the real directory or
@@ -119,7 +127,22 @@
 //      regular file". THE SYNC ROOT IS THE FIRST NAME ASKED, because every path
 //      in the act is composed under it and a link there would aim the whole
 //      mirror — its creates, its copies and its removals — at whatever it
-//      points to. IT IS ALSO WHERE A DESTINATION THAT IS SIMPLY NOT THERE
+//      points to.
+//      ON THE SOURCE SIDE the rule reaches the THREE ROOTS THE ACT OPENS and
+//      the FILES IT COPIES, and it draws the same line the destination side
+//      draws between a name the act claims and a name it merely passes: a
+//      symlinked `render/` or `tmp/` refuses at its own claim (an ABSENT one
+//      is still rule 1's empty set, and one that is there but is not a
+//      directory keeps the walk's own "Cannot read" line rather than gaining a
+//      second sentence for the same fact); an entry directly under `tmp/` that
+//      is a link refuses, because whether the act would WALK it cannot be
+//      decided without following it; and inside a wav folder a link NAMED
+//      `<...>.wav` refuses, because that is one the act would copy, while a
+//      link named anything else is simply not in the set — the extension is
+//      lexical, so nothing is followed to drop it, and the destination side
+//      likewise removes an unkept link instead of refusing over it.
+//      THE SYNC ROOT'S CLAIM IS ALSO WHERE A DESTINATION THAT IS SIMPLY NOT
+//      THERE
 //      ANSWERS (2026-08-30, the configured path's own case, which a FOUND
 //      volume could never have had): an unplugged stick or a mistyped
 //      `sync_path` names nothing, and the root's claim refuses "'<path>' is
@@ -156,6 +179,28 @@
 //      through the existing `My Title.wav` entry, whose spelling on the stick
 //      need not change, and a spelling comparison would then delete the very
 //      file this act had just copied.
+//   5. A SET THE DESTINATION COULD NOT HOLD APART IS REFUSED WHOLE, before
+//      anything is created or copied (2026-09-02). Rule 4's own fact read the
+//      other way: the project's filesystem is case-SENSITIVE and the stick's
+//      is not, so two names in one destination directory that differ only by
+//      case are TWO files here and ONE entry there — `My Title.wav` and
+//      `my title.wav`, which the CLI's own retitle can produce with nothing
+//      adversarial in it, the CLI having no prune. Left to run, the second
+//      staged rename replaces the first, rule 4 then reads the one survivor
+//      as either of them and keeps it, and the act reports success — silently
+//      — having shipped one of the two and said nothing. So the SET
+//      CONSTRUCTION compares the desired entries of each destination
+//      directory pairwise under an ASCII case fold (`ascii_folded`,
+//      external_sync.cpp — vfat's real rule is Unicode and codepage-
+//      dependent, and this is the test every host agrees on) and a pair that
+//      folds together ends the act with "'<a>' and '<b>' would be one file at
+//      the destination", the fourth fixed sentence beside rule 2's three.
+//      The sentence states the FACT and not the cause, so it is true of an
+//      exact tie as well (a batch folder named `x.wav` beside a deliverable
+//      of that name). EVERY DESIRED ENTRY IS A TERM, folders included: the
+//      top level wants `render/`'s wavs AND each batch folder's name, and a
+//      folder folds onto a folder exactly as a file folds onto a file.
+//      Nothing is copied and nothing is deleted — the act stops on the set.
 //
 // NOTHING IS SKIPPED AND NOTHING IS RETRIED. Every file in the set is copied
 // on every act, and the size-and-mtime skip that suggests itself is

@@ -471,7 +471,7 @@ every file is copied on every act — each onto a staging sibling that is
 renamed onto the final name only once the copy is complete, so a failed or
 interrupted copy leaves the previous file on the stick whole.
 
-THE FOUR STRICTNESS RULES are `external_sync.h`'s head, stated there once and
+THE FIVE STRICTNESS RULES are `external_sync.h`'s head, stated there once and
 nowhere else: the mirror deletes only against a listing it finished (any
 enumeration or status error other than an absent optional root ends the act
 before a single deletion, a destination-side one included, which therefore
@@ -479,18 +479,31 @@ cannot report success — SO THE DELETION IS TWO PASSES, classifying the whole
 destination into kept, unkept link and unkept subtree, top level and then each
 kept batch folder, before its first removal, which is also why no
 `directory_iterator` is ever live while its own directory is being changed); no
-destination symlink is ever followed, which makes the scope claim above true by
+symlink is ever followed ON EITHER SIDE, which makes the scope claim above true by
 construction (THE SYNC ROOT ITSELF IS THE FIRST NAME CHECKED, every path in the act
 being composed under it, and a link at one of the act's own names is a REFUSAL
 and not a deletion, an unkept link being removed as a link; SINCE 2026-08-30
 that check is also where a destination that is simply NOT THERE answers — an
 unplugged stick or a mistyped `sync_path` refuses `'<name>' is not a
-directory`, the act never creating its own sync root) — the checks run at
+directory`, the act never creating its own sync root; and SINCE 2026-09-02 the
+SOURCE side is in the rule too — the classifiers followed links until then,
+so a symlinked `render/`, `tmp/` or batch folder was walked and a symlinked
+`x.wav` was copied through, which HELP already promised against: the three
+roots the act opens and the wavs it copies refuse on a link, while a link the
+act would neither walk nor copy is simply not in the set, the same line the
+destination side draws) — the checks run at
 the act's start and not again at each use, that check-then-use window being an
 ACCEPTED COST, a hand on a mounted stick mid-act and so the adversarial class
-this product never backstops; every copy is staged; and what is kept is kept by
+this product never backstops; every copy is staged; what is kept is kept by
 filesystem identity (`std::filesystem::equivalent`) rather than by spelling, the
-stick being case-insensitive vfat.
+stick being case-insensitive vfat; and — THE FIFTH, 2026-09-02, rule 1's
+copy-side twin — a SET THE DESTINATION COULD NOT HOLD APART is refused before
+anything is created or copied: two desired entries of one destination
+directory whose names fold together under an ASCII case fold are two files on
+the project's case-sensitive filesystem and ONE entry on the stick, so the
+act ends with `'<a>' and '<b>' would be one file at the destination` (the
+fourth fixed sentence) instead of letting the second rename replace the first
+and the identity test keep the survivor as either, silently and successfully.
 
 WHAT A FAILURE LEAVES is `external_sync.h`'s (a)(b)(c) and nothing stronger:
 (a) no deletion runs at all unless every copy succeeded and the destination
@@ -519,9 +532,12 @@ merely unraised, so a successful verdict carries an empty message by
 construction. On the first failure of any kind the card names the path it was
 reading or writing and the system's own words (`Cannot read '<path>': <...>`
 / `Could not copy '<path>': <...>` / `Could not remove '<path>': <...>`), or
-one of the symlink rule's own three lines (`'<path>' is a symbolic link` /
-`'<path>' is not a directory` / `'<path>' is not a regular file` — the second
-of which is also the unplugged stick's and the mistyped path's answer) — every
+one of the FOUR fixed lines (the symlink rule's own three, `'<path>' is a
+symbolic link` — which a SOURCE root, a `tmp/` entry or a `.wav` earns since
+2026-09-02 exactly as a destination name does — / `'<path>' is not a
+directory` / `'<path>' is not a regular file`, the second
+of which is also the unplugged stick's and the mistyped path's answer; and the
+fold rule's `'<a>' and '<b>' would be one file at the destination`) — every
 `<path>` named RELATIVE TO THE MIRROR'S TWO ROOTS (`<sync path's last
 component>/…` on the stick, the path under the project folder in the project;
 the full path is on

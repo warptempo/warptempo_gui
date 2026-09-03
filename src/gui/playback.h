@@ -364,13 +364,22 @@ public:
     // hoisted here so a route that dropped on the tablet (a headphone pulled,
     // a Bluetooth route gone) comes back at the NEXT PRESS instead of leaving
     // every main-window launch road carding forever behind a read that never
-    // reopened — and answers false only after that reopen FAILED (the latch
-    // and `device_ready` re-read after it, through device_unavailable). It
-    // does not replace play()'s own reopen or its post-publish race check:
+    // reopened — AND THEN STARTS IT, because the question a launch gate asks
+    // is whether this device will SOUND, not whether a stream object stands:
+    // a reopened stream is stopped, and an init whose start was refused
+    // leaves a non-null stopped one, neither of which device_unavailable can
+    // see. Left to play()'s own start — which runs AFTER the publish — a
+    // refused start lowers the playing bit and closes the stream while the
+    // launch body has already seeded the scanner and returned true, so the
+    // next tick reads that bit as a natural end: a silent false launch with
+    // no card. The start is idempotent, so an ordinary play makes no device
+    // call here; a refused one closes the stream and answers false, which is
+    // the card. It does not replace play()'s own reopen and start or its
+    // post-publish race check:
     // the player's road reaches play() with no gate ahead of it, and the
     // ordering argument at play()'s second latch read rests on the head
     // check standing there. Main thread only; non-const because it may open
-    // a device.
+    // and start a device.
     bool    ensure_device_available_for_play();
 
     // Continuous (sub-frame) counterpart of cursor(): the pre-truncation

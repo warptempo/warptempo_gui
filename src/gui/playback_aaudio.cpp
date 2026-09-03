@@ -42,7 +42,11 @@
 // stream ONCE, at open (init, and the reopen after a disconnect), and stops it
 // only where the stream is about to be CLOSED: shutdown, and the dead-stream
 // reopen. Both live in close_stream, which is the only requestStop left in the
-// file.
+// file. `start_stream` is idempotent on `started`, so the three sites that
+// call it — init's own, the launch gate's
+// (ensure_device_available_for_play, where a reopened stream's start is what
+// the gate's answer rests on) and play()'s retry for the roads that reach it
+// ungated — are one road and an ordinary play makes no device call at all.
 //
 // So the transient happens once per session, at launch, with no audition under
 // it, and no play() or stop() touches the device's run state at all. BETWEEN
@@ -59,8 +63,9 @@
 // file:
 //   * MAIN owns the stream handle outright — every AAudio call in this file
 //     (open, requestStart, getState, requestStop, close) is made from
-//     init/play/stop/shutdown and from nowhere else. There is no mutex
-//     and none is needed: no other thread reads `stream`.
+//     init/ensure_device_available_for_play/play/stop/shutdown and from
+//     nowhere else. There is no mutex and none is needed: no other thread
+//     reads `stream`.
 //   * The DATA CALLBACK thread runs the engine's render body and touches
 //     nothing else — no allocation, no I/O, no locks, no AAudio call.
 //   * The ERROR CALLBACK thread writes three atomics and logs. It calls NO
@@ -635,9 +640,28 @@ bool GuiPlayback::device_unavailable() const {
            impl_->stream == nullptr;
 }
 
-// THE PRESS'S REOPEN (contract at the declaration; architect 2026-09-02): the
-// head of play(), hoisted to the launch gates so a dead stream is reopened
-// where the main window asks its device question instead of read and carded.
+// THE PRESS'S REOPEN AND ITS START (contract at the declaration; architect
+// 2026-09-02): the head of play(), hoisted to the launch gates so a dead
+// stream is reopened where the main window asks its device question instead
+// of read and carded.
+// THE QUESTION IS STARTABILITY, NOT EXISTENCE: a stream OBJECT standing is
+// not a device that will sound. A freshly reopened stream has `started`
+// false, and an init whose own start was refused leaves a non-null unstarted
+// one — neither of which device_unavailable can see, since it reads the latch,
+// `device_ready` and the null stream alone. If this member answered on the
+// object alone, play() would take the start attempt AFTER its publish, and a
+// refused start there lowers the playing bit and closes the stream while
+// launch_playback_window has already seeded and damaged the scanner and
+// returned true: no card, and the next tick reads the lowered bit as a
+// natural end and tears the scanner down — a silent false launch, repeatable.
+// So the transition happens HERE, before the gate answers: start_stream is
+// idempotent on `started`, so a stream already running (the ordinary play)
+// makes no device call at all, and only the two stopped paths — this reopen
+// and init's refused start — actually request one. A refusal closes the
+// stream and answers false, which is the card's own condition.
+// The start's own transient (the lifecycle block at the head of this file:
+// starting an AAudio stream is audible) is unmoved in practice — it lands at
+// the same launch press it always did, microseconds earlier than play()'s.
 // The answer is device_unavailable's own reading taken AFTER the reopen — the
 // latch cleared by close_stream, the stream standing or not — so the gates
 // card exactly when nothing can be opened. A device that never came up
@@ -649,6 +673,12 @@ bool GuiPlayback::device_unavailable() const {
 bool GuiPlayback::ensure_device_available_for_play() {
     if (!impl_ || !impl_->device_ready) return false;
     reopen_stream_if_dead(*impl_);
+    // A null stream (the reopen just failed) takes this arm too: start_stream
+    // answers false on it and close_stream is a no-op there.
+    if (!start_stream(*impl_)) {
+        close_stream(*impl_);
+        return false;
+    }
     return !device_unavailable();
 }
 

@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-// The act (the layout, the mirror and its four rules are stated whole at the
+// The act (the layout, the mirror and its five rules are stated whole at the
 // head of external_sync.h) and its worker thread. Nothing below states a rule
 // of its own; each site names the rule it is serving.
 
@@ -97,6 +97,23 @@ std::string remove_failure(const GuiExternalSyncJob&    job,
     return "Could not remove '" + shown(job, p) + "': " + ec.message();
 }
 
+// THE DESTINATION'S OWN FOLD (rule 5 at the head), spelled once: an ASCII
+// case fold of one directory entry's name. The stick is vfat and
+// case-INSENSITIVE, so two desired entries in one destination directory whose
+// names fold together are ONE entry there and the second would silently
+// replace the first. The fold is ASCII-only and deliberately so: vfat's real
+// rule is Unicode and codepage-dependent, this test is the one every host
+// agrees on, and a pair it misses is a pair that folds on the stick but not
+// here — the same class the act already refuses to guess at, and one the
+// architect's own ASCII titles cannot produce.
+std::string ascii_folded(const std::string& s) {
+    std::string out = s;
+    for (char& c : out) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    }
+    return out;
+}
+
 // ONE NON-THROWING DIRECTORY WALK, used by every listing in the act below.
 // Every std::filesystem call in this file takes its error_code overload, and a
 // range-for over a directory_iterator does not (its increment throws), so the
@@ -147,6 +164,18 @@ std::optional<std::string> walk_directory(const GuiExternalSyncJob&    job,
 // a directory is not a regular file, and `.fingerprint`, `.peaks` and an
 // interrupted act's staging `<name>.wav.tmp` are not `.wav`.
 //
+// THE CLASSIFICATION IS symlink_status, SO NOTHING IS COPIED THROUGH A LINK
+// (rule 2, whose scope is both sides): `is_regular_file` FOLLOWS a link and
+// this walk used it until 2026-09-02, so a `render/x.wav` pointing anywhere at
+// all was read through and mirrored onto the stick while HELP promised the
+// act would refuse it. A LINK WHOSE NAME IS A `.wav` IS ONE THE ACT WOULD
+// COPY, and it refuses with the destination side's own sentence; a link with
+// any other name is not in the set at all and is simply dropped, exactly as
+// the destination side removes an unkept link rather than refusing over it.
+// The line that separates them is whether the act would have to FOLLOW the
+// link to decide: the extension is lexical, so a non-`.wav` needs no
+// following.
+//
 // Rule 1 throughout: the root is OPTIONAL, so an absent folder is an empty set
 // and every other answer — the walk's, and each entry's own status — is the
 // refusal line the caller returns.
@@ -159,10 +188,15 @@ std::optional<std::string> list_wav_files(
             [&](const std::filesystem::directory_entry& de)
                     -> std::optional<std::string> {
                 std::error_code de_ec;
-                const bool is_file = de.is_regular_file(de_ec);
+                const std::filesystem::file_status st = de.symlink_status(de_ec);
                 if (de_ec) return read_failure(job, de.path(), de_ec);
-                if (!is_file) return std::nullopt;
-                if (de.path().extension() != ".wav") return std::nullopt;
+                const bool is_wav_name = de.path().extension() == ".wav";
+                if (std::filesystem::is_symlink(st)) {
+                    if (!is_wav_name) return std::nullopt;
+                    return "'" + shown(job, de.path()) + "' is a symbolic link";
+                }
+                if (!std::filesystem::is_regular_file(st)) return std::nullopt;
+                if (!is_wav_name) return std::nullopt;
                 out.push_back(de.path());
                 return std::nullopt;
             })) {
@@ -231,6 +265,31 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     if (auto bad = claim_destination(job.sync_root, DestKind::SyncRoot))
         return refuse(*bad);
 
+    // Rule 2 ON THE SOURCE SIDE: a root this act is about to OPEN is asked
+    // with symlink_status before it is opened, so nothing is read through a
+    // link either (until 2026-09-02 the rule was destination-scoped and a
+    // symlinked `render/` or `tmp/` was walked normally, HELP promising
+    // otherwise). ONLY THE LINK REFUSES here: an ABSENT root is the optional
+    // root's ENOENT carve-out (rule 1) and belongs to the walk below, and a
+    // root that is there but is not a directory keeps the walk's own
+    // "Cannot read" line rather than gaining a second sentence for the same
+    // fact. The batch folders under `tmp/` are the third source root and are
+    // claimed by the walk that finds them, below.
+    auto claim_source_root =
+        [&job](const std::filesystem::path& p) -> std::optional<std::string> {
+        std::error_code st_ec;
+        const std::filesystem::file_status st =
+            std::filesystem::symlink_status(p, st_ec);
+        if (st.type() == std::filesystem::file_type::not_found)
+            return std::nullopt;
+        if (st_ec) return read_failure(job, p, st_ec);
+        if (std::filesystem::is_symlink(st))
+            return "'" + shown(job, p) + "' is a symbolic link";
+        return std::nullopt;
+    };
+    if (auto bad = claim_source_root(job.render_root)) return refuse(*bad);
+    if (auto bad = claim_source_root(job.batch_root))  return refuse(*bad);
+
     // -- THE SET ------------------------------------------------------------
     //
     // Built first and whole, so the mirror's two halves read one description
@@ -271,15 +330,27 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // adds only the directories. The order is plain byte order on both levels,
     // the product's one order for names on disk (project_model.h), so a sync's
     // copies run in the order the folders read.
+    //
+    // Rule 2 on the source side, and THIS IS THE THIRD SOURCE ROOT'S CLAIM: a
+    // batch folder is a root this act opens, so it is classified with
+    // symlink_status (`is_directory` FOLLOWED a link and this walk used it
+    // until 2026-09-02). A LINK HERE REFUSES OUTRIGHT, unlike the non-`.wav`
+    // link the listing rule drops: whether the act would traverse this one
+    // cannot be decided without FOLLOWING it — directory-ness is not lexical
+    // the way an extension is — and the act refuses rather than guessing at a
+    // name it may be about to walk.
     std::vector<std::filesystem::path> batches;
     if (auto fault = walk_directory(
             job, job.batch_root, true,
             [&](const std::filesystem::directory_entry& de)
                     -> std::optional<std::string> {
                 std::error_code de_ec;
-                const bool is_dir = de.is_directory(de_ec);
+                const std::filesystem::file_status st = de.symlink_status(de_ec);
                 if (de_ec) return read_failure(job, de.path(), de_ec);
-                if (is_dir) batches.push_back(de.path());
+                if (std::filesystem::is_symlink(st))
+                    return "'" + shown(job, de.path()) + "' is a symbolic link";
+                if (std::filesystem::is_directory(st))
+                    batches.push_back(de.path());
                 return std::nullopt;
             })) {
         return refuse(*fault);
@@ -303,6 +374,52 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job) {
     // rather than accumulated beside it: what the act writes and what it keeps
     // cannot then disagree.
     for (const Copy& c : copies) kept_files.push_back(c.to);
+
+    // -- TWO DESIRED NAMES THE DESTINATION COULD NOT HOLD APART -------------
+    //
+    // Rule 5, and it runs BEFORE ANYTHING IS CREATED OR COPIED because there
+    // is no honest way to finish an act whose set the destination cannot
+    // hold: the project's filesystem is case-SENSITIVE and the stick's is
+    // not, so `My Title.wav` and `my title.wav` are two files here and ONE
+    // entry there — the second staged rename replaces the first, rule 4's
+    // identity test then reads the survivor as either of them and keeps it,
+    // and the act reports success (silently) having shipped one of the two
+    // and told nobody which. The CLI writes its deliverable with no prune, so
+    // a retitle differing only in case produces the pair with nothing
+    // adversarial in it.
+    //
+    // THE TEST IS ON THE DESIRED SET, PER DESTINATION DIRECTORY, and it
+    // covers every entry the act wants there — `render/`'s wavs and the batch
+    // FOLDERS at the top level, each cell's wavs inside it — because a folder
+    // is an entry the destination folds exactly as a file is. The comparison
+    // is the plain O(n²) this act already accepts for its identity test, over
+    // a set of a few dozen names.
+    struct Wanted {
+        std::filesystem::path dir;      // the destination directory
+        std::string           name;     // the entry it wants there
+        std::filesystem::path source;   // the project-side path that wants it
+    };
+    std::vector<Wanted> wanted;
+    for (const std::filesystem::path& d : kept_dirs) {
+        wanted.push_back({d.parent_path(), d.filename().string(),
+                          job.batch_root / d.filename()});
+    }
+    for (const Copy& c : copies)
+        wanted.push_back({c.to.parent_path(), c.to.filename().string(), c.from});
+    for (size_t i = 0; i < wanted.size(); ++i) {
+        for (size_t j = i + 1; j < wanted.size(); ++j) {
+            if (wanted[i].dir != wanted[j].dir) continue;
+            if (ascii_folded(wanted[i].name) != ascii_folded(wanted[j].name))
+                continue;
+            // The sentence states the FACT rather than the cause, which is
+            // what makes it true of the exact tie as well as of the fold (a
+            // batch folder named `x.wav` beside a deliverable of that name):
+            // whatever brought them together, these two want one entry.
+            return refuse("'" + shown(job, wanted[i].source) + "' and '" +
+                          shown(job, wanted[j].source) +
+                          "' would be one file at the destination");
+        }
+    }
 
     // -- THE REST OF WHAT THE ACT MAY TOUCH ---------------------------------
     //
