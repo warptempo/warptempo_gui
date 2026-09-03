@@ -29,22 +29,24 @@
 // live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
 // THE DRAG GATES' ONE SENTENCE (architect 2026-08-30): the keyboard is
-// swallowed while a gesture holds the pointer, and the FOUR sites that
+// swallowed while a gesture holds the pointer, and the FIVE sites that
 // swallow it refuse for the SAME reason and therefore say the same words —
 // the editor text-selection drag's gate, above the editor handlers; the
-// pointer gestures' drag-modal gate below them; and THE RENDER PLAYER'S AND
-// THE PICKER'S OWN ARMS above both, which outrank that gate and so ask its
+// pointer gestures' drag-modal gate below them; and THE RENDER PLAYER'S, THE
+// PICKER'S AND THE AV SYNC STATS PANEL'S OWN ARMS above both (re-greped
+// 2026-09-03 off this constant's raisers, the panel's arm having joined that
+// day), which outrank that gate and so ask its
 // question themselves rather than letting the band's row press or the scrub's
 // marker drag swallow a key in silence. One literal, so a retune moves all
-// four.
+// five.
 //
-// THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last two speak for every
+// THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last three speak for every
 // chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
 // below sit on the MAIN DISPATCH, where an unbound press is answered by
-// silence, while the player's and the picker's arms sit inside a mode whose
+// silence, while the three mode arms sit inside a mode whose
 // router is the whole vocabulary — bare `r` flips Repeat one in there — and
 // that
-// vocabulary is not what the inventory knows, so those two ask nothing and
+// vocabulary is not what the inventory knows, so those three ask nothing and
 // answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
@@ -334,7 +336,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
     // which must not open over a picker). The gesture clause is the player's
     // own: the overlay's row press arm is a member of
-    // any_pointer_gesture_active under either owner, and while it stands
+    // any_pointer_gesture_active under every owner, and while it stands
     // every key is swallowed but the drag-modal gate's Ctrl+Q hatch.
     if (app.picker.active) {
         if (any_pointer_gesture_active(app)) {
@@ -474,14 +476,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         finalize_editor_text_drag();
-        // THE HATCH IS A GESTURE END: this drag holds the cursor down to the
-        // Arrow through any_pointer_gesture_active, so pressing Esc over the
+        // THE HATCH IS A GESTURE END: this drag holds the cursor to the TEXT
+        // I-beam through pointer_cursor_kind's live-drag arm (architect
+        // 2026-09-03), so pressing Esc over the
         // waveform must come back showing the Pan
         // — which it does at this iteration's tail, once the editor
         // below has closed and everything else this call does has settled.
-        // (The TOP FLAG EDITOR is in it too, by a different route: it is
-        // pointer-transparent, so its own modality never forced the Arrow — the
-        // live text drag alone did, through the same gesture refusal.)
+        // (The TOP FLAG EDITOR is in it too, by the SAME route: that arm sits
+        // above the dialog editors' blanket and reads the drag's own record,
+        // so it is one owner for both editor families.)
         // fall through: the editor handler below runs Esc (cancel the
         // edit) or Ctrl+Q (hand on the close routing, which tears the edit
         // down and then opens the close prompt) exactly as with no drag in
@@ -1262,7 +1265,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // consumed no-op. IT SITS BESIDE QUIT because it is the same family — the
     // two acts on the session as a whole — and the placement is otherwise free:
     // every state that must refuse the picker refuses it ABOVE this line (a
-    // standing prompt, the player's and the picker's own routers, an open
+    // standing prompt, the player's, the picker's and the AV Sync Stats
+    // panel's own routers, an open
     // dropdown, loading-or-absent audio, the editor text drag, any
     // keyboard-modal editor) or inside the opener's own body, which is the
     // road the File menu's row takes and carries the gates for both. Nothing
@@ -1285,7 +1289,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // bound nowhere. IT SITS BESIDE OPEN AND QUIT for the same reason they sit
     // together — the acts on the session as a whole — and the placement is
     // otherwise free: every state that must refuse the act refuses it ABOVE
-    // this line (a standing prompt, the player's and the picker's routers, an
+    // this line (a standing prompt, the player's, the picker's and the AV
+    // Sync Stats panel's routers, an
     // open dropdown, the editor text drag, any keyboard-modal editor) or
     // INSIDE THE ACT'S OWN BODY, which is where the menu row's road has always
     // met them (the modal refusals, the loading state, no source loaded, the

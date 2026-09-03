@@ -373,11 +373,13 @@ inline int surface_height_px() {
 // modal owner that is NOT an editor, so the term lost its producer and was
 // deleted (a gate term exists iff a producer exists — validation_topology.md's
 // rule applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
-// stands only under the render player or a picker, neither of which is a
+// stands only under the render player, a picker or the AV Sync Stats panel,
+// none of which is a
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
 // could raise one (the flag editor's double-click, the measure button — the
-// roster is dead under both); and the touch region begin refuses under both.
+// roster is dead under all three); and the touch region begin refuses under
+// all three.
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record
 // would have to name.

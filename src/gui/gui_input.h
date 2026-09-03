@@ -498,13 +498,14 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // existing lock refusal are untouched, and drift here stays what it always was
 // — a MISSED CARD, never a wrong act.
 //
-// THE TWO MODE ROUTERS ARE NOT, and that is the line: while the RENDER PLAYER
-// or the PICKER stands, its router IS the whole vocabulary and the dispatch
+// THE THREE MODE ROUTERS ARE NOT, and that is the line: while the RENDER
+// PLAYER, the PICKER or the AV SYNC STATS PANEL stands, its router IS the whole
+// vocabulary and the dispatch
 // below it never runs, so its keys are its own world and not the product's —
 // bare `r` flips Repeat one in the player and binds nothing anywhere else
 // (the render chords are Ctrl+Alt), and an `r` pressed outside it must be as
-// silent as any unbound letter. Neither
-// router can reach a gate below it either (both are ranked above all six), so
+// silent as any unbound letter. None of the three
+// routers can reach a gate below it either (all are ranked above all six), so
 // no term for them could ever be asked. THE EDITORS ARE THE SAME KIND OF
 // WORLD: an editor's own keys (its motion arm, its ctrl-exact clipboard
 // chords, its printable insertion) are consumed by the editor itself and

@@ -3849,13 +3849,16 @@ private:
     // pointer-transparent, so the wheel reaches the viewport under it, a
     // waveform press reaches the audio under it, and its roster presses were
     // never blocked to begin with.
-    // THE RENDER PLAYER AND THE PICKER ARE DELIBERATELY NOT IN IT
-    // (2026-08-28): each is a MODE and not a text editor, so each has its own
-    // predicate (render_player_active and picker_active, above) and every
+    // THE RENDER PLAYER, THE PICKER AND THE AV SYNC STATS PANEL ARE
+    // DELIBERATELY NOT IN IT (the first two 2026-08-28, the panel 2026-09-03):
+    // each is a MODE and not a text editor, so each has its own
+    // predicate (render_player_active, picker_active and stats_panel_active,
+    // above) and every
     // reader here was audited for whether the mode belongs in its answer —
     // the veil, the cursor, the hover walk's veil term and the chrome
-    // release's re-ask took a term of their own for both (the wheel reads the
-    // overlay's standing predicate, which covers both); the field's I-beam,
+    // release's re-ask took a term of their own for all three (the wheel reads
+    // the overlay's standing predicate, which covers all three); the field's
+    // I-beam,
     // the editors' Tab admission and the repeat arms did not (the ring's Tab
     // and the list walk repeat through each router's own arm).
     // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
@@ -3942,8 +3945,9 @@ private:
     // it the feint's inside bit), the hover walk, and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
-    // prompt gate and ABOVE the two mode veils (the player's and the
-    // picker's), each of which admits exactly the band and its own modal row;
+    // prompt gate and ABOVE the THREE mode veils (the player's, the picker's
+    // and the AV Sync Stats panel's), each of which admits exactly the band
+    // and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.
     bool claim_folder_overlay_press(int x, int y, GuiMouseButton button,
                                     GuiInputState mods);

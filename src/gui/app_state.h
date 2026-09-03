@@ -1844,12 +1844,15 @@ struct TrimBarPressSeed {
 // no disabled face of their own — which is stated at each face's site rather
 // than modelled here (row 4 takes the click face but not the disabled one; the
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
-// and is the one exception, at redesign_button_enabled below). Row 1's FILE and
-// SETTINGS are the roster's TWO non-chord entries (File joined them 2026-08-13,
-// taking the slot the Quit button held; NAVIGATION was a third from 2026-08-02
-// until its menu was deleted whole on 2026-08-15): each press TOGGLES ITS OWN
-// DROPDOWN, which no keyboard chord does, and both are spelled at the menu claim
-// rather than in the chord table.
+// and is the one exception, at redesign_button_enabled below). ROW 1'S FIVE MENU
+// ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit, Iterations, Settings
+// and Help, re-greped 2026-09-03 against kDropdownMenus and the chord table (50
+// chord rows + 5 anchors = kRedesignButtonCount); the count was TWO, File and
+// Settings, from 2026-08-13, when File took the slot the Quit button held
+// (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
+// 2026-08-15): each press TOGGLES ITS OWN
+// DROPDOWN, which no keyboard chord does, and all five are spelled at the menu
+// claim rather than in the chord table.
 //
 // The enum ORDER is painted order, and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
@@ -1858,7 +1861,7 @@ struct TrimBarPressSeed {
 // two of them (as row 1's Settings and Navigation were, 2026-08-03) renumbers
 // the stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row: the two LEFT-FLOATING buttons, then the three of
+    // Row 1, the menu row: the five LEFT-FLOATING anchors, then the three of
     // the RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
     // absolute view selectors S+W / T+P / T+W, which are bare 1/2/3.
     //
@@ -5424,7 +5427,8 @@ struct AppState {
     DialogEditorText dialog_editor_text;
 
     // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the four dialog
-    // editors, the render player and the picker paint ON THE BOTTOM ROW since
+    // editors, the render player, the picker and the AV Sync Stats panel paint
+    // ON THE BOTTOM ROW since
     // 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
     // shadow, and faking one wouldn't work"): while one stands the row's
@@ -7519,7 +7523,10 @@ struct AppState {
     // opens it, so the row needs no OK — "if I'm using the picker my hand
     // stays on the right", and the one button sits flush right). The opener
     // refuses under a prompt, an editor,
-    // the render player, a standing picker and a load; the one close body is
+    // a standing picker and a load — the render player's arm is RETIRED
+    // (2026-09-03: the panel covers row 1, so the File row is unreachable, and
+    // the player's router consumes Ctrl+O; the record is at the opener) — and
+    // the one close body is
     // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+Q's road, the same-
     // project no-op and the reopen's own tail all pass through it), which
     // resets the overlay with it — so "the band leaves with the picker" is a
@@ -8929,16 +8936,21 @@ inline int64_t snap_authored_frame(double frame) {
 // through scroll_drag, exactly as a held upper-half press is. The target-view
 // TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// EIGHT CONSUMERS, re-derived by grep 2026-08-29 (the render player's key gate
-// joined with the player's two arms above and THE PICKER'S GATE with the picker,
-// both on 2026-08-28 — the count read SEVEN until the re-grep found the second of
-// that pair missing from this list; the follow chase joined 2026-08-12; the
+// TEN CONSUMERS AT ELEVEN CALL SITES, re-greped 2026-09-03 (the render
+// player's key gate joined with the player's two arms above and THE PICKER'S
+// GATE with the picker, both on 2026-08-28 — the count read SEVEN until the
+// 2026-08-29 re-grep found the second of that pair missing from this list; the
+// CENTERED VIEWPORT'S derive joined 2026-09-01 at two call sites of its own,
+// the resting one and the playing one, and THE STATS PANEL'S KEY GATE
+// 2026-09-03, neither having been added here until this re-grep; the follow
+// chase joined 2026-08-12; the
 // eighth ruling's touch half had left FIVE, its mouse half FOUR — deleting the
 // bare right-press scrub's gate — and the timer-free touch model had deleted
 // begin_touch_trim_move the same day). EACH STATES THE SAME
 // "nothing pops mid-gesture" BOUNDARY FROM ITS OWN SIDE, and they split into
-// two kinds: the SIX INPUT-ROUTE consumers refuse events, and the run loop's
-// TWO — the per-tick hover refresh and the pre-paint follow chase — pause the
+// two kinds: the SEVEN INPUT-ROUTE consumers refuse events, and the run loop's
+// THREE — the per-tick hover refresh, the centered viewport's derive and the
+// pre-paint follow chase — pause the
 // world's autonomous movers for the gesture's life:
 //   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
 //     the platform's per-frame sub-detent accumulator probe both route through
@@ -8963,6 +8975,11 @@ inline int64_t snap_authored_frame(double frame) {
 //     swallows every key under a live gesture with the same single Ctrl+Q
 //     hatch. Two gates rather than one because each owns its own router;
 //     folder_overlay_stands is what makes the arm one thing under both;
+//   * THE AV SYNC STATS PANEL'S KEY GATE (input_handler.cpp's on_key,
+//     2026-09-03) — the picker's clause spelled a third time at the panel's
+//     own rank, on the same argument and with the same single Ctrl+Q hatch:
+//     the overlay's band arm is a member of this predicate under this owner
+//     too, and the panel's router is its whole vocabulary;
 //   * pointer_cursor_kind's live-gesture refusal (input_pointer.cpp) — a cue
 //     must not promise a press mid-drag — RANKED BELOW the trim-gesture arm,
 //     the one gesture that keeps its own cursor (architect 2026-08-03; the
@@ -8974,6 +8991,10 @@ inline int64_t snap_authored_frame(double frame) {
 //     the hook pattern);
 //   * the run loop's per-tick redesign-button hover refresh (main.cpp) — an
 //     active gesture FREEZES hover;
+//   * the run loop's CENTERED VIEWPORT DERIVE (main.cpp, 2026-09-01, the
+//     product's second autonomous viewport mover) — TWO call sites, the
+//     resting derive and the playing one, each pausing the pin for the
+//     gesture's life exactly as the chase below pauses follow;
 //   * the run loop's PRE-PAINT FOLLOW CHASE (main.cpp) — the autopager is the
 //     product's one autonomous viewport mover, and every aiming gesture
 //     converts a window column through the CURRENT viewport later than the
@@ -11048,10 +11069,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER, whichever content owns it
     // (architect 2026-08-28, the ruled exception recorded above the
     // signature: "everything else greys as in the `h` view"). Under the
-    // PLAYER and under the PICKER the pointer rule is the veil (every
+    // PLAYER, the PICKER and the AV SYNC STATS PANEL the pointer rule is the
+    // veil (every
     // press outside the overlay band and the modal row is consumed —
-    // render_player_active and picker_active, input_handler.h), and this
-    // line is the face that says so for both. It is ranked first, above the
+    // render_player_active, picker_active and stats_panel_active,
+    // input_handler.h), and this
+    // line is the face that says so for all three. It is ranked first, above the
     // `h` partition, so a band standing over any state greys everything that
     // partition would have lit.
     //

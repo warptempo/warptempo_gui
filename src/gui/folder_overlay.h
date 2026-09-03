@@ -298,8 +298,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
 //
 // THE DAMAGE IS THE CALLER'S: each of the three answers whether the band's
 // pixels changed and writes none of them, so the panel needs no Viewport and
-// no include of one — the player damages through its own helper, the pickers
-// through the input handler's. Nothing else about the highlight lives
+// no include of one — the player damages through its own helper, the other
+// two contents through the input handler's. Nothing else about the highlight lives
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 

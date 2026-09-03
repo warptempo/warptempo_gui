@@ -193,11 +193,12 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // like every other window_activated face.
 //
 // ITS SCOPE IS THE FOLDER OVERLAY'S PANEL — the highlighted row's band and its
-// list-focused outline — AND THE MODAL ROW UNDER EVERY ONE OF ITS FOUR OWNERS,
+// list-focused outline — AND THE MODAL ROW UNDER EVERY ONE OF ITS FIVE OWNERS,
 // where it is the buttons' ACTIVE-FOCUS outline: the panel is what the ruling
 // was taken on, but the row is ONE visual role and the ring is a claim about
 // the KEYBOARD, which an unfocused window does not have, so a prompt's and a
-// dialog editor's rings dim with the player's and the picker's (the fork is on
+// dialog editor's rings dim with the player's, the picker's and the AV Sync
+// Stats panel's (the fork is on
 // the flag alone at accent_for_focus, paint_handler.cpp, and the activation
 // hook damages whichever modal row stands). It is the FOURTH reader class of
 // AppState::window_activated after rows 1 and 2 (the ground) and the scrub
@@ -3016,7 +3017,7 @@ struct FlagEditorBox {
 // swap, all through the one ladder; the border class-invariant), so opening an
 // editor changes the flag's SIZE and nothing else about how it reads. An
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed. The five DIALOG editors flash that same pair too
+// kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
 // paint_modal_dialog), so there is one

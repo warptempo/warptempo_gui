@@ -2751,8 +2751,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // and the mode term in this row's layout all went together. The arrows paint
 // unconditionally now — nothing on this lane is conditional on a mode.)
 
-// THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE PRODUCT'S MONOSPACE
-// SURFACE (with the render player's modal clock, which derives from it)
+// THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE FIRST OF THE PRODUCT'S
+// THREE MONOSPACE CELLS (with the render player's modal clock, which derives
+// from it, and the AV Sync Stats panel's lines since 2026-09-03 — the set is
+// named at gui_font.h)
 // (architect 2026-08-11, moving the timestamp off the status line and reversing
 // his own 2026-08-01 "monospace is gone from the product" in the same breath —
 // the reversal is scoped to this cell and the status line stays sans, which is
@@ -3210,7 +3212,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // cell into NO clip at all — the collision it exists to prevent.)
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so this text is hidden while a prompt, a dialog editor, the render
-        // player or the picker stands (architect-accepted at the fold; the
+        // player, the picker or the AV Sync Stats panel stands
+        // (architect-accepted at the fold; the
         // one-day status BAR painted through a modal, that being what a
         // separate lane buys). It is why the render player's
         // load-under-a-running-render refusal says its sentence on a CARD: the
@@ -6161,8 +6164,10 @@ void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_key_pressed_key = 0;
     app.modal_dialog_field_hovered   = false;
     // THE LIST BIT is modal face state too (2026-08-28): whether the ring's
-    // -1 means the folder overlay's list, under the player and the pickers
-    // alike. It dies on the same edges — a prompt raised over the player and
+    // -1 means the folder overlay's list, under all three of the overlay's
+    // contents alike (the panel's band lands the ring at -1 too, showing
+    // nothing there — the ring's own record, input_key_dispatch.cpp).
+    // It dies on the same edges — a prompt raised over the player and
     // answered leaves the ring off the list, as a fresh open does.
     app.folder_overlay.list_focused  = false;
 }
@@ -7762,7 +7767,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const bool text_row =
                 row.kind == AppState::FolderOverlayRow::Kind::Text;
             const bool highlighted = !text_row && index == ov.highlight_row;
-            // NO ROW HOVERS UNDER A PROMPT. A prompt outranks both contents
+            // NO ROW HOVERS UNDER A PROMPT. A prompt outranks every content
             // and its veil takes the pointer, so on_motion's prompt branch
             // returns before the band's hover walk and the stored row keeps
             // whatever it held at the raise. The term lives HERE, at the

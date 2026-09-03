@@ -751,7 +751,8 @@ static_assert(std::size(kToolbarChords) + 5 ==
 // THE NOTIFICATION CARDS ARE HIT ABOVE THE VEIL, BY RULING, AND ARE NOT AN
 // EXCEPTION TO IT (architect 2026-08-29): a card is not a reach into the
 // veiled surface — it is the message about the act the veil stands over —
-// so its X must answer under a prompt, the player, the picker and every
+// so its X must answer under a prompt, the player, the picker, the AV Sync
+// Stats panel and every
 // dialog editor alike. The claim sits at on_button_press's head, ahead of
 // every gate (the rule at notifications.h).
 
@@ -1699,9 +1700,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
-//   2. the five DIALOG modal editors' veil, which consumes every press
+//   2. the FOUR DIALOG modal editors' veil, which consumes every press
 //      outside the dialog's own field and buttons — the
-//      shared predicate is modal_dialog_editor_active;
+//      shared predicate is modal_dialog_editor_active, whose membership is
+//      AppState::dialog_editor_session's four;
 //   3. the open dropdown, which owns the pointer and consumes every press over
 //      the pixels it floats above;
 //   4. the loading / empty-audio return, above the whole waveform band. The four
@@ -1712,8 +1714,11 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      widened to any_pointer_gesture_active, the one authoritative "some
 //      pointer gesture is in flight" predicate. A gesture is not a swallow but
 //      it is a lie: mid-drag the button is already down and no new press can
-//      start anything. ONE gesture is excepted, ahead of the refusal: a live
-//      trim gesture owns the cursor (the arm below, architect 2026-08-03).
+//      start anything. TWO gestures are excepted, each ahead of the refusal
+//      and each on the same rule — the thing being dragged is the thing the
+//      cursor names: a live trim gesture owns the cursor (the arm below,
+//      architect 2026-08-03), and a live EDITOR TEXT DRAG owns the I-beam
+//      (the arm at the top of the body, architect 2026-09-03).
 GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                                    GuiInputState mods) const {
     // THE NOTIFICATION CARDS FIRST (2026-08-29), ahead of every refusal
@@ -3439,7 +3444,8 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
 }
 
 // A dialog button's PRESS: arm the index and paint it, dispatching nothing.
-// Shared by the prompt claim, the player's, the picker's and the editor claim
+// Shared by the prompt claim, the player's, the picker's, the AV Sync Stats
+// panel's and the editor claim
 // — they differ in what their RELEASE runs, not in what their press does.
 // Returns true when a button was hit (the claim then consumes the press; the
 // veil consumes it either way).
@@ -4694,8 +4700,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE FOLDER OVERLAY'S BAND, claimed for EVERY content and ranked here —
     // under the prompt gate above (a prompt outranks every surface; the
     // player's load confirmation and the reopen's unsaved-tab question paint
-    // over their own rows) and above the two mode veils below, the player's
-    // and the picker's, each of which admits the band and its own modal row
+    // over their own rows) and above the THREE mode veils below — the
+    // player's, the picker's and the AV Sync Stats panel's, each of which
+    // admits the band and its own modal row
     // and consumes the rest. The claim is opaque and owns its own button
     // gate, so a non-left press on the band falls to whichever veil stands
     // and is consumed there.
@@ -4765,7 +4772,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // contract admits as a command arm through the ordinary press body while a
     // dialog editor stood, which is what gave a keyboard-less user on GLASS a
     // way out of an accidentally opened settings editor. THE MODAL ANSWERS
-    // THAT ITSELF now: all five editor dialogs publish real OK and CANCEL
+    // THAT ITSELF now: all four editor dialogs publish real OK and CANCEL
     // buttons, the claim below admits a press on them, and Cancel dispatches
     // the session's own Esc. With Quit's button gone to the File menu the
     // membership had already derived down to Save, and a convenience chord is
@@ -5073,8 +5080,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // roster admits it on, CTRL+SHIFT never), a SHIFT press binding only where
     // the roster admits one, and any press in the band that is not on a button
     // a consumed nothing. Each band differs ONLY in its rect
-    // and (row 1) in the dropdown toggle of its TWO non-chord buttons, File
-    // and Settings, so the press is ONE arm body, arm_redesign_press, driven
+    // and (row 1) in the dropdown toggle of its FIVE non-chord buttons — the
+    // menu anchors File, Edit, Iterations, Settings and Help (re-greped
+    // 2026-09-03 against kDropdownMenus) — so the press is ONE arm body,
+    // arm_redesign_press, driven
     // by the table's per-button flags — and the act one release body,
     // finish_chrome_press_release, in on_button_release.
     //
@@ -7623,11 +7632,12 @@ void GuiInputHandler::finish_chrome_press_release(
     // once, above the switch, rather than per branch.)
     // A PROMPT needs no term here for any kind: on_button_release's prompt
     // gate returns unconditionally above this call, so no arm reaches this
-    // body while one stands — and neither does THE RENDER PLAYER's or THE
-    // PICKER's, whose release blocks return above this call the same way; the
-    // term below is the editor OPENED MID-HOLD's, and a player or a picker
-    // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
-    // takes the same refusal through it.
+    // body while one stands — and neither does THE RENDER PLAYER's, THE
+    // PICKER's or THE AV SYNC STATS PANEL's, whose release blocks return above
+    // this call the same way; the
+    // term below is the editor OPENED MID-HOLD's, and any of the three
+    // opened mid-hold (bare `l`, Ctrl+O, `'` or the Help row typed under a
+    // held button) takes the same refusal through it.
     if (modal_dialog_editor_active() || app.render_player.active ||
         app.picker.active || app.stats_panel.active) return;
     switch (arm.kind) {
@@ -9406,7 +9416,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         recompute_redesign_button_hover();
         return;
     }
-    // THE FOLDER OVERLAY'S MOTION, for BOTH contents and at the press
+    // THE FOLDER OVERLAY'S MOTION, for EVERY content and at the press
     // claim's own rank: a standing row arm follows the pointer (the feint's
     // inside bit, or the band's scroll drag once the vertical gate is
     // crossed) and owns the motion whole, and with no arm standing the band

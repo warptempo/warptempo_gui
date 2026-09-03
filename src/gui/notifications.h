@@ -22,15 +22,17 @@
 //              three refusals, Synchronize's refusals, "Target render
 //              failed", "History is unavailable", and — since 2026-08-30 —
 //              THE GATES' OWN CARDS, the swallowed press answered by the
-//              state that swallowed it (the editor gate, the FOUR drag gates
+//              state that swallowed it (the editor gate, the FIVE drag gates
 //              — the editor text drag, the pointer gestures' drag-modal gate
-//              and the player's and the picker's own arms above it — the
+//              and the player's, the picker's and the AV Sync Stats panel's
+//              own arms above it — the
 //              loading gate, the `h` allowlist and the read-only lock). THREE
 //              OF THEM NAME THE CHORD through the one speller spell_chord
 //              (gui_input.h), and every gate ON THE MAIN DISPATCH speaks only
 //              for a chord this product BINDS (chord_is_bound, gui_input.h —
-//              the unbound-keys ruling below; the player's and the picker's
-//              own drag arms are the two that do not ask, each standing
+//              the unbound-keys ruling below; the player's, the picker's and
+//              the AV Sync Stats panel's
+//              own drag arms are the three that do not ask, each standing
 //              inside a mode whose router is its own vocabulary). And THE
 //              ACTS' OWN REFUSALS beside them — the
 //              home-view binding's four sentences, the marker verbs' subject
@@ -223,6 +225,7 @@
 // and the X's box is the icon row's 32 px button box, already the product's
 // glass target, which is why no finger-fattened body target exists. The
 // claim ranks ABOVE EVERY VEIL (the prompt's, the player's, the picker's, the
+// AV Sync Stats panel's, the
 // dialog editors') because a card is not a reach into the veiled surface: it
 // is the message about the act the veil stands over, and it must be
 // dismissable under any of them. The press is the act (content acts the

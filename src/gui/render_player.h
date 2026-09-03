@@ -331,8 +331,9 @@ struct GuiRenderPlayer {
     // app_state.h, which the button's face reads too).
     void up();
     // The widget's three mechanics with the player's damage on top
-    // (folder_overlay.h owns the clamps and the scroll-into-view; the picker
-    // drives the same mechanics through its own damage): move the highlight by
+    // (folder_overlay.h owns the clamps and the scroll-into-view; the
+    // overlay's other two contents drive the same mechanics through their own
+    // damage): move the highlight by
     // `delta` rows, seat it on `index` — the click's first half, the open
     // being its second — and scroll the band by `rows` rows, the wheel's
     // detent step.
