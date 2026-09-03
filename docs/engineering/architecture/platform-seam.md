@@ -14,19 +14,24 @@ held (A) backend mechanics, (B) portable input policy and (C) the run-loop
 contract. The port split them:
 
 - **A — the backend**, one per platform, same class name and IDENTICAL
-  public API (75 declarations as of 2026-09-03 — 13 `using` aliases and 62
+  public API (77 declarations as of 2026-09-03 — 13 `using` aliases and 64
   members including the constructor and destructor — counted over the
   `public:` section of each header with `//` comments and blank lines
   stripped: the semicolon-terminated declarations, plus the three one-line
   inline accessors that end in `}` rather than `;`, which the count has
   always included and which the words "semicolon-terminated" alone used to
   leave out. The identity is proved by diffing those two stripped sections,
-  which come out line-for-line equal — 84 lines each at this writing. The
+  which come out line-for-line equal — 86 lines each at this writing, the
+  count being 77 because three declarations wrap (`set_touch_nav_hooks`'s
+  eight lines, and one wrapped line each in `set_history_prefetch_completion_fd`
+  and `synthesize_key`). The
   count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
   mirror's discovery — Synchronize is told its destination by the device
   config's `sync_path` now, so neither backend goes looking for a volume —
-  ROSE BY ONE on 2026-09-02 with `display_lead_ns`, and FELL BY ONE AGAIN on
+  ROSE BY ONE on 2026-09-02 with `display_lead_ns`, FELL BY ONE AGAIN on
   2026-09-03 when that member went with the playback leads (the Playback seam
+  below), and ROSE BY TWO the same day with the AV sync panel's pair,
+  `set_display_measurement` and `display_stats` (the Display measurement seam
   below). Re-derive it; never decrement the number you find.
   There is NO Android-only member any more — the on-screen keyboard's
   two, `wants_onscreen_keyboard` and `synthesize_key`, are declared on both and
@@ -40,10 +45,17 @@ contract. The port split them:
   `platform_wayland.{h,cpp}`
   (Wayland/xkb/cursor/shm/clipboard/pointer-lock, keymap
   → `GuiKey`; the protocol classes — five REQUIRED globals, every `wl_output`
-  best-effort, and exactly TWO OPTIONAL protocols, pointer-constraints and
-  relative-pointer — are stated once at `platform_wayland.h`'s globals block,
-  which also carries `wp_presentation`'s one-day membership of that list,
-  2026-09-02 to 2026-09-03) and
+  best-effort, and exactly THREE OPTIONAL protocols, pointer-constraints,
+  relative-pointer and `wp_presentation` — are stated once at
+  `platform_wayland.h`'s globals block, which also carries the third one's
+  succession: it was the DISPLAY LEAD's instrument 2026-09-02 to 2026-09-03,
+  went with the playback leads that day, and came back the same day under the
+  AV sync panel's gate — BOUND at init and asked for nothing while the panel
+  is down. EVERY `wl_output` BINDS AT v4 SINCE 2026-09-03 (it was v2): v4's
+  `name` event is the connector string the panel prints, and the version is
+  kept per record so the teardown can use v3's `release` in place of
+  `destroy` — an older compositor binds at what it offers and reports its
+  make and model instead) and
   `platform_android.{h,cpp}` (NativeActivity glue, ANativeWindow present,
   AInputQueue → the core, stubs). `platform.h` is the ONE include that
   selects the header; every consumer includes it and changes nothing (NINE translation units and headers today, re-grepped 2026-08-29 — the number is a consequence of the seam, not a fact about it, so nothing here keeps a list).
@@ -211,9 +223,16 @@ drag coordinates floor instead of truncating.
   ACCEPTED, never unnoticed. THE INSTRUMENTS WENT WITH THE LEADS on the same
   ruling — the JACK port-latency figure with its callbacks and its stderr
   line, and the Wayland presentation-feedback lead with its own — because the
-  product does not measure what it was not asked to measure. A follow-up arc
-  is to re-home those measurements under a panel that runs only while it
-  stands; it does not exist, and nothing in this tree is a stub for it.
+  product does not measure what it was not asked to measure. **THE OTHER HALF
+  OF THAT RULING LANDED THE SAME DAY**: the measurements are re-homed under
+  `Help → AV Sync Stats` and run ONLY WHILE THAT PANEL STANDS (the Display
+  measurement seam below, and render-player.md for the panel itself). NEITHER
+  MEASUREMENT IS COMPENSATION and neither reaches the line: the predictor is
+  the raw one above whether the panel is up or down, and what the panel does
+  is SAY what the residue is, in words, when the user asks. **THE TWO INIT
+  STDERR LINES DID NOT COME BACK** — the JACK latency line and the display
+  lead's — because the panel IS the instrument now, and a measurement nobody
+  asked for is not printed.
 
   WHAT STAYED IS EVERY CORRECTION, AND EACH STANDS ON ITS OWN GROUND — read
   this list before deleting any of it as lead residue. THE WINDOW TRAVELS AS
@@ -248,14 +267,50 @@ drag coordinates floor instead of truncating.
   period — section C above owns which output that is.
 
   ANDROID RUNS THE SAME RAW PREDICTOR. With no compensation on either
-  backend there is no asymmetry left on this axis to record, and the seam
-  carries no latency member for either one. The tablet fact still worth
+  backend there is no asymmetry left on this axis to record, and no latency
+  figure of either device enters any anchor or position read on either one
+  (the seam's two members below MEASURE and publish; nothing consumes them
+  but the panel's text). The tablet fact still worth
   keeping is the ROUTE AND WHAT IT PAINTS: the car's route is Bluetooth,
   whose latency is large, variable and unreported, and in the car the render
   player stands, under which the waveform scanner is neither sampled nor
   painted (`main.cpp`'s pre-paint hook returns above it) — so the only moving
   picture there is the modal row's scrub and clock, registered against no
   waveform.
+- **Display measurement** (architect 2026-09-03, the AV sync panel): TWO SEAM
+  MEMBERS, `set_display_measurement(bool)` and `display_stats()`, whose
+  contract is at `platform_wayland.h` beside them and whose types
+  (`GuiDisplayStats`, and the audio half's `GuiAudioStats`) are plain values
+  in `av_sync_stats.h`, so both backends, both playback halves and the
+  panel's composer share ONE spelling. THE ARM IS THE WHOLE DESIGN: it has
+  exactly TWO callers, the panel's open passing true and its one close body
+  passing false, and with the bit DOWN — which is every frame of every other
+  session — the backend takes no clock stamp, requests no feedback and holds
+  no ring. Arming and disarming both CLEAR the ring and destroy whatever is
+  outstanding, so a panel opened twice reads its own session. `display_stats`
+  is a pure read the panel makes once per frame while it is up.
+  **WAYLAND** answers it with `wp_presentation`, bound at init and asked for
+  nothing until the arm: every content commit then carries one feedback
+  request stamped with the instant the pre-paint hook began, and the reading
+  is the MEAN, MIN AND MAX of (presented − sampled) over the last thirty
+  presented frames, beside the window's own output name and refresh. TWO
+  PRECONDITIONS ARE REPORTED RATHER THAN ASSUMED — the global was advertised,
+  and the compositor's `clock_id` IS `CLOCK_MONOTONIC`, the predictor's own
+  clock — because a figure measured across two clocks is a number and not a
+  measurement; either one missing, the reading says which and the panel
+  prints no net line. There is NO FALLBACK FIGURE and no stderr line.
+  **ANDROID** answers `available` false and its arm is a no-op, and that is a
+  FACT ABOUT THE PLATFORM rather than a gap: there is no feedback road on the
+  `lock`/`unlockAndPost` path (EGL frame timestamps need an EGLSurface;
+  Choreographer timelines describe the next frame, not this one's light), and
+  the audio half says the same on its own side — AAudio reports no
+  trustworthy output latency, the car's Bluetooth route being large, variable
+  and unreported. So the tablet prints its backend, rate, burst and stream
+  buffer and then says the rest is not available on this backend. **NO
+  ESTIMATE IS INVENTED**, and that is the standing record, not an omission to
+  fill in later. (The AUDIO half is NOT a seam member: `GuiPlayback::
+  audio_stats` is a member of the playback header both backends implement, the
+  shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
   both-sides member. The FIVE keys it stamps are per-DEVICE preferences
