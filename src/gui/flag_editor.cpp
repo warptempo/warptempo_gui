@@ -777,6 +777,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // surviving callers can now run in TARGET view, where the write is the granted
 // home-view-binding exception argued at the sweep's tail
 // (run_iteration_sweep_render, input_key_dispatch.cpp).
+// THE LOAD IN PLACE IS NOT A ROUTE EITHER (architect 2026-09-02): iteration
+// mode is where you stand, so apply_recipe_in_place leaves the mode bit alone
+// and resets no bracket — the incoming set carries none by construction, and
+// undo restores the outgoing set with its brackets under a mode that never
+// changed (the record is at that body, input_key_dispatch.cpp).
 // Pushes one undo entry when something was cleared and no-ops otherwise, so
 // a bracketless exit leaves the undo stack untouched; plain undo is
 // deliberately ungated and may restore a previously accepted bracket set.
@@ -802,9 +807,12 @@ void GuiFlagEditor::wipe_iter_state() {
 
 // Wipe every marker's session-only bpm state — owner flag, beats, bracket
 // bounds, and span endpoint back to their defaults. Runs on every bpm-mode
-// exit (the single chokepoint exit_bpm_mode) and after a sweep dispatches, so
-// a bracket exists only while the mode is live; re-entering bpm mode always
-// seeds an EMPTY field.
+// exit (the single chokepoint exit_bpm_mode, which the sweep's dispatch and
+// every editor close reach), so a bracket exists only while the mode is live;
+// re-entering bpm mode always seeds an EMPTY field. Its one other caller is
+// the load in place (apply_recipe_in_place), where the mode is off by
+// construction and the call is a statement over a set that already carries
+// defaults — never a mode exit.
 //
 // History-less on purpose: bpm values are session-only with no undo of their
 // own (see commit_bpm_edit), so no undo entry is pushed. Unlike iter state,

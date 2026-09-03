@@ -4687,20 +4687,45 @@ void GuiInputHandler::apply_recipe_in_place(
                         app.active_markers_view);
     undo.recompute_dirty();
 
-    // Wholesale authoring reset: clear every marker's session-only iteration
-    // state and the bpm state, and turn off both sweep modes' visibility. This
-    // is scratch ABOUT the markers that were just replaced, so it goes with
-    // them; it is not view state and not a preference.
-    {
-        auto& mv = app.warpmarkers.markers_mut();
-        for (auto& m : mv) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
-        }
-    }
+    // THE LOAD IS NOT AN ITERATION-MODE EXIT ROUTE (architect 2026-09-02:
+    // "iteration mode is where you stand"). The two sweep-mode bits are VIEW
+    // STATE, exactly like the S/T and W/P bits this act already leaves alone,
+    // and a bracket is MARKER STATE: the incoming set carries what it carries
+    // and the bits stay as the user set them. Until this date the block here
+    // reset every bracket, wiped the bpm scratch and turned both bits off
+    // inline — a fourth exit route beside the three that run the one
+    // chokepoint wipe_iter_state (flag_editor.cpp), and visibly wrong in one
+    // way: Ctrl+Z put the old markers back WITH their brackets under a mode
+    // the load had switched off. Now undo restores the old markers, brackets
+    // included (an UndoEntry snapshot is the whole GuiWarpMarker, the
+    // session-only fields with it — undo.cpp's row identity reads them),
+    // under a mode that never changed.
+    //
+    // NO BRACKET IS RESET HERE, and each of the three callers' vectors says
+    // why: the two sidecar roads (load_render_entry_in_place,
+    // load_history_commit_in_place) build theirs through GuiWarpMarkers::load,
+    // whose GuiWarpMarker is upcast from a parsed WarpMarker — the sidecar
+    // grammar has no bracket field, so every session-only field keeps its
+    // default (warpmarkers.cpp) — and the timeline road
+    // (load_history_local_entry_in_place) copies a typed undo-timeline
+    // snapshot, whose brackets ride in EXACTLY as an undo restore's do, the
+    // snapshot being the same struct an UndoEntry holds. With the mode lit, a
+    // bracketless store shows the blank `+[+0.00,+0.00]` form on every
+    // eligible flag and the Render button greys on NoBracketAuthored
+    // (iteration_sweep_plan); nothing reads a lit mode as a promise that a
+    // bracket exists.
+    //
+    // THE BPM SCRATCH WIPE STAYS, and it is scratch, not mode: the fields it
+    // clears are about the markers this body replaced, and it writes no mode
+    // bit — exit_bpm_mode stays the mode's one off-chokepoint. bpm mode is
+    // exactly its editor session (close_modal_editors_no_commit), and no
+    // load-in-place road runs beside an editor, so the mode is off here and
+    // every vector the three roads hand in already carries default bpm fields
+    // (the sidecar has no bpm field either; every timeline snapshot carries
+    // defaults — the argument at wipe_bpm_state). The call finds nothing by
+    // construction and stands as the explicit statement that a loaded set
+    // enters with no bpm scratch.
     flag_editor.wipe_bpm_state();
-    app.iteration_mode_enabled = false;
-    app.bpm_mode_enabled       = false;
 
     // The engine block, VALUES ONLY — the third and last piece the undo entry
     // carries. The map rebuild and the target preview are the tail's, below,
@@ -5244,9 +5269,12 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     // THE APPLY IS THE ONE OWNER'S (apply_recipe_in_place), the same body both
     // siblings hand their three pieces to: the outgoing snapshot, both store
     // replacements, the selection clear, the ONE cross-file undo entry, the
-    // session-only marker scratch wipe, the engine block, the displayed target
-    // basis reset, the live playhead and viewport clamps, and the auto-select /
-    // sync / invalidate / trigger tail. What is left below is this act's own.
+    // bpm scratch wipe (a statement over a set already at its defaults; the
+    // snapshot's own iteration brackets ride in untouched, as a restore's do,
+    // and neither sweep-mode bit moves — the record at the body), the engine
+    // block, the displayed target basis reset, the live playhead and viewport
+    // clamps, and the auto-select / sync / invalidate / trigger tail. What is
+    // left below is this act's own.
     //
     // THE TWO STEPS THIS BODY GAINED BY JOINING ARE CORRECT FOR IT, not a cost
     // of sharing: a wholesale store replace can move the ACTIVE domain's total

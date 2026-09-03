@@ -2932,9 +2932,11 @@ private:
     // reasoning puts that close. What it does, in order: snapshot the outgoing
     // stores, replace both, clear the selection, push ONE cross-file undo entry
     // (the live W/P as its op_mode and NO tab override — the entry belongs to
-    // the tab the user is standing in, no tab switch happening any more), wipe
-    // the session-only marker scratch (iteration brackets, bpm state, both mode
-    // bits), assign the engine block, take the store-change basis reset, clamp
+    // the tab the user is standing in, no tab switch happening any more), run
+    // the bpm scratch wipe (a statement over a set that already carries
+    // defaults — NO bracket is touched and NEITHER sweep-mode bit moves since
+    // 2026-09-02: iteration mode is where you stand, the record at the body),
+    // assign the engine block, take the store-change basis reset, clamp
     // the live playhead and viewport into the possibly-changed domain, and run
     // the coincidence auto-select and the sync/invalidate/trigger tail. Each
     // caller keeps its own tail after it (the tmp/ trash-then-wipe, the

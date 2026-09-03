@@ -82,13 +82,19 @@ struct GuiFlagEditor {
     void enter_bpm_mode();
     void exit_bpm_mode();
     // Wipe every marker's session-only iter bracket — the single clear
-    // every iteration-mode exit route shares (the `i` toggle's turning-off
-    // branch, enter_bpm_mode's forced iter-off, and the S->T audio-view
-    // toggle). Undo entry when something cleared; callers own the mode flip
-    // and repaint.
+    // every iteration-mode exit route shares, THREE routes re-greped
+    // 2026-09-02: the `i` toggle's turning-off branch, enter_bpm_mode's
+    // forced iter-off, and the iteration sweep's success tail (the S->T
+    // audio-view toggle left the list 2026-08-07; the load in place is NOT a
+    // route since 2026-09-02 — it leaves the mode bit alone, the record at
+    // apply_recipe_in_place). Undo entry when something cleared; callers own
+    // the mode flip and repaint.
     void wipe_iter_state();
     // Wipe every marker's session-only bpm state (owner flag, beats,
-    // bracket bounds, endpoint). History-less; callers own the repaint.
+    // bracket bounds, endpoint). History-less; callers own the repaint. TWO
+    // CALLERS (re-greped 2026-09-02): exit_bpm_mode, the mode's one
+    // off-chokepoint, and apply_recipe_in_place, where it is a statement
+    // over a set that already carries defaults.
     void wipe_bpm_state();
 
   private:
