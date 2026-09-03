@@ -201,9 +201,17 @@ namespace {
 // and the click fill as a 30% accent tint of that same ground, so both keep
 // their measured relationship in either state instead of drifting when only the
 // ground moves.
+//
+// THE VERDICT IS NOT THE ACTIVATION FLAG BUT chrome_focused (app_state.h),
+// which adds "and no folder overlay standing" — the render player or the Open
+// project picker takes the header inactive with it, kdenlive's own look under
+// a modal (architect 2026-09-02). The reasoning, the `h` view's exclusion and
+// the damage are at that owner; the VIEW BAR reads the same call, which is
+// what makes its #292c30 read as the disabled ground under the panel instead
+// of vanishing into a header that was still painting the focused #292c30.
 GuiColor redesign_row_ground(const AppState& app) {
-    return app.window_activated ? kRedesignRowGround
-                                : kRedesignRowGroundUnfocused;
+    return chrome_focused(app) ? kRedesignRowGround
+                              : kRedesignRowGroundUnfocused;
 }
 
 // THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
@@ -1523,8 +1531,12 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // reads the same fact; a press cannot land there anyway (the veil
         // consumes it), and the fall-through the pressed arm already documents
         // is what it would take.
-        const bool bar_focused =
-            app.window_activated && !folder_overlay_stands(app);
+        // IT IS THE HEADER'S OWN VERDICT (chrome_focused, app_state.h), not a
+        // second copy: this row's ground reads the same call above, so the bar
+        // and the header it sits in go inactive together — which is what the
+        // ruling needs, the unfocused bar being NUMERICALLY EQUAL to the
+        // focused header ground.
+        const bool bar_focused = chrome_focused(app);
         const GuiColor bar_bg = bar_focused
                                     ? kRedesignViewBarBg
                                     : kRedesignViewBarBgUnfocused;

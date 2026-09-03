@@ -7915,6 +7915,40 @@ inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }
 
+// IS THE CHROME FOCUSED? THE ONE VERDICT behind every header face that has a
+// focused and an unfocused form — the menu row's ground (redesign_row_ground,
+// paint_handler.cpp, which is also the mix TARGET of that row's disabled label
+// and of its click fill) and the view bar's own background and face table
+// (the `bar_focused` term paint_menu_row hands to view_bar_face). It is the
+// window's activation AND no folder overlay standing.
+//
+// THE SECOND TERM IS KDENLIVE'S LOOK UNDER A MODAL (architect 2026-09-02, on
+// the view bar he had just been given its unfocused face: "top right 1/2/3
+// buttons — those look right when window loses focus but when media player/
+// picker is open they don't have the disabled background for the nonselected
+// buttons — if that was deliberate, they should have the disabled bg as that
+// is what kdenlive does with a modal"). The bar alone could not deliver it:
+// its unfocused ground #292c30 is NUMERICALLY EQUAL to the FOCUSED header
+// ground kRedesignRowGround, so while the window stayed activated under the
+// panel the bar's div and its resting buttons vanished into the header they
+// sit in. THE HEADER HAS TO GO INACTIVE WITH IT — which is the honest reading
+// anyway, the panel being the modal that holds the keyboard — and then
+// #292c30 stands out against the #202326 header exactly as it does on a real
+// focus loss, which is the look he calls right. So the two faces read ONE
+// answer and cannot part.
+//
+// THE `h` HISTORY VIEW IS NOT IN IT: a MODE is not a MODAL. The view keeps
+// the keyboard, its own allowlist including the view bar's 1/2/3, so its
+// header stays focused and its bar stays blue.
+//
+// DAMAGE: the activation hook damages the top strip (and the standing modal
+// row and panel) on every focus edge, and a panel's open and close each
+// invalidate the whole window — so both producers of this verdict repaint the
+// header on both of their edges with no damage call of their own.
+inline bool chrome_focused(const AppState& a) {
+    return a.window_activated && !folder_overlay_stands(a);
+}
+
 // THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
 // wears, ONE answer for both (architect 2026-09-01, the truthful-tooltips
 // ruling: a tooltip names the act the press will run in the current state).

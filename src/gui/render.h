@@ -213,9 +213,19 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 // The crops' #292c30 is Breeze's FOCUSED header shade; when the WINDOW LOSES
 // KEYBOARD FOCUS the header darkens to #202326, tracking the labwc titlebar
 // above it, which darkens on the same edge. A HARD SWAP — no transition, no
-// fade — driven by AppState::window_activated, and ON THESE TWO ROWS it moves
-// the GROUND ONLY: separators, border lines, the accent, labels and icons all
-// keep their colors here.
+// fade — and ON THESE TWO ROWS it moves the GROUND ONLY: separators, border
+// lines, the accent, labels and icons all keep their colors here.
+//
+// IT IS DRIVEN BY THE CHROME-FOCUS VERDICT (chrome_focused, app_state.h),
+// WHICH HAS TWO PRODUCERS: AppState::window_activated, and — since
+// 2026-09-02 — A STANDING FOLDER OVERLAY, the render player or the Open
+// project picker taking the header inactive with it, kdenlive's own look
+// under a modal (architect). The second producer is what makes the VIEW BAR's
+// own unfocused face visible at all: kRedesignViewBarBgUnfocused is
+// numerically equal to the FOCUSED kRedesignRowGround, so a bar that went
+// grey under a header that stayed focused simply vanished into it. The `h`
+// history view is NOT a producer — a mode is not a modal, and it keeps the
+// keyboard. The reasoning and the damage are at the owner.
 // NO OTHER ROW'S GROUND SWAPS: row 3's ground and every row below it sit on
 // kRedesignContentGround, itself the unfocused shade, so the swap has nothing
 // to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
@@ -228,7 +238,10 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 // accent takes kRedesignAccentInactive above. So "no row below row 2 swaps",
 // true of the GROUND when it was written, is no longer true of the window:
 // what row 1 and row 2 own is the unfocused ground, and the accent's own
-// unfocused face is the panel's.
+// unfocused face is the panel's. (Row 2's own LANE died at the 2026-08-12
+// relayout — its crop-named faces are the icon row's now, over a ground that
+// is already the unfocused shade — so this ground has ONE lane left to paint,
+// and the pairing survives as the crops' naming.)
 //
 // NOTE it coincides with kBackground and with kRedesignContentGround (all
 // three sample the same Breeze Window color) and is nonetheless its OWN
@@ -294,17 +307,26 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // absolute view selectors. Sampled off the nine 82x32 row_right_*.png crops,
 // each one whole "Logging" button.
 //
-// TWO BAR BACKGROUNDS, AND TWO PRODUCERS OF THE SECOND: the bar swaps on
-// window focus exactly as rows 1 and 2 swap their ground, and the swap is the
-// same kind of thing — a PAINT-ONLY variant of the whole surface. SINCE
-// 2026-09-02 A STANDING FOLDER OVERLAY IS THE OTHER PRODUCER (architect: while
-// the render player or the picker stands, "the top right 1/2/3 buttons should
-// use #292c30 for unselected bg, #44464a for selected bg and #535659 for
-// selected outline") — which is this ground and the two lifts below over it,
-// so the ruling ships as the unfocused face rather than as new constants. The
-// verdict is one local at the paint site (`bar_focused` = the window activated
-// AND no overlay standing, paint_handler.cpp), read by the ground and by
-// view_bar_face's `focused` term alike.
+// TWO BAR BACKGROUNDS AND ONE VERDICT BEHIND THE SECOND: the bar swaps
+// exactly as row 1 swaps its ground, and the swap is the same kind of thing —
+// a PAINT-ONLY variant of the whole surface. SINCE 2026-09-02 THAT VERDICT HAS
+// A SECOND PRODUCER, a standing FOLDER OVERLAY (architect: while the render
+// player or the picker stands, "the top right 1/2/3 buttons should use
+// #292c30 for unselected bg, #44464a for selected bg and #535659 for selected
+// outline") — which is this ground and the two lifts below over it, so the
+// ruling ships as the unfocused face rather than as new constants.
+//
+// THE VERDICT IS chrome_focused (app_state.h), NOT A LOCAL: the bar's
+// background, view_bar_face's `focused` term and ROW 1'S GROUND all read the
+// one call, which is what the ruling actually needs — kRedesignViewBarBg-
+// Unfocused is numerically equal to the FOCUSED kRedesignRowGround, so a bar
+// that went grey while the header stayed focused vanished into the header,
+// resting buttons and all. With the header going inactive with it, this
+// #292c30 stands out against #202326 as the disabled ground he asked for,
+// exactly as it does on a real focus loss (the local `bar_focused` of
+// 2026-09-02 morning was the two terms hand-spelled at the paint site; the
+// owner is that expression, kept in one place so the two surfaces cannot
+// part).
 //
 // The crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button,
 // and there is still no DIMMED face here — but "these three are never disabled"
