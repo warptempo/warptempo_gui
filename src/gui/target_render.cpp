@@ -435,6 +435,19 @@ void GuiTargetRender::dispatch_render_now() {
         compute_buffer_start_frame_for(app.trim.begin_frame,
                                        app.trim.end_frame);
 
+    // THE GENERATION THIS DISPATCH EMBODIES, read here for the same reason the
+    // verdict is taken here: everything below — the live fingerprint, the two
+    // reuse lookups and build_render_request — reads the LIVE store, and
+    // nothing between this line and any of the three rungs mutates it, so one
+    // read at the top names what all three produce. It is deliberately
+    // dirty_generation_ and not the dispatched_generation_ promise: the
+    // request is built from the state standing NOW, so this is the recipe the
+    // samples will actually embody. (The two are equal at every entry here —
+    // trigger() stamps the promise on the line that raises pending_, and every
+    // later generation re-stamps before raising it again — so the read differs
+    // only in what it depends on, which is nothing.)
+    const uint64_t generation = dirty_generation_;
+
     // THE FALLBACK'S CARD (architect 2026-09-02, deep dive item L), at the ONE
     // OUTERMOST SITE EVERY TARGET-VIEW DISPATCH PASSES THROUGH. It has to be
     // here rather than at any rung: a cache hit, an archival artifact hit and a
@@ -520,7 +533,7 @@ void GuiTargetRender::dispatch_render_now() {
                 "warptempo_gui: %s; rendering untrimmed\n",
                 verdict.fallback_reason);
         }
-        complete_successful_buffer();
+        complete_successful_buffer(generation);
         return;
     }
 
@@ -566,7 +579,7 @@ void GuiTargetRender::dispatch_render_now() {
                     "warptempo_gui: %s; rendering untrimmed\n",
                     verdict.fallback_reason);
             }
-            complete_successful_buffer();
+            complete_successful_buffer(generation);
             std::fprintf(stderr,
                 "warptempo_gui: Target view loaded from archival render: "
                 "%s\n",
@@ -581,6 +594,17 @@ void GuiTargetRender::dispatch_render_now() {
 
     // Miss: synthesize. The remainder is the original dispatch path.
     in_flight_ = true;
+    // THE RECEIPT, stamped beside the bit it is paired with (the invariant at
+    // the counters, target_render.h): from here the worker's product is this
+    // generation's, whatever a later trigger() does to the
+    // dispatched_generation_ promise while this render runs. on_render_done
+    // reads it back and refuses to bless a buffer whose generation the store
+    // has already left behind.
+    // Nothing between this line and the dispatch call below can advance either
+    // counter — the request build, the anchor stamp and the label stamp are all
+    // straight-line GUI-thread work with no trigger() among them — so this IS
+    // the hand-off instant.
+    in_flight_generation_ = generation;
 
     // THE MISS IS WHERE THE UPDATE BECOMES A WAIT — both reuse rungs above
     // returned synchronously without touching the label — so this is one of the
@@ -648,9 +672,22 @@ void GuiTargetRender::dispatch_render_now() {
 
 void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     in_flight_ = false;
+    // CONSUME THE RECEIPT: this callback belongs to exactly one dispatch — the
+    // proof that no second preview can have overwritten the member is at the
+    // declaration, and it rests on the dispatcher's is_busy() covering
+    // CompletionPending — and it is zeroed with the bit it is paired with, so
+    // (in_flight_generation_ != 0) == in_flight_ holds past this line too.
+    const uint64_t completed_generation = in_flight_generation_;
+    in_flight_generation_ = 0;
 
     if (outcome == RenderOutcome::Success) {
-        complete_successful_buffer();
+        // Judged by its own generation, not by the standing promise: a Success
+        // the store has already left behind discards inside this tail rather
+        // than clearing is_dirty_ and rebinding (the whole rationale at the
+        // declaration). The two non-Success arms need no such judgement — they
+        // empty the buffer whatever generation they carried, which is the safe
+        // direction in both cases.
+        complete_successful_buffer(completed_generation);
     } else if (outcome == RenderOutcome::Cancelled) {
         std::fprintf(stderr, "warptempo_gui: Target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
@@ -663,38 +700,62 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // maybe_dispatch_pending at the tail of this callback, so an
         // ensure_ready that honoured that pending_ instead of redispatching
         // still gets its render. Every state the guard can meet, with
-        // in_flight_ just fallen here or standing elsewhere (D = is_dirty_,
-        // F = in_flight_, P = pending_, G = dispatched_generation_ equals
-        // dirty_generation_), and what lands the buffer:
+        // in_flight_ just fallen here or standing elsewhere. Five columns
+        // (codex round C added the last): D = is_dirty_, F = in_flight_,
+        // P = pending_, G = dispatched_generation_ == dirty_generation_ (the
+        // PROMISE the guard reads), I = in_flight_generation_ ==
+        // dirty_generation_ (the RECEIPT the completion is judged by; it has a
+        // meaning only while F=1). What lands the buffer, every row:
         //
-        //   D=0                  clean rebind in ensure_ready; no dispatch.
-        //   D=1 F=0 P=0 (any G)  nothing stands: ensure_ready -> trigger()
-        //                        -> a fresh dispatch (the archival-kill road
-        //                        ends here too: the killed preview's
-        //                        completion pumps the parked command, whose
-        //                        own completion re-runs
-        //                        maybe_reestablish_target_buffer).
-        //   D=1 F=0 P=1 G=1      honoured; this re-pump (or the archival
-        //                        session's finalize pump) dispatches it.
-        //   D=1 F=0 P=1 G=0      impossible: pending_ is only ever raised
-        //                        with the stamp, and every later generation
-        //                        re-stamps on its way to raising it again;
-        //                        the T->S void drops pending_ in the same
-        //                        body.
-        //   D=1 F=1 P=0 G=1      honoured; that render's Success rebinds
-        //                        (or, killed by an archival dispatch, lands
-        //                        by the F=0 P=0 row after the command).
-        //   D=1 F=1 P=1 G=1      honoured; the busy-branch cancel is under
-        //                        way and this re-pump dispatches pending_.
-        //   D=1 F=1 P=* G=0      an older recipe in flight (a source-view
-        //                        edit bumped the generation, or the T->S leg
-        //                        voided the stamp): ensure_ready -> trigger()
-        //                        -> busy -> cancel + a re-stamped pending_,
-        //                        and this re-pump dispatches it.
+        //   D F P G I
+        //   0 - - - -   ensure_ready's clean rebind; no dispatch. Only a
+        //               current Success (I=1, or a reuse rung's same-instant
+        //               generation) can have cleared D — a superseded one
+        //               discards and leaves D up, so this row cannot be
+        //               reached with a stale buffer.
+        //   1 0 0 x -   nothing stands: ensure_ready -> trigger() -> a fresh
+        //               dispatch (the archival-kill road ends here too: the
+        //               killed preview's completion pumps the parked command,
+        //               whose own completion re-runs
+        //               maybe_reestablish_target_buffer).
+        //   1 0 1 1 -   honoured; this re-pump (or the archival session's
+        //               finalize pump) dispatches pending_, and that dispatch
+        //               reads the live generation, so its completion carries
+        //               I=1 and rebinds.
+        //   1 0 1 0 -   impossible: pending_ is only ever raised with the
+        //               stamp, and every later generation re-stamps on its way
+        //               to raising it again; the T->S void drops pending_ in
+        //               the same body.
+        //   1 1 0 1 1   honoured; the render on the worker IS the current
+        //               generation, so its Success rebinds and clears D (or,
+        //               killed by an archival dispatch, it lands by the
+        //               F=0 P=0 row after the command).
+        //   1 1 1 1 0   honoured; the busy-branch cancel is under way. The
+        //               in-flight render is superseded, so its Success
+        //               DISCARDS rather than blessing the pre-mutation recipe,
+        //               and this re-pump dispatches pending_ — whose own
+        //               completion carries I=1 and rebinds. THE ROW THE
+        //               ARCHIVAL PRIORITY STRETCHES: the pump may hand the
+        //               idle beat to a parked command first, leaving pending_
+        //               parked behind it, and the buffer then lands at that
+        //               command's own finalize pump.
+        //   1 1 0 0 0   an older recipe in flight with nothing standing for
+        //               the new one (a source-view edit bumped the generation,
+        //               or the T->S leg voided the stamp and dropped
+        //               pending_): ensure_ready -> trigger() -> busy ->
+        //               cancel + a re-stamped pending_, which this re-pump
+        //               dispatches; the obsolete render's own completion
+        //               discards on its way through.
+        //   1 1 1 0 -   impossible, the F=0 row's reason exactly.
         //
-        // A Failed completion is the F=0 P=* rows: the bit falls, the
-        // buffer is empty, and the next ensure_ready dispatches or honours
-        // pending_ exactly as above.
+        // P=1 FORCES I=0 WHILE F=1, which is why no row above carries both:
+        // pending_ is raised only by trigger(), which bumps dirty_generation_
+        // first, so a render still on the worker can never be the generation
+        // its own parked successor is for.
+        //
+        // A Failed completion is the F=0 rows: the bit falls, the buffer is
+        // empty, and the next ensure_ready dispatches or honours pending_
+        // exactly as above.
     } else {
         // The one preview outcome the user was not watching for: a card
         // beside the stderr line (2026-08-29). Cancelled says nothing — it is
@@ -726,7 +787,50 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     maybe_dispatch_pending();
 }
 
-void GuiTargetRender::complete_successful_buffer() {
+void GuiTargetRender::complete_successful_buffer(
+    uint64_t completed_generation) {
+    // THE SUPERSESSION GATE (codex round C, 2026-09-02), at the OWNER of
+    // "bless this buffer as current" rather than at any one of its three
+    // callers, so every road is judged by one test. A Success whose generation
+    // the store has already left behind is DISCARDED — the buffer emptied,
+    // nothing rebound, is_dirty_ left up — because the alternative, binding it
+    // as a transient picture until the successor lands, serves the
+    // pre-mutation recipe to a Space press in that window, and "no wrong
+    // audio" outranks a moment of stale-but-present preview. Emptying rather
+    // than merely not binding is what keeps preview_ready() honest: it reads
+    // target_buffer_frames, and a populated buffer with the dirty bit up would
+    // still say the preview is playable to the roster's Play face.
+    //
+    // WHO CAN REACH IT: the worker completion alone. Both reuse rungs pass the
+    // generation read at the top of dispatch_render_now, the same instant they
+    // take the fingerprint and the trim verdict, and nothing between that read
+    // and their call mutates the store — so their generation IS
+    // dirty_generation_ and they always pass. The gate is kept uniform anyway:
+    // a future caller that resolves a buffer across any wait gets the same
+    // verdict without having to know to ask for it.
+    //
+    // THE SUCCESSOR IS ALREADY PARKED by construction — the mutation that
+    // advanced dirty_generation_ was a target-view trigger(), which raises
+    // pending_ on the busy branch — and on_render_done's tail pumps it in the
+    // same callback, so the discard costs one worker round trip that the
+    // supersession had already spent.
+    if (completed_generation != dirty_generation_) {
+        std::fprintf(stderr,
+            "warptempo_gui: Target render superseded; discarding\n");
+        app.target_buffer.clear();
+        app.target_buffer_frames = 0;
+        // THE "Updating..." LABEL DELIBERATELY STAYS UP, unlike every other
+        // road out of a completion: the update is not over. pending_ stands by
+        // construction here (the mutation that superseded this render was a
+        // target-view trigger(), which parks it on the busy branch), so either
+        // the caller's tail dispatches the successor — which re-stamps the
+        // label where it goes asynchronous and clears it through this same
+        // tail when it resolves on a reuse rung — or the idle beat goes to a
+        // parked archival command and the preview waits behind it, which the
+        // standing label reports truthfully. Clearing here would blink it off
+        // mid-update for exactly one worker round trip.
+        return;
+    }
     // Cache the buffer's frame count and rebind playback. The buffer is
     // interleaved float; total_frames = size / channels. Use the source's
     // channel count (engine preserves channel count).
@@ -961,6 +1065,19 @@ void GuiTargetRender::ensure_ready() {
     // through below replaces it. The state table for every combination this
     // guard can meet is at on_render_done's Cancelled branch, the road that
     // re-pumps pending_.
+    //
+    // AND THE CLEAN PATH ABOVE CANNOT BE REACHED BY AN OBSOLETE RENDER (codex
+    // round C, 2026-09-02). The guard honours a dispatch by its PROMISE
+    // (dispatched_generation_), which a later trigger() overwrites; what
+    // clears is_dirty_ is a completion judged by its RECEIPT
+    // (in_flight_generation_, or a reuse rung's same-instant read), so a
+    // Success the store has left behind discards instead of blessing itself,
+    // and the clean path's !is_dirty_ term can only be true of a buffer that
+    // really is the current generation's. Before that judgement existed, an
+    // obsolete Success cleared the bit as though it were its successor's, and
+    // this arm's own honouring then made it permanent: with the successor
+    // parked behind a parked archival command, a T→S leg dropped pending_ and
+    // the next entry took the clean path onto the pre-mutation buffer.
     if (dispatch_stands_for_current_generation()) {
         return;
     }
@@ -978,9 +1095,24 @@ void GuiTargetRender::cancel_in_flight_update() {
     // edit that triggered the render is still unrendered), so the next true
     // target-view entry re-renders. Does not touch playback — callers own the
     // rebind (source.wav for T→S).
+    // THE PREVIEW NEVER CLAIMS SOMEBODY ELSE'S SESSION: in_flight_ is this
+    // class's own bit, raised only at dispatch_render_now's hand-off, so a
+    // worker busy with an ARCHIVAL session (the parked command the idle pump
+    // gave the beat to) reads false here and the cancel is not sent — a T→S
+    // flip must not kill an explicit user command, and the archival priority
+    // the pump enforces would be inverted if it did.
     if (async_renderer.is_busy() && in_flight_) {
         async_renderer.request_cancel();
     }
+    // DROPPING pending_ HERE LEAVES THE PREVIEW DIRTY, and the generation guard
+    // then fails CLOSED rather than open: is_dirty_ is untouched (the edit that
+    // parked this dispatch is still unrendered), the stamp is voided on the
+    // next line, and with pending_ down and in_flight_ either down or naming a
+    // render whose own completion now discards, the next target-view entry
+    // finds dispatch_stands_for_current_generation() false and falls through to
+    // trigger(). That is the whole of the road codex round C found open: it was
+    // the discard's absence, not this drop, that used to hand the next entry a
+    // clean-looking stale buffer.
     pending_ = false;
     // THE STAMP IS VOIDED WITH THE DISPATCH: pending_ falls here, but in_flight_
     // falls only when the cancelled render's completion arrives, and until then
@@ -990,6 +1122,12 @@ void GuiTargetRender::cancel_in_flight_update() {
     // lands nothing. Zero equals no generation (construction is 1), so the
     // next target-view entry dispatches again through trigger() whatever the
     // in-flight bit still says (the contract at the counters, target_render.h).
+    // in_flight_generation_ IS NOT VOIDED WITH IT: that receipt names the
+    // render still running on the worker, whose completion must be judged
+    // truthfully — zeroing it would make a Success arriving in this window
+    // read as generation 0 and discard even where the store has not moved, and
+    // the completion's own bookkeeping (the empty buffer, the source-view
+    // rebind gate) already handles the navigated-away case.
     dispatched_generation_ = 0;
     // A CONTEXT-ENDING clear (the T→S exit): the target view the label belongs
     // to is going away, so any run goes with it and this clear is unheld.

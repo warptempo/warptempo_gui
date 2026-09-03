@@ -247,6 +247,23 @@ private:
     // target_buffer on Success; logs cancellation. Always clears
     // queue_progress_text and re-pumps pending_ (a fresh trigger() may
     // have arrived during render).
+    //
+    // IT CONSUMES in_flight_generation_ — the identity of the render this
+    // callback belongs to — and hands it to complete_successful_buffer, which
+    // is what keeps a superseded Success from blessing a stale buffer. The
+    // member read is sound because ONE PREVIEW IS IN FLIGHT AT A TIME, and
+    // that is structural rather than a convention: the only writer of
+    // in_flight_generation_ is dispatch_render_now's hand-off, and
+    // dispatch_render_now has exactly two callers (trigger()'s idle branch and
+    // maybe_dispatch_pending), both of which run only with
+    // GuiAsyncRenderer::is_busy() false — and is_busy() covers BOTH Running
+    // and CompletionPending, so the window between the worker's last write and
+    // this callback is closed on the dispatcher's own side (async_renderer.h).
+    // The state leaves Idle only at a dispatch and returns to Idle in
+    // on_completion_event immediately before this callback runs, so no second
+    // preview can have overwritten the member in between. The generation
+    // therefore does not need to ride on GuiAsyncRenderer::DoneCallback, whose
+    // shape stays the archival road's.
     void on_render_done(RenderOutcome outcome);
 
     // THE ONE WRITER of the "Updating..." label. Both async stamp sites —
@@ -262,7 +279,23 @@ private:
     // Shared Success tail for cache hits, archival artifact loads, and worker
     // completions. Cache insertion is owned by the render worker; target_render
     // only consumes lookup/artifact results and binds the completed buffer.
-    void complete_successful_buffer();
+    //
+    // THE SUCCESS IS JUDGED BY THE GENERATION IT RENDERED (architect
+    // 2026-09-02, codex round C), which the caller passes: the dispatch's own
+    // generation for the two synchronous reuse rungs (read at the top of
+    // dispatch_render_now, the same instant the fingerprint and the trim
+    // verdict are taken, so it always equals dirty_generation_ here) and
+    // in_flight_generation_ for the worker completion. A SUPERSEDED SUCCESS —
+    // completed_generation != dirty_generation_ — DISCARDS: the buffer is
+    // emptied, nothing is rebound, is_dirty_ stays up. Binding it as a
+    // transient picture was the alternative and is refused by the standing "no
+    // wrong audio" rule — a bound buffer is playable the instant it lands, and
+    // Space between the obsolete completion and its successor's would sound
+    // the pre-mutation recipe as though it were current. Discarding also keeps
+    // preview_ready() honest (target_buffer_frames falls to 0) and costs
+    // nothing the successor does not already owe: it is pending by
+    // construction and the caller's tail pumps it at once.
+    void complete_successful_buffer(uint64_t completed_generation);
 
     // One trim-survival verdict per dispatch, driving BOTH the buffer's
     // domain anchor and the fallback diagnostic. start_frame is the domain
@@ -437,16 +470,17 @@ private:
     // first ensure_ready() must dispatch.
     bool is_dirty_  = true;
 
-    // THE DIRTY GENERATION AND THE DISPATCHED GENERATION (architect 2026-09-02,
-    // the four-tier review's R-8). is_dirty_ alone cannot tell "stale, and
-    // nothing is doing anything about it" from "stale, and the render that
-    // will make it current is already on its way", so ensure_ready used to
-    // call trigger() in both cases — and on every mutate-then-re-enter road
-    // (a load in place followed by the player's close, the S→T tail behind a
-    // trigger, maybe_reestablish_target_buffer) the second trigger() found the
-    // worker busy with the FIRST dispatch, cancelled it, parked pending_, and
-    // the cancelled completion redispatched an identical render. The buffer
-    // was never wrong; the preview landed one worker round trip late.
+    // THE THREE GENERATIONS (architect 2026-09-02, the four-tier review's R-8
+    // for the first two, codex round C for the third). is_dirty_ alone cannot
+    // tell "stale, and nothing is doing anything about it" from "stale, and
+    // the render that will make it current is already on its way", so
+    // ensure_ready used to call trigger() in both cases — and on every
+    // mutate-then-re-enter road (a load in place followed by the player's
+    // close, the S→T tail behind a trigger, maybe_reestablish_target_buffer)
+    // the second trigger() found the worker busy with the FIRST dispatch,
+    // cancelled it, parked pending_, and the cancelled completion redispatched
+    // an identical render. The buffer was never wrong; the preview landed one
+    // worker round trip late.
     //
     // dirty_generation_ COUNTS THE MUTATIONS: it is incremented at the ONE
     // writer that sets is_dirty_ true (trigger()'s top — every
@@ -466,6 +500,28 @@ private:
     // in_flight_ bit only falls at its completion, so the stamp is what keeps
     // the guard from seeing that navigated-away-from render as standing.
     //
+    // in_flight_generation_ IS THE GENERATION THE WORKER IS ACTUALLY RENDERING
+    // (codex round C, 2026-09-02) — a DIFFERENT question from
+    // dispatched_generation_, which the R-8 shape above conflated. That stamp
+    // is a PROMISE ("a dispatch stands for this generation") and every later
+    // trigger() overwrites it, including one that arrives while the worker is
+    // still completing an older preview; this one is a RECEIPT, written once
+    // at dispatch_render_now's hand-off to the worker and never touched again
+    // until that render's own callback consumes it. Without it on_render_done
+    // had no identity at all and every Success cleared is_dirty_, so an
+    // obsolete preview's completion could bless itself as current — and where
+    // the idle beat then went to a parked archival command, leaving the
+    // successor pending, a T->S cancel dropped that successor and the next T
+    // entry took the clean path onto the pre-mutation buffer for good.
+    //
+    // Zero means no render is in flight, which the pairing invariant makes
+    // exact: it is stamped beside in_flight_ = true and zeroed beside
+    // in_flight_ = false, so (in_flight_generation_ != 0) == in_flight_ at
+    // every observation point. It is deliberately NOT voided by
+    // cancel_in_flight_update: that body voids the PROMISE (the T->S leg's
+    // whole point), while the render on the worker is still running and its
+    // completion must still be judged truthfully.
+    //
     // "A DISPATCH STANDS FOR THE CURRENT GENERATION" means exactly:
     //     (in_flight_ || pending_) && dispatched_generation_ == dirty_generation_
     // — the one predicate below, ensure_ready's one reader. A render of an
@@ -474,6 +530,7 @@ private:
     // trigger() exactly as before.
     uint64_t dirty_generation_      = 1;
     uint64_t dispatched_generation_ = 0;
+    uint64_t in_flight_generation_  = 0;
     bool dispatch_stands_for_current_generation() const {
         return (in_flight_ || pending_) &&
                dispatched_generation_ == dirty_generation_;
