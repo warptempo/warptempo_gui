@@ -146,11 +146,14 @@ public:
     // wire), which is why every input event that can trigger a copy caches
     // its serial (last_input_serial_).
     //
-    // clipboard_publishes is the STATIC half of the same question, the one a
-    // FACE may read ahead of a press: whether this backend can put text
-    // anywhere another program reads. True here — the system clipboard is
-    // the wl_data_device selection. The per-press half (the serial, the data
-    // device) is the verdict's alone; a face never reads it.
+    // THERE IS NO STATIC HALF ANY MORE (2026-09-03, the same day it was
+    // introduced): `clipboard_publishes()` asked whether a backend can put
+    // text where another program reads it, and both backends now answer yes —
+    // the Android sliver's ClipboardManager road landed the same evening — so
+    // the capability, its AppState mirror and the face arms that read it were
+    // deleted rather than left standing with no producer. Whether a
+    // particular copy landed is the per-press verdict's alone, and it CARDS;
+    // no face reads it.
     //
     // clipboard_get_text answers with that stored payload while WE hold
     // the selection (the self-paste short circuit — a same-thread
@@ -164,7 +167,6 @@ public:
     // validates UTF-8 well-formedness and drops control bytes.
     bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
-    static constexpr bool clipboard_publishes() { return true; }
 
     int width()  const;
     int height() const;

@@ -370,14 +370,20 @@ drag coordinates floor instead of truncating.
   a modal, where none can stand. Playback is shut down and re-inited per
   session (one AAudio stream start per reopen, accepted). The unsaved-tab
   prompt is Ctrl+Q's own with a REOPEN target (`GuiCloseTarget`, prompt.h).
-- **Android stubs** (each named at its site with its Wayland twin):
-  clipboard over one stored string (its `clipboard_set_text` answering FALSE
-  and `clipboard_publishes()` false since 2026-09-03, so no copy cards a
-  success there and the faces reading the static half grey — the Java
-  sliver is a road to `ClipboardManager` that is NOT BUILT, a ruling
-  pending), pointer capture as no-ops (the notional-x
-  FIELD survives and tracks the finger), cursor kinds stored and never
-  applied, titles. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
+- **Android stubs** (each named at its site with its Wayland twin), THREE
+  since 2026-09-03 and re-greped at that count: pointer capture as no-ops (the
+  notional-x FIELD survives and tracks the finger), cursor kinds stored and
+  never applied, titles. **THE CLIPBOARD LEFT THIS LIST** the evening it was
+  written into it (architect, *"if it's cheap, let's go ahead and build it"*):
+  it was one stored string with `clipboard_set_text` answering FALSE, and it
+  is now the SYSTEM clipboard over the MediaSession's own JNI road — two more
+  `MainActivity` methods, `clipboardSet(byte[])` / `clipboardGet()`, the ids
+  looked up in the same init block as `mediaState`'s and the payload crossing
+  as BYTES because JNI strings are modified UTF-8 (conventions.md's clipboard
+  section owns the whole ruling; the stored string survives only as the
+  road-absent fallback, for a failed attach or a missing method). The static
+  capability `clipboard_publishes()` went with the stub: both backends now
+  publish, so it had no producer and no face reads it. **CLOSE LEFT THAT LIST ON 2026-08-29**: THE ANDROID CLOSE IS
   BACK (architect — the tablet's BACK asks the unsaved-work question the
   laptop's X asks). `AKEYCODE_BACK` is consumed WHOLE in `on_input_event` —
   the one KeyEvent this backend answers — and its ACTION_UP fires the seam's
@@ -775,13 +781,18 @@ and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
 `res/values` style and an `aapt2 compile` step this APK has never had. Every
-later Java need (the SAF picker's `onActivityResult`, the clipboard) joins
-this class as a method, and the first one did on 2026-08-28: THE CAR'S
-MediaSession (the section below), which brought the class its `static {
+later Java need (the SAF picker's `onActivityResult` is the one still
+outstanding) joins this class as a method, and TWO HAVE — THE CAR'S
+MediaSession on 2026-08-28 (the section below) and THE SYSTEM CLIPBOARD on
+2026-09-03 (`clipboardSet` / `clipboardGet`, riding the same attach, the same
+env and the same lookup block) — the first of them bringing the class its
+`static {
 System.loadLibrary("warptempo_gui"); }` initialiser (NativeActivity's own
 dlopen does not register the library for name-based JNI resolution), its
-one `native` method `nativeMediaCommand(int, long)`, the instance method
-`mediaState(...)` the native side calls up, an inner
+one `native` method `nativeMediaCommand(int, long)` — STILL the only one,
+the clipboard's pair going UP rather than down — the first of the instance
+methods the native side calls up (`mediaState(...)`, joined 2026-09-03 by
+`clipboardSet` / `clipboardGet`), an inner
 `MediaSession.Callback` (an inner class, not a second top-level one) and
 the first lifecycle override beside `onCreate` — `onDestroy`, which
 releases the session after `super.onDestroy()` has joined the native

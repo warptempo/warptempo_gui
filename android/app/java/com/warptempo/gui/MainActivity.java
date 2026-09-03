@@ -1,6 +1,8 @@
 package com.warptempo.gui;
 
 import android.app.NativeActivity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
@@ -15,6 +17,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import java.nio.charset.StandardCharsets;
 
 /**
  * The product's ONE Java class: a NativeActivity subclass. Its body is
@@ -87,13 +90,15 @@ import android.view.WindowManager;
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
  * top-level class (the MediaSession.Callback below is an INNER class of this
  * one and is not a second class in that sense: it is the session's own
- * listener shape and can be nothing else). Two more are known: the SAF
- * picker's onActivityResult (which is exactly why a subclass is required at
- * all, NativeActivity never forwarding it) and the system clipboard
- * (ClipboardManager is a Java object with no NDK surface, so copy and paste
- * stop at the process edge until it lands). The key-repeat cadence stays
- * hard-coded from labwc's numbers in platform_android.cpp because nothing
- * native reports it.
+ * listener shape and can be nothing else). TWO HAVE LANDED: the car's
+ * MediaSession (the block at the end of this comment) and, on 2026-09-03, THE
+ * SYSTEM CLIPBOARD -- clipboardSet / clipboardGet, ClipboardManager being a
+ * Java object with no NDK surface, so copy and paste reach every other app on
+ * the tablet over the same JNI road the session opened. One is still known
+ * and unbuilt: the SAF picker's onActivityResult, which is exactly why a
+ * subclass is required at all, NativeActivity never forwarding it. The
+ * key-repeat cadence stays hard-coded from labwc's numbers in
+ * platform_android.cpp because nothing native reports it.
  *
  * <p>THE CAR (architect design 2026-08-28, section 3): the head unit's buttons
  * reach an app over Bluetooth AVRCP as media-button events delivered to
@@ -389,6 +394,81 @@ public class MainActivity extends NativeActivity {
         } else if (!active && focusHeld) {
             audioManager.abandonAudioFocusRequest(focusRequest);
             focusHeld = false;
+        }
+    }
+
+    // THE SYSTEM CLIPBOARD, THE SECOND JNI ROAD UP (architect 2026-09-03,
+    // "if it's cheap, let's go ahead and build it"): ClipboardManager is a
+    // Java object with no NDK surface, so these two methods are what the
+    // native clipboard_set_text / clipboard_get_text call
+    // (src/gui/platform_android.cpp), on the native loop's thread, exactly as
+    // mediaState is called. setPrimaryClip and getPrimaryClip are binder
+    // calls and are legal from any attached thread; neither needs the UI
+    // thread and neither is posted to a Looper.
+    //
+    // THE PAYLOAD IS BYTES, NOT A String, ON BOTH ROADS. JNI's NewStringUTF /
+    // GetStringUTFChars speak MODIFIED UTF-8 -- a supplementary character as
+    // two three-byte surrogate halves, U+0000 as C0 80 -- and the product's
+    // text is UTF-8 verbatim and round-trips byte-identically (the text
+    // ruling in CLAUDE.md; text_editor::replace_selection is the one incoming
+    // filter). So the array crosses raw and the decode and encode happen
+    // here, in real UTF-8. A byte[] the decoder cannot read yields U+FFFD
+    // rather than an exception, which is the same "nothing here refuses"
+    // posture the head unit's title takes.
+    //
+    // NO synchronized, AND THAT IS DELIBERATE: mediaState takes `this`
+    // because it touches the session, the focus request and `released`, all
+    // shared with the UI thread's onDestroy. These two touch NO field of this
+    // object -- the manager is fetched per call (getSystemService is a cached
+    // lookup) -- so there is nothing for a lock to protect, and taking `this`
+    // would put a clipboard binder call in the way of onDestroy's release.
+    private static final byte[] NO_BYTES = new byte[0];
+
+    // FALSE ON ANY THROWABLE is the verdict the native side hands back to the
+    // GUI, which cards "The clipboard did not take the copy" on it: some OEM
+    // builds refuse setPrimaryClip with a SecurityException, and a copy that
+    // did not happen must not be announced as one.
+    public boolean clipboardSet(byte[] utf8) {
+        if (utf8 == null) return false;
+        try {
+            final ClipboardManager clip =
+                    (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clip == null) return false;
+            clip.setPrimaryClip(ClipData.newPlainText(
+                    "warptempo", new String(utf8, StandardCharsets.UTF_8)));
+            return true;
+        } catch (Throwable t) {
+            Log.w(TAG, "clipboard copy refused", t);
+            return false;
+        }
+    }
+
+    // AN EMPTY ARRAY IS THE EMPTY ANSWER, never null and never an exception:
+    // no clip, an empty clip, a first item carrying no text, or a system that
+    // withholds the clip all mean "there is nothing to paste", which is the
+    // consumed no-op the GUI already handles (conventions.md's clipboard
+    // ruling). On Android 10 and later getPrimaryClip answers null unless the
+    // app has window focus; this one is a foreground kiosk, so the withheld
+    // case is the same empty answer rather than a state to detect.
+    //
+    // getText(), NOT coerceToText(): the Wayland twin accepts text/plain
+    // mimes and nothing else, so a clip whose first item is a URI or an
+    // Intent reads as nothing to paste here for the same reason -- and
+    // coerceToText would open a ContentResolver on the GUI loop's thread to
+    // find that out.
+    public byte[] clipboardGet() {
+        try {
+            final ClipboardManager clip =
+                    (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clip == null) return NO_BYTES;
+            final ClipData data = clip.getPrimaryClip();
+            if (data == null || data.getItemCount() == 0) return NO_BYTES;
+            final CharSequence text = data.getItemAt(0).getText();
+            if (text == null || text.length() == 0) return NO_BYTES;
+            return text.toString().getBytes(StandardCharsets.UTF_8);
+        } catch (Throwable t) {
+            Log.w(TAG, "clipboard read refused", t);
+            return NO_BYTES;
         }
     }
 

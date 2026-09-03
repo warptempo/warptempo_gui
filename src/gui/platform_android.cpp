@@ -604,12 +604,17 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // UP: this thread — the glue's, which runs the whole GUI loop and is NOT
     // attached to the VM by the glue — is attached ONCE here (an
     // already-attached thread gets the same env back, so the call is safe
-    // either way), and MainActivity's instance method is looked up ONCE
+    // either way), and MainActivity's instance methods are looked up ONCE
     // through the activity object (`clazz` is the ACTIVITY INSTANCE, a global
     // ref the glue holds for the activity's life, despite its name). The
     // activity's own `env` is the UI thread's and is never used from here. A
-    // failed attach or lookup logs and leaves the pair null, and every push
-    // then drops with this line already written.
+    // failed attach or lookup logs and leaves the id null, and every call
+    // then drops or falls back with this line already written.
+    //
+    // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
+    // mediaState (2026-08-28) and the clipboard's pair (2026-09-03). Each is
+    // independent — a missing clipboardSet leaves the head unit's display
+    // working and vice versa — so each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
         JNIEnv* env = nullptr;
         if (app_->activity->vm->AttachCurrentThread(&env, nullptr) == JNI_OK &&
@@ -630,11 +635,35 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "found; the head unit's display will show "
                              "nothing\n");
             }
+            clipboard_set_method_ =
+                env->GetMethodID(cls, "clipboardSet", "([B)Z");
+            if (!clipboard_set_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: MainActivity.clipboardSet not "
+                             "found; copies stay inside this process\n");
+            }
+            clipboard_get_method_ =
+                env->GetMethodID(cls, "clipboardGet", "()[B");
+            if (!clipboard_get_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: MainActivity.clipboardGet not "
+                             "found; pastes read this process's own copies "
+                             "only\n");
+            }
             env->DeleteLocalRef(cls);
         } else {
             std::fprintf(stderr,
                          "warptempo_gui: AttachCurrentThread failed; the "
-                         "head unit's display will show nothing\n");
+                         "head unit's display will show nothing and the "
+                         "clipboard stays inside this process\n");
         }
     }
 
@@ -898,9 +927,11 @@ void GuiPlatform::shutdown() {
     if (jni_attached_ && app_ && app_->activity && app_->activity->vm) {
         app_->activity->vm->DetachCurrentThread();
     }
-    jni_attached_       = false;
-    jni_env_            = nullptr;
-    media_state_method_ = nullptr;
+    jni_attached_         = false;
+    jni_env_              = nullptr;
+    media_state_method_   = nullptr;
+    clipboard_set_method_ = nullptr;
+    clipboard_get_method_ = nullptr;
     if (timerfd_ >= 0) {
         unwatch_fd(timerfd_);
         close(timerfd_);
@@ -1781,27 +1812,108 @@ void GuiPlatform::publish_media_state(const GuiMediaState& state) {
 }
 
 // ---------------------------------------------------------------------------
-// The stubs — what the Wayland twin does, and why this platform has no twin
+// The system clipboard (contract at the declaration)
 // ---------------------------------------------------------------------------
 
-// THE CLIPBOARD IS ONE STORED STRING (contract at the declaration). The
-// Wayland twin claims the CLIPBOARD selection through wl_data_device, answers
-// the compositor's later `send` from the same store, and reads a foreign
-// selection back through a bounded pipe read. Android's system clipboard is a
-// Java object (ClipboardManager) with no NDK surface; since the MediaSession
-// JNI landed (2026-08-28) the Java sliver IS a road to it, and that road is
-// NOT BUILT — a ruling is pending (2026-09-03). Until it is, copy and paste
-// work inside this process and stop at its edge, and set answers FALSE so no
-// carded copy claims otherwise (the editors' copy and cut card nothing and
-// ignore the verdict; their paste reads the store).
-bool GuiPlatform::clipboard_set_text(const std::string& text) {
-    clipboard_text_ = text;
-    return false;
+// THE SECOND JNI ROAD UP (architect 2026-09-03, "if it's cheap, let's go
+// ahead and build it"), the car's mediaState being the first and this one
+// riding exactly its shape: the glue thread's env, an id looked up once in
+// init(), a local frame per call, an exception described, cleared and
+// swallowed. ClipboardManager is a Java object with no NDK surface, so
+// MainActivity.clipboardSet / .clipboardGet are the whole mechanism and the
+// reasoning that belongs to Java — the UTF-8 decode, the throwable arm, the
+// empty answer — lives at those two methods.
+bool GuiPlatform::clipboard_road_open() const {
+    return app_ && app_->activity && jni_env_ && clipboard_set_method_ &&
+           clipboard_get_method_;
 }
 
-std::string GuiPlatform::clipboard_get_text() {
-    return clipboard_text_;
+// THE BYTES CROSS RAW. NewStringUTF speaks MODIFIED UTF-8 and would mangle
+// exactly the text this product promises to round-trip byte-identically, so
+// the payload goes over as a byte[] and Java does the decode; CheckJNI, live
+// in this debuggable build, aborts the process on a four-byte sequence handed
+// to NewStringUTF, which is the same fault from the other side.
+//
+// THE VERDICT IS JAVA'S: setPrimaryClip's own success. FALSE where the road
+// is absent (a failed attach or lookup, the line already logged at init) and
+// the text then goes into this process's own one payload, so the editors'
+// in-app paste keeps working while a carded copy refuses truthfully. A
+// throwable out of the call — an OEM build's SecurityException — is caught on
+// the Java side and comes back as false; the ExceptionCheck here is the
+// belt-and-braces arm for anything the call itself raises (an OOM off
+// NewByteArray).
+bool GuiPlatform::clipboard_set_text(const std::string& text) {
+    if (!clipboard_road_open()) {
+        clipboard_text_ = text;
+        return false;
+    }
+    JNIEnv* env = jni_env_;
+    if (env->PushLocalFrame(4) != 0) {
+        env->ExceptionClear();
+        return false;
+    }
+    bool published = false;
+    jbyteArray bytes = env->NewByteArray(static_cast<jsize>(text.size()));
+    if (bytes) {
+        if (!text.empty()) {
+            env->SetByteArrayRegion(
+                bytes, 0, static_cast<jsize>(text.size()),
+                reinterpret_cast<const jbyte*>(text.data()));
+        }
+        published = env->CallBooleanMethod(app_->activity->clazz,
+                                           clipboard_set_method_,
+                                           bytes) == JNI_TRUE;
+    }
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        published = false;
+        std::fprintf(stderr,
+                     "warptempo_gui: MainActivity.clipboardSet threw; the "
+                     "copy did not reach the system clipboard\n");
+    }
+    env->PopLocalFrame(nullptr);
+    return published;
 }
+
+// THE EMPTY STRING IS THE EMPTY ANSWER — no clip, no text in it, a system
+// that withholds it, or a throw — and every caller already reads that as
+// "nothing to paste" (a paste of nothing must not delete the selection).
+// There is no self-paste short circuit and none is needed: Android's
+// clipboard is a system-owned store, so our own copy reads straight back out
+// of it, where the Wayland twin would have to read its own pipe and deadlock.
+std::string GuiPlatform::clipboard_get_text() {
+    if (!clipboard_road_open()) return clipboard_text_;
+    JNIEnv* env = jni_env_;
+    if (env->PushLocalFrame(4) != 0) {
+        env->ExceptionClear();
+        return std::string();
+    }
+    std::string text;
+    jobject answer = env->CallObjectMethod(app_->activity->clazz,
+                                           clipboard_get_method_);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        std::fprintf(stderr,
+                     "warptempo_gui: MainActivity.clipboardGet threw; there "
+                     "is nothing to paste\n");
+    } else if (answer) {
+        jbyteArray bytes = static_cast<jbyteArray>(answer);
+        const jsize n = env->GetArrayLength(bytes);
+        if (n > 0) {
+            text.resize(static_cast<size_t>(n));
+            env->GetByteArrayRegion(bytes, 0, n,
+                                    reinterpret_cast<jbyte*>(text.data()));
+        }
+    }
+    env->PopLocalFrame(nullptr);
+    return text;
+}
+
+// ---------------------------------------------------------------------------
+// The stubs — what the Wayland twin does, and why this platform has no twin
+// ---------------------------------------------------------------------------
 
 // POINTER CAPTURE IS A NO-OP ON GLASS (contract at the declaration). The
 // Wayland twin hides the cursor, creates a zwp_locked_pointer_v1 and switches

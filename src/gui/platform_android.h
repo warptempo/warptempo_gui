@@ -154,27 +154,33 @@ public:
     void drain_events();
     void paint_now();
 
-    // THE CLIPBOARD IS THIS PROCESS'S OWN and goes no further: set stores the
-    // one payload, get answers with it, and the empty string is the legal cold
-    // answer every caller already handles ("nothing to paste"). Android's
-    // system clipboard is a Java surface (ClipboardManager), NOT BUILT here —
-    // the Java sliver (MainActivity, the MediaSession's JNI road) could carry
-    // it, and a ruling on that road is pending (2026-09-03); the Wayland
-    // twin's wl_data_device machinery — the selection claim, the offer
-    // bookkeeping, the bounded pipe read — has no counterpart here. The bytes
-    // are not filtered here for the Wayland twin's reason:
+    // THE CLIPBOARD IS THE SYSTEM CLIPBOARD HERE TOO (architect 2026-09-03,
+    // ending the process-local stub): ClipboardManager is a Java object with
+    // no NDK surface, so both roads go up the MediaSession's own JNI road to
+    // MainActivity.clipboardSet / .clipboardGet — the glue thread's env, two
+    // method ids looked up once beside mediaState's (the init block), a local
+    // frame per call, an exception described, cleared and swallowed. THE
+    // PAYLOAD CROSSES AS BYTES, never as a jstring: JNI strings are MODIFIED
+    // UTF-8 and the product's text is UTF-8 verbatim (the Java side carries
+    // the whole reasoning). The Wayland twin's wl_data_device machinery — the
+    // selection claim, the offer bookkeeping, the bounded pipe read — still
+    // has no counterpart: Android's clipboard is a system-owned store, so a
+    // set is a write to it and a get is a read of it, with no ownership to
+    // hold and no self-paste short circuit to need. The bytes are not
+    // filtered here for the Wayland twin's reason:
     // text_editor::replace_selection is the boundary that validates them.
     //
-    // THE VERDICT IS FALSE, ALWAYS (the twin's contract: true only when a
-    // claim another program can read has been issued): the store still takes
-    // the text, so the editors' in-app paste keeps working, but a carded copy
-    // reads false and refuses truthfully rather than announcing a copy no
-    // other application can receive. clipboard_publishes is the same answer
-    // as a STATIC capability, the half a face may read ahead of a press: the
-    // stats panel's Copy to clipboard greys on this backend.
+    // THE VERDICT IS JAVA'S (the twin's contract: true only when a claim
+    // another program can read has been issued) — setPrimaryClip's own
+    // success, false on a throwable, which some OEM builds produce. FALSE IS
+    // ALSO THE ROAD-ABSENT ANSWER: with the attach or a lookup failed there is
+    // no road at all, and the pair then falls back to clipboard_text_, this
+    // process's own one payload, so the editors' in-app paste still works
+    // while a carded copy refuses truthfully. `get` answers the empty string
+    // where there is nothing to paste, the legal cold answer every caller
+    // already handles.
     bool        clipboard_set_text(const std::string& text);
     std::string clipboard_get_text();
-    static constexpr bool clipboard_publishes() { return false; }
 
     int width()  const;
     int height() const;
@@ -530,9 +536,14 @@ private:
     // method id, looked up once. Null when the attach or the lookup failed,
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
+    // The clipboard's two ids (2026-09-03) are looked up in the same block
+    // off the same class object, and clipboard_road_open() is the one
+    // predicate both clipboard roads ask.
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
-    struct _jmethodID* media_state_method_ = nullptr;
+    struct _jmethodID* media_state_method_   = nullptr;
+    struct _jmethodID* clipboard_set_method_ = nullptr;
+    struct _jmethodID* clipboard_get_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
@@ -562,7 +573,11 @@ private:
     int  sync_worker_completion_fd_ = -1;
     std::function<void()> on_sync_worker_completion_;
 
-    // -- The clipboard's one payload (see clipboard_set_text) --
+    // -- The clipboard's ROAD-ABSENT payload (see clipboard_set_text) --
+    // Written and read ONLY while clipboard_road_open() is false — a failed
+    // attach or a missing method id, where the system clipboard cannot be
+    // reached at all. With the road open the system store IS the store and
+    // nothing is kept here.
     std::string clipboard_text_;
 
     // -- The synthesized keyboard's codepoint table --
@@ -597,6 +612,11 @@ private:
     // the content rect (origin + size, re-read every time), the backbuffer,
     // the core's surface width, has_initial_configure_, and full damage. `fire_resize` is false for init()'s adoption alone (see
     // initial_resize_owed_) and true everywhere else.
+    // Whether the Java clipboard road exists at all: the glue thread's env
+    // and both method ids. False means a failed attach or lookup, and both
+    // clipboard members then fall back to clipboard_text_ (their contract).
+    bool clipboard_road_open() const;
+
     void adopt_window(bool fire_resize);
     // Resolve the glue's current content rect against the surface size: the
     // origin and the size the GUI will be told, the status-bar air already

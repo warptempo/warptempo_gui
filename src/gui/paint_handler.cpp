@@ -6355,10 +6355,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         bool        lit          = false;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. TWO OWNERS READ IT: the player's seven through
-        // render_player_button_enabled and, since 2026-09-03, the stats
-        // panel's Copy to clipboard through app.clipboard_publishes; true on
-        // every other owner's buttons.
+        // below. ONE OWNER READS IT, re-greped 2026-09-03: the player's seven
+        // through render_player_button_enabled; true on every other owner's
+        // buttons. (The stats panel's Copy to clipboard read it for one day,
+        // off a backend capability that is gone — the tablet's clipboard now
+        // publishes too, so nothing greys that button ahead of the press.)
         bool        enabled      = true;
         icons::Icon icon         = icons::Icon::MediaPlaybackStart;
         std::string tooltip;     // the player's own; empty = the composer's
@@ -6557,24 +6558,20 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // is a CHORD (Ctrl+C in route_stats_panel_key), so the tooltip carries
         // the product's own modifier spelling directly. One line — the button
         // admits no modified press, so there is no second line to add.
-        // ITS FACE READS THE BACKEND (2026-09-03, codex): the seam's static
-        // capability, mirrored at app.clipboard_publishes, is the one
-        // condition a face may read ahead of the press — on the tablet the
-        // clipboard reaches no other program, so the button greys and its
-        // tooltip says the press's own card sentence (tooltips-on-disabled).
-        // The per-press half of the verdict (the Wayland serial, the data
-        // device) is unknowable ahead of the press and is the CARD's
-        // (copy_stats_panel_report), never the face's. No twin keeps this
-        // face lit: the button admits no modified press.
+        // ITS FACE NEVER GREYS. It read a backend capability for one day
+        // (2026-09-03, codex) — whether the clipboard reached another program
+        // at all — and both backends answer yes since the tablet's
+        // ClipboardManager road landed that evening, so the condition had no
+        // producer left and went with the capability. Every other half of the
+        // verdict (the Wayland serial, the data device, Java's own refusal)
+        // is unknowable ahead of the press and is the CARD's
+        // (copy_stats_panel_report), never the face's. No twin question
+        // arises: the button admits no modified press.
         if (stats_up) {
             DialogButtonPlan copy;
             copy.label     = "Copy to clipboard";
             copy.stats_act = AppState::StatsButtonAct::CopyReport;
-            copy.enabled   = app.clipboard_publishes;
-            copy.tooltip   = app.clipboard_publishes
-                                 ? "Copy to clipboard (Ctrl+C)"
-                                 : "Copy is not available on this backend "
-                                   "(Ctrl+C)";
+            copy.tooltip   = "Copy to clipboard (Ctrl+C)";
             plan.push_back(std::move(copy));
         } else if (!picker_up) {
             DialogButtonPlan ok;

@@ -3466,10 +3466,10 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // arm_redesign_press rule on this surface: nothing arms, no face paints,
     // no card (the grey is the message). The bit read is the STASH'S, which
     // may only SELECT — a press that slipped through on a stale stash still
-    // dies at the dispatch's live re-ask. The stats panel's Copy to clipboard
-    // publishes the backend's static answer (app.clipboard_publishes) since
-    // 2026-09-03; every other owner's buttons publish enabled=true, so this
-    // line is inert off those two.
+    // dies at the dispatch's live re-ask. THE PLAYER'S SEVEN ARE THE ONLY
+    // BUTTONS THAT PUBLISH IT (re-greped 2026-09-03; the stats panel's Copy
+    // to clipboard did for one day, off a backend capability that is gone),
+    // so this line is inert off every other owner's row.
     if (!app.modal_dialog.buttons[static_cast<size_t>(hit)].enabled)
         return true;
     if (shift &&
@@ -3673,13 +3673,12 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // THE STATS PANEL'S TWO BUTTONS (2026-09-03): the act the stash names,
     // decided against the live panel — which for this owner means the mode bit
-    // this arm has already been reached under. Close is unconditional; the
-    // copy's ONE ahead-of-press condition is the backend's static capability
-    // (app.clipboard_publishes), which greys the face and so never reaches
-    // this arm (the arm above consumes a disabled button's press), while its
-    // per-press verdict is the act's own card (copy_stats_panel_report). Its
-    // row was **Close** alone for its first hours, and that arm read no bit
-    // at all.
+    // this arm has already been reached under. BOTH ARE UNCONDITIONAL: the
+    // copy had one ahead-of-press condition for a day (a backend whose
+    // clipboard reached no other program), and it is gone with that
+    // capability, so the whole of the copy's verdict is the act's own card
+    // (copy_stats_panel_report). Its row was **Close** alone for its first
+    // hours, and that arm read no bit at all.
     if (app.stats_panel.active) {
         switch (b.stats_act) {
             case AppState::StatsButtonAct::CopyReport:
