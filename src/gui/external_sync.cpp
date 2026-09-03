@@ -49,8 +49,9 @@ std::string shown(const GuiExternalSyncJob& job, const std::filesystem::path& p)
     std::string rel;
     if (under(job.sync_root, rel)) {
         // THE ROOT'S LAST COMPONENT, and a TRAILING SEPARATOR IS STRIPPED to
-        // find it: `sync_path` is typed by hand now, and a shell's own
-        // completion ends a folder in `/` — `/run/media/b/SANDISK/` has an
+        // find it: `sync_path` is typed now, and a shell's completion — and
+        // the settings editor's own Tab, which ends a single match the same
+        // way — ends a folder in `/`: `/run/media/b/SANDISK/` has an
         // EMPTY filename() and would leave every sentence naming
         // `/550 - 1/x.wav` with no root at all. The discovered mount
         // point this replaced could never carry one, so this case is the

@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -123,28 +124,27 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         if (key == "projects_repo") {
-            // Free text, taken verbatim in UTF-8 with no host/path grammar
-            // enforced here — the GitHub recheck normalizes it against the
-            // local clone's own `origin` and refuses the mismatch there,
-            // which is a far better place to judge it than a reader that
-            // cannot see the clone. An empty value is legal and simply never
-            // matches, disabling the feature. (The arm moved here verbatim
-            // from the sidecar schema, architect approval 2026-08-27.)
+            // Free text, taken verbatim in UTF-8 under the one grammar in the
+            // header (is_projects_repo: no line separator, the format's own
+            // limit, and nothing about hosts or paths — the GitHub recheck
+            // judges the value against the clone's `origin`). An empty value
+            // is legal and simply never matches, disabling the feature. (The
+            // arm moved here verbatim from the sidecar schema, architect
+            // approval 2026-08-27; the predicate joined 2026-09-02 with the
+            // settings editor's three device-key arms.)
+            if (!is_projects_repo(value)) {
+                return bad_value(ln, key, value, kProjectsRepoGrammarReason);
+            }
             out.projects_repo = value;
             return {};
         }
         if (key == "projects_path") {
             // Absolute, under the shared path-value grammar — the one owner
-            // in the header; existence is startup's question, not this
-            // reader's. THE REASON NAMES THE EDGE RULE because that is the
-            // fault a hand actually makes here: an absolute path with a
-            // trailing space (or the `\r` a CRLF-saved file leaves on every
-            // value) is refused, and "must be an absolute path" alone would
-            // read as a lie against a value that plainly is one.
+            // in the header, whose reason is spelled there too (it names the
+            // edge rule, for the reason said beside it); existence is
+            // startup's question, not this reader's.
             if (!is_projects_path(value)) {
-                return bad_value(ln, key, value,
-                    "must be an absolute path with no whitespace at either "
-                    "edge");
+                return bad_value(ln, key, value, kProjectsPathGrammarReason);
             }
             out.projects_path = value;
             return {};
@@ -164,9 +164,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
             // one owner in the header, where the empty form's meaning ("not
             // set up on this device") is stated.
             if (!is_sync_path(value)) {
-                return bad_value(ln, key, value,
-                    "must be empty or an absolute path with no whitespace at "
-                    "either edge");
+                return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
             return {};
@@ -178,32 +176,40 @@ std::expected<DeviceConfig, std::string> read_device_config(
     return out;
 }
 
-bool write_device_config(const DeviceConfig& cfg) {
+std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg) {
+    // THE TWO CLAUSES ARE COMPOSED HERE (GuiFailure, failure.h — 2026-09-02,
+    // the four-tier review's R-11 applied to this writer when the settings
+    // editor's device-key arms began carding its failure): the diagnostic
+    // carries the full path and the system's words where a call gave any,
+    // the display names the file the basename rule's way — `config`, the one
+    // file this program writes outside a project — and the same tag opens
+    // both. Nothing is printed here; the caller owns its surfaces.
+    static constexpr std::string_view kTag =
+        "Device config write failed: could not write ";
     const std::filesystem::path path = device_config_path();
     if (path.empty()) {
-        std::fprintf(stderr,
-            "warptempo_gui: No config home (neither XDG_CONFIG_HOME nor HOME "
-            "is set); device config not written\n");
-        return false;
+        // Unreachable after a startup that read the config through the same
+        // resolver — the environment does not change under the process — and
+        // kept as the belt it always was, with no path to name.
+        return plain_failure(
+            "Device config write failed: no config home (neither "
+            "XDG_CONFIG_HOME nor HOME is set)");
     }
     std::error_code ec;
     std::filesystem::create_directories(path.parent_path(), ec);
     if (ec) {
-        std::fprintf(stderr,
-            "warptempo_gui: Could not create '%s': %s\n",
-            path.parent_path().string().c_str(), ec.message().c_str());
-        return false;
+        return path_failure(kTag, path, path.filename().string(),
+                            ": " + ec.message());
     }
     // The same atomic writer the sidecars use (tmp + fsync + rename), so a
     // crash mid-write cannot leave a torn file that refuses the next startup.
+    // It reports by its bool alone, so this arm has no system words to
+    // append — the save's own three arms are in the same position.
     if (!atomic_write_string_to_path(path.string(),
                                      format_device_config_text(cfg))) {
-        std::fprintf(stderr,
-            "warptempo_gui: Device config write failed: %s\n",
-            path.string().c_str());
-        return false;
+        return path_failure(kTag, path, path.filename().string(), "");
     }
-    return true;
+    return std::nullopt;
 }
 
 std::expected<DeviceConfig, std::string> load_device_config(

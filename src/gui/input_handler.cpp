@@ -3714,14 +3714,22 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // THE PERSIST IS PART OF THE COMMIT since 2026-08-27: the scale is a
     // per-DEVICE preference now (device_config.h) and Ctrl+S does not carry it,
     // so the only moment it can be written is the moment it changes. The write
-    // is advisory — it prints its own line on failure and the live value stands
-    // either way — and it goes through THE LIVE CONFIG (AppState::device_config,
-    // the loop's one struct): the file holds five keys and is rewritten whole,
-    // and that struct is the one place all five are live at once, across every
-    // reopen (the ownership rule is at write_device_config, device_config.h).
+    // is advisory — the live value stands either way — and SAID since
+    // 2026-09-02: the writer composes the failure's two clauses at its one
+    // failure point (GuiFailure, failure.h), this site prints the diagnostic
+    // and cards the display. It goes through THE LIVE CONFIG
+    // (AppState::device_config, the loop's one struct): the file holds five
+    // keys and is rewritten whole, and that struct is the one place all five
+    // are live at once, across every reopen (the ownership rule is at
+    // write_device_config, device_config.h).
     app.gui_scale = percent;
     app.device_config->gui_scale = percent;
-    (void)write_device_config(*app.device_config);
+    if (auto failure = write_device_config(*app.device_config)) {
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     failure->diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure->display);
+    }
     set_gui_scale_percent(percent);
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the

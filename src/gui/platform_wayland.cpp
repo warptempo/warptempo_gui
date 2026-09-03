@@ -730,7 +730,8 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // the folder after the volume's own label, which is the stick's business
     // and not this program's, and a wrong guess would aim the mirror's
     // creates, copies and removals at a folder the architect never named. He
-    // types the path once, by hand, like the projects path above it.
+    // types the path once — the Settings dropdown's `Sync path` row, or the
+    // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
     return cfg;

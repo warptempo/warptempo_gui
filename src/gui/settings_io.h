@@ -124,17 +124,17 @@ std::string format_settings_text(
 // keys; a trim bound recalls as its actual frame, exactly as the writer emits
 // it. Used by the settings prompt's Tab autocomplete.
 //
-// THE DEVICE CONFIG'S THREE EDITABLE KEYS RECALL HERE TOO, off the same live
-// AppState, even though they left the `.settings` schema 2026-08-27: the
-// settings editor is still their authoring surface — the Settings dropdown's
-// "GUI scale" item prefills through this very call — so a recall that answered
-// nothing for them would have broken the menu item and the Tab completion
-// together. What they recall is byte-identical to what the device config file
-// carries, through that file's own serializer (format_gui_scale_percent,
-// device_config.h) or verbatim for the two free-text keys: the same "recall and
-// the file can never diverge" rule the `.settings` keys keep, only against a
-// different file. (`projects_path` and `last_project` are not editable here
-// and recall nothing: the first is hand-edited in the file, the second is the
-// program's own.)
+// THE DEVICE CONFIG'S FOUR EDITABLE KEYS RECALL HERE TOO, off the live
+// AppState and the live struct it points at, even though they are not in the
+// `.settings` schema: the settings editor is their authoring surface — the
+// Settings dropdown's four device rows prefill through this very call — so a
+// recall that answered nothing for them would break the menu rows and the Tab
+// completion together. What they recall is byte-identical to what the device
+// config file carries, through that file's own serializer
+// (format_gui_scale_percent, device_config.h) or verbatim for the three
+// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path` and
+// `sync_path`): the same "recall and the file can never diverge" rule the
+// `.settings` keys keep, only against a different file. (`last_project` is
+// not editable and recalls nothing: it is the program's own.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

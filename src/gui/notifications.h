@@ -40,7 +40,8 @@
 //              cycle's ends, the trim family's four, playback's and the
 //              audition's, and the render chords' — and, beside them, EVERY
 //              RED FLASH'S REASON (2026-08-30): the seven commit refusals of
-//              the flag-editor cluster, the settings editor's five, the
+//              the flag-editor cluster, the settings editor's (the three
+//              device-key grammars among them since 2026-09-02), the
 //              commit title's blank, the offset editor's grammar, the measure
 //              paste's two and the text editor's two capacity refusals. Each
 //              is ONE SENTENCE WITH TWO READERS, the stderr line the site
@@ -277,6 +278,16 @@
 // the unbound half with silence. The full reasoning is at that gate
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
+
+// THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02, the four-tier review's
+// R-22): a `projects_path=` commit from the settings editor rewrites the
+// device config and changes nothing on screen — the open project stays open
+// on its absolute paths — while File → Open project and the next launch read
+// the new folder at once (the whole account is at
+// GuiSettingsEditor::commit_device_setting, settings_editor.cpp). A press
+// whose result nothing paints says where it applies; one clause.
+inline constexpr const char* kProjectsPathAppliesCard =
+    "Projects path applies at the next Open project and the next launch";
 
 // THE TARGET PREVIEW'S SENTENCE — a launch asked for in target view before
 // the preview it would play exists. Its two sites are Space's own play edge

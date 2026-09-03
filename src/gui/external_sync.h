@@ -17,8 +17,9 @@
 //
 // THE DESTINATION IS TOLD, NOT FOUND (architect 2026-08-30): it is the DEVICE
 // CONFIG's `sync_path` key (device_config.h), an absolute folder the architect
-// types once per machine, and the act below is handed that path and never
-// looks for one. IT WAS FOUND FOR THREE DAYS — `GuiPlatform::removable_volume`
+// types once per machine — the Settings dropdown's `Sync path` row since
+// 2026-09-02, the config file by hand before it — and the act below is handed
+// that path, read off the live struct at each press, and never looks for one. IT WAS FOUND FOR THREE DAYS — `GuiPlatform::removable_volume`
 // answered with the one mounted removable volume per backend and
 // `sole_removable_volume` counted the candidates — and that rule worked on the
 // laptop and COULD NOT WORK ON THE TABLET AT ALL, this One UI build mounting

@@ -3091,8 +3091,10 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
 // LABEL (the redesign's capitalization ruling; "GUI scale" and "URL" keep their
 // acronym case) with the SETTINGS KEY the click prefills into the editor, and
-// `separator_before` marks the one place the two categories part: the two GUI
-// keys, then the four metadata keys.
+// `separator_before` marks the one place the two categories part: the four
+// SIDECAR keys a hand edits (the metadata), then the four DEVICE CONFIG keys
+// in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
+// `last_project` is the program's own and has no row).
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
@@ -3116,25 +3118,38 @@ struct SettingsPopupItem {
 // exactly as it does for a sidecar key (recall_gui_setting_value, settings_io.h).
 // A menu of KEYS TO EDIT does not care which file a key rests in.
 //
-// THE WAVEFORM MAGNIFICATION LEVEL JOINED THE GUI HALF 2026-08-26, a third GUI
-// key beside `gui_scale` and `playback_speed` — and the GUI HALF IS TWO since
-// the next day, when playback_speed retired whole and took its item with it.
-// It is settable here like every key that can appear in a
-// `.settings`, and its click prefills through the ordinary recall serializer
-// with nothing translated. It is the WIDEST LABEL, which costs nothing: the
-// popup's width is DERIVED from the widest measured label plus the pads (the
-// derivation is at the paint site), so the box simply grows. The KEY's real
-// gestures are its TWO bare chords (`=` / `-`), the PLAIN WHEEL and its TWO
-// icon-row buttons — the third chord Ctrl+0 and the third button retired
-// together 2026-08-27 — and a dropdown
-// item is the typed route's convenience, not the act's home.
+// THE WAVEFORM MAGNIFICATION LEVEL'S ROW LIVED HERE FROM 2026-08-26 TO
+// 2026-09-02 (architect, the four-tier review's R-23: "it does not belong
+// beside the device-config key it sits next to"). It joined as a third GUI
+// key beside `gui_scale` and `playback_speed`, the GUI half fell to two the
+// next day when playback_speed retired whole, and it was the WIDEST LABEL for
+// its whole stay (the paint site's width table carries the figure). The KEY
+// is untouched: it stays in the `.settings` schema and the settings editor
+// still takes it typed — `;` then `waveform_magnification_level=0` is still
+// the one reset road — and its real gestures are its TWO bare chords (`=` /
+// `-`), the PLAIN WHEEL and its TWO icon-row buttons; only the ROW went, a
+// dropdown item being the typed route's convenience and not the act's home.
+//
+// THE DEVICE HALF IS FOUR SINCE 2026-09-02 (architect, R-22): the three
+// gesture-less device keys — `Projects repository`, `Projects path`, `Sync
+// path` — joined `GUI scale` as rows, each opening the settings editor
+// prefilled through the ordinary recall serializer (recall_gui_setting_value
+// answers all four off the live struct) and committing through the device
+// config's writer under the key's own grammar (commit_device_setting,
+// settings_editor.cpp). The two path rows are the first whose Tab completion
+// is the FILESYSTEM's rather than a recall (complete_path_value). The two
+// halves are ordered SIDECAR THEN DEVICE, the one separator between them —
+// which moved `GUI scale` from the first row to the device group's head, the
+// group keeping kDeviceConfigKeys' own order.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
-    {"GUI scale",      "gui_scale",      false},
-    {"Waveform magnification level", "waveform_magnification_level", false},
-    {"Title",          "title",          true},
-    {"Notes",          "notes",          false},
-    {"URL",            "url",            false},
-    {"Cover",          "cover",          false},
+    {"Title",               "title",         false},
+    {"Notes",               "notes",         false},
+    {"URL",                 "url",           false},
+    {"Cover",               "cover",         false},
+    {"GUI scale",           "gui_scale",     true},
+    {"Projects repository", "projects_repo", false},
+    {"Projects path",       "projects_path", false},
+    {"Sync path",           "sync_path",     false},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -4661,12 +4676,14 @@ struct AppState {
     std::string projects_repo = kDefaultProjectsRepo;
 
     // THE LIVE DEVICE CONFIG, the loop's one struct (main.cpp), reached by
-    // pointer: the two commits that write that file (apply_gui_scale, the
-    // `projects_repo=` arm) mirror their value into
-    // it and hand it to write_device_config, and the two keys with no live
-    // field of their own — `projects_path`, `last_project` — are read from it
-    // where they are needed (the Open project picker's rows, the startup and
-    // reopen choice). Seated at each AppState's construction by
+    // pointer: the commits that write that file (apply_gui_scale, and the
+    // settings editor's one device-key body for `projects_repo=`,
+    // `projects_path=` and `sync_path=`) mirror their value into it and hand
+    // it to write_device_config, and the three keys with no live field of
+    // their own — `projects_path`, `last_project`, `sync_path` — are read
+    // from it where they are needed (the Open project picker's rows, the
+    // startup and reopen choice, the Synchronize act's destination, the
+    // editor's recall). Seated at each AppState's construction by
     // gui_main and never null while the GUI runs; the ownership rationale is
     // the callers inventory at write_device_config, device_config.h.
     DeviceConfig* device_config = nullptr;
@@ -6372,7 +6389,7 @@ struct AppState {
     // File menu's one item pass through too, since both dispatch as chords
     // via on_key) and handle_history_mode_press (the pointer allowlist). Each
     // states its own admitted set at its definition. THE SETTINGS DROPDOWN is
-    // shut out structurally instead, at toggle_dropdown: its six items all open
+    // shut out structurally instead, at toggle_dropdown: its eight items all open
     // the settings editor, a modal this view has no place for, and refusing the
     // menu is one line where covering that one pointer bypass per item would be
     // several.
@@ -10302,7 +10319,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // Ctrl+Shift+Tab was then the mode's own reverse walk-source cycle rather than
 // the walk the label promised (the chord is that walk in the view too since
 // 2026-08-18, marching the diff flags). The SETTINGS menu never had one (it does not open in that
-// view — its anchor is refused at toggle_dropdown — and outside it its six items
+// view — its anchor is refused at toggle_dropdown — and outside it its eight items
 // keep the never-grey rule, their own refusals answering) and neither did FILE
 // (its one row is Ctrl+Q, admitted everywhere the menu can be opened, the
 // history view included). So deleting the Navigation menu left the predicate

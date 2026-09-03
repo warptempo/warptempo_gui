@@ -2087,13 +2087,23 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
             // THE REMEMBERED PROJECT (2026-08-27): every successful open —
             // startup's included — writes its name into the device config's
-            // last_project, the THIRD writer of that file (the inventory is
-            // at write_device_config, device_config.h). Gated on a real
-            // change like the other two, so a relaunch of the same project
-            // rewrites nothing.
+            // last_project, the program's own writer of that file (the
+            // inventory is at write_device_config, device_config.h). Gated
+            // on a real change like the others, so a relaunch of the same
+            // project rewrites nothing. A failed write is advisory and SAID
+            // (2026-09-02): a background act the user was not watching
+            // finishing badly is a card by messaging.md's own division, the
+            // writer composing both clauses at its failure point and this
+            // site printing the one and raising the other.
             if (device_config.last_project != project.name) {
                 device_config.last_project = project.name;
-                (void)write_device_config(device_config);
+                if (auto failure = write_device_config(device_config)) {
+                    std::fprintf(stderr, "warptempo_gui: %s\n",
+                                 failure->diagnostic.c_str());
+                    notifications.notify(
+                        AppState::NotificationClass::Normal,
+                        failure->display);
+                }
             }
             // THE PREFETCH'S STARTUP KICK (2026-08-07), here because this is
             // where the source settles: app.source_audio_path is final by now

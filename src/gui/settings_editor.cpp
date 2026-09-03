@@ -17,7 +17,9 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -43,6 +45,47 @@ std::string trim_ws(const std::string& s) {
 bool is_key_char(char c) {
     const unsigned char uc = static_cast<unsigned char>(c);
     return std::isalnum(uc) || c == '_';
+}
+
+// THE TWO PATH KEYS — the device config's `projects_path` and `sync_path`,
+// the keys whose Tab completion is the filesystem's (complete_path_value).
+// `projects_repo` is deliberately not one: a host/path, not a folder here.
+bool is_path_completed_key(const std::string& key) {
+    return key == "projects_path" || key == "sync_path";
+}
+
+// The longest common prefix of the matches, cut back to a CODEPOINT BOUNDARY:
+// two names sharing only the lead byte of different multi-byte characters
+// would otherwise yield a lone lead byte, which the editor's incoming filter
+// drops as malformed — the answer would be right (no advance) but by
+// accident. The cut makes it right by construction: a UTF-8 lead byte says
+// how many bytes its sequence has, and a prefix that ends inside one is
+// shortened to the byte before it.
+std::string common_prefix_on_codepoint_boundary(
+        const std::vector<std::string>& names) {
+    if (names.empty()) return {};
+    std::string lcp = names.front();
+    for (size_t i = 1; i < names.size(); ++i) {
+        const std::string& n = names[i];
+        size_t k = 0;
+        while (k < lcp.size() && k < n.size() && lcp[k] == n[k]) ++k;
+        lcp.resize(k);
+    }
+    // Walk back to the last lead byte (any byte that is not a continuation
+    // byte) and drop the sequence it starts if that sequence is incomplete.
+    size_t lead = lcp.size();
+    while (lead > 0 &&
+           (static_cast<unsigned char>(lcp[lead - 1]) & 0xc0) == 0x80) {
+        --lead;
+    }
+    if (lead == 0) return {};
+    const unsigned char b = static_cast<unsigned char>(lcp[lead - 1]);
+    size_t expected = 1;
+    if      ((b & 0xe0) == 0xc0) expected = 2;
+    else if ((b & 0xf0) == 0xe0) expected = 3;
+    else if ((b & 0xf8) == 0xf0) expected = 4;
+    if (lcp.size() - (lead - 1) < expected) lcp.resize(lead - 1);
+    return lcp;
 }
 
 } // namespace
@@ -82,7 +125,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // settings). The gate belongs HERE because this is the single chokepoint every
 // open passes: the bare `;` key (which the keyboard allowlist already refuses
 // one level up, and keeps refusing — this is not its defense) and the SETTINGS
-// DROPDOWN's six item clicks, which call open_prefilled and reach no other gate
+// DROPDOWN's eight item clicks, which call open_prefilled and reach no other gate
 // at all. That second route was the hole: the menu opened the editor from a
 // locked tab and every engine key was then settable in it.
 //
@@ -192,9 +235,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (projects_repo, the other editable device key, has no vocabulary
-    // at all and takes its free-text arm in commit(), exactly as it did when
-    // both were `.settings` keys.)
+    // move. (The other three editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path and sync_path — have no chokepoint to reach
+    // and take their one direct-set body in commit(), commit_device_setting,
+    // ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -503,40 +547,10 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // projects_repo is the one preference with no dedicated gesture at all —
-    // free text, no undo history, no dirty tracking — so the settings editor
-    // is its sole authoring surface and it takes a direct-set arm here rather
-    // than a chokepoint route through commit_gui_setting (which routes every
-    // OTHER GUI key into its gesture chokepoint). Since 2026-08-27 it is a
-    // DEVICE preference: ONE user has ONE repository, so the projects home is
-    // the device config's (device_config.h), Ctrl+S does not carry it, and
-    // THIS COMMIT IS ITS PERSIST — the config is written right here through
-    // THE LIVE STRUCT (AppState::device_config, the loop's one), so the other
-    // three keys travel as they stand (the ownership rule is at
-    // write_device_config); a failed write is advisory and prints its own
-    // line there, the live value standing for this session either way. An
-    // empty value simply never matches any remote, which disables the GitHub
-    // recheck. A same-value commit no-op-deactivates like every routed
-    // GUI-kind key (the empty value included) and writes nothing. (Its twin
-    // arm, `audio_player=`, retired with that key 2026-08-28.)
-    if (key == "projects_repo") {
-        if (value == app.projects_repo) {
-            std::fprintf(stderr,
-                "warptempo_gui: Setting unchanged: %s=%s\n",
-                key.c_str(), value.c_str());
-            viewport.invalidate_modal_dialog_area();
-            text_editor::deactivate(app.settings_editor);
-            return;
-        }
-        app.projects_repo = value;
-        app.device_config->projects_repo = value;
-        (void)write_device_config(*app.device_config);
-        std::fprintf(stderr, "warptempo_gui: projects_repo set: '%s'\n",
-            value.c_str());
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.settings_editor);
-        return;
-    }
+    // 2. The three gesture-less device keys — one body, ahead of the routers
+    //    because none of them has a chokepoint to route into (the head's
+    //    item 1; the body's own comment carries the rest).
+    if (commit_device_setting(key, value)) return;
 
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
     // settable here: the router parses strictly and applies through the key's
@@ -715,6 +729,172 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
+// THE THREE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
+// a direct-set arm here since it was a `.settings` key — free text, no undo
+// history, no dirty tracking, the settings editor its sole authoring surface
+// — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
+// repository, so the projects home is the device config's (device_config.h)
+// and Ctrl+S does not carry it. projects_path and sync_path JOINED IT
+// 2026-09-02 (architect, the four-tier review's R-22 — the Settings dropdown
+// carries all three as rows), which is what made the arm a body: ONE SHAPE
+// FOR THE THREE. The key's own grammar owner in device_config.h decides —
+// is_projects_repo, is_projects_path, is_sync_path, never a second spelling
+// — and a refusal is the red flash and the card with the grammar's own
+// reason, through the composer every other key uses. A value byte-equal to
+// the live one is the consumed no-op every routed GUI-kind key takes (the
+// empty value included) and writes nothing. On success the LIVE STRUCT takes
+// the value (AppState::device_config, the loop's one — so the other keys
+// travel as they stand, the ownership rule at write_device_config) and THIS
+// COMMIT IS THE PERSIST: the config is written right here. A failed write is
+// advisory — the live value stands for the session — and since 2026-09-02 it
+// is SAID: the writer composes the two clauses at its one failure point
+// (GuiFailure, failure.h) and this site prints the diagnostic and cards the
+// display, the strictness ruling's shape for a press whose result nothing
+// paints.
+//
+// WHEN EACH IS IN FORCE. `projects_repo`: at once — every reader reads
+// `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
+// readers did not (an empty value simply never matches any remote, which
+// disables the GitHub recheck). `sync_path`: at once — the Synchronize act
+// reads the live struct at each press (synchronize_to_external_storage,
+// input_key_dispatch.cpp). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
+// NEXT LAUNCH, the open project staying open — the picker lists the folders
+// under the live struct's path and gui_main's reopen resolves the chosen name
+// under that same live value (main.cpp), so File → Open project already
+// works against the new folder, while the open project's own paths are
+// absolute and untouched. The card says where the change applies, because
+// nothing on screen changes at the commit. `last_project` still names a
+// folder under the OLD path until the next successful open rewrites it; the
+// next launch's fallback (startup_source, project_model.cpp) is load-lenient
+// on a name that is gone and takes the first valid folder under the new path.
+// THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
+// (open_project_commit), so a folder under the new path carrying the open
+// project's own name reads as "already open" until a relaunch or a different
+// project is opened first — a rename-by-hand case, accepted.
+bool GuiSettingsEditor::commit_device_setting(const std::string& key,
+                                              const std::string& value) {
+    std::string* live    = nullptr;
+    bool (*grammar)(const std::string&) = nullptr;
+    const char* reason   = nullptr;
+    if (key == "projects_repo") {
+        live = &app.device_config->projects_repo;
+        grammar = &is_projects_repo;
+        reason  = kProjectsRepoGrammarReason;
+    } else if (key == "projects_path") {
+        live = &app.device_config->projects_path;
+        grammar = &is_projects_path;
+        reason  = kProjectsPathGrammarReason;
+    } else if (key == "sync_path") {
+        live = &app.device_config->sync_path;
+        grammar = &is_sync_path;
+        reason  = kSyncPathGrammarReason;
+    } else {
+        return false;
+    }
+
+    // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
+    // `gui_scale` arm's sentence exactly (the reason after the tag and no key
+    // name, the field on screen already showing which key): the refusal
+    // sentence is built once and read by the stderr line and by the card, a
+    // red field saying only THAT it refused.
+    if (!grammar(value)) {
+        app.settings_editor.red = true;
+        viewport.invalidate_modal_dialog_area();
+        const std::string refusal =
+            std::string("Settings edit rejected: ") + reason;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+        return true;
+    }
+    if (value == *live) {
+        std::fprintf(stderr,
+            "warptempo_gui: Setting unchanged: %s=%s\n",
+            key.c_str(), value.c_str());
+        viewport.invalidate_modal_dialog_area();
+        text_editor::deactivate(app.settings_editor);
+        return true;
+    }
+    *live = value;
+    // The live field every reader of the repository reads (the rationale at
+    // AppState::projects_repo); the two path keys have no field beside the
+    // struct's own.
+    if (key == "projects_repo") app.projects_repo = value;
+    if (auto failure = write_device_config(*app.device_config)) {
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     failure->diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure->display);
+    }
+    std::fprintf(stderr,
+        "warptempo_gui: Setting applied: %s=%s\n",
+        key.c_str(), value.c_str());
+    viewport.invalidate_modal_dialog_area();
+    text_editor::deactivate(app.settings_editor);
+    if (key == "projects_path") {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kProjectsPathAppliesCard);
+    }
+    return true;
+}
+
+bool GuiSettingsEditor::complete_path_value(const std::string& value) {
+    // Split at the last `/`: the HEAD names the directory to list (the
+    // separator kept, so `/` alone lists the root), the TAIL is what a name
+    // must start with. A value with no `/` at all has no head, and a relative
+    // head completes nothing — the grammar's own rule (is_config_path_value:
+    // both keys take absolute paths), so the completer never offers a value
+    // the commit would refuse.
+    const size_t slash = value.rfind('/');
+    if (slash == std::string::npos) return false;
+    const std::string head = value.substr(0, slash + 1);
+    const std::string tail = value.substr(slash + 1);
+    const std::filesystem::path dir(head);
+    if (!dir.is_absolute()) return false;
+
+    // LISTED AFRESH AT EVERY TAB, with an error_code: a directory that is not
+    // there, not readable or not a directory completes nothing, and a Tab that
+    // completes nothing walks the ring — the one autocomplete model.
+    std::error_code ec;
+    std::filesystem::directory_iterator it(dir, ec);
+    if (ec) return false;
+    std::vector<std::string> matches;
+    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        if (ec) return false;
+        const std::filesystem::directory_entry& e = *it;
+        // DIRECTORIES ONLY — both keys name folders. Through the link: a
+        // symlinked folder is a folder to name, and the grammar follows
+        // nothing either way.
+        std::error_code dec;
+        if (!e.is_directory(dec) || dec) continue;
+        const std::string name = e.path().filename().string();
+        if (name.size() < tail.size() ||
+            name.compare(0, tail.size(), tail) != 0) continue;
+        matches.push_back(name);
+    }
+    if (matches.empty()) return false;
+
+    std::string lcp = common_prefix_on_codepoint_boundary(matches);
+    // The tail is a prefix of every match, so it is a prefix of the common
+    // prefix — unless the boundary cut took it below the tail, in which case
+    // the matches diverge inside one character and there is nothing to add.
+    if (lcp.size() < tail.size()) return false;
+    std::string append = lcp.substr(tail.size());
+    if (matches.size() == 1) append += '/';
+    if (append.empty()) return false;
+
+    // The append lands at the LINE'S END whatever the cursor was doing, through
+    // the one incoming filter, as the recall does; its over-capacity refusal is
+    // silent for the recall's reason (the text is the product's own, not the
+    // user's), and answers false below because the buffer stood still.
+    const std::string before = app.settings_editor.pending;
+    app.settings_editor.cursor_pos       =
+        static_cast<int>(app.settings_editor.pending.size());
+    app.settings_editor.selection_anchor = -1;
+    (void)text_editor::replace_selection(app.settings_editor, append);
+    viewport.invalidate_modal_dialog_area();
+    return app.settings_editor.pending != before;
+}
+
 // Returns whether the buffer CHANGED — the one autocomplete model's question
 // (the rule is stated at route_modal_editor_key's Tab arm,
 // input_key_dispatch.cpp): true consumes the Tab that ran it, false lets that
@@ -727,18 +907,28 @@ bool GuiSettingsEditor::autocomplete_value() {
     // No `key=` yet; nothing to complete.
     if (eq == std::string::npos) return false;
 
+    const std::string key = trim_ws(pending.substr(0, eq));
     // Only fill an empty value side, so an in-progress value is never
     // overwritten. Whitespace-only counts as empty. THIS is what makes a
     // SECOND Tab walk with no state to remember the first: the completion just
-    // written is a non-empty value side.
-    if (!trim_ws(pending.substr(eq + 1)).empty()) return false;
+    // written is a non-empty value side. THE TWO PATH KEYS ARE THE EXCEPTION
+    // (2026-09-02): a non-empty value side there is a path PREFIX, and Tab
+    // completes it against the filesystem — the recall below still answers
+    // the empty side, so the dropdown's prefill and a bare `sync_path=` Tab
+    // behave as every other key's do, and the path road opens only once
+    // something has been typed. The path completer's own no-advance cases
+    // (an ambiguous prefix already at the common prefix, no match, a relative
+    // or unlistable head) are Tabs that walk, exactly as here.
+    if (!trim_ws(pending.substr(eq + 1)).empty()) {
+        if (!is_path_completed_key(key)) return false;
+        return complete_path_value(pending.substr(eq + 1));
+    }
 
-    const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
     // follow, centered, gui_scale, waveform_magnification_level,
-    // projects_repo — gui_scale and projects_repo the device config's —
-    // per-tab trim / read_only)
+    // projects_repo, projects_path, sync_path — the last four the device
+    // config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
@@ -783,7 +973,8 @@ bool GuiSettingsEditor::autocomplete_value() {
     viewport.invalidate_modal_dialog_area();
     // The literal answer, compared against the buffer this call started from:
     // recalling an EMPTY value (a blank free-text key such as `projects_repo=`
-    // or an empty `title=`) onto an already-bare `key=` writes the same bytes
-    // back and is honestly no advance, so its Tab walks.
+    // or `sync_path=` on a device with no destination, or an empty `title=`)
+    // onto an already-bare `key=` writes the same bytes back and is honestly
+    // no advance, so its Tab walks.
     return app.settings_editor.pending != pending;
 }

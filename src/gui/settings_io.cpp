@@ -363,14 +363,21 @@ bool write_settings_file(
 
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key) {
-    // THE DEVICE CONFIG'S TWO EDITABLE KEYS, ahead of the `.settings` walk
-    // because they are not in it any more (2026-08-27) and the settings editor
-    // still edits them — the whole rationale is at the declaration. Each
-    // recalls through the device config's own serializer or verbatim, so a
-    // recall and that file agree byte for byte exactly as a `.settings` recall
-    // and a Ctrl+S do.
+    // THE DEVICE CONFIG'S FOUR EDITABLE KEYS, ahead of the `.settings` walk
+    // because they are not in it (2026-08-27; the two path keys 2026-09-02)
+    // and the settings editor edits them — the whole rationale is at the
+    // declaration. Each recalls through the device config's own serializer or
+    // verbatim, so a recall and that file agree byte for byte exactly as a
+    // `.settings` recall and a Ctrl+S do. The two path keys have no field
+    // beside the live struct's own, which is never null while the GUI runs
+    // (AppState::device_config); the test is the belt every pointer read
+    // wears.
     if (key == "gui_scale")     return format_gui_scale_percent(app.gui_scale);
     if (key == "projects_repo") return app.projects_repo;
+    if (key == "projects_path" && app.device_config != nullptr)
+        return app.device_config->projects_path;
+    if (key == "sync_path" && app.device_config != nullptr)
+        return app.device_config->sync_path;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

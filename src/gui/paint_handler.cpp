@@ -1108,15 +1108,21 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //
 //   File       "Synchronize to external storage" | "Ctrl+Q"   -> content
 //   Iterations "BPM iterations" | "M"                         -> 209   FLOOR
-//   Settings   "Waveform magnification level" (no column)     -> 288   content
+//   Settings   "Projects repository" (no column)              -> estimate FLOOR
 //   Edit       "Paste phase reset state" | "Ctrl+Alt+Shift+P" -> 374   content
 //
 // THE SETTINGS MENU LEFT THE FLOOR ON 2026-08-26, when "Waveform magnification
 // level" joined its roster and took the widest-label slot at 209px (the item's
 // own note is at kSettingsPopupItems, app_state.h — the box "simply grows",
-// and this is what it grew into). Its content asks 288 at 100%, past the 242,
-// so that popup is DERIVED at every scale now — 296px wide with its chrome —
-// and the +42 no longer lands on it at all.
+// and this is what it grew into): its content asked 288 at 100%, past the
+// 242, so that popup DERIVED at every scale — 296px wide with its chrome —
+// and the +42 did not land on it. THAT ROW LEFT 2026-09-02 (R-23) and three
+// device-key rows joined (R-22), the widest label now "Projects repository"
+// — some 19 characters against the 28 that asked 209, so by the same
+// advance-width method the content sits under the 242 and the FLOOR is the
+// width again; unmeasured, and it does not have to be: the painter takes the
+// larger of the two terms at every paint, so which wins is never in doubt,
+// only which term it is.
 //
 // WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: ITERATIONS, two rows of
 // "BPM iterations"/"Grid iterations" beside single letters. THE 2026-08-31

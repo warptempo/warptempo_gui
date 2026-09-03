@@ -1022,7 +1022,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // The anchors are the roster's only NON-chord actions, so there is no chord
 // to ask the gate about and each has to be answered here. SETTINGS is DEAD
 // because toggle_dropdown refuses that menu while the mode stands (its first
-// line): its six items open the settings editor, a modal the view has no place
+// line): its eight items open the settings editor, a modal the view has no place
 // for. FILE (2026-08-13) is LIVE: its one item is Ctrl+Q, which the mode
 // admits, so its menu works in there.
 // (NAVIGATION was a third entry, LIVE from 2026-08-08 — the architect ruled its

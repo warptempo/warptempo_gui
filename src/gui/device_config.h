@@ -1,8 +1,11 @@
 #pragma once
 
+#include "failure.h"
+
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
@@ -88,6 +91,20 @@
 // its own chokepoint, and each chokepoint writes this file immediately, so the
 // file is always the last committed state and a save carries none of them.
 // The chokepoints are the callers inventory at write_device_config below.
+//
+// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect, the
+// four-tier review's R-22): the Settings dropdown carries `GUI scale`,
+// `Projects repository`, `Projects path` and `Sync path` as rows that open the
+// settings editor prefilled, and the editor commits each through this file's
+// writer under the key's own grammar below. Until that day the two path keys
+// were hand-edited only, and HELP told the user to edit `sync_path` without
+// telling him to quit first — which mattered, because A HAND EDIT UNDER A
+// RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT (R-6): the live struct is
+// the truth and every commit rewrites the whole file from it. That stays so,
+// and it is ordinary Linux behaviour for a program-written config; the in-app
+// road is the sanctioned one now and the hand edit is the quit-first
+// alternative. `last_project` is the one key with no editor — it is the
+// program's own.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
@@ -204,6 +221,41 @@ inline bool is_projects_path(const std::string& v) {
     return is_config_path_value(v);
 }
 
+// THE GRAMMARS' REASONS, spelled once beside the predicates they explain:
+// the config reader's `bad_value` line and the settings editor's red-flash
+// card are the two readers of each, so a refusal says the same words on the
+// terminal at startup and on a card at the commit. THE PATH REASONS NAME THE
+// EDGE RULE because that is the fault a hand actually makes: an absolute path
+// with a trailing space (or the `\r` a CRLF-saved file leaves on every value)
+// is refused, and "must be an absolute path" alone would read as a lie
+// against a value that plainly is one.
+inline constexpr const char* kProjectsPathGrammarReason =
+    "must be an absolute path with no whitespace at either edge";
+inline constexpr const char* kSyncPathGrammarReason =
+    "must be empty or an absolute path with no whitespace at either edge";
+inline constexpr const char* kProjectsRepoGrammarReason =
+    "must not carry a line separator";
+
+// THE projects_repo GRAMMAR — free text, verbatim, EMPTY INCLUDED (a blank
+// repository never matches a remote and so disables the GitHub recheck), with
+// ONE refusal: a line separator anywhere (`\n` or `\r`), the one thing this
+// line-based `key=value` file with no escaping cannot carry — the writer would
+// emit more than one physical line and the shared scanner would refuse the
+// remainder on the next read. No host/path grammar is enforced here: the
+// recheck normalizes the value against the local clone's own `origin` and
+// refuses the mismatch there, which is a far better place to judge it than a
+// reader that cannot see the clone. The `\r` clause has the same real
+// producer the path keys' has (std::getline on a CRLF-saved file) and joined
+// 2026-09-02 when the key gained this predicate — before it the reader took
+// the value with no test at all, and the editor's own filter had always
+// dropped control bytes, so the only value the clause newly refuses is a
+// hand-edited one.
+inline bool is_projects_repo(const std::string& v) {
+    if (v.find('\n') != std::string::npos) return false;
+    if (v.find('\r') != std::string::npos) return false;
+    return true;
+}
+
 // THE sync_path GRAMMAR (architect 2026-08-30) — the path value grammar, OR
 // EMPTY.
 //
@@ -216,10 +268,13 @@ inline bool is_projects_path(const std::string& v) {
 // answer, and a wrong guess would aim a mirror — its creates, its copies and
 // its removals — at a folder the user never named.
 //
-// THE KEY HAS NO IN-APP WRITER, `projects_path`'s own posture: the architect
-// hand-edits it (`/run/media/<user>/<stick>` on the laptop), the template
-// stamps it empty, and the app only ever reads it. The three writers of this
-// file are unchanged and their inventory is at write_device_config.
+// THE KEY IS SET IN-APP SINCE 2026-09-02 (architect, R-22): the Settings
+// dropdown's `Sync path` row opens the settings editor on `sync_path=` and the
+// commit writes this file under this very predicate — the template stamps it
+// empty, the user types the path once (`/run/media/<user>/<stick>` on the
+// laptop), and the act reads the LIVE struct, so the value is in force at the
+// next `\` with no relaunch. A hand edit (with the app quit) is the other
+// road. The writers' inventory is at write_device_config.
 inline bool is_sync_path(const std::string& v) {
     return v.empty() || is_config_path_value(v);
 }
@@ -307,9 +362,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
     const std::filesystem::path& path);
 
 // Write the live values atomically (temp + fsync + rename, through the shared
-// atomic writer), creating the parent directory if it is missing. Returns false
-// on any I/O failure, having printed one stderr line — a failed persist is
-// advisory, never fatal: the live value stands for this session.
+// atomic writer), creating the parent directory if it is missing. Answers
+// nothing on success and THE FAILURE ON ANY I/O FAILURE — both clauses
+// composed here at the one failure point (GuiFailure, failure.h: the
+// diagnostic with the full path and the system's words where there are any,
+// the display naming the file by its basename, `config`), this writer
+// printing nothing itself; each caller prints the diagnostic and, where it
+// has a card surface, raises the display. A failed persist is advisory, never
+// fatal: the live value stands for this session and the next launch reads
+// whatever the file last held.
 //
 // THE LIVE CONFIG HAS ONE OWNER, gui_main's loop (main.cpp): the ONE
 // DeviceConfig it reads at startup outlives every project the process opens,
@@ -320,17 +381,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THE THREE CALLERS ARE THE THREE COMMITS, and this is their inventory: the
-// scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp),
-// the settings editor's `projects_repo=` arm (settings_editor.cpp; its
-// `audio_player=` twin retired with the key 2026-08-28), and gui_main's
-// `last_project` write on the success
-// path of every open (main.cpp). A same-value commit never reaches any of them
-// — each gates the no-op ahead of the write — so a file rewrite means a value
-// actually moved. TWO KEYS HAVE NO IN-APP WRITER AT ALL — `projects_path` and,
-// since 2026-08-30, `sync_path`: each is stamped by the template and edited by
-// hand, and the app only reads it.
-bool write_device_config(const DeviceConfig& cfg);
+// THE FIVE CALLERS ARE THE FIVE COMMITS, and this is their inventory
+// (re-greped 2026-09-02): the scale's chokepoint
+// GuiInputHandler::apply_gui_scale (input_handler.cpp), the settings editor's
+// three device-key arms in one body — `projects_repo=`, `projects_path=` and
+// `sync_path=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// the two path arms joined 2026-09-02 under R-22, and the `audio_player=` arm
+// retired with its key 2026-08-28) — and gui_main's `last_project` write on
+// the success path of every open (main.cpp). A same-value commit never
+// reaches any of them — each gates the no-op ahead of the write — so a file
+// rewrite means a value actually moved. `last_project` is the one key with no
+// editor: it is the program's own.
+std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
