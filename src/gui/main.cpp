@@ -190,9 +190,13 @@ namespace {
 // HEIGHT (architect 2026-08-12: the seventh glass ruling gave the clamp,
 // kWaveformMaxHeightPx at render.h carrying the value and its bracket; the
 // relayout's COMMIT B, dictated at session close, gave the centering and took
-// the clamp 550 -> 500). The window stacks, top to bottom:
-//   THE MENU ROW, pinned at the window top;
-//   GAP 1 — flexible blank window ground;
+// the clamp 550 -> 500), AND THE MENU ROW SITS ON THE TAB ROW WITH THE
+// FLEXIBLE BAND ABOVE IT (architect 2026-09-03, at his 27" 1920x1080 monitor).
+// The window stacks, top to bottom:
+//   GAP 1 — flexible band, painted in THE MENU ROW'S OWN GROUND (paint_menu_
+//     row fills it with the lane, so the two read as one tall row whose
+//     content sits at its foot);
+//   THE MENU ROW, on the tab row;
 //   THE CENTERED BLOCK — tab row, icon row, OVERVIEW STRIP, trim bar, ruler,
 //     marker lane, then THE WAVEFORM, whose own thick bottom border (render_-
 //     canvas's, taken FROM the waveform area) is the block's bottom edge;
@@ -200,11 +204,30 @@ namespace {
 //   THE UNIFIED BOTTOM ROW at the window's foot, its 1px border-top the thin
 //     border facing the gap and its only chrome line.
 //
+// WHERE GAP 1 OPENS IS HIS 2026-09-03 RULING, and the rest of the stack is
+// commit B's. From commit B until that day the menu row was PINNED AT THE
+// WINDOW TOP and gap 1 opened between it and the tab row. Looking at the
+// 1080 layout he kept the waveform where it is — "it's perfect right there" —
+// and the gap BELOW it at the bottom row "looks correct" (a DAW would put
+// more channels there), while the gap at the top "is what looks weird and
+// wrong": "bring row one — File, Edit, Iterations, etc. — down so that it
+// touches the tab row ... a fat chunky row one ... File, Edit, etc. would sit
+// right above where the tab row sits right now"; the view bar's buttons at the
+// row's right ("S+W, T+P, etc.") "remain there the same height and design,
+// they would just be moved down". So the anchors and the view bar keep their
+// authored height and their y relative to the row's rect, the rect itself
+// moved down by the gap, and the band above wears the row's ground so the
+// fat row is one surface. ON THE TABLET NOTHING MOVES: at 2304x1440 and
+// gui_scale 225 gap 1 is already 0 (the stack below), so the menu row was on
+// the tab row there before the ruling and stays where it was.
+//
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, with no
 // titlebar arithmetic anywhere, because "the labwc titlebar above and the panel
 // below offset each other" (the architect's own reasoning). The derivation, all
-// of it in the four functions below:
+// of it in the four functions below (unchanged by the 2026-09-03 ruling: the
+// gap's SIZE is the centering's remainder above the block, and the menu row
+// is part of the top lane stack whichever side of the gap it sits on):
 //   leftover = win_h - (menu + block-above-the-waveform) - the bottom strip's
 //              ONE lane = centered_leftover_h; the waveform's own borders are
 //                INSIDE its area, so the block's thick bottom border is not a
@@ -230,7 +253,9 @@ namespace {
 // 2026-08-29 and folded back into the row that evening)
 // — every number below is re-derived from that table rather than adjusted):
 //   1920x1080: leftover 840 -> waveform CLAMPED at 500, gap 1 = 97, gap 2 = 243
-//     — 31 menu / 97 blank / 162 block / 500 waveform / 243 blank / 47 row,
+//     — 97 blank / 31 menu / 162 block / 500 waveform / 243 blank / 47 row
+//     since 2026-09-03 (31 / 97 / 162 / 500 / 243 / 47 from commit B until
+//     then — the same six numbers, the first two swapped),
 //     the waveform spanning y 290..790 about the window's midline
 //     540 (the clamp fixes its height and the midpoint rule its centre, so the
 //     bar's 33 came out of GAP 2 alone on its one day and went back into it).
@@ -238,23 +263,30 @@ namespace {
 //   floors exist for; that rig is returned and no host runs this geometry —
 //   the glass host is 2304x1440 at gui_scale 225):
 //     leftover 360 -> waveform UNCLAMPED at 360, both gaps 0
-//     — 31 / 0 / 162 / 360 / 0 / 47. Centering is infeasible there (the
+//     — 0 / 31 / 162 / 360 / 0 / 47. Centering is infeasible there (the
 //     midpoint rule would want gap 1 = -73), so the waveform keeps everything,
 //     which is the rule's own floor rather than a special case.
 //
-// THE TWO BLANK BANDS ARE WINDOW GROUND AND HIT NOTHING: render_background's
-// chrome erase paints both and no lane painter covers them; a press in either
-// falls to a consumed nothing (gap 1 through the top strip's empty-spot return,
-// gap 2 through the press path's tail), the cursor map answers Arrow over both,
-// and the wheel is inert in both (gap 1 by its own band in wheel_context's
-// inert list — it lies INSIDE top_strip_area, which is a pan surface; gap 2
-// needs no band, lying below every area that probe tests). ONE OWNER: the two
-// gaps enter the geometry at exactly three expressions in this file —
-// strip_row_rect's inset for top lanes 1..6 (gap 1, which every block lane
-// sits below), top_strip_h's total and bottom_strip_h's total (which is what
-// makes waveform_area's h - top - bottom arithmetic yield W with no second
-// expression of the rule) — so every consumer (hit tests, paint, damage, the
-// wheel probe, the touch pan zone) inherits the shifted y's through the lane
+// THE TWO BANDS HIT NOTHING, AND ONLY ONE IS BLANK: gap 2 is window ground
+// (render_background's chrome erase paints it and no lane painter covers it),
+// while GAP 1 IS PAINTED BY paint_menu_row in the menu row's ground — the
+// chrome erase lays kBackground under it first, and the row's painter fills
+// the gap band with the lane (top_flex_gap_area, its second reader), so the
+// unfocused swap the row's ground takes moves the band with it. A press in
+// either falls to a consumed nothing (gap 1 through the top strip's
+// empty-spot return, gap 2 through the press path's tail), the cursor map
+// answers Arrow over both, and the wheel is inert in both (gap 1 by its own
+// band in wheel_context's inert list — it lies INSIDE top_strip_area, which
+// is a pan surface; gap 2 needs no band, lying below every area that probe
+// tests). ONE OWNER: the two gaps enter the geometry at exactly three
+// expressions in this file — strip_row_rect's inset for EVERY top lane (gap
+// 1, which every top lane sits below since 2026-09-03; lanes 1..6 alone
+// carried it before), top_strip_h's total and bottom_strip_h's total (which
+// is what makes waveform_area's h - top - bottom arithmetic yield W with no
+// second expression of the rule) — so every consumer (hit tests, paint,
+// damage, the wheel probe, the touch pan zone, the notification stack under
+// row 1, the dropdown boxes hanging off the anchors, the folder overlay's
+// band starting at the tab row) inherits the shifted y's through the lane
 // accessors with no second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
@@ -274,8 +306,9 @@ namespace {
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
 // inside ONE lane, and the playhead's triangle became the aliased head on the
 // MARKER lane's bottom rows. No seam is exempt any more — every seam (menu|tab,
-// which is GAP 1's band since commit B and was the toolbar lane's until the
-// roster commit deleted it, tab|icon, icon|overview and overview|trim (the
+// TIGHT since 2026-09-03 — it was GAP 1's band from commit B until then, and
+// the toolbar lane's until the roster commit deleted it — and the window
+// top|menu seam, which is GAP 1's band now, tab|icon, icon|overview and overview|trim (the
 // strip's new neighbours; the icon|trim seam it split was a flexible-gap band
 // for the seventh ruling's first hours and tight from the row unification to
 // commit B), trim|ruler, ruler|marker, the bottom strip's own row|bar seam
@@ -399,11 +432,13 @@ int waveform_clamped_h(int win_h) {
     const int cap = waveform_max_h_px();
     return leftover < cap ? leftover : cap;
 }
-// GAP 1 — the flexible blank band between the MENU ROW and the centered block
-// (commit B's centering rule, spelled at the vertical rule above): whatever it
-// takes to put the waveform's midpoint on the window's, floored at 0 where that
-// is infeasible. strip_total_h(top) is exactly the rule's "menu + the block
-// above the waveform", the two being the whole top lane stack.
+// GAP 1 — the flexible band ABOVE THE MENU ROW since 2026-09-03 (between the
+// menu row and the centered block from commit B until then; the vertical rule
+// above carries the ruling): whatever it takes to put the waveform's midpoint
+// on the window's, floored at 0 where that is infeasible. strip_total_h(top)
+// is exactly the rule's "menu + the block above the waveform", the two being
+// the whole top lane stack — the arithmetic is commit B's unchanged, because
+// the gap's SIZE never depended on where in the stack it opened.
 int top_flex_gap(int win_h) {
     const int gap = win_h / 2 - strip_total_h(/*top_strip=*/true)
                               - waveform_clamped_h(win_h) / 2;
@@ -436,9 +471,10 @@ int bottom_flex_gap(int win_h) {
 
 // The TOP strip's public height INCLUDES GAP 1 (commit B): it is the distance
 // from the window top to the WAVEFORM top, which is what every consumer asks of
-// it — top_strip_area then spans the blank band between the menu row and the
-// block (its damage covering it is correct: the band is repainted window
-// ground), and waveform_area's y is this sum with no second expression.
+// it — top_strip_area then spans the blank band above the menu row (its damage
+// covering it is correct: the band is repainted in the menu row's ground by
+// that row's painter), and waveform_area's y is this sum with no second
+// expression.
 int top_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -549,13 +585,15 @@ GuiRect waveform_area(const AppState& a) {
 // A lane is a pure index from its strip's window edge (0 = the edge-most lane):
 // the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
 // each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
-// further inward — PLUS, for TOP lanes 1 and beyond, GAP 1 (the vertical rule at
-// the head of this block: the menu row is pinned at the window top and the
-// centered block hangs below the flexible blank band, so every lane from the tab
-// row down carries it). The bottom strip's own gap 2 is NOT an inset here: its
-// one lane rests on the window's foot, and the gap sits above it, inside
-// bottom_strip_h. The top strip counts downward from y=0; the bottom strip
-// mirrors it about the window midline (`h - inset - lane_h`).
+// further inward — PLUS, for EVERY top lane, GAP 1 (the vertical rule at the
+// head of this block: since 2026-09-03 the flexible blank band opens between
+// the window's top and the MENU ROW, and the menu row sits on the tab row, so
+// every top lane from the menu row down carries the gap; until that day the
+// menu row was pinned at the window top and lanes 1..6 alone carried it). The
+// bottom strip's own gap 2 is NOT an inset here: its one lane rests on the
+// window's foot, and the gap sits above it, inside bottom_strip_h. The top
+// strip counts downward from y=0; the bottom strip mirrors it about the window
+// midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
 // 5 and the marker lane lane 6 — the numbering the overview strip's arrival in
@@ -576,12 +614,15 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
         inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
         inset += static_cast<int>(kRowGapPx);
     }
-    // GAP 1 opens between the menu row and the centered block (the vertical
-    // rule): every top lane from 1 down sits below it, and the bottom strip's
-    // arithmetic never sees it. (The seventh ruling's own gap sat after the ICON
-    // row for hours; the row unification moved it to the window's foot as the
-    // bottom lanes' inset, and commit B split it into this one and gap 2.)
-    if (top_strip && lane_from_window_edge >= 1)
+    // GAP 1 opens ABOVE THE MENU ROW (the vertical rule; architect
+    // 2026-09-03): every top lane sits below it, lane 0 included, and the
+    // bottom strip's arithmetic never sees it. (The seventh ruling's own gap
+    // sat after the ICON row for hours; the row unification moved it to the
+    // window's foot as the bottom lanes' inset; commit B split it into this
+    // one — between the menu row and the tab row, lanes 1..6 carrying it —
+    // and gap 2; and 2026-09-03 lifted it over the menu row, so the
+    // `>= 1` this line carried became every top lane.)
+    if (top_strip)
         inset += top_flex_gap(h);
     const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
                                  : bottom_lane_height(lane_from_window_edge);
@@ -589,31 +630,36 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
     return GuiRect{0, y, w, lane_h};
 }
 
-// THE TWO BLANK BANDS AS RECTS. Gap 1 alone has a consumer: wheel_context's
-// wheel-inert band list, because the band lies INSIDE top_strip_area, which is
-// one of that probe's pan surfaces — everything else about both bands is a
-// fall-through (a press claims nothing, the cursor map answers Arrow,
-// render_background paints them). GAP 2 DELIBERATELY HAS NO ACCESSOR: it lies
+// THE TWO BLANK BANDS AS RECTS. Gap 1 has TWO readers since 2026-09-03:
+// wheel_context's wheel-inert band list, because the band lies INSIDE
+// top_strip_area, which is one of that probe's pan surfaces; and
+// paint_menu_row, which fills it in THE MENU ROW'S OWN GROUND so the row reads
+// as one tall lane with its content at the foot (the vertical rule above) —
+// everything else about both bands is a fall-through (a press claims nothing,
+// the cursor map answers Arrow). GAP 2 DELIBERATELY HAS NO ACCESSOR: it lies
 // below every area the wheel probe tests, so the no-context 0 already answers
-// it, and a rect with no reader would be dead code.
-// Derived from the two lane rects it lies between rather than from the gap
-// function, so the band covers the (zero) inter-lane gaps around it too — a
-// seam is non-lane ground exactly as the flexible band is, and the answer stays
-// correct if kRowGapPx is ever un-zeroed.
+// it, and a rect with no reader would be dead code; render_background paints
+// it as window ground.
+// Derived from the window's top edge and the menu row's own rect rather than
+// from the gap function, so the band covers the (zero) outer gap above lane 0
+// too — a seam is non-lane ground exactly as the flexible band is, and the
+// answer stays correct if kFlagBottomLiftPx is ever un-zeroed. (Until
+// 2026-09-03 it lay between the menu row and the tab row and was derived from
+// those two lanes' rects the same way.)
 GuiRect top_flex_gap_area(const AppState& a) {
     const GuiRect menu = strip_row_rect(a, /*top_strip=*/true, 0);
-    const GuiRect tab  = strip_row_rect(a, /*top_strip=*/true, 1);
-    const int y0 = menu.y + menu.h;
-    const int gap_h = tab.y - y0;
-    return GuiRect{0, y0, menu.w, gap_h > 0 ? gap_h : 0};
+    return GuiRect{0, 0, menu.w, menu.y > 0 ? menu.y : 0};
 }
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
-// Lane 0 is the MENU row (the kdenlive menu bar at the window edge: a flat
-// ground carrying the left float's four menu buttons and
+// Lane 0 is the MENU row (the kdenlive menu bar: a flat
+// ground carrying the left float's five menu buttons and
 // the right float's view
-// bar, plus its own 1px margin-bottom), and GAP 1 opens under it — every lane
-// below is a member of THE CENTERED BLOCK. Lane 1 is the TAB row (the "A" / "B"
+// bar, plus its own 1px margin-bottom), which sits ON the tab row with GAP 1
+// ABOVE it since 2026-09-03 (the vertical rule) — every lane below it is a
+// member of THE CENTERED BLOCK, and the row itself is the block's cap, its
+// content at the foot of the tall ground the gap and the lane paint together.
+// Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
 // its border-bottom); lane 2 is the ICON row (the twenty-seven view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12

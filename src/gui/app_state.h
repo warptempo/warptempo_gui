@@ -3503,9 +3503,10 @@ inline constexpr int kSeriesPopupItemCount =
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems.
 // This row cannot refuse for any reason a user can reach anyway: THE ANCHOR
 // ITSELF is dead in the `h` history view (menu_anchor_dead_in_mode — the panel
-// is refused there, so the menu would open onto nothing), and under a prompt,
-// an editor or either of the folder overlay's other two contents the row is
-// unreachable, the panel covering row 1 whole.
+// is refused there, so the menu would open onto nothing) and under every
+// folder-overlay content (the same owner's first arm — the menu row stands
+// above the band greyed, kdenlive's modal admitting no menu), and under a
+// prompt or an editor the row is unreachable, the veil consuming the press.
 inline constexpr CommandPopupItem kHelpPopupItems[] = {
     {"AV Sync Stats", nullptr, 0, false, false, false, false,
      GuiPopupAct::AvSyncStats},
@@ -7544,8 +7545,9 @@ struct AppState {
     // stays on the right", and the one button sits flush right). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
-    // (2026-09-03: the panel covers row 1, so the File row is unreachable, and
-    // the player's router consumes Ctrl+O; the record is at the opener) — and
+    // (2026-09-03: the File anchor is dead under the panel, so its row is
+    // unreachable, and the player's router consumes Ctrl+O; the record is at
+    // the opener) — and
     // the one close body is
     // GuiInputHandler::close_picker (Esc, Cancel, Ctrl+Q's road, the same-
     // project no-op and the reopen's own tail all pass through it), which
@@ -8197,14 +8199,47 @@ inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }
 
-// (THE CHROME-FOCUS VERDICT `chrome_focused` — `window_activated && !folder_
-// overlay_stands` — STOOD HERE FOR THE EVENING OF 2026-09-02 AND IS DELETED.
-// It existed so the menu row's ground and the view bar's face would go
-// inactive together under a standing panel, which the architect asked for
-// while the panel's ceiling was row 1's foot and row 1 was the one lane still
-// showing. THE PANEL COVERS ROW 1 SINCE 2026-09-03, so that face has no
-// producer left — nothing can see the header while the panel stands — and
-// both readers went back to AppState::window_activated alone.)
+// IS THE CHROME FOCUSED? THE ONE VERDICT behind every header face that has a
+// focused and an unfocused form — the menu row's ground (redesign_row_ground,
+// paint_handler.cpp, which is also the mix TARGET of that row's disabled label
+// and of its click fill, and which fills GAP 1's band above the row in the
+// same shade) and the view bar's own background and face table (the
+// `bar_focused` term paint_menu_row hands to view_bar_face). It is the
+// window's activation AND no folder overlay standing.
+//
+// THE SECOND TERM IS KDENLIVE'S LOOK UNDER A MODAL (architect 2026-09-02, on
+// the view bar he had just been given its unfocused face: "top right 1/2/3
+// buttons — those look right when window loses focus but when media player/
+// picker is open they don't have the disabled background for the nonselected
+// buttons — if that was deliberate, they should have the disabled bg as that
+// is what kdenlive does with a modal"). The bar alone could not deliver it:
+// its unfocused ground #292c30 is NUMERICALLY EQUAL to the FOCUSED header
+// ground kRedesignRowGround, so while the window stayed activated under the
+// panel the bar's div and its resting buttons vanished into the header they
+// sit in. THE HEADER HAS TO GO INACTIVE WITH IT — which is the honest reading
+// anyway, the panel being the modal that holds the keyboard — and then
+// #292c30 stands out against the #202326 header exactly as it does on a real
+// focus loss, which is the look he calls right. So the two faces read ONE
+// answer and cannot part.
+//
+// IT STOOD FOR THE EVENING OF 2026-09-02, WAS DELETED FOR THE HOURS OF
+// 2026-09-03 THE BAND COVERED ROW 1 (no producer: nothing could see the
+// header under the panel) AND IS BACK SINCE THE GAP MOVED ABOVE THE MENU ROW
+// that evening — the band starts at the tab row now, row 1 shows above it
+// under every content, and the view bar's three have no dimmed face of their
+// own (render.h's view-bar block), so this is the only way they grey.
+//
+// THE `h` HISTORY VIEW IS NOT IN IT: a MODE is not a MODAL. The view keeps
+// the keyboard, its own allowlist including the view bar's 1/2/3, so its
+// header stays focused and its bar stays blue.
+//
+// DAMAGE: the activation hook damages the top strip (and the standing modal
+// row and panel) on every focus edge, and a panel's open and close each
+// invalidate the whole window — so both producers of this verdict repaint the
+// header on both of their edges with no damage call of their own.
+inline bool chrome_focused(const AppState& a) {
+    return a.window_activated && !folder_overlay_stands(a);
+}
 
 // THE PLAY/PAUSE BUTTON'S FACE — the word its hint says and the glyph it
 // wears, ONE answer for both (architect 2026-09-01, the truthful-tooltips
@@ -8720,11 +8755,14 @@ GuiRect top_icon_row_area(const AppState& a);
 // lane under the unified row for the afternoon it landed;
 // bottom_overview_row_area is this accessor's former name.
 GuiRect top_overview_row_area(const AppState& a);
-// GAP 1's band — the flexible blank window ground between the menu row and the
-// centered block (the vertical rule, main.cpp). ONE consumer, the wheel-inert
-// band list: the band lies inside top_strip_area, which is a pan surface, so it
-// needs a band of its own to stay inert. Gap 2 (above the bottom row) has no
-// accessor by the same reasoning inverted — it lies below every wheel area.
+// GAP 1's band — the flexible band ABOVE THE MENU ROW since 2026-09-03
+// (between the menu row and the tab row from commit B until then; the
+// vertical rule, main.cpp). TWO readers: the wheel-inert band list (the band
+// lies inside top_strip_area, which is a pan surface, so it needs a band of
+// its own to stay inert) and paint_menu_row, which fills it in the menu row's
+// own ground so the row reads as one tall lane with its content at the foot.
+// Gap 2 (above the bottom row) has no accessor by the same reasoning inverted
+// — it lies below every wheel area and is window ground nothing paints over.
 GuiRect top_flex_gap_area(const AppState& a);
 // ROW 5's three lanes (2026-08-01), replacing the legacy
 // chip / marker-text / flag / triangle four.
@@ -8766,7 +8804,8 @@ GuiRect bottom_row_content_area(const AppState& a);
 // the folder overlay take turns in — never both (structurally: the overlay's
 // owners are not editors; the record is at onscreen_keyboard::stands). The two tenants agree on
 // the band's X, ITS WIDTH AND ITS BOTTOM EDGE and differ only in HEIGHT (the
-// keyboard's four key rows; the overlay's own content, capped below), so that
+// keyboard's four key rows; the overlay's the ceiling's whole extent, named
+// below), so that
 // agreement is written ONCE here rather than twice in the two headers —
 // which is also the only place both of them can read it, folder_overlay.h
 // being the lower of the two since the overlay's rows stopped borrowing the
@@ -8792,15 +8831,21 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 }
 
 // THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top edge a
-// tenant may reach — TO THE WINDOW'S TOP and no further (architect 2026-09-03:
-// "remove top row in file picker/media player — kdenlive does not allow ctrl+q
-// during modal so we don't need to either"). So the panel is EVERY LANE but
-// the bottom row: the menu row with its view bar, the tab row, the icon row,
-// the overview strip, the trim bar, the ruler, the marker lane and the
-// waveform entire. The height IS the bottom row's own top edge, which the lane
-// accessors resolve on the CLAMPED window dimensions — the same geometry
+// tenant may reach — TO THE TAB ROW'S FIRST PIXEL and no further (architect
+// 2026-09-03, the same day's second ruling on the ceiling, at his 1080
+// monitor: "whatever overlays we put could start right at the first pixel of
+// the tab row ... below File, Edit, etc. would be the AV sync stats overlay
+// ... it could also go all the way down to the bottom strip — yes, I think
+// so"). So the panel is EVERY LANE BUT THE MENU ROW AND THE BOTTOM ROW: the
+// tab row, the icon row, the overview strip, the trim bar, the ruler, the
+// marker lane, the waveform entire and gap 2 — and THE MENU ROW STANDS ABOVE
+// IT, VISIBLE AND DEAD (kdenlive's modal admits no menu: the face is
+// redesign_button_enabled's first arm, the anchors' own gate
+// menu_anchor_dead_in_mode's overlay term, the press the veil's). The height
+// is the bottom row's top edge less the tab row's, both resolved by the lane
+// accessors on the CLAMPED window dimensions — the same geometry
 // keyboard_slot_band takes its x and width from, so the two cannot disagree
-// about where the window begins. Zero on a degenerate stack, which every
+// about where the band begins. Zero on a degenerate stack, which every
 // consumer already reads as "no room".
 //
 // THE FIXED-HEIGHT HALF OF R35 STANDS AND ITS MIDPOINT HALF DOES NOT
@@ -8810,17 +8855,23 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // listing, and that is unchanged: a short listing leaves ground and a long one
 // scrolls, whatever the ceiling is. Only WHERE the ceiling sits has moved —
 // the waveform's midpoint until 2026-09-02, row 1's foot for that one day, the
-// window's top since.
+// window's top for the hours of 2026-09-03 the menu row was covered ("remove
+// top row in file picker/media player — kdenlive does not allow ctrl+q during
+// modal so we don't need to either"), and the tab row's top since the gap
+// moved above the menu row that day.
 //
 // ONLY THE OVERLAY IS CAPPED BY IT: the keyboard's height is its four key
 // rows, authored, and it is deliberately not clamped here — a band that
 // scaled past this ceiling would be a keyboard with a row missing. (That
 // sentence is what keeps the on-screen keyboard exactly where it was under
-// today's taller ceiling: onscreen_keyboard::surface_height_px reads no term
-// of this function.)
+// every move of this ceiling: onscreen_keyboard::surface_height_px reads no
+// term of this function, and only slot_damage_rect's MAX reads it beside the
+// overlay's own surface_rect.)
 inline int keyboard_slot_max_height_px(const AppState& a) {
     const int floor_y = bottom_row_area(a).y;
-    return floor_y > 0 ? floor_y : 0;
+    const int top_y   = top_tab_row_area(a).y;
+    const int h = floor_y - top_y;
+    return h > 0 ? h : 0;
 }
 
 // THE OVERVIEW STRIP'S COLUMN MAPPING — one owner for the lane's
@@ -10592,16 +10643,35 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // (2026-08-13): its three rows — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
 // `\` — are all on the allowlist, so its menu opens onto three working rows.
 //
-// THE FOLDER OVERLAY IS NOT A PRODUCER (it was one for a day, 2026-09-02, when
-// the panel stood under row 1 and left File lit): the panel covers row 1
-// whole since 2026-09-03, so no anchor is reachable under it at all and there
-// is no partition to state — the whole roster is dead there through
-// redesign_button_enabled's own first arm.
+// THE FOLDER OVERLAY KILLS EVERY ANCHOR, FILE INCLUDED (architect 2026-09-03,
+// twice in one day): kdenlive's modal admits no menu, so under the render
+// player, the Open project picker and the AV Sync Stats panel alike the menu
+// row STANDS ABOVE THE BAND — visible since the band's ceiling dropped to the
+// tab row's first pixel that evening — with all five anchors greyed and no
+// menu openable. The term is the FIRST arm here, before the File exception,
+// because that exception is the `h` view's partition and no partition exists
+// under a modal. (The panel left File LIT under it for the one day of
+// 2026-09-02, when the band stopped at row 1's foot, and the roster was
+// UNSEEN under it for the hours of 2026-09-03 the band ran to the window's
+// top, when this owner carried no overlay term at all.)
 //
-// ITS TWO READERS: history_mode_disables_button's anchor arm (the face) and
-// toggle_dropdown's guard (the OPEN). No third copy of the set exists.
+// THE FACE IS redesign_button_enabled's FIRST ARM — the whole roster greys
+// under the band, the anchors with it — and THE PRESS IS THE VEIL'S: every
+// press outside the band and the modal row is consumed before the menu-row
+// claim is reached, and on_motion's three overlay branches return before the
+// armed hover open. So this term is reached by no route today, and it stands
+// because THE ACT'S OWN GATE must read what the face reads: toggle_dropdown is
+// the one body every open route converges on (the press, the armed hover
+// open, the hover switch), and an anchor that greys on folder_overlay_stands
+// must refuse on the same predicate at its act rather than by the veil's
+// ordering alone.
+//
+// ITS TWO READERS: history_mode_disables_button's anchor arm (the face, inside
+// the `h` view) and toggle_dropdown's guard (the OPEN). No third copy of the
+// set exists.
 inline bool menu_anchor_dead_in_mode(const AppState& a, RedesignButton b) {
     if (!redesign_button_is_menu_anchor(b)) return false;
+    if (folder_overlay_stands(a)) return true;
     if (b == RedesignButton::File) return false;
     return a.history_mode.active;
 }
@@ -11115,13 +11185,18 @@ inline bool redesign_button_enabled(const AppState& a,
     // `h` partition, so a band standing over any state greys everything that
     // partition would have lit.
     //
-    // THE PANEL COVERS ROW 1 ITSELF since 2026-09-03 (architect: "remove top
-    // row in file picker/media player — kdenlive does not allow ctrl+q during
-    // modal so we don't need to either"), so the roster's every button — the
-    // five menu anchors with the rest — is not merely dead but UNSEEN while
-    // it stands, and there is no lit-anchor exception to carve. The face this
-    // line paints is one nothing paints on screen; it stays because the
-    // predicate is also what the veil's press answers read.
+    // THE MENU ROW STANDS ABOVE THE BAND, VISIBLE AND DEAD (architect
+    // 2026-09-03: the band starts at the tab row's first pixel, so row 1 —
+    // the five anchors and the view bar — is the ONE roster lane on screen
+    // while a content stands, and this line is the face it wears: every
+    // anchor and every view button grey, with no lit-anchor exception to
+    // carve, kdenlive's modal admitting no menu). The anchors' OPEN reads the
+    // same predicate at menu_anchor_dead_in_mode's first arm, and the veil
+    // consumes the press before either is asked. (The band covered row 1
+    // whole for the hours of that day between "remove top row in file
+    // picker/media player" and the gap's move above the menu row, and this
+    // face had no viewer then; on 2026-09-02 the band stopped at row 1's foot
+    // and File alone stayed lit under it.)
     if (folder_overlay_stands(a)) return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the

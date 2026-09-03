@@ -843,10 +843,11 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // out at each consumer (a flag hit is claimed first, lane vocabulary), and the
 // TRIM BAR and the OVERVIEW STRIP are disjoint y-bands that never answer true
 // here (the strip has its own claim and its own cue). Deliberately NOT the
-// flexible GAP 1 band between the menu row and the centered block — that ground
-// is chrome, not surface, and stays inert (the gap sat between the icon row and
-// the trim lane for the seventh ruling's first hours, and at the window's foot
-// until the relayout's commit B split it in two).
+// flexible GAP 1 band above the menu row — that ground is the row's own
+// chrome, not surface, and stays inert (the gap sat between the icon row and
+// the trim lane for the seventh ruling's first hours, at the window's foot
+// until the relayout's commit B split it in two, and between the menu row and
+// the tab row until 2026-09-03 lifted it over the menu row).
 bool point_in_nav_lanes(const AppState& app, int x, int y) {
     if (!rect_contains(top_strip_area(app), x, y)) return false;
     const GuiRect ruler = top_ruler_row_area(app);
@@ -1263,9 +1264,11 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // default for an unlisted button is LIVE — which also keeps the tail's
     // "not in the table and not an anchor" claim true. The set moved out to a
     // shared owner on 2026-09-02, when the folder overlay's band briefly stood
-    // under row 1 and needed the identical partition; the panel covers row 1
-    // whole since 2026-09-03, so this view is the owner's only face reader
-    // again and the owner stays where it is — one enumeration, two readers.
+    // under row 1 and needed the identical partition; since 2026-09-03 the
+    // owner's first arm kills EVERY anchor under the band (the menu row shows
+    // above it, dead — kdenlive's modal admits no menu), a term the face
+    // never reaches from here because redesign_button_enabled's own first arm
+    // has already greyed the whole roster — one enumeration, two readers.
     if (redesign_button_is_menu_anchor(b))
         return menu_anchor_dead_in_mode(app, b);
     for (const ToolbarChord& tc : kToolbarChords) {
@@ -3140,7 +3143,8 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
         return false;
     // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the two
     // clauses above's reason exactly and for one more: the panel paints over
-    // the waveform's lower part, the whole waveform is the pan zone, and
+    // the waveform whole (its band runs from the tab row's first pixel to the
+    // bottom row), the whole waveform is the pan zone, and
     // BOTH of the band's gestures live on the POINTER — the row press, whose
     // act is at the lift, and the band's own SCROLL DRAG, which is that same
     // arm past the vertical gate. Left in the zone, a finger crossing the
@@ -4416,9 +4420,10 @@ void GuiInputHandler::update_folder_overlay_hover(int x, int y) {
         return;
     // A NOTIFICATION CARD IS OPAQUE TO THE POINTER (notifications.h), the
     // roster walk's own term one surface over: the stack grows DOWN from row
-    // 1 and the band's ceiling is the window's top since 2026-09-03, so the
-    // two overlap wherever a card stands at all, and a row under a card must
-    // neither light nor promise the press the card's claim will consume.
+    // 1 and the band's ceiling is the tab row's first pixel since 2026-09-03
+    // (row 1's own foot), so the two overlap wherever a card stands at all,
+    // and a row under a card must neither light nor promise the press the
+    // card's claim will consume.
     const int hit = notification_card_at(app, x, y) != 0
                         ? -1
                         : folder_overlay::row_at(app, x, y);
@@ -4734,8 +4739,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (the arm every dialog button takes), and EVERY OTHER PRESS IS CONSUMED
     // — the tabs, the flags, the waveform, the menu anchors, the dead roster.
     // (The FILE ANCHOR was a fourth target for the one day of 2026-09-02, when
-    // the panel stopped at row 1's foot; the panel covers that row too since
-    // 2026-09-03, so there is nothing up there to press.)
+    // the panel stopped at row 1's foot; since 2026-09-03 the menu row stands
+    // above the band DEAD — every anchor greyed, kdenlive's modal admitting
+    // no menu — so a press up there is consumed here like any other, and
+    // the anchors' own gate, menu_anchor_dead_in_mode, agrees at the act.)
     // The whole rule is stated at render_player_active (input_handler.h).
     // THE ONE ROW THAT ADMITS SHIFT (2026-08-28, R37): the player's two skips
     // carry a shifted twin — the item folder's ends — so a SHIFT press reaches
@@ -4991,8 +4998,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //
     // AND BELOW THE FOLDER OVERLAY'S THREE VEILS, which costs nothing for the
     // same kind of reason: A POPUP AND THE PANEL ARE NEVER UP TOGETHER, from
-    // both directions. The panel covers row 1 whole since 2026-09-03, so no
-    // anchor is reachable to open one under it; and no panel can rise under a
+    // both directions. Every anchor is dead under the panel since 2026-09-03
+    // (the veil consumes the press, menu_anchor_dead_in_mode refuses the
+    // open), so none can open one; and no panel can rise under a
     // popup, because every opener the three contents have — bare `l`, bare `'`,
     // Ctrl+O, the Play renders button, the File menu's Open project row and
     // the Help menu's AV Sync Stats row — either arrives through on_key, whose
@@ -7193,8 +7201,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // face — they are here so the walk's own statement of "nothing behind the
     // modal hovers" stays true by its own reading. (They were dropped for the
     // one day of 2026-09-02, when the panel left the File anchor lit and a
-    // blanket term would have refused it its hover pill; the panel covers row
-    // 1 whole since 2026-09-03 and the pair is back.)
+    // blanket term would have refused it its hover pill; every anchor is dead
+    // under the band since 2026-09-03 — the menu row shows above it, greyed —
+    // and the pair is back.)
     const bool modal_veil =
         app.prompt.active || modal_dialog_editor_active() ||
         app.render_player.active || app.picker.active ||
@@ -8652,10 +8661,14 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE SET IS THE SHARED OWNER'S (menu_anchor_dead_in_mode, app_state.h),
     // which is the same enumeration history_mode_disables_button's anchor arm
     // reads for the FACE — so which menus open and which anchors grey cannot
-    // drift apart. It carried a folder-overlay term for the one day of
-    // 2026-09-02, when the panel stopped at row 1's foot; the panel covers
-    // that row whole since 2026-09-03, so no anchor is reachable under it and
-    // there is nothing for a term to say.
+    // drift apart. ITS FIRST ARM IS THE FOLDER OVERLAY, every anchor dead
+    // under the band (2026-09-03: the menu row stands above the band, greyed
+    // by redesign_button_enabled's first arm, and kdenlive's modal admits no
+    // menu) — a term no route reaches today, the veil consuming the press and
+    // on_motion's overlay branches returning before the hover open, and kept
+    // because this act's refusal must read what the face reads (the
+    // reasoning at the owner). It was a File-exempt term for the one day of
+    // 2026-09-02, when the panel stopped at row 1's foot.
     if (menu_anchor_dead_in_mode(app, dropdown_anchor_button(menu))) return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
@@ -8840,8 +8853,9 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 //
 // (The FOLDER OVERLAY's two motion branches called it too for the one day of
 // 2026-09-02, when the panel stopped at row 1's foot and left the File anchor
-// live under it. The panel covers that row whole since 2026-09-03, so those
-// branches return with no anchor under the pointer to open.)
+// live under it. Every anchor is dead under the band since 2026-09-03 — the
+// menu row shows above it, greyed — so those branches return before this
+// tail, and toggle_dropdown's own guard would refuse the open regardless.)
 void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {
     if (!app.dropdown.menu_row_armed) return;
     // ON AN ANCHOR, OPEN ITS MENU — through toggle_dropdown, the same owner the

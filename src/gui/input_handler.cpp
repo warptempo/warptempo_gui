@@ -293,8 +293,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // save, which touches no transport, and Ctrl+Q with the player already
     // closed, so the quit road runs on the ordinary state. (Ctrl+O and bare
     // `\` fell through too for the one day of 2026-09-02, when the panel
-    // stopped at row 1's foot and the File menu stayed reachable under it; the
-    // panel covers that row whole since 2026-09-03.) No editor and no
+    // stopped at row 1's foot and the File menu stayed reachable under it;
+    // every anchor is dead under the band since 2026-09-03 — the menu row
+    // shows above it, greyed.) No editor and no
     // gesture of any OTHER surface can stand under it (its opener refuses
     // under every editor; the veil arms none), so the gates below never
     // contend with it — its own two arms are this block's business, below.
@@ -3060,11 +3061,12 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
             top_menu_row_area(app),
-            // GAP 1's blank band, the ONE non-lane member (commit B): it sits
+            // GAP 1's band, the ONE non-lane member (commit B; ABOVE the menu
+            // row since 2026-09-03, wearing that row's ground): it sits
             // inside the top-strip area below, which pans, so without this
-            // entry a wheel over blank window ground would scroll the song —
-            // exactly the fault row 1's ruling named. Not a redesigned row, but
-            // the same answer for the same reason, and the reason it needs a
+            // entry a wheel over that ground would scroll the song — exactly
+            // the fault row 1's ruling named. Not a redesigned row, but the
+            // same answer for the same reason, and the reason it needs a
             // rect at all is at top_flex_gap_area (app_state.h).
             top_flex_gap_area(app),
             top_tab_row_area(app),   top_icon_row_area(app),

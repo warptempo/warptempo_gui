@@ -39,14 +39,20 @@
 // centre cell (paint_bottom_row_buttons_and_clock, which owns the face, the
 // size and the cell) and, since 2026-08-28, the render player's modal clock,
 // which is that same cell said twice and takes its metrics from it — and,
-// SINCE 2026-09-03, THE AV SYNC STATS PANEL (architect, with the panel): a
-// DELIBERATE WIDENING rather than a leak, and the reason is the one the clock's
-// own reversal turned on. The panel is a COLUMN OF FIGURES read against each
-// other — a label column and a numbers column, over rows that are rebuilt every
-// frame as the measurements move — and a proportional face would make the
-// numbers walk under the eye at 60 Hz, which is exactly the wiggle the clock
-// takes the face for. So the set is THREE CELLS, ENUMERATED HERE AND AT
-// gui_font.h, and nothing outside those three may take the face.
+// SINCE 2026-09-03, THE FOLDER OVERLAY WHOLE, all three of its contents
+// (architect, twice that day): the AV SYNC STATS PANEL took it with the panel
+// that morning, a DELIBERATE WIDENING rather than a leak whose reason is the
+// one the clock's own reversal turned on — a COLUMN OF FIGURES read against
+// each other, a label column and a numbers column over rows rebuilt every
+// frame as the measurements move, which a proportional face would make walk
+// under the eye at 60 Hz, exactly the wiggle the clock takes the face for —
+// and the render player's and the Open project picker's listings followed it
+// that evening as his first try at their width asymmetry ("maybe we could
+// just use monospace font ... let's try that first"; the quote is at
+// paint_folder_overlay's face selection). So the set is THREE CELLS,
+// ENUMERATED HERE AND AT gui_font.h — the row-8 clock, the player's modal
+// clock and the folder overlay's band — and nothing outside those three may
+// take the face.
 //
 // EVERY STRING THE STATE CELL CARRIES — the queue/render status and the
 // history walk line — is the redesign's sans at the redesign's size, shaped
@@ -209,15 +215,20 @@ namespace {
 // their measured relationship in either state instead of drifting when only the
 // ground moves.
 //
-// THE VERDICT IS THE ACTIVATION FLAG AND NOTHING ELSE. (A standing folder
-// overlay was a second producer for the evening of 2026-09-02, through a
-// `chrome_focused` owner, so the header would go inactive with the panel the
-// way kdenlive's does under a modal. THE PANEL COVERS ROW 1 SINCE 2026-09-03
-// and nobody can see this ground while it stands, so that producer and its
-// owner are both deleted.)
+// THE VERDICT IS NOT THE ACTIVATION FLAG BUT chrome_focused (app_state.h),
+// which adds "and no folder overlay standing" — the render player, the Open
+// project picker or the AV Sync Stats panel takes the header inactive with
+// it, kdenlive's own look under a modal (architect 2026-09-02; the owner
+// carries the ruling, its one-day deletion while the band covered row 1, and
+// its return on 2026-09-03 when the band's ceiling dropped to the tab row and
+// row 1 showed above it again). The VIEW BAR reads the same call, which is
+// what makes its #292c30 read as the disabled ground under the panel instead
+// of vanishing into a header that was still painting the focused #292c30.
+// GAP 1's band above the row takes this same shade from paint_menu_row, so
+// the tall row swaps whole.
 GuiColor redesign_row_ground(const AppState& app) {
-    return app.window_activated ? kRedesignRowGround
-                                : kRedesignRowGroundUnfocused;
+    return chrome_focused(app) ? kRedesignRowGround
+                              : kRedesignRowGroundUnfocused;
 }
 
 // THE ACCENT'S FOCUS FORK — ONE OWNER for "which blue does a face that says
@@ -1382,10 +1393,21 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     cairo_save(cr);
 
     // The ground covers the WHOLE LANE, margin included — one fill, and the
-    // margin needs no second source.
+    // margin needs no second source. AND IT COVERS GAP 1 ABOVE THE LANE
+    // (architect 2026-09-03, main.cpp's vertical rule: the flexible band
+    // moved from under the menu row to above it, and the row is "a fat chunky
+    // row one" whose content sits at its foot — the anchors and the view bar
+    // keep their authored height and their y within the lane, the lane itself
+    // having moved down by the gap). The band is top_flex_gap_area, this
+    // painter's the second of its two readers; it is zero-height wherever the
+    // centering leaves no gap (the tablet), and the fill is one rectangle
+    // from the window's top to the lane's foot so the two cannot show a seam.
+    // The exposure gate at the paint order's step 3 tests the band too, so an
+    // exposure inside the gap alone repaints this ground and nothing else.
     const GuiColor ground = redesign_row_ground(app);
+    const GuiRect  gap    = top_flex_gap_area(app);
     cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
-    cairo_rectangle(cr, row.x, row.y, row.w, row.h);
+    cairo_rectangle(cr, row.x, gap.y, row.w, (row.y + row.h) - gap.y);
     cairo_fill(cr);
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
@@ -1606,16 +1628,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         if (div_w <= 0 || btn_h <= 0) { cairo_restore(cr); return; }
 
         const int div_x = row.x + row.w - div_w;
-        // THE BAR SWAPS ON THE WINDOW'S FOCUS ALONE, this row's own ground's
-        // verdict read one float over. (A standing folder overlay was a second
-        // producer for the evening of 2026-09-02, when the panel's ceiling was
-        // this row's foot and the bar was the one thing under a modal that
-        // still wore Breeze blue; the panel covers this row whole since
-        // 2026-09-03, so the face has no viewer and the term is deleted with
-        // `chrome_focused` itself.) ONE local, read by the ground here and by
-        // view_bar_face's `focused` term below, so the pressed interior reads
-        // the same fact.
-        const bool bar_focused = app.window_activated;
+        // IT IS THE HEADER'S OWN VERDICT (chrome_focused, app_state.h), not a
+        // second copy: this row's ground reads the same call above, so the bar
+        // and the header it sits in go inactive together — the window's
+        // focus, AND a standing folder overlay, under which this row shows
+        // above the band with every button dead (architect 2026-09-02, the
+        // ruling at the owner; the term left for the hours of 2026-09-03 the
+        // band covered this row and came back when the band's ceiling dropped
+        // to the tab row). The unfocused bar is NUMERICALLY EQUAL to the
+        // focused header ground, so the header must move for the bar's
+        // resting buttons to read as disabled at all. ONE local, read by the
+        // ground here and by view_bar_face's `focused` term below, so the
+        // pressed interior reads the same fact.
+        const bool bar_focused = chrome_focused(app);
         const GuiColor bar_bg = bar_focused
                                     ? kRedesignViewBarBg
                                     : kRedesignViewBarBgUnfocused;
@@ -2776,8 +2801,8 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 
 // THE CLOCK — ROW 8'S LEFT-ALIGNED CELL, AND THE FIRST OF THE PRODUCT'S
 // THREE MONOSPACE CELLS (with the render player's modal clock, which derives
-// from it, and the AV Sync Stats panel's lines since 2026-09-03 — the set is
-// named at gui_font.h)
+// from it, and the folder overlay's band under all three contents since
+// 2026-09-03 — the set is named at gui_font.h)
 // (architect 2026-08-11, moving the timestamp off the status line and reversing
 // his own 2026-08-01 "monospace is gone from the product" in the same breath —
 // the reversal is scoped to this cell and the status line stays sans, which is
@@ -3144,12 +3169,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THREE CELLS since 2026-09-03: this one, the RENDER PLAYER's
     // `<position> / <length>` on the modal row — which takes this cell's size,
     // metrics and authored offsets so the digits never walk between them
-    // (2026-08-28) — and the AV SYNC STATS PANEL's rows, which take the face
-    // and the size and none of this cell's geometry, being a list rather than
-    // a cell. NONE OF THE THREE EVER PAINTS IN THE SAME FRAME AS ANOTHER: the
-    // player and the panel each own the row whole while they stand, and the
-    // panel's band covers everything above it. The set's own record is at this
-    // file's bottom-row text block.
+    // (2026-08-28) — and the FOLDER OVERLAY's rows under every content (the
+    // AV Sync Stats panel's lines, the render player's and the Open project
+    // picker's listings), which take the face and the size and none of this
+    // cell's geometry, being a list rather than a cell. THE TWO CLOCKS NEVER
+    // PAINT IN THE SAME FRAME (the player owns the row whole while it stands)
+    // and the band paints beside whichever row stands. The set's own record is
+    // at this file's bottom-row text block.
     {
         gui_select_font_face(cr, GuiFontFamily::Mono);
         const double size_px = clock_font_size_px();
@@ -6814,8 +6840,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE CLOCK'S CELL IS MEASURED BEFORE ANYTHING IS PLACED, its width
         // being one of the fixed terms the scrub's own is what is left over.
         // ONE FACE, THREE CELLS since 2026-09-03 (this pair since 2026-08-28;
-        // the AV sync stats panel is the third — the set's own record is at
-        // this file's bottom-row text block): the row-8 clock's face, size,
+        // the folder overlay's band, under all three contents, is the third —
+        // the set's own record is at this file's bottom-row text block): the
+        // row-8 clock's face, size,
         // cell metrics and authored offsets, so the digits never walk between
         // the project's clock and the player's.
         gui_select_font_face(cr, GuiFontFamily::Mono);
@@ -7703,9 +7730,10 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
     // THE BAND IS THE STANDING TENANT'S OWN (2026-08-28): the overlay's is the
-    // CEILING BAND every time it stands — the whole window above the bottom
-    // row since 2026-09-03, whatever its listing's length (R35's fixed height,
-    // the architect's new ceiling) — and the keyboard's is its four key rows,
+    // CEILING BAND every time it stands — the tab row's first pixel through
+    // the bottom row's top since 2026-09-03, whatever its listing's length
+    // (R35's fixed height, the architect's new ceiling) — and the keyboard's
+    // is its four key rows,
     // so "the band" is a question with two answers and the bit describes
     // the pixels THIS frame may have written. With NEITHER standing the band
     // to cover is the slot's tallest — the hide's own damage, which is what
@@ -7735,20 +7763,24 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
-// AppState::folder_overlay. TWO ROW CLASSES, ONE PREDICATE FOR BOTH THE FACE
-// AND THE PITCH: the player's and the picker's rows are BUTTON ROWS (the
-// project picker's are all Folder rows, each taking its glyph from the row's
-// KIND and its face from the same ladder the player's rows do, and the
-// transport mark below is structurally absent under the picker — the player
-// holds no item while a picker stands), while the stats panel's Text rows
-// are INERT MONOSPACE LINES — no face, no glyph, no press arm, standing at
-// the monospace line's own pitch with no gap. THE OWNER TAG DECIDES BOTH
-// HALVES THROUGH ONE PREDICATE, `folder_overlay::text_listing`: it selects
-// the font here AND forks the row height and gap in folder_overlay.h, since
-// a row shaped in one face and spaced for another would be two surfaces
-// disagreeing about one row (fc40318e). A row's KIND is what the walk reads
-// per row to skip the glyph and the face ladder, and the walk asserts the
-// two agree — a listing is homogeneous in kind.
+// AppState::folder_overlay. ONE FACE, TWO ROW CLASSES: every content shapes
+// and paints in THE MONOSPACE at the clock's size (architect 2026-09-03, the
+// whole panel — the set's record is at this file's bottom-row text block and
+// at gui_font.h), and the classes part on the PITCH alone. The player's and
+// the picker's rows are BUTTON ROWS (the project picker's are all Folder
+// rows, each taking its glyph from the row's KIND and its face from the same
+// ladder the player's rows do, and the transport mark below is structurally
+// absent under the picker — the player holds no item while a picker stands),
+// while the stats panel's Text rows are INERT LINES — no face, no glyph, no
+// press arm, standing at the monospace line's own pitch with no gap. THE
+// OWNER TAG DECIDES THE PITCH THROUGH ONE PREDICATE, `folder_overlay::text_
+// listing`, which forks the row height and gap in folder_overlay.h; it
+// selected the face here too until the listings took the monospace whole
+// (fc40318e gave it both halves so a row could not be shaped in one face and
+// spaced for another; with one face on every content the face half has
+// nothing left to fork). A row's KIND is what the walk reads per row to skip
+// the glyph and the face ladder, and the walk asserts the two agree — a
+// listing is homogeneous in kind.
 //
 // THE BUTTON ROWS ARE THE ICON ROW'S BUTTON AND THE PALETTE IS THE FILE
 // MANAGER'S (architect 2026-08-28, R31/R32, superseding the keyboard's
@@ -7780,10 +7812,13 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // button-like surface in the product is filled and framed on, at the
 // button's corner radius; a Text row skips it whole. THE BAND WEARS NO TOP
 // BORDER (architect 2026-09-03: "remove the top
-// border since now there is nothing above the player"): it starts at the
-// window's top edge, so the 1 px kRedesignTabLine it carried from 2026-08-29
-// — the twin of its bottom edge, which is row 8's own border-top — would frame
-// the panel off from nothing. The line, folder_overlay::border_h_px and the
+// border since now there is nothing above the player", ruled while the band
+// ran to the window's top; since that evening it starts at the TAB ROW'S
+// FIRST PIXEL under the menu row, and the seam there is the lanes' own — the
+// tab row's top edge against the menu row's ground — so the 1 px
+// kRedesignTabLine it carried from 2026-08-29 — the twin of its bottom edge,
+// which is row 8's own border-top — would double a seam that already
+// exists). The line, folder_overlay::border_h_px and the
 // content rect that subtracted it are all deleted, and the band's ground runs
 // edge to edge. (It opened 2026-08-28 with no line at its top either, the
 // keyboard's own rule; the framed reading lived between those two dates.)
@@ -7820,29 +7855,25 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_clip(cr);
 
-    // THE FACE IS THE CONTENT'S. Two of the three contents list NAMES — files
-    // and projects — and take the redesign's sans like every other row in the
-    // product; the AV SYNC STATS PANEL takes the product's MONOSPACE at the
-    // clock's own size, because its rows are a label column beside a numbers
-    // column rebuilt every frame and a proportional face would make the digits
-    // walk (the widening is the architect's, 2026-09-03; the rule and the
-    // three-cell set are stated at this file's bottom-row text block and at
-    // gui_font.h). THE PREDICATE IS THE ROW PITCH'S OWN
-    // (folder_overlay::text_listing): a text row stands at this face's line
-    // height, so the face and the pitch must fork on one question or a row
-    // could be shaped in one face and spaced for another. SHAPE WITH THE FONT
-    // YOU PAINT WITH: the handle below is
-    // taken AFTER the selection, and this painter selects once and never again
-    // — nothing after this call reads a face it did not select, so the
-    // borrowed handle stays valid for the whole walk.
+    // THE FACE IS THE PANEL'S, AND IT IS THE MONOSPACE AT THE CLOCK'S SIZE
+    // under every content (architect 2026-09-03, the evening's cheap first try
+    // for the player's and the picker's listings: "maybe we could just use
+    // monospace font, and that way it'll tidy up the width asymmetry ... let's
+    // try that first ... I actually think that maybe all that's needed"). The
+    // AV Sync Stats panel had taken it that morning for its own reason — a
+    // label column beside a numbers column rebuilt every frame, which a
+    // proportional face would make walk — and the file and project names
+    // follow it now, so THE FOLDER OVERLAY IS ONE MONOSPACE SURFACE, the third
+    // cell of the set stated at this file's bottom-row text block and at
+    // gui_font.h. The pitch still forks on folder_overlay::text_listing
+    // (button rows for the two listings, the monospace line for the stats
+    // panel); the face no longer does. SHAPE WITH THE FONT YOU PAINT WITH: the
+    // handle below is taken AFTER the selection, and this painter selects
+    // once and never again — nothing after this call reads a face it did not
+    // select, so the borrowed handle stays valid for the whole walk.
     const bool stats = folder_overlay::text_listing(app);
-    if (stats) {
-        gui_select_font_face(cr, GuiFontFamily::Mono);
-        cairo_set_font_size(cr, clock_font_size_px());
-    } else {
-        gui_select_font_face(cr, GuiFontFamily::Sans);
-        cairo_set_font_size(cr, redesign_font_size_px());
-    }
+    gui_select_font_face(cr, GuiFontFamily::Mono);
+    cairo_set_font_size(cr, clock_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
@@ -8180,7 +8211,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // it except the floating surfaces, which paint over everything by design.
     {
         const GuiRect exposed{x, y, w, h};
-        if (rects_intersect(exposed, top_menu_row_area(app))) {
+        // THE MENU ROW'S EXPOSURE IS ITS LANE OR GAP 1 ABOVE IT: the painter
+        // fills both in the row's ground (the vertical rule, main.cpp), so an
+        // exposure inside the gap alone must reach it too.
+        if (rects_intersect(exposed, top_menu_row_area(app)) ||
+            rects_intersect(exposed, top_flex_gap_area(app))) {
             paint_menu_row(cr);
         }
         // THE TAB ROW PAINTS TABS AND NOTHING ELSE since 2026-08-29: it
@@ -8296,10 +8331,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
         //      since 2026-08-28, one tenant at a time), whose opaque ground
-        //      covers the waveform area's lower part (the keyboard) or the
-        //      WHOLE WINDOW ABOVE THE BOTTOM ROW (the overlay, since
-        //      2026-09-03 — so steps 3 through 11 all end up under it) and so
-        //      follows every pass above. Which is why the WAVEFORM passes do
+        //      covers the waveform area's lower part (the keyboard) or
+        //      EVERYTHING BETWEEN THE MENU ROW AND THE BOTTOM ROW (the
+        //      overlay, since 2026-09-03 — the tab row's first pixel down, so
+        //      of steps 3 through 11 only the menu row's lane stays in view,
+        //      greyed) and so follows every pass above. Which is why the WAVEFORM passes do
         //      not paint there at all: they are gated and clipped on the
         //      waveform's PAINTED rect while either tenant stands
         //      (onscreen_keyboard::waveform_paint_area, read just above this
@@ -8439,9 +8475,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // overlay since 2026-08-28 — one band, one tenant at a time), between the
     // waveform passes above and the three floating surfaces below — which is
     // exactly where it sits in the picture. It OVERLAYS the waveform with its
-    // own opaque ground — the area's lower part under the keyboard, and THE
-    // WHOLE WINDOW ABOVE THE BOTTOM ROW under the overlay since 2026-09-03,
-    // the menu row included — so it must follow every pass that paints there
+    // own opaque ground — the area's lower part under the keyboard, and
+    // EVERYTHING BETWEEN THE MENU ROW AND THE BOTTOM ROW under the overlay
+    // since 2026-09-03, the tab row's first pixel down — so it must follow
+    // every pass that paints there
     // (the top button rows, the overview strip, the plate, the region ink, the
     // trim, the ruler, the flags, the stems, the scanner, the anchor) and
     // precede the flag editor's box, the dropdown and the modal, which float

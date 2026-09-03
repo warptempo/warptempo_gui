@@ -28,17 +28,26 @@
 // row, `..`, was a fourth kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
 // row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, standing from THE WINDOW'S TOP down to the bottom row
-// (architect 2026-09-03: "remove top row in file picker/media player —
-// kdenlive does not allow ctrl+q during modal so we don't need to either") —
-// so EVERY LANE BUT THE BOTTOM ROW is under it, the menu row with its File
-// anchor and its view bar included, and the waveform's own passes paint
-// nothing (onscreen_keyboard::waveform_paint_area, whose gate reads both
-// tenants and whose clip reads the STANDING one's own rect, and which this
-// band reduces to a zero-height rect) while the lanes above paint and are
-// covered. IT WEARS NO TOP BORDER — there is nothing above it to be framed
-// off (the line it had from 2026-08-29 is retired with the ground it
-// separated the panel from). The architect's ruling (R3):
+// full window width, standing from THE TAB ROW'S FIRST PIXEL down to the
+// bottom row (architect 2026-09-03, at his 1080 monitor: "whatever overlays
+// we put could start right at the first pixel of the tab row ... below File,
+// Edit, etc. would be the AV sync stats overlay ... it could also go all the
+// way down to the bottom strip — yes, I think so"; the same day's earlier
+// "remove top row in file picker/media player — kdenlive does not allow
+// ctrl+q during modal so we don't need to either" had run it to the window's
+// top for some hours) — so EVERY LANE BUT THE MENU ROW AND THE BOTTOM ROW is
+// under it, and THE MENU ROW STANDS ABOVE IT, VISIBLE AND DEAD: its five
+// anchors and its view bar grey through redesign_button_enabled's first arm,
+// the anchors' open refuses at menu_anchor_dead_in_mode's first arm and the
+// veil consumes the press, kdenlive's modal admitting no menu. The
+// waveform's own passes paint nothing (onscreen_keyboard::waveform_paint_area,
+// whose gate reads both tenants and whose clip reads the STANDING one's own
+// rect, and which this band reduces to a zero-height rect) while the lanes
+// it covers paint and are covered. IT WEARS NO TOP BORDER: the seam above it
+// is the one the lanes already own — the tab row's own top edge against the
+// menu row's ground — and a line there would double it (the line it had
+// from 2026-08-29 is retired with the ground it separated the panel from).
+// The architect's ruling (R3):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
 // space, and no use of the panel needs typing. So THE OVERLAY AND THE
@@ -57,19 +66,21 @@
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
 //     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
 //     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
-//     EXTENT, every time it stands: from THE WINDOW'S TOP
-//     (keyboard_slot_max_height_px, the same header) down to the bottom row,
+//     EXTENT, every time it stands: from THE TAB ROW'S FIRST PIXEL
+//     (keyboard_slot_max_height_px, the same header — the bottom row's top
+//     less the tab row's) down to the bottom row,
 //     whatever the listing's length — architect 2026-08-28, R35: "we should
 //     automatically make the height ... so that it's not a fluid height —
 //     it's always a fixed height", and 2026-09-03 for where that fixed height
-//     starts: "remove top row in file picker/media player". A
+//     starts: "start right at the first pixel of the tab row". A
 //     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
 //     scrolls. R35 retired the growing half of R33 (which read "it grows with
 //     its content up to that cap, then scrolls") the same day, the panel
 //     having jumped under the pointer as the listings changed size; that half
 //     stands, and only WHERE the ceiling sits has moved — R33's waveform
 //     midpoint until 2026-09-02, row 1's foot for that one day, the window's
-//     top since. The content's height stays the SCROLL CLAMP's
+//     top for some hours of 2026-09-03 and the tab row's first pixel since
+//     that evening. The content's height stays the SCROLL CLAMP's
 //     input and is nothing else's.
 //   * THE ROW IS EXACTLY THE ICON ROW'S BUTTON: the same 32px box, the same
 //     2px gap between boxes, the same corner radius, the same 22px glyph
@@ -194,12 +205,17 @@ inline int text_row_pitch_px() {
 // the project picker's holds one (their builders produce Folder and Wav rows
 // alone), so asking the standing owner loses nothing a row's kind would
 // answer. It is the OWNER TAG rather than a read of the rows for two reasons.
-// The pitch is a property of the FACE the words are painted in, and the face
-// is what the painter already selects on this tag — the monospace at the
-// clock's size under the stats panel, the sans everywhere else — so pitch and
-// face share ONE predicate and cannot part (a row shaped sans at 16 px on a
-// monospace line, or the reverse, would be two surfaces disagreeing about
-// one row). And it is a fact of the standing state and not of a table
+// The pitch is a property of the LISTING — a text listing is lines, a button
+// listing is boxes — and not of the face: since the evening of 2026-09-03
+// every content is shaped and painted in the monospace at the clock's size
+// (the painter selects it once, unforked — the architect's first try at the
+// player's and the picker's width asymmetry, quoted there), so the face has
+// nothing to fork on and this predicate is the pitch's alone. (Until that
+// evening it selected the face too — the monospace under the stats panel,
+// the sans under the two listings — so a row could not be shaped in one face
+// and spaced for another, fc40318e; with one face on every content that
+// pairing holds by construction.) And it is a fact of the standing state and
+// not of a table
 // entry, so row_rect(a, i) answers for any index — an empty table, a table
 // mid-rebuild — and paint, hit and damage read one number by reading one
 // tag. A row's KIND stays what the painter reads per row to draw no glyph
@@ -215,15 +231,18 @@ inline int row_gap_px(const AppState& a) {
 }
 
 // (THE BAND'S TOP BORDER IS RETIRED, architect 2026-09-03: "remove the top
-// border since now there is nothing above the player". It stood from
+// border since now there is nothing above the player", said while the band
+// ran to the window's top. It stood from
 // 2026-08-29 — the bottom row's own 1 px kRedesignTabLine, read from that
 // row's accessor so the panel's two edges read alike — and its whole reason
-// was the ground it ran into above. With the band starting at the window's
-// top there is no such ground, and a line along the window edge would frame
-// the panel off from nothing. `border_h_px` and the `content_rect` that
-// subtracted it are both deleted: THE CONTENT RECT IS THE SURFACE RECT, and
-// the rows, the scroll ceiling and the keep-visible walk all read
-// surface_rect directly.)
+// was the WAVEFORM ground it ran into above. THE RETIREMENT STANDS NOW THAT
+// THE MENU ROW IS ABOVE THE BAND AGAIN (that evening's ruling, the head
+// prose): the band starts at the tab row's first pixel, whose top edge
+// against the menu row's ground is the lanes' own seam, so a line there
+// would frame the panel off a seam that already exists. `border_h_px` and
+// the `content_rect` that subtracted it are both deleted: THE CONTENT RECT
+// IS THE SURFACE RECT, and the rows, the scroll ceiling and the keep-visible
+// walk all read surface_rect directly.)
 
 // -- Standing ----------------------------------------------------------------
 

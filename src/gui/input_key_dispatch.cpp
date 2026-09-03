@@ -5884,8 +5884,9 @@ void GuiInputHandler::open_project_picker() {
     // else per project. What the act still refuses in here is what it refuses
     // everywhere: a publishing checkpoint, at open_project_commit.)
     // (THE RENDER PLAYER HAS NO ARM HERE AT ALL since 2026-09-03, and this act
-    // cannot be reached under it: the panel covers row 1 whole — kdenlive's
-    // modal admits no menu, so the File row is unreachable — and Ctrl+O is
+    // cannot be reached under it: the File anchor is dead under the band —
+    // kdenlive's modal admits no menu, so the File row is unreachable — and
+    // Ctrl+O is
     // consumed by route_render_player_key's catch-all, the player's whole
     // vocabulary being its router's. Both of the arms that stood here are
     // retired with the reasons they rested on: "Close the render player
@@ -6218,9 +6219,9 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // the same step the compositor's close takes, stated once there rather
     // than here, so the two roads cannot drift. (Bare `\` was a second for the
     // one day of 2026-09-02, when the File anchor stayed lit under the panel
-    // and Synchronize's row worked in here; the panel covers row 1 whole since
-    // 2026-09-03, so no File row is reachable and the chord is consumed by the
-    // catch-all with every other one.)
+    // and Synchronize's row worked in here; every anchor is dead under the
+    // band since 2026-09-03, so no File row is reachable and the chord is
+    // consumed by the catch-all with every other one.)
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [list, Cancel] through the one modal
@@ -6280,9 +6281,9 @@ void GuiInputHandler::open_av_sync_stats() {
     //
     // ALL OF THEM ARE SILENT. There is no key road into this act, so nothing
     // here is a press that would owe a sentence: the anchor is UNREACHABLE
-    // under a prompt, under either of the other two folder-overlay contents
-    // and under a standing panel (the band covers row 1 whole), and it is DEAD
-    // in the `h` view (menu_anchor_dead_in_mode). The arms stand anyway
+    // under a prompt, and it is DEAD under either of the other two
+    // folder-overlay contents, under a standing panel and in the `h` view
+    // (menu_anchor_dead_in_mode's two arms). The arms stand anyway
     // because the gate belongs with the act it refuses — the picker's own
     // shape — not because a road takes them.
     if (app.prompt.active) return;
@@ -6523,9 +6524,9 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // THE ONE FALL-THROUGH: Ctrl+Q falls through to the ordinary quit road,
     // which takes the panel down at its head (GuiPrompt::request_close) — the
     // same step the compositor's close takes, stated once there rather than
-    // here. The panel covers row 1 whole, so no menu row is reachable under it
-    // and nothing else has a reason to fall through (the picker's own record
-    // of that reasoning is one router up).
+    // here. Every anchor is dead under the panel, so no menu row is reachable
+    // under it and nothing else has a reason to fall through (the picker's
+    // own record of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // THE RING: Tab / Shift+Tab walk [band, Copy to Clipboard, Close] through
@@ -7289,9 +7290,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // same step the compositor's close takes, stated once there rather than
     // here, so the two roads cannot drift. (Ctrl+O and bare `\` were a third
     // and a fourth for the one day of 2026-09-02, when the File anchor stayed
-    // lit under the panel and its rows had to agree with their chords; the
-    // panel covers row 1 whole since 2026-09-03 — kdenlive's modal admits no
-    // menu, and neither does this one — so both go back to the catch-all.)
+    // lit under the panel and its rows had to agree with their chords; every
+    // anchor is dead under the panel since 2026-09-03 — kdenlive's modal
+    // admits no menu, and neither does this one — so both go back to the
+    // catch-all.)
     if (ctrl && !shift && !alt && key == GuiKeys::S) return false;
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 

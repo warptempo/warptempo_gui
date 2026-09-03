@@ -217,12 +217,13 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 // fade — and ON THESE TWO ROWS it moves the GROUND ONLY: separators, border
 // lines, the accent, labels and icons all keep their colors here.
 //
-// IT IS DRIVEN BY AppState::window_activated AND NOTHING ELSE. (A standing
-// FOLDER OVERLAY was a second producer for the evening of 2026-09-02, through
-// a `chrome_focused` verdict, so the header would go inactive with the panel
-// the way kdenlive's does under a modal; the panel covers row 1 whole since
-// 2026-09-03 — nothing can see this ground while it stands — and both the
-// producer and the verdict are deleted.)
+// IT IS DRIVEN BY chrome_focused (app_state.h): AppState::window_activated
+// AND no folder overlay standing — the header goes inactive with the render
+// player, the picker and the AV Sync Stats panel the way kdenlive's does
+// under a modal (architect 2026-09-02; the verdict was deleted for the hours
+// of 2026-09-03 the panel covered row 1, nothing seeing this ground then, and
+// is back since that evening's ruling put the menu row above the band). GAP
+// 1's band above the row wears the same shade from the same painter.
 // NO OTHER ROW'S GROUND SWAPS: row 3's ground and every row below it sit on
 // kRedesignContentGround, itself the unfocused shade, so the swap has nothing
 // to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
@@ -304,17 +305,20 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // absolute view selectors. Sampled off the nine 82x32 row_right_*.png crops,
 // each one whole "Logging" button.
 //
-// TWO BAR BACKGROUNDS, ONE PER WINDOW-FOCUS STATE: the bar swaps on
-// app.window_activated exactly as row 1 swaps its ground, and the swap is the
-// same kind of thing — a PAINT-ONLY variant of the whole surface. (A standing
-// FOLDER OVERLAY was a second producer for the evening of 2026-09-02, when the
-// panel stopped at row 1's foot and this bar was the one thing under a modal
-// still wearing Breeze blue; the panel covers row 1 whole since 2026-09-03, so
-// the face has no viewer and the term went with the `chrome_focused` verdict
-// that carried it.) The crops named "disabled" are the UNFOCUSED WINDOW, not a
-// disabled button: these three are never disabled (redesign_button_enabled
-// returns true for them, with the rest of row 1 and with row 3), so there is
-// no dimmed face here at all.
+// TWO BAR BACKGROUNDS, ONE PER CHROME-FOCUS STATE: the bar swaps on
+// chrome_focused (app_state.h) exactly as row 1 swaps its ground, and the
+// swap is the same kind of thing — a PAINT-ONLY variant of the whole surface.
+// That verdict is the window's activation AND no folder overlay standing
+// (architect 2026-09-02: under the render player or the picker the resting
+// 1/2/3 "should have the disabled bg as that is what kdenlive does with a
+// modal"; the term left for the hours of 2026-09-03 the panel covered row 1
+// and came back that evening when the band's ceiling dropped to the tab row
+// and this bar showed above it again, dead). The crops named "disabled" are
+// the UNFOCUSED WINDOW, not a disabled button: these three have no dimmed
+// face of their own — redesign_button_enabled greys them only under the
+// folder overlay, through its first arm, and it is the ground swap above,
+// not a face, that shows it, the unfocused bar being the focused header's
+// own shade.
 // (The clause used to name ROW 4 alongside them and no longer can: the icon row
 // greys for two MODES since 2026-08-15 — the `h` view and the read-only lock.
 // The view bar is untouched by either, its 1/2/3 being navigation, which is

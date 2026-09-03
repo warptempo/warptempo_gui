@@ -485,8 +485,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // rule that THE WAVEFORM IS NOT PAINTED WHERE
 // THE SLOT PAINTS. IT SUBTRACTS THE STANDING TENANT'S OWN RECT, which since
 // 2026-08-28 is a real fork rather than a formality: the overlay's band is the
-// CEILING every time it stands (the window's top down since 2026-09-03,
-// whatever its listing's length) and the keyboard's is its four key rows, so a
+// CEILING every time it stands (the tab row's first pixel down since
+// 2026-09-03, whatever its listing's length) and the keyboard's is its four
+// key rows, so a
 // rect
 // borrowed from the other tenant would either hide waveform nothing paints
 // over or leave the panel painting where the waveform still runs.
@@ -513,11 +514,13 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // can still answer true for an empty rect an exposure straddles — it compares
 // edges, not areas). THAT LAST CASE IS THE OVERLAY'S ORDINARY ONE SINCE
 // 2026-09-02, when the panel's ceiling first moved above the waveform (row 1's
-// foot that day, the window's top since 2026-09-03): its band starts ABOVE the
-// waveform, so every waveform pass is clipped out whole while it stands, and
-// the LANES it also covers (rows 1..7) are not spared this way — their
-// painters run and the panel covers them, because they publish the roster's
-// hit rects (the record is at the paint-order block, paint_handler.cpp).
+// foot that day, the window's top for hours of 2026-09-03 and the tab row's
+// first pixel since that evening): its band starts ABOVE the waveform, so
+// every waveform pass is clipped out whole while it stands, and the LANES it
+// also covers (rows 2..7; the menu row stands above the band, greyed) are not
+// spared this way — their painters run and the panel covers them, because
+// they publish the roster's hit rects (the record is at the paint-order
+// block, paint_handler.cpp).
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
     const GuiRect area    = waveform_area(a);
     const bool    overlay = folder_overlay::stands(a);

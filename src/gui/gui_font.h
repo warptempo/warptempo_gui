@@ -10,12 +10,15 @@
 // chokepoint's subject) and the monospace — ONE FACE, THREE CELLS since
 // 2026-09-03 (it was two, the clock's pair, from 2026-08-28): the row-8 clock,
 // the render player's `<position> / <length>` on the modal row, which takes
-// the row-8 cell's size and metrics, and the AV SYNC STATS PANEL's rows
-// (architect 2026-09-03 — a column of figures rebuilt every frame, which a
-// proportional face would make walk under the eye; the widening's own record
-// is at paint_handler.cpp's bottom-row text block, which owns the rule). Slant
-// and weight are not parameters: every site is normal/normal, so a face is
-// named by its family and nothing else.
+// the row-8 cell's size and metrics, and THE FOLDER OVERLAY'S BAND under all
+// three of its contents (architect 2026-09-03, twice: the AV Sync Stats
+// panel's rows that morning — a column of figures rebuilt every frame, which
+// a proportional face would make walk under the eye — and the render player's
+// and the Open project picker's listings that evening, his first try at their
+// width asymmetry; the widening's own record is at paint_handler.cpp's
+// bottom-row text block, which owns the rule). Slant and weight are not
+// parameters: every site is normal/normal, so a face is named by its family
+// and nothing else.
 //
 // This selects the FACE only. Size stays the caller's — each site sets its own
 // cairo_set_font_size after selecting, and the scaled font it then borrows is

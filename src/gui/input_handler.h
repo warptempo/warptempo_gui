@@ -2670,8 +2670,9 @@ private:
     //       SILENTLY on the other three, a prompt veiling everything and
     //       being its own answer, a second picker being what is already on
     //       screen (the reasoning is at the arms, 2026-08-30). THE RENDER
-    //       PLAYER HAS NO ARM AT ALL since 2026-09-03: the panel covers row 1,
-    //       so its File row is unreachable, and Ctrl+O is consumed by the
+    //       PLAYER HAS NO ARM AT ALL since 2026-09-03: the File anchor is
+    //       dead under the band (menu_anchor_dead_in_mode's first arm), so
+    //       its row is unreachable, and Ctrl+O is consumed by the
     //       player's own router — no road reaches this body from in there.
     //       ("Close the render player first" stood from 2026-08-30 and a
     //       close-then-open body replaced it for the one day the File anchor
