@@ -4,13 +4,9 @@
 // 2026-08-28). ONE WIDGET, THREE CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, and — since
 // 2026-09-03 — the AV SYNC STATS PANEL's text lines (Help → AV Sync Stats,
-// av_sync_stats.h), the first content whose rows are INERT AS ROWS: no glyph,
-// no highlight, no act, the band scrolling and consuming presses under it as it
-// does under any content. What its rows carry instead is TEXT THE POINTER
-// SELECTS (architect 2026-09-03) — a press inside a row's painted text extent
-// arms the panel's own selection drag rather than the band's scroll — and that
-// is a fact about the CONTENT, not about the row: the widget still knows only
-// rows, and the fork lives at the press router with every other owner fork. (A fourth stood for one day, the `h` view's history
+// av_sync_stats.h), the first content whose rows are INERT: no glyph, no
+// highlight, no act, the band scrolling and consuming presses under it as it
+// does under any content. (A fourth stood for one day, the `h` view's history
 // picker; it was retired 2026-08-29 as overengineered, that view's `'` raising
 // its confirmation on the viewed member with no list at all — and the TEXT
 // KIND it introduced is what the stats panel produces now.) Which one fills it

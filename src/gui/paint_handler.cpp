@@ -5809,7 +5809,8 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
 // (the fourth, the same day: its Cancel-alone row), the AV SYNC STATS PANEL
-// (the fifth, 2026-09-03: its Close-alone row) or any dialog editor. The
+// (the fifth, 2026-09-03: its Copy to clipboard · Close row) or any dialog
+// editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
 static bool modal_owns_bottom_row(AppState& app) {
@@ -6313,6 +6314,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
+        // The AV sync stats panel's own vocabulary (2026-09-03), zero on every
+        // other owner's buttons exactly as `player_act` is.
+        AppState::StatsButtonAct  stats_act  = AppState::StatsButtonAct::None;
         bool        glyph        = false;
         bool        lit          = false;
         // The player row's disabled face (architect 2026-08-30) — the live
@@ -6495,14 +6499,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // own keys under the product's one spelling (spell_chord's head,
         // gui_input.h).
         //
-        // THE STATS PANEL'S ROW IS **Close** ALONE (architect 2026-09-03), the
-        // picker's one-button shape with the word its own act names: the panel
-        // reads and nothing is being answered, so "Cancel" would name a
-        // decision it does not ask for. It is the escape sentinel by
-        // construction on a one-button row, and the hint composer's
-        // "Close (Esc)" follows for free — Esc being the router's own key
-        // under the product's one spelling (spell_chord's head, gui_input.h).
-        if (!picker_up && !stats_up) {
+        // THE STATS PANEL'S ROW IS **Copy to clipboard · Close** (architect
+        // 2026-09-03), the picker's shape with the word its own act names: the
+        // panel reads and nothing is being answered, so "Cancel" would name a
+        // decision it does not ask for. Close stays LAST, the escape sentinel
+        // by construction, and the hint composer's "Close (Esc)" follows for
+        // free — Esc being the router's own key under the product's one
+        // spelling (spell_chord's head, gui_input.h).
+        //
+        // COPY TO CLIPBOARD IS A WORD BUTTON AND DELIBERATELY NOT A GLYPH
+        // (architect 2026-09-03: "we don't need a glyph button, because this
+        // is more like a modal, so you can literally just write Copy to
+        // clipboard on the button face"). The player's row is all glyphs; the
+        // three word-button owners are the prompts, the dialog editors and
+        // the picker's Cancel, and this joins them — same label box, same
+        // resting outline, sentence case like every label that is not a
+        // dropdown item (the capitalization block at the head of this file).
+        // ITS HINT IS WRITTEN OUT rather than composed: the default composer
+        // spells one key off `response_key`/`editor_ok`, and this button's key
+        // is a CHORD (Ctrl+C in route_stats_panel_key), so the tooltip carries
+        // the product's own modifier spelling directly. One line — the button
+        // admits no modified press, so there is no second line to add.
+        if (stats_up) {
+            DialogButtonPlan copy;
+            copy.label     = "Copy to clipboard";
+            copy.stats_act = AppState::StatsButtonAct::CopyReport;
+            copy.tooltip   = "Copy to clipboard (Ctrl+C)";
+            plan.push_back(std::move(copy));
+        } else if (!picker_up) {
             DialogButtonPlan ok;
             ok.label     = "OK";
             ok.editor_ok = true;
@@ -6510,6 +6534,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
         DialogButtonPlan last;
         last.label = stats_up ? "Close" : "Cancel";
+        if (stats_up) last.stats_act = AppState::StatsButtonAct::Close;
         plan.push_back(std::move(last));
     }
     // EVERY BUTTON'S WIDTH, and the ONE CLUSTER'S total behind it — the total
@@ -6937,14 +6962,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Picker;
         buttons_x0 = buttons_x_max;
     } else if (stats_up) {
-        // -- THE AV SYNC STATS PANEL'S ROW (architect 2026-09-03): **Close**
-        //    and nothing else, and it takes the picker's seat for the picker's
-        //    reason — THE ALIGNMENT RULE (stated in full in the branch above):
-        //    a modal carrying a FIELD OR A MESSAGE is flush left with it, and a
-        //    LIST's buttons are flush right. This owner carries neither a field
-        //    nor a message — the band above is the whole content — so its one
-        //    button starts at `buttons_x_max`, the same rightmost seat every
-        //    other owner uses as its CAP. --
+        // -- THE AV SYNC STATS PANEL'S ROW (architect 2026-09-03): **Copy to
+        //    clipboard · Close** and nothing else, and it takes the picker's
+        //    seat for the picker's reason — THE ALIGNMENT RULE (stated in full
+        //    in the branch above): a modal carrying a FIELD OR A MESSAGE is
+        //    flush left with it, and a LIST's buttons are flush right. This
+        //    owner carries neither a field nor a message — the band above is
+        //    the whole content — so its cluster starts at `buttons_x_max`, the
+        //    same rightmost seat every other owner uses as its CAP. --
         dlg.owner  = AppState::ModalDialogOwner::Stats;
         buttons_x0 = buttons_x_max;
     } else {
@@ -7388,6 +7413,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
+        out.stats_act    = plan[i].stats_act;
         out.enabled      = plan[i].enabled;
         // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
         // ruling that took the accelerators off the labels and put the key on
@@ -7736,34 +7762,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     }
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
-    // THE STATS PANEL'S TEXT GEOMETRY IS REPUBLISHED WHOLE EVERY RUN and
-    // cleared under the other two contents, whose rows are names and take no
-    // caret (the stash's contract is at AppState::StatsPanelRowText). Sized to
-    // the LIVE row table, so an entry exists for every row the hit test can
-    // ask about and each starts invalid — the rows the walk below skips (a
-    // listing scrolled past the band's edge) stay that way, which is the same
-    // answer folder_overlay::row_at gives them.
-    if (stats) {
-        app.stats_panel_text.assign(ov.rows.size(),
-                                    AppState::StatsPanelRowText{});
-    } else if (!app.stats_panel_text.empty()) {
-        app.stats_panel_text.clear();
-    }
-    // THE SELECTION'S SPAN, read once for the whole walk: each row highlights
-    // the intersection of this range with its own byte span.
-    const size_t sel_lo = stats ? stats_panel_selection_lo(app) : 0;
-    const size_t sel_hi = stats ? stats_panel_selection_hi(app) : 0;
-    // A SELECTED NEWLINE NEEDS A WIDTH TO SHOW. The join's '\n' has no glyph
-    // and so no advance, and without this a selection running through a blank
-    // spacing row — the panel has three — would simply vanish on it and read as
-    // two selections. One SPACE in the panel's own face is that width, measured
-    // through the one shaping chokepoint like everything else here rather than
-    // authored as a number: it is the width the line break would have if it
-    // were the character it stands for.
-    const double newline_px =
-        (stats && sel_hi > sel_lo)
-            ? text_shape::shape_text_run(font, " ").width_px : 0.0;
-
     const int    lw     = std::max(1, scaled_px(kIconOutlineStrokePx));
     const double radius = std::nearbyint(kIconCornerRadiusPx *
                                          gui_scale_factor());
@@ -7782,42 +7780,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
                  const GuiRect& r) {
-            if (!rects_intersect(surf, r)) return;
-
-            // THE STATS PANEL PUBLISHES BEFORE IT ASKS ABOUT THE DAMAGE, and
-            // that order is the whole reason the two tests were swapped
-            // (2026-09-03, with the panel's selection). PER-ROW EXPOSURE below
-            // is a PAINT economy, but the hit test asks about rows no damage
-            // happens to have crossed — a press arriving under a narrow
-            // notification-card damage would find an unpublished row and land
-            // nowhere. So every row INSIDE THE BAND is shaped and published,
-            // and only then does the exposure test decide whether it is drawn.
-            // The cost is a dozen short monospace runs on a narrow frame, which
-            // is what this panel already pays per frame for its heartbeat.
-            text_shape::ShapedRun run;
-            std::vector<double>   byte_x;
-            bool                  have_run  = false;
-            size_t                row_start = 0;
-            if (stats) {
-                run       = text_shape::shape_text_run(font, row.name);
-                byte_x    = text_shape::byte_offsets_px(run, row.name.size());
-                have_run  = true;
-                row_start = stats_panel_row_start(app, index);
-                if (static_cast<size_t>(index) < app.stats_panel_text.size()) {
-                    AppState::StatsPanelRowText& pub =
-                        app.stats_panel_text[static_cast<size_t>(index)];
-                    pub.valid         = true;
-                    pub.text_origin_x = static_cast<double>(r.x + inset);
-                    pub.width_px      = run.width_px;
-                    pub.byte_count    = row.name.size();
-                    pub.byte_x        = byte_x;
-                }
-            }
-
             // PER-ROW EXPOSURE, the keyboard's own economy: a row costs a face
             // box, a glyph and a shaped run, so a narrow damage pays only for
             // the rows it crosses.
             if (!rects_intersect(exposed, r)) return;
+            if (!rects_intersect(surf, r)) return;
 
             // A TEXT ROW IS INERT AND THE FACE LADDER SKIPS IT WHOLE
             // (2026-09-03): no fill, no outline, no press arm — the row is a
@@ -7895,7 +7862,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // gives the selected row white text, kdenlive's own band carries
             // it, and a row that changes ink with its face would be a second
             // thing to read).
-            if (!have_run) run = text_shape::shape_text_run(font, row.name);
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, row.name);
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,
@@ -7906,47 +7874,6 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            // THE SELECTION'S GROUND, BEHIND THE INK (the AV sync panel alone;
-            // architect 2026-09-03). THE PAIRING IS THE PRODUCT'S ONE — the
-            // accent behind the selected substring and kRedesignLabel #fcfcfc
-            // for its glyphs, "on every text surface" (the ruling is at
-            // render.h's selection block, and the four dialog editors and the
-            // marker lane's flag editor are its other readers) — and this
-            // surface needs no second show for the ink half, its resting run
-            // already painting in that label white. NO NEW COLOUR: the palette
-            // is hard-coded whole.
-            //
-            // IT IS THE PLAIN ACCENT AND NOT accent_for_focus, which is the
-            // BAND'S own fork — the highlighted ROW and the modal row's focus
-            // outline dim while the window is unfocused. This panel has no row
-            // highlight at all, and the selected substring is the text
-            // surfaces' selection, whose one pairing the editors read straight.
-            //
-            // THE SPAN IS THE INTERSECTION of the selection with this row's
-            // byte span [row_start, row_start + len], mapped through the SAME
-            // pen offsets the glyphs below are drawn at, so highlight and ink
-            // cannot describe different bytes.
-            if (stats && sel_hi > sel_lo && !byte_x.empty()) {
-                const size_t len = row.name.size();
-                const size_t end = row_start + len;
-                const size_t a = std::clamp(sel_lo, row_start, end);
-                const size_t b = std::clamp(sel_hi, row_start, end);
-                double x0 = static_cast<double>(text_x) + byte_x[a - row_start];
-                double x1 = static_cast<double>(text_x) + byte_x[b - row_start];
-                // THE JOINING NEWLINE, when the selection runs past this row's
-                // last byte and this row has one (every row but the last).
-                const bool has_newline =
-                    static_cast<size_t>(index) + 1 < ov.rows.size();
-                if (has_newline && sel_lo <= end && sel_hi > end)
-                    x1 += newline_px;
-                if (x1 > x0) {
-                    cairo_set_source_rgb(cr, kRedesignAccent.r,
-                                         kRedesignAccent.g, kRedesignAccent.b);
-                    cairo_rectangle(cr, x0, static_cast<double>(r.y),
-                                    x1 - x0, static_cast<double>(r.h));
-                    cairo_fill(cr);
-                }
-            }
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             text_shape::show_shaped_run(
