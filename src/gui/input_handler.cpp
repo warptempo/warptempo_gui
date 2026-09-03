@@ -1131,17 +1131,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN
-    // EIGHT PLACES AND NOWHERE ELSE (re-greped 2026-08-31, when the CARD
-    // DISMISSAL joined as (e) — the drag-modal gate above tests only Ctrl+Q,
-    // so Esc is UNBOUND there and falls through with every other key while a
-    // gesture is in flight; it is NOT one of the eight), the first seven
-    // earlier in this function than this point, so reaching here means the
-    // press has nothing left to do BUT the stack. THE LETTERING BELOW IS AN
-    // ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
+    // NINE PLACES AND NOWHERE ELSE (re-greped 2026-09-03, when the AV SYNC
+    // STATS PANEL joined as (c5) — the drag-modal gate above tests only
+    // Ctrl+Q, so Esc is UNBOUND there and falls through with every other key
+    // while a gesture is in flight; it is NOT one of the nine), the first
+    // eight earlier in this function than this point, so reaching here means
+    // the press has nothing left to do BUT the stack. THE LETTERING BELOW IS
+    // AN ENUMERATION, NOT THE DISPATCH'S ORDER (corrected 2026-09-02): on_key
     // tests the PROMPT gate first of all, ahead of the loading gate and so
     // ahead of the editor hatch and the editors — which is right, a prompt
     // outranking an editor everywhere — while the letters below run
-    // editor-first. Read them as a list of the eight places, and read on_key
+    // editor-first. Read them as a list of the nine places, and read on_key
     // itself for which one answers when two could:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
@@ -1158,13 +1158,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, joining as the sixth of
     //       the six the count then stood at). EVERY menu — re-greped
-    //       2026-08-28, the four of kDropdownMenus: File, Edit, Series and
-    //       Settings — is this ONE
+    //       2026-09-03, the five of kDropdownMenus: File, Edit, Series,
+    //       Settings and Help — is this ONE
     //       binding: they
     //       share one popup state and one gate, so the second dropdown
     //       (Navigation, 2026-08-02), the third (File, 2026-08-13), the
-    //       fourth-then-third (Edit, 2026-08-20) and the Series menu
-    //       (2026-08-27) added no
+    //       fourth-then-third (Edit, 2026-08-20), the Series menu
+    //       (2026-08-27) and the Help menu (2026-09-03) added no
     //       place of their own and the Navigation one's deletion (2026-08-15) took
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
@@ -1186,12 +1186,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       replaced were members of (b), so the count grew by one place, and
     //       it did not move again when the `h` view's own picker retired
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
+    //   (c5) THE AV SYNC STATS PANEL (2026-09-03, the ninth — the folder
+    //       overlay's THIRD content, one router of its own) — Esc closes it
+    //       (route_stats_panel_key, at the picker's rank: none of the three
+    //       list owners stands with another). It joined its own rung rather
+    //       than the picker's for the same reason the picker did not join the
+    //       player's: a surface that shares an existing route adds no place
+    //       (the commit-title editor into (b), every menu into (c2)), a
+    //       surface with its own router does. It cannot collide with (a)/(b)
+    //       for the player's and the picker's own two reasons: it opens under
+    //       no editor and admits no editor opener;
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
     //       rung, at the bare-key tail (handle_plain_bare_keys' Escape arm,
     //       input_key_dispatch.cpp, where the reasoning lives): a press none
-    //       of the seven above claims clears every card, whatever its class,
+    //       of the eight above claims clears every card, whatever its class,
     //       and with no card standing the arm is the ruled silence it has
     //       always been. It is the X's BULK keyboard twin and it is RANKED
     //       rather than privileged — the X's own pointer claim sits above

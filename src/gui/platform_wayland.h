@@ -594,7 +594,7 @@ private:
     // The bound INTERFACES are more than these classes name — every
     // wl_output, and the seat's own children — so the count of bound globals
     // is not a number worth stating here; what is ruled is the five required
-    // and the two optional.
+    // and the three optional.
     struct wl_display*    wl_display_     = nullptr;
     struct wl_registry*   wl_registry_    = nullptr;
     struct wl_compositor* wl_compositor_  = nullptr;
@@ -872,10 +872,11 @@ private:
     struct xkb_state*   xkb_state_   = nullptr;
 
     // -- Pointer capture (pointer-constraints + relative-pointer) --
-    // THE WHOLE OF THE RULED OPTIONAL LIST, both members, nothing else: null when
+    // TWO OF THE RULED OPTIONAL LIST'S THREE MEMBERS, nothing else: null when
     // the compositor does not advertise them, and every capture entry point then
     // degrades to a silent no-op (strip drags run on clamped absolute motion,
-    // announced by one stderr line at init). Any other protocol is required or
+    // announced by one stderr line at init). The third member, wp_presentation,
+    // is its own block below the outputs. Any other protocol is required or
     // best-effort — see the globals block above.
     // relative_pointer_ is created once alongside wl_pointer_ and destroyed
     // with it; its motion events are consumed only while a capture is active.
