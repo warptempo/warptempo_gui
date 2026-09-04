@@ -5719,6 +5719,21 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      waveform_border_px thick, this lane's are its own 1px (the CSS box
 //      model and the succession are recorded at the constant). Painted on
 //      every frame class, audio or none.
+//
+//      THE GROUND HAS A REGION HALF SINCE 2026-09-04 (architect): while the
+//      trim region overlay stands, the trim's own columns take the waveform's
+//      kWaveformRegionCanvas recolor here too, so the overlay has a SECOND
+//      SURFACE and the whole-song picture answers where the trim is. It is the
+//      same ruling that took the framing off bare `[`'s show half — the camera
+//      no longer travels to the window, because this lane already shows it
+//      (handle_toggle_trim_region, input_trim.cpp). It is layer 1's other half
+//      rather than a layer of its own: the recolor REPLACES ground, it lands
+//      before the bars exactly as paint_region_ground lands before the plate
+//      blit, and the trim line, the box and the tick all draw over the
+//      finished highlight. IT IS HALF OF A PAIR, the ink lift under layer 2
+//      being the other half, exactly as on the waveform. The passes sit past
+//      the audio guards in the body, the span owner needing a lane scale,
+//      which is the one thing that separates them from the borders above.
 //   2. THE BARS (the cached blit; maybe_rebuild_overview_bar_cache below):
 //      the WHOLE PIECE as per-column min/max bars in kWaveformInk, two
 //      channel bands exactly as the plate stacks them. THE DATA IS THE
@@ -5728,6 +5743,13 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      and the BOX does the domain work. Clipped to the lane's content band
 //      (overview_content_rect — the lane less its two border rows, which
 //      survive every frame) exactly as the plate clips to the waveform's.
+//
+//      THE BARS HAVE A REGION HALF TOO, the other end of layer 1's: right
+//      after this blit the span's bars take kWaveformRegionInk, masked through
+//      the cache's own binary alpha, so the highlight is the SAME PAIR the
+//      waveform paints — ground under the picture, ink through it — and the
+//      span reads as one lit region rather than as a lit background behind
+//      unlit content. Both halves read one span, resolved once above.
 //   3. The trim line (architect 2026-09-04): a 1px horizontal run along the
 //      lane's top row, showing where in the whole song the trim sits. That is
 //      the one thing the 9px trim bar a lane down cannot show —
@@ -5748,6 +5770,13 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      which reports nothing at a full window, the whole song not being
 //      information. It is drawn under the box by ruling, though the two cannot
 //      meet: the box is inside the content band and this row is outside it.
+//      THE LINE IS THE LANE'S ALWAYS-ON TRIM PRESENCE and layer 1's region
+//      recolor is the emphasis (architect 2026-09-04, ruling the pair): the
+//      line paints whether or not the overlay stands, so the lane tells where
+//      the trim is at all times and says additionally, by the recolor, when
+//      the big surface is up. The line FADES AGAINST THE VIEWPORT BOX where
+//      the box contains the trim — the box's own white corner sits on this
+//      same head row — and that is accepted rather than reordered.
 //      It needs no damage of its own, for the box's reason — every route that
 //      writes a trim bound raises Viewport::invalidate_waveform_area, whose
 //      one rect runs the window top through the waveform's bottom and so
@@ -5910,6 +5939,82 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     const double spp_ov = overview_samples_per_pixel(app, audio);
     if (spp_ov <= 0.0) return;
 
+    // THE REGION HIGHLIGHT'S LANE COLUMNS, resolved ONCE for the highlight's
+    // TWO passes — the ground under the bars just below and the ink lift
+    // through them after the blit — so the pair cannot straddle two answers on
+    // one frame. It is this lane's answer to what region_columns is for the
+    // waveform: one derivation, two readers, no chance of a half-lit span.
+    int  region_x0 = 0;
+    int  region_x1 = 0;
+    const bool region_span = app.region.shown &&
+        overview_trim_span(app, audio, &region_x0, &region_x1);
+
+    // LAYER 1'S REGION HALF — the trim region overlay's second surface
+    // (architect 2026-09-04). While the overlay stands, this lane's ground
+    // takes the same recolor the waveform's ground takes, over the same two
+    // numbers, so the strip shows WHERE IN THE WHOLE SONG the shown window
+    // sits. That is the answer the camera used to give: bare `[`'s show half
+    // framed the span until the same ruling took the framing off it, on the
+    // reading that a user should not be walked through zoom levels to see a
+    // window this lane can simply point at.
+    //
+    // IT IS HALF OF THE HIGHLIGHT, NOT ALL OF IT — the waveform's own shape:
+    // the ink lift after the blit (below layer 2) is the other half, so the
+    // span reads as ONE LIT REGION rather than as a lit background behind
+    // unlit bars, which is exactly why the waveform gained its second pass on
+    // 2026-08-18.
+    //
+    // IT CANNOT DISAGREE WITH THE WAVEFORM'S OVERLAY. Both read
+    // app.region.shown — the one bit that is the whole region state — and both
+    // derive their span from the RESTING trim bounds on the frame they paint,
+    // with nothing stored between them: the waveform through trim_overlay_span
+    // into displayed columns, this lane through overview_trim_span into its own
+    // cell columns.
+    // Neither surface can hold a span the other has moved on from.
+    //
+    // A NEW READER OF kWaveformRegionCanvas AND NOT A NEW COLOUR, exactly as
+    // the trim line below is a new reader of kTrimLaneBar. It is an OPAQUE
+    // GROUND REPLACEMENT and never a wash: the cached bar surface is cleared to
+    // transparent and carries binary-alpha ink alone, so an ink pixel covers
+    // this fill and a gap shows it through — the plate's own relationship at
+    // the lane's scale, which is the only form the palette admits.
+    //
+    // CLIPPED TO THE CONTENT BAND, mirroring paint_region_ground's own clip to
+    // waveform_content_rect: the recolor leaves the lane's two border rows
+    // alone, so the trim line on the head row and the box inside the band are
+    // both drawn over it rather than swallowed by it, and the lane's frame
+    // still reads as the lane's frame.
+    //
+    // IT PAINTS NOTHING AT A FULL WINDOW, through the span owner's own rule and
+    // the trim line's: the whole song is not information, and a recolor the
+    // full width of the lane would point at nothing. The waveform overlay does
+    // stand there and says nothing about it either — its two bounds at the
+    // song's edges are their own confirmation.
+    //
+    // NO DAMAGE OF ITS OWN, for the trim line's reason: both halves of the
+    // show/hide toggle and every route that writes a trim bound raise
+    // Viewport::invalidate_waveform_area, whose one rect runs the window top
+    // through the waveform's bottom and so contains this lane.
+    //
+    // POINTER-INERT like everything else painted here. The lane's press
+    // vocabulary is the three gestures the header names — drag the outline,
+    // click to teleport, drag the bounds — and a press inside the recolored
+    // span is whatever the lane already makes of that column.
+    if (region_span) {
+        const GuiRect band = overview_content_rect(lane);
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kWaveformRegionCanvas.r,
+                             kWaveformRegionCanvas.g,
+                             kWaveformRegionCanvas.b);
+        // Inclusive at both ends, the span owner's contract — the same
+        // arithmetic the trim line takes below.
+        cairo_rectangle(cr, lane.x + region_x0, band.y,
+                        region_x1 - region_x0 + 1, band.h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
     // Layer 2 — the cached bars, content-band clipped like the plate blit.
     maybe_rebuild_overview_bar_cache(lane);
     if (overview_bar_cache.surface) {
@@ -5923,12 +6028,52 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
         cairo_restore(cr);
     }
 
+    // LAYER 2'S REGION HALF — the highlight's ink lift, the pair's second pass
+    // (architect 2026-09-04, accepting the lane's half-highlight as the same
+    // defect the waveform's own ground-only pass was on 2026-08-18: a recolored
+    // ground behind unlit bars reads as a lit background, not as a lit region).
+    // The bars inside the span take kWaveformRegionInk, the same doubled Breeze
+    // lift their ground already takes, so the two surfaces that depict the trim
+    // region wear ONE construction at two scales.
+    //
+    // A SECOND OPAQUE COLOUR MASKED THROUGH THE CACHE'S OWN ALPHA, never a
+    // translucent wash — the retired form the recolor model rejects, and the
+    // mechanism is paint_region_ink's verbatim: the cache surface is cleared to
+    // transparent and written by the aliased renderer, so its alpha is BINARY,
+    // and masking with it makes every bar pixel inside the span exactly this
+    // colour while every gap is left showing the recolored ground beneath.
+    //
+    // THE MASK IS TAKEN AT THE BLIT'S OWN ORIGIN (lane.x, lane.y), so it lands
+    // on exactly the pixels layer 2 just painted, and the clip is (the span)
+    // INTERSECT (the content band) — the same two-term clip the waveform's ink
+    // pass takes, which is what keeps the lift off the lane's border rows and
+    // therefore off the trim line's head row.
+    //
+    // IT READS THE SAME region_span AS THE GROUND, so the two halves of one
+    // highlight cannot disagree, and it runs BEFORE the trim line, the box and
+    // the tick — all three still paint over the finished highlight.
+    if (region_span && overview_bar_cache.surface) {
+        const GuiRect band = overview_content_rect(lane);
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_rectangle(cr, lane.x + region_x0, band.y,
+                        region_x1 - region_x0 + 1, band.h);
+        cairo_clip(cr);
+        cairo_set_source_rgb(cr, kWaveformRegionInk.r, kWaveformRegionInk.g,
+                             kWaveformRegionInk.b);
+        cairo_mask_surface(cr, overview_bar_cache.surface, lane.x, lane.y);
+        cairo_restore(cr);
+    }
+
     // Layer 3 — the trim line on the lane's top row, off its own span owner
     // (overview_trim_span, app_state.cpp), which reports nothing at a full
     // window. Its columns are the lane's cell class like everything else here,
     // and the span is inclusive at both ends because both trim bounds are
     // inclusive authored frames — the box below is half-open because a viewport
-    // end is exclusive. The line is pointer-inert: the lane's press vocabulary
+    // end is exclusive. It is the lane's ALWAYS-ON trim presence, where layer
+    // 1's region recolor above is the emphasis that comes and goes with the
+    // overlay — one span owner behind both, so the two can only ever agree.
+    // The line is pointer-inert: the lane's press vocabulary
     // is the three gestures the header names and nothing more, so do not add a
     // hit test for it — a press on this row is whatever the lane already makes
     // of that column.

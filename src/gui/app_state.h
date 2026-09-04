@@ -337,7 +337,9 @@ struct UndoEntry {
 //
 // THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `[` and the icon row's
 // IconShowRegion button, one toggle over one act (handle_toggle_trim_region,
-// input_trim.cpp), whose show half also brings the span into view; by THE
+// input_trim.cpp), which since 2026-09-04 MOVES NO VIEWPORT on either half —
+// its show ran bring_span_into_view until the architect deleted the framing,
+// the overview strip answering where the trim is instead; by THE
 // SWEEP'S FIRST ACCEPTED TRIM WRITE through the one raise owner
 // show_trim_region_overlay (input_handler.h, which carries its whole call-site
 // inventory, the no-framing rule and the `h` carve-out) — its ONE caller, at
@@ -2065,9 +2067,9 @@ enum class RedesignButton {
     // that needed a home. THE CHORD IS BARE `[` SINCE 2026-08-24, the whole trim
     // family having moved onto the bracket — the key it left "is too easy to hit
     // accidentally instead of `c`, and it can mess up the viewport", the show
-    // half framing the trim span; `[` looks like the begin-trim endcap, which is
-    // the mnemonic. The chords it has left behind (Ctrl+Shift+X, then bare `x`)
-    // are unbound.
+    // half FRAMING the trim span then; the framing left the act on 2026-09-04
+    // and `[` stands on its mnemonic alone, looking like the begin-trim endcap.
+    // The chords it has left behind (Ctrl+Shift+X, then bare `x`) are unbound.
     //
     // A TOGGLE WITH A LAMP, where the 2026-08-16 ruling made it deliberately
     // MOMENTARY and stateless. The hole that ruling avoided cannot occur under
@@ -2076,8 +2078,11 @@ enum class RedesignButton {
     // scrolled offscreen left the button lit with only a clearing press
     // available — "the region toggle is on, but the region view can't be
     // accessed because the toggle is already on". This lamp reads the overlay's
-    // VISIBILITY and the show half ALWAYS FRAMES, so a lit button means the
-    // overlay is on screen or one press from being re-shown there.
+    // VISIBILITY, so every press changes what is painted and the toggle can
+    // never stick. The offscreen case is answered by the PICTURE rather than by
+    // the camera since 2026-09-04, when the framing left the act: the trim bar
+    // and the overview strip both show where the window is, and the trim bar's
+    // double-click is the gesture that brings the camera to it.
     //
     // SHIFT REACHES Shift+[, THE MAXIMIZER (redesign_button_shift_admits), by
     // shift-click or by a long press at kChromeShiftHoldMs — the admission the
@@ -9171,7 +9176,7 @@ double overview_anchor_sample_at_x(const AppState& a, const GuiAudio& audio,
 bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
                                int64_t* out_begin, int64_t* out_end);
 // THE VIEWPORT BOX'S LANE COLUMNS — the ONE owner of the box arithmetic,
-// shared by the painter (paint_overview_strip's layer 3) and the lane's hit
+// shared by the painter (paint_overview_strip's box layer) and the lane's hit
 // geometry (hit_test_overview_endcap below, the press claim's inside-the-box
 // test) so a grabbed edge is exactly a painted one. Lane-relative half-open
 // span [*x0, *x1): the LIVE viewport's span (start through
@@ -12898,10 +12903,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // worth keeping, because the hole is easy to re-invent. The old design
         // lit the lamp from a SPAN'S EXISTENCE, so a span scrolled offscreen
         // left the button lit with only a clearing press available and the one
-        // thing the user wanted out of reach. This lamp reads VISIBILITY, and
-        // the show half ALWAYS FRAMES (bring_span_into_view), so a lit button
-        // means the overlay is on screen or one press from being re-shown
-        // there, and the unreachable state has no way to arise.
+        // thing the user wanted out of reach. This lamp reads VISIBILITY, so a
+        // press always changes what is painted and the state it reports is
+        // always the state a press leaves. The framing that used to back this
+        // paragraph left the act on 2026-09-04 and is not missed: where the
+        // window IS is the overview strip's and the trim bar's answer, and the
+        // trim bar's double-click is the camera's.
         case RedesignButton::IconShowRegion: return a.region.shown;
         // ADD TO SELECTION IS THE BOTTOM ROW'S ONE LAMP (2026-08-18), on the
         // same toggle pattern as the two above: it reads the live bit bare `k`

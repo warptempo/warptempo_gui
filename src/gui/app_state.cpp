@@ -726,7 +726,7 @@ bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
 }
 
 // THE VIEWPORT BOX'S LANE COLUMNS — the box arithmetic hoisted whole out of
-// paint_overview_strip's layer 3 when the box grew grab handles (the lane
+// paint_overview_strip's box layer when the box grew grab handles (the lane
 // rework, 2026-08-12), so painter and hit geometry read ONE derivation and a
 // grabbed edge is exactly a painted one. The LIVE viewport's span in the
 // active domain (through the edge owner above, which owns the past-EOF end

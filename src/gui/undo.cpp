@@ -940,8 +940,28 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // one column of the viewport's edge — so a restore could
                 // recentre where the lamp had just promised the camera would
                 // stand still. The recentre itself is unchanged.
-                const int64_t domain_frame =
-                    source_frame_to_active_domain(app, viewport.audio, src_f);
+                //
+                // AND THE FRAME IS CLAMPED BEFORE EITHER READS IT, which is
+                // what makes the three agree in full: the crossing into the
+                // active domain can round a right-wall marker onto
+                // domain_total_frames itself, one past the last frame, and both
+                // of the other two answers already clamp that away — the LAND
+                // just above through seat_playhead_on_source_frame's
+                // clamp_playhead_to_live_domain, and the lamp's predicate
+                // through clamp_frame_to_domain on the domain a restore would
+                // install (undo_restore_within_viewport, app_state.h). Asking
+                // the column test at the unclamped value asked about a position
+                // nothing else believed in, so a marker at the wall could be
+                // called offscreen and recentred on while the lamp had
+                // promised the camera would stand still — the very drift the
+                // shared owner was hoisted to end. The group arm below spells
+                // the same clamp per member; this is the singleton's. ONE
+                // VALUE SERVES BOTH READERS here, so the recentre arithmetic
+                // centres on the frame the test judged and on the frame the
+                // land seated.
+                const int64_t domain_frame = clamp_playhead_to_live_domain(
+                    source_frame_to_active_domain(app, viewport.audio, src_f),
+                    app, viewport.audio);
                 const int64_t visible = samples_visible(app, viewport.audio);
                 const int64_t start   = app.viewport_start_sample;
                 if (!span_columns_visible(app, viewport.audio, start,

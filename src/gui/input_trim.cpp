@@ -499,10 +499,12 @@ void GuiInputHandler::handle_trim_maximize() {
 //
 // THE WHOLE TRIM FAMILY MOVED ONTO THE BRACKET ON 2026-08-24, the architect's
 // own reason being that the key it left "is too easy to hit accidentally
-// instead of `c`, and it can mess up the viewport" — this act's show half
-// frames the trim span, so a mis-hit for the neighbouring working-zoom command
-// moved the camera. `[` looks like the begin-trim endcap, which is the mnemonic
-// he chose; its shift form is the maximizer below. THE TWO KEYS IT LEFT ARE
+// instead of `c`, and it can mess up the viewport" — the show half FRAMED the
+// trim span then, so a mis-hit for the neighbouring working-zoom command moved
+// the camera. THAT HAZARD IS GONE SINCE 2026-09-04, the show half moving no
+// viewport at all, and the spelling stands on its own mnemonic: `[` looks like
+// the begin-trim endcap, which is why he chose it; its shift form is the
+// maximizer below. THE TWO KEYS IT LEFT ARE
 // UNBOUND — bare `x` (this act's chord from 2026-08-18, and, for the retired
 // set-from-region act, from long before) and Shift+X (the maximizer's) — and
 // answer nothing anywhere under the strict-modifier rule, exactly as
@@ -514,11 +516,25 @@ void GuiInputHandler::handle_trim_maximize() {
 // reachable without a keyboard (redesign_button_shift_admits, app_state.h).
 //
 // ONE ACT WITH TWO HALVES, over the one bit that is the whole region state
-// (RegionState, app_state.h): SHOW the waveform overlay and BRING ITS SPAN INTO
-// VIEW, or HIDE it. It writes NO trim, NO selection and NO playhead, and hiding
-// DISCARDS NOTHING — the trim persists, so a later show restores an identical
-// overlay. That is what makes the toggle safe, and it is the property the
-// pre-2026-08-18 model did not have.
+// (RegionState, app_state.h): SHOW the waveform overlay, or HIDE it. It writes
+// NO trim, NO selection, NO playhead AND NO VIEWPORT, and hiding DISCARDS
+// NOTHING — the trim persists, so a later show restores an identical overlay.
+// That is what makes the toggle safe, and it is the property the pre-2026-08-18
+// model did not have.
+//
+// SHOWING NEVER MOVES THE CAMERA (architect 2026-09-04). The show half brought
+// the span into view through bring_span_into_view from 2026-08-16 until that
+// ruling, and the framing is deleted on his two reasons: a user should not be
+// walked through zoom levels to look at a window, and the short trim is mostly
+// a tablet act, where the picture jumping under the finger is a distraction.
+// WHAT REPLACED IT IS A PICTURE, NOT A MOVE — the overview strip paints the
+// trim's whole-song place on every frame, its 1px line always and, while this
+// overlay stands, the same region recolor across the trim's own columns
+// (paint_overview_strip, paint_handler.cpp) — so the question the framing
+// answered is answered with the viewport left where it stands. THE FRAMING ACT
+// STILL EXISTS AND HAS ITS OWN GESTURE: the trim bar's double-click zooms to
+// the trim window (run_span_framing_command, input_handler.cpp), which is where
+// a user who wants the camera moved asks for it.
 //
 // IT IS A TOGGLE AGAIN, AND THE OLD HOLE CANNOT COME BACK — worth stating,
 // because that hole is easy to re-invent. The 2026-08-16 design was a toggle
@@ -531,13 +547,18 @@ void GuiInputHandler::handle_trim_maximize() {
 // a region-shower, and that's it" — and the button was MOMENTARY and stateless
 // from 2026-08-16 to 2026-08-18. Under the derived model the state is back and
 // the hole is not: the lamp reads the overlay's VISIBILITY, not a span's
-// existence, and the SHOW HALF ALWAYS FRAMES, so a lit button means the overlay
-// is on screen or one press away from being re-shown there.
+// existence, so every press changes what is painted and the toggle can never
+// stick holding a state the user cannot leave. THE OFFSCREEN CASE IS ANSWERED
+// BY THE PICTURE RATHER THAN BY THE CAMERA since 2026-09-04, when the framing
+// left this act: the trim bar and the overview strip both show where the window
+// is at all times, and the trim bar's double-click is the gesture that brings
+// the camera to it. What the lamp promises is what it reads — the overlay is
+// being painted — and it never promised the viewport.
 //
 // THE SPAN IS DERIVED, NOT SEEDED. The 2026-08-15 seed copied the trim window
 // into a free region once and let go; there is nothing to copy now, the overlay
-// being the trim on every frame. So the show half writes only the visibility
-// bit and then frames — and the retired trim-window highlight SYNC is not what
+// being the trim on every frame. So the show half writes the visibility bit and
+// nothing else — and the retired trim-window highlight SYNC is not what
 // came back either: that was a continuous invariant republishing the window
 // into a SECOND state, and there is no second state here at all.
 //
@@ -546,24 +567,23 @@ void GuiInputHandler::handle_trim_maximize() {
 // gives an overlay covering everything, whose Move is clamped to a no-op and
 // whose two bounds sit at the screen edges where they are still grabbable.
 //
-// THEN BRING THE SPAN INTO VIEW — exactly as the GROUP undo/redo restore frames
-// its touched set (architect: "like undo in terms of zoom/viewport — if the
-// region can fit at current zoom and is not fully in view, it is brought into
-// view just like undo marker group, without affecting zoom; if it cannot fit,
-// zoom is made to fit"). That is bring_span_into_view, the SHARED owner hoisted
-// out of the restore's tail for this caller (input_handler.cpp carries the
-// three arms and the whole argument). It takes ACTIVE-DOMAIN frames ORDERED,
-// which is exactly what the span owner hands back.
+// THE FRAMING'S SUCCESSION, for whoever finds this act's shape surprising: the
+// show half ran bring_span_into_view from 2026-08-16 to 2026-09-04 — the GROUP
+// undo/redo restore's own scroll-else-frame, hoisted into a shared owner for
+// exactly this caller at the architect's "like undo in terms of zoom/viewport —
+// if the region can fit at current zoom and is not fully in view, it is brought
+// into view just like undo marker group, without affecting zoom; if it cannot
+// fit, zoom is made to fit". The owner is untouched and keeps the caller it was
+// written for, the restore's own tail; only this one left it.
 //
-// THE DAMAGE AND THE KICK ARE THIS SITE'S, by the framing owner's contract: it
-// writes only the viewport and neither damages nor renders, so the SHOW half
-// pays one invalidate + one synchronous kick for both halves of what can change
-// (the overlay ground, which the overlay pass draws, and the plate under a
-// moved viewport). Unconditional there, the restore tail's own shape. THE HIDE
-// HALF PAYS THE INVALIDATE ALONE and deliberately no kick: it moves no
-// viewport, and the overlay is a PAINT-TIME recolor over the plate rather than
-// anything written into it, so the plate on screen is already the one the next
-// frame wants — a synchronous full-width render would buy nothing.
+// BOTH HALVES PAY THE SAME TAIL NOW, ONE INVALIDATE AND NO KICK, and they are
+// symmetric because neither moves a viewport. The kick was the framer's:
+// bring_span_into_view writes the viewport and neither damages nor renders, so
+// the show half owed a synchronous render of the plate under the moved
+// viewport. With no move there is no new plate to want — the overlay is a
+// PAINT-TIME recolor over the plate rather than anything written into it, so
+// the plate on screen is already the one the next frame wants, which is the
+// hide half's own standing argument now serving both halves.
 //
 // NO READ-ONLY CHECK and none is wanted: the chord is on the keyboard gate's
 // allowlist (read_only_key_blocked, input_key_dispatch.cpp) because it writes
@@ -590,11 +610,10 @@ void GuiInputHandler::handle_toggle_trim_region() {
     // WHOSE RESULT IS ON SCREEN SAYS NOTHING. The overlay going up over the
     // whole song, its two bounds at the song edges, IS the confirmation, on
     // both roads alike (bare `[` and the Show trim region button's plain
-    // lift).
-    const TrimOverlaySpan span = trim_overlay_span(app, audio);
-    bring_span_into_view(app, audio, viewport, span.lo, span.hi);
+    // lift). THE OVERVIEW LANE STAYS QUIET IN THAT ONE CASE and deliberately:
+    // its region recolor reports nothing at a full window, the whole song being
+    // nothing to point at, so the confirmation there is the waveform's alone.
     viewport.invalidate_waveform_area();
-    viewport.kick_waveform_sync();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------

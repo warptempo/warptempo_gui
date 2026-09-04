@@ -433,13 +433,16 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // rest of the stroke live. A no-op when it already stands, which is what lets
 // its one caller sit on a per-motion path.
 //
-// IT DOES NOT FRAME, which is the one thing that separates it from bare `[`'s
-// show half (handle_toggle_trim_region, input_trim.cpp — the toggle's raise
-// runs bring_span_into_view because the user asked to LOOK at the window). The
-// caller here is a LIVE POINTER GESTURE, already under the pointer or the
-// finger, so moving the viewport out from under it would be the wrong answer —
-// the argument is about the gesture, not about the event's phase, which is why
-// it survived the raise moving off the press.
+// IT DOES NOT FRAME, and since 2026-09-04 NEITHER DOES ANY OTHER RAISE: bare
+// `[`'s show half ran bring_span_into_view from 2026-08-16 until the architect
+// deleted the framing (handle_toggle_trim_region, input_trim.cpp, carries the
+// ruling), so NO ROAD THAT SHOWS THIS OVERLAY MOVES THE VIEWPORT and the
+// distinction this paragraph used to draw has nothing left to draw it against.
+// THE ARGUMENT HERE IS UNCHANGED AND STILL ITS OWN: the caller is a LIVE
+// POINTER GESTURE, already under the pointer or the finger, so moving the
+// viewport out from under it would be the wrong answer whatever the toggle
+// does — about the gesture, not about the event's phase, which is why it
+// survived the raise moving off the press.
 //
 // CALL SITES, RE-DERIVED BY GREP 2026-08-21 — ONE, and it is a MOTION BODY:
 //   * THE SWEEP'S FIRST ACCEPTED TRIM WRITE (apply_region_drag_motion,
@@ -650,12 +653,19 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // framer above's caller, not its sibling: arm three IS
 // frame_span_into_view(margin=true).
 //
+// ONE CALLER TODAY, the restore it was written for (undo.cpp), re-greped
+// 2026-09-04: the Show trim region act LEFT on that date, when the architect
+// ruled that showing the trim never moves the camera. The owner stays hoisted
+// rather than folding back into the restore — the hoist is what gives "inside
+// the viewport" a single definition shared with span_columns_visible and the
+// Restrict undo to viewport lamp, and that reason never was the caller count.
+//
 // [lo, hi] are ACTIVE-DOMAIN frames, the same domain frame_span_into_view
 // takes and the same one BOTH callers already hold — the restore derives its
 // extent through clamp_playhead_to_live_domain(source_frame_to_active_domain
 // (...)) and the region's endpoints ARE active-domain frames by definition. A
-// caller holding SOURCE frames (the trim bounds, say) converts before it calls,
-// which is what the Show trim region act does.
+// caller holding SOURCE frames (the trim bounds, say) would convert before it
+// calls; no such caller stands today.
 //
 // It writes ONLY the viewport (level and start) and only through the family's
 // clamp chokepoints; it damages nothing and kicks no render, exactly as the
@@ -3305,13 +3315,17 @@ private:
     // under strict modifier validation) —
     // the icon row's
     // IconShowRegion button and its keyboard twin. ONE ACT, TWO HALVES over the
-    // one visibility bit that is the whole region state: SHOW and BRING THE
-    // SPAN INTO VIEW through bring_span_into_view, or HIDE. It writes NO TRIM,
-    // no selection and no playhead, and HIDING DISCARDS NOTHING — the trim
-    // persists and a later show restores an identical overlay, which is what
-    // makes a toggle safe here where the 2026-08-16 existence-lamp design was
-    // not (that record, and why its hole cannot recur, are at the definition
-    // and at the roster entry, app_state.h). Read-only-LEGAL (its entry is on
+    // one visibility bit that is the whole region state: SHOW, or HIDE. It
+    // writes NO TRIM, no selection, no playhead AND NO VIEWPORT — the show half
+    // framed the span through bring_span_into_view until 2026-09-04, when the
+    // architect deleted the framing because the overview strip shows where the
+    // trim is and a user should not be walked through zoom levels to look at a
+    // window (the ruling and what replaced it are at the definition,
+    // input_trim.cpp) — and HIDING DISCARDS NOTHING: the trim persists and a
+    // later show restores an identical overlay, which is what makes a toggle
+    // safe here where the 2026-08-16 existence-lamp design was not (that
+    // record, and why its hole cannot recur, are at the definition and at the
+    // roster entry, app_state.h). Read-only-LEGAL (its entry is on
     // read_only_key_blocked's allowlist), and the `h` view simply consumes it —
     // not on that mode's allowlist, so the derived partition greys the button
     // with nothing hand-listed, which is where trim's freeze in that view is

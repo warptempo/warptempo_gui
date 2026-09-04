@@ -2817,8 +2817,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // moves the viewport and none of the three, so it simply works
             // and the next playhead change, or an A/B or S/T switch (each tab
             // being its own virtual playhead), re-pins; by the same token a
-            // programmatic framing (bring_span_into_view, bare `[`'s show)
-            // stands until one does — PLUS THE SUBJECT, which is the STOP
+            // programmatic framing (bring_span_into_view on the group undo/redo
+            // restore, the trim bar's double-click zoom) stands until one
+            // does — PLUS THE SUBJECT, which is the STOP
             // EDGE: a stop swaps the painted playhead from the scanner back
             // to the cursor while all three of those are unchanged, so the
             // last derivation's subject being the SCANNER is itself due here

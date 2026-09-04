@@ -2014,9 +2014,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // THE FAMILY MOVED HERE WHOLE ON 2026-08-24 (architect): the key pair it
     // left "is too easy to hit accidentally instead of `c`, and it can mess up
-    // the viewport" — the show half frames the trim span, so a mis-hit for the
-    // neighbouring working-zoom command moved the camera. `[` looks like the
-    // begin-trim endcap, which is the mnemonic he chose, and the shift form
+    // the viewport" — the show half FRAMED the trim span then, so a mis-hit for
+    // the neighbouring working-zoom command moved the camera; that hazard died
+    // with the framing on 2026-09-04 and the spelling stands on its mnemonic
+    // alone. `[` looks like the begin-trim endcap, and the shift form
     // rides the same key so the pair stays one surface. BOTH KEYS IT LEFT ARE
     // UNBOUND — bare `x` and Shift+X answer nothing anywhere now, exactly as
     // Ctrl+Shift+X has since 2026-08-18 — and under strict modifier validation
@@ -2845,13 +2846,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //
 // IT WRITES ONLY THE VIEWPORT and damages nothing: the caller owns its own
 // damage and its own sync kick, which is what keeps the restore behaviourally
-// unchanged by the hoist (its tail already invalidated and kicked
-// unconditionally) and what lets the TRIM REGION TOGGLE'S SHOW HALF pay the
-// same tail once. That the show ALWAYS FRAMES is what makes the toggle safe: a
-// lit button means the overlay is on screen or one press away from being
-// re-shown there, so the stuck-toggle hole the 2026-08-16 momentary design was
-// written to avoid cannot arise (the record is at handle_toggle_trim_region,
-// input_trim.cpp).
+// unchanged by the hoist — its tail already invalidated and kicked
+// unconditionally. THE TRIM REGION TOGGLE WAS THE SECOND CALLER and left on
+// 2026-09-04, when the architect ruled that showing the trim moves no camera;
+// the toggle's own safety rests on its lamp reading VISIBILITY and on hiding
+// discarding nothing, never on a framing (the record is at
+// handle_toggle_trim_region, input_trim.cpp).
 // A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put — the
 // visibility owner's own answer since 2026-09-04 (span_columns_visible,
 // app_state.h), and the inline guard's before that.

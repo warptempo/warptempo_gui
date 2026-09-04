@@ -868,6 +868,21 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // Since the aliasing deletion the plate's alpha is BINARY, so an ink pixel is
 // fully opaque and a gap is fully transparent: this colour shows through the
 // gaps and blends with nothing.
+//
+// IT GAINED A SECOND READER ON 2026-09-04 (architect), deliberately rather than
+// a second colour: the OVERVIEW STRIP recolors the trim's own columns in this
+// same ground while the overlay stands (paint_overview_strip's layer 1,
+// paint_handler.cpp), so the overlay has a second surface and the whole-song
+// lane says where the trim window sits — which is what let the show half stop
+// framing the same day. The relationship carries over intact at that scale: the
+// lane's cached bar surface is cleared to TRANSPARENT and carries binary-alpha
+// ink alone, so this fill lands under the bars, shows through their gaps and
+// blends with nothing there either. THE LANE TAKES THE WHOLE PAIR, not the
+// ground alone: kWaveformRegionInk below lifts the lane's bars over the same
+// span in a second pass after the blit, so the highlight is ONE CONSTRUCTION
+// AT TWO SCALES and the strip reads as a lit region rather than as a lit
+// background behind unlit bars — the same correction the waveform's own
+// ground-only pass took on 2026-08-18.
 inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
 
 // THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
@@ -887,6 +902,15 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63
 // untouched — still showing the kWaveformRegionCanvas ground the first pass
 // laid down. A translucent wash painted over the plate is the retired form the
 // opaque recolor model rejects, and this is not it.
+//
+// IT GAINED A SECOND READER ON 2026-09-04 alongside its ground sibling: the
+// OVERVIEW STRIP lifts the lane's bars over the trim's own columns in this same
+// colour (paint_overview_strip's layer 2 region half, paint_handler.cpp),
+// masked through the CACHED BAR SURFACE's own binary alpha exactly as this pass
+// masks through the plate's — that surface is cleared to transparent and
+// written by the same aliased renderer, so the mechanism carries over whole.
+// The lane takes the PAIR because half of it was the 2026-08-18 defect again:
+// the ground recolor alone lit the background behind unlit bars.
 //
 // THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
 // derivation and not a measurement, so this constant and kWaveformRegionCanvas

@@ -208,8 +208,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // on 2026-08-19): its chord is BARE `[` since 2026-08-24, when the architect
     // moved the whole trim family onto the bracket — the key it left "is too
     // easy to hit accidentally instead of `c`, and it can mess up the viewport",
-    // this act's show half framing the trim span. `[` looks like the begin-trim
-    // endcap, which is the mnemonic he chose. THE TWO CHORDS IT HAS LEFT BEHIND
+    // this act's show half FRAMING the trim span then — the framing left the
+    // act on 2026-09-04 and `[` stands on its mnemonic alone, looking like the
+    // begin-trim endcap. THE TWO CHORDS IT HAS LEFT BEHIND
     // — Ctrl+Shift+X (2026-08-16 to 2026-08-18) and bare `x` (2026-08-18 to
     // 2026-08-24) — are UNBOUND and answer nothing anywhere under the
     // strict-modifier rule.
