@@ -187,6 +187,17 @@ void GuiPrompt::cancel_paste_confirmation() {
 // proceed.
 void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
+    // Not while a synchronization is running (architect 2026-09-04), and the
+    // question is asked here, above every closing step below, because a
+    // refused close must leave the window exactly as it found it: the render
+    // player still standing, the picker still up, the editor still holding
+    // its uncommitted text. The gate belongs on this road for the same reason
+    // those steps do — it is the one road Ctrl+Q, the compositor's close, the
+    // tablet's BACK and the picker's reopen all pass through, so no producer
+    // of a quit can miss it and none restates it. The predicate, the card and
+    // the reasoning are the input handler's one body
+    // (close_refused_by_external_sync); this line only asks.
+    if (input != nullptr && input->close_refused_by_external_sync()) return;
     // THE RENDER PLAYER COMES DOWN FIRST, on every road into this one: the
     // mode's transport is stopped, the view's buffer rebound and the overlay
     // cleared before the question is asked, so a Cancel leaves the ordinary

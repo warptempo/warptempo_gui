@@ -1832,6 +1832,36 @@ struct GuiInputHandler {
     // behind a torn-down window. Public for that one caller, exactly as the
     // two above are; its contract is with the panel's cluster below.
     void close_stats_panel();
+    // The quit refuses outright while a synchronization to external storage
+    // runs (architect 2026-09-04), which is why this one is a question rather
+    // than a fourth closing step. GuiExternalSyncWorker::shutdown has no
+    // cancel by design, so a quit taken mid-mirror joins the worker with the
+    // window already gone and the act finishes blind: a failing mirror's
+    // verdict reaches no screen at all, and a working one costs the user
+    // however long the stick takes with nothing painted. Refusing keeps that
+    // join off a live-window road entirely; the wait is seconds and the bit
+    // falls by itself.
+    //
+    // One caller, GuiPrompt::request_close, asked at its head and ahead of
+    // every closing step, so this one gate covers every road into the quit
+    // through the body those roads already share: the keyboard's Ctrl+Q
+    // (which the render player's, the picker's, the stats panel's and the
+    // modal editors' routers all fall through to, as do the drag-modal and
+    // paste-confirm hatches), the File menu's Quit row (which dispatches that
+    // same chord), the compositor's title-bar X and the tablet's BACK press
+    // (both the seam's close callback, main.cpp's set_on_close), and the Open
+    // project picker's reopen completion. True means the close does not
+    // proceed: no prompt raised, nothing torn down, and the answer said on a
+    // normal card.
+    //
+    // It reads GuiExternalSyncWorker::is_busy — the act's own
+    // single-in-flight bit — and says the act's own sentence, so the running
+    // mirror refuses in one wording everywhere. The picker's open act keeps
+    // its own arm on that same bit, which is not a second predicate: it
+    // refuses earlier, above close_picker and above the reopen name it would
+    // otherwise seat, so the picker stays open with its answer instead of
+    // closing over a quit that will not happen.
+    bool close_refused_by_external_sync();
     // AND THE PANEL'S PER-FRAME REFRESH, public for the run loop's tick, which
     // is its ONE caller (main.cpp). It returns on its first line with the mode
     // bit down, which is what makes the measurements gated: no reading is

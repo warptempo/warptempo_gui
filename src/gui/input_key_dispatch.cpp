@@ -71,14 +71,17 @@ constexpr const char* kCheckpointPublishing =
     "Wait for the checkpoint to finish publishing";
 
 // THE SYNCHRONIZATION-RUNNING SENTENCE, ONE LITERAL (2026-09-02, the
-// four-tier review's R-14). TWO READERS in this file — the act's own
+// four-tier review's R-14). THREE READERS in this file — the act's own
 // single-in-flight refusal (synchronize_to_external_storage, whose sentence it
-// was) and the Open project picker's open act, which refuses a reopen for the
+// was); the Open project picker's open act, which refuses a reopen for the
 // same reason it refuses one under a publishing checkpoint: the session
 // teardown JOINS this worker after forgetting its completion fd, so a reopen
 // mid-mirror freezes the GUI for as long as the stick takes and drops the
-// verdict a failing mirror owed the user. Both meet ONE bit at
-// GuiExternalSyncWorker::is_busy, so the two sites cannot disagree about what
+// verdict a failing mirror owed the user; and, since 2026-09-04, the close
+// road's own gate (close_refused_by_external_sync), which is that same
+// reasoning carried to the quit, where the teardown's join has no window left
+// to report into at all. All three meet ONE bit at
+// GuiExternalSyncWorker::is_busy, so the sites cannot disagree about what
 // "running" means; the wording is the ACT's because it names what is running.
 constexpr const char* kSyncRunning =
     "A synchronization is already running";
@@ -6038,6 +6041,12 @@ void GuiInputHandler::open_project_commit(int index) {
     // synchronize_to_external_storage's), asked here rather than mirrored, and
     // it falls by itself. THE PICKER STAYS OPEN, like its other three
     // refusals, so the answer is one line and another Enter.
+    // The close road gates on the same bit since 2026-09-04
+    // (close_refused_by_external_sync, at request_close's head), and this arm
+    // is not made redundant by it: the reopen reaches that road only past
+    // close_picker and past the seated reopen name, so refusing here is what
+    // keeps the picker standing with its answer instead of closing over a
+    // quit that will not happen. Same predicate, same sentence, earlier place.
     if (external_sync_worker.is_busy()) {
         refuse(plain_failure(kSyncRunning));
         return;
@@ -6596,6 +6605,25 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
 
 // -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
 
+// The mirror's process line, row 8's state cell (architect 2026-09-04). A
+// running mirror is state — true right now, replaced as it changes, never
+// timed out — so it belongs beside the cell's other two process strings
+// rather than on a card, and the dispatch notice this replaces was dropped in
+// 2026-08-29 for being exactly that fact on the event surface. Three ASCII
+// periods like both neighbours (`Loading...`, `Updating...`): the cell is the
+// product's monospace surface and the ASCII-in-grammars rule governs the
+// spelling. Two readers, the write below and the clear on the way back.
+constexpr const char* kSyncProgressLine = "Synchronizing...";
+
+// The close road's synchronization gate. The contract, the reasoning and the
+// inventory of roads it covers are at the declaration (input_handler.h); this
+// body is the predicate and the sentence, and it owns neither.
+bool GuiInputHandler::close_refused_by_external_sync() {
+    if (!external_sync_worker.is_busy()) return false;
+    notifications.notify(AppState::NotificationClass::Normal, kSyncRunning);
+    return true;
+}
+
 // The act's GUI half: the gates, the destination, the capture, the dispatch.
 // TWO ROADS REACH IT and neither restates anything: the File menu's
 // Synchronize row, whose release has already closed the popup and calls this
@@ -6622,9 +6650,12 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // FAILURES on the way back (on_external_sync_complete) — visible in the
     // `h` view like anywhere else; they were the status chain's transient
     // tier for one day, invisible under the view's own line. THE DISPATCH
-    // NOTICE IS DROPPED with the move: "Synchronizing to …" was a process
-    // line, state rather than an event, and the design gives the mirror no
-    // bar cell. AND SINCE 2026-08-30 A SUCCESS SAYS NOTHING AT ALL (the
+    // NOTICE WAS DROPPED with the move — "Synchronizing to …" was a process
+    // line, state rather than an event — and the state surface took it on
+    // 2026-09-04: `Synchronizing...` in row 8's state cell for as long as the
+    // worker runs, the same fact on the surface that owns it (the write and
+    // its precedence ruling are at the dispatch below). AND SINCE
+    // 2026-08-30 A SUCCESS SAYS NOTHING AT ALL (the
     // architect's ruling, the render's precedent), so the only sentences left
     // are refusals — which is why this act, when it works, is one menu press
     // and silence. THE WORKER'S FAILURES ARE STILL LOUD on stderr too —
@@ -6685,6 +6716,21 @@ void GuiInputHandler::synchronize_to_external_storage() {
     job.project_dir  =
         std::filesystem::path(app.source_audio_path).parent_path();
 
+    // The synchronization yields the state cell, and that is a ruling rather
+    // than an implementation note (architect 2026-09-04). A render, the batch
+    // queue or the startup load can be running beside this act, and the
+    // render's progress line is both the more frequent and the more
+    // informative state, so the mirror writes its line only into an empty
+    // cell and clears it only while the cell still holds its own string
+    // (on_external_sync_complete). Two strings want no stack and no priority
+    // enum: the "is the text ours" test is the whole mechanism, the same one
+    // target_render's hold already takes. Damage goes through the one owner,
+    // invalidate_status_cell_area, which covers the bottom row's lane whole.
+    if (app.queue_progress_text.empty()) {
+        app.queue_progress_text = kSyncProgressLine;
+        viewport.invalidate_status_cell_area();
+    }
+
     external_sync_worker.dispatch(
         std::move(job),
         [this](GuiExternalSyncOutcome outcome) {
@@ -6708,6 +6754,16 @@ void GuiInputHandler::synchronize_to_external_storage() {
 // one statement and neither invents the other.
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
+    // The process line comes down here, on the yielding writer's own terms:
+    // guarded on the text still being ours, because a render dispatched while
+    // the mirror ran owns the cell now and a writer that yielded to it does
+    // not erase it. Invalidate before the clear, the ordering every
+    // status-clear path in the product keeps — the lane has to be damaged
+    // while the longer string is still the one the painter would draw.
+    if (app.queue_progress_text == kSyncProgressLine) {
+        viewport.invalidate_status_cell_area();
+        app.queue_progress_text.clear();
+    }
     if (outcome.ok) return;
     notifications.notify(AppState::NotificationClass::Normal,
                          std::move(outcome.failure.display));

@@ -315,6 +315,22 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job);
 // mirror abandoned between its copies and its deletions is exactly the state
 // the copies-then-deletions order is chosen to make harmless — but leaving one
 // copy_file half-written is not, so the join waits.
+//
+// And quit refuses while it runs (architect 2026-09-04), which is that same
+// design read from the other end. The join has to happen somewhere, and the
+// only road that could reach it with a window still on screen is the close: a
+// quit taken mid-mirror joined here with the window already torn down, so the
+// act finished blind — a failing mirror's verdict reaching no card and no
+// title bar, and a working one costing the user however long the stick takes
+// with nothing painted and nothing to press. Refusing the quit keeps that
+// join off a live-window road entirely, leaving it where it has always been
+// safe: the teardown after run() has returned. The refusal sits at the close
+// road's head — GuiPrompt::request_close asks
+// GuiInputHandler::close_refused_by_external_sync, which reads is_busy() below
+// and says the act's own sentence on a card — so every producer of a quit
+// meets it, and the wait is seconds because the bit falls by itself. The act
+// says so while it runs, too: row 8's state cell carries `Synchronizing...`
+// (messaging.md), so the refusal names something already on screen.
 class GuiExternalSyncWorker {
 public:
     using DoneCallback = std::function<void(GuiExternalSyncOutcome)>;

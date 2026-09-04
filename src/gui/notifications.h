@@ -258,9 +258,10 @@
 // with), and a family whose several sites share ONE translation unit keeps its
 // constant there (kKeysDuringDrag, kCheckpointPublishing and, since
 // 2026-09-02, kSyncRunning, which the Open project picker's act began raising
-// beside the mirror's own single-in-flight refusal; the two mode routers'
-// catch-all tails were a third until their catch-alls went silent with the
-// unbound-keys ruling). A THIRD HOME EXISTS for a sentence a FACE reads rather
+// beside the mirror's own single-in-flight refusal and which the close road's
+// gate joined on 2026-09-04, all three still in that one file; the two mode
+// routers' catch-all tails were a third until their catch-alls went silent
+// with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence a FACE reads rather
 // than a second site raises: the grid-iteration sweep's two verdict cards live
 // at app_state.h beside iteration_sweep_plan, whose readers are the dispatch
 // that raises them and the Render button's tooltip, because this header
