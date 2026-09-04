@@ -64,9 +64,10 @@ namespace {
 // term until the architect ruled a gate's membership the chord's alone and the
 // refusal became the act's to say.
 // ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
-// shape): the sentence is the instruction, exactly as its sibling
-// kTargetPreviewNotReadyCard already was. It read "A checkpoint is still
-// publishing; try again when it finishes" until that day.
+// shape): the sentence is the instruction, the shape its sibling
+// kTargetPreviewNotReadyCard already wore (that card retired 2026-09-04, both
+// of its gates going silent). It read "A checkpoint is still publishing; try
+// again when it finishes" until that day.
 constexpr const char* kCheckpointPublishing =
     "Wait for the checkpoint to finish publishing";
 

@@ -1398,13 +1398,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.active_audio_view == 'T' &&
             !playback.is_playing() &&
             !target_render.preview_ready()) {
-            // AND IT SAYS SO (architect 2026-08-30): a Space that plays
-            // nothing in target view is answered by the state that refused
-            // it, in the sentence the waveform scrub's own twin refusal
-            // raises (kTargetPreviewNotReadyCard, notifications.h — two
-            // predicates, one fact).
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kTargetPreviewNotReadyCard);
+            // The refusal is silent (architect 2026-09-04): row 8's state
+            // cell already carries the preview render's own `Updating...`
+            // while it runs, and the Play button greys on this very
+            // predicate, so the screen says why. That is the rule stated in
+            // messaging.md's silent list as the second member of the
+            // one-dimensional class — a bound key's refusal is silent when
+            // row 8's process line already names the reason. It carded from
+            // 2026-08-30 to that day, in the sentence the waveform scrub's
+            // twin refusal shared (kTargetPreviewNotReadyCard, deleted with
+            // both raises). Space stays bound: chord_is_bound and spell_chord
+            // are untouched, so this silence is this rule's and not an
+            // unbinding's.
             return;
         }
         // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the

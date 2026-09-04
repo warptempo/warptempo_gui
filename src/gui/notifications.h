@@ -299,14 +299,6 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 
-// THE TARGET PREVIEW'S SENTENCE — a launch asked for in target view before
-// the preview it would play exists. Its two sites are Space's own play edge
-// (which reads GuiTargetRender::preview_ready) and the waveform scrub's
-// (which reads is_updating): two predicates, one fact to the user, so one
-// sentence.
-inline constexpr const char* kTargetPreviewNotReadyCard =
-    "Wait for the target preview to finish rendering";
-
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02, deep dive item L) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,

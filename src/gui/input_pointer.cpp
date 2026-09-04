@@ -1654,11 +1654,11 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // cannot migrate to the stopped case, whose scanner fields are stale by
 // contract (a stopped scanner is deactivated immediately; no non-playing
 // validity window exists). A refused launch (out-of-window frame; target
-// update in flight; a dead device) leaves playback stopped AND SAYS WHY since
-// 2026-08-30 — the target gate's own kTargetPreviewNotReadyCard at this act,
-// and the launch body's two sentences under it, this scrub being the one
-// launch road with no outer gate of its own; a later click at a launchable
-// frame launches.
+// update in flight; a dead device) leaves playback stopped, the launch body's
+// own sentence answering the dead device under it — this scrub is the one
+// launch road with no outer gate of its own — and a later click at a
+// launchable frame launches. The target gate below carded from 2026-08-30
+// until 2026-09-04 and is silent now, by the rule stated at that gate.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
     if (playback.is_playing()) {
         // The pure stop, through the standing stop machinery — side-effect-
@@ -1671,15 +1671,20 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     }
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target
-    // buffer, which Space refuses — so the scrub launch refuses it too, AND
-    // SAYS SO SINCE 2026-08-30, in Space's own sentence
-    // (kTargetPreviewNotReadyCard, notifications.h). The two gates read
-    // different predicates — preview_ready there, is_updating here — and
-    // report one fact, which is why the words are shared rather than
-    // spelled twice.
+    // buffer, which Space refuses — so the scrub launch refuses it too, and
+    // silently since 2026-09-04. Row 8's state cell already carries the
+    // preview render's own `Updating...` for as long as that render runs,
+    // which is the rule stated in messaging.md's silent list as the second
+    // member of the one-dimensional class — a bound key's refusal is silent
+    // when row 8's process line already names the reason. (The greyed Play
+    // button is the other half of the answer at Space's edge alone: its face
+    // reads preview_ready, which a stale-but-present buffer keeps true while
+    // this gate's is_updating is.) The same ruling took Space's twin card,
+    // the shared kTargetPreviewNotReadyCard deleted with both raises. The
+    // gate itself is unchanged: the click is still consumed, and
+    // chord_is_bound and spell_chord are untouched, so nothing about this
+    // silence says the road is unbound.
     if (app.active_audio_view == 'T' && target_render.is_updating()) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kTargetPreviewNotReadyCard);
         return;
     }
     playback_lifecycle.scrub_launch_at(frame);
