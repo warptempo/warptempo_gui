@@ -248,9 +248,14 @@ public:
     // NOTHING ELSE: it reopens nothing, so on Android a dead stream stays dead
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
-    // road reaches play(), which reopens at its head). ONE READER: the render
-    // player's tick (a dead stream mid-play must PAUSE, not advance), plus the
-    // reopen's own post-reopen read inside ensure_device_available_for_play.
+    // road reaches play(), which reopens at its head). TWO READERS, re-grepped
+    // 2026-09-04, and both are TICKS: the render player's (a dead stream
+    // mid-play must PAUSE, not advance) and — since that day's ruling — the
+    // A/B audition's, GuiAbAudition::fire_if_due, which ends the whole act
+    // through the one stop body and cards
+    // kPlaybackDeviceUnavailableCard. Plus the reopen's own post-reopen read
+    // inside ensure_device_available_for_play. A tick is where this belongs
+    // and a press is not: a press reopens.
     // The launch FACES do not read it — they read device_absent below, the
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;

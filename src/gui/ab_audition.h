@@ -145,6 +145,16 @@ struct GuiInputHandler;
 // are not, which is what lets the act's own two tab switches run inside it.
 // Bare Esc is NOT one of them — its eight bindings are closed (the card
 // dismissal joined them on 2026-08-31; the enumeration is input_handler.cpp's).
+// AND A DEVICE LOST MID-ACT IS AN INTERRUPT LIKE ANY OTHER (architect
+// 2026-09-04): fire_if_due asks GuiPlayback::device_unavailable on every tick
+// the act stands, in a play as in a rest, and ends it through that same one
+// stop body with the launch gate's own card. The tick is therefore a CALLER of
+// clearing owner (1) rather than a fifth owner, and the tab stays where the act
+// had it, exactly as every other interruption leaves it. Until that day the
+// tick had no device fork at all and an AAudio disconnect read as the play's
+// natural end, so the act advanced one rest and the rest's launch either
+// reopened the device or carded at the belt; the ruling replaces that with one
+// end and one sentence.
 //
 // THE RUNNING CASE IS NOT A REFUSAL (architect 2026-08-31): a Shift+Space that
 // finds `phase != Idle` STOPS the act through the one stop body and launches
@@ -237,9 +247,13 @@ struct GuiAbAudition {
     // advance site.
     void advance_after_natural_end(const GuiAuditionSequence& ended);
 
-    // THE REST'S DEADLINE SAMPLER: launch the phase the advance armed once its
-    // rest has elapsed. A no-op unless a rest stands and is due, so an idle
-    // tick costs one enum compare — the clock is read only past that. It reads
+    // THE REST'S DEADLINE SAMPLER AND THE ACT'S DEVICE WATCH: launch the phase
+    // the advance armed once its rest has elapsed, or end the whole act where
+    // the device has gone away. A no-op unless the act stands, so an idle tick
+    // still costs one enum compare — the device read and the clock are both
+    // past that, and the device read comes first because it must catch a PLAY
+    // as well as a rest (the arm and its reasoning are at the definition;
+    // architect 2026-09-04). It reads
     // monotonic_ms() itself rather than taking a `now`, so the caller need not
     // sample a clock on every tick for a state that is almost never standing.
     // The rest is cleared BEFORE the launch is attempted, so a refusal ahead
@@ -249,7 +263,11 @@ struct GuiAbAudition {
     // it again on a refusal, as every launch of the act's does.
     // ONE CALLER: main.cpp's on_tick, above its playing-only guard — a rest has
     // nothing playing, so it must be sampled ahead of that return — and beside
-    // the platform's own deadline samplers on the same timerfd expiry.
+    // the platform's own deadline samplers on the same timerfd expiry. That
+    // placement is what lets the device arm end a stalled PLAY too, and it is
+    // what keeps the tick's natural-end branch from advancing behind it: the
+    // stop body this arm takes lowers the scanner flag, so the guard the call
+    // sits above returns before that branch is reached and the act ends once.
     void fire_if_due();
 
 private:

@@ -4527,7 +4527,13 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         prompt), the A/B tab switch by any route (Ctrl+Tab, the tab click,
 //         undo/redo's tab restore, the settings editor's tab key), the `h`
 //         view's entry, the S/T flip, every trim write, the scrub's stop half,
-//         and the tick's natural end itself (which then advances).
+//         the tick's natural end itself (which then advances), and — since
+//         2026-09-04 — THE ACT'S OWN TICK WHERE THE DEVICE HAS GONE AWAY:
+//         GuiAbAudition::fire_if_due asks GuiPlayback::device_unavailable
+//         ahead of its waiting and deadline tests, so a play stalled on a dead
+//         stream ends the act exactly as a rest does, on a card carrying the
+//         launch gate's own sentence. That arm is a CALLER here, like
+//         Shift+Space's own stop edge, and not a fifth owner.
 //     (2) THE VIEW-END LAUNCH ENTRY, GuiPlaybackLifecycle::launch_playback_from,
 //         ahead of its delegation to the one launch body, refused or not
 //         (2026-09-01; the launch body's own head from 2026-08-26 until then):

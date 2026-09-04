@@ -243,8 +243,38 @@ void GuiAbAudition::apply_working_zoom() {
 void GuiAbAudition::fire_if_due() {
     using Phase = GuiAuditionSequence::Phase;
     GuiAuditionSequence& seq = app.audition_sequence;
-    // One compare on an idle tick; the clock is read only past it.
-    if (seq.phase == Phase::Idle || !seq.waiting) return;
+    // One compare on an idle tick; nothing below is read past it.
+    if (seq.phase == Phase::Idle) return;
+    // A device that goes away mid-act ends the whole act, on this tick and on
+    // a card (architect 2026-09-04). It is asked ahead of the waiting and
+    // deadline tests below because both halves need it: in a PLAY the dead
+    // stream is playing nothing and the natural end that would advance the act
+    // may never come, and in a REST the launch the rest is waiting for could
+    // only fail. The read is GuiPlayback::device_unavailable — the latch, not
+    // the reopen, a reopen being the press's alone (playback.h) — so in
+    // practice this arm is AAudio's: it fires on the tablet when a headphone
+    // is pulled or a Bluetooth route drops, while JACK's answer is
+    // `!client_active`, which never flips mid-run and so can only be true here
+    // if start() had already carded (it asks the same device question at the
+    // press and refuses the act).
+    //
+    // THE END IS THE ONE STOP BODY, so this is a CALLER of clearing owner (1)
+    // and not a fifth owner (the inventory at GuiAuditionSequence,
+    // app_state.h): every clear the interrupt owes runs there, exactly as it
+    // does for bare Space's stop, and the tab is left where the act had it —
+    // an interruption never returns to the home tab. The card is the launch
+    // gate's own sentence, so a device lost mid-act and a device that was
+    // never there say the same thing. It fires ONCE: the stop body puts the
+    // phase to Idle, so the next tick returns at the compare above.
+    if (playback.device_unavailable()) {
+        playback_lifecycle.stop_playback_if_playing();
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPlaybackDeviceUnavailableCard);
+        return;
+    }
+    // Past here the act is resting or not, and the clock is read only for a
+    // rest that stands.
+    if (!seq.waiting) return;
     if (monotonic_ms() < seq.launch_due_ms) return;
     const Phase phase    = seq.phase;
     const char  home_tab = seq.home_tab;

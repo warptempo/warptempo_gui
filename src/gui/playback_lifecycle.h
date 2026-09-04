@@ -19,22 +19,33 @@
 // 2026-07-30; every damage this cluster emits now goes through Viewport.)
 struct GuiRenderPlayer;
 
-// THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND THREE SITES (2026-08-30): the
-// one launch body's own device gate — the BELT, which every road that plays
-// passes — and the TWO PRE-LAUNCH GATES that decide something before reaching
-// it and so must ask the same question first: toggle_playback's target-view
+// THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND FOUR SITES (2026-08-30; the
+// fourth joined 2026-09-04): the one launch body's own device gate — the BELT,
+// which every road that plays passes — and the TWO PRE-LAUNCH GATES that decide
+// something before reaching it and so must ask the same question first:
+// toggle_playback's target-view
 // pre-sum position gate (which would otherwise answer a dead device with the
 // POSITION sentence) and GuiAbAudition::start's press-time preflight (which
 // would otherwise run `c` and switch tabs before the belt refused). Only one of
 // the three fires per press — each returns — so the shared literal is what
-// keeps one fact one sentence. It lives here rather than in notifications.h
+// keeps one fact one sentence.
+// THE FOURTH SITE IS NOT A PRESS AT ALL and is the one exception to the
+// launch-road reading below: GuiAbAudition::fire_if_due, the A/B audition's
+// tick, which ends the whole act on device_unavailable and raises this same
+// sentence (architect 2026-09-04). It reads rather than reopens, being a tick,
+// and it says what the three launch sites say because a device lost mid-act
+// and a device that was never there are one fact to the user. It cannot double
+// with them: it returns, and the stop body it takes leaves the act Idle, so no
+// launch of the act's follows it.
+// It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
-// 2026-09-02): each of the three sites reopens a dead AAudio stream before it
-// asks, and cards only when that reopen failed, JACK answering its unchanged
-// read — and every site that raises it is a launch road. The reads: the
-// render player's tick keeps device_unavailable (a dead stream mid-play must
-// pause), and the two PLAY-face predicates (space_launch_would_play,
+// 2026-09-02): each of the three PRESS sites reopens a dead AAudio stream
+// before it asks, and cards only when that reopen failed, JACK answering its
+// unchanged read. The reads: the TWO TICKS keep device_unavailable — the
+// render player's (a dead stream mid-play must pause) and the A/B audition's
+// (a dead stream mid-act must end the act, the fourth site above) — and the
+// two PLAY-face predicates (space_launch_would_play,
 // ab_audition_preflight_ok) read device_absent, the never-came-up half alone
 // — a face is a read, never a reopen, and it must not grey what the press
 // would reopen.

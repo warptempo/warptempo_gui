@@ -2594,9 +2594,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return;
         }
 
-        // THE A/B AUDITION'S REST DEADLINE, sampled here and ABOVE the
-        // playing-only guard below — a rest has nothing playing and no scanner
-        // by definition, so a call under that guard would never run during one.
+        // THE A/B AUDITION'S REST DEADLINE AND ITS DEVICE WATCH, sampled here
+        // and ABOVE the playing-only guard below — a rest has nothing playing
+        // and no scanner by definition, so a call under that guard would never
+        // run during one, and since 2026-09-04 the same call also ends the act
+        // where the device has gone away, which must be asked in a PLAY as
+        // well (the arm is at GuiAbAudition::fire_if_due; it takes the one
+        // stop body, and the natural-end branch below is then unreachable this
+        // tick because that body lowers the scanner flag).
         // This is the run loop's own deadline tick, the same timerfd expiry the
         // platform's key-repeat and touch-disambiguation deadlines ride
         // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
@@ -2760,13 +2765,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The stop body's own call is unchanged: the
         // fence-before-flag-clear ordering above is exactly what the next
         // launch relies on too, a rebind-safe, quiesced device under the fresh
-        // play(). A DEVICE THAT DIES MID-ACT READS HERE AS THAT PLAY'S
-        // NATURAL END (2026-09-02, recorded with the reopen-at-the-press
-        // ruling, no arm added): the AAudio disconnect lowers the playing bit
-        // exactly as a finished window does and this branch has no device
-        // fork, so the act ADVANCES ONE REST, and the next launch — the
-        // rest's fire, through the launch body's belt — reopens the device or
-        // cards; the reopen is the press's, never the tick's.
+        // play(). A DEVICE THAT DIES MID-ACT NO LONGER REACHES THIS BRANCH
+        // (architect 2026-09-04, superseding the 2026-09-02 reading recorded
+        // here, which let the act ADVANCE ONE REST into a launch that would
+        // card at the belt): the AAudio disconnect lowers the playing bit
+        // exactly as a finished window does, and this branch still has no
+        // device fork of its own — but ab_audition.fire_if_due, called above
+        // the playing-only guard, asks GuiPlayback::device_unavailable while
+        // the act stands and ends the WHOLE act through the one stop body on a
+        // card. That stop lowers the scanner flag, so the guard returns and
+        // this branch is never reached: the act ends once, with one sentence.
+        // The reopen is still the press's and never the tick's — the
+        // audition's arm reads the latch, as the render player's tick does.
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
