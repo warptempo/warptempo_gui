@@ -786,6 +786,53 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
     return true;
 }
 
+// The trim's lane columns, the second span the overview paints (architect
+// 2026-09-04). The trim bar a lane down is viewport-scaled, so at a zoomed-in
+// view the trim's place in the whole song is shown nowhere; this span is that
+// picture. There is no domain crossing here — the bounds rest as source frames
+// and the lane's data is the source domain in every view — which is the one
+// simplification it has over the box above, which inverse-maps the
+// active-domain viewport first.
+//
+// It reports nothing at a full window, through the shared recognition
+// (trim_is_full_window): the whole song is not information, so the painter
+// draws no line rather than a line the full width of the lane.
+//
+// The span is inclusive rather than half-open, which is the other difference
+// from the box: it runs from the column containing the begin bound through the
+// column containing the end bound, both under the lane's own cell class (the
+// declaration above overview_samples_per_pixel — overview_column_containing is
+// the one floor and no caller spells a second). The end bound is itself an
+// inclusive authored frame, so its own column is the last one painted, where
+// the box's viewport end is exclusive and its span therefore half-open.
+//
+// The two bounds are ordered on the way out, because a mid-gesture pair may be
+// crossed: the store's rest invariant holds only at commit, and this reads the
+// live pair on every frame of a drag.
+bool overview_trim_span(const AppState& a, const GuiAudio& audio,
+                        int* out_x0, int* out_x1) {
+    const GuiRect lane = top_overview_row_area(a);
+    const double spp_ov = overview_samples_per_pixel(a, audio);
+    if (spp_ov <= 0.0) return false;
+    const int64_t total = audio.total_frames();
+    if (trim_is_full_window(a.trim, total)) return false;
+    int64_t b = a.trim.begin_frame;
+    int64_t e = a.trim.end_frame;
+    if (b > e) { const int64_t t = b; b = e; e = t; }
+    if (b < 0) b = 0;
+    if (e > total - 1) e = total - 1;
+    if (e < b) e = b;
+    int x0 = overview_column_containing(static_cast<double>(b), spp_ov);
+    int x1 = overview_column_containing(static_cast<double>(e), spp_ov);
+    if (x0 < 0) x0 = 0;
+    if (x0 > lane.w - 1) x0 = lane.w - 1;
+    if (x1 > lane.w - 1) x1 = lane.w - 1;
+    if (x1 < x0) x1 = x0;   // >=1px: a sub-window is never nothing
+    *out_x0 = x0;
+    *out_x1 = x1;
+    return true;
+}
+
 // The box endcaps' hit test — the trim endcap model on the box outline's two
 // edge columns (contract and the TrimHit-return reasoning at the declaration,
 // app_state.h). The bands are the 1px edges inflated by the trim bar's own

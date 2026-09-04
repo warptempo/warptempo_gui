@@ -9133,6 +9133,20 @@ bool overview_box_edge_samples(const AppState& a, const GuiAudio& audio,
 // width) with the outputs untouched.
 bool overview_box_span(const AppState& a, const GuiAudio& audio,
                        int* out_x0, int* out_x1);
+// The trim's lane columns — the whole-song place of the trim, which the 9px
+// trim bar cannot show because that lane is viewport-scaled (architect
+// 2026-09-04). Lane-relative and inclusive [*x0, *x1]: the column containing
+// the begin bound through the column containing the end bound, both under the
+// lane's cell class, the end bound being an inclusive authored frame rather
+// than the box's exclusive viewport end. No domain crossing — the trim rests
+// as source frames and the lane's data is the source domain in every view.
+// Returns false on degenerate geometry and at a full window, where the painter
+// draws nothing because the whole song is not information (the recognition is
+// the shared owner trim_window_is_full, through TrimState's forwarder). One
+// reader, paint_overview_strip's trim line; the lane's press vocabulary does
+// not consult it, the line being pointer-inert.
+bool overview_trim_span(const AppState& a, const GuiAudio& audio,
+                        int* out_x0, int* out_x1);
 // (The box endcaps' hit test, hit_test_overview_endcap, is declared beside
 // hit_test_trim_endcap below — it returns that family's TrimHit.)
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);

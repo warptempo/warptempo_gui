@@ -5625,7 +5625,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // and the deleted min/max clamp pair; it was bottom lane 0 under the unified row
 // for the afternoon it landed).
 //
-// FOUR LAYERS, bottom to top, all inside the lane:
+// FIVE LAYERS, bottom to top, all inside the lane:
 //   1. GROUND + TWO BORDERS, spelled here rather than through render_canvas:
 //      the waveform's kWaveformCanvas ground (reused rather than resampled —
 //      the lane IS a miniature of the waveform surface, and a third ground
@@ -5648,7 +5648,25 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      and the BOX does the domain work. Clipped to the lane's content band
 //      (overview_content_rect — the lane less its two border rows, which
 //      survive every frame) exactly as the plate clips to the waveform's.
-//   3. THE VIEWPORT BOX: a 1px outline marking the visible span, in
+//   3. The trim line (architect 2026-09-04): a 1px horizontal run along the
+//      lane's foot, showing where in the whole song the trim sits. That is the
+//      one thing the 9px trim bar a lane down cannot show — render_trim_flags
+//      is viewport-scaled (it takes the basis's vp_start/vp_end), so at a
+//      zoomed-in view the trim's place in the piece was shown nowhere. It sits
+//      on the lane's last pixel row, the bottom border's own, and covers it
+//      over the trim's span exactly as the tick covers both rows over its
+//      column. Its colour is the trim bar body's kTrimLaneBar — a new reader
+//      of that constant rather than a new colour, so the two surfaces that
+//      depict the trim wear one shade at two scales; the endcap shade stays
+//      the endcaps'. Its span is overview_trim_span, which reports nothing at
+//      a full window, the whole song not being information. It is drawn under
+//      the box by ruling, though the two cannot meet: the box is inside the
+//      content band and this row is outside it. It needs no damage of its own,
+//      for the box's reason — every route that writes a trim bound raises
+//      Viewport::invalidate_waveform_area, whose one rect runs the window top
+//      through the waveform's bottom and so contains this lane, per motion
+//      event during a drag and once per commit everywhere else.
+//   4. THE VIEWPORT BOX: a 1px outline marking the visible span, in
 //      kOverviewBoxLine — brightened off kRedesignLine at the lane rework
 //      (2026-08-12, "increase contrast on the outline": the outline is a
 //      GRAB SURFACE now — its edges are the endcap handles below — and the
@@ -5663,7 +5681,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      keeps within one synchronous-rebuild frame of the plate — at
 //      whole-song scale an async publish window's divergence is under a
 //      column.
-//   4. THE PLAYHEAD TICK: one kPlayheadStem column at the playhead's source
+//   5. THE PLAYHEAD TICK: one kPlayheadStem column at the playhead's source
 //      position — the scanner while one is live, the resting cursor
 //      otherwise — full LANE height, OVER BOTH border rows: this stem is a
 //      boundary line and the borders do not clip it, which is the recorded
@@ -5818,7 +5836,31 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
         cairo_restore(cr);
     }
 
-    // Layer 3 — the viewport box, off the ONE span owner the lane's hit
+    // Layer 3 — the trim line on the lane's foot, off its own span owner
+    // (overview_trim_span, app_state.cpp), which reports nothing at a full
+    // window. Its columns are the lane's cell class like everything else here,
+    // and the span is inclusive at both ends because both trim bounds are
+    // inclusive authored frames — the box below is half-open because a viewport
+    // end is exclusive. The line is pointer-inert: the lane's press vocabulary
+    // is the three gestures the header names and nothing more, so do not add a
+    // hit test for it — a press on this row is whatever the lane already makes
+    // of that column.
+    {
+        int tx0 = 0;
+        int tx1 = 0;
+        if (overview_trim_span(app, audio, &tx0, &tx1)) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
+                                 kTrimLaneBar.b);
+            cairo_rectangle(cr, lane.x + tx0, lane.y + lane.h - 1,
+                            tx1 - tx0 + 1, 1);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+    }
+
+    // Layer 4 — the viewport box, off the ONE span owner the lane's hit
     // geometry shares (overview_box_span, app_state.cpp — the arithmetic was
     // this painter's inline block until the box grew grab handles, and the
     // hoist is what makes a grabbed edge exactly a painted one). The visible
@@ -5852,7 +5894,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
         }
     }
 
-    // Layer 4 — the playhead tick: the scanner while live (its precise
+    // Layer 5 — the playhead tick: the scanner while live (its precise
     // position, the value the waveform scanner paints from), the resting
     // cursor otherwise; through the ONE column owner the damage sites share
     // (overview_tick_column), full LANE height across both border rows.

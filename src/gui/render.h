@@ -500,6 +500,12 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // them out rather than inventing a formula from three samples.
 inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
 inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
+// The body colour gained a second reader on 2026-09-04, deliberately rather
+// than a second colour: the overview strip's trim line (paint_overview_strip's
+// layer 3) paints the trim's whole-song span in kTrimLaneBar, so the two
+// surfaces that depict the trim wear one shade and read as the same object at
+// two scales. The endcap shade stays the endcaps' alone — the overview line is
+// pointer-inert and has no handles to distinguish.
 // THE MIDPOINT MARK NEEDS NO COLOUR OF ITS OWN (architect 2026-08-01, second
 // pass — he overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled
 // the crop implemented VERBATIM): the 9x9 crop is exactly a LANE-HEIGHT TILE
