@@ -7806,18 +7806,19 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 //                            list
 // Every BUTTON row is drawn with redesign_face_box, the one path every
 // button-like surface in the product is filled and framed on, at the
-// button's corner radius; a Text row skips it whole. THE BAND WEARS NO TOP
-// BORDER (architect 2026-09-03: "remove the top
-// border since now there is nothing above the player", ruled while the band
-// ran to the window's top; since that evening it starts at the TAB ROW'S
-// FIRST PIXEL under the menu row, and the seam there is the lanes' own — the
-// tab row's top edge against the menu row's ground — so the 1 px
-// kRedesignTabLine it carried from 2026-08-29 — the twin of its bottom edge,
-// which is row 8's own border-top — would double a seam that already
-// exists). The line, folder_overlay::border_h_px and the
-// content rect that subtracted it are all deleted, and the band's ground runs
-// edge to edge. (It opened 2026-08-28 with no line at its top either, the
-// keyboard's own rule; the framed reading lived between those two dates.)
+// button's corner radius; a Text row skips it whole. The band wears the tab
+// row's own top border (architect 2026-09-03 evening: "let's add the same
+// border that the tab row has up at the top — add that to the overlays").
+// The band starts at the tab row's first pixel, so it draws the line that row
+// would have drawn there — kRedesignTabLine at tab_row_border_h_px, the same
+// colour and the same scaled thickness, aliased like every chrome line — and
+// the overlay reads as the lane it replaces. It is painted inside the band as
+// its first row and comes out of the content's room
+// (folder_overlay::border_h_px and content_rect own that geometry), so the
+// surface rect, the damage rect and the hit rect are all unchanged by it. A
+// line stood here from 2026-08-29 for a different reason, framing the panel
+// off the waveform ground above, and went out with that ground for the hours
+// of 2026-09-03 the band covered the menu row.
 //
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT band (the
 // list's keyboard focus — what Enter and Load in place act on, and nothing
@@ -7848,6 +7849,22 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                          kModalFieldGround.b);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
+    // The top border, the band's first row (the block above): the tab row's
+    // own line, laid over the ground before the clip so the rows below start
+    // under it by construction — row_rect reads content_rect, which is this
+    // band less this row.
+    {
+        const int border = folder_overlay::border_h_px();
+        if (border > 0 && border < surf.h) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
+            cairo_rectangle(cr, surf.x, surf.y, surf.w, border);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+    }
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_clip(cr);
 

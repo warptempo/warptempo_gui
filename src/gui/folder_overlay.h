@@ -50,10 +50,17 @@
 // waveform's own passes paint nothing (onscreen_keyboard::waveform_paint_area,
 // whose gate reads both tenants and whose clip reads the STANDING one's own
 // rect, and which this band reduces to a zero-height rect) while the lanes
-// it covers paint and are covered. IT WEARS NO TOP BORDER: the seam above it
-// is the one the lanes already own — the tab row's own top edge against the
-// menu row's ground — and a line there would double it (the line it had
-// from 2026-08-29 is retired with the ground it separated the panel from).
+// it covers paint and are covered. It wears the tab row's own top border
+// (architect 2026-09-03 evening: "let's add the same border that the tab row
+// has up at the top — add that to the overlays"). The band starts on the tab
+// row's first pixel, so it takes the line that row would have drawn there and
+// reads as the lane it replaces: kRedesignTabLine at tab_row_border_h_px, the
+// tab row's own colour and scaled thickness, painted inside the band as its
+// first row and taken out of the content's room (border_h_px and content_rect
+// below). A line stood here from 2026-08-29 for a different reason — it
+// framed the panel off the waveform ground above — and it was retired for the
+// few hours of that day the band covered the menu row and had nothing above
+// it.
 // The architect's ruling (R3):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
@@ -236,19 +243,16 @@ inline int row_gap_px(const AppState& a) {
     return text_listing(a) ? 0 : button_row_gap_px();
 }
 
-// (THE BAND'S TOP BORDER IS RETIRED, architect 2026-09-03: "remove the top
-// border since now there is nothing above the player", said while the band
-// ran to the window's top. It stood from
-// 2026-08-29 — the bottom row's own 1 px kRedesignTabLine, read from that
-// row's accessor so the panel's two edges read alike — and its whole reason
-// was the WAVEFORM ground it ran into above. THE RETIREMENT STANDS NOW THAT
-// THE MENU ROW IS ABOVE THE BAND AGAIN (that evening's ruling, the head
-// prose): the band starts at the tab row's first pixel, whose top edge
-// against the menu row's ground is the lanes' own seam, so a line there
-// would frame the panel off a seam that already exists. `border_h_px` and
-// the `content_rect` that subtracted it are both deleted: THE CONTENT RECT
-// IS THE SURFACE RECT, and the rows, the scroll ceiling and the keep-visible
-// walk all read surface_rect directly.)
+// The band's top border, its one chrome line: the line the tab row would have
+// drawn on the pixel row the band now starts at, so the overlay reads as the
+// lane it replaces (architect 2026-09-03 evening, the head prose). It is read
+// from the tab row's own accessor rather than respelled, which is why this
+// file still owns no line number of its own; the colour, kRedesignTabLine, is
+// the painter's. Its history is short and twice-turned: a line stood here
+// from 2026-08-29, framing the panel off the waveform ground above, and it
+// went out with that ground for the hours of 2026-09-03 the band covered the
+// menu row.
+inline int border_h_px() { return tab_row_border_h_px(); }
 
 // -- Standing ----------------------------------------------------------------
 
@@ -287,11 +291,10 @@ inline int content_height_px(const AppState& a) {
 // "the band at its ceiling" rect to remember to use. (There was one —
 // band_damage_rect, whose single reader was the player's listing rebuild — and
 // it went with the growing band that gave it its reason: a rect exists iff it
-// answers a question, and the two answers are now the same rect.) SINCE
-// 2026-09-03 IT IS THE ROWS' BAND TOO: the top border retired with the ground
-// above it, and the content rect that subtracted that border went with it, so
-// the ground, the damage, the hit test, the rows and the scroll ceiling all
-// read this one rect.
+// answers a question, and the two answers are now the same rect.) It is what
+// the painter grounds, what a damage erases and what the hit test contains;
+// the rows live in the content rect below, which is this band less its top
+// border row.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -303,11 +306,25 @@ inline GuiRect surface_rect(const AppState& a) {
     return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
 }
 
+// The rows' band: the surface less its top border row. Every geometry below
+// reads this and not the surface, so the rows, the scroll ceiling and the
+// keep-visible walk all live under the line by construction. The surface rect
+// stays what the painter grounds, what a damage erases and what the hit test
+// contains, so the border costs those three nothing. A degenerate band —
+// shorter than its own border — passes through unshrunk rather than
+// inverting, the overview lane's own shape.
+inline GuiRect content_rect(const AppState& a) {
+    const GuiRect surf = surface_rect(a);
+    const int b = border_h_px();
+    if (surf.h <= b) return surf;
+    return GuiRect{surf.x, surf.y + b, surf.w, surf.h - b};
+}
+
 // -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect band = surface_rect(a);
+    const GuiRect band = content_rect(a);
     return std::max(0, content_height_px(a) - band.h);
 }
 
@@ -327,7 +344,7 @@ inline void clamp_scroll(AppState& a) {
 // read their rects from here and nowhere else). It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
-    const GuiRect band = surface_rect(a);
+    const GuiRect band = content_rect(a);
     const int h = row_height_px(a);
     const int y = band.y + pad_px() + index * (h + row_gap_px(a)) -
                   a.folder_overlay.scroll_px;
@@ -366,7 +383,7 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect band = surface_rect(a);
+    const GuiRect band = content_rect(a);
     const GuiRect r    = row_rect(a, index);
     const int top      = band.y + pad_px();
     const int bottom   = band.y + band.h - pad_px();
