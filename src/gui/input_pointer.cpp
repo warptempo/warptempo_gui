@@ -1373,7 +1373,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
         return history_mode_key_blocked(tc.key, chord, app);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
-    // (the table plus the five anchors is the whole roster) and stated rather
+    // (the table plus the four anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
@@ -5031,7 +5031,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE ONE THING THE THREE VEILS BELOW LET THROUGH (architect 2026-09-03
     // evening): the LIVE MENU ANCHOR — File. The menu row stands above the
-    // band with File lit and the other four anchors dead, so its press must
+    // band with File lit and the other three anchors dead, so its press must
     // reach the menu-row claim at the foot of this function, which sits BELOW
     // these veils, and this one local is what carries it past them. ONE OWNER
     // (press_on_live_menu_anchor, near the head of this file — the same
@@ -5057,7 +5057,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on the track, the marker drag on its band), the modal row's buttons
     // (the arm every dialog button takes) and, since 2026-09-03 evening, the
     // FILE ANCHOR above the band (the exemption above), and EVERY OTHER PRESS
-    // IS CONSUMED — the tabs, the flags, the waveform, the four dead anchors,
+    // IS CONSUMED — the tabs, the flags, the waveform, the three dead anchors,
     // the view bar, the dead roster. (File was a target under the panel on
     // 2026-09-02 too, when it stopped at row 1's foot; it was consumed here
     // for the hours between the gap's close and that evening's ruling.)
@@ -9066,7 +9066,7 @@ void GuiInputHandler::update_menu_row_exit(int mouse_x, int mouse_y) {
 // is what keeps the armed hover open out of the three overlay contents. It is
 // their rank and not the anchors' faces that does it: FILE IS LIVE above the
 // band again since 2026-09-03 evening, so toggle_dropdown's guard would admit
-// it — the four dead anchors are the ones that guard refuses. The branches
+// it — the three dead anchors are the ones that guard refuses. The branches
 // called this tail for the one day of 2026-09-02, when the panel stopped at
 // row 1's foot.)
 void GuiInputHandler::open_menu_row_anchor_on_hover(int mouse_x, int mouse_y) {

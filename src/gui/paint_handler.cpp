@@ -1515,7 +1515,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — whichever of the five anchors emitted the open
+        // well as on hover — whichever of the four anchors emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the

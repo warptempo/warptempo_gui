@@ -6312,10 +6312,10 @@ struct AppState {
     // was set_history_delta rather than a chord, and went with that
     // repurposing on 2026-08-18: row 3 is the A/B pair in every state, so a
     // press on a tab arms as Roster and dispatches Ctrl+Tab like any other.)
-    // (The FIVE dropdown ANCHORS — File, Edit, Iterations, Settings and Help,
-    // re-greped 2026-09-03 against kDropdownMenus, a Navigation anchor having
-    // left 2026-08-15 and Edit, Iterations and Help having arrived 2026-08-20,
-    // 2026-08-27 and 2026-09-03 — are
+    // (The FOUR dropdown ANCHORS — File, Edit, Settings and Help,
+    // re-greped 2026-09-04 against kDropdownMenus, a Navigation anchor having
+    // left 2026-08-15, Edit and Help having arrived 2026-08-20 and 2026-09-03,
+    // and Iterations having arrived 2026-08-27 and left 2026-09-04 — are
     // deliberately NOT armed: their toggle is the recorded press-time
     // exception, and the reasoning is at their press claim in on_button_press.
     // The claim walks kDropdownMenus, so none of those changes touched
@@ -11930,7 +11930,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     only give one. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's five anchors and row 3's tabs answer true HERE: row 1 keeps its
+//   * Row 1's four anchors and row 3's tabs answer true HERE: row 1 keeps its
 //     two faces by ruling, and a tab has no disabled face of its own. Their
 //     entries exist
 //     so the vector is total over the roster and the comparator needs no
@@ -11953,7 +11953,7 @@ inline bool playback_launch_playable(const AppState& a,
 // AV Sync Stats panel — EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
 // the arm at the head of the body defers to menu_anchor_dead_in_mode, so the
-// other four anchors and the view bar are dead with the rest).
+// other three anchors and the view bar are dead with the rest).
 // All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
@@ -12146,7 +12146,7 @@ inline bool redesign_button_enabled(const AppState& a,
     //
     // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
     // PARTITION (architect 2026-09-03 evening: the band starts at the tab
-    // row's first pixel, so row 1 — the five anchors and the view bar — is
+    // row's first pixel, so row 1 — the four anchors and the view bar — is
     // the ONE roster lane on screen while a content stands, and "everything
     // else like what we do with history: all the commands in File are
     // available in history mode. Leave that for the player, the picker and

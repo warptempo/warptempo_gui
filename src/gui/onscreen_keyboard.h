@@ -519,7 +519,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // first pixel since that evening): its band starts ABOVE the waveform, so
 // every waveform pass is clipped out whole while it stands, and the LANES it
 // also covers (rows 2..7; the menu row stands above the band, File lit and the
-// other four anchors and the view bar greyed) are not
+// other three anchors and the view bar greyed) are not
 // spared this way — their painters run and the panel covers them, because
 // they publish the roster's hit rects (the record is at the paint-order
 // block, paint_handler.cpp).
