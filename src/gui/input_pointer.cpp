@@ -1279,9 +1279,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // at all; EDIT (2026-08-20) and ITERATIONS (2026-08-27) because every one
     // of their rows is a CHORD the mode's allowlist drops, so the menu would
     // open onto nothing — the face promising more than the keys deliver, which
-    // is what this partition exists to prevent; HELP (2026-09-03) for
-    // Settings' reason, its one row being a direct call the AV sync panel's
-    // opener refuses in this view; FILE is LIVE (2026-08-13, its
+    // is what this partition exists to prevent; HELP (2026-09-03) for the same
+    // reason since its one row gained Shift+L that evening, a chord the
+    // allowlist does not name either; FILE is LIVE (2026-08-13, its
     // three rows Ctrl+Q, Ctrl+O and, since 2026-08-31, bare `\`, all on the
     // allowlist), so the menu opens onto three working rows.
     //
@@ -8195,17 +8195,14 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
             synchronize_to_external_storage();
             return true;
         }
-        // THE SECOND MEMBER OF THAT CLASS (2026-09-03): the Help menu's AV
-        // Sync Stats row. Its act has NO chord at all — not a deferred one —
-        // so the opener carries the gates a chord would have met in its own
-        // body, exactly as Synchronize's does, and the row's `key` field stays
-        // unread. Still CLOSE FIRST, THEN ACT, for the reason above: the panel
-        // takes the modal row and the whole window, and the popup must not be
-        // standing under it even for a frame.
-        if (it.act == GuiPopupAct::AvSyncStats) {
-            open_av_sync_stats();
-            return true;
-        }
+        // (THE HELP MENU'S AV SYNC STATS ROW stood in this fork for the hours
+        // of 2026-09-03 between the panel's landing and its binding. The act
+        // has Shift+L now, so the row rides the dispatch below like Quit and
+        // Open, and its arm is deleted rather than left beside a chord — the
+        // Open row's own 2026-08-28 succession. Closing first still matters
+        // for it: the panel takes the modal row and the whole window, and the
+        // popup must not stand under it even for a frame, which the dispatch
+        // below gets from this body's own ordering.)
         GuiInputState chord{};
         chord.ctrl  = it.ctrl;
         chord.shift = it.shift;

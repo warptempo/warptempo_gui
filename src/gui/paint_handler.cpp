@@ -412,10 +412,13 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // THE HELP MENU (architect 2026-09-03) — the row's FIFTH dropdown and the
     // only one painted to the RIGHT of Settings, which is what the order rule
     // above says the shell's own menu does. A COMMAND MENU of ONE row, "AV Sync
-    // Stats", and the FIRST whose row carries no accelerator at all: the act
-    // has no chord (the record is at GuiPopupAct, app_state.h), so the width
-    // rule's optional column term simply finds no hotkey and the popup is a
-    // label box — the SETTINGS menu's shape reached from the other side.
+    // Stats", which is its chord like every other command row: Shift+L since
+    // 2026-09-03 evening, so the width rule's optional column term finds a
+    // hotkey and the popup draws an accelerator column. It was the one menu
+    // whose row carried no accelerator at all for the hours before that
+    // binding — the Settings menu's shape reached from the other side — and
+    // the optional term is what let it be, no edit here being needed either
+    // way.
     // ITS LABEL COSTS THE FLOAT 54px at 100% and 118 at 225%, measured on this
     // file's own advance-width method, and the right float is untouched: the
     // collision corner is at the LEFT float's total against the view bar's,

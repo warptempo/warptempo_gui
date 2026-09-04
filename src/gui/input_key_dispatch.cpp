@@ -498,6 +498,15 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses on a locked tab inside the player (the lock's rule, at the act).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
+    // Shift+L — the AV sync stats panel (2026-09-03) — is admitted on the
+    // header's own standard, and more plainly than its bare twin: the panel
+    // reads the audio device and the compositor, shows numbers and copies
+    // them, and reaches no piece at all. Shift-exact through the shared
+    // predicate, so this entry and the dispatch arm cannot drift. The Play
+    // renders button carries the chord on its shift-click, and its face is not
+    // in redesign_button_enabled's read-only arm, so a locked tab leaves the
+    // button lit exactly as it leaves both chords live.
+    const bool is_av_sync_stats = is_av_sync_stats_key(key, mods);
     // BARE `'` IS ADMITTED OUTSIDE THE `h` VIEW AND BLOCKED INSIDE IT
     // (architect 2026-09-01, with the Load in place button's move to the
     // history group): THE STATE SELECTS WHICH ACT THE CHORD IS, and the gate
@@ -572,7 +581,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
-             is_add_to_selection || is_play_renders ||
+             is_add_to_selection || is_play_renders || is_av_sync_stats ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source);
 }
@@ -6284,14 +6293,18 @@ void GuiInputHandler::open_av_sync_stats() {
     // Open project picker's own, mirrored because this act reaches the user
     // through a MENU ROW and a menu row's refusals belong to the act.
     //
-    // ALL OF THEM ARE SILENT. There is no key road into this act, so nothing
-    // here is a press that would owe a sentence: the anchor is UNREACHABLE
-    // under a prompt, and the HELP anchor is DEAD under either of the other
-    // two folder-overlay contents, under a standing panel and in the `h` view
-    // (menu_anchor_dead_in_mode — File is the one anchor those modes leave
-    // live, and it does not carry this row). The arms stand anyway
-    // because the gate belongs with the act it refuses — the picker's own
-    // shape — not because a road takes them.
+    // All of them are silent, and none of them owes a sentence in any state a
+    // press can reach. The Help anchor is unreachable under a prompt and dead
+    // under either of the other two folder-overlay contents, under a standing
+    // panel and in the `h` view (menu_anchor_dead_in_mode — File is the one
+    // anchor those modes leave live, and it does not carry this row), so no
+    // row press arrives here refused. Shift+L, the act's chord since
+    // 2026-09-03 evening, meets its own refusals ABOVE this body: the three
+    // routers own the keyboard while their contents stand and consume it, the
+    // `h` view's allowlist cards it in the mode's own sentence, and the modal
+    // and loading gates at on_key's head swallow it before the dispatch. So
+    // the arms below are a belt on states no road delivers, standing because
+    // the gate belongs with the act it refuses — the picker's own shape.
     if (app.prompt.active) return;
     if (keyboard_modal_editor_active()) return;
     if (render_player_active()) return;
@@ -6536,6 +6549,15 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // gated body and Ctrl+O dying in the catch-all's silence (the picker's own
     // record of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+
+    // Shift+L closes, the opener's own chord answering in here exactly as bare
+    // `l` answers inside the render player. It is named ahead of the modified
+    // catch-all below for that reason: a chord that opens a mode closes it, and
+    // the toggle it belongs to never runs while this router owns the keyboard.
+    if (is_av_sync_stats_key(key, mods)) {
+        close_stats_panel();
+        return true;
+    }
 
     // THE RING: Tab / Shift+Tab walk [band, Copy to Clipboard, Close] through
     // the one modal ring route, whose list arm the three list owners share. A
@@ -7270,6 +7292,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
+    // Shift+L — the AV sync stats panel (architect 2026-09-03), bare `l`'s
+    // shifted twin and the same letter's other overlay content. It sits here
+    // rather than one rank out because the two are one pair: the gates above
+    // this handler are exactly the gates the player's own opener wants, and
+    // the panel's opener carries the rest in its own body — the modal
+    // refusals, the `h` view, the loading state — as it did while the Help
+    // menu's row was its only road. Inside the panel the chord is the mode's
+    // own closer (route_stats_panel_key) and never reaches here, which is bare
+    // `l`'s shape exactly. The Play renders button's shift-click and its long
+    // press synthesize this chord (redesign_button_shift_admits).
+    if (is_av_sync_stats_key(key, mods)) {
+        toggle_av_sync_stats();
+        return true;
+    }
+
     return false;
 }
 
@@ -7284,6 +7321,18 @@ void GuiInputHandler::toggle_render_player() {
         return;
     }
     (void)render_player.open();
+}
+
+// The AV sync stats panel's own toggle for Shift+L, toggle_render_player's
+// shape one content over: the two bodies it forks between are the panel's one
+// opener and its one close body, and it adds no gate of its own — a standing
+// panel closes, and anything else asks the opener, which refuses or raises.
+void GuiInputHandler::toggle_av_sync_stats() {
+    if (app.stats_panel.active) {
+        close_stats_panel();
+        return;
+    }
+    open_av_sync_stats();
 }
 
 bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {

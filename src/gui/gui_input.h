@@ -576,12 +576,16 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the view toggles and the
         // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
-        // selection, `l` the render player, `m` bpm mode, `t` the S/T flip,
-        // `y` the centered pin).
+        // selection, `m` bpm mode, `t` the S/T flip, `y` the centered pin).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
-        case GuiKeys::K: case GuiKeys::L: case GuiKeys::M: case GuiKeys::T:
+        case GuiKeys::K: case GuiKeys::M: case GuiKeys::T:
         case GuiKeys::Y:
             return bare;
+        // The folder overlay's two openers on one letter (2026-09-03): bare
+        // `l` toggles the render player and Shift+L toggles the AV sync stats
+        // panel. It left the bare-only group above the day the shifted twin
+        // landed.
+        case GuiKeys::L: return bare || sh;
         // -- THE `h` VIEW'S OWN BARE LETTERS, bound while it stands and unbound
         // outside it (2026-09-01, U4): `g` the walk source, `u` the compare
         // reading — both handle_history_mode_key's, behind its mode return —
@@ -701,6 +705,13 @@ static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
                                   GuiInputState{true, false, false}, false),
               "Synchronize is bare backslash and no decoration of it");
+static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::L,
+                                 GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{true, false, false}, false),
+              "`l` binds bare and shifted only — the render player and its "
+              "shifted twin the AV sync stats panel");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
                                  GuiInputState{false, true, false}, false) &&
@@ -860,6 +871,26 @@ inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
 // content, exactly as bare `s` is) — and the same one-owner reason.
 inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
+}
+
+// True for the chord that opens and closes the AV sync stats panel (architect
+// 2026-09-03): Shift+L exactly, no ctrl and no alt. Bare `l` is the render
+// player's opener and this is its shifted twin, so the folder overlay's two
+// list-and-panel contents sit on one letter in the shape `s` / Shift+S and
+// `j` / Shift+J already carry. The shifted `l` was the strict rule's consumed
+// no-op until this date, so the binding costs no other chord anything. The act
+// is GuiInputHandler::toggle_av_sync_stats, whose open half carries every gate
+// in its own body — the modal refusals, the `h` view, the loading state — which
+// is what let the Help menu's row reach it with no chord at all until now.
+// Three readers, the shape shared so none can drift: on_key's dispatch arm
+// (handle_mode_keys, beside bare `l`), the read-only allowlist
+// (read_only_key_blocked, which admits it — the panel measures the hardware and
+// authors nothing) and the panel's own router, where this same chord is the
+// closer. The `h` view refuses it at that mode's allowlist like every chord it
+// does not name, which is the same answer the dead Help anchor gives the
+// pointer in there.
+inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::L && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the

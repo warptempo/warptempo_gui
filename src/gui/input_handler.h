@@ -2801,16 +2801,20 @@ private:
     // it shows and why the two figures mean what they do is at
     // av_sync_stats.h; what is here is the mode.
     //
-    // ONE OPENER AND ONE ROAD TO IT: the Help menu's one row, whose release
-    // calls open_av_sync_stats directly (GuiPopupAct::AvSyncStats — the act
-    // has no chord, so the gates a chord would have met live in the opener's
-    // own body, SyncExternal's shape). It refuses — silently, touching no
-    // playback — under a prompt, under any keyboard-modal editor, under the
-    // render player, under a picker, under a standing panel, in the `h`
-    // history view and during a load; past every one of those it takes the
-    // shared modal stop (stop_playback_for_modal_open, whose decision table
-    // names every dialog modal surface), raises the band and ARMS THE DISPLAY
-    // MEASUREMENT.
+    // ONE OPENER, REACHED THREE WAYS since 2026-09-03: the Help menu's row,
+    // which is its chord like every other command row and dispatches Shift+L
+    // through on_key; that chord pressed on the keyboard (is_av_sync_stats_key,
+    // gui_input.h — bare `l`'s shifted twin, both toggles of one overlay); and
+    // the Play renders button's shift-click or long press, which synthesizes
+    // the same chord. The row carried no chord at all from the panel's landing
+    // that morning until that evening, the opener's own body holding the gates
+    // a chord would have met; the gates stayed where they are and the road
+    // count changed. The opener refuses — silently, touching no playback —
+    // under a prompt, under any keyboard-modal editor, under the render
+    // player, under a picker, under a standing panel, in the `h` history view
+    // and during a load; past every one of those it takes the shared modal
+    // stop (stop_playback_for_modal_open, whose decision table names every
+    // dialog modal surface), raises the band and arms the display measurement.
     //
     // THE MEASUREMENTS RUN ONLY WHILE IT STANDS, which is the feature and not
     // an optimization (the architect's ruling). Three things are gated and
@@ -2822,7 +2826,9 @@ private:
     // that same refresh, called from the run loop's tick under the mode bit
     // (main.cpp) and from nowhere else.
     //
-    //   open_av_sync_stats:       the opener (above).
+    //   open_av_sync_stats:       the opener (above), with
+    //     toggle_av_sync_stats the keyboard's toggle over it and the one close
+    //     body.
     //   close_stats_panel:        THE ONE CLOSE BODY — Esc, the Close button
     //     and Ctrl+Q's / the compositor's close road (GuiPrompt::request_close,
     //     beside the player's and the picker's) all pass through it. It
@@ -2841,12 +2847,22 @@ private:
     //     THE BAND (there is no
     //     highlight to walk — which is exactly why this panel could not reuse
     //     route_picker_key and needed a modal owner of its own, the record
-    //     being at AppState::ModalDialogOwner); every other bare key and every
-    //     other modified chord is consumed, silently.
+    //     being at AppState::ModalDialogOwner); Shift+L closes, the opener's
+    //     own chord answering in here as bare `l` answers inside the player;
+    //     every other bare key and every other modified chord is consumed,
+    //     silently.
     //
     // No undo, nothing authored, LEGAL ON A READ-ONLY TAB — it reads hardware
     // and touches no piece.
     void open_av_sync_stats();
+    // The panel's opener toggle for Shift+L (2026-09-03), bare `l`'s shifted
+    // twin and toggle_render_player's own shape: a standing panel closes
+    // through the one close body, and anything else opens through the one
+    // opener above, whose gates decide whether the open happens at all. Two
+    // callers, both keyboard: the dispatch arm in handle_mode_keys beside bare
+    // `l`, and the Play renders button's shift-click or long press, which
+    // synthesizes that same chord.
+    void toggle_av_sync_stats();
     // Compose the rows from the two live readings and seat them in the
     // overlay's table (the TABLE alone, so a refresh keeps the scroll offset
     // and the band's press arm). A frame in which no line changed leaves the

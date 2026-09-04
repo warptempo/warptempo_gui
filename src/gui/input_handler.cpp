@@ -1623,9 +1623,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // P / I / M / K / L letter keys plus the MEASURE PROPAGATE'S TWO SLASH
     // CHORDS (phase-reset clipboard, view toggle, iteration, bpm mode,
-    // add-to-selection, listen, and Ctrl+/ / Ctrl+Alt+/). Bare `/` never
-    // reaches here — its own arm above claims it — so the two chords fall
-    // through to this dispatch exactly as Ctrl+P does.
+    // add-to-selection, the render player on bare `l` and the AV sync stats
+    // panel on its shifted twin since 2026-09-03, and Ctrl+/ / Ctrl+Alt+/).
+    // Bare `/` never reaches here — its own arm above claims it — so the two
+    // chords fall through to this dispatch exactly as Ctrl+P does.
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the

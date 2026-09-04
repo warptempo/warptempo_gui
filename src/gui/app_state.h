@@ -3196,8 +3196,7 @@ inline constexpr int kSettingsPopupItemCount =
 //
 // IT HAS FOUR INSTANCES SINCE 2026-09-03 — the FILE table below
 // (2026-08-13), the EDIT one beside it (2026-08-20), SERIES (2026-08-27) and
-// HELP (2026-09-03, the one instance whose rows carry NO accelerator at all) —
-// and it was always going to grow them: it was
+// HELP (2026-09-03) — and it was always going to grow them: it was
 // two from 2026-08-02 until 2026-08-15 (NAVIGATION was the other, and the
 // first — this row type is its shape, which File then landed on with no edit to
 // the painter or the release at all), one for five days, two again, and three
@@ -3242,20 +3241,18 @@ inline constexpr int kSettingsPopupItemCount =
 // enumerator is deleted rather than left producer-less. A future act that
 // genuinely cannot have a chord takes SyncExternal's shape.
 //
-// AND ONE DID, 2026-09-03: `AvSyncStats`, the Help menu's one row, is a SECOND
-// MEMBER OF THAT CLASS AND NOT A NEW EXCEPTION. The AV sync panel is opened
-// from that row and from nowhere else — no chord spells it, the convention
-// having no room for one that would not collide, and none is wanted: the panel
-// is a hardware check reached a handful of times, which is what a menu is for.
-// Its opener carries in its own body every gate a chord would have met (the
-// modal refusals, the `h` view, the loading state — GuiInputHandler::
-// open_av_sync_stats), which is exactly what made a chord-less row possible in
-// SyncExternal's case, and its `key` field stays unread the same way, the
-// release forking on `act` above the chord composition. The difference from
-// Synchronize is only that this act has no second road: Synchronize's bare `\`
-// arrived later and both roads reach one body, while this one has the menu row
-// alone.
-enum class GuiPopupAct : uint8_t { Chord, SyncExternal, AvSyncStats };
+// ONE MORE JOINED AND LEFT THE SAME DAY, 2026-09-03: `AvSyncStats`, the Help
+// menu's one row, stood as a second member of that class from the panel's
+// landing that morning until the architect gave the act Shift+L that evening
+// ("bare `l` opens the player, Shift+L the AV sync stats"). The row is an
+// ordinary `Chord` row now, dispatching its chord through on_key like Quit and
+// Open, and the enumerator is deleted rather than left producer-less — Open's
+// own 2026-08-28 succession exactly, and for the same reason: an act that has
+// a chord has no business forking the release. Nothing about the opener
+// changed, its body still carrying every gate the chord meets. So the class
+// has ONE MEMBER AGAIN, SyncExternal, and a future act that genuinely cannot
+// have a chord takes its shape.
+enum class GuiPopupAct : uint8_t { Chord, SyncExternal };
 
 struct CommandPopupItem {
     const char* label;
@@ -3492,26 +3489,28 @@ inline constexpr int kSeriesPopupItemCount =
 // stick's mirror act, so the title says what the panel measures instead of
 // what it does.
 //
-// IT CARRIES NO ACCELERATOR AT ALL, and the width rule reads that off the ROWS
-// rather than off the menu (paint_dropdown's optional column term): a null
-// `hotkey` on every row means no accelerator column, which is the SETTINGS
-// menu's shape arrived at from the other side — that menu has no chords
-// because its rows open an editor, this one because its row's act has no chord
-// (the record is at GuiPopupAct). So `key` and the three modifier bits below
-// are all zero and all unread; the release forks on `act` and calls the panel's
-// opener directly.
+// THE ROW IS ITS CHORD, Shift+L, like every other command row in the product
+// (architect 2026-09-03 evening, the same day the panel landed chord-less):
+// bare `l` opens the render player and its shifted twin opens this panel, the
+// folder overlay's two contents on one letter. So the release dispatches the
+// chord through on_key and the panel's opener meets the keyboard's own gates,
+// which is what the act was always built for — it carried those gates in its
+// own body while the row was its only road, and it still does. The menu drew
+// no accelerator column at all for the hours before the binding, its one row's
+// `hotkey` being null (the width rule reads the column off the ROWS rather
+// than off the menu, paint_dropdown's optional column term); the column is
+// there now with the one chord in it.
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems.
 // This row cannot refuse for any reason a user can reach anyway: THE ANCHOR
 // ITSELF is dead in the `h` history view and under every folder-overlay
 // content (menu_anchor_dead_in_mode, whose criterion this row IS in both —
-// the panel's opener refuses under a standing player, picker or panel and in
-// the view, so HELP would open onto nothing; FILE is the one anchor those
-// modes leave live and it does not carry this row), and under a prompt or an
-// editor the row is unreachable, the veil consuming the press.
+// the view's allowlist drops Shift+L and the three routers consume it, so
+// HELP would open onto nothing; FILE is the one anchor those modes leave live
+// and it does not carry this row), and under a prompt or an editor the row is
+// unreachable, the veil consuming the press.
 inline constexpr CommandPopupItem kHelpPopupItems[] = {
-    {"AV Sync Stats", nullptr, 0, false, false, false, false,
-     GuiPopupAct::AvSyncStats},
+    {"AV Sync Stats", "Shift+L", GuiKeys::L, false, true, false, false},
 };
 inline constexpr int kHelpPopupItemCount =
     static_cast<int>(std::size(kHelpPopupItems));
@@ -10662,12 +10661,14 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // THE CRITERION: an anchor whose every row the mode consumes would open onto
 // nothing, which is the face promising more than the keys deliver. SETTINGS is
 // dead because its rows reach the settings editor by a DIRECT call that meets
-// no gate at all; EDIT (2026-08-20) and ITERATIONS (2026-08-27) because every
-// one of their rows is a chord the view's allowlist drops; and HELP
-// (2026-09-03) because its one row reaches the AV sync panel by a DIRECT call
-// the panel's own opener REFUSES in this view — Settings' case exactly, a
-// direct-call row whose act says no here — so the menu would open onto
-// nothing. That is the criterion working rather than a carve-out. FILE is LIVE
+// no gate at all; EDIT (2026-08-20), ITERATIONS (2026-08-27) and HELP
+// (2026-09-03) because every one of their rows is a chord the view's allowlist
+// drops — Help's one row is Shift+L since that evening, and the allowlist does
+// not name it, so the menu would open onto nothing. (Help was Settings' case
+// for the hours its row had no chord at all and reached the panel by a direct
+// call the opener refuses in here; the binding moved it one criterion over and
+// the answer did not change.) That is the criterion working rather than a
+// carve-out. FILE is LIVE
 // (2026-08-13): its three rows — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
 // `\` — are all on the allowlist, so its menu opens onto three working rows.
 //
@@ -10695,8 +10696,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // unbound-keys ruling, each router's catch-all) — one row of three, which is
 // not "every row would open onto nothing" and so not a reason to kill the
 // anchor. The other four die under the band for their `h`-view reasons said
-// once above: Settings and Help are direct calls their acts refuse under a
-// modal, Edit and Iterations are chords every router drops.
+// once above: Settings is a direct call its act refuses under a modal, and
+// Edit, Iterations and Help are chords every router drops.
 //
 // THE FACE IS redesign_button_enabled's FIRST ARM (which asks this owner for
 // the anchors and greys everything else under the band) and THE PRESS IS THE
@@ -11421,6 +11422,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // `h` view greys it through the derived partition above, bare `l`
         // being consumed in there. THE LOAD is what the lock refuses, and that
         // refusal belongs to the player's own Load in place button.
+        // Its shifted twin (Shift+L, the AV sync stats panel — 2026-09-03)
+        // costs this arm nothing, and the twin rule says why: an arm greys
+        // only where BOTH admitted forms would change nothing, and neither
+        // form is mirrored here at all. The `h` view's partition answers for
+        // both, its allowlist dropping the shifted chord exactly as it drops
+        // the bare one.
         case RedesignButton::IconListen:
         // THE READ-ONLY TOGGLE MIRRORS NOTHING (2026-08-14): bare `o` is
         // always meaningful on a loaded piece — it locks a writable tab and
@@ -12556,6 +12563,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // take the stream of single steps away from the panel that has no other road
 // to it. The admission stays because the SHIFT-CLICK is real and because the
 // tooltip's second line is bound to this predicate.)
+// (PLAY RENDERS JOINED 2026-09-03 EVENING, with Shift+L: its plain act opens
+// the render player and its shifted twin opens the AV sync stats panel — the
+// same rule as the drop's and the copy's above, a shift-enabled gesture whose
+// bare form has a button. The long press is what the admission is really for
+// here: this is the tablet's first road to the panel that is not the Help
+// menu, and the panel is a hardware check a glass rig wants most.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconShowRegion ||
@@ -12564,6 +12577,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportPlayStop ||
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconCopyValue ||
+           b == RedesignButton::IconListen ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown ||
            b == RedesignButton::TransportLeft ||
@@ -12842,7 +12856,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // KEYS are untouched: bare `'` still opens the player from the
         // keyboard outside the view, an alias the no-second-road doctrine
         // permits because that doctrine is about pointer homes.
-        case RedesignButton::IconListen: return {"Play Renders (L)", nullptr};
+        // ITS SECOND LINE ARRIVED 2026-09-03 EVENING with Shift+L, the AV sync
+        // stats panel — the shift-twin rule, one letter carrying the folder
+        // overlay's two contents.
+        case RedesignButton::IconListen:
+            return {"Play Renders (L)", "Press Shift for the AV sync stats."};
         // THE READ-ONLY TOGGLE (2026-08-14), one line: bare `o` toggles and
         // has no shifted twin. The TEXT NAMES THE TOGGLE (the lamp rule at
         // this table's head) while the glyph and the lamp carry the state;
