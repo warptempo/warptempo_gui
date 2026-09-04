@@ -377,6 +377,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // locked tab by the same answer.
     const bool is_center_on_next =
         (key == GuiKeys::N && !ctrl && !shift && !alt);
+    // RESTRICT UNDO TO VIEWPORT, bare `z` (2026-09-04): the same reasoning
+    // once more — the bit decides whether an undo RUNS and authors nothing the
+    // lock protects, so the switch is admitted on a locked tab and its button
+    // stays lit there. Ctrl+Z and Ctrl+Shift+Z are NOT on this allowlist and
+    // do not join it: the acts the lamp governs are exactly what the lock
+    // refuses.
+    const bool is_restrict_undo =
+        (key == GuiKeys::Z && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
@@ -586,6 +594,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
              is_follow || is_centered || is_center_on_next ||
+             is_restrict_undo ||
              is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -8131,6 +8140,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // settings editor's `centered=` commit and the icon-row button's
         // synthesized chord. History-less, one-shot, follow's own shape.
         playback_lifecycle.set_centered_mode(!app.centered_mode);
+        break;
+    case GuiKeys::Z:
+        // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
+        // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
+        // icon-row button's synthesized chord and with nothing else — the bit
+        // is session-only, so there is no settings commit to share it with.
+        // History-less, one-shot, the centered pin's own shape — and nothing
+        // moves at the press: the bit is read at the NEXT Ctrl+Z, through
+        // undo_step_permitted_by_viewport_lamp, and by nothing else.
+        set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
         break;
     case GuiKeys::N:
         // Toggle the Center on next marker lamp (2026-09-04). The setter is

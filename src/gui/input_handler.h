@@ -3874,6 +3874,28 @@ private:
     // already on screen.
     void set_center_on_next_marker(bool desired);
 
+    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE SETTER (architect 2026-09-04) —
+    // set_center_on_next_marker's shape with ONE road instead of two: bare `z`,
+    // which the icon row's own button reaches by synthesizing that press. There
+    // is no settings-editor road, because there is no key: the bit is
+    // SESSION-ONLY (AppState::restrict_undo_to_viewport), off at every launch,
+    // in no sidecar and in no vocabulary.
+    //
+    // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
+    // restore would move the viewport refuses, cards and leaves both stacks
+    // untouched; the verdict has one owner,
+    // undo_step_permitted_by_viewport_lamp (app_state.h), which the Ctrl+Z arm,
+    // the two buttons' faces and their tooltips' reasons all read. The bit
+    // reaches no camera, no walk and no other act.
+    //
+    // What it does: writes the field. No damage call — the lamp's face and the
+    // two faces it can grey all ride the per-tick comparator like every other
+    // stateful button face, and no glyph swaps on this bit. History-less: no
+    // undo entry, no dirty bit, and nothing to persist. Nothing moves at the
+    // toggle either way — the bit is read at the NEXT Ctrl+Z, so lighting it
+    // changes nothing already on screen.
+    void set_restrict_undo_to_viewport(bool desired);
+
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare
     // horizontal arrows step one painted column per press; the lane decides WHAT

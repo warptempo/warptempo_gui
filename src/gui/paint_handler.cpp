@@ -833,9 +833,11 @@ struct IconRowDef {
     icons::Icon    icon;
 };
 constexpr IconRowDef kIconRowButtons[] = {
-    // THE TOOLBAR FOUR — the row's FIRST GROUP since the 2026-08-12 grand
+    // THE TOOLBAR GROUP — the row's FIRST since the 2026-08-12 grand
     // relayout dissolved row 2 (architect: the labeled lane goes, "the icon
-    // to represent all those various meanings"): Save, Undo, Redo, Render at
+    // to represent all those various meanings"): Save, Undo, Redo, THE
+    // RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04, the group's fifth) and
+    // Render at
     // the row's left, the SAME chords, gates, disabled derivations and
     // stateful faces the labeled buttons carried — only the FACE is a glyph
     // in the 32px box now (Save's VcsCommit swap and Render's DialogCancel
@@ -845,6 +847,16 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
+    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) stands inside the
+    // toolbar group and TOUCHING THE PAIR IT GOVERNS, which is why it is here
+    // rather than at the viewport group's tail behind the centered pin: the
+    // rule is about undo first and the camera second, and a lamp four buttons
+    // away among the zoom acts would hide which two buttons it changes.
+    // Breeze's timeline-lift, a clip's two end brackets with a red cross
+    // between them — a stretch of timeline the editor declines to travel. It
+    // joins the group rather than opening one, so the row gains one box and one
+    // 2px gap and no separator moves.
+    {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
     // THE TWO VIEW LAMPS (architect 2026-09-04, the radio-pair collapse): one
     // button per axis where four radios stood. Each wears THE LIT STATE'S OWN

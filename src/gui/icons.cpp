@@ -268,6 +268,35 @@ constexpr IconPath kZoomNextPaths[] = {
      ".601562-0.5996094z"},
 };
 
+// THE RESTRICT-UNDO-TO-VIEWPORT LAMP's icon (2026-09-04, the architect's
+// pick): timeline-lift, a clip's two end brackets with a red cross standing
+// between them — a stretch of timeline the editor declines to travel, which is
+// what the lamp does to an undo whose restore would carry the camera off the
+// stretch on screen. THREE paths in file order, TWO COLOURS: the brackets and
+// their two tick marks are the scheme's #fcfcfc, the cross carries its own
+// literal #d24d57. Command coverage: relative `m` with implicit repetition,
+// absolute `M` with `H` / `V`, absolute `M` with implicit absolute linetos, and
+// `z` — every one of them an arm the interpreter already reads. The first
+// path's two rectangles wind alike and nest in nothing, so the nonzero fill
+// leaves both solid.
+//
+// ITS RED IS ITS OWN LITERAL, not a reference to preview-render-on's pip even
+// though both files write #d24d57: the two coincide by shared Breeze ancestry,
+// which is exactly what media-record's #da4453 and the marker ring say about
+// each other at the head of this table.
+constexpr GuiColor kIconLiftCross = hex(0xD24D57);
+
+constexpr IconPath kTimelineLiftPaths[] = {
+    {kIconText,
+     "m 3,11 0,4 4,0 0,-4 -4,0 z m 12,0 0,4 4,0 0,-4 -4,0 z"},
+    {kIconText,
+     "M6 10H7V11H6zM15 10H16V11H15z"},
+    {kIconLiftCross,
+     "M 9.207,10.5 8.5,11.207 10.293,13 8.5,14.793 9.207,15.5 11,13.707 "
+     "12.793,15.5 13.5,14.793 11.707,13 13.5,11.207 12.793,10.5 11,12.293 "
+     "9.207,10.5 Z"},
+};
+
 constexpr IconPath kPreviewRenderOnPaths[] = {
     {kIconText,
      "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
@@ -1183,6 +1212,7 @@ constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kAlignHorizontalCenter {22.0, kAlignHorizontalCenterPaths, 1};
 constexpr IconDef kZoomNext           {22.0, kZoomNextPaths,            1};
+constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
@@ -1241,6 +1271,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoJump:              return kGoJump;
         case Icon::AlignHorizontalCenter: return kAlignHorizontalCenter;
         case Icon::ZoomNext:            return kZoomNext;
+        case Icon::TimelineLift:        return kTimelineLift;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;

@@ -227,6 +227,12 @@ enum class Icon {
     // into view, which is what the Tab walk's framing does. A verbatim 22px
     // transcription for the Center on next marker lamp.
     ZoomNext,            // Toggle center on next marker (`n`)
+    // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
+    // end brackets with a red cross between them — a stretch of timeline the
+    // editor declines to travel. The lamp it wears refuses an undo whose
+    // restore would carry the camera off the stretch on screen. A verbatim
+    // 22px transcription, and the roster's fourth two-colour file.
+    TimelineLift,        // Toggle restrict undo to viewport (`z`)
     PreviewRenderOn,     // Listen to a render
     // THE CHECKMARK HAS TWO READERS SINCE 2026-09-01, one per surface that
     // runs a load in place: the ICON ROW's button (the `h` view's load, its
@@ -470,6 +476,14 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
+// 56 SINCE 2026-09-04, THE RESTRICT-UNDO-TO-VIEWPORT LAMP: 55 + timeline-lift,
+// one fresh verbatim transcription with no departure beside it — two
+// `.ColorScheme-Text` paths and one carrying its own literal #d24d57, which is
+// media-record's and preview-render-on's shape a third time. (55 was the
+// CENTER ON NEXT MARKER lamp's zoom-next earlier the same day, which added its
+// enumerator without a line here; the 55 above is a re-COUNT of the
+// enumerators, per the inventory-retell rule, and not an increment of a stale
+// value.)
 // 51 SINCE 2026-08-28, THE PLAYER ROW'S PAUSE FACE: 50 + media-playback-pause,
 // one fresh transcription for R36's Play/Pause + Stop pair — two `m` subpaths
 // of m/v/h/z in one `d`, the arms media-playback-stop and the two skips
@@ -577,7 +591,7 @@ enum class Icon {
 // stale value, per the inventory-retell rule; the drift cost exactly what this
 // header says it costs — one icon's once-per-icon diagnostic latch, the latch
 // being bounds-checked — and nothing else.
-inline constexpr int kIconCount = 55;
+inline constexpr int kIconCount = 56;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -28,55 +28,16 @@
 
 namespace {
 
-// THE ROW EQUALITY BASIS, ONE ENUMERATION PER COLUMN AND TWO READERS (hoisted
-// out of the post-restore matcher's own two lambdas 2026-09-01, when the
-// net-zero pop below needed the same question asked of a whole store and a
-// second spelling of a field list would have been exactly the drift the "one
-// authoritative enumeration per concept" preference exists to prevent).
-// `differ(a, b)` is false exactly when the two rows are identical in EVERY
-// field the store holds, serialized and session-only alike — row identity means
-// the WHOLE struct. THE TWO READERS: apply_post_restore_rules_impl's same-count
-// arm, which asks it of one row pair at a time to reconstruct a touched set,
-// and entry_restores_live_marker_stores below, which asks it of a whole store.
-// EXACT COMPARES, no epsilon and no re-rounding: an authored position is a
-// whole frame and an authored tempo whole cents BY TYPE, and the two double
-// fields (tempo_scale, the bpm bracket) are compared as stored — what a restore
-// would write back, field for field.
-bool warp_row_fields_differ(const GuiWarpMarker& a, const GuiWarpMarker& b) {
-    return a.time_frame     != b.time_frame
-        || a.disabled       != b.disabled
-        || a.tempo_inherits != b.tempo_inherits
-        || a.tempo_cents    != b.tempo_cents
-        || a.tempo_scale    != b.tempo_scale
-        || a.label_def      != b.label_def
-        || a.label_ref      != b.label_ref
-        // The measure is a serialized field like the rest: a measure-only undo
-        // mutates nothing else, so omitting it would strand the selection
-        // exactly as an omitted bracket would.
-        || a.measure        != b.measure
-        // Session-only iter/bpm fields ride undo snapshots too, and row
-        // identity means the WHOLE struct: an iteration-bracket-only or
-        // bpm-only undo mutates only these, so omitting them would leave the
-        // same-count matcher finding no touched row and stranding the
-        // selection. Every GuiWarpMarker field beyond the serialized eight
-        // above.
-        || a.iter_start_cents != b.iter_start_cents
-        || a.iter_end_cents   != b.iter_end_cents
-        || a.bpm_owner        != b.bpm_owner
-        || a.bpm_beats        != b.bpm_beats
-        || a.bpm_lo           != b.bpm_lo
-        || a.bpm_hi           != b.bpm_hi
-        || a.bpm_endpoint     != b.bpm_endpoint;
-}
-
-bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
-                                   const GuiPhaseResetMarker& b) {
-    return a.time_frame != b.time_frame
-        || a.disabled   != b.disabled
-        // The measure, for the warp column's reason: a measure-only undo
-        // mutates nothing else, and row identity means the whole struct.
-        || a.measure    != b.measure;
-}
+// THE ROW EQUALITY BASIS AND THE TOUCHED-SET RECONSTRUCTION BOTH LIVE IN
+// app_state.h since 2026-09-04 — warp_row_fields_differ,
+// phase_reset_row_fields_differ and restore_touched_indices — where the
+// Restrict undo to viewport lamp's predicate can reach them: that lamp greys
+// the Undo and Redo buttons on the touched set a restore WOULD produce, and a
+// face compiled in that header cannot ask a matcher that lives here. The
+// enumerations and the matcher's arms are unchanged and their argument is at
+// their new home. This file is still their applier and, through
+// entry_restores_live_marker_stores below, still asks the row question of a
+// whole store.
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks
@@ -579,24 +540,41 @@ void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
 
 namespace {
 
-// Shared post-restore SELECTION rule for both marker lists. After a marker
-// swap, classify before -> after as add / remove / same-count and set the
-// selection to the touched markers. `fields_differ` is the ROW EQUALITY basis:
-// !fields_differ(a, b) means the two rows are identical, which the same-count
-// branch uses for identity matching. All three branches consume by exact
-// multiset matching — no epsilon, no double widening, no re-rounding — and
-// multiplicity-aware, each before-row matching at most one after-row: add /
-// remove match on the whole-int64-source-frame time (`time_frame`), same-count
-// matches on the FULL row (every field, via !fields_differ). So a crossing drag
-// that reorders the store still flags only the changed row, and when one of two
-// exactly coincident markers is touched, the tie's moved member is still
-// identified. This resolves the touched set, writes it as the selection, and
-// picks the EARLIEST touched marker as focus (equal members; the tempo step's
+// Shared post-restore SELECTION rule for both marker lists: take the touched
+// set a restore of `entry` produces and make it the selection, with the
+// EARLIEST touched marker as focus (all members are equal; the tempo step's
 // re-land and Tab's start both tolerate it, and a singleton's earliest IS the
 // touched marker).
-// THE TOUCHED SET WINS UNCONDITIONALLY, the empty case included — an empty set
-// EMPTIES the selection rather than leaving the prior one standing (the derivation
-// is at that branch below; it is what closes the tab-entry auto-select hole).
+//
+// THE RECONSTRUCTION IS NOT THIS FUNCTION'S — restore_touched_indices
+// (app_state.h) owns it, and this is its applier. The classification, the
+// identity hints, the three count arms and the row-equality basis they consume
+// are all stated there, where the Restrict undo to viewport lamp's predicate
+// asks the same question of the same entry before the restore runs.
+//
+// THE TOUCHED SET WINS UNCONDITIONALLY, THE EMPTY CASE INCLUDED — an empty set
+// EMPTIES the selection rather than leaving the prior one standing, and the
+// world changed under the old fall-through: it used to preserve "whatever the
+// user had", which was a defensible thing to keep. Since the never-parked
+// selection ruling (architect 2026-07-29) the entry's TAB SWITCH
+// (restore_history_entry runs it before the stores are restored) ends in
+// COINCIDENCE AUTO-SELECT, so what a fall-through preserves is a MACHINE GUESS
+// — the destination tab's stored cursor happening to stand on a marker — and
+// the visual tail then treats that guess as though the undo had touched it: a
+// spurious land, recenter, and an ARMED MARKER LANE after an undo that changed
+// no marker in this column. Emptying instead makes the standing rule ("the
+// restore's touched set wins over the tab-entry auto-select in every reachable
+// case") true with no exception, and it is not a SELECT — the same shape the
+// 'S' arm uses. REACHABILITY, the reachable sequence: `push_undo_both` (notably
+// the render-entry LOAD-IN-PLACE, which records the current marker mode and the
+// dispatch tab while the entry may change only engine settings and/or the OTHER
+// column) leaves the active column's vector byte-identical, so undoing it from
+// the other tab auto-selects on arrival and the active-column diff then finds
+// nothing. A REMOVAL reaches the same empty answer for its own reason — it
+// leaves no touched row to select at all — and both take this one clear, which
+// runs through the Selection mutator so the region, the shift anchor and the
+// subject-change damage are all handled by their owner.
+//
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
 // the universal land-on-the-focus rule at land_playhead_on_marker) and the
@@ -608,124 +586,14 @@ void apply_post_restore_rules_impl(AppState& app,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
                                    FieldsDiffer  fields_differ) {
-    std::set<int> target_set;
-
-    // Explicit identity hints first (the position movers — the reposition drag and
-    // the two nudges): entry.touched_snapshot
-    // names the touched marker directly in THIS entry's snapshot coordinates,
-    // which are exactly `after` (the state a restore of this entry produced). Use
-    // them verbatim, bounds-filtered against `after` defensively; only when they
-    // are absent (every hint-less producer) or filter empty (defensive) does the
-    // diff reconstruction below run. The hints exist because that diff matcher
-    // cannot tell a moved row from an untouched one when a column-snapped move
-    // lands field-identical at another row's position.
-    if (!entry.touched_snapshot.empty()) {
-        for (int idx : entry.touched_snapshot) {
-            if (idx >= 0 && idx < static_cast<int>(after.size()))
-                target_set.insert(idx);
-        }
-    }
-
-    if (!target_set.empty()) {
-        // Hints resolved the touched set — skip the diff reconstruction entirely.
-    } else if (after.size() > before.size()) {
-        std::multiset<int64_t> before_frames;
-        for (const auto& m : before) before_frames.insert(m.time_frame);
-        for (size_t i = 0; i < after.size(); ++i) {
-            auto it = before_frames.find(after[i].time_frame);
-            if (it != before_frames.end()) {
-                before_frames.erase(it);  // consume: one match per row
-            } else {
-                target_set.insert(static_cast<int>(i));
-            }
-        }
-    } else if (after.size() < before.size()) {
-        // A removal leaves no touched row to select — clear the selection.
-        // The empty post-sanitize selection then takes the visual tail's
-        // size == 0 arm in restore_history_entry: no land, no region, playhead
-        // and viewport still (clear_selection's damage is paint-only).
-        // Same body as the NOTHING-TOUCHED empty-target_set arm below (this
-        // branch is reachable only when target_set is provably still empty
-        // here) — kept as its own arm rather than falling through so the
-        // removal case reads locally; a future edit to "touched set wins
-        // unconditionally" must update both arms.
-        selection.clear_selection();
-        return;
-    } else {  // same count: identity-based row matching
-        // A crossing drag reorders the store (reorder_markers_by_time), so
-        // before and after are a permutation plus one changed row: comparing
-        // before[i] vs after[i] POSITIONALLY would flag every passed-over
-        // marker (each sits at a shifted index and differs from its
-        // counterpart). Match by identity instead, mirroring the add/remove
-        // branches: an after-row is untouched iff it exactly equals some
-        // not-yet-consumed before-row, each before-row consumed at most once.
-        // The unmatched after-rows are the touched set.
-        //
-        // Plain O(n^2) consume (a used[] flag over `before`, inner scan with
-        // !fields_differ) rather than a std::multiset: marker lists are small,
-        // and this avoids inventing a strict ordering over the mixed field
-        // tuple (label strings, doubles) a multiset key would need.
-        //
-        // Consequences: a pure permutation with no field change (a stable-sort
-        // tie reorder) matches every row and yields an empty touched set — no
-        // selection change, correct; coincident equal rows are handled by the
-        // one-match-per-row consumption exactly like the add/remove branches.
-        // This matcher CANNOT distinguish a moved row that lands field-identical
-        // to an untouched row (a column-snapped move onto a row-identical marker)
-        // from that untouched
-        // row — it would flag the wrong subset. The position movers therefore
-        // supply explicit touched_snapshot hints (consumed above), and this
-        // diff matcher is only the fallback for hint-less producers, where such
-        // collisions do not arise.
-        std::vector<char> used(before.size(), 0);
-        for (size_t i = 0; i < after.size(); ++i) {
-            bool matched = false;
-            for (size_t j = 0; j < before.size(); ++j) {
-                if (!used[j] && !fields_differ(after[i], before[j])) {
-                    used[j] = 1;  // consume: one match per row
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) target_set.insert(static_cast<int>(i));
-        }
-    }
-
-    // NOTHING TOUCHED => NOTHING SELECTED (converted 2026-07-29). This case must
-    // NOT fall through any more, and the reason is that
-    // the world changed under the old fall-through: it used to preserve "whatever
-    // the user had", which was a defensible thing to keep. Since the never-parked
-    // selection ruling (architect 2026-07-29)
-    // the entry's TAB SWITCH (restore_history_entry runs it before the stores are
-    // restored) ends in COINCIDENCE AUTO-SELECT, so what a fall-through preserves is
-    // a MACHINE GUESS — the destination tab's stored cursor happening to stand on a
-    // marker — and the visual tail then treats that guess as though the undo had
-    // touched it: a spurious land, recenter, and an ARMED MARKER LANE after an undo
-    // that changed no marker in this column. Emptying instead makes the standing
-    // rule ("the restore's touched set wins over the tab-entry auto-select in every
-    // reachable case") true with no exception, and it is not a SELECT — the same
-    // shape the 'S' arm uses. REACHABILITY, the reachable sequence: `push_undo_both`
-    // (notably the render-entry LOAD-IN-PLACE, which records the current
-    // marker mode and the
-    // dispatch tab while the entry may change only engine settings and/or the OTHER
-    // column) leaves the active column's vector byte-identical, so undoing it from
-    // the other tab auto-selects on arrival and the active-column diff then finds
-    // nothing. The clear runs through the Selection mutator so the region, the shift
-    // anchor and the subject-change damage are all handled by their owner.
-    // Same body as the removal arm above (it clears for the identical reason,
-    // reachably provable there rather than derived here) — cross-referenced,
-    // not merged, so each site reads without following the other.
+    const std::set<int> target_set =
+        restore_touched_indices(entry, before, after, fields_differ);
     if (target_set.empty()) {
         selection.clear_selection();
         return;
     }
 
     app.selected_markers = target_set;
-    // EARLIEST touched marker as focus — one rule for singleton (trivially the
-    // touched marker) and group (all members are equal; there is no stored focus
-    // hint). sanitize keeps it (it is in the set and in range); the visual tail
-    // in restore_history_entry then lands the playhead on that focus in either
-    // arm, and for a group additionally frames the restored set into view.
     app.last_selected_marker = *target_set.begin();
 }
 

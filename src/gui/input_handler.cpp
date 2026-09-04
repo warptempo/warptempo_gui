@@ -1607,6 +1607,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                       "read-only");
             return;
         }
+        // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S REFUSAL (architect 2026-09-04),
+        // ranked behind the two terms above because emptiness and the other
+        // tab's lock are the older answers and one press owes one card. With
+        // the lamp lit, a step whose restore would carry the camera off the
+        // picture on screen is a CONSUMED NO-OP: nothing is popped, nothing is
+        // pushed, and both stacks are byte-identical afterwards — the ops are
+        // never reached. The verdict is the one owner both buttons grey on
+        // (undo_step_permitted_by_viewport_lamp, app_state.h), vacuous while
+        // the lamp is dark. A HELD Ctrl+Z CARDS ONCE PER BURST with nothing
+        // added here: on_key's HeldRepeatDispatchScope is the one seam, and a
+        // synthesized repeat MOVES this card to the top of the stack rather
+        // than adding one.
+        if (!undo_step_permitted_by_viewport_lamp(app, audio, stack)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 shift ? kRedoOutsideViewCard
+                                       : kUndoOutsideViewCard);
+            return;
+        }
         if (shift) undo.do_redo();
         else       undo.do_undo();
         return;
@@ -2834,28 +2852,25 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // re-shown there, so the stuck-toggle hole the 2026-08-16 momentary design was
 // written to avoid cannot arise (the record is at handle_toggle_trim_region,
 // input_trim.cpp).
-// A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put, matching
-// the inline version's own guard.
+// A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put — the
+// visibility owner's own answer since 2026-09-04 (span_columns_visible,
+// app_state.h), and the inline guard's before that.
 void bring_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi) {
-    const GuiRect area = waveform_area(app);
-    const int     W    = area.w;
-    const double  q    = painter_samples_per_pixel(app, audio, area);
-    // Endpoint column under a given viewport start, on the flag painters' basis
-    // (the shared displayed_column_at rounding, warp_frame_map_view.h).
-    auto both_columns_visible = [&](int64_t vp_start) {
-        const int lo_col = displayed_column_at(
-            static_cast<double>(lo), static_cast<double>(vp_start), q);
-        const int hi_col = displayed_column_at(
-            static_cast<double>(hi), static_cast<double>(vp_start), q);
-        return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
-    };
-    if (q > 0.0 && W > 0 && !both_columns_visible(app.viewport_start_sample)) {
+    // THE ENDPOINT-COLUMN TEST LEFT THIS BODY 2026-09-04 for
+    // span_columns_visible (app_state.h), when the Restrict undo to viewport
+    // lamp needed to ask the same question of a restore that has not happened:
+    // "inside the viewport" now has ONE definition and this framer is one of
+    // its two readers. The behaviour is unchanged, the degenerate guard
+    // included — the owner answers TRUE on q <= 0 or W <= 0, which is exactly
+    // the `q > 0.0 && W > 0` this condition used to spell.
+    if (!span_columns_visible(app, audio, app.viewport_start_sample, lo, hi)) {
         // Tentatively center at the current zoom and clamp.
         const int64_t visible = samples_visible(app, audio);
         app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
         clamp_viewport_start(app, audio);
-        if (!both_columns_visible(app.viewport_start_sample)) {
+        if (!span_columns_visible(app, audio, app.viewport_start_sample,
+                                  lo, hi)) {
             // Cannot fit at this level even centered -> zoom out to fit
             // (overwrites the tentative viewport wholesale).
             frame_span_into_view(app, audio, viewport, lo, hi,
@@ -3905,6 +3920,16 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     if (band.read_only == value) return;
     band.read_only = value;
     if (tab_view == app.active_tab_view) viewport.invalidate_top_strip();
+}
+
+void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
+    // The contract — sole writer, session-only, history-less, no damage — is at
+    // the declaration (input_handler.h), which also states the scope: this bit
+    // is read by undo_restore_within_viewport's caller and by nothing else. The
+    // two callers are the bare-`z` arm, which the icon row's button reaches by
+    // synthesizing that press, and nothing else: there is no settings key to
+    // commit it from.
+    app.restrict_undo_to_viewport = desired;
 }
 
 void GuiInputHandler::set_center_on_next_marker(bool desired) {

@@ -615,8 +615,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Toggle inherit, and — since 2026-09-04 — the CENTER ON NEXT MARKER
         // lamp on the bare letter, which was free. The ctrl form is untouched.
         case GuiKeys::N: return bare || cl;
-        // Undo, and redo on the one meaningful shift bit.
-        case GuiKeys::Z: return cl || cs;
+        // Undo, and redo on the one meaningful shift bit — plus, since
+        // 2026-09-04, the RESTRICT UNDO TO VIEWPORT lamp on the bare letter,
+        // which was free. The lamp governs exactly the pair it shares the key
+        // with, so the letter reads as one subject; the ctrl forms are
+        // untouched.
+        case GuiKeys::Z: return bare || cl || cs;
         // The render pair: the dispatch and the archival one.
         case GuiKeys::R: return ca || cas;
 
