@@ -5649,23 +5649,30 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      (overview_content_rect — the lane less its two border rows, which
 //      survive every frame) exactly as the plate clips to the waveform's.
 //   3. The trim line (architect 2026-09-04): a 1px horizontal run along the
-//      lane's foot, showing where in the whole song the trim sits. That is the
-//      one thing the 9px trim bar a lane down cannot show — render_trim_flags
-//      is viewport-scaled (it takes the basis's vp_start/vp_end), so at a
-//      zoomed-in view the trim's place in the piece was shown nowhere. It sits
-//      on the lane's last pixel row, the bottom border's own, and covers it
-//      over the trim's span exactly as the tick covers both rows over its
-//      column. Its colour is the trim bar body's kTrimLaneBar — a new reader
-//      of that constant rather than a new colour, so the two surfaces that
-//      depict the trim wear one shade at two scales; the endcap shade stays
-//      the endcaps'. Its span is overview_trim_span, which reports nothing at
-//      a full window, the whole song not being information. It is drawn under
-//      the box by ruling, though the two cannot meet: the box is inside the
-//      content band and this row is outside it. It needs no damage of its own,
-//      for the box's reason — every route that writes a trim bound raises
-//      Viewport::invalidate_waveform_area, whose one rect runs the window top
-//      through the waveform's bottom and so contains this lane, per motion
-//      event during a drag and once per commit everywhere else.
+//      lane's top row, showing where in the whole song the trim sits. That is
+//      the one thing the 9px trim bar a lane down cannot show —
+//      render_trim_flags is viewport-scaled (it takes the basis's
+//      vp_start/vp_end), so at a zoomed-in view the trim's place in the piece
+//      was shown nowhere. It sits on the lane's first pixel row, the top
+//      border's own, and covers it over the trim's span exactly as the tick
+//      covers both rows over its column. The head is where it reads, and it
+//      landed there on the architect's ruling of 2026-09-04, from a laptop
+//      screenshot he sampled by pixel: on the foot the line was painted and
+//      invisible, the trim bar lane beginning on the very next pixel row in
+//      this same blue and swallowing it — and the trim belongs above the
+//      waveform, which is where that bar sits. Its colour is the trim bar
+//      body's kTrimLaneBar — a new reader of that constant rather than a new
+//      colour, so the two surfaces that depict the trim wear one shade at two
+//      scales; the endcap shade stays the endcaps' (and the shared shade is
+//      exactly what made the foot unreadable). Its span is overview_trim_span,
+//      which reports nothing at a full window, the whole song not being
+//      information. It is drawn under the box by ruling, though the two cannot
+//      meet: the box is inside the content band and this row is outside it.
+//      It needs no damage of its own, for the box's reason — every route that
+//      writes a trim bound raises Viewport::invalidate_waveform_area, whose
+//      one rect runs the window top through the waveform's bottom and so
+//      contains this lane, per motion event during a drag and once per commit
+//      everywhere else.
 //   4. THE VIEWPORT BOX: a 1px outline marking the visible span, in
 //      kOverviewBoxLine — brightened off kRedesignLine at the lane rework
 //      (2026-08-12, "increase contrast on the outline": the outline is a
@@ -5836,7 +5843,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
         cairo_restore(cr);
     }
 
-    // Layer 3 — the trim line on the lane's foot, off its own span owner
+    // Layer 3 — the trim line on the lane's top row, off its own span owner
     // (overview_trim_span, app_state.cpp), which reports nothing at a full
     // window. Its columns are the lane's cell class like everything else here,
     // and the span is inclusive at both ends because both trim bounds are
@@ -5853,7 +5860,7 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
                                  kTrimLaneBar.b);
-            cairo_rectangle(cr, lane.x + tx0, lane.y + lane.h - 1,
+            cairo_rectangle(cr, lane.x + tx0, lane.y,
                             tx1 - tx0 + 1, 1);
             cairo_fill(cr);
             cairo_restore(cr);
