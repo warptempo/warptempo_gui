@@ -1,8 +1,10 @@
 #include "av_sync_stats.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <string_view>
 
 // THE PANEL'S TEXT (the contract is at av_sync_stats.h). One composer, three
 // groups — the audio half, the display half, and the NET LINE the panel exists
@@ -52,26 +54,57 @@ static_assert(kAvSyncRowCount == 20,
 // spelling that can be printed before its figure exists is paired with a
 // placeholder of exactly the same width.
 //
+// A width here is a ceiling and not only a floor. A printf width is a minimum,
+// so a figure past its column's range would widen the field and push every
+// character after it along the line — the one thing the fixed columns exist to
+// prevent — and where that would happen the column prints its overflow
+// spelling instead, at exactly the same width. The two same-width spellings
+// say different things and are meant to be read apart: a run of `-` is "not
+// measured yet" and a run of `+` is "measured, and wider than this column can
+// say". A millisecond figure too far negative to fit takes the overflow
+// spelling too (`%06.2f` of -0.5 is `-00.50` and fits; -100 ms does not), as
+// does a non-finite one, there being no number to print at all.
+//
 // Milliseconds take three integer digits rather than his two, because every
 // millisecond column here legitimately passes 100 ms — a large period at
 // 44.1 kHz, a port chain feeding a deep sink, or a stalled compositor's worst
 // frame in the presentation ring — and a value wider than its column would
 // break the alignment the panel is shaped for. One spelling serves all of
 // them, so the figures read against each other.
-constexpr const char* kMsSpelling       = "%06.2f";  // 021.33
-constexpr const char* kMsPlaceholder    = "---.--";
+constexpr const char*  kMsSpelling       = "%06.2f";  // 021.33
+constexpr const char*  kMsPlaceholder    = "---.--";
+constexpr const char*  kMsOverflow       = "+++.++";
+constexpr std::size_t  kMsWidth          = 6;
 // Frame counts: five digits cover a period, a stream buffer and a port latency
 // alike (99999 frames is over two seconds at 44.1 kHz).
-constexpr const char* kFramesSpelling   = "%05lld";  // 01024
+constexpr const char*  kFramesSpelling   = "%05lld";  // 01024
+constexpr const char*  kFramesOverflow   = "+++++";
+constexpr std::size_t  kFramesWidth      = 5;
 // Sample rates: six digits cover every rate a device may grant, 192 kHz and
 // its doubling included.
-constexpr const char* kRateSpelling     = "%06lld";  // 048000
+constexpr const char*  kRateSpelling     = "%06lld";  // 048000
+constexpr const char*  kRateOverflow     = "++++++";
+constexpr std::size_t  kRateWidth        = 6;
 // The refresh in hertz to three decimals; three integer digits cover the
 // fastest panel the product will meet.
-constexpr const char* kRefreshSpelling  = "%07.3f";  // 059.996
+constexpr const char*  kRefreshSpelling  = "%07.3f";  // 059.996
+constexpr const char*  kRefreshOverflow  = "+++.+++";
+constexpr std::size_t  kRefreshWidth     = 7;
 // The presentation ring's two counts, which share one column.
-constexpr const char* kCountSpelling    = "%03lld";  // 030
-constexpr const char* kCountPlaceholder = "---";
+constexpr const char*  kCountSpelling    = "%03lld";  // 030
+constexpr const char*  kCountPlaceholder = "---";
+constexpr const char*  kCountOverflow    = "+++";
+constexpr std::size_t  kCountWidth       = 3;
+
+// The placeholders and the overflow spellings are each their own column wide,
+// which is the whole reason they exist; the compiler holds them to it.
+static_assert(std::string_view(kMsPlaceholder).size() == kMsWidth);
+static_assert(std::string_view(kMsOverflow).size() == kMsWidth);
+static_assert(std::string_view(kFramesOverflow).size() == kFramesWidth);
+static_assert(std::string_view(kRateOverflow).size() == kRateWidth);
+static_assert(std::string_view(kRefreshOverflow).size() == kRefreshWidth);
+static_assert(std::string_view(kCountPlaceholder).size() == kCountWidth);
+static_assert(std::string_view(kCountOverflow).size() == kCountWidth);
 
 std::string row(const char* label, const std::string& value) {
     std::string s = "  ";
@@ -81,15 +114,25 @@ std::string row(const char* label, const std::string& value) {
     return s;
 }
 
-std::string fmt(const char* format, double v) {
+// One figure printed into its column, or the column's overflow spelling where
+// it does not fit. Both overloads ask snprintf's own return the question: it
+// is the count of characters the value needed, so a count past the column's
+// width is a value the column cannot carry, whatever made it wide — an extra
+// integer digit, a sign, or a whole extra order of magnitude.
+std::string capped(const char* format, const char* overflow,
+                   std::size_t width, double v) {
+    if (!std::isfinite(v)) return overflow;
     char buf[128];
-    std::snprintf(buf, sizeof(buf), format, v);
+    const int n = std::snprintf(buf, sizeof(buf), format, v);
+    if (n < 0 || static_cast<std::size_t>(n) != width) return overflow;
     return std::string(buf);
 }
 
-std::string fmt_i(const char* format, long long v) {
+std::string capped_i(const char* format, const char* overflow,
+                     std::size_t width, long long v) {
     char buf[128];
-    std::snprintf(buf, sizeof(buf), format, v);
+    const int n = std::snprintf(buf, sizeof(buf), format, v);
+    if (n < 0 || static_cast<std::size_t>(n) != width) return overflow;
     return std::string(buf);
 }
 
@@ -101,16 +144,29 @@ double ms_of_frames(int64_t frames, int rate) {
 
 double ms_of_ns(int64_t ns) { return static_cast<double>(ns) * 1e-6; }
 
-// The four figure spellings as text, each at its column's width.
-std::string ms_text(double v) { return fmt(kMsSpelling, v); }
+// The five figure spellings as text, each exactly its column's width. These
+// are the panel's only formatters — no line composes a figure of its own — so
+// the width contract holds by there being nowhere else for a number to be
+// printed. The refresh takes its own millihertz and does the division here,
+// for the same reason.
+std::string ms_text(double v) {
+    return capped(kMsSpelling, kMsOverflow, kMsWidth, v);
+}
 std::string frames_text(int64_t v) {
-    return fmt_i(kFramesSpelling, static_cast<long long>(v));
+    return capped_i(kFramesSpelling, kFramesOverflow, kFramesWidth,
+                    static_cast<long long>(v));
 }
 std::string rate_text(int v) {
-    return fmt_i(kRateSpelling, static_cast<long long>(v));
+    return capped_i(kRateSpelling, kRateOverflow, kRateWidth,
+                    static_cast<long long>(v));
+}
+std::string refresh_text(int mhz) {
+    return capped(kRefreshSpelling, kRefreshOverflow, kRefreshWidth,
+                  static_cast<double>(mhz) / 1000.0);
 }
 std::string count_text(int v) {
-    return fmt_i(kCountSpelling, static_cast<long long>(v));
+    return capped_i(kCountSpelling, kCountOverflow, kCountWidth,
+                    static_cast<long long>(v));
 }
 
 // A count of frames beside its own duration, the audio half's one value shape.
@@ -199,9 +255,7 @@ std::vector<std::string> compose_av_sync_rows(const GuiAudioStats& audio,
                                          : display.output_name));
         rows.push_back(
             row("Refresh", display.refresh_mhz > 0
-                               ? fmt(kRefreshSpelling,
-                                     static_cast<double>(display.refresh_mhz) /
-                                         1000.0) + " Hz"
+                               ? refresh_text(display.refresh_mhz) + " Hz"
                                : std::string("not known yet")));
         if (!display.instrument_present) {
             rows.push_back(row("Commit to light",
