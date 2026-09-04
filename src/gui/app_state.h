@@ -1936,12 +1936,18 @@ enum class RedesignButton {
     // AFTER Settings under the order rule above. Its one row is **AV Sync
     // Stats**, the text panel that measures the audio device's output latency
     // and the display's commit-to-light interval while it stands
-    // (av_sync_stats.h). The row CARRIES NO CHORD and takes SyncExternal's
-    // shape at GuiPopupAct — a second member of an existing class rather than
-    // a new exception — because the panel's every gate lives in its own
-    // opener. It is dead in the `h` history view, and that is the criterion
-    // working: its one row is refused there, so the anchor would open onto
-    // nothing (menu_anchor_dead_in_mode, below).
+    // (av_sync_stats.h). THE ROW IS AN ORDINARY COMMAND ROW AND IT IS ITS
+    // CHORD, Shift+L: the table is kHelpPopupItems, its act the plain
+    // GuiPopupAct::Chord every other command row takes, so the release
+    // dispatches the chord through on_key and the panel's opener meets the
+    // keyboard's own gates. (The row was chord-less for the hours of the day
+    // it landed, wearing SyncExternal's shape; the binding that evening
+    // replaced it, and the record is at kHelpPopupItems.) The anchor is dead
+    // in the `h` history view and under every folder-overlay content, and the
+    // reason is the chord's: those modes CONSUME Shift+L — the view's
+    // allowlist drops it and the three routers swallow it — so the anchor
+    // would open onto a row that could do nothing
+    // (menu_anchor_dead_in_mode, below).
     File, Edit, Series, Settings, Help, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they

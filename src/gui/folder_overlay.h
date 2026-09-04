@@ -292,9 +292,11 @@ inline int content_height_px(const AppState& a) {
 // band_damage_rect, whose single reader was the player's listing rebuild — and
 // it went with the growing band that gave it its reason: a rect exists iff it
 // answers a question, and the two answers are now the same rect.) It is what
-// the painter grounds, what a damage erases and what the hit test contains;
-// the rows live in the content rect below, which is this band less its top
-// border row.
+// the painter grounds, what a damage erases and what the band's OUTER CLAIM
+// contains — the press router asks this rect to decide that the band, not the
+// waveform under it, owns the press. It is not where a row lives: the rows are
+// painted and hit inside the content rect below, which is this band less its
+// top border row.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -308,11 +310,16 @@ inline GuiRect surface_rect(const AppState& a) {
 
 // The rows' band: the surface less its top border row. Every geometry below
 // reads this and not the surface, so the rows, the scroll ceiling and the
-// keep-visible walk all live under the line by construction. The surface rect
-// stays what the painter grounds, what a damage erases and what the hit test
-// contains, so the border costs those three nothing. A degenerate band —
-// shorter than its own border — passes through unshrunk rather than
-// inverting, the overview lane's own shape.
+// keep-visible walk all live under the line by construction. It is also what
+// the painter clips the row walk to and what row_at contains against, which is
+// what makes the line inert BY CONSTRUCTION rather than by arithmetic: a
+// scrolled listing's straddling row can neither paint over the border nor be
+// opened through it, at any scroll offset. The surface rect stays what the
+// painter grounds, what a damage erases and what the band's outer claim
+// contains — a press on the line is consumed by the band as any press inside
+// it is, and simply arms no row — so the border costs those three nothing. A
+// degenerate band — shorter than its own border — passes through unshrunk
+// rather than inverting, the overview lane's own shape.
 inline GuiRect content_rect(const AppState& a) {
     const GuiRect surf = surface_rect(a);
     const int b = border_h_px();
@@ -362,12 +369,18 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
     }
 }
 
-// The row under (x, y), or -1 — a point outside the band answers -1 whatever
-// row's rect would contain it, so a row scrolled out of the band cannot be
-// pressed through the waveform above or the bottom row below.
+// The row under (x, y), or -1 — a point outside the CONTENT rect answers -1
+// whatever row's rect would contain it, so a row scrolled out of the band
+// cannot be pressed through the waveform above or the bottom row below, and a
+// row straddling the band's top cannot be opened through the border line. It
+// is the content rect and not the surface because the surface is the band's
+// outer CLAIM (the press router's own test, one call up) while the rows live
+// under the line: a press on the border is still the band's, it just names no
+// row. The painter clips its row walk to this same rect, so paint and hit
+// agree on the line as they do on every other pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {
-    const GuiRect surf = surface_rect(a);
-    if (!rect_contains(surf, x, y)) return -1;
+    const GuiRect band = content_rect(a);
+    if (!rect_contains(band, x, y)) return -1;
     int hit = -1;
     for_each_row(a, [&](int i, const AppState::FolderOverlayRow&,
                         const GuiRect& r) {

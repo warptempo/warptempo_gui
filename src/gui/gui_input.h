@@ -705,13 +705,28 @@ static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
                                   GuiInputState{true, false, false}, false),
               "Synchronize is bare backslash and no decoration of it");
+// `l` is the one letter whose two forms are two contents of one band, so its
+// anchor witnesses the "only" whole: the two positives, then EVERY non-bare,
+// non-shift-only combination of the three modifiers as a negative. A widening
+// onto any of them trips here rather than at the next review.
 static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::L,
                                  GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{true, false, false}, false),
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{true, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{false, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::L,
+                                  GuiInputState{true, true, true}, false),
               "`l` binds bare and shifted only — the render player and its "
-              "shifted twin the AV sync stats panel");
+              "shifted twin the AV sync stats panel — and none of the six "
+              "other modifier combinations spells anything");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
                                  GuiInputState{false, true, false}, false) &&

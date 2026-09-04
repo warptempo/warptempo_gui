@@ -4316,8 +4316,10 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // press is a consumed no-op — nothing on a row reads shift or ctrl, and
     // nothing on a row reads kHoldBeatMs either: the load is the modal row's
     // own button (strict modifier validation's answer, and the roster's
-    // shift-hold is elsewhere). A press on the pad or a gap between rows arms
-    // nothing.
+    // shift-hold is elsewhere). A press on the pad, on a gap between rows or
+    // on the band's top border line arms nothing — the claim is this SURFACE
+    // rect, while row_at contains against the content rect below the line, so
+    // the border is claimed and inert by construction at every scroll offset.
     //
     // A MODIFIED PRESS ON A ROW IS SILENT LIKE ONE ANYWHERE ELSE ON THE BAND
     // (architect 2026-08-30, the unbound-keys ruling read on the pointer:
@@ -8748,13 +8750,18 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // moved where those two commands are reached without moving what the mode
     // does to them. Its anchor greys beside this one too.
     //
-    // THE HELP MENU JOINED THE LOCKOUT ON 2026-09-03, and it is the SETTINGS
-    // case rather than a third one: its single row reaches the AV sync panel
-    // by a DIRECT call (finish_dropdown_release's GuiPopupAct fork), meeting
-    // no keyboard gate at all, and the panel's own opener refuses in this view
-    // — so the menu would open onto a row that does nothing, which is the same
-    // box-onto-nothing the two command menus above are refused for. Its anchor
-    // greys beside this one too.
+    // THE HELP MENU JOINED THE LOCKOUT ON 2026-09-03, and it is the COMMAND
+    // menu case Edit and Series are refused under, with nothing re-argued: its
+    // single row is an ordinary chord row, Shift+L, dispatched through on_key
+    // exactly as a redesigned button's chord is (kHelpPopupItems, act
+    // GuiPopupAct::Chord), and the mode answers that chord for itself — the
+    // view's allowlist refuses it in the mode's own sentence, and the panel's
+    // opener refuses the view again in its own body. With that the one row is
+    // a box that opens onto nothing, the same criterion. Its anchor greys
+    // beside this one too. (The row was chord-less for the hours of the day it
+    // landed, reaching the panel by a direct call, and was the SETTINGS case
+    // then; the binding that evening moved it here, and the refusal did not
+    // change.)
     //
     // THE SET IS THE SHARED OWNER'S (menu_anchor_dead_in_mode, app_state.h),
     // which is the same enumeration history_mode_disables_button's anchor arm

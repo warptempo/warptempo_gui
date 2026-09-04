@@ -7818,8 +7818,11 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // the overlay reads as the lane it replaces. It is painted inside the band as
 // its first row and comes out of the content's room
 // (folder_overlay::border_h_px and content_rect own that geometry), so the
-// surface rect, the damage rect and the hit rect are all unchanged by it. A
-// line stood here from 2026-08-29 for a different reason, framing the panel
+// surface rect and the damage rect are unchanged by it and the rows — the row
+// walk's clip here, row_at's containment there — live under the line at every
+// scroll offset. The band's press claim is still the surface's, so a press on
+// the line is consumed and simply arms no row.
+// A line stood here from 2026-08-29 for a different reason, framing the panel
 // off the waveform ground above, and went out with that ground for the hours
 // of 2026-09-03 the band covered the menu row.
 //
@@ -7844,18 +7847,19 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     const AppState::RenderPlayer&  rp = app.render_player;
 
     cairo_save(cr);
-    // The band's ground, one fill; then EVERYTHING ELSE UNDER THE BAND'S CLIP,
-    // because a scrolled listing's first and last rows straddle the band's
-    // edges and must not paint into the waveform above or the bottom row
-    // below.
+    // The band's ground, one fill; then EVERYTHING ELSE UNDER THE CONTENT
+    // RECT'S CLIP, because a scrolled listing's first and last rows straddle
+    // the content's edges and must not paint into the waveform above, the
+    // bottom row below, or the band's own top border.
     cairo_set_source_rgb(cr, kModalFieldGround.r, kModalFieldGround.g,
                          kModalFieldGround.b);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
     // The top border, the band's first row (the block above): the tab row's
-    // own line, laid over the ground before the clip so the rows below start
-    // under it by construction — row_rect reads content_rect, which is this
-    // band less this row.
+    // own line, laid over the ground before the clip — row_rect reads
+    // content_rect, which is this band less this row, and the clip below is
+    // that same rect, so a row scrolled part-way off the top is cut at the
+    // line instead of covering it.
     {
         const int border = folder_overlay::border_h_px();
         if (border > 0 && border < surf.h) {
@@ -7868,7 +7872,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_restore(cr);
         }
     }
-    cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
+    // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
+    // SAME RECT (folder_overlay.h), so paint and hit agree about the border
+    // line as they agree about every other pixel: the line can be neither
+    // erased by a row's fill nor pressed through, at any scroll offset. The
+    // surface stays the ground, the damage and the band's outer claim.
+    const GuiRect content = folder_overlay::content_rect(app);
+    cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
 
     // THE FACE IS THE CONTENT'S. Two of the three contents list NAMES — files
@@ -7930,7 +7940,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // box, a glyph and a shaped run, so a narrow damage pays only for
             // the rows it crosses.
             if (!rects_intersect(exposed, r)) return;
-            if (!rects_intersect(surf, r)) return;
+            if (!rects_intersect(content, r)) return;
 
             // A TEXT ROW IS INERT AND THE FACE LADDER SKIPS IT WHOLE
             // (2026-09-03): no fill, no outline, no press arm — the row is a
