@@ -2494,34 +2494,52 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker, recenter —
-    // AT THE CURRENT ZOOM LEVEL, which the cycle never changes (architect
-    // 2026-08-05, "no zoom on Tab", reverting the same-day working-zoom landing
-    // this carried for one commit; `c` remains the direct route to
-    // kWorkingZoomLevel, and `0`'s second arm reaches it through `c` when its
-    // tab has stamped no return level). The recenter is unconditional — follow mode
-    // does not gate the cycle. A step that focuses nothing does nothing at all.
+    // playback and move the playhead onto the newly focused marker. The zoom is
+    // untouched — AT THE CURRENT ZOOM LEVEL, which the cycle never changes
+    // (architect 2026-08-05, "no zoom on Tab", reverting the same-day
+    // working-zoom landing this carried for one commit; `c` remains the direct
+    // route to kWorkingZoomLevel, and `0`'s second arm reaches it through `c`
+    // when its tab has stamped no return level). A step that focuses nothing
+    // does nothing at all.
+    //
+    // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
+    // This body moves the focus and lands the playhead; it decides nothing
+    // about the camera and reads no preference of its own — follow mode never
+    // gated it, and the Center on next marker lamp does not gate it either.
+    // The lamp governs the BARE Tab walk alone, so the three bare arms pass
+    // marker_walk_frame(app) (app_state.h, the lamp's one reader) while the
+    // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::Center outright.
+    // The parameter carries no default precisely so a future third caller
+    // cannot inherit either answer by saying nothing.
     // The WHOLE Tab family comes through here: the three bare chords and the
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
-    void cycle_marker_focus(bool forward);
+    void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
 
     // Jump the playhead directly onto the currently focused marker
-    // (app.last_selected_marker), stopping playback and recentering the
-    // viewport on it AT THE LEVEL IT IS CALLED AT — the zoom belongs to the
-    // caller, and the callers differ in it: `c` sets the working zoom right
-    // after this returns, the Tab family sets nothing (2026-08-05).
+    // (app.last_selected_marker), stopping playback and then treating the
+    // camera as `frame` says — MarkerLandingFrame::Center recentering the
+    // viewport on the landing AT THE LEVEL IT IS CALLED AT,
+    // MarkerLandingFrame::FollowPage leaving the camera where it stands and
+    // merely paging an OFFSCREEN landing into view through follow's own body.
+    // The zoom belongs to the caller too, and the callers differ in it: `c`
+    // sets the working zoom right after this returns, the Tab family sets
+    // nothing (2026-08-05).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
-    // Tab family) and the `c` gesture, both of which recenter the viewport; a
-    // plain marker click is the other land-onto-marker route (its own direct
-    // write in run_marker_click_act — same two-step placement basis, but NO
-    // viewport move). Both leave the playhead coincident with the focus, and a later
-    // nudge/drag re-lands it on the focused marker as that marker moves.
-    bool jump_playhead_to_focused_marker();
+    // Tab family) and the `c` gesture; a plain marker click is the other
+    // land-onto-marker route (its own direct write in run_marker_click_act —
+    // same two-step placement basis, but NO viewport move). Both leave the
+    // playhead coincident with the focus, and a later nudge/drag re-lands it on
+    // the focused marker as that marker moves.
+    // `frame` IS REQUIRED and this body resolves nothing (architect
+    // 2026-09-04): it asks no lamp, no follow bit and no mode, so every route
+    // that lands a focus states its own camera. `c` states Center; the walk
+    // states what ITS caller handed it.
+    bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
     // (architect 2026-08-05, replacing the working-zoom toggle; the second arm
@@ -3811,6 +3829,29 @@ private:
     // itself. A same-value write is a no-op here as well as at the editor's
     // own unchanged() gate one step earlier.
     void set_tab_read_only(char tab_view, bool value);
+
+    // THE CENTER-ON-NEXT-MARKER LAMP'S ONE SETTER (architect 2026-09-04) —
+    // set_tab_read_only's shape, and the same two-road membership: bare `n`,
+    // which the icon row's own button reaches by synthesizing that press, and
+    // the settings editor's `center_on_next_marker=` commit.
+    //
+    // THIS TOGGLE GOVERNS THE BARE TAB WALK ALONE — bare Tab, Shift+Tab and
+    // IsoLeftTab, whose three arms are the only callers of marker_walk_frame
+    // (app_state.h), the bit's one reader. Nothing else in the product asks
+    // it: the Ctrl+Shift+Tab paired march states MarkerLandingFrame::Center at
+    // both of its steps, `c`, Shift+`j` and the A/B audition frame through
+    // run_center_command, and a marker click has never moved the camera. The
+    // walk itself takes framing as a required argument and reads no preference
+    // of its own, so this bit cannot leak into any act that composes it.
+    //
+    // What it does: writes the field. No damage call — the lamp's face rides
+    // the per-tick comparator like every other stateful button face, and no
+    // glyph swaps on this bit. History-less, like every GUI-kind key's
+    // gesture: no undo entry, no dirty bit, and the value persists on the next
+    // ordinary Ctrl+S. The camera does not move at the toggle either way: the
+    // bit is read at the NEXT walk, so lighting it re-frames nothing that is
+    // already on screen.
+    void set_center_on_next_marker(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare

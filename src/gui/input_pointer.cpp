@@ -308,6 +308,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // derived partition keeps the face lit) and on a locked tab (navigation,
     // the lock's allowlist).
     {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
+    // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered pin's shape
+    // exactly, one lamp further along the same group: bare `n`, a TOGGLE
+    // reading the live bit its own chord flips. Live on a locked tab (bare `n`
+    // is navigation, on the lock's allowlist) and DEAD in the `h` view, where
+    // Tab denotes the diff-flag cycle and the mode's allowlist drops the
+    // chord, so the derived partition greys this face in there.
+    {RedesignButton::IconCenterOnNext,
+     GuiKeys::N, false, false, false, false, true},                                // bare n
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
     // 2026-09-01, the LOAD IN PLACE having moved to the history group below
@@ -666,8 +674,14 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FIVE menu anchors carries a chord here — 50
-// rows against the roster's 55 since 2026-09-03'S HELP ANCHOR, which moved the
+// every RedesignButton but the FIVE menu anchors carries a chord here — 48
+// rows against the roster's 53 since 2026-09-04'S CENTER-ON-NEXT-MARKER LAMP,
+// one pure addition inside an existing group (a chord, so the pair moved
+// together): `IconCenterOnNext` closed row 4's viewport-class group on bare
+// `n`, behind the centered pin, and no separator or group boundary moved. It
+// was 47 against 52 earlier that day, at THE RADIO-PAIR COLLAPSE, which took
+// three rows out of this table with the three buttons the three lamps
+// replaced. It was 50 against 55 from 2026-09-03'S HELP ANCHOR, which moved the
 // ROSTER and not this table (an anchor carries no chord — the Series anchor's
 // own 2026-08-27 shape). It was 50 against 54
 // from 2026-08-31'S CENTERED LAMP, one pure

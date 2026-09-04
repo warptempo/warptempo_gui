@@ -28,6 +28,7 @@ enum class SettingKind {
     ActiveTabViewChar,
     FollowFlag,
     CenteredFlag,
+    CenterOnNextMarkerFlag,
     WaveformMagnificationLevel,
     TrimBegin_A,
     TrimEnd_A,
@@ -80,6 +81,14 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // key itself is a display preference like follow and reaches no render
     // input.
     { "centered",                    SettingKind::CenteredFlag,         EngineField::Title,                   "false"    },
+    // CENTER ON NEXT MARKER (2026-09-04), the third boolean session pref and
+    // `centered`'s neighbour on disk: whether the Tab / Shift+Tab marker walk
+    // FRAMES its landing. Its default is TRUE because framing is what the walk
+    // did before the key existed. Like follow and centered it is a display
+    // preference and reaches no render input; unlike them it governs ONE act,
+    // the Tab walk — the paired march and the A/B audition call the center
+    // command by name and are untouched.
+    { "center_on_next_marker",       SettingKind::CenterOnNextMarkerFlag, EngineField::Title,                 "true"     },
     // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
     // `playback_speed` retired whole; `gui_scale`, `audio_player` and
     // `projects_repo` moved to the per-device config, device_config.h, where
@@ -141,6 +150,8 @@ std::optional<std::string> format_nonengine_value(
             return std::string(gui.follow ? "true" : "false");
         case SettingKind::CenteredFlag:
             return std::string(gui.centered ? "true" : "false");
+        case SettingKind::CenterOnNextMarkerFlag:
+            return std::string(gui.center_on_next_marker ? "true" : "false");
         case SettingKind::WaveformMagnificationLevel:
             // Plain digits, the one canonical spelling validate_gui_setting's
             // range arm accepts (parse_authored_frame): the default
@@ -409,6 +420,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode, app.centered_mode,
+        app.center_on_next_marker,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
         app.waveform_magnification_level};
     return format_nonengine_value(desc->kind, gui);

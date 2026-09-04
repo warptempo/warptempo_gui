@@ -557,8 +557,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
 // Backspace, and every letter the ladder never tests (A, B, E, W, X — Y left
-// the class 2026-08-31, the centered pin's toggle, and V on 2026-09-01, the
-// `h` view's revert act moving onto it off Ctrl+H);
+// the class 2026-08-31, the centered pin's toggle, V on 2026-09-01, the
+// `h` view's revert act moving onto it off Ctrl+H, and BARE N on 2026-09-04,
+// the Center on next marker lamp joining Ctrl+N on that letter);
 // every key the boards carry that this switch names nowhere (the keypad, the
 // editing and system block, the vendor strip — the speller named them too
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
@@ -609,8 +610,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // mode-only letters above), so the ctrl spelling binds nothing again
         // and takes the unbound silence.
         case GuiKeys::H: return bare;
-        // Toggle disabled / toggle inherit / quit.
-        case GuiKeys::D: case GuiKeys::N: case GuiKeys::Q: return cl;
+        // Toggle disabled / quit.
+        case GuiKeys::D: case GuiKeys::Q: return cl;
+        // Toggle inherit, and — since 2026-09-04 — the CENTER ON NEXT MARKER
+        // lamp on the bare letter, which was free. The ctrl form is untouched.
+        case GuiKeys::N: return bare || cl;
         // Undo, and redo on the one meaningful shift bit.
         case GuiKeys::Z: return cl || cs;
         // The render pair: the dispatch and the archival one.

@@ -971,12 +971,13 @@ of the few places behaviour differs by host.
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
-wide, and the icon row fits WHOLE up to gui_scale 268 since the three radio
-pairs collapsed into three lamps on 2026-09-04 and made the walk 857 authored
-px (240 at the centered lamp's 959 from 2026-08-31; 249 at the 2026-08-27
+wide, and the icon row fits WHOLE up to gui_scale 258 since the CENTER ON NEXT
+MARKER lamp joined the row on 2026-09-04 and made the walk 891 authored px (268
+for the hours the same day's radio collapse had it at 857; 240 at the centered
+lamp's 959 from 2026-08-31; 249 at the 2026-08-27
 Series relocation's 925; 228 at the 1007-px row before that, and 221 for the one
 day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (857*2.25 = 1928 of the panel's 2304, 376 px of slack
+the whole icon row lands (891*2.25 = 2005 of the panel's 2304, 299 px of slack
 where the 959-px row had 146) and the layout is the one the redesign was drawn
 against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is

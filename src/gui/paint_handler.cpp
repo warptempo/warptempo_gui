@@ -974,6 +974,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // center column. It joins the group rather than opening one, so the row
     // gains one box and one 2px gap and no separator moves.
     {RedesignButton::IconCentered, icons::Icon::AlignHorizontalCenter},
+    // THE CENTER-ON-NEXT-MARKER LAMP (2026-09-04) closes the same group behind
+    // the centered pin: Breeze's zoom-next, a magnifier ring with a chevron
+    // stepping forward out of it — the walk bringing its next stop into view.
+    // It joins the group rather than opening one, so the row gains one box and
+    // one 2px gap and no separator moves.
+    {RedesignButton::IconCenterOnNext, icons::Icon::ZoomNext},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the

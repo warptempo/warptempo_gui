@@ -223,6 +223,20 @@ struct SettingsFile {
     // (architect approval 2026-08-31 — "the parser's non-engine-modifying
     // keys are ok to touch".)
     bool   centered                = false;
+    // Center on next marker — whether the Tab / Shift+Tab marker walk FRAMES
+    // its landing. It is `follow`'s and `centered`'s mechanical twin: a
+    // required GUI-kind boolean on the same parse_bool_token grammar,
+    // defaulting TRUE because framing the walk is what the product has always
+    // done. With it off the walk lands without recentering and the viewport
+    // only advances when the landing would otherwise be offscreen. The CLI
+    // parses the key and ignores it like every other GUI-kind key, and a
+    // checkpoint committed before it leaves the `h` walk through the same
+    // strict gate every schema addition costs — no migration, no reader
+    // leniency, the magnification key's precedent.
+    // (architect approval 2026-09-04 — the same grant `follow`'s and
+    // `centered`'s siblings were taken under: the parser's
+    // non-engine-modifying keys are ok to touch.)
+    bool   center_on_next_marker   = true;
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
@@ -335,7 +349,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
 // free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
-    bool        b    = false;   // follow, centered, tab_X_read_only
+    bool        b    = false;   // follow, centered, center_on_next_marker, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, waveform_magnification_level
     double      d    = 0.0;     // tab_X_zoom

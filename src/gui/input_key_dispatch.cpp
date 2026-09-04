@@ -371,6 +371,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // by the same answer.
     const bool is_centered =
         (key == GuiKeys::Y && !ctrl && !shift && !alt);
+    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the centered pin's own
+    // reasoning again — the bit decides where the CAMERA goes after a Tab
+    // walk and authors nothing the lock protects. Its button stays lit on a
+    // locked tab by the same answer.
+    const bool is_center_on_next =
+        (key == GuiKeys::N && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
@@ -579,7 +585,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
-             is_follow || is_centered || is_center || is_sub_t || is_sub_p ||
+             is_follow || is_centered || is_center_on_next ||
+             is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
@@ -7899,29 +7906,50 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord.
+    //
+    // IT FRAMES BOTH TABS, DELIBERATELY AND BY ITS OWN STATEMENT (architect
+    // 2026-09-04): both steps pass MarkerLandingFrame::Center, so the march
+    // centres on each tab's new focus whatever the Center on next marker lamp
+    // says. The lamp governs the bare Tab walk, and the march is a different
+    // act that composes that walk rather than a Tab press wearing modifiers —
+    // when framing lived inside cycle_marker_focus the march inherited the
+    // lamp, which is the shape the required parameter now forbids.
+    //
+    // BOTH STEPS FRAME BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
+    // the whole point of a paired march: switch_active_tab_view_to pushes the
+    // live viewport / zoom / playhead into the LEAVING tab's band
+    // (refresh_active_tab_view_from_app) before pulling the target tab's, so
+    // the first step's centring is not a camera about to be thrown away — it
+    // persists into tab A's saved viewport and is what tab A restores on the
+    // way back. Centring once at the end would silently leave tab A framed on
+    // its old focus. Do not collapse these two into one.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus(true);
+        cycle_marker_focus(true, MarkerLandingFrame::Center);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true);
+        cycle_marker_focus(true, MarkerLandingFrame::Center);
         target_render.trigger();
         return true;
     }
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
-    // marker, moving the playhead to it and recentering on it at the current
-    // zoom (always — follow mode does not gate it). The Ctrl+Tab branch above runs first and
+    // marker, moving the playhead to it and framing PER THE LAMP —
+    // marker_walk_frame(app) (app_state.h) is the Center on next marker bit's
+    // one reader, and these three arms are its only callers: lit, the walk
+    // recentres at the current zoom the way it always has; dark, the camera
+    // holds and only an offscreen landing pages in, follow's way. The Ctrl+Tab
+    // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
     // cycle path either. Alt-strict everywhere: an Alt held makes the chord
     // an unbound no-op rather than falling into the cycle.
     if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
-        cycle_marker_focus(true);  return true;
+        cycle_marker_focus(true,  marker_walk_frame(app)); return true;
     }
     if (!ctrl && !alt && key == GuiKeys::Tab && shift)  {
-        cycle_marker_focus(false); return true;
+        cycle_marker_focus(false, marker_walk_frame(app)); return true;
     }
     if (!ctrl && !alt && key == GuiKeys::IsoLeftTab)    {
-        cycle_marker_focus(false); return true;
+        cycle_marker_focus(false, marker_walk_frame(app)); return true;
     }
 
     return false;
@@ -8092,6 +8120,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // settings editor's `centered=` commit and the icon-row button's
         // synthesized chord. History-less, one-shot, follow's own shape.
         playback_lifecycle.set_centered_mode(!app.centered_mode);
+        break;
+    case GuiKeys::N:
+        // Toggle the Center on next marker lamp (2026-09-04). The setter is
+        // GuiInputHandler::set_center_on_next_marker, shared with the settings
+        // editor's `center_on_next_marker=` commit and with the icon-row
+        // button's synthesized chord. History-less, one-shot, the centered
+        // pin's own shape — and nothing moves at the press: the bit is read at
+        // the next BARE Tab walk, through marker_walk_frame, and by nothing
+        // else (the Ctrl+Shift+Tab march states its own framing).
+        set_center_on_next_marker(!app.center_on_next_marker);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

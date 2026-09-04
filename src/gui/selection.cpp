@@ -389,11 +389,12 @@ void Selection::cycle_selection(bool forward) {
     if (land_marker < 0) return;
 
     // Selection only. Viewport positioning is owned entirely by the sole
-    // caller (cycle_marker_focus), which always centers the focused stop in
-    // one write. A scroll-into-view here would be a redundant
-    // intermediate viewport write — overridden by that centering in the same
-    // keypress — and the resulting damage, accumulated against a non-final
-    // viewport, is what produced the outline-blink / cursor-hop artifact.
+    // caller (cycle_marker_focus), which frames the focused stop in one write
+    // as ITS caller asked — a centre or follow's page, decided there and never
+    // here. A scroll-into-view here would be a redundant intermediate viewport
+    // write — overridden by that one write in the same keypress — and the
+    // resulting damage, accumulated against a non-final viewport, is what
+    // produced the outline-blink / cursor-hop artifact.
     set_single_selection(land_marker);
 }
 

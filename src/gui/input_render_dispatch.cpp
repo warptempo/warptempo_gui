@@ -115,6 +115,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.active_markers_view = app.active_markers_view;
     s.follow              = app.follow_mode;
     s.centered            = app.centered_mode;
+    s.center_on_next_marker = app.center_on_next_marker;
     s.waveform_magnification_level = app.waveform_magnification_level;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is

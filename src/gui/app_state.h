@@ -2200,6 +2200,22 @@ enum class RedesignButton {
     // mode's allowlist admits `y` and the derived partition keeps this face
     // lit.
     IconCentered,
+    // CENTER ON NEXT MARKER (architect 2026-09-04) — the `n` lamp, closing the
+    // viewport-class group behind Follow and the centered pin, which is the
+    // company it keeps: a per-piece camera preference wearing a lamp on the
+    // live bit its own chord flips (center_on_next_marker). What it governs is
+    // the Tab / Shift+Tab marker walk's FRAMING and nothing else — lit, the
+    // walk recenters on its landing; dark, the walk lands and the camera holds
+    // unless the landing was offscreen, in which case follow's own page brings
+    // it in.
+    //
+    // LIVE ON A LOCKED TAB (bare `n` is navigation, on the lock's allowlist)
+    // and DEAD IN THE `h` VIEW, which is Follow's answer rather than the
+    // centered pin's: in there Tab denotes the diff-flag cycle, so the walk
+    // this bit forks does not exist and the mode's allowlist drops the chord.
+    // The derived partition greys the face on that answer with nothing
+    // hand-listed.
+    IconCenterOnNext,
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
@@ -2831,7 +2847,13 @@ enum class RedesignButton {
 // 54 = 53 + THE CENTERED LAMP (2026-08-31, R11): IconCentered joined the zoom
 // group beside Follow with bare `y`, one box and one 2px gap on the icon row's
 // walk and no new separator.
-inline constexpr int kRedesignButtonCount = 52;
+// 53 = 52 + THE CENTER-ON-NEXT-MARKER LAMP (architect 2026-09-04): one pure
+// chord addition inside an existing group — IconCenterOnNext on bare `n`,
+// closing row 4's viewport-class group behind the centered pin — so the split
+// goes 47 + 5 to 48 + 5, one box and one 2px gap join the icon row's walk and
+// no separator or group boundary moves. It is the centered lamp's own shape
+// four days on.
+inline constexpr int kRedesignButtonCount = 53;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2909,6 +2931,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconFollow:
         case RedesignButton::IconCentered:
+        case RedesignButton::IconCenterOnNext:
         case RedesignButton::IconListen:
         case RedesignButton::IconReadOnly:
         case RedesignButton::IconHistory:
@@ -4618,6 +4641,26 @@ struct AppState {
     // read direct only by the lamp's face, the settings editor, the load and
     // the sidecar writers — the preference the act never changes.
     bool    centered_mode          = false;
+
+    // CENTER ON NEXT MARKER — the lamp on bare `n` (architect 2026-09-04),
+    // session-global like the two above and persisted beside them as the
+    // required GUI-kind key `center_on_next_marker` (default true). It governs
+    // ONE act: whether the bare Tab / Shift+Tab marker walk FRAMES its
+    // landing. Lit, the walk recenters the viewport on the marker it lands on,
+    // which is what the walk has always done. Dark, the walk lands without
+    // moving the camera, and the viewport advances only when the landing would
+    // otherwise be offscreen — follow's own page, through follow's own body
+    // (Viewport::follow_scroll_if_needed).
+    //
+    // ITS ONE READER IS marker_walk_frame (below), which the three bare Tab
+    // arms call and nothing else does. The walk itself does not read this bit:
+    // framing is a required argument of cycle_marker_focus, so the
+    // Ctrl+Shift+Tab paired march — which composes that walk — states
+    // MarkerLandingFrame::Center at both of its steps rather than inheriting
+    // anything from here. `c`, Shift+`j` and the A/B audition frame through
+    // run_center_command, and marker clicks land through their own act owner;
+    // none of them asks this bit either.
+    bool    center_on_next_marker  = true;
 
     // The centered derivation's memory — WHAT THE LAST DERIVATION WAS MADE
     // AGAINST, written by Viewport::derive_centered_viewport itself (its one
@@ -10347,6 +10390,36 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
     return marker_walk_landing(a, audio, forward) >= 0;
 }
 
+// How a marker landing treats the camera, stated by the caller that asks for
+// the landing (architect 2026-09-04). `Center` recenters the viewport on the
+// landing at the standing zoom, which is what the Tab walk and `c` have always
+// done; `FollowPage` leaves the camera where it stands and merely pages an
+// offscreen landing into view through follow's own body
+// (Viewport::follow_scroll_if_needed).
+//
+// The type exists so that framing cannot be inherited. It is a REQUIRED
+// argument of both GuiInputHandler::cycle_marker_focus and
+// GuiInputHandler::jump_playhead_to_focused_marker — neither carries a default
+// — so a new caller of either cannot compile without saying which of the two
+// it means, which is exactly what a defaulted bool would have let it skip.
+// No `Gui` prefix: that convention rides the marker-side data types
+// (GuiWarpMarker, GuiPhaseResetMarker), while the small policy and verdict
+// enums beside this one — MarkerClickSpan, TrimHit, PayloadEligibility — carry
+// none.
+enum class MarkerLandingFrame { Center, FollowPage };
+
+// The Center on next marker lamp read as a framing choice — the bare Tab /
+// Shift+Tab / IsoLeftTab arms' own answer and nobody else's, the lamp
+// governing that walk alone. It lives out here rather than inside the walk so
+// the walk carries no lamp knowledge at all: the three bare arms call this by
+// name, the Ctrl+Shift+Tab paired march states MarkerLandingFrame::Center
+// instead, and `c` states it too. Its one caller class is therefore the bare
+// Tab family, and a second caller would be a second act claiming the lamp.
+inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
+    return a.center_on_next_marker ? MarkerLandingFrame::Center
+                                   : MarkerLandingFrame::FollowPage;
+}
+
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
 // `stack` would actually act. Two ways a step is a silent no-op — an empty
 // source stack, or a top entry whose TARGET tab is currently read-only (a
@@ -11001,7 +11074,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the two VIEW LAMPS
-//     (bare `t` / `p`), the zoom four, follow and the
+//     (bare `t` / `p`), the zoom four, the magnification pair, follow, the
+//     CENTERED PIN and the CENTER-ON-NEXT-MARKER lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (THE TRIM
 //     SCISSORS were on this list, their chord being read-only-legal like every
@@ -11452,6 +11526,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlist, the derivation reading the same cursor the view's lanes
         // read — where Follow greys.
         case RedesignButton::IconCentered:
+        // THE CENTER-ON-NEXT-MARKER LAMP MIRRORS NOTHING EITHER (2026-09-04),
+        // on the same answer as the two above it: bare `n` toggles the walk's
+        // framing in either direction on any loaded piece and the lock admits
+        // it. Unlike the centered pin it GREYS IN THE `h` VIEW, which the
+        // derived partition answers with nothing hand-listed — the mode's
+        // allowlist drops `n`, Tab denoting the diff-flag cycle in there.
+        case RedesignButton::IconCenterOnNext:
         // PLAY RENDERS MIRRORS NOTHING (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
         // nothing, so the lock admits the chord and this face follows the key
@@ -12273,6 +12354,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // the live bit bare `y` flips, so the lit face and the pin cannot
         // drift.
         case RedesignButton::IconCentered: return a.centered_mode;
+        // The center-on-next-marker lamp (2026-09-04): the same toggle
+        // pattern again, reading the live bit bare `n` flips, so the lit face
+        // and the walk's behaviour cannot drift.
+        case RedesignButton::IconCenterOnNext:
+            return a.center_on_next_marker;
         // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
         // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
         // bit bare `[` flips, so the lit face and the surface on screen
@@ -12907,6 +12993,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Toggle Follow (F)", nullptr};
         case RedesignButton::IconCentered:
             return {"Toggle Centered Viewport (Y)", nullptr};
+        // THE WALK'S FRAMING LAMP (2026-09-04), one line: bare `n` toggles and
+        // has no shifted twin. It NAMES THE TOGGLE like the two above (the
+        // lamp rule at this table's head) — the state is the lamp's to tell.
+        case RedesignButton::IconCenterOnNext:
+            return {"Toggle Center on Next Marker (N)", nullptr};
         // PLAY RENDERS IS THE PLAYER'S ONE ICON-ROW OPENER since 2026-09-01
         // (architect, on the tooltip survey): both buttons opened it until
         // then — bare `l` and bare `'` being TWO KEYS onto one act outside the

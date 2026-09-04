@@ -2264,7 +2264,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // together that evening.
 }
 
-void GuiInputHandler::cycle_marker_focus(bool forward) {
+void GuiInputHandler::cycle_marker_focus(bool forward, MarkerLandingFrame frame) {
     // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
     // ruling), and the test is THE LANDING OWNER'S — marker_walk_actionable
     // over marker_walk_landing (app_state.h), the very predicate the Walk
@@ -2289,10 +2289,21 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     else         selection.select_prev_marker();
 
     // The select above establishes the focused marker; the shared jump tail
-    // moves the playhead onto it and recenters AT THE CURRENT ZOOM. Byte-
-    // identical to the `c` gesture's marker jump — the zoom is what separates
-    // the two commands: `c` snaps to the working level, a Tab walk keeps
-    // whatever level the user is reading at.
+    // moves the playhead onto it and treats the camera as `frame` says.
+    //
+    // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
+    // (architect 2026-09-04, rebuilding the walk when the Center on next
+    // marker lamp landed). The walk moves focus and lands the playhead; the
+    // camera is its caller's statement, forwarded untouched. The lamp governs
+    // the BARE Tab walk alone, so the three bare arms hand this
+    // marker_walk_frame(app) while the Ctrl+Shift+Tab paired march — a
+    // different act, which always centres — hands it
+    // MarkerLandingFrame::Center. Putting the lamp read in here is what made
+    // the march inherit it, which is the shape the required parameter exists
+    // to prevent: framing cannot be acquired by saying nothing.
+    // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
+    // what separates the two commands: `c` snaps to the working level, a Tab
+    // walk keeps whatever level the user is reading at.
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
@@ -2309,7 +2320,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
-    jump_playhead_to_focused_marker();
+    jump_playhead_to_focused_marker(frame);
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {
@@ -2336,10 +2347,12 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport) {
     viewport.invalidate_waveform_area();
 }
 
-bool GuiInputHandler::jump_playhead_to_focused_marker() {
+bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) {
     // The walk is markers-only (trim is not a cycle stop). The playhead lands on
-    // the focused marker unconditionally, and the viewport always recenters on
-    // it (below) — follow mode does not gate the cycle.
+    // the focused marker unconditionally, and the camera below does whatever
+    // `frame` says — this body resolves nothing, asking no lamp, no follow bit
+    // and no mode (architect 2026-09-04). Follow mode never gated the cycle
+    // either.
     // FOCUS RESOLUTION, kept for the `false` RETURN ALONE: a missing or
     // out-of-range focus aborts the WHOLE jump, stop included, and the land
     // owner's silent no-op cannot express that, so the two refusals stay spelled
@@ -2373,18 +2386,37 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // working zoom right after this returns, the Tab family sets nothing at all
     // (architect 2026-08-05, "no zoom on Tab") — so this tail frames the stop at
     // whatever level it was called at, and only `c`'s apply_zoom_change
-    // re-centers after it. This recenter is unconditional: follow
-    // mode does not gate the cycle (architect 2026-07-19, reversing the
-    // earlier follow-only rule). center_viewport_on_playhead is the SOLE
-    // viewport write in this path: it reads the cursor we just set and
-    // scrolls once to center it, emitting one coherent set of waveform +
-    // top-strip damage against the final viewport.
+    // re-centers after it. Follow mode does not gate it either (architect
+    // 2026-07-19, reversing the earlier follow-only rule).
+    // center_viewport_on_playhead is the SOLE viewport write in this arm: it
+    // reads the cursor we just set and scrolls once to center it, emitting one
+    // coherent set of waveform + top-strip damage against the final viewport.
     // center_viewport_on_playhead routes through kick_waveform_sync (whose
     // installed callback IS force_synchronous_waveform_rebuild) inside its
     // own moved guard, so a recenter that scrolls already gets its one
     // synchronous rebuild here — no second call in this function's tail. The
     // unmoved path (EOF-clamped no-op) needs none.
-    viewport.center_viewport_on_playhead();
+    //
+    // `frame` IS THE CALLER'S TOO (architect 2026-09-04, the Center on next
+    // marker lamp), and it selects between these two lines and nothing else:
+    // the land above already happened, so a FollowPage landing still moves the
+    // focus and the playhead — the camera simply stays where the user left it.
+    // THE FollowPage ARM IS FOLLOW'S PAGE, not a second scroll spelling:
+    // Viewport::follow_scroll_if_needed is the one body that brings an
+    // offscreen playhead into view at follow's own margin, it asks no follow
+    // bit of its own (its callers do), and playback is stopped above so it
+    // reads the resting cursor. A landing already on screen leaves it a no-op,
+    // which is the whole of what "does not frame" means here.
+    //
+    // WHO PASSES WHAT, re-grepped 2026-09-04: `c` (run_center_command) and the
+    // Ctrl+Shift+Tab paired march both state Center; the three bare Tab arms
+    // state marker_walk_frame(app), the lamp's one reader. Shift+`j` and the
+    // A/B audition reach the camera through run_center_command by name and so
+    // take its Center with it.
+    switch (frame) {
+        case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
+        case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
+    }
     return true;
 }
 
@@ -2480,8 +2512,13 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // (The jump's own no-focus return is center_command_lands_on_focus's live
     // arm — the focus atom — plus an out-of-range belt the faces accept
     // reading unrepaired; the Center button's hint reads that predicate.)
+    // THE CAMERA IS STATED, NOT INHERITED (architect 2026-09-04): `c` frames,
+    // always and by its own name, so it hands the jump
+    // MarkerLandingFrame::Center rather than taking a default. Its own
+    // center_viewport_on_playhead two lines down is the post-zoom re-centre and
+    // is a separate act from this one.
     selection.repair_last_selected();
-    jump_playhead_to_focused_marker();
+    jump_playhead_to_focused_marker(MarkerLandingFrame::Center);
     viewport.apply_zoom_change(target_zoom_level);
     viewport.center_viewport_on_playhead();
 }
@@ -3868,4 +3905,13 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     if (band.read_only == value) return;
     band.read_only = value;
     if (tab_view == app.active_tab_view) viewport.invalidate_top_strip();
+}
+
+void GuiInputHandler::set_center_on_next_marker(bool desired) {
+    // The contract — sole writer, history-less, no damage, camera untouched —
+    // is at the declaration (input_handler.h), which also states the scope:
+    // this toggle governs the bare Tab walk alone. The two callers are the
+    // bare-`n` arm, which the icon row's button reaches by synthesizing that
+    // press, and the settings editor's `center_on_next_marker=` commit.
+    app.center_on_next_marker = desired;
 }

@@ -77,6 +77,10 @@ struct NonEngineSettingsSnapshot {
     // The `y` lamp's persisted preference (2026-08-31): keep the viewport
     // centered on the playhead. A display preference like follow, per piece.
     bool               centered;
+    // The Tab walk's framing lamp (2026-09-04): whether a marker walk
+    // recenters the viewport on its landing. Follow's and centered's kind of
+    // thing exactly — a per-piece display preference reaching no render input.
+    bool               center_on_next_marker;
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;

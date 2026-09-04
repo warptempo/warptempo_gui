@@ -48,6 +48,9 @@ struct AuthoringSnapshot {
     // The `y` centered lamp (2026-08-31), follow's sibling in the schema and
     // here: carried into the entry's .settings, never a render input.
     bool        centered            = false;
+    // The Center on next marker lamp (2026-09-04), the third boolean session
+    // pref: carried into the entry's .settings, never a render input.
+    bool        center_on_next_marker = true;
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.

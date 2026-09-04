@@ -104,7 +104,12 @@ constexpr const char* kCanonicalSettingsKeys[] = {
     // the `y` lamp's persisted viewport preference. Every checkpoint
     // committed before it leaves the `h` walk through this same strict gate —
     // the accepted precedent, no migration and no reader leniency.
-    "follow", "centered", "waveform_magnification_level",
+    // `center_on_next_marker` landed 2026-09-04 (architect approval
+    // 2026-09-04, on the same grant the two above were taken under): the Tab walk's framing
+    // lamp, `centered`'s neighbour on disk. Its default is TRUE, which is the
+    // behaviour that stood before the key existed.
+    "follow", "centered", "center_on_next_marker",
+    "waveform_magnification_level",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -268,6 +273,15 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     if (key == "centered") {
         // Follow's sibling: the same shared bool grammar, one canonical
         // spelling per value (architect approval 2026-08-31).
+        bool v = false;
+        if (!parse_bool_token(value, v))
+            return err("must be true or false");
+        out.b = v;
+        return R(out);
+    }
+    if (key == "center_on_next_marker") {
+        // The third of the boolean session prefs, on the same shared grammar
+        // (architect approval 2026-09-04).
         bool v = false;
         if (!parse_bool_token(value, v))
             return err("must be true or false");
@@ -462,6 +476,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.follow = gv.b;
         } else if (key == "centered") {
             out.centered = gv.b;
+        } else if (key == "center_on_next_marker") {
+            out.center_on_next_marker = gv.b;
         } else if (key == "active_audio_view") {
             out.active_audio_view = gv.c;
         } else if (key == "active_markers_view") {

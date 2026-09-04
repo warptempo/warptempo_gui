@@ -162,8 +162,8 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
 // icon row's toggle. That is the ruling working rather than a hole, and it is
 // why the commit arm below stays engine-only: the GUI-kind keys are band
-// rather than authored content — view state, follow, centered, the
-// magnification level, the per-tab viewport, zoom, playhead, trim and the
+// rather than authored content — view state, follow, centered,
+// center_on_next_marker, the magnification level, the per-tab viewport, zoom, playhead, trim and the
 // read_only bit itself — and have been read-only-legal since 2026-08-07, so
 // none of them owes a gate here.
 void GuiSettingsEditor::open() {
@@ -292,6 +292,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // one more caller of the toggle's own body, never a parallel writer.
         if (gv.b == app.centered_mode) { unchanged(); return true; }
         playback_lifecycle.set_centered_mode(gv.b);
+        applied(); return true;
+    }
+    if (key == "center_on_next_marker") {
+        // History-less, through the same chokepoint bare `n` and its icon-row
+        // button use (set_center_on_next_marker): a typed
+        // `center_on_next_marker=false` is one more caller of the lamp's own
+        // setter, never a parallel writer. Nothing moves at the commit — the
+        // bit is read at the next Tab walk.
+        if (gv.b == app.center_on_next_marker) { unchanged(); return true; }
+        input->set_center_on_next_marker(gv.b);
         applied(); return true;
     }
     if (key == "waveform_magnification_level") {
@@ -989,7 +999,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // follow, centered, gui_scale, waveform_magnification_level,
+    // follow, centered, center_on_next_marker, gui_scale,
+    // waveform_magnification_level,
     // projects_repo, projects_path, sync_path — the last four the device
     // config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical

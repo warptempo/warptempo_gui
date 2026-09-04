@@ -1893,6 +1893,7 @@ struct GuiHistoryGuiSide {
     ViewState   tab_b;
     bool        follow              = false;
     bool        centered            = false;
+    bool        center_on_next_marker = true;
     char        active_audio_view   = 'S';
     char        active_markers_view = 'W';
     char        active_tab_view     = 'A';
@@ -1920,6 +1921,7 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
 
     gui->follow              = app.follow_mode;
     gui->centered            = app.centered_mode;
+    gui->center_on_next_marker = app.center_on_next_marker;
     gui->active_audio_view   = app.active_audio_view;
     gui->active_markers_view = app.active_markers_view;
     gui->active_tab_view     = app.active_tab_view;
@@ -1931,6 +1933,7 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine) {
     const NonEngineSettingsSnapshot snap{
         gui.tab_a, gui.tab_b, gui.follow, gui.centered,
+        gui.center_on_next_marker,
         gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
         gui.waveform_magnification_level};
     return format_settings_text(snap, engine);

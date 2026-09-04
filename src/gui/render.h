@@ -1428,8 +1428,9 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
-// tabs (row 4 of the redesign: TWENTY-SEVEN view/mode/action buttons since
-// 2026-08-31, when the centered lamp joined beside Follow — the
+// tabs (row 4 of the redesign: TWENTY-FIVE view/mode/action buttons since
+// 2026-09-04, when the radio collapse took three off the row and the Center on
+// next marker lamp put one back — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a

@@ -222,6 +222,11 @@ enum class Icon {
     // the center column. A fresh verbatim transcription for the `y` centered
     // lamp beside Follow.
     AlignHorizontalCenter,  // Toggle centered viewport (`y`)
+    // Breeze's zoom-next (2026-09-04, the architect's pick): a magnifier with
+    // a chevron pointing forward out of its lens — bringing the NEXT thing
+    // into view, which is what the Tab walk's framing does. A verbatim 22px
+    // transcription for the Center on next marker lamp.
+    ZoomNext,            // Toggle center on next marker (`n`)
     PreviewRenderOn,     // Listen to a render
     // THE CHECKMARK HAS TWO READERS SINCE 2026-09-01, one per surface that
     // runs a load in place: the ICON ROW's button (the `h` view's load, its
@@ -572,7 +577,7 @@ enum class Icon {
 // stale value, per the inventory-retell rule; the drift cost exactly what this
 // header says it costs — one icon's once-per-icon diagnostic latch, the latch
 // being bounds-checked — and nothing else.
-inline constexpr int kIconCount = 54;
+inline constexpr int kIconCount = 55;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

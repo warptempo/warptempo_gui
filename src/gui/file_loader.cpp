@@ -35,6 +35,10 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.centered_derived_tab        = 0;
     app.centered_derived_audio_view = 0;
     app.centered_derived_scanner    = false;
+    // The Tab walk's framing lamp loads with the two above (2026-09-04): a
+    // plain preference with no derivation memory of its own, read at the next
+    // walk and nowhere else.
+    app.center_on_next_marker       = sf.center_on_next_marker;
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER
@@ -551,7 +555,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         };
         apply(sf.tab_a, app.tab_a);
         apply(sf.tab_b, app.tab_b);
-        // Engine block plus the scalar session prefs (follow,
+        // Engine block plus the scalar session prefs (follow, centered,
+        // center_on_next_marker,
         // active_audio_view, active_markers_view, active_tab_view,
         // waveform_magnification_level), VALUES ONLY. The
         // one side effect that consumes these (on_resize) stays below where it

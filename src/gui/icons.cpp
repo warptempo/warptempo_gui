@@ -251,6 +251,23 @@ constexpr IconPath kAlignHorizontalCenterPaths[] = {
      "1v-1-3-1h-1-1.5v-1h-1m-1.5 2h4v3h-4v-3m-3 9h10v3h-10v-3"},
 };
 
+// THE CENTER-ON-NEXT-MARKER LAMP's icon (2026-09-04, the architect's pick):
+// zoom-next, the magnifier ring with a chevron stepping forward out of it —
+// the walk bringing its next stop into view. Command coverage: relative `m` /
+// `l` / `a` with implicit repetition and one `z`, all of which the interpreter
+// already reads; the ring is two subpaths wound oppositely, so the nonzero
+// fill leaves it hollow (preview-render-on's own construction).
+constexpr IconPath kZoomNextPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 4.892578-1.693359l3.400391 "
+     "3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 0-1.414062l-3.40039-3.400391a8 8 "
+     "0 0 0 1.693359-4.892578 8 8 0 0 0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 "
+     "7 0 0 1-7-7 7 7 0 0 1 7-7zm-1.5 2.2988281-1.2011719 1.2011719 0.5996094 "
+     "0.6015625 2.8984375 2.8984375-2.8984375 2.898438-0.5996094 0.601562 "
+     "1.2011719 1.201172 0.601562-0.59961 4.09961-4.101562-4.09961-4.1015625-0"
+     ".601562-0.5996094z"},
+};
+
 constexpr IconPath kPreviewRenderOnPaths[] = {
     {kIconText,
      "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
@@ -1165,6 +1182,7 @@ constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kAlignHorizontalCenter {22.0, kAlignHorizontalCenterPaths, 1};
+constexpr IconDef kZoomNext           {22.0, kZoomNextPaths,            1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
@@ -1222,6 +1240,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::BlackSum:            return kBlackSum;
         case Icon::GoJump:              return kGoJump;
         case Icon::AlignHorizontalCenter: return kAlignHorizontalCenter;
+        case Icon::ZoomNext:            return kZoomNext;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;
