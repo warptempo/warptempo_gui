@@ -86,6 +86,19 @@ struct GuiWarpMarkersOps {
     // playback_lifecycle.h).
     GuiOpRefusal adjust_tempo_cents(int64_t delta_cents,
                                     bool synthesized_repeat);
+    // THE VERTICAL ARROWS' SECOND STEP BODY (architect 2026-09-04): steps one
+    // bound of the focused marker's iteration bracket — `side` Lower or Upper,
+    // the addressed cell the dispatch forks on (AppState::iter_step_cell) —
+    // by `delta_cents` through the same ladder, with a 2+ selection taking
+    // the all-or-nothing group arm below. Its predicates are the tempo step's
+    // shape one for one (app_state.h, the bound step's block) and its undo
+    // entry is the bracket-only kind (affects_persistence false, the flag
+    // editor's own bracket commit's), coalescing as the tempo step does under
+    // GestureKind::IterBoundStep. It changes no map: no render trigger, no
+    // re-land, no target-view refusal — a bracket is target-legal. Never
+    // stops playback, for the tempo step's own reason.
+    GuiOpRefusal adjust_iter_bound_cents(IterStepCell side, int64_t delta_cents,
+                                         bool synthesized_repeat);
     // `step_columns` is the press's signed PAINTED-COLUMN count (±1 bare, ±3
     // shifted, ±10 with ctrl — the ladder above), which the shared road reads
     // as a plain column delta the whole way down.
@@ -100,4 +113,11 @@ struct GuiWarpMarkersOps {
     // its own tempo_cents by delta_cents. See the definition for the wall set.
     GuiOpRefusal adjust_tempo_cents_group(int64_t delta_cents,
                                           bool synthesized_repeat);
+    // Group bound step (2+ selection): all-or-nothing over the members the
+    // sweep reads — an ineligible member is skipped, every survivor must take
+    // the FULL `delta_cents` inside its walls or the whole press refuses on
+    // its own sentence; then each survivor's addressed bound steps.
+    GuiOpRefusal adjust_iter_bound_cents_group(IterStepCell side,
+                                               int64_t delta_cents,
+                                               bool synthesized_repeat);
 };

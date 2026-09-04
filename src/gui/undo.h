@@ -85,12 +85,15 @@ struct GuiInputHandler;
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the two position
-// nudges and the Up/Down cent step (TempoStep, singleton and group — its own kind
-// keeps a nudge burst and a tempo burst separate). TempoImageStep was a fourth
-// until 2026-07-29 and went caller-less with the tempo-image family's deletion
-// (marker_drag.h).
+// nudges, the Up/Down cent step (TempoStep, singleton and group — its own kind
+// keeps a nudge burst and a tempo burst separate) and, since 2026-09-04, the
+// same arrows' ITERATION BOUND STEP (IterBoundStep, singleton and group — the
+// arrows' second body, stepping a bound cell of the bracket; its own kind
+// because the two bodies write different fields and a burst has one subject).
+// TempoImageStep was a kind until 2026-07-29 and went caller-less with the
+// tempo-image family's deletion (marker_drag.h).
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep
+    None, WarpNudge, PhaseResetNudge, TempoStep, IterBoundStep
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL

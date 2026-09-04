@@ -348,13 +348,21 @@ struct FlagCache {
     // fp_gui_scale_percent is the axis itself, so the dependence the deleted
     // field used to stand for is a field again, and by construction this time.)
     // ITERATION MODE joined the fingerprint with row 5 (2026-08-01): the flags
-    // CARRY TEXT now, composed through flag_text_iter, which splices the
-    // `+[lo, hi]` bracket exactly when this bit is on. Before row 5 the shapes
-    // were textless and the bracket surfaced only in the marker-text lane, a
-    // live per-frame pass that needed no fingerprint; `i` damages the top strip
-    // but the rebuild is fingerprint-guarded, so without this field the damage
+    // CARRY TEXT now, and the mode changes what an eligible flag paints — the
+    // two bound cells beside it, exactly when this bit is on (the spliced
+    // bracket in the text until 2026-09-04). Before row 5 the shapes were
+    // textless and the bracket surfaced only in the marker-text lane, a live
+    // per-frame pass that needed no fingerprint; `i` damages the top strip but
+    // the rebuild is fingerprint-guarded, so without this field the damage
     // would repaint the same cached bytes.
     bool      fp_iteration_mode           = false;
+    // THE ADDRESSED CELL (IterStepCell, stored as its integer value): the
+    // focused marker's addressed cell wears the cue underline while the mode
+    // is on, and a marker press moves the axis without necessarily moving
+    // the selection (a re-press of the focused flag's other cell), so the
+    // axis is a content fact of this surface in its own right. The marker
+    // the cue sits on is the focus, already keyed by fp_selection_hash.
+    int       fp_iter_step_cell           = 0;
     // THE MARKER WHOSE FLAG EDITOR IS OPEN, or -1. In the fingerprint because
     // that marker's box is SKIPPED in the cached pass (the open editor paints it
     // unrolled instead), so opening, closing or retargeting the editor changes
@@ -600,10 +608,11 @@ struct GuiPaintHandler {
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash, fp_selection_hash,
     //     fp_active_markers_view;
-    //   - CONTENT, three more: fp_iteration_mode (it changes what the flags
-    //     SAY), fp_editing_flag_target (the payload editor's marker, whose box
-    //     this pass SKIPS whole) and fp_editing_measure_target (the measure
-    //     editor's marker, whose MEASURE BOX alone this pass skips);
+    //   - CONTENT, four more: fp_iteration_mode (it changes what the flags
+    //     SHOW — the bound cells), fp_iter_step_cell (which cell of the focus
+    //     wears the cue), fp_editing_flag_target (the payload editor's marker,
+    //     whose box this pass SKIPS whole) and fp_editing_measure_target (the
+    //     measure editor's marker, whose MEASURE BOX alone this pass skips);
     //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
     //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
     //     fp_history_active, fp_history_index, fp_history_focus,

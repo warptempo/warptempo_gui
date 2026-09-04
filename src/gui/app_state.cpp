@@ -287,8 +287,8 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 }
 
 // The topmost published flag rect under the point, or nullptr — the ONE walk
-// both public answers below take, so "which box" and "which half of it" cannot
-// disagree.
+// both public answers below take, so "which marker" and "which box of its run"
+// cannot disagree.
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
                                             int mouse_x, int mouse_y) {
     for (auto it = app.flag_hit_rects.rbegin();
@@ -306,12 +306,17 @@ MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
                                    int mouse_x, int mouse_y) {
     (void)audio;
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
-    // THE PAINTER'S OWN BOUNDARY, never a re-derivation: it is the flag box's
-    // right edge, and it equals the rect's right edge whenever no measure box
-    // painted — so a measureless flag answers Flag everywhere by construction.
+    // THE PAINTER'S OWN BOUNDARIES, never a re-derivation: each is the seam
+    // column of the box it introduces, and each collapses onto the next where
+    // that box did not paint (FlagHitRect's contract), so the walk from the
+    // rightmost box inward can only answer a box with pixels — a cell-less,
+    // measureless flag answers Flag everywhere by construction.
     if (!r) return MarkerClickSpan::Flag;
-    return (static_cast<double>(mouse_x) >= r->measure_boundary_x)
-        ? MarkerClickSpan::Measure : MarkerClickSpan::Flag;
+    const double x = static_cast<double>(mouse_x);
+    if (x >= r->measure_boundary_x)    return MarkerClickSpan::Measure;
+    if (x >= r->iter_upper_boundary_x) return MarkerClickSpan::IterUpper;
+    if (x >= r->iter_lower_boundary_x) return MarkerClickSpan::IterLower;
+    return MarkerClickSpan::Flag;
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,

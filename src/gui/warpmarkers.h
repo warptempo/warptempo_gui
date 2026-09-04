@@ -19,19 +19,22 @@
 // resolver and the engine path never see these GUI-only fields.
 struct GuiWarpMarker : WarpMarker {
     // Iteration mode. Session-only render-parameter scratchpad: never
-    // serialized, lost on app close, authored in the Enter flag editor and
-    // surfaced ON THE FLAG ITSELF since row 5 — the flags carry text now, and
-    // flag_text_iter splices the `+[lo, hi]` bracket into the label exactly
-    // while iteration mode is on and the owner is not effectively disabled
-    // (a disabled owner's bracket is DORMANT — kept, shown in its editor
-    // alone, invisible to the flag and the sweep until re-enabled; the
-    // eligibility pair below), the marker-text lane that used to show it and
-    // its hover popup being deleted. Signed tempo deltas in integer cents —
-    // the same integer-cents domain the tempo itself lives in, so the
-    // sweep's per-cell base + delta is plain integer addition. nullopt
-    // means "blank" (the flag shows the zero-filled `+[+0.00,+0.00]` — the one
-    // locked display form at format_iter_bracket_inline below); when set, both
-    // are set and iter_start_cents <= iter_end_cents.
+    // serialized, lost on app close, authored two ways — typed into the Enter
+    // flag editor as the `+[lo,hi]` bracket, or stepped a cent at a time by
+    // the vertical arrows on the flag's two BOUND CELLS (architect 2026-09-04,
+    // the road's authoring surface: the bracket is the one thing the mode
+    // needed a keyboard for) — and surfaced ON THE FLAG ITSELF while
+    // iteration mode is on and the owner is not effectively disabled: the flag
+    // keeps its plain text and grows two cells to its right, the lower bound
+    // then the upper, each painted as another flag payload (render_flags,
+    // render.cpp). A disabled owner's bracket is DORMANT — kept, shown in its
+    // editor alone, invisible to the flag and the sweep until re-enabled; the
+    // eligibility pair below. Signed tempo deltas in integer cents — the same
+    // integer-cents domain the tempo itself lives in, so the sweep's per-cell
+    // base + delta is plain integer addition. nullopt means "blank" (both
+    // cells read `+0.00` and the editor seeds `+[+0.00,+0.00]` — the one
+    // blank rule at format_iter_bound_cell below); when set, both are set and
+    // iter_start_cents <= iter_end_cents.
     std::optional<int64_t> iter_start_cents;
     std::optional<int64_t> iter_end_cents;
 
@@ -225,20 +228,45 @@ inline std::string format_signed_delta_cents(int64_t cents) {
     return s;
 }
 
-// Iteration mode: format the inline bracket segment spliced into
-// an eligible flag after the tempo. The leading `+` is the
-// "relative to base" cue; the blank (both iter values nullopt) renders as
-// the zero-filled `+[+0.00,+0.00]`, set values as the same signed
-// two-decimal form (no space after the comma, so the display form matches
-// the typeable form). This is the single locked display form.
+// Which cell of the focused warp marker the vertical arrows step (architect
+// 2026-09-04). Tempo is the flag box itself — the bare Up/Down cent step as it
+// has always been — and Lower / Upper are the two bound cells iteration mode
+// paints to its right. It is ONE session axis over every marker
+// (AppState::iter_step_cell): a marker press writes it from the cell the press
+// landed on, Tab to another marker keeps it, and it falls back to Tempo the
+// moment iteration mode goes off, so outside the mode it is Tempo by
+// construction. The type lives here, beside the bracket it addresses, because
+// the painter (render.h) needs it and render.h cannot see AppState.
+enum class IterStepCell { Tempo, Lower, Upper };
+
+// Iteration mode: the text of ONE bound cell — the bound in the signed
+// two-decimal form, `+0.00` for a blank bracket on either side. THE BLANK
+// RULE HAS THIS ONE HOME: the flag's two cells and the editor's seeded bracket
+// (format_iter_bracket_inline below) both read it, so what the cells show and
+// what the editor opens with are one spelling of one value. `side` is never
+// Tempo here — a tempo cell carries the flag's own text, not a delta — and a
+// Tempo argument answers the lower bound, the harmless reading.
+inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
+                                          IterStepCell side) {
+    const bool blank = !m.iter_start_cents.has_value() ||
+                       !m.iter_end_cents.has_value();
+    if (blank) return format_signed_delta_cents(0);
+    return format_signed_delta_cents(side == IterStepCell::Upper
+                                         ? *m.iter_end_cents
+                                         : *m.iter_start_cents);
+}
+
+// Iteration mode: the bracket as the flag EDITOR seeds it, `+[lo,hi]` after
+// the tempo. The leading `+` is the "relative to base" cue; the two bounds are
+// the cell texts above (so a blank bracket seeds `+[+0.00,+0.00]`), with no
+// space after the comma, so the seeded form matches the typeable form. This is
+// the single locked typed form; the flag itself never carries it since the
+// cells landed (2026-09-04) — it shows the two bounds as two cells.
 inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
-    if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
-        return "+[+0.00,+0.00]";
-    }
     std::string out = "+[";
-    out += format_signed_delta_cents(*m.iter_start_cents);
+    out += format_iter_bound_cell(m, IterStepCell::Lower);
     out += ',';
-    out += format_signed_delta_cents(*m.iter_end_cents);
+    out += format_iter_bound_cell(m, IterStepCell::Upper);
     out += ']';
     return out;
 }
@@ -272,15 +300,18 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // reaches, is no carrier), and it is asked through the vector/index form all
 // the same so that a change to the cascade lands here for free and no caller
 // can hand a bare marker and lose it — which is why this is the ONE spelling
-// and the single-marker form above carries a different name. THREE READERS,
-// and a disabled owner's bracket is dormant at all three: the sweep's
+// and the single-marker form above carries a different name. FOUR READERS,
+// and a disabled owner's bracket is dormant at all four: the sweep's
 // dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
 // plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
 // neither multiplies the cell count nor names a byte-identical cell — the
-// marker's tempo is render-filtered whatever value a cell wrote into it — and
-// the flag composer (flag_text_iter, render.cpp, its Swept mode) paints no
-// bracket on a disabled flag. (The name is the retired hover popup's — the
-// eligibility rule outlived the surface that first displayed it.)
+// marker's tempo is render-filtered whatever value a cell wrote into it; the
+// flag painter (render_flags, render.cpp) paints the two bound cells on
+// exactly these markers and no cells on a disabled flag; and the bound step
+// (GuiWarpMarkersOps::adjust_iter_bound_cents) skips an ineligible member in
+// a group and refuses an ineligible singleton on a card. (The name is the
+// retired hover popup's — the eligibility rule outlived the surface that
+// first displayed it.)
 inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
                                        int idx) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return false;
@@ -308,7 +339,11 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // bracket TYPED into the editor still gates LOUD at commit (red flash +
 // stderr) because it is authored input arriving at its own surface; later
 // base motion clamps SILENTLY, because there the base is what is being
-// authored and the bracket is the passenger.
+// authored and the bracket is the passenger. The bound STEP (the arrows on a
+// bound cell, adjust_iter_bound_cents) is not a caller: it moves a bound, not
+// the base, and its landing owner (iter_bound_step_landing, app_state.h)
+// clamps into this same window as it steps, so nothing it writes needs
+// folding after the fact.
 //
 // A blank bracket (either bound nullopt) is untouched — no cells, nothing to
 // bound. A bracket that lands FULLY outside degenerates to a zero-width delta

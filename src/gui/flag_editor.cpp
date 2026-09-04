@@ -786,7 +786,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // a bracketless exit leaves the undo stack untouched; plain undo is
 // deliberately ungated and may restore a previously accepted bracket set.
 // Callers own the mode-flag flip and the repaint invalidation.
+// AND IT RESETS THE ADDRESSED CELL (architect 2026-09-04): the vertical
+// arrows' cell axis (AppState::iter_step_cell) falls back to Tempo here,
+// ahead of the bracket test, because this body is the one thing every exit
+// from the mode runs — there is no single mode setter, the three writers of
+// the off edge each flip the bit themselves after calling this — so a step
+// outside the mode can only ever be the tempo step. History-less: the axis is
+// a session address, not content, and the snapshot below carries no such
+// field.
 void GuiFlagEditor::wipe_iter_state() {
+    app.iter_step_cell = IterStepCell::Tempo;
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {

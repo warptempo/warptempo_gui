@@ -397,13 +397,15 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
     // preference. The routes are the nudges' shared prologue plus both arms of the
-    // Up/Down cent step (grep this function's callers).
+    // Up/Down cent step and both arms of the Up/Down bound step (grep this
+    // function's callers).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — FOUR routes over THREE call sites (the two position
+    // at every eligible route — SIX routes over FIVE call sites (the two position
     // nudges through their shared commit tail, plus the singleton and group arms of
-    // the Up/Down cent step) — and ONLY on the accepted path, so a REFUSED press
+    // the Up/Down cent step and of the Up/Down bound step) — and ONLY on the
+    // accepted path, so a REFUSED press
     // never enables a later merge into an older entry, tap or repeat. Presses
     // beyond the window, or after a subject change, open their own entries.
     return merge;

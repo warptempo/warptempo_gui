@@ -3911,6 +3911,34 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // refuses (read-only still selects and lands, and the index came from a
     // live hit test).
     playback_lifecycle.stop_playback_if_playing();
+    // WHICH BOX THE PRESS LANDED ON, from the painter's published boundaries
+    // (MarkerClickSpan, app_state.h), asked ONCE for the press's two readers:
+    // the addressed cell written here and the double-click seed the plain arm
+    // stamps below.
+    //
+    // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
+    // bound cells): a press on the flag box addresses the tempo, on a bound
+    // cell that bound, and a measure press leaves the axis where it stands —
+    // on ALL THREE click shapes, because the press already selects and lands
+    // on every shape and the axis is one more thing the press says. Read-only
+    // does not refuse it: the axis is navigation, as the selection is, and the
+    // step it addresses meets the lock at its own gate. The cue moves with
+    // it, so a changed axis damages the marker lane even where the selection
+    // stood still (a re-press of the focused flag's other cell).
+    const MarkerClickSpan span = hit_test_flag_span(app, audio, x, y);
+    {
+        IterStepCell addressed = app.iter_step_cell;
+        switch (span) {
+        case MarkerClickSpan::Flag:      addressed = IterStepCell::Tempo; break;
+        case MarkerClickSpan::IterLower: addressed = IterStepCell::Lower; break;
+        case MarkerClickSpan::IterUpper: addressed = IterStepCell::Upper; break;
+        case MarkerClickSpan::Measure:   break;
+        }
+        if (addressed != app.iter_step_cell) {
+            app.iter_step_cell = addressed;
+            viewport.invalidate_top_strip();
+        }
+    }
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
     // 2026-08-18): while the mode stands, a PLAIN press on a flag is a ctrl
     // press in every respect — same branch, same land, same nothing-armed
@@ -4025,9 +4053,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // marker drag after a consumed open" structural rather than policed.
     //
     // AND THE SPAN DECIDES WHICH EDITOR (2026-08-19). The seed carries which
-    // half of the box the FIRST press landed on (MarkerClickSpan), so the two
-    // halves of one box open two different editors and a pair straddling the
-    // seam opens the one the first click named. The gates differ with them:
+    // box of the run the FIRST press landed on (MarkerClickSpan): the MEASURE
+    // span opens the measure editor and every other span — the flag box and,
+    // since 2026-09-04, the two iteration bound cells — opens the payload
+    // editor, a cell's double-click being the flag's own act (the bracket is
+    // typed there as inline text), and a pair straddling a seam opens the one
+    // the first click named. The gates differ with them:
     // the PAYLOAD editor keeps read-only and the P view, while the MEASURE
     // editor asks read-only ALONE — measures are the fourth ruled exception to
     // the home-view binding, so the phase column's measure double-click is
@@ -4067,11 +4098,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     app.pending_marker_press.marker  = hit;
     app.pending_marker_press.press_x = x;
     app.pending_marker_press.press_y = y;
-    // WHICH HALF OF THE BOX THIS PRESS LANDED ON, stamped now from the
-    // painter's published boundary and carried to the seed at the motionless
-    // release. Only the double-click reads it; the drag this may become is the
-    // same gesture from either half.
-    app.pending_marker_press.span = hit_test_flag_span(app, audio, x, y);
+    // WHICH BOX THIS PRESS LANDED ON, the span resolved at the head and
+    // carried to the seed at the motionless release. Only the double-click
+    // reads it here; the drag this may become is the same gesture from any
+    // box.
+    app.pending_marker_press.span = span;
 }
 
 // ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (BEGIN) /

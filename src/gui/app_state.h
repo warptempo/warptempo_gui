@@ -779,16 +779,23 @@ struct EditorTextDragState {
     bool shift_extend = false;
 };
 
-// WHICH HALF OF A MARKER'S BOX A PRESS LANDED ON (2026-08-19). The flag and its
-// blue MEASURE box are one clickable surface for press, drag and select — one
-// marker, one rect — and this distinction exists for the DOUBLE-CLICK ALONE,
-// which opens a different editor on each half: the flag span opens the PAYLOAD
-// editor (warp only, its own gates), the measure span the MEASURE editor (both
-// columns, both views). It is resolved from the painter's own published
-// boundary (FlagHitRect::measure_boundary_x) and never re-derived, and it is
-// stamped at the FIRST press so the pair of clicks agrees about what it is
-// opening even if the box has since been repainted at a different width.
-enum class MarkerClickSpan { Flag, Measure };
+// WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON (2026-08-19; four-way since
+// 2026-09-04). The flag, its two iteration BOUND CELLS and its blue MEASURE
+// box are one clickable surface for press, drag and select — one marker, one
+// rect — and the span decides two things. THE ADDRESSED CELL: a press on the
+// flag span, the lower cell or the upper cell writes AppState::iter_step_cell
+// (Tempo / Lower / Upper) inside run_marker_click_act on all three click
+// shapes, so the vertical arrows then step that cell; a measure press leaves
+// the axis alone. THE DOUBLE-CLICK'S EDITOR: the measure span opens the
+// MEASURE editor (both columns, both views) and every other span opens the
+// PAYLOAD editor (warp only, its own gates) — a cell's double-click is the
+// flag's own act, the bracket being typed there as inline text. It is
+// resolved from the painter's own published boundaries
+// (FlagHitRect::iter_lower_boundary_x / iter_upper_boundary_x /
+// measure_boundary_x) and never re-derived, and the seed is stamped at the
+// FIRST press so the pair of clicks agrees about what it is opening even if
+// the box has since been repainted at a different width.
+enum class MarkerClickSpan { Flag, IterLower, IterUpper, Measure };
 
 // THE MARKER FLAG'S PENDING PRESS — armed by the PLAIN flag-box press ALONE,
 // AFTER the click has already acted (architect 2026-08-17: CONTENT ACTS THE
@@ -853,12 +860,13 @@ struct PendingMarkerPress {
     int  marker         = -1; // marker index the press hit (active view's list)
     int  press_x        = 0;  // press position (window px): the gate + drag
     int  press_y        = 0;  //   anchor + the release-side seed's position
-    // WHICH HALF OF THE BOX THE PRESS LANDED ON, stamped here at the press from
-    // the painter's published boundary and carried to the double-click seed at
-    // the motionless release — the same reason the POSITION is carried: the
-    // seed describes the press, and only the release knows the press was a
-    // click. It reaches nothing else; the drag this pending may become is one
-    // gesture on one marker whatever half started it.
+    // WHICH BOX OF THE RUN THE PRESS LANDED ON, resolved once at the press
+    // from the painter's published boundaries (the addressed cell is written
+    // from the same answer there) and carried to the double-click seed at the
+    // motionless release — the same reason the POSITION is carried: the seed
+    // describes the press, and only the release knows the press was a click.
+    // It reaches nothing else; the drag this pending may become is one gesture
+    // on one marker whatever box started it.
     MarkerClickSpan span = MarkerClickSpan::Flag;
 };
 
@@ -8095,12 +8103,30 @@ struct AppState {
     // ON 2026-08-24: it was source-only only because the flag editor was, and
     // the editor is now the home-view binding's fifth ruled exception
     // (active_column_authoring_allowed, below), so a bracket is typed in
-    // either view. When true, flag_text_iter splices the
-    // inline `+[lo, hi]` bracket into every eligible owning marker's composed
-    // label — every carrier the sweep reads; a disabled owner's bracket is
-    // dormant and stays off its flag — so the mode is visible directly on the
-    // flags (it is a flag-cache fingerprint field for exactly that reason).
+    // either view. When true, every eligible owning marker's flag grows two
+    // BOUND CELLS to its right (render_flags — every carrier the sweep reads;
+    // a disabled owner's bracket is dormant and paints no cells), so the mode
+    // is visible directly on the flags (it is a flag-cache fingerprint field
+    // for exactly that reason). THE THREE WRITERS OF THE OFF EDGE all run
+    // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm, the sweep's
+    // fire and BPM mode's forced exit — which is where the addressed cell
+    // below falls back to Tempo.
     bool iteration_mode_enabled = false;
+
+    // Which cell of the focused warp marker the vertical arrows step
+    // (IterStepCell, warpmarkers.h — Tempo, or one of the two bound cells;
+    // architect 2026-09-04). Session-only, in no settings vocabulary, Tempo at
+    // every launch. WRITTEN BY A MARKER PRESS'S SPAN inside
+    // run_marker_click_act (flag → Tempo, lower cell → Lower, upper cell →
+    // Upper, the measure leaving it) on all three click shapes, and RESET TO
+    // Tempo by wipe_iter_state, which every exit from iteration mode runs — so
+    // outside the mode it is Tempo by construction. It persists across focus
+    // changes: Tab to the next marker and Up steps the same cell there — one
+    // column address over every marker, the W/P column's own shape. READERS:
+    // the Up/Down dispatch's fork (input_handler.cpp), the flag painter's cue
+    // (the flag cache's fp_iter_step_cell), and the Up/Down buttons' face and
+    // tooltip (redesign_button_enabled / redesign_button_tooltip).
+    IterStepCell iter_step_cell = IterStepCell::Tempo;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
     // exclusive with iteration_mode_enabled (toggling one ON forces the
@@ -9817,6 +9843,99 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // purpose (the tails' record at its declaration), and this owner adds no face.
 const char* tempo_cent_step_target_view_refusal(const AppState& a,
                                                 const GuiAudio& audio);
+
+// -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
+//
+// The vertical arrows' SECOND step body, GuiWarpMarkersOps::adjust_iter_bound_
+// cents (warpmarkers_ops.cpp), steps one bound of the focused marker's
+// iteration bracket while the addressed cell (AppState::iter_step_cell) is
+// Lower or Upper. Its predicates mirror the tempo step's above one for one —
+// the stable-state refusals, the landing owner, the group verdict, the
+// directional face, the kind refusal — and each has the same readers: the act,
+// the Up/Down buttons' face, their tooltip and the card. What differs is the
+// subject (a bound in the bracket's delta domain, not the base tempo) and the
+// eligibility (iter_popup_eligible_marker, the sweep's own — a label ref, a
+// pass or a disabled owner has no live bound to step).
+
+// THE BOUND STEP'S STABLE-STATE REFUSALS: iteration mode on, then the tempo
+// step's own three terms — the warp column, a standing selection, a valid
+// focus — which are the same terms and are read rather than restated. The
+// mode term is a belt: the axis falls back to Tempo the moment the mode goes
+// off, so no dispatch reaches the bound body outside it. TWO READERS: the
+// act's leading refusal and the Up/Down face with a bound addressed.
+inline bool iter_bound_step_actionable(const AppState& app) {
+    return app.iteration_mode_enabled && tempo_cent_step_actionable(app);
+}
+
+// WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
+// tempo_cent_step_landing in the bracket's delta domain. The start is the
+// bound's resting value, 0 for a blank bracket (a step from blank authors the
+// bracket at [0, 0] plus the step). Two walls, both inclusive: the clamp
+// window clamp_iter_bracket_to_tempo_bracket already states,
+// [kTempoMinCents − base, kTempoMaxCents − base] (inside ±kIterDeltaMaxCents
+// for free — that owner's comment), and the PARTNER bound — the lower never
+// rises above the upper, the upper never falls below the lower, the trim
+// endcap's own clamp at its partner. The partner is inside the window by the
+// retroactive clamp's invariant (and 0 is inside it for a blank bracket, the
+// window always containing the zero delta), so clamping to the window and
+// then to the partner lands inside both. The act commits exactly this number
+// and the directional face compares it against the resting value.
+inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
+                                       IterStepCell side,
+                                       int64_t delta_cents) {
+    const int64_t lo = m.iter_start_cents.value_or(0);
+    const int64_t hi = m.iter_end_cents.value_or(0);
+    const int64_t start   = side == IterStepCell::Upper ? hi : lo;
+    const int64_t partner = side == IterStepCell::Upper ? lo : hi;
+    const int64_t windowed =
+        std::clamp(start + delta_cents, kTempoMinCents - m.tempo_cents,
+                   kTempoMaxCents - m.tempo_cents);
+    return side == IterStepCell::Upper ? std::max(windowed, partner)
+                                       : std::min(windowed, partner);
+}
+
+// THE GROUP BOUND STEP'S WALL SCAN, the tempo scan's shape over the sweep's
+// own eligibility: an INELIGIBLE member (iter_popup_eligible_marker false — a
+// label ref, a pass, a disabled owner) is SKIPPED, not walled, exactly as the
+// tempo scan skips a disabled member; the SURVIVORS take the step together or
+// not at all (GROUP RIGIDITY, argued at adjust_tempo_cents_group) — `Walled`
+// when one cannot take the WHOLE step inside its walls, `Steps` when every
+// survivor can, `Empty` when nothing survives. Defined in warpmarkers_ops.cpp
+// beside its tempo sibling; the act forks its sentence on the verdict and the
+// face reads the boolean wrapper.
+enum class IterBoundStepGroupVerdict { Steps, Walled, Empty };
+IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
+                                                        IterStepCell side,
+                                                        int64_t delta_cents);
+inline bool iter_bound_step_group_actionable(const AppState& a,
+                                             IterStepCell side,
+                                             int64_t delta_cents) {
+    return iter_bound_step_group_verdict(a, side, delta_cents) ==
+           IterBoundStepGroupVerdict::Steps;
+}
+
+// WOULD A BOUND STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
+// Up/Down face with a bound addressed, forking exactly where the act forks: a
+// 2+ selection takes the group scan (grey AND card, the group pairing), a
+// singleton compares iter_bound_step_landing against the focused marker's
+// resting bound — silent at the key when walled, the grey being the whole
+// cue, as the tempo step's bracket end is. An INELIGIBLE singleton answers
+// TRUE: its refusal is a fact about the marker's kind, carded by the act
+// through iter_bound_step_kind_refusal below. Defined in warpmarkers_ops.cpp.
+// The twin rule costs nothing here either: the singleton's clamped landing
+// equals the resting value iff the bound rests on a wall, the same for one
+// cent, three or ten, and the group scan walls a superset as the step grows.
+bool iter_bound_step_direction_actionable(const AppState& a,
+                                          IterStepCell side,
+                                          int64_t delta_cents);
+
+// WOULD A SINGLETON BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
+// would card with, or nullptr: a marker without a tempo of its own (a pass or
+// a label ref) has no bracket to step, and a disabled owner's bracket is
+// dormant. Magnitude-blind, so the Up/Down tooltip drops its ladder line on it
+// exactly as it drops it on tempo_cent_step_target_view_refusal. TWO READERS:
+// the act's card and the tooltip's line. Defined in warpmarkers_ops.cpp.
+const char* iter_bound_step_kind_refusal(const AppState& a);
 
 // IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
 // the playhead scanner is active, or the A/B audition sequence stands in any
@@ -12685,16 +12804,28 @@ inline bool redesign_button_enabled(const AppState& a,
                 return false;
             break;
         case RedesignButton::TransportUp:
-        case RedesignButton::TransportDown:
+        case RedesignButton::TransportDown: {
             if (active_view_state(a).read_only) return false;
+            const int64_t delta = b == RedesignButton::TransportUp ? +1 : -1;
+            // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
+            // a bound cell addressed the pair reads the bound step's own
+            // owners, otherwise the tempo step's — the same fork the dispatch
+            // makes, so the face and the act read one decision either way.
+            if (a.iter_step_cell != IterStepCell::Tempo) {
+                if (!iter_bound_step_actionable(a)) return false;
+                if (!iter_bound_step_direction_actionable(a, a.iter_step_cell,
+                                                          delta))
+                    return false;
+                break;
+            }
             if (!tempo_cent_step_actionable(a)) return false;
             // AND THE DIRECTIONAL HALF since 2026-08-31 (architect, R3): the
             // singleton's bracket end and the group's whole refusal, both
             // through the acts' own owners (the ruling is at the predicate).
-            if (!tempo_cent_step_direction_actionable(
-                    a, audio, b == RedesignButton::TransportUp ? +1 : -1))
+            if (!tempo_cent_step_direction_actionable(a, audio, delta))
                 return false;
             break;
+        }
         // THE MARKER-WALK GROUP (2026-08-15's always-on policy until
         // 2026-08-30): the `h` view's derived partition greys NONE of the
         // three, all three chords being the mode's OWN vocabulary in there
@@ -14500,11 +14631,31 @@ inline RedesignTooltipText redesign_button_tooltip(
         // face on the bare rung anyway (tempo_cent_step_direction_actionable),
         // so the line is owed for the twin. The GROUP arm is out for the same
         // reason: its wall scan walls a superset as the step grows.
+        //
+        // WITH A BOUND CELL ADDRESSED (architect 2026-09-04) the pair steps
+        // that bound instead, and the hint SAYS WHICH — a NAME in title case
+        // over the table's own direction word, the key still the direction —
+        // with the same ladder line, dropped on the bound step's own kind
+        // refusal (iter_bound_step_kind_refusal: a marker without a tempo of
+        // its own, a disabled owner — magnitude-blind, every rung carding
+        // alike). A second line only where the table already binds one:
+        // these two carry both admissions.
         case RedesignButton::TransportUp:
-        case RedesignButton::TransportDown:
+        case RedesignButton::TransportDown: {
+            if (a.iter_step_cell != IterStepCell::Tempo) {
+                const bool up = b == RedesignButton::TransportUp;
+                const char* name =
+                    a.iter_step_cell == IterStepCell::Lower
+                        ? (up ? "Lower Bound Up (Up)" : "Lower Bound Down (Down)")
+                        : (up ? "Upper Bound Up (Up)" : "Upper Bound Down (Down)");
+                return {name, iter_bound_step_kind_refusal(a)
+                                  ? nullptr
+                                  : redesign_button_tooltip(b).line2};
+            }
             if (tempo_cent_step_target_view_refusal(a, audio))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
+        }
         // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE
         // through the home-view binding's own owner ("Markers are moved in
         // source view", the dispatch's card) — the lane term first, because
@@ -14675,14 +14826,15 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// WHICH HALF of that box the point landed on — the topmost rect's published
-// boundary compared against mouse_x, nothing more. Its ONE consumer is the
-// marker press, which stamps the answer onto the double-click seed so the two
-// halves can open two different editors (MarkerClickSpan states the whole
-// rule). It answers Flag for a point that hits no flag at all, which is the
-// harmless answer: a caller with no hit has nothing to fork. Same backward
-// walk, same topmost-wins arbitration as hit_test_flag — literally the same
-// walk, so the two can never disagree about which box was hit.
+// WHICH BOX of that run the point landed on — the topmost rect's three
+// published boundaries compared against mouse_x, nothing more. Its ONE
+// consumer is the marker press (run_marker_click_act), which writes the
+// addressed cell from the answer and stamps it onto the double-click seed so
+// the boxes can open their editors (MarkerClickSpan states the whole rule).
+// It answers Flag for a point that hits no flag at all, which is the harmless
+// answer: a caller with no hit has nothing to fork. Same backward walk, same
+// topmost-wins arbitration as hit_test_flag — literally the same walk, so the
+// two can never disagree about which box was hit.
 MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
                                    int mouse_x, int mouse_y);
 

@@ -1175,6 +1175,226 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     return std::nullopt;
 }
 
+// -- THE ITERATION BOUND STEP (architect 2026-09-04) --------------------------
+//
+// The vertical arrows' second body. On the road he does not type, and grid
+// iterations was the one mode that needed the keyboard — the bracket was
+// typed into the flag editor as `+[lo,hi]` — so the two bounds became CELLS on
+// the flag, each addressable by a click and stepped by the arrows. What
+// follows mirrors adjust_tempo_cents' shape one clause at a time: the leading
+// refusal block named whole in a predicate the face reads, the 2+ fork onto an
+// all-or-nothing group arm, the wall asked through the directional face AHEAD
+// of the coalesce stamp, the value-shaped kind refusal behind it on a card,
+// the mutation through the one landing owner, the entry and the settle. The
+// contracts are at the declarations (warpmarkers_ops.h, app_state.h's bound
+// step block); what is argued here is only what differs from the tempo step.
+//
+// WHAT DIFFERS. The subject is a bound in the bracket's delta domain, not the
+// base tempo, so the walls are the clamp window and the partner bound
+// (iter_bound_step_landing). The eligibility is the sweep's own
+// (iter_popup_eligible_marker): a marker without a tempo of its own has no
+// bracket to step, and a disabled owner's bracket is dormant — so the group
+// arm SKIPS those members as the tempo arm skips a disabled one, and the
+// singleton REFUSES them on a card. A blank bracket starts at [0, 0] and the
+// first step authors it, both bounds written, and nothing normalizes back to
+// blank — the editor's `+[+0.00,+0.00]` stores the same thing. AND NOTHING
+// RENDERS: a bracket is not a map input (excluded from build_warp_frame_map
+// and from the render recipe alike, the flag editor's bracket-only commit
+// being the precedent), so there is no trigger, no target-view re-warp, no
+// re-land and no target-view kind refusal — the step is target-legal as the
+// bracket is. The entry is the bracket-only kind (affects_persistence false,
+// so the dirty dot never lights for it) and the damage is the marker lane's.
+
+// THE GROUP BOUND STEP'S WALL SCAN — the contract is at the declaration
+// (app_state.h). A const walk, extracted for the same reason the tempo scan
+// was: the act reads the verdict and the Up/Down face reads its boolean
+// wrapper, so the wall set has one spelling.
+IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
+                                                        IterStepCell side,
+                                                        int64_t delta_cents) {
+    const auto& mv = a.warpmarkers.markers();
+    const int   n  = static_cast<int>(mv.size());
+    int survivors = 0;
+    for (int idx : a.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
+        if (!iter_popup_eligible_marker(mv, idx)) continue;   // invisible
+        ++survivors;
+        const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
+        // CAN THIS MEMBER TAKE THE WHOLE STEP — the tempo scan's own test in
+        // the delta domain: the landing owner clamps at the window and at the
+        // partner, and the clamp bites iff the member cannot take the full
+        // step, which is what GROUP RIGIDITY refuses on.
+        const int64_t start = side == IterStepCell::Upper
+                                  ? m.iter_end_cents.value_or(0)
+                                  : m.iter_start_cents.value_or(0);
+        if (iter_bound_step_landing(m, side, delta_cents) != start + delta_cents)
+            return IterBoundStepGroupVerdict::Walled;
+    }
+    return survivors > 0 ? IterBoundStepGroupVerdict::Steps
+                         : IterBoundStepGroupVerdict::Empty;
+}
+
+// The DIRECTIONAL half of the Up/Down face with a bound addressed — the
+// contract is at the declaration (app_state.h). Forks where the act forks.
+bool iter_bound_step_direction_actionable(const AppState& a,
+                                          IterStepCell side,
+                                          int64_t delta_cents) {
+    if (a.selected_markers.size() >= 2)
+        return iter_bound_step_group_actionable(a, side, delta_cents);
+    const auto& mv = a.warpmarkers.markers();
+    const int   f  = a.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
+    // An INELIGIBLE focus keeps a live face and a card of its own (the kind
+    // refusal below); only an eligible marker's bound can rest on a wall, and
+    // its wall is the landing owner's own answer.
+    if (!iter_popup_eligible_marker(mv, f)) return true;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
+    const int64_t start = side == IterStepCell::Upper
+                              ? m.iter_end_cents.value_or(0)
+                              : m.iter_start_cents.value_or(0);
+    return iter_bound_step_landing(m, side, delta_cents) != start;
+}
+
+// THE SINGLETON'S KIND REFUSAL — the contract and the readers are at the
+// declaration (app_state.h). Two sentences for the three ineligible kinds: a
+// pass and a label ref share one fact (no tempo of their own, so no bracket
+// to ride it), and a disabled owner's is that its bracket is dormant.
+const char* iter_bound_step_kind_refusal(const AppState& a) {
+    if (a.selected_markers.size() >= 2) return nullptr;
+    const auto& mv = a.warpmarkers.markers();
+    const int   f  = a.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv.size())) return nullptr;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
+    if (!iter_bracket_carrier(m))
+        return "Only a marker that owns its tempo has a range";
+    if (effective_disabled(mv, f))
+        return "A disabled marker's range is dormant";
+    return nullptr;
+}
+
+GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
+        IterStepCell side, int64_t delta_cents, bool synthesized_repeat) {
+    // THE LEADING REFUSAL BLOCK, named whole (iter_bound_step_actionable) and
+    // read by the Up/Down face too, so no lift reaches it. One sentence for
+    // the mode, the column, an empty selection and a missing focus: the step
+    // wants a focused warp marker's range and has none.
+    if (!iter_bound_step_actionable(app))
+        return "Select a warp marker to change its range";
+    if (app.selected_markers.size() >= 2)
+        return adjust_iter_bound_cents_group(side, delta_cents,
+                                             synthesized_repeat);
+    // THE WALL, AHEAD OF THE COALESCE STAMP — the face greys on it, so the
+    // key must leave the stamp exactly as the greyed button does (the rule at
+    // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal
+    // already at its state, the cell's own value being the place to glance.
+    if (!iter_bound_step_direction_actionable(app, side, delta_cents))
+        return std::nullopt;
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
+    // THE KIND REFUSAL, behind the stamp with a live face and a card, as the
+    // tempo step's value-shaped tails are.
+    if (const char* refusal = iter_bound_step_kind_refusal(app))
+        return refusal;
+    const auto& mv_const = app.warpmarkers.markers();
+    const int f = app.last_selected_marker;
+    // A stale focus is a belt against the selection layer's own invariant
+    // (in range by iter_bound_step_actionable above), so it says nothing.
+    if (f < 0 || f >= static_cast<int>(mv_const.size())) return std::nullopt;
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    GuiWarpMarker& m = proposed[static_cast<size_t>(f)];
+    const int64_t landing = iter_bound_step_landing(m, side, delta_cents);
+    // BOTH BOUNDS ARE WRITTEN: a blank bracket becomes [0, 0] with the step
+    // applied to its addressed side, and a set one keeps its partner as it
+    // was. The landing owner already holds lo <= hi and the clamp window, so
+    // the retroactive clamp has nothing to do here and is not called.
+    const int64_t lo = m.iter_start_cents.value_or(0);
+    const int64_t hi = m.iter_end_cents.value_or(0);
+    m.iter_start_cents = side == IterStepCell::Lower ? landing : lo;
+    m.iter_end_cents   = side == IterStepCell::Upper ? landing : hi;
+    // Unreachable past the wall test above: the directional face admitted
+    // this press only because the landing differs from the resting bound
+    // (0 for a blank bracket, which the write above sets on both sides), so
+    // at least one field moved. Kept as the belt it is.
+    if (m.iter_start_cents == mv_const[static_cast<size_t>(f)].iter_start_cents &&
+        m.iter_end_cents   == mv_const[static_cast<size_t>(f)].iter_end_cents)
+        return std::nullopt;
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(proposed);
+    // The bracket-only entry: session-only fields, never serialized, so the
+    // dirty dot stays where it is (recompute_dirty honours the flag). A
+    // coalesced repeat skips the push, the burst's opener owning the
+    // pre-burst snapshot.
+    if (!merge) undo.push_undo_warp(std::move(pre_state),
+                                    /*affects_persistence=*/false);
+    // Settle the burst, POST-mutation: the stamp, or the byte-equal pop of a
+    // merged press that stepped the bound back to the burst entry's own
+    // snapshot (the rule at Undo::record_gesture; the row comparator reads
+    // the iter fields).
+    undo.record_gesture(GestureKind::IterBoundStep, merge);
+    undo.recompute_dirty();
+    // The marker lane repaints its cells — the store's generation moved, so
+    // the flag cache rebuilds under the top strip's damage. No waveform
+    // damage: a stem reads the class, and a bound changes no class; no map
+    // moved, so no image moved.
+    viewport.invalidate_top_strip();
+    return std::nullopt;
+}
+
+GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
+        IterStepCell side, int64_t delta_cents, bool synthesized_repeat) {
+    // THE WALL SCAN, ahead of the coalesce verdict, carded AND greyed — the
+    // group pairing the tempo step argues (adjust_tempo_cents_group): a group
+    // step would have moved every selected cell, so it is not the
+    // one-dimensional refusal that went silent. THE EMPTY STEP HAS THE
+    // SINGLETON'S SENTENCE: a selection whose every member is ineligible has
+    // no range to step, which is the empty-selection answer.
+    switch (iter_bound_step_group_verdict(app, side, delta_cents)) {
+    case IterBoundStepGroupVerdict::Steps:
+        break;
+    case IterBoundStepGroupVerdict::Walled:
+        return "One of the selected markers cannot take this range change";
+    case IterBoundStepGroupVerdict::Empty:
+        return "Select a warp marker to change its range";
+    }
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
+    const auto& mv = app.warpmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    std::vector<GuiWarpMarker> pre_state = mv;
+    // Every SURVIVOR steps its addressed bound by the full delta — none is
+    // walled (checked above through the landing owner, so the add lands
+    // exactly where the landing says) — with both bounds written, a blank
+    // bracket authored at [0, 0] plus the step. An ineligible member is
+    // skipped on the same predicate the scan skipped it on; the store is
+    // unchanged between the two walks, so the survivor set is one.
+    std::vector<int> touched;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;
+        if (!iter_popup_eligible_marker(mv, idx)) continue;   // invisible
+        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
+        if (!m) continue;
+        const int64_t landing = iter_bound_step_landing(*m, side, delta_cents);
+        const int64_t lo = m->iter_start_cents.value_or(0);
+        const int64_t hi = m->iter_end_cents.value_or(0);
+        m->iter_start_cents = side == IterStepCell::Lower ? landing : lo;
+        m->iter_end_cents   = side == IterStepCell::Upper ? landing : hi;
+        touched.push_back(idx);
+    }
+    // Defensive (a fully-stale selection): the all-ineligible selection never
+    // reaches it — that is the Empty verdict above.
+    if (touched.empty()) return std::nullopt;
+    // ONE bracket-only entry per press with identity hints (no reorder —
+    // positions untouched — so touched_snapshot == touched_live); a coalesced
+    // repeat skips the push, the burst's opener owning the snapshot.
+    if (!merge) undo.push_undo_warp(std::move(pre_state),
+                                    /*affects_persistence=*/false,
+                                    touched, touched);
+    undo.record_gesture(GestureKind::IterBoundStep, merge);
+    undo.recompute_dirty();
+    viewport.invalidate_top_strip();
+    return std::nullopt;
+}
+
 // Nudge the FOCUSED warp marker by exactly one on-screen pixel column per press.
 // direction: -1 for earlier (up/left), +1 for later (down/right).
 //

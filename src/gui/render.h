@@ -658,6 +658,20 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 // glass check rather than pre-corrected here.
 inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 
+// The addressed cell's cue is this same ink, as a derivation and not a sample
+// (architect 2026-09-04, the iteration bound cells; a first guess for the
+// glass). While iteration mode is on, the focused marker's addressed cell —
+// its flag box when the vertical arrows step the tempo, its lower or upper
+// bound cell when they step a bound — wears an underline on the box's bottom
+// row, inside the box, across the cell's fill width, one authored pixel tall
+// through marker_flag_border_px so it rides gui_scale exactly as the seam
+// column does. It is the lane's text ink because it belongs to the text: the
+// cue says "this is the value the arrows change", and the value is the box's
+// text. It takes the face's resolved label ink (resolve_flag_face), so on a
+// disabled marker's tempo cell it damps as the label damps; a disabled owner
+// paints no bound cells at all, so no dimmed bound cue exists. No constant of
+// its own, and nothing paints outside the mode.
+
 // THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
 // WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
 // with dark text... let's just do that everywhere for consistency"). One
@@ -2018,8 +2032,9 @@ inline int waveform_border_px() {
 // and nothing painted now needs one. DISPLAY ONLY: the store,
 // the sidecars, the editor seed and the copy payload never see the dots.
 //
-// WHAT IT COVERS is the LABEL, and only the label — the iter bracket is exempt
-// (the next constant states why).
+// WHAT IT COVERS is the LABEL, and only the label: the iteration bound cells
+// and the measure box paint their own runs beside it, budgeted by nothing
+// (their grammars fix their width).
 inline constexpr size_t kMarkerLabelGlyphBudget = 9;
 
 // THE TRUNCATION MARKER ITSELF, so the bytes cap_marker_label appends and the
@@ -2027,21 +2042,18 @@ inline constexpr size_t kMarkerLabelGlyphBudget = 9;
 // apart. Pure ASCII, so its size() is both its byte length and its glyph count.
 inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 
-// THE ITER BRACKET DOES NOT COUNT AGAINST THE BUDGET (architect 2026-08-02).
-// It is 14 glyphs on its own — `+[-4.00,+4.00]`, a LOCKED display shape
-// (format_iter_bracket_inline, warpmarkers.h: the `+[`, two signed
-// two-decimal values whose integer digit is bounded by the +-4.00 authoring
-// bracket, one comma, the `]`) — so budgeting it truncated every bracketed
-// flag down to a stub of its own bracket and showed nothing useful. The label
-// alone takes the nine, the bracket splices in WHOLE, and the box grows to fit:
-// a bracket is what the user is reading while iteration mode is on.
+// ONE ITERATION BOUND CELL'S GLYPH COUNT, a fixed shape by grammar
+// (format_iter_bound_cell, warpmarkers.h: a sign, one integer digit, the
+// point, two decimals — `+4.00` at the widest, the integer digit bounded by the
+// clamp window clamp_iter_bracket_to_tempo_bracket states, which is inside
+// ±kIterDeltaMaxCents). The width bound below charges two of these while
+// iteration mode is on; nothing is laid out against the number.
 //
-// THE BPM BRACKET NEEDS NO SUCH RULE, and the symmetry question is answered
+// THE BPM BRACKET NEEDS NO SUCH TERM, and the symmetry question is answered
 // rather than skipped: format_bpm_bracket_text (warpmarkers.h) is a different
 // composer feeding a different surface — it seeds the DIALOG-HOSTED BpmBracket
-// editor and never reaches a flag box — so no budget applies to it and there is
-// nothing to exempt. Only the iter bracket is spliced into flag text.
-inline constexpr size_t kIterBracketDisplayGlyphs = 14;
+// editor and never reaches a flag box — so no flag width depends on it.
+inline constexpr size_t kIterCellGlyphs = 5;
 
 // An UPPER BOUND on a flag box's painted width, used only to decide how far
 // LEFT of the viewport a marker may sit and still reach into it (flags run
@@ -2055,25 +2067,34 @@ inline constexpr size_t kIterBracketDisplayGlyphs = 14;
 // both terms are here. An untruncated label is shorter than the budget by
 // definition, so the truncated form is the worst case on both arms.
 //
-// `iteration_on` ADDS THE BRACKET'S OWN GLYPHS, and it must: with the bracket
-// outside the budget a bracketed box can be 14 glyphs wider than the budget
-// alone predicts, and a bound that no longer bounds would cull a marker whose
-// flag still reached into the viewport. The bracket's shape is FIXED, so this
-// stays a constant-time bound rather than becoming a measurement. It remains a
-// bound and not a layout input either way — over-admitting a few offscreen
-// markers per frame costs a shaped run each and drops nothing visible.
+// `iteration_on` ADDS THE TWO BOUND CELLS, and it must: an eligible flag runs
+// two cells further right than its label predicts (each a seam column, two
+// pads and kIterCellGlyphs glyphs), and a bound that no longer bounds would
+// cull a marker whose flag still reached into the viewport. The cells' shape
+// is FIXED, so this stays a constant-time bound rather than becoming a
+// measurement, and it is charged flat rather than per marker — every carrier
+// paints both cells in the mode, unlike the measure, which most markers lack.
+// It remains a bound and not a layout input either way — over-admitting a
+// few offscreen markers per frame costs a shaped run each and drops nothing
+// visible.
 //
-// THE LEFT BORDER IS DELIBERATELY NOT IN IT. This bound answers "how far RIGHT
-// of its frame column can a box reach", and the border grows the box the other
-// way — leftward, away from the viewport — so adding it would only over-admit
-// culled markers by one column and never save a visible one.
+// THE FLAG'S OWN LEFT BORDER IS DELIBERATELY NOT IN IT. This bound answers
+// "how far RIGHT of its frame column can a box reach", and that border grows
+// the box the other way — leftward, away from the viewport — so adding it
+// would only over-admit culled markers by one column and never save a visible
+// one. The cells' seam columns ARE in it: they stand to the right.
 inline double marker_flag_max_width_px(bool iteration_on) {
     const size_t glyphs = kMarkerLabelGlyphBudget +
-                          kMarkerLabelTruncationMarker.size() +
-                          (iteration_on ? kIterBracketDisplayGlyphs : 0);
-    return static_cast<double>(glyphs) * redesign_font_size_px() +
-           static_cast<double>(marker_flag_pad_left_px() +
-                               marker_flag_pad_right_px());
+                          kMarkerLabelTruncationMarker.size();
+    const double pads = static_cast<double>(marker_flag_pad_left_px() +
+                                            marker_flag_pad_right_px());
+    const double flag = static_cast<double>(glyphs) * redesign_font_size_px() +
+                        pads;
+    if (!iteration_on) return flag;
+    const double cell = static_cast<double>(kIterCellGlyphs) *
+                            redesign_font_size_px() +
+                        pads + static_cast<double>(marker_flag_border_px());
+    return flag + 2.0 * cell;
 }
 
 // THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
@@ -2309,22 +2330,31 @@ inline int playhead_half_px() {
 // marker's frame column (marker_flag_border_px) — because this stash has always
 // been the painted extent and a click on the border is a click on the flag.
 //
-// IT SPANS THE MEASURE BOX TOO where one paints: the blue box is
-// the flag continued, so it is ordinary flag surface for press, drag and select
-// and the rect covers both. `measure_boundary_x` is the window x where the flag
-// ends and the measure begins — the PAINTER'S own number, published rather than
-// re-derived, because a second shaping pass could disagree with the pixels. It
-// has ONE reader, the double-click's span fork (flag span = the payload
-// editor's act, measure span = the measure editor's), and it equals the rect's
-// own right edge whenever no measure box painted, so "past the boundary" is
-// false for a measureless flag by construction.
+// IT SPANS THE TWO ITERATION BOUND CELLS AND THE MEASURE BOX TOO where they
+// paint: each is the flag continued, so all of it is ordinary flag surface for
+// press, drag and select and the rect covers the whole run. The three
+// boundaries are the PAINTER'S own numbers, published rather than re-derived,
+// because a second shaping pass could disagree with the pixels: the window x
+// where the flag box ends and the LOWER cell's seam begins
+// (`iter_lower_boundary_x`), where the lower cell ends and the UPPER cell's
+// seam begins (`iter_upper_boundary_x`), and where the cells end and the
+// measure's seam begins (`measure_boundary_x`). They are non-decreasing, and
+// each collapses onto the next when its box did not paint — a cell-less flag
+// publishes both cell boundaries AT the measure boundary, a measureless flag
+// its measure boundary AT the rect's own right edge — so hit_test_flag_span's
+// walk (Measure first, then Upper, then Lower, else Flag) can never answer a
+// span that has no pixels. ONE READER, hit_test_flag_span (app_state.cpp),
+// whose four-way answer the marker press reads for the addressed cell and the
+// double-click seed.
 struct FlagHitRect {
     int    marker_index;
     double x;
     double y;
     double w;
     double h;
-    double measure_boundary_x = 0.0;
+    double iter_lower_boundary_x = 0.0;
+    double iter_upper_boundary_x = 0.0;
+    double measure_boundary_x    = 0.0;
 };
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
@@ -2946,10 +2976,28 @@ struct MarkerStem {
 //              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
 //              CALM kMarkerFlagFill either way (the architect's explicit rule).
 //
-// `iteration_on` reaches the one composer (flag_text_iter, in its Swept mode)
-// so the flag shows exactly what the editor would seed — less a disabled
-// owner's dormant bracket, which the editor alone shows. `cr`'s scaled font is set by this
-// function (the redesign sans face at redesign_font_size_px) and restored.
+// `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04): while the
+// mode is on, every marker the sweep reads (iter_popup_eligible_marker,
+// warpmarkers.h — so a disabled owner's dormant bracket paints no cells)
+// extends its flag rightward with two more boxes, the LOWER bound then the
+// UPPER, each painted exactly as the flag box is — the marker's own resolved
+// face, the seam column on its left, the top edge, the lane's ink — carrying
+// the bound in its signed two-decimal form (format_iter_bound_cell). A cell
+// reads as another flag payload, and the sign is its whole syntax: a flag
+// payload never carries one and a cell always does, so no bracket or
+// separator opens in one cell to close in the next. The measure box, when one
+// paints, follows the cells. The flag's own text is the plain composer's in
+// every state; the bracket the editor seeds (flag_text_iter's Authored mode)
+// never paints on a flag.
+//
+// `iter_cue_marker` / `iter_cue_cell` PAINT THE ADDRESSED CELL'S CUE: while
+// the mode is on, the focused marker's addressed cell — the flag box itself
+// when the cell is Tempo — wears a one-pixel underline in the lane's ink on the
+// box's bottom row (the derivation is at kMarkerFlagLabel's block). The caller
+// passes -1 outside the mode, and nothing paints then.
+//
+// `cr`'s scaled font is set by this function (the redesign sans face at
+// redesign_font_size_px) and restored.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted box in PAINT ORDER (so the hit walk reads it backwards to get the
@@ -2995,6 +3043,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
                   bool iteration_on,
+                  int iter_cue_marker,
+                  IterStepCell iter_cue_cell,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
@@ -3283,45 +3333,33 @@ void render_history_diff_flags(cairo_t* cr,
                                std::vector<MarkerStem>* out_stems,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
-// WHICH BRACKET THE COMPOSER SPLICES (architect 2026-09-02, the four-tier
-// review's R-12): the flag paints the bracket THE SWEEP READS and the editor
-// seeds the bracket THE MARKER CARRIES, and the two answers differ on exactly
-// one marker — an effectively disabled owner, whose bracket is DORMANT: kept
-// on the marker, absent from its flag and from the sweep's cell product,
-// present in its editor so it can be authored and seen while the marker is
-// disabled and returns whole when it is re-enabled. The two predicates are the
-// eligibility pair in warpmarkers.h (iter_popup_eligible_marker /
-// iter_bracket_carrier); the composer asks them here so that no caller
-// spells the verdict.
+// WHETHER THE COMPOSER SPLICES THE BRACKET THE MARKER CARRIES. The bracket is
+// the flag EDITOR'S seed alone since the bound cells landed (architect
+// 2026-09-04): the flag paints the plain composer's text and shows the two
+// bounds as cells beside it (render_flags), while the editor opens on the
+// canonical line with `+[lo,hi]` spliced after the tempo, on every carrier
+// (iter_bracket_carrier, warpmarkers.h) — a disabled owner's dormant bracket
+// included, so it can be seen and authored while the marker is disabled and
+// returns whole when it is re-enabled. The composer asks the predicate here so
+// that no caller spells the verdict. (A third mode, Swept, painted the
+// sweep's own eligibility onto the flag text from 2026-09-02 until the cells
+// took that job.)
 enum class IterBracketSplice {
     None,      // iteration mode off (or the P column): the plain flag text
-    Swept,     // the flag and its measured width: iter_popup_eligible_marker
     Authored,  // the flag editor's seed: iter_bracket_carrier
 };
 
-// Iteration-aware flag text composer. Returns the plain flag text under
-// `IterBracketSplice::None` or when the marker fails the mode's predicate;
-// otherwise splices the inline `+[lo, hi]` bracket after the tempo. The single
-// canonical composer for warp flag text: the FLAG ITSELF paints it (row 5, its
-// LABEL truncated at the nine-glyph budget with the bracket exempt) and the
-// flag editor seeds from it, so what a marker shows and what its editor opens
-// with are one string by construction — save the dormant bracket of a
-// disabled owner, which the editor shows and the flag does not (the enum
-// above).
-//
-// THE OPTIONAL OUT-PAIR REPORTS THE BRACKET'S BYTE SPAN in the returned string
-// — `[*out_bracket_pos, *out_bracket_pos + *out_bracket_len)` — and is written
-// as {npos, 0} whenever no bracket was spliced. It exists for exactly one
-// caller, the flag paint's truncation, which must not count or cut those bytes
-// (kIterBracketDisplayGlyphs states the ruling). The span is reported by the
-// composer rather than re-found by a search because the composer is the only
-// thing that knows where it put it: `+[` is not a token the label grammar can
-// otherwise produce today, but a search would be a second, weaker copy of the
-// composition rule. Callers wanting the plain string pass neither.
+// The flag editor's text composer over the plain flag text. Returns the plain
+// text under `IterBracketSplice::None` or for a non-carrier; otherwise splices
+// the inline `+[lo,hi]` bracket after the tempo. The plain text underneath is
+// the ONE base composer for warp flag text (flag_text, render.cpp): the FLAG
+// paints it (its LABEL truncated at the nine-glyph budget) and the editor
+// seeds from it through this wrapper, so the tempo, scale and label a flag
+// shows and the ones its editor opens with are one string by construction,
+// and the bracket the editor adds is the same two values the flag's cells
+// show (format_iter_bound_cell owns both spellings).
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, IterBracketSplice splice,
-                           size_t* out_bracket_pos = nullptr,
-                           size_t* out_bracket_len = nullptr);
+                           int idx, IterBracketSplice splice);
 
 // (THE MEASURED MONOSPACE GRID IS GONE — row 7, 2026-08-01: monospace_advance,
 // monospace_text_box_h, monospace_text_row_baseline_offset,
@@ -3358,9 +3396,9 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 // truncation marker. IT IS THE FIRST TOKEN IN THE PRODUCT TO SPEND ITS OWN
 // BUDGET — every other label reaching a flag box is user text — and the shapes
 // that receive it were already built for it: the phase-reset column paints
-// through the shared render_flag_boxes_impl, whose cap runs on every label, and
-// this token carries no exempt span ({npos, 0} — the iter bracket is a
-// warp-column form and this column has none), so it takes the plain arm. The
+// through the shared render_flag_boxes_impl, whose cap runs on every label
+// (the iteration bounds are a warp-column form painted in cells of their own,
+// so this column's label is the whole of its text), so it takes the cap. The
 // box grows with it and nothing lays out against the old width: every flag's
 // width is pad + shaped(label) + pad, re-derived from the shaping pass, and
 // marker_flag_max_width_px already bounds the left cull at budget + marker

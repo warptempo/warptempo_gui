@@ -1939,13 +1939,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // ALT still binds no press at all. Read-only tabs refuse upstream in all
     // three forms: the allowlist does not admit the vertical arrows on any
     // modifier, and the card names the chord that was pressed.
+    //
+    // THE ADDRESSED CELL PICKS THE BODY (architect 2026-09-04, the iteration
+    // bound cells): with a bound cell addressed (AppState::iter_step_cell,
+    // written by a marker press on that cell, Tempo again the moment the mode
+    // goes off) the same chord at the same magnitude runs the SECOND step body,
+    // adjust_iter_bound_cents, whose refusal this arm cards exactly as it cards
+    // the tempo step's. Same ladder, same repeat bit, same coalescing shape;
+    // the Up/Down buttons' face forks on the same bit.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
         const int64_t delta_cents = (key == GuiKeys::Up ? +1 : -1) *
                                     arrow_step_magnitude(mods);
-        card_op_refusal(notifications,
-                        warpops.adjust_tempo_cents(delta_cents,
-                                                   mods.synthesized_repeat));
+        card_op_refusal(
+            notifications,
+            app.iter_step_cell == IterStepCell::Tempo
+                ? warpops.adjust_tempo_cents(delta_cents,
+                                             mods.synthesized_repeat)
+                : warpops.adjust_iter_bound_cents(app.iter_step_cell,
+                                                  delta_cents,
+                                                  mods.synthesized_repeat));
         return;
     }
     // THE FOUR STEP CHORDS ON `=` AND `-`, TWO AXES ONE MODIFIER APART: BARE
