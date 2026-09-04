@@ -5722,9 +5722,11 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //
 //      THE GROUND HAS A REGION HALF SINCE 2026-09-04 (architect): while the
 //      trim region overlay stands, the trim's own columns take the waveform's
-//      kWaveformRegionCanvas recolor here too, so the overlay has a SECOND
-//      SURFACE and the whole-song picture answers where the trim is. It is the
-//      same ruling that took the framing off bare `[`'s show half — the camera
+//      kWaveformRegionCanvas recolor here too — the whole content band at a
+//      full window, where the lane recolors exactly what the waveform recolors
+//      — so the overlay has a SECOND SURFACE and the whole-song picture
+//      answers where the trim is. It is the same ruling that took the framing
+//      off bare `[`'s show half — the camera
 //      no longer travels to the window, because this lane already shows it
 //      (handle_toggle_trim_region, input_trim.cpp). It is layer 1's other half
 //      rather than a layer of its own: the recolor REPLACES ground, it lands
@@ -5749,7 +5751,9 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      the cache's own binary alpha, so the highlight is the SAME PAIR the
 //      waveform paints — ground under the picture, ink through it — and the
 //      span reads as one lit region rather than as a lit background behind
-//      unlit content. Both halves read one span, resolved once above.
+//      unlit content. Both halves read one span, resolved once above off
+//      overview_region_span, so they cover the whole band together at a full
+//      window and the trim's columns alone at a sub-window.
 //   3. The trim line (architect 2026-09-04): a 1px horizontal run along the
 //      lane's top row, showing where in the whole song the trim sits. That is
 //      the one thing the 9px trim bar a lane down cannot show —
@@ -5767,9 +5771,11 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 //      colour, so the two surfaces that depict the trim wear one shade at two
 //      scales; the endcap shade stays the endcaps' (and the shared shade is
 //      exactly what made the foot unreadable). Its span is overview_trim_span,
-//      which reports nothing at a full window, the whole song not being
-//      information. It is drawn under the box by ruling, though the two cannot
-//      meet: the box is inside the content band and this row is outside it.
+//      the hiding face of the lane's one span owner: the line draws nothing at
+//      a full window, the whole song not being information, where the region
+//      recolor above takes that owner's other face and lights the whole band.
+//      It is drawn under the box by ruling, though the two cannot meet: the
+//      box is inside the content band and this row is outside it.
 //      THE LINE IS THE LANE'S ALWAYS-ON TRIM PRESENCE and layer 1's region
 //      recolor is the emphasis (architect 2026-09-04, ruling the pair): the
 //      line paints whether or not the overlay stands, so the lane tells where
@@ -5944,10 +5950,14 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // through them after the blit — so the pair cannot straddle two answers on
     // one frame. It is this lane's answer to what region_columns is for the
     // waveform: one derivation, two readers, no chance of a half-lit span.
+    // The owner is overview_region_span, the trim line's span owner wearing its
+    // other face: the trim's own columns at a sub-window and the whole content
+    // width at a full one, which is what makes this recolor and the waveform's
+    // overlay recolor the same music in every state.
     int  region_x0 = 0;
     int  region_x1 = 0;
     const bool region_span = app.region.shown &&
-        overview_trim_span(app, audio, &region_x0, &region_x1);
+        overview_region_span(app, audio, &region_x0, &region_x1);
 
     // LAYER 1'S REGION HALF — the trim region overlay's second surface
     // (architect 2026-09-04). While the overlay stands, this lane's ground
@@ -5968,8 +5978,8 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // app.region.shown — the one bit that is the whole region state — and both
     // derive their span from the RESTING trim bounds on the frame they paint,
     // with nothing stored between them: the waveform through trim_overlay_span
-    // into displayed columns, this lane through overview_trim_span into its own
-    // cell columns.
+    // into displayed columns, this lane through overview_region_span into its
+    // own cell columns.
     // Neither surface can hold a span the other has moved on from.
     //
     // A NEW READER OF kWaveformRegionCanvas AND NOT A NEW COLOUR, exactly as
@@ -5985,11 +5995,14 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // both drawn over it rather than swallowed by it, and the lane's frame
     // still reads as the lane's frame.
     //
-    // IT PAINTS NOTHING AT A FULL WINDOW, through the span owner's own rule and
-    // the trim line's: the whole song is not information, and a recolor the
-    // full width of the lane would point at nothing. The waveform overlay does
-    // stand there and says nothing about it either — its two bounds at the
-    // song's edges are their own confirmation.
+    // AT A FULL WINDOW IT RECOLORS THE WHOLE CONTENT BAND, every column, ground
+    // and ink alike (architect 2026-09-04, refusing the asymmetry the pair
+    // landed with hours earlier: "it is more distracting to have an
+    // asymmetry"). The waveform's overlay stands at a full window, so the lane
+    // recolors exactly what the waveform recolors and the two surfaces are
+    // alike in every state. The 1px trim LINE below keeps its own hide there,
+    // which is the line's rule and not this one's: a line the full width of the
+    // lane is a picture of nothing, while a lit band is the region itself.
     //
     // NO DAMAGE OF ITS OWN, for the trim line's reason: both halves of the
     // show/hide toggle and every route that writes a trim bound raise
@@ -6072,7 +6085,10 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
     // inclusive authored frames — the box below is half-open because a viewport
     // end is exclusive. It is the lane's ALWAYS-ON trim presence, where layer
     // 1's region recolor above is the emphasis that comes and goes with the
-    // overlay — one span owner behind both, so the two can only ever agree.
+    // overlay — one span body behind both, so the two can only ever agree
+    // about where the trim is; they part on one case alone, the full window,
+    // where the line hides and the recolor takes the whole band (the fork is at
+    // the two faces, app_state.cpp, and the reasons are there).
     // The line is pointer-inert: the lane's press vocabulary
     // is the three gestures the header names and nothing more, so do not add a
     // hit test for it — a press on this row is whatever the lane already makes

@@ -794,9 +794,16 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
 // simplification it has over the box above, which inverse-maps the
 // active-domain viewport first.
 //
-// It reports nothing at a full window, through the shared recognition
-// (trim_is_full_window): the whole song is not information, so the painter
-// draws no line rather than a line the full width of the lane.
+// IT HAS TWO FACES AND THEY DIFFER ONLY IN WHAT A FULL WINDOW MEANS, which is
+// why one body serves both: overview_trim_span, the trim LINE's, reports
+// nothing there — the whole song is not information, so the painter draws no
+// line rather than a line the full width of the lane — while
+// overview_region_span, the region overlay's, answers the whole content width.
+// The recolor must say what the waveform's overlay says, and that overlay
+// stands at a full window; a lane painting nothing beside it was an asymmetry
+// the architect refused on 2026-09-04 ("it is more distracting to have an
+// asymmetry"). The whole-lane answer needs no mapping at all, so the frame to
+// column road below stays the one road and the fork costs no second floor.
 //
 // The span is inclusive rather than half-open, which is the other difference
 // from the box: it runs from the column containing the begin bound through the
@@ -809,13 +816,22 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
 // The two bounds are ordered on the way out, because a mid-gesture pair may be
 // crossed: the store's rest invariant holds only at commit, and this reads the
 // live pair on every frame of a drag.
-bool overview_trim_span(const AppState& a, const GuiAudio& audio,
-                        int* out_x0, int* out_x1) {
+static bool overview_trim_columns(const AppState& a, const GuiAudio& audio,
+                                  bool whole_lane_at_full_window,
+                                  int* out_x0, int* out_x1) {
     const GuiRect lane = top_overview_row_area(a);
     const double spp_ov = overview_samples_per_pixel(a, audio);
+    // A positive spp already carries the lane's width and the piece's length,
+    // so the whole-lane arm below can spell lane.w - 1 without a guard of its
+    // own (overview_samples_per_pixel returns 0 for either).
     if (spp_ov <= 0.0) return false;
     const int64_t total = audio.total_frames();
-    if (trim_is_full_window(a.trim, total)) return false;
+    if (trim_is_full_window(a.trim, total)) {
+        if (!whole_lane_at_full_window) return false;
+        *out_x0 = 0;
+        *out_x1 = lane.w - 1;
+        return true;
+    }
     int64_t b = a.trim.begin_frame;
     int64_t e = a.trim.end_frame;
     if (b > e) { const int64_t t = b; b = e; e = t; }
@@ -831,6 +847,18 @@ bool overview_trim_span(const AppState& a, const GuiAudio& audio,
     *out_x0 = x0;
     *out_x1 = x1;
     return true;
+}
+
+bool overview_trim_span(const AppState& a, const GuiAudio& audio,
+                        int* out_x0, int* out_x1) {
+    return overview_trim_columns(a, audio, /*whole_lane_at_full_window=*/false,
+                                 out_x0, out_x1);
+}
+
+bool overview_region_span(const AppState& a, const GuiAudio& audio,
+                          int* out_x0, int* out_x1) {
+    return overview_trim_columns(a, audio, /*whole_lane_at_full_window=*/true,
+                                 out_x0, out_x1);
 }
 
 // The box endcaps' hit test — the trim endcap model on the box outline's two

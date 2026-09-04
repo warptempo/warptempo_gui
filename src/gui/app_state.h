@@ -9208,6 +9208,20 @@ bool overview_box_span(const AppState& a, const GuiAudio& audio,
 // not consult it, the line being pointer-inert.
 bool overview_trim_span(const AppState& a, const GuiAudio& audio,
                         int* out_x0, int* out_x1);
+// The same columns for the TRIM REGION OVERLAY'S lane surface — the second
+// face of the span above, sharing its whole body and differing only at a full
+// window, where this one answers the lane's whole content width [0, w - 1]
+// rather than nothing. The recolor recolors exactly what the waveform's
+// overlay recolors, and that overlay stands at a full window; painting nothing
+// there beside it was an asymmetry the architect refused (2026-09-04). The
+// trim LINE keeps the hiding face — a line the full width of the lane is the
+// picture that says nothing. Inclusive [*x0, *x1] like that face, on the same
+// one frame-to-column road, and false on degenerate geometry alone. One
+// reader, paint_overview_strip's region pair (its ground pass and its ink
+// pass, resolved once between them); the lane's press vocabulary does not
+// consult it either, the recolor adding no hit surface.
+bool overview_region_span(const AppState& a, const GuiAudio& audio,
+                          int* out_x0, int* out_x1);
 // (The box endcaps' hit test, hit_test_overview_endcap, is declared beside
 // hit_test_trim_endcap below — it returns that family's TrimHit.)
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
