@@ -372,6 +372,14 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // fatal: the live value stands for this session and the next launch reads
 // whatever the file last held.
 //
+// The card stands, and it is a ruling rather than a leftover (architect
+// 2026-09-04, blessing what landed 2026-09-02 under R-11's shape): the
+// four-tier review had classed a failed persist as adversarial reach and asked
+// for no message at all, but each of these writes is a deliberate press whose
+// result nothing paints, and the deliberate-press rule (R-7's shape,
+// messaging.md) is what decides such a case — so the failure says its
+// sentence, on a NORMAL card, where the caller has a card surface.
+//
 // THE LIVE CONFIG HAS ONE OWNER, gui_main's loop (main.cpp): the ONE
 // DeviceConfig it reads at startup outlives every project the process opens,
 // and AppState reaches it through `AppState::device_config` (a pointer, seated
@@ -381,17 +389,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THE FIVE CALLERS ARE THE FIVE COMMITS, and this is their inventory
-// (re-greped 2026-09-02): the scale's chokepoint
-// GuiInputHandler::apply_gui_scale (input_handler.cpp), the settings editor's
-// three device-key arms in one body — `projects_repo=`, `projects_path=` and
-// `sync_path=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
-// the two path arms joined 2026-09-02 under R-22, and the `audio_player=` arm
-// retired with its key 2026-08-28) — and gui_main's `last_project` write on
-// the success path of every open (main.cpp). A same-value commit never
-// reaches any of them — each gates the no-op ahead of the write — so a file
-// rewrite means a value actually moved. `last_project` is the one key with no
-// editor: it is the program's own.
+// THREE CALL SITES CARRY THE FIVE KEY COMMITS, and this is their inventory
+// (re-greped 2026-09-04, correcting a count this header had read as five):
+// the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
+// the settings editor's ONE device-key body, which serves three keys —
+// `projects_repo=`, `projects_path=` and `sync_path=`
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the two path
+// arms joined 2026-09-02 under R-22, and the `audio_player=` arm retired with
+// its key 2026-08-28); and gui_main's `last_project` write on the success path
+// of every open (main.cpp). A same-value commit never reaches any of them —
+// each gates the no-op ahead of the write — so a file rewrite means a value
+// actually moved. `last_project` is the one key with no editor: it is the
+// program's own.
 std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 
 // STARTUP: the config, created from `first_run_template` if the file does not

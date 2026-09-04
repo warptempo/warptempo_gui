@@ -8214,15 +8214,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     }
     // SETTINGS: the editor's open is its own ordinary route, prefilled through
     // the one recall serializer.
-    // IT CAN REFUSE SINCE 2026-08-07, and this site says nothing about it: the
-    // editor is disabled on a read-only ACTIVE tab (it authors the engine
-    // settings), the refusal living at GuiSettingsEditor::open — the one
-    // chokepoint — together with the modal playback stop, which moved off this
-    // line to sit past that gate. So a locked tab's item click closes the menu
-    // and does nothing else: no editor, no stopped audition. THE ITEM IS NOT
-    // GREYED, deliberately — the never-grey rule for these items is the
-    // standing ruling (and since 2026-08-15 it has no exception anywhere; the
-    // record is at kFilePopupItems), and their commands' own refusals answer.
+    // IT OPENS ON A LOCKED TAB SINCE 2026-09-04, and this site says nothing
+    // about the lock either way: the editor refused on a read-only ACTIVE tab
+    // from 2026-08-07 to that date, and the lock now governs the KEYS at their
+    // own commit arms instead — the four sidecar rows are engine keys and say
+    // the lock's sentence when they commit, while the four device rows commit
+    // regardless (the account is at GuiSettingsEditor::open). The modal
+    // playback stop stays at that opener, where it moved off this line in
+    // 2026-08-07. THE ITEM IS NOT GREYED, deliberately — the never-grey rule
+    // for these items is the standing ruling (and since 2026-08-15 it has no
+    // exception anywhere; the record is at kFilePopupItems), and their
+    // commands' own refusals answer.
     const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
     close_dropdown();
     settings_editor.open_prefilled(key);

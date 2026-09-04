@@ -53,7 +53,12 @@ struct GuiInputHandler;
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
-//    engine key") with a red-flash and no commit.
+//    engine key") with a red-flash and no commit. This arm is also where the
+//    read-only lock lives since 2026-09-04 (architect: the lock governs the
+//    keys, not the surface): an engine key IS the piece, so a locked active
+//    tab refuses it with the lock's own card, while items 1 and 2 above —
+//    the device keys and the band — commit on a locked tab. The opener
+//    refuses nothing; the account is at GuiSettingsEditor::open.
 struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -68,12 +73,15 @@ struct GuiSettingsEditor {
     Undo&                 undo;
     GuiTargetRender&   target_render;
     GuiPlaybackLifecycle& playback_lifecycle;
-    // The card surface, wired 2026-08-30 for the ONE refusal this unit can
-    // answer with a sentence: the read-only gate in open(), which the SETTINGS
-    // DROPDOWN's item clicks are the only road to (bare `;` is off the
-    // read-only allowlist and dies at the keyboard gate, whose own card says
-    // the same words). The dropdown items never grey by ruling, so their
-    // commands' refusals are what answer them.
+    // The card surface, wired 2026-08-30 for the refusals this unit answers
+    // with a sentence: every red flash says its reason on a card, and the
+    // read-only lock says its own at the engine-key commit arm (it stood at
+    // open() from 2026-08-30 until 2026-09-04, when the lock moved to the
+    // keys). The SETTINGS DROPDOWN's item clicks are the only road onto a
+    // locked tab's editor — bare `;` is off the read-only allowlist and dies
+    // at the keyboard gate, whose own card says the same words — and the
+    // dropdown items never grey by ruling, so their commands' refusals are
+    // what answer them.
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the

@@ -2055,11 +2055,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // OPENER'S SINCE 2026-08-07, not this site's: the editor gained a read-only
     // refusal that day (a locked tab authors no engine settings), so the stop
     // moved inside GuiSettingsEditor::open past that gate, the `h` view's
-    // load raise being the same shape (history_load_in_place). This key
-    // never meets that
-    // refusal anyway — `;` is off the
-    // read-only allowlist and drops far above — but the two openers share one
-    // owner rather than one of them keeping a private copy.
+    // load raise being the same shape (history_load_in_place). That refusal
+    // left the opener again on 2026-09-04, the lock now governing the keys at
+    // their own commit arms rather than the surface, and the stop stayed
+    // where it is: the two openers share one owner rather than one of them
+    // keeping a private copy. This key never met the refusal either way — `;`
+    // is off the read-only allowlist and drops far above, which is still the
+    // typed road's whole defense.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
         settings_editor.open();
         return;

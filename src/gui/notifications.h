@@ -269,10 +269,13 @@
 // the same reason.
 //
 // THE LOCK'S SENTENCE — the read-only tab, said by the three sites that KNOW
-// THEIR ACT and so need no chord in it: the Settings dropdown's own opener
-// (the menu's items never grey, so their commands owe the answer themselves),
-// the render player's Load in place, and the `h` view's bare `v`, whose
-// admission composes the subject with this same lock. THE KEYBOARD GATE IS
+// THEIR ACT and so need no chord in it: the settings editor's ENGINE-KEY
+// commit arm (an engine key is the piece; the arm took the sentence from the
+// editor's opener on 2026-09-04, when the lock moved from the surface to the
+// keys — the account is at GuiSettingsEditor::open, and the Settings menu's
+// items still never grey, so their commands owe the answer themselves), the
+// render player's Load in place, and the `h` view's bare `v`, whose admission
+// composes the subject with this same lock. THE KEYBOARD GATE IS
 // NOT A READER (since 2026-08-30): it says "<chord> is not available on a
 // read-only tab" through the speller instead, naming what was pressed, which
 // is what a user who just pressed it is looking for. Its predicate is the

@@ -42,6 +42,20 @@ std::string trim_ws(const std::string& s) {
     return s.substr(a, b - a);
 }
 
+// The leading half of the trim above, for the path completer alone: commit()
+// trims both sides, so a value typed with a leading space is a path prefix
+// like any other and Tab should complete it. The trailing side is deliberately
+// left on, because the completer appends at the LINE'S end — a value that does
+// not end where the buffer ends has nothing to append to, and letting the
+// trailing bytes stay in the tail is what makes such a Tab match no name and
+// walk the ring instead of writing the completion past the gap.
+std::string ltrim_ws(const std::string& s) {
+    size_t a = 0;
+    while (a < s.size() &&
+           std::isspace(static_cast<unsigned char>(s[a]))) ++a;
+    return s.substr(a);
+}
+
 bool is_key_char(char c) {
     const unsigned char uc = static_cast<unsigned char>(c);
     return std::isalnum(uc) || c == '_';
@@ -100,11 +114,14 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // the honest fallback rather than an error. Its bool answer is the TAB
     // arm's question and means nothing here, so this caller drops it.
     //
-    // IT CARRIES NO GATE OF ITS OWN and needs none: it delegates to open()
-    // WHOLE, so the read-only refusal (and the modal stop past it) are that one
-    // owner's, and the is_active test on the next line is what turns a refused
-    // open into this route's silent return — the seed never runs, so a locked
-    // tab's menu click changes nothing at all.
+    // It carries no gate of its own and needs none: it delegates to open()
+    // whole, so whatever that one owner decides is what this route gets, and
+    // the is_active test on the next line is the belt that turns an open which
+    // did not take into this route's silent return — the seed never runs.
+    // Since 2026-09-04 the opener refuses nothing, the read-only decision
+    // having moved to the key's own commit arm (the account is at open()), so
+    // a locked tab's menu click raises the editor like any other and the
+    // commit says the lock's sentence where the key is the piece's.
     if (key == nullptr) return;
     open();
     if (!text_editor::is_active(app.settings_editor)) return;
@@ -116,58 +133,50 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     viewport.invalidate_modal_dialog_area();
 }
 
-// THE ONE OPENER, and the ONE read-only decision for this whole surface.
+// The one opener, and it carries no read-only decision at all: the lock
+// governs the keys, not the surface (architect 2026-09-04).
 //
-// THE EDITOR IS DISABLED ON A READ-ONLY ACTIVE TAB (architect 2026-08-07): the
-// surface authors the ENGINE SETTINGS, which the lock protects by the ruling's
-// own vocabulary (read_only_key_blocked, input_key_dispatch.cpp — read-only
-// protects the authored musical content, the two marker stores and the engine
-// settings). The gate belongs HERE because this is the single chokepoint every
-// open passes: the bare `;` key (which the keyboard allowlist already refuses
-// one level up, and keeps refusing — this is not its defense) and the SETTINGS
-// DROPDOWN's eight item clicks, which call open_prefilled and reach no other gate
-// at all. That second route was the hole: the menu opened the editor from a
-// locked tab and every engine key was then settable in it.
+// The gate this function held from 2026-08-07 to 2026-09-04 was reasoned for
+// the engine keys — the surface authors the engine settings, which the lock
+// protects by the ruling's own vocabulary (read_only_key_blocked,
+// input_key_dispatch.cpp: read-only protects the authored musical content, the
+// two marker stores and the engine settings, and nothing else). What sitting at
+// the surface could not see is that the same editor authors the four per-device
+// keys, which belong to no piece (device_config.h: no undo, no dirty, no
+// Ctrl+S), so a locked tab killed the one road to `sync_path`,
+// `projects_path`, `projects_repo` and the scale — and on the tablet the menu
+// is that road. The decision sits at each key's own commit arm now: the
+// engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
+// the red flash every other refusal there wears, while commit_device_setting's
+// three keys and the `gui_scale` arm commit regardless. So every Settings
+// dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
+// URL, Cover) say the lock's sentence when they commit.
 //
-// IT IS A SILENT CONSUMED NO-OP, NOT A GREYED MENU ITEM, and that is a ruling
-// rather than an omission: the dropdown items' NEVER-GREY rule is the
-// architect's own standing one (they dispatch and their commands' own refusals
-// answer), so a face here would contradict it. A silent refusal is the
-// product's ordinary shape for a gesture that cannot act.
-//
-// WHAT THIS MAKES UNREACHABLE, recorded because it is a live rule and not a
-// dead one: the typed `tab_X_trim_*=` commits lost their read-only refusal the
-// same day (trim is band, not authored content) — on a locked ACTIVE tab that
-// relaxation is now unreachable, the SURFACE being gone rather than the rule.
-// The arm's deleted guard stays deleted: this opener is the one owner, and a
-// second check there would be both unreachable and wrong. Typing
-// `tab_b_trim_begin=` from an UNLOCKED active tab while B is locked stays legal
-// and is the case the relaxation still serves.
+// The typed road did not move and keeps its refusal one level up: bare `;` is
+// off the read-only allowlist and dies at the keyboard gate, which names the
+// press in its own voice ("; is not available on a read-only tab"). What the
+// dropdown opens on a locked tab is the whole editor, though, and its field is
+// free text — a row prefills a key, it does not restrict the buffer — so every
+// GUI-kind key can now be typed from a locked ACTIVE tab, the typed
+// `tab_X_trim_*=` relaxation of 2026-08-07 among them, and
+// `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
+// icon row's toggle. That is the ruling working rather than a hole, and it is
+// why the commit arm below stays engine-only: the GUI-kind keys are band
+// rather than authored content — view state, follow, centered, the
+// magnification level, the per-tab viewport, zoom, playhead, trim and the
+// read_only bit itself — and have been read-only-legal since 2026-08-07, so
+// none of them owes a gate here.
 void GuiSettingsEditor::open() {
-    // THE LOCK SAYS SO (architect 2026-08-30, the strictness ruling), and the
-    // card here answers the SETTINGS DROPDOWN alone: bare `;` is off the
-    // read-only allowlist and dies at the keyboard gate one level up, which
-    // says the same fact in its own voice ("; is not available on a read-only
-    // tab" — that gate cannot tell a bound chord from an unbound one and so
-    // names the press; this site knows its act and does not have to). No
-    // press takes two cards either way. The dropdown's items never grey (the
-    // architect's standing rule for them), which is exactly why their
-    // commands owe an answer of their own.
-    if (active_view_state(app).read_only) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kTabReadOnlyCard);
-        return;
-    }
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
     // answer — a second `;` asks for what is already there.
     if (text_editor::is_active(app.settings_editor)) return;
-    // THE MODAL PLAYBACK STOP IS THE OPENER'S, past every refusal above — the
+    // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening
-    // session undisturbed"). It moved here from the two call sites with the
-    // gate: a
-    // caller-side stop would have made the dropdown's refusal kill a live
-    // audition and open nothing, which is not the consumed no-op this is.
+    // session undisturbed"). It moved here from the two call sites in
+    // 2026-08-07 with the read-only gate that has since left again: a
+    // caller-side stop would have made a refused open kill a live audition and
+    // open nothing.
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
@@ -417,15 +426,18 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // Navigation-class (allowed even while the tab is read-only), and the
         // remote-unlock route for the OTHER tab. read_only lives in the band for
         // both tabs.
-        // IT IS THE REMOTE ROUTE ONLY: there is no SELF-unlock through this
-        // surface, because no route raises the editor on a locked ACTIVE tab at
-        // all — bare `;` is off the read-only allowlist one level up, and the
-        // settings dropdown's item clicks go through open_prefilled, which
-        // delegates to open() whole and takes its refusal (the reasoning lives
-        // at that opener). So this arm is reached by typing
-        // `tab_X_read_only=false` from an UNLOCKED active tab about the other
-        // one; a locked ACTIVE tab is unlocked by bare `o` or the icon row's
-        // read-only toggle, which is that key's button.
+        // IT WAS THE REMOTE ROUTE ONLY UNTIL 2026-09-04, when the lock moved
+        // from this surface to the keys (the account is at open()): the editor
+        // did not raise on a locked ACTIVE tab, so the arm was reached only by
+        // typing `tab_X_read_only=false` from an unlocked tab about the other
+        // one. The Settings dropdown raises the editor on a locked tab now,
+        // and its field is free text — the row is a prefill, not a
+        // restriction — so a self-unlock can be typed there. That is the
+        // ruling working rather than a hole: this key is band, not authored
+        // content, navigation-class on the read-only allowlist's own reading,
+        // and the ordinary unlock is bare `o` or the icon row's toggle
+        // standing right there. Bare `;` still cannot open the editor on a
+        // locked tab at all, being off that allowlist one level up.
         if (gv.b == band.read_only) { unchanged(); return true; }
         band.read_only = gv.b;
         applied(); return true;
@@ -570,6 +582,29 @@ void GuiSettingsEditor::commit() {
             "Settings edit rejected: unknown engine key '" + key + "'";
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
+        return;
+    }
+
+    // The lock, and this is the whole of it for this surface (architect
+    // 2026-09-04, moving the decision off GuiSettingsEditor::open — the
+    // account is there). An engine key IS the piece: read-only protects the
+    // authored musical content, the two marker stores and the engine settings
+    // (read_only_key_blocked, input_key_dispatch.cpp), so the four sidecar
+    // dropdown rows and every typed engine key refuse here while the device
+    // keys and the GUI-kind band above commit on a locked tab. It sits past
+    // is_canonical_engine_key so an unknown key still hears that it is
+    // unknown, and ahead of the value validator because the lock outranks the
+    // grammar: a locked tab refuses the key whatever the value would have
+    // been. Red flash plus card, the shape every refusal on this surface
+    // wears, and the sentence is the lock's own (kTabReadOnlyCard,
+    // notifications.h) because this site knows its act and needs no chord in
+    // it.
+    if (active_view_state(app).read_only) {
+        app.settings_editor.red = true;
+        viewport.invalidate_modal_dialog_area();
+        std::fprintf(stderr, "warptempo_gui: %s\n", kTabReadOnlyCard);
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kTabReadOnlyCard);
         return;
     }
 
@@ -867,6 +902,15 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
         std::error_code dec;
         if (!e.is_directory(dec) || dec) continue;
         const std::string name = e.path().filename().string();
+        // Dot-directories are offered only when they are asked for, the
+        // shell's own convention: nearly every home directory holds a
+        // `.config` and a `.cache`, and with an empty tail those join the
+        // match set and drag the common prefix to nothing, so the Tab that
+        // most naturally asks "what is here" would advance by zero characters
+        // and walk the focus ring instead. A tail beginning with `.` says the
+        // hidden names are the ones wanted and lets them all through.
+        if (!name.empty() && name[0] == '.' &&
+            (tail.empty() || tail[0] != '.')) continue;
         if (name.size() < tail.size() ||
             name.compare(0, tail.size(), tail) != 0) continue;
         matches.push_back(name);
@@ -921,7 +965,11 @@ bool GuiSettingsEditor::autocomplete_value() {
     // or unlistable head) are Tabs that walk, exactly as here.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         if (!is_path_completed_key(key)) return false;
-        return complete_path_value(pending.substr(eq + 1));
+        // Leading whitespace off, trailing whitespace kept — the reasons are
+        // at ltrim_ws. The completer used to be handed the raw substring, so a
+        // `sync_path= /run/media` never completed although commit() trims and
+        // accepts exactly that value.
+        return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
     }
 
     // Recall the current live value for ANY settable key. Engine keys read

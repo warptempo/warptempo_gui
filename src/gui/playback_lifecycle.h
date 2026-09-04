@@ -150,7 +150,10 @@ struct GuiPlaybackLifecycle {
     // point both stops moved INSIDE GuiSettingsEditor::open to sit past that
     // gate. Two callers became one, and the refusal-gating rule below is why: a
     // caller-side stop would have let the dropdown's now-refusable click kill an
-    // audition and open nothing.
+    // audition and open nothing. The count did not move back when that
+    // refusal left the opener on 2026-09-04 (the lock governs the keys now —
+    // GuiSettingsEditor::open): one owner for the two doors is the shape to
+    // keep whether or not the opener can refuse.
     // The count had held across the day's earlier change by coincidence: the
     // commit-title editor replaced the history commit confirmation, so one
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.

@@ -122,10 +122,12 @@ inline GuiFailure render_folder_creation_failure(
 // being written is not a `.wav` at all and no walk here can see it; and a
 // render publishing the CURRENT title's deliverable is the match this keeps.
 // A render publishing a PREVIOUS title's — the title was edited in the
-// settings editor while the render ran, which kills nothing — races only its
-// own already-renamed wav: the prune may take that wav between the rename and
-// the fingerprint write, leaving an orphan sidecar the next prune removes.
-// That is the ruling working, not a breach: the folder is the current title's.
+// settings editor while the render ran, which kills nothing — is the accepted
+// adversarial case recorded at the prune's one trigger
+// (input_render_dispatch.cpp's completion), and that record is the one to
+// read: the whole pair goes at that render's own completion. There is no race
+// to describe here, this trigger being the only one and running on the GUI
+// thread after do_render has written both files.
 //
 // REFUSALS. An empty source path or an empty stem makes the prune a NO-OP that
 // deletes nothing — never "delete everything because nothing matches" (the
