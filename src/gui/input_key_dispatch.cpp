@@ -6357,11 +6357,13 @@ void GuiInputHandler::open_av_sync_stats() {
     // requests no presentation feedback at all (the ruling and the mechanism
     // are at GuiPlatform::set_display_measurement).
     gui.set_display_measurement(true);
-    // The first listing, so the band has rows on the frame it appears. The
-    // display half will read "waiting for the first presented frame" until the
-    // compositor answers for a commit made under the arm — a frame or two —
-    // and the per-frame refresh fills it in. (The return is the refresh's own
-    // damage fork and means nothing here: the open damages the whole window.)
+    // The first listing, and it is the panel's whole shape: the composer emits
+    // the same rows in every state, so what appears on this frame is what
+    // stands, with the display half reading "measuring..." at its placeholders
+    // until the compositor answers for a commit made under the arm — a frame
+    // or two — and the per-frame refresh writing the figures into the lines
+    // already there. (The return is the refresh's own damage fork and means
+    // nothing here: the open damages the whole window.)
     build_stats_panel_rows();
     // A modal OPEN damages the whole window (the row's rect does not exist
     // before its first paint — the settings opener carries the rule).
@@ -6385,10 +6387,10 @@ void GuiInputHandler::close_stats_panel() {
 // arm all survive a refresh, so a band the user has scrolled stays where he
 // put it while its digits move under him. A FRAME IN WHICH NO LINE CHANGED
 // LEAVES THE STORED STRINGS ALONE — the text compare decides the rebuild and
-// nothing else; the refresh damages either way. The listing's length is stable
-// frame to frame in practice, but the compare is over the text and not over
-// the count, so a group that gains or loses a line (the first presented frame
-// arriving, a device coming up) is rewritten like any other change.
+// nothing else; the refresh damages either way. The listing's length is a
+// constant of the composer (av_sync_stats.h's contract), so the compare is
+// only ever over the text: a figure landing rewrites the line it lands in and
+// moves no row.
 void GuiInputHandler::build_stats_panel_rows() {
     const std::vector<std::string> lines =
         compose_av_sync_rows(playback.audio_stats(), gui.display_stats());
@@ -6439,10 +6441,14 @@ void GuiInputHandler::refresh_stats_panel_rows() {
     const GuiRect band = folder_overlay::surface_rect(app);
     const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (band.w <= 0 || band.h <= 0 || n <= 0) return;
-    // A LISTING THAT CHANGED LENGTH DAMAGES THE BAND WHOLE (the first
-    // presented frame arriving, a device coming up): the rows below the change
-    // have all moved, and the clamp may have moved the offset with them, so
-    // the rows' extent is no longer a rect that covers what was painted.
+    // A listing that changed length damages the band whole, and this arm is a
+    // belt: the composer's row count is fixed in every state (its own
+    // contract, and the reason the panel no longer relayouts when the first
+    // presented frame lands), so nothing can reach it today. It stands because
+    // it costs a size compare and it is the honest guard the day a line is
+    // added conditionally — the rows below such a change would all have moved,
+    // and the clamp may have moved the offset with them, so the rows' extent
+    // would no longer be a rect that covers what was painted.
     if (was != app.folder_overlay.rows.size()) {
         viewport.invalidate_rect(band);
         return;

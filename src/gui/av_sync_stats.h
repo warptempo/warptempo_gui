@@ -87,5 +87,14 @@ struct GuiDisplayStats {
 // Sentence case on every line but the title, and no key hints anywhere (the
 // standing rules; the text convention's owner is paint_handler.cpp's
 // capitalization block).
+//
+// The row count is the same in every state, and that is the panel's shape
+// (architect 2026-09-04): the composer emits one fixed set of lines whatever
+// the two readings say, so the listing can never change length under the
+// reader and a refresh repaints text alone. A figure still being measured
+// prints `measuring...` with placeholders at its own columns' widths, a figure
+// that is never coming leaves its line empty under the sentence that says why,
+// and every number is zero-padded to a width its column owns. The composer's
+// own comments carry the counts and the widths.
 std::vector<std::string> compose_av_sync_rows(const GuiAudioStats& audio,
                                               const GuiDisplayStats& display);
