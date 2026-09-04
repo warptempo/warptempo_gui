@@ -250,9 +250,11 @@ private:
     void dispatch_render_now();
 
     // Target render on_done. Rebinds playback to the (now-populated)
-    // target_buffer on Success; logs cancellation. Always clears
-    // queue_progress_text and re-pumps pending_ (a fresh trigger() may
-    // have arrived during render).
+    // target_buffer on Success; logs cancellation. Takes queue_progress_text
+    // down at both of its arms and re-pumps pending_ (a fresh trigger() may
+    // have arrived during render); both clears ask first whether the label
+    // standing there is this preview's own ("Updating..."), the ownership test
+    // every clear on this side takes.
     //
     // IT CONSUMES in_flight_generation_ — the identity of the render this
     // callback belongs to — and hands it to complete_successful_buffer, which

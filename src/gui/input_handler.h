@@ -1441,10 +1441,11 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's five menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-four (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-five (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
-    // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
-    // the four companions) and the bottom
+    // seven closing it — the opener, the walk lamp and the four companions
+    // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
+    // bottom
     // row's eighteen — the transport three, then the right block's four marker
     // verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG button
     // (2026-08-27), the MARKER MEASURE
@@ -1842,6 +1843,22 @@ struct GuiInputHandler {
     // however long the stick takes with nothing painted. Refusing keeps that
     // join off a live-window road entirely; the wait is seconds and the bit
     // falls by itself.
+    //
+    // A running render at the same press does not refuse, and the difference
+    // belongs to the acts rather than to the quit. A render is disposable and
+    // killable: the quit kills it exactly as any dispatch kills it, nothing
+    // authored is lost and the deliverable standing in render/ stays as it was.
+    // The mirror is the one act the product cannot kill cleanly, by its own
+    // design, and its half-done state is a stick the user is about to pull — so
+    // what can be killed is killed and what cannot be killed refuses, which is
+    // the level at which the rule is symmetric. Row 8's Synchronizing... line
+    // covers the time before the press and says nothing about what a quit would
+    // do to the act, which is why the refusal carries a card of its own.
+    //
+    // Making the mirror cancellable at the quit instead — finish the file in
+    // hand, skip the deletions, join and go — was considered and ruled out as
+    // more code than the ruling asked for, on an act whose whole wait is
+    // seconds.
     //
     // One caller, GuiPrompt::request_close, asked at its head and ahead of
     // every closing step, so this one gate covers every road into the quit
@@ -2294,9 +2311,11 @@ private:
     // ever painted.
     //
     // status_promoted_ says the text currently in the SHARED slot is ours, and
-    // exists so a park can retract it (a sweep cell's "3 of 8" must not linger
-    // over the reuse cells that follow) without ever erasing another owner's
-    // message — the preview's "Updating..." lives in the same slot.
+    // exists so a park and the finalize can retract it (a sweep cell's "3 of 8"
+    // must not linger over the reuse cells that follow, and a finished session
+    // leaves no line behind) without ever erasing another owner's message — the
+    // preview's "Updating..." and the mirror's "Synchronizing..." live in the
+    // same slot, each cleared by its own owner.
     //
     // synthesis_started_ is the flag do_render stores true at its synthesis
     // boundary (RenderRequest::synthesis_started carries its address; the
@@ -2355,9 +2374,11 @@ private:
     void dispatch_next_batch_entry();
 
     // Finalize the current single-render-or-batch run on the GUI thread:
-    // clear queue_running / queue_progress_text, invalidate the bottom
-    // strip, and drop the deferred status message with its signal. The summary
-    // log is the caller's concern.
+    // clear queue_running, take down the state-cell text if this session
+    // promoted one (status_promoted_ is that test, so a rung-served run and
+    // another owner's line are both left alone), invalidate the bottom strip,
+    // and drop the deferred status message with its signal. The summary log is
+    // the caller's concern.
     void finalize_render_run();
 
     // Arm the deferred status message for an entry about to be dispatched, and
@@ -4395,7 +4416,7 @@ private:
     //     is what makes an edge swap the lane's content atomically instead of
     //     blanking it for a frame (architect 2026-08-07). The drop's comment
     //     carries both arguments.
-    //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
+    //   * set_history_delta is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
     //     2026-08-07 to the (walk source, reading) PAIR): bare `g` STEPS THE
     //     WALK through it (2026-08-18, the icon row's WALK LAMP's chord — a
@@ -4442,8 +4463,8 @@ private:
     bool open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
     void republish_history_lane_now();
-    void set_history_reading(GuiHistoryWalkSource source,
-                             GuiHistoryCompare    compare);
+    void set_history_delta(GuiHistoryWalkSource source,
+                           GuiHistoryCompare    compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);

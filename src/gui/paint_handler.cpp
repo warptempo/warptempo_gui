@@ -1734,7 +1734,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // tabs, in the `h` history view exactly as outside it. From 2026-08-05 the
     // view REPURPOSED the surface as its WALK SELECTOR — the labels reading
     // "Remote" and "Local", the selected face marking the live walk rather than
-    // the live tab, a press routed to set_history_reading by a band claim of
+    // the live tab, a press routed to set_history_delta by a band claim of
     // the mode's own — and the walk has its own radio pair in the icon row now,
     // so the label override, the selected-face arm, the tooltip silence and
     // that band claim are all deleted. Nothing in this painter forks on the
@@ -2132,7 +2132,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-FOUR members
+    // width, separator-divided groups of 32x32 buttons — TWENTY-FIVE members
     // in SIX groups since 2026-09-04, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE AUDIO-VIEW
@@ -2142,8 +2142,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom four (2026-08-12), the waveform
     // magnification pair (2026-08-26), FOLLOW, which came in from the
-    // dissolved mass-marker group the same day, and THE CENTERED LAMP beside
-    // it (2026-08-31, R11) — the RENDER-ENTRY group
+    // dissolved mass-marker group the same day, THE CENTERED LAMP beside
+    // it (2026-08-31, R11) and THE CENTER ON NEXT MARKER LAMP closing the group
+    // (2026-09-04) — the RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
     // 2026-09-01) and THE HISTORY GROUP, the opener leading THE WALK LAMP,
@@ -2152,7 +2153,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-four paint on every
+    // hiding/showing icons in top icon row"): all twenty-five paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2168,21 +2169,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 24·32 + (24−6)·2 + (6−1)·9 = 8 + 768 + 36 + 45 = 857px,
+    //   8 + 25·32 + (25−6)·2 + (6−1)·9 = 8 + 800 + 38 + 45 = 891px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 865.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 899.
     //
     // THE RADIO-PAIR COLLAPSE'S ARITHMETIC (architect 2026-09-04): three boxes
     // and three gaps (−102) off the 959 the centered lamp left, no separator
     // moving — the two view groups went from two members to one each and a
-    // group of one is still a group. The row is 857 authored px, the widest
-    // single cut it has taken, and it was taken to make room for two new lamps
-    // landing after that arc. THE TABLET FIT CEILING GOES FROM 240 TO 268 (the
-    // walk fits while 857·factor ≤ 2304; 857·2.68 = 2297, and 269 overruns by
-    // ~1 device px). THE TABLET'S FIRST-RUN SCALE IS 225 AND THE WALK NOW
-    // CLEARS IT WIDE: 857·2.25 = 1928 against the panel's 2304, 376 px of
-    // slack where the 959-px row had 146 — and 857 of the panel's 1024 LOGICAL
-    // px at that scale.
+    // group of one is still a group. That is the widest single cut the row has
+    // taken (959 to 857), and it was taken to make room for new lamps landing
+    // after that arc: the Center on Next Marker lamp landed later the same day,
+    // one box and one gap (+34) at the viewport group's tail, so the row stands
+    // at 891 authored px. The tablet fit ceiling is 258 — the walk fits while
+    // 891·factor ≤ 2304, 891·2.58 = 2299, and 259 overruns by ~4 device px. The
+    // tablet's first-run scale is 225 and the walk clears it wide: 891·2.25 =
+    // 2005 against the panel's 2304, 299 px of slack where the 959-px row had
+    // 146 — and 891 of the panel's 1024 logical px at that scale.
     //
     // THE 959 IT SHRANK FROM WAS THE CENTERED LAMP'S (2026-08-31, R11): one box
     // and one gap (+34) onto the 925 the Series relocation left, which had
@@ -2190,7 +2192,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // ~3 authored px) and left the tablet's 225 with 146 px of slack.
     //
     // THE 925 IT GROWS ON WAS THE 2026-08-27 SERIES RELOCATION'S ARITHMETIC,
-    // THE BIGGEST SINGLE CUT THIS ROW HAS TAKEN: two boxes (−68) and two
+    // the biggest single cut this row had taken before the radio-pair
+    // collapse's 102: two boxes (−68) and two
     // separators (−18) off the 1007/1015 it stood at that morning, 82px
     // narrower authored. WHAT IT BOUGHT IS SCALE HEADROOM ON THE TABLET,
     // which is the measurement that matters now that the deployment panel is
@@ -2204,12 +2207,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 266 rather than 268 — the pad
+    // (Counting the trailing pad the ceiling is 256 rather than 258 — 899 is
+    // the ink plus the pad, 899·2.56 = 2301 fits and 257 overruns — but the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
-    // Both older deployments clear it outright: 865 of 1024 at 100% on the
-    // retired Pi panel, 865 of 1920 on the laptop.
+    // Both older deployments clear it outright: 899 of 1024 at 100% on the
+    // retired Pi panel, 899 of 1920 on the laptop.
     //
-    // (It was 959px at twenty-seven in six groups from 2026-08-31; 925px at
+    // (It was 857px at twenty-four in six groups for the few hours of
+    // 2026-09-04 between the radio-pair collapse and the Center on Next Marker
+    // lamp; 959px at twenty-seven in six groups from 2026-08-31; 925px at
     // twenty-six in six groups from 2026-08-27; 1007px at
     // twenty-eight in eight groups from 2026-08-26; 939px at
     // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at

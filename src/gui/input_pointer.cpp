@@ -1180,8 +1180,8 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   2026-08-18 and as ORDINARY A/B TABS since (Ctrl+Tab is on the allowlist,
 //   so they come out of the walk like any other admitted chord), with no
 //   padlock drawn on either in any state since 2026-08-14,
-//   and THE TWO WALK RADIOS since 2026-08-18 (bare `g`, the mode's own
-//   vocabulary),
+//   and THE WALK LAMP since 2026-08-18 (bare `g`, the mode's own vocabulary; a
+//   radio pair until the 2026-09-04 collapse),
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
 //   them with nothing hand-listed,
@@ -1197,8 +1197,9 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
 //   and the same free answer). Those three plus Revert are the roster's
-//   RESTING-DISABLED family — four of them, joined by the TWO WALK RADIOS on
-//   2026-08-18 for six, all six gated at rest on `history_mode.active` by their
+//   RESTING-DISABLED family — four of them, joined by the WALK LAMP on
+//   2026-08-18 (a radio pair then) for five, all five gated at rest on
+//   `history_mode.active` by their
 //   own arm in redesign_button_enabled (which carries the succession, the plain
 //   `true` of 2026-08-15..18 included). This walk's answers for them have never
 //   changed and this paragraph is still what says they ACT in here; what the
@@ -1690,9 +1691,9 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     // which is the rule stated in messaging.md's silent list as the second
     // member of the one-dimensional class — a bound key's refusal is silent
     // when row 8's process line already names the reason. (The greyed Play
-    // button is the other half of the answer at Space's edge alone: its face
-    // reads preview_ready, which a stale-but-present buffer keeps true while
-    // this gate's is_updating is.) The same ruling took Space's twin card,
+    // button is the other half of the answer here too: its face reads
+    // preview_ready, which folds is_updating in (target_render.h), so the face
+    // and this gate cannot disagree.) The same ruling took Space's twin card,
     // the shared kTargetPreviewNotReadyCard deleted with both raises. The
     // gate itself is unchanged: the click is still consumed, and
     // chord_is_bound and spell_chord are untouched, so nothing about this
@@ -5377,7 +5378,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // `h` history view included (architect: "ctrl+tab should work as
             // normal in history view"). It was that view's WALK SELECTOR from
             // 2026-08-05 — a claim right here routed every press in the band to
-            // set_history_reading, each slot naming its own walk, arming a
+            // set_history_delta, each slot naming its own walk, arming a
             // HistoryWalkTab press whose lift selected rather than dispatching
             // a chord — because the tabs' own Ctrl+Tab had become the mode's
             // walk cycle and would have stepped past whichever slot was
@@ -5589,7 +5590,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // which have none and are
     // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
     // THIS MODE STOOD, from 2026-08-05 to 2026-08-18: the tab row's band claim
-    // intercepted it and armed set_history_reading at the lift, the walk
+    // intercepted it and armed set_history_delta at the lift, the walk
     // selector being deliberately not a chord. The walk has its own lamp
     // in the icon row now, so the tabs dispatch Ctrl+Tab in here like
     // everywhere else.) That exception is a refusal decided ABOVE this gate, so
@@ -7225,9 +7226,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's five menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-five — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 55, the enum's
+// eighteen since 2026-08-29: 53, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

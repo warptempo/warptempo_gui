@@ -189,11 +189,18 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
     // Not while a synchronization is running (architect 2026-09-04), and the
     // question is asked here, above every closing step below, because a
-    // refused close must leave the window exactly as it found it: the render
-    // player still standing, the picker still up, the editor still holding
-    // its uncommitted text. The gate belongs on this road for the same reason
-    // those steps do — it is the one road Ctrl+Q, the compositor's close, the
-    // tablet's BACK and the picker's reopen all pass through, so no producer
+    // refused close must leave every surface standing: the render player still
+    // up, the picker still up, the editor still holding its uncommitted text.
+    // Three roads run a prelude of their own before they reach this line, and
+    // each prelude is that road's own act rather than a closing step of the
+    // quit's — the drag hatch finalizes the active drags (a drag's end is "any
+    // end commits", the pointer-gesture rule), the paste-confirm hatch cancels
+    // its confirmation, and the compositor's close callback closes a standing
+    // dropdown — so a refusal under any of the three leaves the window as that
+    // prelude left it and takes down no surface of the quit's own. The gate
+    // belongs on this road for the same reason those steps do — it is the one
+    // road Ctrl+Q, the compositor's close, the tablet's BACK and the picker's
+    // reopen all pass through, so no producer
     // of a quit can miss it and none restates it. The predicate, the card and
     // the reasoning are the input handler's one body
     // (close_refused_by_external_sync); this line only asks.

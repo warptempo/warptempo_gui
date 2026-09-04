@@ -255,19 +255,28 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
-    // Invalidate the state cell before clearing queue_progress_text.
-    // invalidate_status_cell_area covers THE BOTTOM ROW'S LANE WHOLE — the
-    // label's home since 2026-08-29's fold, the one-day status bar's that
-    // morning and the tab row's from 2026-08-13 — and the label
-    // lives nowhere else; keep this
-    // ordering consistent with the other status-clear paths.
-    viewport.invalidate_status_cell_area();
-    app.queue_progress_text.clear();
-    // Drop the deferred message and disarm the signal. THE PARKED STRING MUST
-    // DIE HERE or a rung-served run — which never promoted, so this clear of the
-    // slot has nothing of its to erase — would leave its message waiting for the
-    // NEXT dispatch's signal to show it. Every terminal branch of an archival
-    // session reaches this one function (the single render's on_done and the
+    // The slot clear is an ownership test, not a sweep: only a session that
+    // promoted its message into the shared cell has anything of its own
+    // standing there, and status_promoted_ is the bit that records it —
+    // park_render_status asks the same question for the same reason. A
+    // rung-served session never promoted and so erases nothing here, and a
+    // sibling's string in the slot is not ours to take down: a preview's
+    // "Updating..." belongs to the run hold, the mirror's "Synchronizing..." to
+    // the act it names, each cleared by its own owner. Invalidate before the
+    // clear — invalidate_status_cell_area covers the bottom row's lane whole,
+    // the label's home since 2026-08-29's fold, the one-day status bar's that
+    // morning and the tab row's from 2026-08-13, and the label lives nowhere
+    // else — keeping the ordering every status-clear path takes.
+    if (status_promoted_) {
+        viewport.invalidate_status_cell_area();
+        app.queue_progress_text.clear();
+    }
+    // Drop the deferred message and disarm the signal, both unconditionally.
+    // THE PARKED STRING MUST DIE HERE or a rung-served run — which never
+    // promoted, so the guarded clear above found nothing of its own to erase —
+    // would leave its message waiting for the NEXT dispatch's signal to show
+    // it. Every terminal branch of an archival session reaches this one
+    // function (the single render's on_done and the
     // batch's out-of-entries and cancelled terminal), so this is the whole
     // cleanup. The signal reset is belt-and-braces — each dispatch resets it
     // too — and keeps the resting state honest between runs; it is safe here

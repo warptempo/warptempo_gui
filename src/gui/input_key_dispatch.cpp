@@ -740,7 +740,7 @@ void GuiInputHandler::close_history_mode() {
 // 2026-08-05: a different walk or a different reading is a different list, so a
 // switch replaces the lane's content exactly as a step does — one edge whether
 // it arrived from bare `g`, the walk lamp's click or bare `u`, all of them
-// going through set_history_reading): the pointer stash (flag_hit_rects), the stem
+// going through set_history_delta): the pointer stash (flag_hit_rects), the stem
 // painter's stash (marker_stems — paint-only since the stems-inert ruling,
 // 2026-08-12, but its `marker_index` still changes domain across the edge and
 // the playhead's stem-suppression decider reads it) and the diff-flag LIST
@@ -1283,8 +1283,13 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // halves still arrive here and only here — the `g` step passes (the next walk,
 // the current reading) and the `u` toggle passes (the current walk, the flipped
 // reading).
-void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
-                                          GuiHistoryCompare    compare) {
+//
+// The name covers both axes (renamed from set_history_reading, architect
+// 2026-09-04): the pair this writes is read back through one accessor,
+// AppState::HistoryMode::displayed_delta, so what the switch selects is which
+// delta the lane displays — the reading is only half of it.
+void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
+                                        GuiHistoryCompare    compare) {
     if (!app.history_mode.active) return;
     const bool cumulative = (compare == GuiHistoryCompare::Cumulative);
     if (app.history_mode.source == source &&
@@ -1588,10 +1593,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (!app.history_mode.active) return false;
 
     // BARE `g` — THE WALK'S TOGGLE (architect 2026-08-18), the keyboard half of
-    // the icon row's two WALK RADIOS: it steps the WALK SOURCE in row order
+    // the icon row's walk lamp: it steps the WALK SOURCE in row order
     // with wrap — Git (the committed checkpoints), Session (this session's own
     // undo/redo timeline) — through the ONE switch owner, so the key and the
-    // two buttons cannot diverge, and it passes the CURRENT reading through
+    // lamp cannot diverge, and it passes the CURRENT reading through
     // untouched (`u` is the only thing that moves that bit).
     //
     // ONE CHORD, ONE BUTTON, ONE AXIS since the 2026-09-04 collapse: the walk
@@ -1628,7 +1633,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
                 break;
             }
         }
-        set_history_reading(kRow[(here + 1) % kCount], app.history_compare());
+        set_history_delta(kRow[(here + 1) % kCount], app.history_compare());
         return true;
     }
 
@@ -1649,10 +1654,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // this toggle is remembered until the program closes. Its BUTTON is row 4's
     // HistoryCumulative, which dispatches this same bare chord.
     if (key == GuiKeys::U) {
-        set_history_reading(app.history_mode.source,
-                            app.history_cumulative
-                                ? GuiHistoryCompare::Iterative
-                                : GuiHistoryCompare::Cumulative);
+        set_history_delta(app.history_mode.source,
+                          app.history_cumulative
+                              ? GuiHistoryCompare::Iterative
+                              : GuiHistoryCompare::Cumulative);
         return true;
     }
 

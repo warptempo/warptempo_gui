@@ -609,11 +609,13 @@ void GuiTargetRender::dispatch_render_now() {
     // the one stamp helper.
     //
     // It stamps rather than re-stamps in general, because trigger() often has
-    // not stamped at all: it never does on the idle path, and even when its busy
-    // branch did, a cancelled archival's on_done (finalize_render_run) clears
-    // the text in its terminal branch while the target dispatch runs inside that
-    // same callback's pumping path, so the label can be down here even when the
-    // busy branch put it up. Mid-run the label is usually already showing, held
+    // not stamped at all: it never does on the idle path, so the label can be
+    // down here whatever the busy branch did. (Until 2026-09-04 a cancelled
+    // archival's on_done could also take a preview's label down on its way
+    // past — finalize_render_run cleared the slot whatever stood in it — and
+    // that cross-owner erase is what the ownership guard there ended; a
+    // finalize now leaves a label it never promoted alone.) Mid-run the label
+    // is usually already showing, held
     // there by the completion clears' deferral, and the helper's own
     // already-showing return makes this a no-op. Target-render status uses
     // queue_progress_text.
@@ -764,11 +766,20 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer_frames = 0;
     }
 
-    if (outcome != RenderOutcome::Success && !run_active_) {
+    if (outcome != RenderOutcome::Success && !run_active_ &&
+        app.queue_progress_text == "Updating...") {
         // Clear status. Match finalize_render_run by invalidating the state
         // cell before clearing queue_progress_text;
         // invalidate_status_cell_area covers the BOTTOM ROW'S LANE WHOLE,
         // which is the label's whole home since 2026-08-29's fold.
+        //
+        // The guard is on the text being ours, the test every clear on this
+        // side takes. A cancelled preview is often drained after an archival
+        // command killed it, parked and promoted its own "Rendering..." into
+        // the slot, and it can be drained beside the mirror's
+        // "Synchronizing..." too; erasing either would take down a line this
+        // render never wrote. Only the preview writes "Updating...", so no case
+        // here depends on clearing another owner's string.
         //
         // HELD DURING A RUN: mid-run this branch is the CANCELLED outcome of the
         // render the next trigger just killed, and its successor is already
@@ -874,12 +885,15 @@ void GuiTargetRender::complete_successful_buffer(
     // Clear status. Match finalize_render_run by invalidating the state cell
     // before clearing queue_progress_text; invalidate_status_cell_area covers
     // the BOTTOM ROW'S LANE WHOLE, the label's whole home since 2026-08-29's
-    // fold. GUARDED on a non-empty slot, like the two sibling
-    // clears (dispatch_render_now's early refusal and cancel_in_flight_update):
-    // the reuse rungs reach this tail with the label NEVER stamped — a
-    // synchronous cache or artifact hit resolves without going asynchronous, so
-    // nothing was shown — and clearing an already-empty string would cost the
-    // bottom strip a repaint for no visible change.
+    // fold. The guard is on the text being ours, the same test the four
+    // sibling clears take (tick_updating_hold, dispatch_render_now's early
+    // refusal, on_render_done's failure arm and cancel_in_flight_update): an
+    // empty slot and a sibling's
+    // string are both left alone — the mirror's "Synchronizing...", an archival
+    // "Rendering..." — because a preview that never wrote the cell has nothing
+    // of its own there to erase. The reuse rungs are exactly that case: they
+    // reach this tail with the label never stamped, a synchronous cache or
+    // artifact hit resolving without going asynchronous, so nothing was shown.
     //
     // HELD DURING A RUN: a completion inside a torrent of triggers is the middle
     // of one continuous gesture, and the next trigger is already on its way, so
@@ -887,7 +901,7 @@ void GuiTargetRender::complete_successful_buffer(
     // run's end clears instead (tick_updating_hold, once the quiet window passes
     // with the work idle). Outside a run this is the ordinary immediate clear it
     // has always been.
-    if (!run_active_ && !app.queue_progress_text.empty()) {
+    if (!run_active_ && app.queue_progress_text == "Updating...") {
         viewport.invalidate_status_cell_area();
         app.queue_progress_text.clear();
     }

@@ -86,8 +86,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // FRAMES its landing. Its default is TRUE because framing is what the walk
     // did before the key existed. Like follow and centered it is a display
     // preference and reaches no render input; unlike them it governs ONE act,
-    // the Tab walk — the paired march and the A/B audition call the center
-    // command by name and are untouched.
+    // the Tab walk. The paired march states its own framing at both of its
+    // steps (MarkerLandingFrame::Center, by its own statement) and the A/B
+    // audition frames through the center command; neither asks this bit.
     { "center_on_next_marker",       SettingKind::CenterOnNextMarkerFlag, EngineField::Title,                 "true"     },
     // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
     // `playback_speed` retired whole; `gui_scale`, `audio_player` and

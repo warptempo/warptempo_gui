@@ -1821,10 +1821,11 @@ struct TrimBarPressSeed {
 // kDropdownMenus — the ENUMERATOR for the third keeps
 // its `Series` spelling, the 2026-08-31 rebrand being labels and prose alone)
 // plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-SEVEN
+// TABS, row 4's TWENTY-FIVE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout; the HISTORY OPENER, ITS TWO WALK RADIOS and ITS
-// FOUR COMPANIONS close them since 2026-08-18), then the bottom row's EIGHTEEN — the transport
+// the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
+// COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
+// 2026-09-01), then the bottom row's EIGHTEEN — the transport
 // three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button (2026-08-29),
 // the EDIT FLAG BUTTON (2026-08-27),
 // the MARKER MEASURE (2026-08-19) and
@@ -1961,7 +1962,7 @@ enum class RedesignButton {
     // and the shape is recorded because it is an easy one to re-invent: while
     // the view stood the two slots read "Remote" and "Local", their selected
     // face marked the live WALK SOURCE instead of the live tab, they carried no
-    // tooltip, their presses were routed to set_history_reading by a band claim
+    // tooltip, their presses were routed to set_history_delta by a band claim
     // of the mode's own, and Ctrl+Tab cycled the walks rather than switching
     // tabs. (The row grew to four slots for the (walk source, reading) product
     // on 2026-08-07 and went back to two the following day, when the READING
@@ -2289,7 +2290,7 @@ enum class RedesignButton {
     // 2026-09-04. One button now, bare `g`, its chord's exact twin: the key is
     // a TOGGLE over the two walks (the arm is at handle_history_mode_key) and
     // the press flips the same axis through the same ONE switch owner
-    // set_history_reading, so the key and the button cannot come to mean
+    // set_history_delta, so the key and the button cannot come to mean
     // different things. The `radio` flag the pair carried is gone with it — the
     // half already lit was the only thing that flag protected here.
     //
@@ -2741,9 +2742,9 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: EIGHT in row 1, two
-// in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 55. Of
+// in row 3, TWENTY-FIVE in row 4 and EIGHTEEN in the bottom row — 53. Of
 // those,
-// FIFTY carry a chord in kToolbarChords and FIVE are the dropdown
+// FORTY-EIGHT carry a chord in kToolbarChords and FIVE are the dropdown
 // anchors (File, Edit, Iterations, Settings and Help; the third's enumerator is
 // still spelled `Series`), which is the split the chord
 // table's own
@@ -4652,6 +4653,14 @@ struct AppState {
     // otherwise be offscreen — follow's own page, through follow's own body
     // (Viewport::follow_scroll_if_needed).
     //
+    // The centered pin outranks a dark lamp, exactly as it outranks follow:
+    // with centered_mode lit, the pre-paint's resting arm re-derives the camera
+    // on the landed cursor one tick later (main.cpp, through
+    // Viewport::derive_centered_viewport), so the landing is centred whatever
+    // this bit says. The lamp keeps the preference for the moment the pin comes
+    // down and does not grey, which is Follow's own precedent for a preference
+    // the pin supersedes.
+    //
     // ITS ONE READER IS marker_walk_frame (below), which the three bare Tab
     // arms call and nothing else does. The walk itself does not read this bit:
     // framing is a required argument of cycle_marker_focus, so the
@@ -6156,7 +6165,7 @@ struct AppState {
     // with the padlock's move into the icon row, 2026-08-14 — the read-only
     // toggle is a roster button now and arms as Roster like every other chord
     // button. HistoryWalkTab armed the `h` view's walk-selector TABS, whose act
-    // was set_history_reading rather than a chord, and went with that
+    // was set_history_delta rather than a chord, and went with that
     // repurposing on 2026-08-18: row 3 is the A/B pair in every state, so a
     // press on a tab arms as Roster and dispatches Ctrl+Tab like any other.)
     // (The FIVE dropdown ANCHORS — File, Edit, Iterations, Settings and Help,
@@ -6933,8 +6942,9 @@ struct AppState {
         // visits within one session of the view.
         std::size_t index  = 0;
         // WHICH WALK THE LANE IS READING (architect 2026-08-07) — selected by
-        // the icon row's two WALK RADIOS on bare `g` since 2026-08-18 (row 3's
-        // tabs carried it until then). GuiHistoryWalkSource (history_diff.h)
+        // the icon row's walk lamp on bare `g` since 2026-08-18, a pair of
+        // radios until the 2026-09-04 collapse (row 3's tabs carried it before
+        // 2026-08-18). GuiHistoryWalkSource (history_diff.h)
         // owns the pair's definitions and the local walk's whole model; what
         // lives here is the session's own state.
         //
@@ -6975,7 +6985,7 @@ struct AppState {
         // (a preference — how you want deltas read).
         //
         // A READING SWITCH IS STILL A MODE EDGE, exactly like a `,` / `.` step,
-        // and one owner does all of it (GuiInputHandler::set_history_reading,
+        // and one owner does all of it (GuiInputHandler::set_history_delta,
         // which takes the (source, reading) pair and writes both halves): clear
         // the mode focus, drop the lane's published content, clear a resting
         // region, REPUBLISH THE LANE SYNCHRONOUSLY (2026-08-07 — the arriving
@@ -7018,7 +7028,7 @@ struct AppState {
         // that rebuilds that list would otherwise leave the highlight on an
         // unrelated flag.
         //   - each `,` / `.` step (handle_history_mode_key)
-        //   - each WALK-OR-READING SWITCH (2026-08-05, set_history_reading):
+        //   - each WALK-OR-READING SWITCH (2026-08-05, set_history_delta):
         //     the two
         //     readings are two different lists, and since 2026-08-07 so are the
         //     two walks, so it is the step's own reason at a different edge
@@ -7384,7 +7394,7 @@ struct AppState {
     // schema, not in a sidecar, not in the render fingerprint's settings terms —
     // it changes no rendered bytes, only how a read-only lane groups them.
     //
-    // ITS ONE WRITER is GuiInputHandler::set_history_reading, the switch owner
+    // ITS ONE WRITER is GuiInputHandler::set_history_delta, the switch owner
     // the tab press and the `u` toggle share; its readers are
     // AppState::history_compare() just below (the delta machinery's mapping) and
     // redesign_button_selected (the Cumulative button's lamp, published in every
@@ -11094,7 +11104,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     seven history shapes are UNBOUND (chord_is_bound takes the standing mode
 //     now), so a locked tab answers bare `v` out there with silence, exactly
 //     as a writable tab does. The OPENER is
-//     lit anyway on its own arm's terms; the two WALK RADIOS and the four
+//     lit anyway on its own arm's terms; the WALK LAMP and the four
 //     COMPANIONS are greyed at rest all the same, by `a.history_mode.active`
 //     at their own arm below, which is a MODE fact and not the lock's.
 //   * WHY THE READ-ONLY SET IS NOT DERIVED BY WALKING kToolbarChords THROUGH
