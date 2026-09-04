@@ -125,8 +125,9 @@ struct GuiInputHandler;
 // 2026-08-28, R36). THE STATE IS STORED, in
 // `AppState::RenderPlayer::transport` (that field's block owns the reasons,
 // the writer set and the readers) — IDLE (nothing to resume: no item, or an
-// item a natural end or a fresh open left resting at its start — NO USER ACT
-// PRODUCES IT since the Stop retired), LIVE,
+// item a natural end or a fresh open left resting at its start — THE UP ACT
+// IS THE ONE USER ROAD INTO IT since 2026-09-04, no press producing it at all
+// between the Stop's retirement and that evening), LIVE,
 // PAUSED (an item the transport parked, AT WHATEVER FRAME — a pause at frame 0
 // is PAUSED, which no reading of the resume point could say) — and the table
 // is at play_button_act.
@@ -145,7 +146,7 @@ struct GuiInputHandler;
 // the highlight, in any state" — the table is at play_button_act). THE
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
 // the highlight walks and while a folder is entered — up() is the one
-// navigation that pauses it, and the reason is at that body — it wears the
+// navigation that unloads it, and the reason is at that body — it wears the
 // transport glyph on its row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW
 // and the two Shift+Home / Shift+End ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
@@ -219,8 +220,8 @@ struct GuiInputHandler;
 // playback.play directly against that domain, and the state that says the
 // transport is live is the player's own (`transport`'s LIVE value, the
 // scanner flag's mirror). THE STOP IS STILL THE ONE STOP BODY: every pause —
-// the transport's own, the tick's dead-device arm and, since 2026-09-04, the
-// Up act — every natural end, every close and the rebind ahead of the next
+// the transport's own and the tick's dead-device arm — every natural end,
+// every close, the Up act's unload and the rebind ahead of the next
 // item takes GuiPlaybackLifecycle::stop_playback_if_playing, which carries the
 // player's fork inside it (the fence, then the transport moved to PAUSED and
 // the modal row damaged instead of the scanner teardown), so the keyboard stop
@@ -238,11 +239,14 @@ struct GuiInputHandler;
 // states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
-// listing and a whole-window damage. close() takes the stop body, clears
-// the mode, rebinds THE VIEW'S buffer through the S/T flip's own tail fork
-// verbatim (ensure_ready in target view, rebind_to_source in source view),
-// and only THEN frees the item's buffer: the engine may hold the pointer
-// until the rebind.
+// listing and a whole-window damage. close() clears the mode and takes the
+// panel down around unload_item(), which is THE ONE OWNER of the ordering
+// the engine's pointer demands — the stop body's fence, THE VIEW'S buffer
+// rebound through the S/T flip's own tail fork verbatim (ensure_ready in
+// target view, rebind_to_source in source view), and only THEN the item's
+// fields cleared and its buffer freed. up() calls that same body past its
+// root wall, which is why going up leaves the player standing with nothing
+// loaded, exactly as an open leaves it.
 //
 // THE LOAD ROAD is not here: the Load in place button (bare `'` inside the
 // player) and its confirmation live on GuiInputHandler, which owns the shared
@@ -331,9 +335,9 @@ struct GuiRenderPlayer {
     // the `..` row retired (2026-09-01); a SILENT consumed no-op at the root,
     // which is `tmp/` (the wall's one owner is render_player_up_actionable,
     // app_state.h, which the button's face reads too). Past that wall it
-    // pauses a live transport before it enters the root, through the one stop
-    // body and with the resume point read as toggle_pause reads it; the
-    // reasoning is at the body and nowhere else.
+    // UNLOADS THE ITEM (unload_item) and re-enters the root, so the player
+    // stands as a fresh open leaves it: nothing bound, nothing sounding, the
+    // band on row 0. The reasoning is at the body and nowhere else.
     void up();
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
@@ -593,15 +597,18 @@ struct GuiRenderPlayer {
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep at each retell (SEVEN call sites across SIX
-    // functions; it was eight across seven until GuiRenderPlayer::stop() went
-    // with the player's Stop on 2026-09-01): open() —
+    // re-derived by grep at each retell (EIGHT call sites across SEVEN
+    // functions — seven across six between the player's Stop retiring on
+    // 2026-09-01 and up() taking its own push on 2026-09-04): open() —
     // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
-    // covers the pause, the Up act, the natural end's last-wav rest, the dead
-    // device and the rebind ahead of the next item; seek_to — both arms, so
+    // covers the pause, the natural end's last-wav rest, the dead
+    // device, the rebind ahead of the next item and the Up act's own stop;
+    // up() — active, no item, stopped, the same push open() makes and THE
+    // LAST WORD OVER THAT FORK, whose paused still carries the item this act
+    // is unloading; seek_to — both arms, so
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
     // seek); and
@@ -614,6 +621,15 @@ struct GuiRenderPlayer {
     void publish_media_state();
 
 private:
+    // THE ONE OWNER OF THE UNLOAD ORDERING, shared by close() and up(): the
+    // stop body's fence, then THE VIEW'S buffer rebound, then the item's
+    // fields cleared to their open() values and its buffer freed. The order
+    // is load-bearing — the engine may hold the item's pointer until the
+    // rebind — and the two callers add only what is theirs (close() the mode
+    // bit and the panel teardown, up() the root entry and the head unit's
+    // push). It publishes nothing itself: the fork inside the stop body
+    // pushes a paused state that both callers supersede with their own.
+    void unload_item();
     // Rebuild the listing for the live folder: rows, scroll 0, the highlight
     // on the transport's item's row if it is here else row 0, hover and press
     // cleared. Damages the band.

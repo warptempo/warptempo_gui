@@ -8336,17 +8336,20 @@ struct AppState {
     //              and never another, and the item keeps playing while the
     //              highlight walks and while a folder is entered — the
     //              displayed listing and the item's folder are two things;
-    //              GuiRenderPlayer::up() is the one navigation that pauses
-    //              it), and the item's index in
+    //              GuiRenderPlayer::up() is the one navigation that UNLOADS
+    //              it, leaving the player as a fresh open leaves it, with
+    //              nothing bound at all), and the item's index in
     //              that list. A row whose path is the item's wears the
     //              transport glyph, and since R38 the HIGHLIGHT FOLLOWS the
     //              item at every change the transport makes on its own, where
     //              its row is in the listing on screen;
     //   `buffer` / `frames` the decoded item bound to the one playback engine
     //              (interleaved float32 at the device's own channel count and
-    //              rate — the decode refuses any other shape); freed at close
-    //              only AFTER the view's buffer is rebound, the engine holding
-    //              the pointer until then;
+    //              rate — the decode refuses any other shape); freed at the
+    //              close AND at the Up act, both through the one unload body
+    //              (GuiRenderPlayer::unload_item) and only AFTER the view's
+    //              buffer is rebound, the engine holding the pointer until
+    //              then;
     //   `transport` THE TRANSPORT'S STATE, STORED and never derived (R36's
     //              three states; the table is at
     //              GuiRenderPlayer::play_button_act): IDLE — nothing to
@@ -8362,23 +8365,28 @@ struct AppState {
     //              (GuiRenderPlayer::play_wav and toggle_pause's resume arm),
     //              PAUSED at the ONE STOP BODY'S PLAYER FORK
     //              (GuiPlaybackLifecycle::stop_playback_if_playing — every
-    //              live transport that stops passes there, the pause, the Up
-    //              act, the dead device, the natural end and the close
-    //              alike), and IDLE
-    //              at the THREE acts that mean "resting at the start": the
-    //              natural end's own rest, open() and close(), each written
-    //              AFTER that fork — open()'s reset alone never meeting it,
-    //              since it runs with the mode down. IT WAS FOUR until
-    //              2026-09-01: GuiRenderPlayer::stop() was the fourth and the
-    //              only USER act among them, and the player's Stop retired
-    //              whole with the row's transport triple — the class stays,
-    //              its three remaining producers are all the player's own
-    //              lifecycle, and no press puts the transport into it. LIVE is what
+    //              live transport that stops passes there, the pause, the
+    //              dead device, the natural end, the Up act's unload and the
+    //              close alike), and IDLE
+    //              at the FOUR acts that mean "nothing to resume": the
+    //              natural end's rest at the item's start, open()'s reset,
+    //              and close() and up() through the unload body they share
+    //              (GuiRenderPlayer::unload_item), each written AFTER that
+    //              fork — open()'s reset alone never meeting it,
+    //              since it runs with the mode down. THE ONE PRESS AMONG THEM
+    //              IS UP, and it is the only user road into the state: the
+    //              count stood at THREE with no press at all between
+    //              2026-09-01, when GuiRenderPlayer::stop() retired whole
+    //              with the row's transport triple, and the evening of
+    //              2026-09-04, when the architect made the Up button unload
+    //              the item — "make it like when you first open the player:
+    //              nothing is loaded". LIVE is what
     //              the play/pause glyph, the tick, the position reader, the
     //              car's directional gates and the head unit's `playing` all
     //              ask for;
     //   `resume_frame` THE RESUME POINT AND NOTHING ELSE — where a pause left
-    //              the cursor (0 after a fresh bind or a natural end);
+    //              the cursor (0 after a fresh bind, a natural end or an
+    //              unload);
     //              a seek moves it on a PAUSED transport and the play moves it
     //              on a live one. A SEEK WHILE IDLE IS A CONSUMED NO-OP
     //              (architect 2026-08-29, seek_to's own head, the one owner),

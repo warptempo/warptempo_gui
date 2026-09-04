@@ -192,27 +192,33 @@ void GuiRenderPlayer::up() {
     // said it before. The wall is asked through the predicate above, which the
     // button's face reads too, so the key and the button cannot disagree.
     if (!render_player_up_actionable(app)) return;
-    // Up pauses what is sounding, and the pause belongs here rather than at
-    // the stop body (architect 2026-09-04, from a road test on the tablet).
-    // The play/pause face reads the highlight ahead of the transport
-    // (render_player_highlight_act_row), and the listing this act builds is
-    // the root's folder rows, which hold no row for the item — so the
-    // highlight lands on a folder, the face repaints as a play-class glyph,
-    // and a transport left live under it would be a face that lies about the
-    // sound. On the tablet the row carries no stop button, so this is the one
-    // road where the sound could keep running under such a face. The resume
-    // point is read before the stop exactly as toggle_pause's pause arm reads
-    // it, so this is a pause and nothing more: the item stays the transport's,
-    // and re-entering its batch folder seats the highlight back on it
-    // (rebuild_rows) where the Play button reads the transport tail and
-    // resumes. At the root the highlight is a folder row and the face says
-    // "open folder" over a paused transport, which is what both of them are
-    // doing.
-    AppState::RenderPlayer& rp = app.render_player;
-    if (rp.transport == Transport::Live)
-        rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
-    playback_lifecycle.stop_playback_if_playing();
+    // UP UNLOADS THE ITEM (architect 2026-09-04, in his words: "The Up button
+    // should simply stop audio and drop the selection, not pause it. It should
+    // make it like when you first open the player: nothing is loaded"). WHY AN
+    // UNLOAD RATHER THAN A PAUSE: the row carries no stop button and none is
+    // wanted, and the car's dashboard has no stop either — so Up, the one act
+    // that LEAVES the item's folder, is where stopping lives, and leaving the
+    // folder means nothing is loaded. THE PAUSE FORM LIVED FOR ONE EVENING
+    // (a7b132ec, hours earlier) and was superseded the same day: it wrote the
+    // resume point, took the stop body and kept the item, so walking back in
+    // resumed it. What that form was built for survives unchanged here,
+    // because an unloaded transport is IDLE and the root's listing is folder
+    // rows — the play/pause face reads the highlight ahead of the transport
+    // (render_player_highlight_act_row), so it says "Open Folder" over a
+    // transport that is doing exactly nothing, and no face can lie about the
+    // sound.
+    //
+    // The ordering the engine's pointer demands is the shared body's (the
+    // contract at unload_item's declaration). What is UP'S OWN is the root
+    // entry — the listing rebuilt with no item, so the band seats on row 0 as
+    // at an open — and the head unit's push, which must be THE LAST WORD: the
+    // stop body's fork inside the unload has already published a paused state
+    // carrying the very item this act is dropping. REPEAT ONE IS UNTOUCHED:
+    // the lamp is session state, off at every open() and at no other time, and
+    // going up a folder is not an open.
+    unload_item();
     enter(Folder::Root, {});
+    publish_media_state();
 }
 
 void GuiRenderPlayer::open_row(int index) {
@@ -653,8 +659,8 @@ void GuiRenderPlayer::transport_toggle_act() {
     // ELSE THE ITEM FROM ITS START, ALWAYS (architect 2026-08-29 ~01:40:
     // "Play when idle should start literally"): `resume_frame` is 0 at every
     // idle rest by construction — seek_to's own head refuses an idle seek, so
-    // nothing can have moved it since the last natural end or fresh
-    // bind — and toggle_pause's resume arm reads exactly that field.
+    // nothing can have moved it since the last natural end, fresh bind or
+    // unload — and toggle_pause's resume arm reads exactly that field.
     //
     // WITH NO ITEM THE ANSWER IS toggle_pause'S OWN SILENT GUARD (architect
     // 2026-08-31, R5 — the one-dimensional rule): a player resting with
@@ -705,10 +711,12 @@ void GuiRenderPlayer::toggle_pause() {
         // the same call, so the picture does not step at the pause.
         // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
         // stop_playback_if_playing leaves app.playhead_cursor_sample where
-        // the user put it, so the player's own pauses are the whole
-        // resting-write set — this arm, the tick's dead-device arm and, since
-        // 2026-09-04, up(), each reading the predictor's position exactly as
-        // this one does and each writing it before the stop body.
+        // the user put it, so the player's two pauses are the whole
+        // resting-write set — this arm and the tick's dead-device arm, which
+        // reads the predictor's position exactly as this one does and writes
+        // it before the stop body too. (up() was a third for the evening of
+        // 2026-09-04; it unloads the item now and writes no resume point at
+        // all — the record is at that body.)
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
@@ -959,9 +967,11 @@ void GuiRenderPlayer::on_natural_end() {
     }
     // THE FOLDER IS AT ITS END (or the next wav refused to decode, its own
     // words on a card and the item unchanged) and the transport rests at the
-    // item's start, IDLE — so the next Play replays THIS item. This rest and
-    // open()'s are the whole of the IDLE state's production since the player's
-    // Stop retired (2026-09-01); no user act reaches it any more.
+    // item's start, IDLE — so the next Play replays THIS item. This rest,
+    // open()'s and the Up act's unload are the state's whole production while
+    // the mode stands (close() writes it on the way down), and UP IS THE ONE
+    // USER ACT AMONG THEM since 2026-09-04 — no press reached the state
+    // between the player's Stop retiring (2026-09-01) and that evening.
     //
     // THE FOLDER-END RESTART STOOD HERE (architect 2026-08-28, R27) and IS
     // RETIRED (architect 2026-08-31, R7 — "we simplify — play on last file
@@ -1093,14 +1103,22 @@ bool GuiRenderPlayer::open() {
     return true;
 }
 
-void GuiRenderPlayer::close() {
+// THE UNLOAD, and THE ONE OWNER of the order the engine's pointer demands
+// (the contract at the declaration). Two callers: close(), which adds the mode
+// bit and the panel teardown, and up(), which adds the root entry — so the
+// player standing with nothing loaded and the player gone are the same act
+// with different tails, and the ordering cannot drift between them.
+void GuiRenderPlayer::unload_item() {
     AppState::RenderPlayer& rp = app.render_player;
-    if (!rp.active) return;
-    // THE ORDER IS LOAD-BEARING: stop (the fence) → the mode down → the
-    // VIEW's buffer rebound → only then the item's buffer freed, the engine
-    // holding the pointer until the rebind.
+    // THE ORDER IS LOAD-BEARING: stop (the fence) → the VIEW's buffer rebound
+    // → only then the item's buffer freed, the engine holding the pointer
+    // until the rebind.
     playback_lifecycle.stop_playback_if_playing();
-    rp.active         = false;
+    // IDLE OVER THE FORK'S PAUSED: the stop body's player fork parks every
+    // LIVE transport at PAUSED, and an unloaded transport has nothing to
+    // resume — so this write lands after that fork, exactly as open()'s reset
+    // and the natural end's rest do (the state's whole writer set is at the
+    // field, app_state.h).
     rp.transport      = Transport::Idle;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
@@ -1117,17 +1135,44 @@ void GuiRenderPlayer::close() {
     // THE S/T FLIP'S OWN TAIL FORK, verbatim (switch_active_audio_view_to,
     // input_handler.cpp): target view rebinds the current preview or
     // dispatches a fresh one, source view rebinds source.wav.
+    // UNCONDITIONAL, with an item or without one: a preview that completed
+    // while the player stood did not rebind (GuiTargetRender::
+    // complete_successful_buffer's guard), so re-expressing the view is what
+    // this body owes whatever the transport was doing. Under up() the player
+    // is still standing, so a preview dispatched here meets that same guard
+    // when it completes and waits for the close's own re-express; the engine
+    // rests on the source meanwhile, which is where an unloaded player leaves
+    // it.
     if (app.active_audio_view == 'T') {
         target_render.ensure_ready();
     } else {
         target_render.rebind_to_source();
     }
+    // THE ITEM'S FIELDS TO THEIR open() VALUES, the buffer's memory with them.
+    // The resume point and the painted cursor are cleared here too, which the
+    // close never bothered to do — dead state either way, since open() rewrites
+    // both — so that the fields the item owns go down together and up() has no
+    // clears of its own.
     rp.buffer.clear();
     rp.buffer.shrink_to_fit();
-    rp.frames = 0;
+    rp.frames         = 0;
     rp.item.clear();
     rp.item_folder.clear();
-    rp.item_index = -1;
+    rp.item_index     = -1;
+    rp.resume_frame   = 0;
+    rp.painted_cursor = -1;
+}
+
+void GuiRenderPlayer::close() {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (!rp.active) return;
+    // THE UNLOAD FIRST, THE MODE BIT AFTER IT: the stop body's player fork is
+    // what fences the engine out of the item's buffer, and that fork asks
+    // `active` — a mode taken down ahead of the unload would send the stop
+    // down the project's arm and leave the fence untaken. What is the CLOSE'S
+    // OWN is the mode's two takedowns, the bit and the panel.
+    unload_item();
+    rp.active = false;
     // The panel comes down with the mode: the reset restores Owner::None,
     // which IS the band's standing predicate answering false.
     app.folder_overlay = AppState::FolderOverlay{};
