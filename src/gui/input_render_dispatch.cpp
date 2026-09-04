@@ -261,8 +261,10 @@ void GuiInputHandler::finalize_render_run() {
     // park_render_status asks the same question for the same reason. A
     // rung-served session never promoted and so erases nothing here, and a
     // sibling's string in the slot is not ours to take down: a preview's
-    // "Updating..." belongs to the run hold, the mirror's "Synchronizing..." to
-    // the act it names, each cleared by its own owner. Invalidate before the
+    // "Updating..." belongs to the run hold and is cleared by its own owner.
+    // The mirror's "Synchronizing..." is not in the slot at all — it is derived
+    // below whatever the slot holds (process_line_text, paint_handler.cpp) —
+    // so this clear simply uncovers it where a mirror is running. Invalidate before the
     // clear — invalidate_status_cell_area covers the bottom row's lane whole,
     // the label's home since 2026-08-29's fold, the one-day status bar's that
     // morning and the tab row's from 2026-08-13, and the label lives nowhere

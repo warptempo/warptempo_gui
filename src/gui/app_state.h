@@ -7915,6 +7915,15 @@ struct AppState {
     // starts a render in the view, but one dispatched before the visit runs on
     // through it), and this string is back on screen the moment the view
     // closes.
+    //
+    // THE MIRROR'S LINE IS NOT IN HERE and never reaches this string: a
+    // running synchronization to external storage says `Synchronizing...` in
+    // the same cell, but that line is DERIVED at the one reader out of
+    // GuiExternalSyncWorker::is_busy, below whatever this string holds
+    // (process_line_text, paint_handler.cpp, which owns the spelling and the
+    // reasoning). So the writers of this string are the render side and the
+    // startup load alone, each clearing what it wrote, and the mirror can
+    // neither be overwritten by them nor overwrite them.
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch

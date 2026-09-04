@@ -6635,15 +6635,16 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
 
 // -- SYNCHRONIZE TO EXTERNAL STORAGE (the contract is at the declaration) ---
 
-// The mirror's process line, row 8's state cell (architect 2026-09-04). A
-// running mirror is state — true right now, replaced as it changes, never
-// timed out — so it belongs beside the cell's other two process strings
-// rather than on a card, and the dispatch notice this replaces was dropped in
-// 2026-08-29 for being exactly that fact on the event surface. Three ASCII
-// periods like both neighbours (`Loading...`, `Updating...`): the cell is the
-// product's monospace surface and the ASCII-in-grammars rule governs the
-// spelling. Two readers, the write below and the clear on the way back.
-constexpr const char* kSyncProgressLine = "Synchronizing...";
+// (The mirror's process line lives nowhere here. A running mirror is state —
+// true right now, replaced as it changes, never timed out — so it belongs
+// beside the cell's other process strings rather than on a card (architect
+// 2026-09-04), and the dispatch notice it replaced was dropped in 2026-08-29
+// for being exactly that fact on the event surface. It is DERIVED at the one
+// reader out of GuiExternalSyncWorker::is_busy rather than written into the
+// shared slot here: the spelling, the yield to a render's line and the reason
+// a written one could not stay true are all at process_line_text,
+// paint_handler.cpp. The two sites below own the DAMAGE for it and nothing
+// else.)
 
 // The close road's synchronization gate. The contract, the reasoning and the
 // inventory of roads it covers are at the declaration (input_handler.h); this
@@ -6683,8 +6684,12 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // NOTICE WAS DROPPED with the move — "Synchronizing to …" was a process
     // line, state rather than an event — and the state surface took it on
     // 2026-09-04: `Synchronizing...` in row 8's state cell for as long as the
-    // worker runs, the same fact on the surface that owns it (the write and
-    // its precedence ruling are at the dispatch below). AND SINCE
+    // worker runs, the same fact on the surface that owns it — DERIVED there
+    // out of the worker's busy bit rather than written into the cell, so the
+    // yield to a render's line holds for every ordering of the two acts (the
+    // derivation and its reasoning are at process_line_text,
+    // paint_handler.cpp; the damage for it is at the dispatch below and at
+    // the completion). AND SINCE
     // 2026-08-30 A SUCCESS SAYS NOTHING AT ALL (the
     // architect's ruling, the render's precedent), so the only sentences left
     // are refusals — which is why this act, when it works, is one menu press
@@ -6746,26 +6751,25 @@ void GuiInputHandler::synchronize_to_external_storage() {
     job.project_dir  =
         std::filesystem::path(app.source_audio_path).parent_path();
 
-    // The synchronization yields the state cell, and that is a ruling rather
-    // than an implementation note (architect 2026-09-04). A render, the batch
-    // queue or the startup load can be running beside this act, and the
-    // render's progress line is both the more frequent and the more
-    // informative state, so the mirror writes its line only into an empty
-    // cell and clears it only while the cell still holds its own string
-    // (on_external_sync_complete). Two strings want no stack and no priority
-    // enum: the "is the text ours" test is the whole mechanism, the same one
-    // target_render's hold already takes. Damage goes through the one owner,
-    // invalidate_status_cell_area, which covers the bottom row's lane whole.
-    if (app.queue_progress_text.empty()) {
-        app.queue_progress_text = kSyncProgressLine;
-        viewport.invalidate_status_cell_area();
-    }
-
     external_sync_worker.dispatch(
         std::move(job),
         [this](GuiExternalSyncOutcome outcome) {
             on_external_sync_complete(std::move(outcome));
         });
+
+    // The state cell gains a line at this press and loses one at the
+    // completion, and this act spells the damage for both while writing
+    // neither. The synchronization yields the cell to a render, the batch
+    // queue or the startup load — the render's progress line is both the more
+    // frequent and the more informative state, and that is a ruling rather
+    // than an implementation note (architect 2026-09-04) — and the yield is
+    // read at the painter now, out of the worker's own single-in-flight bit,
+    // so it holds for every ordering of the two acts instead of only for the
+    // two a written line could cover. The damage is unconditional and asked
+    // after the dispatch, so the bit the reader answers is already up when the
+    // next paint runs; it goes through the one owner,
+    // invalidate_status_cell_area, which covers the bottom row's lane whole.
+    viewport.invalidate_status_cell_area();
 }
 
 // The verdict, back on the main thread (the platform's completion eventfd,
@@ -6784,16 +6788,13 @@ void GuiInputHandler::synchronize_to_external_storage() {
 // one statement and neither invents the other.
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
-    // The process line comes down here, on the yielding writer's own terms:
-    // guarded on the text still being ours, because a render dispatched while
-    // the mirror ran owns the cell now and a writer that yielded to it does
-    // not erase it. Invalidate before the clear, the ordering every
-    // status-clear path in the product keeps — the lane has to be damaged
-    // while the longer string is still the one the painter would draw.
-    if (app.queue_progress_text == kSyncProgressLine) {
-        viewport.invalidate_status_cell_area();
-        app.queue_progress_text.clear();
-    }
+    // The process line comes down here, and it comes down by itself: the
+    // worker is already Idle when this callback runs (on_completion_event
+    // stores the state before it fires the callback), so the reader's fallback
+    // has stopped answering and this only has to ask for the paint. Nothing is
+    // erased, which is the point — a render dispatched while the mirror ran
+    // owns the cell's string, and the mirror never owned one to give back.
+    viewport.invalidate_status_cell_area();
     if (outcome.ok) return;
     notifications.notify(AppState::NotificationClass::Normal,
                          std::move(outcome.failure.display));

@@ -1,6 +1,7 @@
 #include "paint_handler.h"
 #include "target_render.h"
 #include "notifications.h"
+#include "external_sync.h"   // GuiExternalSyncWorker::is_busy, the process line's fallback
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -2126,6 +2127,59 @@ static std::string history_walk_line(AppState& app) {
     return line;
 }
 
+// -- process_line_text ------------------------------------------------------
+//
+// Row 8's process line, composed at the reader rather than stored, and the one
+// site that knows the mirror has a line at all. The cell carries what is true
+// right now, so the two facts it can report are asked in the order in which
+// they outrank one another: a render, a batch cell or the startup load has
+// written its own string into the shared slot, and that string wins for as
+// long as it stands; otherwise a synchronization to external storage is
+// running and the cell says so; otherwise there is nothing to report.
+//
+// The mirror's line is derived here because a written one could not stay true.
+// It was written at the dispatch into an empty cell and cleared at the
+// completion while the cell still held its own string (architect 2026-09-04,
+// the yield), which is right for the two orderings that ruling was reasoned on
+// and wrong for the other two. A render started after the mirror took the cell
+// and then cleared it at its own end, leaving the cell blank with the copying
+// still going; and a mirror started while a render's line stood never wrote at
+// all, so nothing appeared when that line went. Everything involved runs on the
+// GUI thread, so it was a precedence gap and not a race. Deriving closes both:
+// the render's line wins exactly while it stands and the mirror's is back the
+// moment it goes, with no stack, no priority enum, and no second writer for the
+// slot's owners to disagree with.
+//
+// The `h` walk line's precedence over the whole answer is unchanged and is
+// decided by the caller, which asks the mode first; this composes the
+// process-line operand alone.
+//
+// Damage stays the changing route's own business and no route gained or lost
+// one: the render side's writes and its ownership-tested clears already damage
+// the cell (input_render_dispatch and target_render, the clears invalidating
+// while the longer string is still the one this would return), and the mirror's
+// dispatch and completion invalidate without touching the string at all.
+//
+// The bit asked here is the act's own single-in-flight bit, which stays up
+// through the brief CompletionPending window between the worker signalling and
+// the GUI thread consuming the eventfd — so the line can outlive the last file
+// copy by a frame or two. That is the same bit and the same window the quit
+// gate refuses on (close_refused_by_external_sync), and the two saying the same
+// thing at the same instant is worth more here than a line that goes out early.
+//
+// The mirror's spelling wears the three ASCII periods both its neighbours wear
+// (`Loading...`, `Updating...`): the cell is the product's monospace surface
+// and the ASCII-in-grammars rule governs the spelling. The constant has one
+// reader, the body just below.
+constexpr const char* kSyncProgressLine = "Synchronizing...";
+
+static std::string process_line_text(const AppState& app,
+                                     const GuiExternalSyncWorker& sync) {
+    if (!app.queue_progress_text.empty()) return app.queue_progress_text;
+    if (sync.is_busy()) return kSyncProgressLine;
+    return std::string();
+}
+
 // (GuiPaintHandler::paint_status_bar IS DELETED — architect 2026-08-29, the
 // evening of the day the STATUS BAR landed. The bar was the window's last
 // lane, three bands on the row-7 crop's measure, carrying the process line or
@@ -3346,11 +3400,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         std::string state;
         if (app.history_mode.active) {
             state = history_walk_line(app);
-        } else if (!app.queue_progress_text.empty()) {
-            // The render/batch/queue status AND the startup "Loading..."
-            // line — one cell, and one of the reasons this body runs on every
-            // frame class (it is the only feedback on the loading frame).
-            state = app.queue_progress_text;
+        } else {
+            // The process line — the render/batch/queue status, the startup
+            // "Loading..." line and the running mirror's, composed above and
+            // empty when there is nothing to report. It is one of the reasons
+            // this body runs on every frame class (it is the only feedback on
+            // the loading frame).
+            state = process_line_text(app, external_sync_worker);
         }
         const double x0 = static_cast<double>(cell_x);
         // THE CLOCK, UNCLIPPED, and its advance is where the state begins.

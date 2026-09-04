@@ -1874,7 +1874,10 @@ struct GuiInputHandler {
     //
     // It reads GuiExternalSyncWorker::is_busy — the act's own
     // single-in-flight bit — and says the act's own sentence, so the running
-    // mirror refuses in one wording everywhere. The picker's open act keeps
+    // mirror refuses in one wording everywhere. Row 8's Synchronizing... line
+    // reads that same bit at the painter (process_line_text,
+    // paint_handler.cpp), so the refusal and the line on screen behind it are
+    // one fact asked twice and cannot disagree. The picker's open act keeps
     // its own arm on that same bit, which is not a second predicate: it
     // refuses earlier, above close_picker and above the reopen name it would
     // otherwise seat, so the picker stays open with its answer instead of
@@ -2314,8 +2317,11 @@ private:
     // exists so a park and the finalize can retract it (a sweep cell's "3 of 8"
     // must not linger over the reuse cells that follow, and a finished session
     // leaves no line behind) without ever erasing another owner's message — the
-    // preview's "Updating..." and the mirror's "Synchronizing..." live in the
-    // same slot, each cleared by its own owner.
+    // preview's "Updating..." lives in the same slot and is cleared by its own
+    // owner. The mirror's "Synchronizing..." is not a third owner of the slot:
+    // it is derived below whatever the slot holds, at the cell's one reader
+    // (process_line_text, paint_handler.cpp), so a render's message never has
+    // to yield to it and never has to preserve it.
     //
     // synthesis_started_ is the flag do_render stores true at its synthesis
     // boundary (RenderRequest::synthesis_started carries its address; the

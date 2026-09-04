@@ -1276,6 +1276,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // path). The settings-editor gui_scale commit uses the input handler's own
     // paint_handler ref for the same rebuild.
     GuiPaintHandler paint_handler(app, audio, playback, target_render,
+                                  external_sync_worker,
                                   wf_cache, flag_cache, waveform_worker, gui);
     // file_loader holds a GuiTargetRender& (its end-of-load ensure_ready()
     // dispatches the eager target preview), so it must be constructed after

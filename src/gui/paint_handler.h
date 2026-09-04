@@ -13,6 +13,7 @@
 
 class GuiWaveformWorker;
 struct GuiTargetRender;
+class GuiExternalSyncWorker;
 
 // Paint handler cluster. Owns the on_redraw and on_resize callback
 // bodies, reaching shared state through the reference members below.
@@ -523,6 +524,16 @@ struct GuiPaintHandler {
     // truthful-buttons ruling — the painter stashes what it paints and the
     // predicate needs the object. Const here; nothing in the painter drives it.
     const GuiTargetRender& target_render;
+    // The synchronization worker, read for one fact: whether a mirror is
+    // running right now. Row 8's process line falls back to the mirror's own
+    // string while it is, and that fallback is derived here at the reader
+    // rather than written into the shared slot at the dispatch
+    // (process_line_text, paint_handler.cpp, which is the one site that asks).
+    // Const for the same reason target_render above is — nothing in the
+    // painter drives it — and is_busy() is a lone atomic load with no lock the
+    // worker ever holds across it, so asking it once per frame is free and
+    // cannot block on the copying.
+    const GuiExternalSyncWorker& external_sync_worker;
     WaveformCache&     wf_cache;
     FlagCache&         flag_cache;
     GuiWaveformWorker& waveform_worker;
@@ -532,6 +543,7 @@ struct GuiPaintHandler {
                     const GuiAudio&    audio_,
                     GuiPlayback&       playback_,
                     const GuiTargetRender& target_render_,
+                    const GuiExternalSyncWorker& external_sync_worker_,
                     WaveformCache&     wf_cache_,
                     FlagCache&         flag_cache_,
                     GuiWaveformWorker& waveform_worker_,
@@ -540,6 +552,7 @@ struct GuiPaintHandler {
           audio(audio_),
           playback(playback_),
           target_render(target_render_),
+          external_sync_worker(external_sync_worker_),
           wf_cache(wf_cache_),
           flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),

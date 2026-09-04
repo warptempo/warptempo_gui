@@ -328,9 +328,10 @@ struct Viewport {
     void invalidate_waveform_area();
     // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
     // evening the STATUS BAR folded back into this row). The cell carries what
-    // is TRUE RIGHT NOW: the `h` walk line, else the render / batch / loading
-    // progress line. So this is the owner for every route that changes one of
-    // THOSE TWO strings and nothing else. (The bar was the window's last lane
+    // is TRUE RIGHT NOW: the `h` walk line, else the process line — the
+    // render / batch / loading progress string, or, when that is empty and a
+    // mirror is running, the derived `Synchronizing...`. So this is the owner
+    // for every route that changes what those answer and nothing else. (The bar was the window's last lane
     // for one day and carried a THIRD string, the resolved readout, in a right
     // cell; that readout RETIRED WHOLE with the bar — bare `j` copies the
     // value and Shift+`j` goes to the marker it came from — and every caller
@@ -349,15 +350,21 @@ struct Viewport {
     // is this row's too, with its own cell owner below — and this rect covers
     // that one as a superset).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-08-29 at the
-    // fold — membership is "this route changes what the cell shows", which is
-    // now the PROGRESS LINE'S WRITERS AND NOTHING ELSE:
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-04 —
+    // membership is "this route changes what the cell shows", which is the
+    // progress line's writers plus the mirror's two edges, eleven sites:
     //   * input_render_dispatch's THREE (the promote, the park's retraction,
     //     finalize_render_run);
     //   * target_render's SIX (the "Updating..." stamp, the run hold's late
     //     clear, the TWO context-ending clears — the target view leaving and
     //     the T->S exit — the render-done failure clear and the completion
-    //     tail's guarded one).
+    //     tail's guarded one);
+    //   * input_key_dispatch's TWO, the synchronization's dispatch and its
+    //     completion. Those two write no string at all: the mirror's
+    //     `Synchronizing...` is DERIVED at the reader out of the worker's
+    //     busy bit, below whatever the progress line holds
+    //     (process_line_text, paint_handler.cpp), so the pair damages the
+    //     lane on the two edges where that bit changes and nothing else.
     // The `h` WALK LINE has no site of its own here and never did: it rides
     // the mode's edges, which invalidate the whole window. The file loader's
     // "Loading..." likewise damages the window whole.
@@ -469,7 +476,8 @@ struct Viewport {
     // the trim commit writers all kept their clock call above and dropped the
     // other one. Nothing on this row pairs with a second surface any more —
     // the STATE CELL that replaced the readout is damaged by the progress
-    // line's writers alone (invalidate_status_cell_area above), and its rect
+    // line's writers and the mirror's two edges (invalidate_status_cell_area
+    // above, whose inventory is authoritative), and its rect
     // is this row's whole lane, which covers this cell as a superset where a
     // route does spell both.) Routes that damage the
     // WHOLE window (the S/T audio-view toggle's full-window invalidate, the

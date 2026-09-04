@@ -330,7 +330,15 @@ GuiExternalSyncOutcome run_external_sync(const GuiExternalSyncJob& job);
 // and says the act's own sentence on a card — so every producer of a quit
 // meets it, and the wait is seconds because the bit falls by itself. The act
 // says so while it runs, too: row 8's state cell carries `Synchronizing...`
-// (messaging.md), so the refusal names something already on screen.
+// (messaging.md), so the refusal names something already on screen — and that
+// line is the SAME BIT read at the painter rather than a string this act
+// writes down, so the gate and the sentence behind it cannot come to disagree.
+// The mirror yields the cell to a render's own line for as long as that line
+// stands and takes it back the moment it goes; the derivation, and why a
+// written line could not stay true through both orderings, are at
+// process_line_text (paint_handler.cpp). The two sites in
+// synchronize_to_external_storage / on_external_sync_complete own the DAMAGE
+// for it and nothing else.
 class GuiExternalSyncWorker {
 public:
     using DoneCallback = std::function<void(GuiExternalSyncOutcome)>;
@@ -362,7 +370,13 @@ public:
     // platform read()s the counter first, as it does for the other workers).
     void on_completion_event();
 
-    // True from dispatch until the completion event has been consumed.
+    // True from dispatch until the completion event has been consumed. TWO
+    // READERS, both on the GUI thread: the close gate
+    // (GuiInputHandler::close_refused_by_external_sync, and the picker's
+    // reopen arm on the same bit) and row 8's process line, which asks this
+    // once per painted frame (process_line_text, paint_handler.cpp). It is a
+    // lone atomic load and holds no lock the worker takes, so the per-frame
+    // read cannot block on the copying.
     bool is_busy() const;
 
 private:
