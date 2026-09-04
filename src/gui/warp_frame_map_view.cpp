@@ -293,23 +293,91 @@ const GuiDisplayContext& active_display_context(const AppState& app,
     return ctx;
 }
 
-// Translate through the active display context. A Source-domain context
+// Translate through a display context. A Source-domain context
 // is identity outright; the TargetLive domain inlines the forward / inverse
 // map math (map_source_to_target / map_target_to_source) against the
-// context's OWN map. Sites translating against an explicit caller-supplied map
+// context's OWN map. The forward direction takes its context as a PARAMETER,
+// so the live translation and the proposed one below run the same arithmetic;
+// the inverse has only the live face (the reason is at its declaration).
+// Sites translating against an explicit caller-supplied map
 // (a proposed pre-commit marker list) use the explicit-map pixel-anchoring
 // helpers instead. The empty-map path (the unbuildable-target fallthrough)
 // stays identity — map_source_to_target / map_target_to_source are identity on
 // an empty map.
-int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
-                                      int64_t source_frame) {
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
+int64_t source_frame_to_domain(const GuiDisplayContext& ctx,
+                               int64_t source_frame) {
     if (ctx.domain == GuiDisplayDomain::Source) return source_frame;
     const size_t q = (source_frame < 0)
         ? static_cast<size_t>(0)
         : static_cast<size_t>(source_frame);
     return static_cast<int64_t>(
         std::nearbyint(map_source_to_target(q, *ctx.warp_frame_map)));
+}
+
+int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
+                                      int64_t source_frame) {
+    return source_frame_to_domain(active_display_context(app, audio),
+                                  source_frame);
+}
+
+GuiDisplayContext proposed_display_context(
+    const AppState& app, const GuiAudio& audio,
+    const std::vector<GuiWarpMarker>& markers,
+    const EngineSettings& settings) {
+    // The domain rule comes from the live accessor and is not re-read (the
+    // contract at the declaration): a copy of the live context is already the
+    // right answer in source view, where the map is the identity, and in
+    // target view it needs only its map and its total replaced.
+    GuiDisplayContext ctx = active_display_context(app, audio);
+    if (ctx.domain != GuiDisplayDomain::TargetLive) return ctx;
+
+    const int  sample_rate  = audio.sample_rate();
+    const long total_frames = static_cast<long>(audio.total_frames());
+
+    // THE STATE THAT IS ALREADY LIVE NEEDS NO MAP OF ITS OWN — the live cache
+    // holds it, built and paid for. This is the phase-reset entry's whole
+    // path: an undo entry carries a full column pair and a restore assigns
+    // both, so a 'P' entry's warp list is a byte-identical copy of the live
+    // one and the map a restore of it installs is the map standing now.
+    if (settings.scale == app.engine_settings.scale &&
+        warp_rows_equal(markers, app.warpmarkers.markers())) {
+        return ctx;
+    }
+
+    ProposedTargetWarpFrameMapCache& c = app.proposed_target_map_cache;
+    for (auto& slot : c.slots) {
+        if (slot.valid && slot.scale == settings.scale &&
+            slot.sample_rate == sample_rate &&
+            slot.total_frames == total_frames &&
+            warp_rows_equal(slot.markers, markers)) {
+            ctx.warp_frame_map      = &slot.warp_frame_map;
+            ctx.domain_total_frames = slot.tgt_total_frames;
+            return ctx;
+        }
+    }
+
+    ProposedTargetWarpFrameMapCache::Slot& slot = c.slots[c.next_victim];
+    c.next_victim = (c.next_victim + 1) % 2;
+    // Loud like every other build (the ruling at build_target_view_warp_frame_-
+    // map's declaration): a proposed state's normalization prints its lines
+    // once, when the state first reaches a slot, and the memo is what keeps
+    // "once" from becoming "every tick".
+    slot.warp_frame_map = build_target_view_warp_frame_map(
+        markers, settings.scale, sample_rate, total_frames, nullptr);
+    // The live cache's own total rule, verbatim: the map's target total when
+    // it is positive, the source total when the map is empty or degenerate.
+    const int64_t tt = target_total_frames_for_map(
+        static_cast<int64_t>(total_frames), slot.warp_frame_map);
+    slot.tgt_total_frames = (tt > 0) ? tt : audio.total_frames();
+    slot.markers      = markers;
+    slot.scale        = settings.scale;
+    slot.sample_rate  = sample_rate;
+    slot.total_frames = total_frames;
+    slot.valid        = true;
+
+    ctx.warp_frame_map      = &slot.warp_frame_map;
+    ctx.domain_total_frames = slot.tgt_total_frames;
+    return ctx;
 }
 
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,

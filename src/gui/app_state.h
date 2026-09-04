@@ -5151,6 +5151,13 @@ struct AppState {
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
+    // Memoized target-view maps for states that are not live — the two slots
+    // behind proposed_display_context (warp_frame_map_view.h), whose one
+    // reader is the Restrict undo to viewport lamp's predicate. Mutable for
+    // the cache above's reason: the predicate is asked from const face and
+    // tooltip paths.
+    mutable ProposedTargetWarpFrameMapCache proposed_target_map_cache;
+
     // Memoized red-flag sets — the marker-store indices whose render resolves
     // to the 1.00 normalization fallback, painted in the marker lane's red class
     // whether or not they are selected (see warp_frame_map_view.h). Mutable:
@@ -10182,14 +10189,25 @@ inline void reset_displayed_target_basis(AppState& a) {
 // passes through unchanged. An empty live domain (total <= 0 — unreachable
 // once audio is loaded, zero-frame sources refuse) has no in-domain frame
 // and clamps to 0.
+//
+// THE CLAMP ITSELF TAKES ITS DOMAIN AS A NUMBER (clamp_frame_to_domain,
+// directly below), so the rule has one body and two faces: the live face
+// clamp_playhead_to_live_domain under it, which names the LIVE domain, and the
+// Restrict undo to viewport lamp's predicate, which asks the same clamp of the
+// domain a restore WOULD install (undo_restore_within_viewport). This block is
+// the rule and its rationale for both; the bodies state only arithmetic.
+inline int64_t clamp_frame_to_domain(int64_t frame,
+                                     int64_t domain_total_frames) {
+    if (domain_total_frames <= 0) return 0;
+    if (frame < 0) return 0;
+    if (frame >= domain_total_frames) return domain_total_frames - 1;
+    return frame;
+}
+
 inline int64_t clamp_playhead_to_live_domain(int64_t frame,
                                              const AppState& a,
                                              const GuiAudio& audio) {
-    const int64_t total = live_total_frames(a, audio);
-    if (total <= 0) return 0;
-    if (frame < 0) return 0;
-    if (frame >= total) return total - 1;
-    return frame;
+    return clamp_frame_to_domain(frame, live_total_frames(a, audio));
 }
 
 // THE TRIM REGION OVERLAY'S SPAN, DERIVED AND NEVER STORED — the one owner of
@@ -10575,6 +10593,33 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
         || a.measure    != b.measure;
 }
 
+// WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
+// length and every row equal, which is what "these two stores hold the same
+// state" means wherever the question is asked of a list rather than a row.
+// TWO READERS: the coalesced burst's net-zero pop, which asks both faces at
+// once (entry_restores_live_marker_stores, undo.cpp), and the Restrict undo to
+// viewport lamp's proposed target map, which asks the warp face alone and of
+// an arbitrary list rather than a store — a restore whose warp list is already live
+// installs the map that is already built, so the live cache answers it
+// (proposed_display_context, warp_frame_map_view.cpp). The phase face has no
+// second reader of its own and ships with the warp one under the co-equal
+// axes rule; it is the net-zero pop's phase half.
+inline bool warp_rows_equal(const std::vector<GuiWarpMarker>& a,
+                            const std::vector<GuiWarpMarker>& b) {
+    if (a.size() != b.size()) return false;
+    for (std::size_t i = 0; i < a.size(); ++i)
+        if (warp_row_fields_differ(a[i], b[i])) return false;
+    return true;
+}
+
+inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
+                                   const std::vector<GuiPhaseResetMarker>& b) {
+    if (a.size() != b.size()) return false;
+    for (std::size_t i = 0; i < a.size(); ++i)
+        if (phase_reset_row_fields_differ(a[i], b[i])) return false;
+    return true;
+}
+
 // THE TOUCHED SET A RESTORE OF `entry` WOULD PRODUCE, in `after` coordinates —
 // `after` being the entry's own snapshot for the column, the state a restore of
 // it writes back, and `before` the store that is live now. PURE: it reads two
@@ -10685,11 +10730,14 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
 // leaves the viewport where it stands, which is the inline guard this hoist
 // replaced.
 //
-// TWO READERS: bring_span_into_view (input_handler.cpp), which asks it at the
-// resting start and again at the tentative one it just wrote, and
+// THREE READERS: bring_span_into_view (input_handler.cpp), which asks it at the
+// resting start and again at the tentative one it just wrote;
 // undo_restore_within_viewport below, which asks it of a restore that has not
-// happened yet. `vp_start` is a parameter for the first reader's second ask and
-// for no other reason.
+// happened yet; and, since 2026-09-04, the undo restore's own SINGLETON visual
+// arm (undo.cpp), which asks it of the degenerate span [frame, frame] — the
+// restore and the lamp that judges it must not mean different things by
+// "inside the viewport". `vp_start` is a parameter for the first reader's
+// second ask and for no other reason.
 inline bool span_columns_visible(const AppState& a, const GuiAudio& audio,
                                  int64_t vp_start, int64_t lo, int64_t hi) {
     const GuiRect area = waveform_area(a);
@@ -10727,25 +10775,48 @@ inline bool span_columns_visible(const AppState& a, const GuiAudio& audio,
 // inside.
 //
 // OTHERWISE THE SPAN IS THE RESTORE'S OWN: the touched set the restore would
-// produce, mapped from the entry's snapshot positions into the active domain
-// the same way the visual tail maps them (source_frame_to_active_domain then
-// clamp_playhead_to_live_domain, the land's own formula), and asked of
+// produce, mapped from the entry's snapshot positions into the domain the
+// restore ends in the same way the visual tail maps them (the forward
+// translation then the domain clamp, the land's own formula), and asked of
 // span_columns_visible at the resting viewport — which is exactly what the
 // tail's group arm hands bring_span_into_view. An EMPTY touched set frames
 // nothing and is inside.
 //
-// TWO RESIDUES, both named rather than papered over, and both cost at most one
-// refusal too many or one too few:
-//   * THE SINGLETON ARM OF THE VISUAL TAIL asks its own offscreen question in
-//     SAMPLES ([start, start + visible)) where this asks it in painted COLUMNS.
-//     The two agree everywhere but within one column of the viewport's edge.
-//     One definition of "inside the viewport" was worth more than byte-equality
-//     with a second spelling of it.
-//   * IN TARGET VIEW THE MAP IS THE LIVE ONE. A restore that also rewrites the
-//     warp map moves every image with it, and the span this predicate measures
-//     is measured under the map standing now. In SOURCE view the map is the
-//     identity and the answer is exact; the phase-reset column and every warp
-//     act author in source view, so the exact case is the common one.
+// THE MAP IS THE ONE THE RESTORE INSTALLS, NOT THE ONE STANDING NOW (architect
+// 2026-09-04, closing the second residue). In target view the picture is drawn
+// through the warp map and the map IS the warp marker list, so an entry that
+// rewrites that list moves every later image with it: undoing a tempo change on
+// marker 12 shifts everything after 12 by the section's whole length change,
+// not by a column. Measuring the touched span under the live map therefore
+// answered about a picture that will not exist — "inside" for a span the
+// restore carries offscreen, "outside" for one that would have stood still.
+// The span is measured under proposed_display_context of the entry's own
+// snapshot and engine block (warp_frame_map_view.h), the pair a restore
+// installs, and the clamp takes that context's own domain total.
+//   * A PHASE-RESET ENTRY NEEDS NO NEW MAP and gets none: every entry carries a
+//     full column pair and a restore assigns both, so a 'P' entry's warp list
+//     is the live one and the proposed context hands back the live cache. The
+//     warp list is the right argument in both columns for that reason.
+//   * SOURCE VIEW IS UNTOUCHED: the proposed context reads the live one for the
+//     domain rule, so source view is the identity map exactly as before and the
+//     answer there stays exact.
+//
+// THE VIEWPORT IS THE ONE STANDING, and that is not an approximation: a restore
+// leaves viewport_start_sample as the target-domain number it already is —
+// nothing re-derives it from a source anchor — so the span the camera shows
+// after the restore is the same span under the new map, and only the marker
+// side moves. What CAN still shift it is the restore's own playhead work: the
+// map-change re-land (Viewport::reseat_playhead_to) scrolls to keep the
+// playhead visible, and its clamp re-seats a viewport left past a shortened
+// domain's end. Both are camera moves this predicate does not measure, because
+// their subject is the playhead rather than the touched set; they cost a
+// step that runs and moves the picture, never a wrong restore.
+//
+// THE FIRST RESIDUE IS CLOSED TOO (the same ruling): the visual tail's
+// SINGLETON arm asked its offscreen question in samples where this asks it in
+// painted columns, and the two disagreed within one column of the viewport's
+// edge. The tail now asks span_columns_visible as well, so the restore and the
+// lamp have ONE definition of "inside the viewport" (undo.cpp).
 inline bool undo_restore_within_viewport(const AppState& a,
                                          const GuiAudio& audio,
                                          const UndoEntry& entry) {
@@ -10764,6 +10835,11 @@ inline bool undo_restore_within_viewport(const AppState& a,
                                       entry.snapshot, warp_row_fields_differ);
     if (touched.empty()) return true;
 
+    // The domain the restore ends in — built once for the whole set, and the
+    // identity in source view.
+    const GuiDisplayContext restored = proposed_display_context(
+        a, audio, entry.snapshot, entry.settings.engine_settings);
+
     int64_t lo = 0, hi = 0;
     bool    have = false;
     for (const int idx : touched) {
@@ -10771,8 +10847,9 @@ inline bool undo_restore_within_viewport(const AppState& a,
         const int64_t src_f = phase_reset
             ? entry.phase_reset_snapshot[at].time_frame
             : entry.snapshot[at].time_frame;
-        const int64_t pos = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(a, audio, src_f), a, audio);
+        const int64_t pos = clamp_frame_to_domain(
+            source_frame_to_domain(restored, src_f),
+            restored.domain_total_frames);
         if (!have) { lo = hi = pos; have = true; }
         else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
     }

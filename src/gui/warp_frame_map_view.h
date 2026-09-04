@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine_settings.h"      // EngineSettings (the proposed-context signature)
+#include "gui_display_context.h"  // GuiDisplayContext (the translation bodies' subject)
 #include "warp_frame_map.h"
 #include "warpmarkers.h"   // GuiWarpMarker (the view-overload signature)
 
@@ -153,6 +155,46 @@ struct PhaseResetRedFlagCache {
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
+// Memoized target-view maps for states that are NOT live — the maps
+// proposed_display_context builds below. TWO SLOTS, because the two readers
+// ask about two different states in the same frame: the Undo and the Redo
+// button faces each ask the Restrict undo to viewport lamp's predicate of
+// their own stack's top entry, and one slot would thrash between them and
+// rebuild both maps every tick.
+//
+// THE KEY IS THE CONTENT, not the entry's address: a slot answers only for a
+// marker list ROW-EQUAL to the one it was built from (warp_rows_equal,
+// app_state.h) under the same scale and audio identity. An undo entry has no
+// stable identity to key on — the stacks pop, push and trim at the cap, so an
+// address can name a different entry a moment later — and a stale map here
+// would be a silently wrong lamp verdict rather than a visible fault. The
+// compare is a whole-struct walk of a marker list, which is what the
+// predicate's own touched-set reconstruction already costs.
+//
+// The memo also keeps the build LOUD-BUT-BOUNDED: every build runs the
+// resolver, which prints its normalization lines to stderr, so an unmemoized
+// per-tick build would reprint them at the frame rate for any state carrying a
+// red flag. One build per distinct proposed state is the same bill the live
+// cache pays per store generation.
+struct ProposedTargetWarpFrameMapCache {
+    struct Slot {
+        bool      valid        = false;
+        // The state this map was built from, kept for the key compare.
+        std::vector<GuiWarpMarker> markers;
+        double    scale        = 0.0;
+        int       sample_rate  = 0;
+        long      total_frames = 0;
+        std::vector<WarpFrameMapSegment> warp_frame_map;
+        // The domain total this map implies (target_total_frames_for_map,
+        // with the live cache's own source-total fallback).
+        int64_t   tgt_total_frames = 0;
+    };
+    Slot slots[2];
+    // Round-robin victim when neither slot matches. Two readers alternating on
+    // two slots never evict a live answer.
+    int  next_victim = 0;
+};
+
 class GuiAudio;
 
 // Convenience wrappers that own the domain-check and the map selection for the
@@ -172,6 +214,44 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
+
+// THE FORWARD TRANSLATION'S ONE BODY, with the domain named by the caller:
+// the image of a source frame in whatever domain `ctx` describes — the
+// identity in Source, the context's own map in TargetLive.
+// source_frame_to_active_domain above is its LIVE face and does nothing but
+// hand it active_display_context's answer; the second face is the proposed
+// context below. There is no second spelling of the target-domain arithmetic.
+//
+// THE INVERSE HAS ONE FACE ONLY, and deliberately: nothing asks where a
+// displayed position would sit in a state that is not live, so
+// active_domain_to_source_frame keeps its live-context body and takes no
+// ctx-parameterized twin (a class exists iff it has a producer).
+int64_t source_frame_to_domain(const GuiDisplayContext& ctx,
+                               int64_t source_frame);
+
+// THE CONTEXT A STATE THAT IS NOT LIVE WOULD DISPLAY: the domain the GUI would
+// be showing if `markers` and `settings` were the live warp store and engine
+// block. Its one reader is the Restrict undo to viewport lamp's predicate
+// (undo_restore_within_viewport, app_state.h), which has to measure a restore's
+// touched markers where the restore will PAINT them — in target view the
+// picture is drawn through the warp map, and the map IS the warp marker list,
+// so a span measured under the map standing now is off by exactly the change
+// being undone.
+//
+// THE VIEW RULE IS NOT RE-READ HERE: this asks active_display_context for the
+// DOMAIN (that accessor stays the only reader of app.active_audio_view for
+// domain queries) and replaces only the map and the domain total, so source
+// view returns the live identity context unchanged and the answer there is
+// exact.
+//
+// RETURNED BY VALUE, and the map it points at is the app-owned proposed cache
+// above: the pointer stays good until two further calls with different states
+// evict the slot, so use the context and let it go — do not hold one across
+// another call, the same lifetime rule the live accessor carries.
+GuiDisplayContext proposed_display_context(
+    const AppState& app, const GuiAudio& audio,
+    const std::vector<GuiWarpMarker>& markers,
+    const EngineSettings& settings);
 
 // The stem painters' samples-per-pixel and the single source of truth for the
 // on-screen column grid: the visible span nearbyint-quantized to whole samples

@@ -35,9 +35,11 @@ namespace {
 // the Undo and Redo buttons on the touched set a restore WOULD produce, and a
 // face compiled in that header cannot ask a matcher that lives here. The
 // enumerations and the matcher's arms are unchanged and their argument is at
-// their new home. This file is still their applier and, through
-// entry_restores_live_marker_stores below, still asks the row question of a
-// whole store.
+// their new home, and the whole-list pair built on them (warp_rows_equal /
+// phase_reset_rows_equal) followed them there when the lamp's proposed target
+// map became the warp face's second reader. This file is still their applier,
+// and entry_restores_live_marker_stores below is still where a whole store is
+// asked the row question.
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks
@@ -63,20 +65,13 @@ namespace {
 // derives a selection from — they die with the entry when it goes.
 bool entry_restores_live_marker_stores(const AppState& app,
                                        const UndoEntry& entry) {
-    const std::vector<GuiWarpMarker>&       live_w = app.warpmarkers.markers();
-    const std::vector<GuiPhaseResetMarker>& live_p =
-        app.phaseresetmarkers.markers();
-    if (entry.snapshot.size() != live_w.size()) return false;
-    if (entry.phase_reset_snapshot.size() != live_p.size()) return false;
-    for (std::size_t i = 0; i < live_w.size(); ++i) {
-        if (warp_row_fields_differ(entry.snapshot[i], live_w[i])) return false;
-    }
-    for (std::size_t i = 0; i < live_p.size(); ++i) {
-        if (phase_reset_row_fields_differ(entry.phase_reset_snapshot[i],
-                                          live_p[i]))
-            return false;
-    }
-    return true;
+    // The whole-list compare is warp_rows_equal / phase_reset_rows_equal
+    // (app_state.h), beside the row comparators they walk: the lamp's proposed
+    // target map asks the warp face the same question of a marker list, so
+    // "these two stores hold the same state" has one spelling.
+    return warp_rows_equal(entry.snapshot, app.warpmarkers.markers()) &&
+           phase_reset_rows_equal(entry.phase_reset_snapshot,
+                                  app.phaseresetmarkers.markers());
 }
 
 }  // namespace
@@ -935,11 +930,22 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // zoom change): center on the touched marker's active-domain image
                 // and re-snap/clamp through the one chokepoint only when it is
                 // outside the visible span.
+                //
+                // "OUTSIDE THE VISIBLE SPAN" IS THE ONE OWNER'S QUESTION since
+                // 2026-09-04 (span_columns_visible, app_state.h), asked of the
+                // degenerate span [frame, frame]. This arm used to ask it in
+                // raw samples ([start, start + visible)) while the group arm
+                // below and the Restrict undo to viewport lamp's predicate both
+                // asked it in painted columns, and the three disagreed within
+                // one column of the viewport's edge — so a restore could
+                // recentre where the lamp had just promised the camera would
+                // stand still. The recentre itself is unchanged.
                 const int64_t domain_frame =
                     source_frame_to_active_domain(app, viewport.audio, src_f);
                 const int64_t visible = samples_visible(app, viewport.audio);
                 const int64_t start   = app.viewport_start_sample;
-                if (domain_frame < start || domain_frame >= start + visible) {
+                if (!span_columns_visible(app, viewport.audio, start,
+                                          domain_frame, domain_frame)) {
                     app.viewport_start_sample = domain_frame - visible / 2;
                     clamp_viewport_start(app, viewport.audio);
                 }
