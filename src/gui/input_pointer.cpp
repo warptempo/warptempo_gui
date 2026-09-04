@@ -87,15 +87,16 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). The tab pair and the two view pairs are radios; the
-    // follow, read-only, history and Cumulative buttons are TOGGLES
-    // and press through in both directions, which is why this is a flag and
-    // not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP PAIR was a fourth
-    // radio for hours on 2026-08-15 and is not one now — the architect
-    // COLLAPSED that pair into one stateful button later the same day, which
-    // is the only reason it ever needed the flag: two buttons over one chord.
-    // The consume itself is untouched and stayed GENERIC throughout — keyed on
-    // the flag plus the lamp, with no id list anywhere.)
+    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S THREE are the flag's
+    // users; the view lamps, the walk lamp, follow, read-only, history and
+    // Cumulative are TOGGLES and press through in both directions, which is why
+    // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
+    // PAIR was a radio for hours on 2026-08-15, and the S/T, W/P and WALK pairs
+    // were radios until 2026-09-04; all four collapsed into single stateful
+    // buttons, which is the only reason any of them ever needed the flag: two
+    // buttons over one chord. The consume itself is untouched and stayed
+    // GENERIC throughout — keyed on the flag plus the lamp, with no id list
+    // anywhere.)
     //
     // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
@@ -186,12 +187,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // row 4's own toggle now.)
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
-    // Row 4 — the icon row. The four view buttons are radios on the same two
-    // toggling chords the tabs' pair models; the rest are plain dispatches.
-    {RedesignButton::IconS,      GuiKeys::T,   false, false, false, true,  true},   // bare t
-    {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
-    {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
-    {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    // Row 4 — the icon row. THE TWO VIEW LAMPS (architect 2026-09-04, the
+    // radio-pair collapse): one button per axis where IconS/IconT and
+    // IconW/IconP were four radios over these same two chords. Each is a plain
+    // TOGGLE now and carries NO radio flag — bare `t` flips the audio view and
+    // bare `p` the marker column, so the press does exactly what the key does
+    // in both directions and there is no wrong half to consume.
+    {RedesignButton::IconAudioView,    GuiKeys::T, false, false, false, false, true}, // bare t
+    {RedesignButton::IconMarkerColumn, GuiKeys::P, false, false, false, false, true}, // bare p
     // THE TRIM GROUP — the Show trim region button, alone in it since the scissors
     // were deleted on 2026-08-18 (the scissors opened the group in 2026-08-11
     // and led it until the architect's 2026-08-16 reorder). THIS TABLE DOES NOT
@@ -327,24 +330,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     // instead, which admits `h` through handle_history_mode_key one line before
     // the allowlist). It closes the row since 2026-08-14.
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false, true},     // bare h
-    // THE TWO WALK RADIOS (architect 2026-08-18) — which walk the `h` view's
-    // lane reads: GIT is the committed checkpoint history, SESSION this
-    // session's own undo/redo timeline. ONE CHORD FOR THE PAIR, BARE `g`, which
-    // was free, and the `radio` flag on both rows is what the shape needs: the
-    // chord is a TOGGLE over the two walks, so a press on the half already lit
-    // would switch AWAY from what the user just clicked — the same reason the
-    // tabs' Ctrl+Tab and the S/T and W/P pairs' bare `t` and `p` carry it. The
-    // consume is the generic one, keyed on this flag plus the lamp.
+    // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since the
+    // 2026-09-04 collapse) — which walk the `h` view's lane reads: Git is the
+    // committed checkpoint history, Session this session's own undo/redo
+    // timeline. BARE `g`, which was free, and NO radio flag: the chord is a
+    // TOGGLE over the two walks and the button flips the same axis, so there is
+    // no already-lit half to consume any more.
     //
-    // BOTH ARE BOUND ONLY INSIDE THE VIEW, like the four companions below, and
-    // what keeps them from dispatching outside one is their ENABLED bit: they
-    // paint in every state on this row, and outside the view they wear the dead
-    // face and the press is consumed at arm_redesign_press's disabled line.
-    // Even reached, bare `g` is bound in handle_history_mode_key alone.
-    {RedesignButton::HistoryWalkGit,
-     GuiKeys::G,      false, false, false, true,  true},                             // bare g
-    {RedesignButton::HistoryWalkSession,
-     GuiKeys::G,      false, false, false, true,  true},                             // bare g
+    // IT IS BOUND ONLY INSIDE THE VIEW, like the four companions below, and
+    // what keeps it from dispatching outside one is its ENABLED bit: it paints
+    // in every state on this row, and outside the view it wears the dead face
+    // and the press is consumed at arm_redesign_press's disabled line. Even
+    // reached, bare `g` is bound in handle_history_mode_key alone.
+    {RedesignButton::HistoryWalk,
+     GuiKeys::G,      false, false, false, false, true},                             // bare g
     // THE HISTORY COMPANIONS — the icon row's last group behind the opener
     // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
     // row's swapped cluster from 2026-08-14, and back here with the architect's
@@ -1151,7 +1150,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   the icon row's S/T + W/P radios (bare `t` / `p`, admitted with the view
+//   the icon row's two VIEW LAMPS (bare `t` / `p`, admitted with the view
 //   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (Ctrl+`=`,
 //   Ctrl+`-` and bare `0` are the allowlist's own zoom admissions and bare `c`
 //   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
@@ -5368,7 +5367,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // HistoryWalkTab press whose lift selected rather than dispatching
             // a chord — because the tabs' own Ctrl+Tab had become the mode's
             // walk cycle and would have stepped past whichever slot was
-            // clicked. THE WALK HAS ITS OWN RADIO PAIR IN THE ICON ROW NOW
+            // clicked. THE WALK HAS ITS OWN LAMP IN THE ICON ROW NOW
             // (bare `g`), so the chord means what it says again and this row
             // needs no mode branch at all: the claim, the arm kind and the
             // switch owner's pointer call site are deleted together.
@@ -5577,7 +5576,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
     // THIS MODE STOOD, from 2026-08-05 to 2026-08-18: the tab row's band claim
     // intercepted it and armed set_history_reading at the lift, the walk
-    // selector being deliberately not a chord. The walk has its own radio pair
+    // selector being deliberately not a chord. The walk has its own lamp
     // in the icon row now, so the tabs dispatch Ctrl+Tab in here like
     // everywhere else.) That exception is a refusal decided ABOVE this gate, so
     // it leaves the mode uncovered nowhere.
@@ -7212,7 +7211,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's five menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-seven — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
 // eighteen since 2026-08-29: 55, the enum's
 // own count at kRedesignButtonCount — the stash is

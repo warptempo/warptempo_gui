@@ -3367,7 +3367,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the PAINTED diff-flag list, and the switch is about to rebuild that list
     // (the contract, and the full clearer list, are at AppState::HistoryMode::
     // focus). This axis's clear lives HERE, at the S/T chokepoint, so the bare
-    // `t` key, the icon row's S/T radios and the 1/2/3 selectors that compose
+    // `t` key, the icon row's audio-view lamp and the 1/2/3 selectors that compose
     // this handler all inherit it with no second route; the W/P axis clears at
     // its own toggle. Placed BELOW the refusal above (a switch that never
     // happened must not clear anything) and far above the kick at the tail,
@@ -3509,7 +3509,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // hide's deletion above because it answers a different question — a stale
     // song frame, not a view preference (codex round 20): TouchNavZoomState::anchor_sample is an ACTIVE-DOMAIN
     // song frame, and nothing about two fingers resting on the glass stops a
-    // keyboard `t` or a mouse click on the S/T radio from reaching here — so a
+    // keyboard `t` or a mouse click on the audio-view lamp from reaching here — so a
     // pinch held across this flip would go on zooming about a SOURCE frame read
     // as a TARGET one, seating the view on an unrelated song point. THIS IS THE
     // CORRECTNESS member of the rule: it is the one view write that changes what

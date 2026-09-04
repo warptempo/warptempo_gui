@@ -181,8 +181,9 @@ constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
 
 // THE SCHEME'S OTHER CLASS, and the only icon colour here that is not a literal
 // written into its own file: `.ColorScheme-Accent`, which every Breeze file
-// carrying it resolves to #3daee9 — deep-history's curl-back arrow is this
-// tree's first and so far only user (2026-08-09). It is recorded the same way
+// carrying it resolves to #3daee9 — deep-history's curl-back arrow was this
+// tree's first user (2026-08-09) and dialog-information's plate is the one
+// standing since that glyph left with the 2026-09-04 collapse. It is recorded the same way
 // kIconText and kIconPreviewOn are, as THE VALUE THAT FILE RESOLVES TO, and it
 // deliberately does NOT reference render.h's kRedesignAccent even though the two
 // are the same 0x3DAEE9: that coincidence is shared Breeze ancestry, and the two
@@ -201,7 +202,9 @@ constexpr GuiColor kIconAccent    = hex(0x3DAEE9);
 // THE CUMULATIVE READING'S ICON SINCE 2026-08-18 (architect, with the roster
 // relayout): black_sum, the summation sigma — a CUMULATIVE delta is a sum over
 // the walk's members, against the iterative reading's one step at a time, and
-// the Σ says so outright where deep-history's swept clock only implied it.
+// the Σ says so outright where the deep-history clock it replaced only
+// implied it (that glyph went to the Git walk radio and left the roster with
+// it on 2026-09-04).
 // (It dressed ITERATION MODE from 2026-08-01, architect-picked then over
 // media-playlist-repeat on the same reading — an iteration sweep is also a sum
 // over cells. That slot took mathmode in the same ruling and the sigma moved
@@ -269,14 +272,22 @@ constexpr IconPath kDialogOkApplyPaths[] = {
      icon_translate(-364.57143, -525.79075)},
 };
 
-// -- ROW 4'S FOUR VIEW RADIOS (architect-picked 2026-08-11) --------------------
+// -- ROW 4'S TWO VIEW LAMPS (architect-picked 2026-08-11) ---------------------
 //
-// The S/T audio pair and the W/P marker pair, which wore shaped LETTER GLYPHS
-// from the row's first day until this pick (icons.h's enum carries the
-// architect's metaphors and the runners-up; the letter arm died with them,
-// having no producer left). Same rules as every entry above: `d` verbatim from
-// the committed file, the colour hard-coded to what that file resolves to — all
-// four are `.ColorScheme-Text` = #fcfcfc.
+// The audio-view lamp and the marker-column lamp, whose four predecessor radios
+// wore shaped LETTER GLYPHS from the row's first day until this pick (icons.h's
+// enum carries the architect's metaphors and the runners-up; the letter arm
+// died with them, having no producer left). Same rules as every entry above:
+// `d` verbatim from the committed file, the colour hard-coded to what that file
+// resolves to — both are `.ColorScheme-Text` = #fcfcfc.
+//
+// TWO OF THE FOUR LEFT ON 2026-09-04, when the architect collapsed the row's
+// three radio pairs into three lamps: each lamp wears the LIT state's glyph, so
+// document-import and chronometer-start stay and document-export (the arrow
+// LEAVING a document, for Source) and speedometer (the gauge with the needle,
+// for Warp — his first pick, reversed to distortionfx in the same breath and
+// restored at his second look that evening, which leaves distortionfx and
+// player-time the recorded runners-up) go with their buttons.
 //
 // CHRONOMETER-START'S STYLE BLOCK DEFINES `.ColorScheme-Accent` TOO and its one
 // path never uses it (the path is `.ColorScheme-Text`), so nothing accent-
@@ -284,52 +295,15 @@ constexpr IconPath kDialogOkApplyPaths[] = {
 // against the file does not read the absence as a transcription bug. It is the
 // only committed file that declares a class it does not use.
 //
-// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, per the deep-history
-// precedent: document-export and document-import are absolute M/L/Z only;
-// chronometer-start is absolute M/L/C with lowercase `z` (and its trailing
-// space, kept like document-save's); speedometer is absolute M/L/C plus
-// fourteen absolute `A` arcs, every argument space-separated, with the same
-// lowercase `z` and trailing space — the UPPERCASE arc is the one form worth
-// checking there, and the parser has taken both cases of every command in the
-// subset since it was written (media-record's `a` was simply the first
-// producer) — so the strings needed nothing new from the parser.
-constexpr IconPath kDocumentExportPaths[] = {
-    {kIconText,
-     "M 11 16 L 16.293 16 L 14 18.293 L 14.707 19 L 18.207 15.5 L 14.707 12 "
-     "L 14 12.707 L 16.293 15 L 11 15 L 11 16 Z M 5 18 L 5 4 L 13 4 L 13 8 L "
-     "17 8 L 17 13 L 18 13 L 18 7 L 14 3 L 4 3 L 4 19 L 13 19 L 13 18 L 5 18 "
-     "Z"},
-};
-
+// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED: document-import is absolute
+// M/L/Z only, and chronometer-start is absolute M/L/C with lowercase `z` (and
+// its trailing space, kept like document-save's), so the strings needed nothing
+// new from the parser.
 constexpr IconPath kDocumentImportPaths[] = {
     {kIconText,
      "M 4 3 L 4 19 L 11 19 L 11 18 L 5 18 L 5 4 L 13 4 L 13 8 L 17 8 L 17 15 "
      "L 12.707 15 L 15 12.707 L 14.293 12 L 10.793 15.5 L 14.293 19 L 15 "
      "18.293 L 12.707 16 L 18 16 L 18 7 L 14 3 L 4 3 Z"},
-};
-
-// THE WARP RADIO'S GAUGE — one path, one fill, no transform. Five subpaths:
-// the dial's outer ring (a radius-8 circle with a radius-7 circle wound the
-// other way inside it, so the nonzero rule leaves a ring, the construction
-// document-save's holes take), two thick inner-arc bands that read as the
-// scale, and the needle.
-constexpr IconPath kSpeedometerPaths[] = {
-    {kIconText,
-     "M 11 3 A 8 8 0 0 0 3 11 A 8 8 0 0 0 11 19 A 8 8 0 0 0 19 11 A 8 8 "
-     "0 0 0 11 3 z M 11 4 A 7 7 0 0 1 18 11 A 7 7 0 0 1 11 18 A 7 7 0 0 "
-     "1 4 11 A 7 7 0 0 1 11 4 z M 11 6 A 5 5 0 0 0 7.6816406 7.2675781 "
-     "L 8.390625 7.9765625 A 4 4 0 0 1 11 7 A 4 4 0 0 1 15 11 L 16 11 A "
-     "5 5 0 0 0 11 6 z M 12.34375 8.1660156 L 10.197266 13.142578 C "
-     "10.074466 13.282368 9.9865731 13.452179 9.9394531 13.636719 C "
-     "9.9324531 13.666519 9.9249219 13.698216 9.9199219 13.728516 L "
-     "9.9140625 13.742188 L 9.9199219 13.742188 C 9.8299219 14.303648 "
-     "10.140852 14.828938 10.638672 14.955078 C 11.137452 15.080448 "
-     "11.659373 14.764692 11.845703 14.226562 L 11.853516 14.228516 L "
-     "11.853516 14.199219 C 11.861516 14.174519 11.870053 14.1501 "
-     "11.876953 14.125 C 11.921853 13.94305 11.923313 13.752999 "
-     "11.882812 13.574219 L 12.34375 8.1660156 z M 6.4746094 8.8886719 "
-     "A 5 5 0 0 0 6 11 L 7 11 A 4 4 0 0 1 7.2382812 9.6523438 L "
-     "6.4746094 8.8886719 z "},
 };
 
 constexpr IconPath kChronometerStartPaths[] = {
@@ -517,92 +491,35 @@ constexpr IconPath kDocumentRevertPaths[] = {
      "2 2s-.892 2-2 2h-10v-14h8v4h4v4h1v-5l-4-4z"},
 };
 
-// -- THE CUMULATIVE READING'S GLYPH (architect 2026-08-09) ---------------------
+// -- THE SESSION WALK'S GLYPH (2026-08-18) ------------------------------------
 //
-// deep-history: a CLOCK FACE WITH A CURL-BACK ARROW sweeping around it,
-// reaching back across the whole span of history at once.
+// shallow-history: a clock face and hands with NO sweep arrow at all — the
+// session's own undo/redo timeline reaches back no further than this run.
 //
-// IT DRESSED THE CUMULATIVE READING'S TOGGLE (bare `u`) from 2026-08-09 until
-// 2026-08-18, when the architect's roster relayout gave that toggle the
-// SUMMATION SIGMA instead — a cumulative delta is a sum over the walk's
-// members, and the Σ names the arithmetic where this dial only implied it.
-// THE GLYPH IS FREED RATHER THAN RETIRED: the sweep across a whole COMMITTED
-// history is what the history view's Git walk radio wants, and it takes this
-// row. Nothing paints it for the span between the two commits, which is
-// expected and is why the row and its asset stay put.
+// IT IS THE WALK LAMP'S WHOLE FACE since 2026-09-04, when the architect
+// collapsed the row's three radio pairs into three lamps: the lamp lights AWAY
+// FROM HOME, so this is the LIT state's glyph and the Git half's deep-history
+// left the roster with that half. deep-history was Breeze's clock face with a
+// curl-back ARROW sweeping around it, the set's one two-class file — path 1
+// `.ColorScheme-Text`, path 2 `.ColorScheme-Accent` — and it dressed the
+// CUMULATIVE reading's toggle from 2026-08-09 until that toggle took the
+// summation sigma on 2026-08-18. Its candidate succession is recorded because
+// none of it is to be re-proposed without a new ruling: office-chart-area
+// (rejected — its rising area is two paths, the second at fill-opacity 0.5, and
+// this product composites nothing), view-sort-ascending (licensed but
+// untranscribable — a `transform="matrix(...)"` the interpreter models translate
+// only), an AUTHORED three-bars glyph (written and reverted the same day,
+// 2026-08-08, the architect preferring a real Breeze file), and
+// office-chart-line-forecast (shipped, retired 2026-08-09 as choppy at row
+// size). PIN and LAYER-VISIBLE-ON were the runners-up on the sheet he picked
+// deep-history from.
 //
-// THE SET'S FIRST TWO-COLOR ICON, and the architect chose it knowing that: path
-// 1 is the clock body and its hands in `.ColorScheme-Text`, path 2 the curl-back
-// arrow in `.ColorScheme-Accent`, so the arrow reads as the ACT over the dial it
-// sweeps. preview-render-on and media-record are two-COLORED but each carries
-// its second colour as a literal of its own; this is the first file whose second
-// colour comes from the scheme's OTHER class. Both literals are hard-coded here
-// from the file's own stylesheet, per the media-record precedent: kIconAccent is
-// #3daee9 because THIS FILE says so, not because the redesign's accent happens
-// to be the same value (it is, by shared Breeze ancestry — see kIconAccent).
-//
-// Transcribed VERBATIM from the committed file like every entry above. TWO
-// PATHS, one fill each, which is the table's existing shape and needed no change
-// anywhere. The `style="fill:currentColor;fill-opacity:1;stroke:none"` form both
-// paths use is the same one go-next, black_sum and document-save carry: this
-// table records only the `d` and the colour the file RESOLVES to, so the style
-// attribute has nothing to transcribe — and its fill-opacity is an explicit 1,
-// fully opaque, not a compositing alpha the palette rule would refuse.
-//
-// COMMAND COVERAGE VERIFIED RATHER THAN ASSUMED, both paths against the subset
-// above: path 1 is m/c/v/h plus implicit repetition, path 2 is m/v/h/a with the
-// arc argument set repeating. Every family already has a committed producer —
-// relative cubics in edit-undo, edit-redo, unlock and document-revert, arcs in
-// media-record, preview-render-on, vcs-commit and vcs-diff — and NEITHER PATH
-// CLOSES WITH `z`, which is likewise already the case in six committed files
-// (edit-undo, edit-redo, go-next, go-previous, lock, unlock): a fill closes the
-// subpath implicitly, in cairo as in SVG. So nothing here asked the interpreter
-// for anything new.
-//
-// THE SUCCESSION, recorded so none of it is re-proposed without a new ruling.
-// office-chart-area was tried first and rejected: its rising area is TWO paths,
-// the second at fill-opacity 0.5, and this product composites nothing — rendered
-// opaque the two merge into a solid block, and its full-opacity path alone is an
-// outlined zigzag that smudges at the row's 22 px. view-sort-ascending was the
-// licensed fallback and could not be transcribed: six sort bars plus an arrow
-// under a `transform="matrix(...)"`, and the interpreter models TRANSLATE ONLY
-// (it grew a general matrix for distortionfx for part of 2026-08-11 and lost it
-// again with that file, so the obstacle stands as it did — which changes
-// nothing about a candidate the architect has already passed over). An AUTHORED
-// three-ascending-bars glyph was then written in
-// office-chart-bar's construction and REVERTED the same day (2026-08-08), the
-// architect preferring a real Breeze file to an in-tree drawing. Its replacement,
-// office-chart-line-forecast, shipped and was RETIRED at the architect's live
-// pass on 2026-08-09: CHOPPY at row size, its dashes and thin axis breaking up.
-// deep-history is his pick off a rendered candidate sheet; PIN and
-// LAYER-VISIBLE-ON were the considered runners-up on that sheet and are not to
-// be re-proposed without a new ruling.
-constexpr IconPath kDeepHistoryPaths[] = {
-    {kIconText,
-     "m11 3c-4.431998 0-8 3.568002-8 8 0 4.431998 3.568002 8 8 8 1.896399"
-     " 0 3.632791-.656291 5-1.751953v-1.248047h-.09375c-1.261408 "
-     "1.237774-2.99118 2-4.90625 2-3.877999 0-7-3.122001-7-7 0-3.877999 "
-     "3.122001-7 7-7 3.877999 0 7 3.122001 7 7 0 .696167-.105435 "
-     "1.366247-.292969 "
-     "2h1.033203c.163714-.639651.259766-1.307916.259766-2 "
-     "0-4.431998-3.568002-8-8-8m-1 2v7h1 5v-1h-5v-6h-1"},
-    {kIconAccent,
-     "m13.65625 14v1h.845703 1.998047a1.5 1.5 0 0 1 1.5 1.5 1.5 1.5 0 0 1"
-     " -1.5 1.5v1a2.5 2.5 0 0 0 2.5 -2.5 2.5 2.5 0 0 0 -2.5 -2.5h-2.84375"},
-};
+// SINGLE-COLOUR: the file has ONE `.ColorScheme-Text` path and no
+// `.ColorScheme-Accent` at all. Command coverage: relative `m` with `c`, `v`
+// and `h` plus implicit repetition and no closing `z` — a fill closes the
+// subpath implicitly, in cairo as in SVG, which six committed files already
+// rely on (edit-undo, edit-redo, go-next, go-previous, lock, unlock).
 
-// DEEP-HISTORY'S SHALLOW SIBLING (2026-08-18), for the history view's SESSION
-// walk radio: the same clock face and hands with NO sweep arrow at all — the
-// session's own undo/redo timeline reaches back no further than this run,
-// which is exactly what the missing sweep says beside the Git walk's swept
-// dial. Taking the PAIR is the point: two readings of one surface should be
-// one construction seen twice, not two unrelated pictures.
-//
-// SINGLE-COLOUR, unlike its sibling: the file has ONE `.ColorScheme-Text` path
-// and no `.ColorScheme-Accent` at all, so deep-history is still the set's one
-// two-colour glyph. Command coverage: relative `m` with `c`, `v` and `h` plus
-// implicit repetition and no closing `z` — path 1 of deep-history's own
-// families, verbatim.
 constexpr IconPath kShallowHistoryPaths[] = {
     {kIconText,
      "m11 3c-4.431998 0-8 3.568002-8 8 0 4.431998 3.568002 8 8 8 4.431998 "
@@ -730,7 +647,7 @@ constexpr IconPath kTextFieldPaths[] = {
 // below) and not as a palette key; it is neither kIconAccent's #3daee9 nor
 // anything render.h names. Absolute `M` / `L` and the ARC `A` (the four
 // note-head circles as eight elliptical arcs), the interpreter's existing arm
-// (media-record's and speedometer's precedent). THE ONE THING WORTH READING
+// (media-record's precedent, and the retired speedometer's). THE ONE THING WORTH READING
 // TWICE: the file wraps the path in a layer group carrying
 // `transform="matrix(1 0 0 1 -326 -534.3622)"` and the path itself carries
 // `transform="matrix(1 0 0 1 326 534.3622)"` — Inkscape's document-offset
@@ -1134,8 +1051,10 @@ constexpr IconPath kInsertLinkPaths[] = {
 //
 // IT IS SINGLE-COLOUR, CHECKED RATHER THAN ASSUMED: its sibling boost-boosted
 // carries a `.ColorScheme-PositiveText` #27ae60 tick, and boost does not — all
-// four paths are `.ColorScheme-Text`. So deep-history is still the set's ONE
-// two-colour glyph, and no second resolved literal is recorded here.
+// four paths are `.ColorScheme-Text`, so no second resolved literal is
+// recorded here. (deep-history was the set's one two-CLASS glyph until it left
+// with the Git walk radio on 2026-09-04; dialog-information and dialog-error
+// carry the accent and negative classes now.)
 //
 // Command coverage: relative `m` with `v` and `h` (the first two paths, which
 // is this table's first producer for either — both have been in the
@@ -1178,7 +1097,7 @@ constexpr IconPath kBoostPaths[] = {
 // rule the palette keeps everywhere), and it gets its own ink below.
 //
 // dialog-information's plate is `.ColorScheme-Accent` (kIconAccent, the
-// value the file resolves to, recorded above deep-history) and
+// value the file resolves to, recorded at that constant) and
 // dialog-error's is `.ColorScheme-NegativeText` (kIconNegativeText, the
 // value list-remove's cross resolves to, recorded above it). So the two
 // class glyphs are Breeze's own blue and red, and a card names its class by
@@ -1241,9 +1160,7 @@ constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
 constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
-constexpr IconDef kDocumentExport     {22.0, kDocumentExportPaths,      1};
 constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
-constexpr IconDef kSpeedometer        {22.0, kSpeedometerPaths,         1};
 constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
@@ -1259,7 +1176,6 @@ constexpr IconDef kGoNext             {22.0, kGoNextPaths,              1};
 constexpr IconDef kKeyframePrevious   {22.0, kKeyframePreviousPaths,    1};
 constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
-constexpr IconDef kDeepHistory        {22.0, kDeepHistoryPaths,         2};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
 constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
@@ -1301,9 +1217,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditUndo:            return kEditUndo;
         case Icon::EditRedo:            return kEditRedo;
         case Icon::MediaRecord:         return kMediaRecord;
-        case Icon::DocumentExport:      return kDocumentExport;
         case Icon::DocumentImport:      return kDocumentImport;
-        case Icon::Speedometer:         return kSpeedometer;
         case Icon::ChronometerStart:    return kChronometerStart;
         case Icon::BlackSum:            return kBlackSum;
         case Icon::GoJump:              return kGoJump;
@@ -1318,7 +1232,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::KeyframePrevious:    return kKeyframePrevious;
         case Icon::KeyframeNext:        return kKeyframeNext;
         case Icon::DocumentRevert:      return kDocumentRevert;
-        case Icon::DeepHistory:         return kDeepHistory;
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
         case Icon::MinuetScales:        return kMinuetScales;

@@ -1610,7 +1610,7 @@ struct OverviewDragState {
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
 //     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
 //     with every command that reaches one (the `t`/`p`/Ctrl+Tab keys, the 1/2/3
-//     selectors, the view bar, the S/T + W/P radios, the settings keys, the
+//     selectors, the view bar, the two view lamps, the settings keys, the
 //     propagate paste and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
 //     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
@@ -1967,20 +1967,21 @@ enum class RedesignButton {
     // on 2026-08-07 and went back to two the following day, when the READING
     // left for its own toggle button in row 4 — HistoryCumulative below. TabC
     // and TabD are deleted whole with that arc.) THE WALK SELECTOR IS ROW 4'S
-    // OWN RADIO PAIR NOW (HistoryWalkGit / HistoryWalkSession on bare `g`,
-    // below), which is what freed this row: a repurposed surface was the only
-    // reason the tabs ever stopped being tabs.
+    // OWN LAMP NOW (HistoryWalk on bare `g`, below — a radio pair from
+    // 2026-08-18 until the 2026-09-04 collapse), which is what freed this row:
+    // a repurposed surface was the only reason the tabs ever stopped being
+    // tabs.
     TabA, TabB,
     // Row 4, the icon row, in painted order: the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
-    // living on as the tooltips), the two view radio pairs, the TRIM GROUP
+    // living on as the tooltips), the two view lamps, the TRIM GROUP
     // (the Show trim region button alone since 2026-08-18), the ZOOM GROUP
     // (2026-08-12, the architect's live placement "after the trim"), the
     // phase-reset clipboard pair with the three mode/editor buttons, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
-    // the HISTORY OPENER leading its two WALK RADIOS, its four companions and
+    // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
     // for it.
     //
@@ -2010,7 +2011,31 @@ enum class RedesignButton {
     // group order was built on — keeping the history opener's x fixed across
     // the toggle — is answered by construction now rather than by placement.
     Save, Undo, Redo, Render,
-    IconS, IconT, IconW, IconP,
+    // The two view lamps (architect 2026-09-04). The row's three radio PAIRS
+    // collapsed into three lamp TOGGLES that day — six buttons to three, to
+    // make room on the tablet's row — so IconS/IconT and IconW/IconP are
+    // deleted and one button per axis stands where each pair did.
+    //
+    // Each lamp toggles its AXIS rather than selecting a state, which makes it
+    // its chord's exact twin: bare `t` flips the audio view and bare `p` the
+    // marker column, so the press does what the key does and the tooltip names
+    // the ACT ("Toggle Audio View (T)", "Toggle Marker Column (P)") because it
+    // has to be true in both states. Bare 1/2/3 stay the absolute selectors and
+    // the primary road; these two are indicators first.
+    //
+    // The lamp lights AWAY FROM HOME. Source + Warp is view 1 and the home
+    // state, so the audio lamp lights in Target and the marker lamp in Phase
+    // Reset, each wearing the lit state's own glyph — document-import and
+    // chronometer-start. The three retired glyphs left the icon roster with
+    // their buttons (document-export, speedometer and, at the walk lamp below,
+    // deep-history).
+    //
+    // Everything else carries over per axis untouched: the `h` view's admission
+    // of each chord, the read-only rules, the undo entry's three view tags and
+    // one enabled arm per lamp reading exactly what the two halves read. The
+    // pairs' `radio` flag in kToolbarChords lost these four users and the walk
+    // lamp's two; row 3's tabs and the view bar's three still carry it.
+    IconAudioView, IconMarkerColumn,
     // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 as "Show region",
     // given its settled name on 2026-08-19 — the one the enumerator carried
     // throughout): THE ZOOM GROUP'S LEADER SINCE 2026-08-27, and the second
@@ -2236,43 +2261,45 @@ enum class RedesignButton {
     // entry, below the companions): the group is now everything the `h` view
     // can be driven by from this row.
     IconHistory,
-    // THE TWO WALK RADIOS (architect 2026-08-18: "add two radio buttons after
-    // history button, before cumulative"), which is where they sit — between
-    // the opener and the cumulative toggle. They select WHICH WALK the lane
-    // reads: GIT is the committed checkpoint history, SESSION is this session's
+    // The walk lamp, between the opener and the cumulative toggle, which is
+    // where the architect put the surface on 2026-08-18 ("add two radio buttons
+    // after history button, before cumulative"). It selects WHICH WALK the lane
+    // reads: Git is the committed checkpoint history, Session is this session's
     // own undo/redo timeline read as states (GuiHistoryWalkSource, the model
-    // they select between, is unchanged — Commit | Local; only the surface that
-    // selects it moved here).
+    // behind it, is unchanged — Commit | Local; only the surface moved here).
     //
-    // ONE CHORD, BARE `g`, AND A RADIO PAIR OVER IT — the roster's established
-    // shape, not a new one: TabA/TabB share Ctrl+Tab and IconS/IconT and
-    // IconW/IconP share bare `t` and bare `p` on exactly these terms. The chord
-    // is a TOGGLE over the two walks (the arm is at handle_history_mode_key)
-    // and the `radio` flag in kToolbarChords is what makes a press on the half
-    // that is ALREADY LIT a consumed nothing rather than a switch away from
-    // what the user just clicked. Both go through the ONE switch owner
-    // set_history_reading, so the key and the two buttons cannot come to mean
-    // different things.
+    // It was a RADIO PAIR — HistoryWalkGit / HistoryWalkSession over one chord
+    // — until the architect collapsed the row's three pairs into three lamps on
+    // 2026-09-04. One button now, bare `g`, its chord's exact twin: the key is
+    // a TOGGLE over the two walks (the arm is at handle_history_mode_key) and
+    // the press flips the same axis through the same ONE switch owner
+    // set_history_reading, so the key and the button cannot come to mean
+    // different things. The `radio` flag the pair carried is gone with it — the
+    // half already lit was the only thing that flag protected here.
     //
-    // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT, the icon row's
-    // settled rule and the same answer their four neighbours give — bare `g` is
-    // bound in exactly one place in the product and it is inside the view. Their
+    // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
+    // all three: Git is the walk's default reading, so the lamp is LIT IN
+    // SESSION and it wears the Session glyph, shallow-history. Deep-history
+    // left the icon roster with the Git half.
+    //
+    // It GREYS OUTSIDE THE `h` VIEW AND IS LIVE INSIDE IT, the icon row's
+    // settled rule and the same answer its four neighbours give — bare `g` is
+    // bound in exactly one place in the product and it is inside the view. Its
     // arm is the companions' own at redesign_button_enabled, which states why it
     // owns that fact rather than the derived partition.
     //
-    // THEIR LAMP IS SCOPED TO THE VIEW, unlike the Cumulative toggle beside
-    // them, and the contrast is the state's own: the READING is a program-
-    // session preference that outlives every visit, while the WALK SOURCE is
-    // per-visit state reset to Commit at every entry — so a lit "Git" outside
-    // the view would advertise a selection that is not a live fact. Exactly one
-    // is lit while the view stands and neither is outside it
-    // (redesign_button_selected).
+    // ITS LAMP IS SCOPED TO THE VIEW, unlike the Cumulative toggle beside it,
+    // and the contrast is the state's own: the READING is a program-session
+    // preference that outlives every visit, while the WALK SOURCE is per-visit
+    // state reset to Commit at every entry — so a lit lamp outside the view
+    // would advertise a selection that is not a live fact. It is unlit out
+    // there whatever the last visit left (redesign_button_selected).
     //
-    // THIS PAIR IS WHY ROW 3 IS THE A/B TABS AGAIN (the row's own entry above
-    // carries the superseded shape): the walk had no surface of its own, so it
-    // borrowed one.
-    HistoryWalkGit, HistoryWalkSession,
-    // THE FOUR COMPANIONS, behind the walk radios in the order they have always
+    // THIS SURFACE IS WHY ROW 3 IS THE A/B TABS AGAIN (the row's own entry
+    // above carries the superseded shape): the walk had no surface of its own,
+    // so it borrowed one.
+    HistoryWalk,
+    // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
     // held
     // — how the delta READS, what you can DO from inside the view, then where
     // you can STEP: the cumulative toggle (bare `u`), the revert act (bare `v`)
@@ -2405,8 +2432,10 @@ enum class RedesignButton {
     //     BUTTONS OVER ONE CHORD, which is what this collapse removes: with one
     //     button there is no wrong half to press, so the `radio` flag and the
     //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
-    //     The generic radio consume is untouched — the S/T and W/P rows and the
-    //     tabs still use it.
+    //     The generic radio consume is untouched — the view bar's three and the
+    //     tabs still use it. (The S/T and W/P rows used it too until 2026-09-04,
+    //     when those pairs collapsed into single lamps for the same reason this
+    //     one did: one button over one chord has no wrong half.)
     //
     // THE FOUR ARROWS REPEAT WHILE HELD (architect 2026-08-16), the row's one
     // hold gesture: the first fire a hold beat after the press, then the
@@ -2789,6 +2818,12 @@ enum class RedesignButton {
 // landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
 // before that, and 29 before 2026-08-08, when row 3's compare-only pair was
 // deleted and row 4 gained the Cumulative toggle.
+// 52 = 55 − 3, THE RADIO-PAIR COLLAPSE (architect 2026-09-04): the icon row's
+// three radio PAIRS became three lamp TOGGLES — IconS/IconT, IconW/IconP and
+// HistoryWalkGit/HistoryWalkSession out, IconAudioView, IconMarkerColumn and
+// HistoryWalk in — so the roster loses three and kToolbarChords loses three
+// with it, the split staying 47 + 5. It is the play/stop collapse's arithmetic
+// three times over, and for the same reason: two buttons over one chord.
 // 55 = 54 + THE HELP ANCHOR (2026-09-03): a fifth menu anchor after Settings,
 // carrying no chord — so the roster grew by one and kToolbarChords did not,
 // which is the SERIES anchor's own 2026-08-27 shape without the two rows that
@@ -2796,7 +2831,7 @@ enum class RedesignButton {
 // 54 = 53 + THE CENTERED LAMP (2026-08-31, R11): IconCentered joined the zoom
 // group beside Follow with bare `y`, one box and one 2px gap on the icon row's
 // walk and no new separator.
-inline constexpr int kRedesignButtonCount = 55;
+inline constexpr int kRedesignButtonCount = 52;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2863,10 +2898,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
-        case RedesignButton::IconS:
-        case RedesignButton::IconT:
-        case RedesignButton::IconW:
-        case RedesignButton::IconP:
+        case RedesignButton::IconAudioView:
+        case RedesignButton::IconMarkerColumn:
         case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomIn:
         case RedesignButton::IconZoomOut:
@@ -2879,8 +2912,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconListen:
         case RedesignButton::IconReadOnly:
         case RedesignButton::IconHistory:
-        case RedesignButton::HistoryWalkGit:
-        case RedesignButton::HistoryWalkSession:
+        case RedesignButton::HistoryWalk:
         case RedesignButton::HistoryCumulative:
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryOlder:
@@ -3007,12 +3039,18 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE SIX GROUPS, in painted order: the toolbar four, the S/T radios, the
-// W/P radios, THE ZOOM GROUP (the Show trim region button leading the zoom
-// four, the waveform magnification pair and FOLLOW), the render-entry group
-// (listen and the read-only toggle — the load-in-place left it on 2026-09-01)
-// and THE HISTORY GROUP — the opener, its two WALK RADIOS, its four
-// companions and that load-in-place at the tail.
+// THE SIX GROUPS, in painted order: the toolbar four, THE AUDIO-VIEW LAMP
+// alone, THE MARKER-COLUMN LAMP alone, THE ZOOM GROUP (the Show trim region
+// button leading the zoom four, the waveform magnification pair and FOLLOW),
+// the render-entry group (listen and the read-only toggle — the load-in-place
+// left it on 2026-09-01) and THE HISTORY GROUP — the opener, its WALK LAMP,
+// its four companions and that load-in-place at the tail.
+//
+// THE 2026-09-04 RADIO-PAIR COLLAPSE COST NO BOUNDARY, which is the arithmetic
+// worth stating: the two view groups were PAIRS and are single buttons now, and
+// a group of one is a group (the trim group's own precedent, alone from
+// 2026-08-18 until it merged into the zoom group). Six leaders, six groups,
+// three fewer boxes.
 //
 // SIX SINCE 2026-08-27, DOWN FROM EIGHT, and the two boundaries that went are
 // the architect's own ruling that Follow and the Show trim region button JOIN
@@ -3051,8 +3089,10 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
-        case RedesignButton::IconS:
-        case RedesignButton::IconW:
+        // The two view lamps lead groups of exactly themselves since the
+        // 2026-09-04 collapse, where IconS and IconW each led a pair.
+        case RedesignButton::IconAudioView:
+        case RedesignButton::IconMarkerColumn:
         // THE ZOOM GROUP'S LEADER, and the merged group's since 2026-08-27:
         // the boundary that used to stand in front of IconZoomIn is deleted,
         // so this one separator now opens the whole viewport class. (The
@@ -3341,7 +3381,7 @@ struct CommandPopupItem {
 // claimed it as the REVERSE cycle of its own walk-selector row — so an item left
 // live would have dispatched a chord doing something else entirely under a label
 // promising the walk. (The premise is gone since 2026-08-18: the walk selector
-// has its own radio pair and the chord marches the pair in the view too, over
+// has its own surface in row 4 and the chord marches the flags in there too, over
 // the diff flags.) It greyed rather than lying, which is a difference in KIND
 // from every other refusal on a command menu, all of which are "the same
 // command, with nothing to act on". THAT ROW DIED WITH ITS MENU and the
@@ -6576,10 +6616,10 @@ struct AppState {
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
     //   LIT — the view bar's three (bare 1/2/3), the
-    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the S/T + W/P radios (bare
+    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the two view lamps (bare
     //   `t` / `p`), BOTH row-3 tabs (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — the tabs switch tabs in here like everywhere else), the
-    //   history button and the two WALK RADIOS
+    //   history button and the WALK LAMP
     //   (bare `h` and bare `g`, the mode's OWN vocabulary, which the derivation
     //   asks about
     //   first), the walk's two arrows (bare `,` / `.`, the same), the
@@ -6629,7 +6669,7 @@ struct AppState {
     // delta describe the same piece on either tab.
     // (From 2026-08-05 to 2026-08-18 the tabs were the WALK SELECTOR instead —
     // two slots, "Remote" and "Local" — with Ctrl+Tab cycling the walk; the walk
-    // has its own radio pair in row 4 now, and the row's record is at
+    // has its own lamp in row 4 now, and the row's record is at
     // RedesignButton::TabA. The row carried the walk-and-reading PRODUCT as four
     // slots for one day, 2026-08-07..08; the READING is row 4's own Cumulative
     // toggle, over a session bit that is not in this struct at all —
@@ -6946,7 +6986,7 @@ struct AppState {
         //     clear sits at each axis's own toggle — handle_active_audio_view_-
         //     toggle and GuiActiveViews::toggle_active_markers_view — which is
         //     what makes the 1/2/3 selectors, the view bar and the icon row's
-        //     radios inherit it by composition.
+        //     two view lamps inherit it by composition.
         //   - entry and exit (the whole-struct reset at both owners)
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
         //     and the DEFERRED CLICK ACT at a motionless navigation-surface
@@ -10960,8 +11000,8 @@ inline bool playback_launch_playable(const AppState& a,
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
-//     viewport), the S/T and
-//     W/P radios, the zoom four, follow and the
+//     viewport), the two VIEW LAMPS
+//     (bare `t` / `p`), the zoom four, follow and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (THE TRIM
 //     SCISSORS were on this list, their chord being read-only-legal like every
@@ -10990,8 +11030,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     buttons below, in two classes, and no total is stated for either — the
 //     set moved twice on 2026-08-20 alone and both classes name their members
 //     right here. (1) THE HISTORY FAMILY'S CHORDS ARE BLOCKED VACUOUSLY: bare
-//     `h`, bare `g` (which BOTH walk radios carry), bare `u`, bare `,` and
-//     bare `.` sit on no allowlist entry, so the walk reads a grey for six
+//     `h`, bare `g` (the walk lamp's), bare `u`, bare `,` and
+//     bare `.` sit on no allowlist entry, so the walk reads a grey for five
 //     buttons the lock has no say over. Bare `h` never reaches the gate at all
 //     — handle_history_mode_key claims the toggle and returns from on_key
 //     ABOVE it — while the other four DO reach it on every press outside the
@@ -11027,7 +11067,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     membership test. (The tabs answer true in EVERY state since 2026-08-05,
 //     and the REASON changed on 2026-08-18 while the answer did not: the `h`
 //     view greyed them for one day, then repurposed the row as its walk
-//     selector — and now the walk has its own radio pair in row 4, so the tabs
+//     selector — and now the walk has its own lamp in row 4, so the tabs
 //     are ordinary A/B tabs in there and their Ctrl+Tab is on the mode's own
 //     ALLOWLIST, which is what makes the derived partition call them LIVE. The
 //     mode line at the top of this body never fires for them either way, and
@@ -11333,10 +11373,8 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::ViewTW:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        case RedesignButton::IconS:
-        case RedesignButton::IconT:
-        case RedesignButton::IconW:
-        case RedesignButton::IconP:
+        case RedesignButton::IconAudioView:
+        case RedesignButton::IconMarkerColumn:
         // THE TRIM REGION TOGGLE MIRRORS NOTHING (2026-08-16, unchanged when
         // it became a toggle on 2026-08-18), and for a stronger reason than
         // the trim scissors it outlived: it HAS no refusal to mirror. Its one
@@ -11925,10 +11963,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // bit, is what reports the mode (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
             break;
-        // THE SIX HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
+        // THE FIVE HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
         // ICON ROW's own settled rule, which is where they live again since
         // the roster relayout: what a mode refuses simply GREYS, and their
-        // chords (bare `g` for the two walk radios, bare `u`, bare `v`, bare `,`
+        // chords (bare `g` for the walk lamp, bare `u`, bare `v`, bare `,`
         // and bare `.` for the four companions) are bound in exactly one place
         // in the product and it is inside the view.
         //
@@ -11937,7 +11975,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // ANSWER IT: the mode line at the top of this body runs only while
         // `a.history_mode.active`, so it has nothing at all to say about a
         // button outside the view — and asked inside it, history_mode_owns_key
-        // claims five of these six as the mode's OWN vocabulary and answers
+        // claims four of these five as the mode's OWN vocabulary and answers
         // LIVE, which is the reverse of the fact wanted here. One
         // `a.history_mode.active` term states the resting half for all six.
         //
@@ -11995,13 +12033,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
         //
-        // THE TWO WALK RADIOS TAKE THE RESTING TERM (2026-08-18), for this same
-        // reason and with one difference worth naming: bare `g` IS the mode's
-        // own vocabulary, so the derived partition answers LIVE for them
-        // inside the view all by itself — what it cannot answer is the RESTING
-        // grey out here, the partition running only while `active`.
-        case RedesignButton::HistoryWalkGit:
-        case RedesignButton::HistoryWalkSession:
+        // THE WALK LAMP TAKES THE RESTING TERM (2026-08-18, for the radio pair
+        // this button replaced on 2026-09-04), for this same reason and with
+        // one difference worth naming: bare `g` IS the mode's own vocabulary,
+        // so the derived partition answers LIVE for it inside the view all by
+        // itself — what it cannot answer is the RESTING grey out here, the
+        // partition running only while `active`.
+        case RedesignButton::HistoryWalk:
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryCumulative:
             return a.history_mode.active;
@@ -12169,11 +12207,12 @@ inline bool redesign_button_enabled(const AppState& a,
 }
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
-// buttons, row 3's tabs and row 4's SIX radios and SIX toggles (the two view
-// pairs and the WALK PAIR that joined them on 2026-08-18; follow, iteration,
-// the TRIM REGION toggle — a toggle again since 2026-08-18, its lamp reading
-// the overlay's visibility — read-only, history, and the CUMULATIVE reading,
-// which came back to this row with the history group the same day). THE
+// buttons, row 3's tabs and row 4's TOGGLES — the two VIEW LAMPS and the WALK
+// LAMP, which were three radio PAIRS until the architect collapsed them on
+// 2026-09-04; follow, the centered pin, iteration, the TRIM REGION toggle (a
+// toggle again since 2026-08-18, its lamp reading the overlay's visibility),
+// read-only, history, and the CUMULATIVE reading, which came back to this row
+// with the history group on 2026-08-18. THE
 // BOTTOM ROW HAS EXACTLY ONE SUBJECT — ADD TO SELECTION, which landed there
 // later the same day, hours after the relayout had left the row lampless: the
 // Cumulative toggle was its one from 2026-08-14 until that relayout, and the
@@ -12216,10 +12255,19 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                                                 a.active_markers_view == 'W';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
-        case RedesignButton::IconS:      return a.active_audio_view   == 'S';
-        case RedesignButton::IconT:      return a.active_audio_view   == 'T';
-        case RedesignButton::IconW:      return a.active_markers_view == 'W';
-        case RedesignButton::IconP:      return a.active_markers_view == 'P';
+        // THE TWO VIEW LAMPS LIGHT AWAY FROM HOME (architect 2026-09-04, the
+        // radio-pair collapse): Source + Warp is view 1 and the home state, so
+        // the audio lamp lights in TARGET and the marker lamp in PHASE RESET,
+        // each reading the very axis its own chord flips. That is why the glyph
+        // each wears is the LIT state's — document-import and
+        // chronometer-start — and why the tooltip names the ACT instead of a
+        // state: a lamp whose face said "Target" would lie half the time.
+        // (Until that day these were four radios, IconS/IconT and IconW/IconP,
+        // each reading its own half of the axis.)
+        case RedesignButton::IconAudioView:
+            return a.active_audio_view   == 'T';
+        case RedesignButton::IconMarkerColumn:
+            return a.active_markers_view == 'P';
         case RedesignButton::IconFollow: return a.follow_mode;
         // The centered lamp (2026-08-31): the same toggle pattern, reading
         // the live bit bare `y` flips, so the lit face and the pin cannot
@@ -12277,20 +12325,17 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // cluster, painted inside the `h` view alone and publishing an empty
         // rect outside it, so this lamp reached no pixel out there at all.)
         case RedesignButton::HistoryCumulative: return a.history_cumulative;
-        // THE WALK RADIOS' LAMP (2026-08-18), the pair's whole face: exactly
-        // one of the two is lit while the view stands, which is what makes them
-        // a radio pair and what the press claim's radio consume reads. THE MODE
-        // TERM IS DELIBERATE, and it is the one thing that separates them from
-        // the Cumulative toggle directly above: the READING is a program-session
-        // preference that outlives every visit, so its lamp publishes
-        // unconditionally, while the WALK SOURCE is per-visit state reset to
-        // Commit at every entry — so lighting "Git" outside the view would
-        // advertise a selection that is not a live fact. Outside the view both
-        // are unlit and both are dead, which is the honest pair.
-        case RedesignButton::HistoryWalkGit:
-            return a.history_mode.active &&
-                   a.history_mode.source == GuiHistoryWalkSource::Commit;
-        case RedesignButton::HistoryWalkSession:
+        // THE WALK LAMP (2026-08-18 as a radio pair, one button since the
+        // 2026-09-04 collapse), lit AWAY FROM HOME like the two view lamps: Git
+        // is the walk's default reading, so the lamp reports SESSION and wears
+        // the shallow-history glyph. THE MODE TERM IS DELIBERATE, and it is the
+        // one thing that separates it from the Cumulative toggle directly
+        // above: the READING is a program-session preference that outlives
+        // every visit, so its lamp publishes unconditionally, while the WALK
+        // SOURCE is per-visit state reset to Commit at every entry — so a lit
+        // lamp outside the view would advertise a selection that is not a live
+        // fact. Out there it is unlit and dead, which is the honest face.
+        case RedesignButton::HistoryWalk:
             return a.history_mode.active &&
                    a.history_mode.source == GuiHistoryWalkSource::Local;
         case RedesignButton::File:
@@ -12793,10 +12838,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // it — planner's call, 2026-08-01.)
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
-        case RedesignButton::IconS:      return {"Source View (T)", nullptr};
-        case RedesignButton::IconT:      return {"Target View (T)", nullptr};
-        case RedesignButton::IconW:      return {"Warp Markers (P)", nullptr};
-        case RedesignButton::IconP:      return {"Phase Resets (P)", nullptr};
+        // The two view lamps, one line each: each chord is a toggle over its
+        // axis and neither has a shifted twin. THE TEXT NAMES THE ACT because
+        // the button is one lamp over a two-state axis (architect 2026-09-04,
+        // the radio-pair collapse) — "Toggle Target" would lie in Target, which
+        // is the lamp rule at this table's head applied to an axis rather than
+        // to a mode. The four radios these replaced named their own states:
+        // "Source View (T)" / "Target View (T)" and "Warp Markers (P)" /
+        // "Phase Resets (P)".
+        case RedesignButton::IconAudioView:
+            return {"Toggle Audio View (T)", nullptr};
+        case RedesignButton::IconMarkerColumn:
+            return {"Toggle Marker Column (P)", nullptr};
         // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
         // maximizer, so the hint says so and the shift admission and the line
         // are the one fact the static_assert below keeps together. The
@@ -12880,18 +12933,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // mode, until 2026-09-01.
         case RedesignButton::IconHistory:
             return {"Toggle History View (H)", nullptr};
-        // THE TWO WALK RADIOS (2026-08-18), one line each: one chord for the
-        // pair and no shifted twin on it. The words name the WALK — "Git" for
-        // the committed checkpoint history, "Session" for this session's own
-        // undo/redo timeline — rather than the model's Commit / Local, which is
-        // the same surface-versus-model split the row-3 words carried while they
-        // held this axis. Both hints show over a DEAD button outside the `h`
-        // view, the tooltips-on-disabled ruling's own case (architect
-        // 2026-08-07), exactly as their four neighbours' do.
-        case RedesignButton::HistoryWalkGit:
-            return {"Git (G)", nullptr};
-        case RedesignButton::HistoryWalkSession:
-            return {"Session (G)", nullptr};
+        // THE WALK LAMP, one line: bare `g` toggles the axis and has no shifted
+        // twin. THE TEXT NAMES THE ACT since the 2026-09-04 collapse made this
+        // one button over a two-state axis — the two radios it replaced named
+        // their own walks, "Git (G)" for the committed checkpoint history and
+        // "Session (G)" for this session's own undo/redo timeline, and either
+        // word alone would lie half the time now. WALK is the tree's word for
+        // this axis (GuiHistoryWalkSource, history_walk_older_actionable); the
+        // Cumulative toggle beside it owns "reading". The hint shows over a
+        // DEAD button outside the `h` view, the tooltips-on-disabled ruling's
+        // own case (architect 2026-08-07), exactly as its four neighbours' do.
+        case RedesignButton::HistoryWalk:
+            return {"Toggle History Walk (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
         // twin; the text names the toggle (the lamp rule at this table's
         // head — it read "Cumulative (U)" until 2026-09-01). Like the three
@@ -13247,7 +13300,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // repurposing that produced them. From 2026-08-05 the tabs read "Remote" and
 // "Local" while the `h` view stood, one word per GuiHistoryWalkSource, through
 // two label constants and a redesign_button_label override that answered for
-// both slots; the walk is the icon row's own radio pair now, so the tabs say
+// both slots; the walk is the icon row's own lamp now, so the tabs say
 // "A" and "B" in every state and the painter shapes its own table label. The
 // widths were the one thing that ruling had to check and it is why the tab
 // painter still measures rather than assumes: the two words came out unequal —
@@ -13642,11 +13695,12 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // ROW 4'S AND THE VIEW BAR'S SELECTED BUTTONS DO HOVER, and
 // that asymmetry with the tabs is the crops': both rows ship a selected-hover
 // state (the accent outline over the selected fill) and row 3 does not. So the
-// zone's carve-out names the tabs alone; the icon row's radios and toggles —
-// the Cumulative one included, back on that row since 2026-08-18 — and the
+// zone's carve-out names the tabs alone; the icon row's toggles — the
+// Cumulative one included, back on that row since 2026-08-18 — and the
 // view bar's three are hoverable in
 // both states, and a radio's already-selected press is refused in the ACTION
-// (the chord table's `radio` flag), not in its hoverability. (The transport's
+// (the chord table's `radio` flag, whose users are the view bar and the tabs
+// since the 2026-09-04 collapse), not in its hoverability. (The transport's
 // Play / Stop pair was a fourth such radio for hours on 2026-08-15 and is one
 // button with no lamp since that day's collapse.)
 //

@@ -846,10 +846,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
-    {RedesignButton::IconS,      icons::Icon::DocumentExport},
-    {RedesignButton::IconT,      icons::Icon::DocumentImport},
-    {RedesignButton::IconW,      icons::Icon::Speedometer},
-    {RedesignButton::IconP,      icons::Icon::ChronometerStart},
+    // THE TWO VIEW LAMPS (architect 2026-09-04, the radio-pair collapse): one
+    // button per axis where four radios stood. Each wears THE LIT STATE'S OWN
+    // GLYPH, which is the collapse's rule across all three lamps — the audio
+    // lamp lights in Target and wears document-import, the marker lamp lights
+    // in Phase Reset and wears chronometer-start. The two glyphs the retired
+    // halves wore, document-export and speedometer, left icons::Icon with
+    // them; the picks and their runners-up are still recorded at that enum.
+    {RedesignButton::IconAudioView,    icons::Icon::DocumentImport},
+    {RedesignButton::IconMarkerColumn, icons::Icon::ChronometerStart},
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -998,7 +1003,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // in this row is ever hidden, so every x here is a constant by
     // construction.
     //
-    // THE OPENER (bare `h`) leads, then the TWO WALK RADIOS (bare `g`, later on
+    // THE OPENER (bare `h`) leads, then the WALK LAMP (bare `g`, later on
     // 2026-08-18), then the four companions in the order they
     // have always held — how the delta READS, what you can DO from inside the
     // view, then where you can STEP — and, since 2026-09-01, THE LOAD IN PLACE
@@ -1007,17 +1012,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     // unchanged but for one: the CUMULATIVE toggle wears BLACK_SUM, the
     // summation sigma, since 2026-08-18 (a cumulative delta is a sum over the
     // walk's members), where it wore Breeze's two-colour deep-history from
-    // 2026-08-09 — and that glyph is what the Git walk radio wears here.
+    // 2026-08-09 — and that glyph dressed the Git walk radio here until the
+    // 2026-09-04 collapse retired that half.
     // Revert keeps document-revert and the walk keeps the keyframe dials.
     {RedesignButton::IconHistory,       icons::Icon::VcsDiff},
-    // THE TWO WALK RADIOS (architect 2026-08-18: "add two radio buttons after
-    // history button, before cumulative"). GIT wears the DEEP-HISTORY clock the
-    // Cumulative toggle yielded that same day — a clock face with a curl-back
-    // arrow sweeping around it, which is exactly what a committed history is —
-    // and SESSION wears its shallow sibling, the same dial with NO sweep arm,
-    // for a timeline that reaches back no further than this run.
-    {RedesignButton::HistoryWalkGit,     icons::Icon::DeepHistory},
-    {RedesignButton::HistoryWalkSession, icons::Icon::ShallowHistory},
+    // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since the
+    // 2026-09-04 collapse), where he put the surface: "add two radio buttons
+    // after history button, before cumulative". It wears the LIT state's glyph
+    // like the two view lamps — SHALLOW-HISTORY, the clock dial with no sweep
+    // arm, for a timeline reaching back no further than this run — because Git
+    // is the walk's default and the lamp reports Session. The Git half's
+    // deep-history clock, which the Cumulative toggle had yielded to it on
+    // 2026-08-18, left icons::Icon with that half.
+    {RedesignButton::HistoryWalk,       icons::Icon::ShallowHistory},
     {RedesignButton::HistoryCumulative, icons::Icon::BlackSum},
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     {RedesignButton::HistoryOlder,      icons::Icon::KeyframePrevious},
@@ -2119,11 +2126,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
-    // in SIX groups since 2026-08-31, RE-COUNTED off the roster enum and the
+    // width, separator-divided groups of 32x32 buttons — TWENTY-FOUR members
+    // in SIX groups since 2026-09-04, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
-    // Redo / Render, the deleted row 2's, leading the row), the S/T and W/P
-    // view radios, THE ZOOM GROUP — the VIEWPORT CLASS whole since the
+    // Redo / Render, the deleted row 2's, leading the row), THE AUDIO-VIEW
+    // LAMP and THE MARKER-COLUMN LAMP, each alone in a group of its own since
+    // the radio-pair collapse, THE ZOOM GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom four (2026-08-12), the waveform
@@ -2132,13 +2140,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // it (2026-08-31, R11) — the RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
-    // 2026-09-01) and THE HISTORY GROUP, the opener leading the TWO WALK
-    // RADIOS, its four companions (2026-08-18, the companions back from the
-    // bottom row and the radios down from row 3 later that day) and THE LOAD
+    // 2026-09-01) and THE HISTORY GROUP, the opener leading THE WALK LAMP,
+    // its four companions (2026-08-18, the companions back from the bottom
+    // row and the walk surface down from row 3 later that day) and THE LOAD
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-seven paint on every
+    // hiding/showing icons in top icon row"): all twenty-four paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2154,17 +2162,26 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 27·32 + (27−6)·2 + (6−1)·9 = 8 + 864 + 42 + 45 = 959px,
+    //   8 + 24·32 + (24−6)·2 + (6−1)·9 = 8 + 768 + 36 + 45 = 857px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 967.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 865.
     //
-    // THE CENTERED LAMP'S ARITHMETIC (2026-08-31, R11): one box and one gap
-    // (+34) onto the 925 the Series relocation left, which moves the TABLET
-    // FIT CEILING from 249 to 240 (the walk fits while 959·factor ≤ 2304;
-    // 959·2.40 = 2302, and 241 clips by ~3 authored px). THE TABLET'S
-    // FIRST-RUN SCALE IS 225 AND THE WHOLE WALK STILL LANDS THERE:
-    // 959·2.25 = 2158 against the panel's 2304, 146 px of slack, every icon
-    // fitting — and 959 of the panel's 1024 LOGICAL px at that scale.
+    // THE RADIO-PAIR COLLAPSE'S ARITHMETIC (architect 2026-09-04): three boxes
+    // and three gaps (−102) off the 959 the centered lamp left, no separator
+    // moving — the two view groups went from two members to one each and a
+    // group of one is still a group. The row is 857 authored px, the widest
+    // single cut it has taken, and it was taken to make room for two new lamps
+    // landing after that arc. THE TABLET FIT CEILING GOES FROM 240 TO 268 (the
+    // walk fits while 857·factor ≤ 2304; 857·2.68 = 2297, and 269 overruns by
+    // ~1 device px). THE TABLET'S FIRST-RUN SCALE IS 225 AND THE WALK NOW
+    // CLEARS IT WIDE: 857·2.25 = 1928 against the panel's 2304, 376 px of
+    // slack where the 959-px row had 146 — and 857 of the panel's 1024 LOGICAL
+    // px at that scale.
+    //
+    // THE 959 IT SHRANK FROM WAS THE CENTERED LAMP'S (2026-08-31, R11): one box
+    // and one gap (+34) onto the 925 the Series relocation left, which had
+    // moved the fit ceiling from 249 to 240 (959·2.40 = 2302, 241 clipping by
+    // ~3 authored px) and left the tablet's 225 with 146 px of slack.
     //
     // THE 925 IT GROWS ON WAS THE 2026-08-27 SERIES RELOCATION'S ARITHMETIC,
     // THE BIGGEST SINGLE CUT THIS ROW HAS TAKEN: two boxes (−68) and two
@@ -2181,19 +2198,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 237 rather than 240 — the pad
+    // (Counting the trailing pad the ceiling is 266 rather than 268 — the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
-    // Both older deployments clear it outright: 967 of 1024 at 100% on the
-    // retired Pi panel, 967 of 1920 on the laptop.
+    // Both older deployments clear it outright: 865 of 1024 at 100% on the
+    // retired Pi panel, 865 of 1920 on the laptop.
     //
-    // (It was 925px at twenty-six in six groups from 2026-08-27; 1007px at
+    // (It was 959px at twenty-seven in six groups from 2026-08-31; 925px at
+    // twenty-six in six groups from 2026-08-27; 1007px at
     // twenty-eight in eight groups from 2026-08-26; 939px at
     // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at
     // twenty-seven from 2026-08-16; and 939 at twenty-six before that — the
     // 2026-08-16 and the relayout rosters matching by coincidence rather than
     // by symmetry, the earlier one being this one with the four verbs in, the
-    // four companions out and no radios. Today's twenty-seven matches the
-    // 2026-08-16 count by coincidence too, having a different group count.
+    // four companions out and no radios.
     // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
@@ -2341,7 +2358,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // category's one survivor since the 2026-08-27 relocation),
         // listen, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
-        // the walk any more; the S/T + W/P radios, the zoom group and the
+        // the walk any more; the two view lamps, the zoom group and the
         // history opener stay live, as do the FOUR HISTORY COMPANIONS and,
         // since 2026-09-01, the LOAD IN PLACE that joined their group — each
         // on the derivation's own answer, which is not one reason but two:

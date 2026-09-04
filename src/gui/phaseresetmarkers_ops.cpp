@@ -207,7 +207,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 //
 // SOURCE VIEW — NO LEAD-IN AND NO MAP CONVERSION: the reset lands EXACTLY at
 // the playhead's source frame. S+P IS A STUB (architect 2026-09-02): it
-// exists so the W/P radio is not broken in source view, takes the minimum —
+// exists so the marker-column lamp is not broken in source view, takes the
+// minimum —
 // no overlay, no lead-in — and no decision rests on it; the lead-in is
 // needed and wanted, and it lives in T+P. The kN/2 is an OUTPUT-domain
 // length the source cursor is not in (subtracting it here would take kN/2

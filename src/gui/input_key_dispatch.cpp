@@ -732,7 +732,7 @@ void GuiInputHandler::close_history_mode() {
 // it, at the entry, the exit, each walk step and each SWITCH (the fourth edge,
 // 2026-08-05: a different walk or a different reading is a different list, so a
 // switch replaces the lane's content exactly as a step does — one edge whether
-// it arrived from bare `g`, the walk radios' clicks or bare `u`, all of them
+// it arrived from bare `g`, the walk lamp's click or bare `u`, all of them
 // going through set_history_reading): the pointer stash (flag_hit_rects), the stem
 // painter's stash (marker_stems — paint-only since the stems-inert ruling,
 // 2026-08-12, but its `marker_index` still changes domain across the edge and
@@ -1259,13 +1259,14 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //     glance (architect, SUPERSEDING the 2026-08-05 reset to full zoom out);
 //   * full-window damage, a discrete command.
 //
-// IDEMPOTENT AT THE TOP, which is where the walk radios' rule comes from: a
+// IDEMPOTENT AT THE TOP, which is where the walk lamp's rule came from: a
 // switch to the walk already shown changes nothing and damages nothing, so it
 // is a consumed nothing without the call site testing for it — and it is what
 // makes bare `g`'s step safe to express as a plain "the next one" without a
-// live-walk test of its own. (The radio flag on the two buttons kills the press
-// one step earlier, at the claim, which is the roster's own shape for a lit
-// radio; this is the owner's backstop under it.) The `!active` guard is the same defensive shape
+// live-walk test of its own. (The radio pair this lamp replaced on 2026-09-04
+// killed a press on the LIT half one step earlier, at the claim; with one
+// button over the chord there is no wrong half and this owner is the whole
+// rule.) The `!active` guard is the same defensive shape
 // the two framers carry — the callers are gated by the mode already.
 //
 // IT WRITES THE PAIR ACROSS TWO HOMES since 2026-08-08, and the split is the
@@ -1298,8 +1299,8 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // arms below (2026-08-05):
 //   * bare `h`             — the toggle, the ONE shape bound outside the mode;
 //   * bare `u`             — the CUMULATIVE reading's toggle (2026-08-08);
-//   * bare `g`             — the WALK's toggle (2026-08-18), the icon row's two
-//     radio buttons' chord;
+//   * bare `g`             — the WALK's toggle (2026-08-18), the icon row's
+//     WALK LAMP's chord;
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
 //     IsoLeftTab exactly as the live cycle is;
@@ -1346,9 +1347,9 @@ void GuiInputHandler::set_history_reading(GuiHistoryWalkSource source,
 // RE-DERIVED BY READING kToolbarChords rather than remembered — which is what
 // this paragraph got wrong twice, having twice claimed a shape "no roster
 // entry carries" while the roster carried it. The current answer, re-greped:
-//   * BARE `g` — the icon row's TWO WALK RADIOS (2026-08-18), which share the
-//     one chord as a radio pair; this claim is what answers their face LIVE
-//     inside the view, their resting grey outside it being their own arm's;
+//   * BARE `g` — the icon row's WALK LAMP (2026-08-18, a radio pair over this
+//     chord until the 2026-09-04 collapse); this claim is what answers its face
+//     LIVE inside the view, its resting grey outside it being its own arm's;
 //   * BARE `,` / BARE `.` — the walk's own two buttons (2026-08-05), the
 //     roster's first RESTING-DISABLED entries, and resting-disabled again
 //     since 2026-08-18: the icon row hides nothing, so what keeps them from
@@ -1586,11 +1587,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // two buttons cannot diverge, and it passes the CURRENT reading through
     // untouched (`u` is the only thing that moves that bit).
     //
-    // ONE CHORD FOR A PAIR IS THE ROSTER'S RADIO SHAPE, not a new one: with two
-    // walks a toggle IS the direct select, exactly as bare `t` and bare `p`
-    // serve the S/T and W/P pairs. The `radio` flag on both rows is what makes
-    // a press on the lit half a consumed nothing instead of a switch away from
-    // what the user just clicked.
+    // ONE CHORD, ONE BUTTON, ONE AXIS since the 2026-09-04 collapse: the walk
+    // lamp is this chord's twin and flips the axis in both directions, exactly
+    // as bare `t` and bare `p` and their two view lamps do. It was a RADIO PAIR
+    // over this chord from 2026-08-18 until then, the `radio` flag making a
+    // press on the lit half a consumed nothing instead of a switch away from
+    // what the user had just clicked; with one button there is no wrong half.
     //
     // NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare shapes
     // that DO repeat and leaves this one out, exactly as it leaves `u` out): a

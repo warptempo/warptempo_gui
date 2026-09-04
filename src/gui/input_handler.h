@@ -273,7 +273,7 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
 // A REFUSAL IS SILENT ON SCREEN, AND BOTH CALLERS REFUSE ALIKE (architect
 // 2026-08-30). The gate STAYS — it is a silent-wrong guard: the preview must
 // never receive a map the builder refuses. Its MESSAGE goes. The `t` road
-// (and the icon row's T radios, and every caller composing the set-to form)
+// (and the icon row's audio-view lamp, and every caller composing the set-to form)
 // stays in source view and prints ONE stderr line with the builder's own
 // words, `warptempo_gui: Target view entry refused: <error>`, which is
 // exactly what the load restore has always done bar the line itself — one
@@ -537,8 +537,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The bare 1/2/3 selectors, the view bar's buttons, the S/T + W/P radios and the
-// settings keys all compose those writers and inherit it.
+// The bare 1/2/3 selectors, the view bar's buttons, the two icon-row VIEW LAMPS
+// and the settings keys all compose those writers and inherit it.
 //
 // WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
 // because the two read alike at the call site: an S/T write CHANGES WHAT THE
@@ -684,9 +684,10 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 //     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle),
 //     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the ONE
 //     ctrl-carrying claim), bare `g`
-//     (the WALK toggle over the two sources, the icon row's radio pair's chord
-//     since 2026-08-18 — it was Ctrl+Tab and Ctrl+Shift+Tab, forward and
-//     reverse over row 3's repurposed tabs, until then), bare Home / End and
+//     (the WALK toggle over the two sources, the icon row's WALK LAMP's chord
+//     since 2026-08-18 — a radio pair's until the 2026-09-04 collapse, and
+//     Ctrl+Tab / Ctrl+Shift+Tab over row 3's repurposed tabs before that), bare
+//     Home / End and
 //     bare `c`. The definition carries the
 //     derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
@@ -1440,7 +1441,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's five menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-four (the
     // toolbar four included since the 2026-08-12 relayout, the history group's
     // seven closing it since 2026-08-18 — the opener, the two WALK RADIOS and
     // the four companions) and the bottom
@@ -4356,8 +4357,9 @@ private:
     //   * set_history_reading is the ONE switch owner for WHAT THE LANE SHOWS
     //     (2026-08-05 as the two compare readings' owner, generalized
     //     2026-08-07 to the (walk source, reading) PAIR): bare `g` STEPS THE
-    //     WALK through it (2026-08-18, the icon row's two radio buttons' chord
-    //     — row 3's repurposed tabs selected it directly until then) and bare
+    //     WALK through it (2026-08-18, the icon row's WALK LAMP's chord — a
+    //     radio pair's until 2026-09-04, and row 3's repurposed tabs selected
+    //     it directly before 2026-08-18) and bare
     //     `u` FLIPS THE READING through it (2026-08-08,
     //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
     //     shape, and the owner is idempotent, which is what makes a step onto

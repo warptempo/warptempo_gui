@@ -144,9 +144,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // bare `u` and row 4's Cumulative button toggle it, and it is OFF — iterative —
 // at program start and KEPT ACROSS VISITS thereafter, since the mode's own
 // struct is reset whole at both edges and this deliberately is not in it. THE
-// WALK SOURCE is the icon row's two radio buttons and bare `g` since 2026-08-18
-// (row 3's tabs and Ctrl+Tab selected it from 2026-08-05 until then); neither
-// surface touches the reading.
+// WALK SOURCE is the icon row's WALK LAMP and bare `g` since 2026-08-18 (two
+// radio buttons over that chord until the 2026-09-04 collapse; row 3's tabs and
+// Ctrl+Tab selected it from 2026-08-05 until 2026-08-18); neither surface
+// touches the reading.
 //
 //   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
 //   ITEM as the new one. It compares FORWARD, toward now: the next-newer

@@ -155,16 +155,17 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (240 since 2026-08-31 — the walk's own paragraph below) are
+// ceiling (268 since 2026-09-04 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 959 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-seven-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it with room to spare (2304/2.25 = 1024 logical
-// px, 65 past the walk) and 240 is the fit ceiling on that panel since the
-// centered lamp joined the row 2026-08-31 (249 at the 925-px walk before it;
-// 250 was tried for
+// 857 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-four-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it wide (2304/2.25 = 1024 logical px, 167 past
+// the walk) and 268 is the fit ceiling on that panel since the architect
+// collapsed the row's three radio pairs into three lamps on 2026-09-04 (240 at
+// the 959-px walk the centered lamp left on 2026-08-31, 249 at the 925-px walk
+// before that; 250 was tried for
 // an afternoon on 2026-08-27 and stepped back the same evening for the ~3
 // authored px it shaved off the rightmost history icon) — and the redesign
 // carries no collision rule anywhere — the crop-at-the-floor allowance recorded

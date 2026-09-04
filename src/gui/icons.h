@@ -86,30 +86,35 @@ enum class Icon {
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
     //
-    // THE FOUR VIEW RADIOS' FACES (architect-picked 2026-08-11 off a rendered
-    // candidate sheet): the S/T audio pair and the W/P marker pair wore shaped
-    // LETTER GLYPHS from the row's first day until then — the row's only
-    // non-icon buttons, and the reason the architect briefly ruled the radios
-    // deleted altogether ("ugly letter blips"); he reversed that the same day
-    // and gave them real glyphs instead, which is what killed the letter arm
-    // (no producer left; the painter's shaped-letter branch went with it).
-    //   SOURCE / TARGET are document-export / document-import, the arrow
-    //   LEAVING a document and ENTERING one — his own metaphor, the source
-    //   being where the audio comes FROM.
-    //   WARP is speedometer, the gauge with the needle: warping IS a speed
-    //   change, and "change speed" is kdenlive's own word for it. It was his
-    //   FIRST pick, reversed to distortionfx (the spiral, "time bends") in the
-    //   same breath, and RESTORED at his second look later the same day, which
-    //   leaves distortionfx the recorded runner-up beside player-time.
+    // THE TWO VIEW LAMPS' FACES (architect-picked 2026-08-11 off a rendered
+    // candidate sheet, for the four radios these two buttons replaced): the S/T
+    // audio pair and the W/P marker pair wore shaped LETTER GLYPHS from the
+    // row's first day until then — the row's only non-icon buttons, and the
+    // reason the architect briefly ruled the radios deleted altogether ("ugly
+    // letter blips"); he reversed that the same day and gave them real glyphs
+    // instead, which is what killed the letter arm (no producer left; the
+    // painter's shaped-letter branch went with it).
+    //   TARGET is document-import, the arrow ENTERING a document. Its Source
+    //   partner was document-export, the arrow LEAVING one — his own metaphor,
+    //   the source being where the audio comes FROM.
     //   PHASE RESET is chronometer-start, the stopwatch with the solid play
     //   triangle in its dial: start the clock anew. Picked over
     //   chronometer-reset and view-refresh — indistinguishable from each other
     //   at row size, and chronometer-reset's dial does not survive the
-    //   rendering — and over the bare chronometer.
-    DocumentExport,      // Source audio view (bare `t`)
-    DocumentImport,      // Target audio view (bare `t`)
-    Speedometer,         // Warp markers (bare `p`)
-    ChronometerStart,    // Phase reset markers (bare `p`)
+    //   rendering — and over the bare chronometer. Its Warp partner was
+    //   speedometer, the gauge with the needle: warping IS a speed change, and
+    //   "change speed" is kdenlive's own word for it. That was his FIRST pick,
+    //   reversed to distortionfx (the spiral, "time bends") in the same breath
+    //   and RESTORED at his second look later the same day, which leaves
+    //   distortionfx the recorded runner-up beside player-time.
+    // TWO OF THE FOUR LEFT ON 2026-09-04, when the architect collapsed the
+    // row's three radio pairs into three lamps: a lamp wears the LIT state's
+    // glyph, so document-export and speedometer went with the Source and Warp
+    // halves — enumerators, defs and assets together, the edit-cut precedent.
+    // Their picks and runners-up stay recorded above so none is re-proposed
+    // without a new ruling.
+    DocumentImport,      // The audio-view lamp, lit in Target (bare `t`)
+    ChronometerStart,    // The marker-column lamp, lit in Phase Reset (bare `p`)
     // (THE TRIM SCISSORS' EDIT-CUT IS DELETED with its button, 2026-08-18: the
     // architect retired the "set trim from region" BUTTON in the roster
     // relayout — and the ACT went with it later the same day, when the region
@@ -226,22 +231,21 @@ enum class Icon {
     // naming the icon-row button's own face for the act one surface over.
     DialogOkApply,       // Load a state in place as the baseline
     VcsDiff,             // The history mode (`h`)
-    // Breeze's deep-history — a clock face with a curl-back arrow sweeping
-    // around it. THE SET'S ONE TWO-COLOR ICON, knowingly: the dial is
-    // .ColorScheme-Text and the arrow .ColorScheme-Accent, so the arrow reads
-    // as the act over what it sweeps. The table's entry records both resolved
-    // literals, the command-coverage check and the four glyphs tried before it.
+    // Breeze's shallow-history: a clock face with NO sweep arrow — the
+    // session's own undo/redo timeline, which reaches back no further than this
+    // run. It arrived 2026-08-18 for the history view's Session walk radio and
+    // is THE WALK LAMP'S WHOLE FACE since the 2026-09-04 collapse, the lamp
+    // lighting in Session and so wearing the lit state's glyph.
     //
-    // IT DRESSED THE CUMULATIVE READING'S TOGGLE from 2026-08-09 (architect's
-    // pick then) until 2026-08-18, when that toggle took the summation sigma
-    // and this glyph was FREED for the history view's Git walk radio — a
-    // committed history is what the deep clock sweeps. Nothing paints it in
-    // the meantime, which is expected and is why the entry stays.
-    DeepHistory,               // The Git (committed) walk
-    // ITS SHALLOW SIBLING (2026-08-18), for the history view's Session walk
-    // radio: the same clock face with NO sweep arrow — the session's own
-    // undo/redo timeline, which reaches back no further than this run.
-    ShallowHistory,            // The Session (local) walk
+    // ITS DEEP SIBLING WENT WITH THE GIT HALF: deep-history, the same dial with
+    // a curl-back arrow sweeping around it, was the set's one TWO-CLASS icon
+    // (dial .ColorScheme-Text, arrow .ColorScheme-Accent). It dressed the
+    // CUMULATIVE reading's toggle from 2026-08-09 until that toggle took the
+    // summation sigma on 2026-08-18, when it was freed for the Git walk radio —
+    // a committed history being what a deep clock sweeps. Its candidate
+    // succession is kept at the shallow-history entry in icons.cpp so none of
+    // it is re-proposed without a new ruling.
+    ShallowHistory,            // The walk lamp, lit in Session (bare `g`)
     // THE ADD-TO-SELECTION ACT'S GLYPH (2026-08-18): Breeze's edit-select, the
     // pointer arrow over a marquee corner — picking one more thing up.
     EditSelect,          // Add to selection
@@ -547,6 +551,14 @@ enum class Icon {
 // dialog-error and window-close — the card's two class glyphs and its X,
 // three fresh verbatim transcriptions with no departures beside them (the
 // two dialog files are two-colour, media-record's shape).
+// 54 SINCE 2026-09-04, THE RADIO-PAIR COLLAPSE: 57 − document-export,
+// speedometer and deep-history, deleted with the six buttons the architect
+// collapsed into three lamps. Each lamp wears the LIT state's glyph, so
+// document-import, chronometer-start and shallow-history stay and the three
+// home-state faces go — enumerators, defs and assets together, which is
+// edit-cut's precedent and the largest single departure this roster has taken.
+// The picks, the metaphors and every runner-up stay recorded at the surviving
+// entries so none is re-proposed without a new ruling.
 // 57 SINCE 2026-09-01, THE PLAYER ROW'S UP BUTTON: 56 + go-parent-folder, one
 // fresh verbatim transcription with no departure beside it — absolute M/L over
 // two `z`-closed subpaths with an explicit command letter before every pair,
@@ -560,7 +572,7 @@ enum class Icon {
 // stale value, per the inventory-retell rule; the drift cost exactly what this
 // header says it costs — one icon's once-per-icon diagnostic latch, the latch
 // being bounds-checked — and nothing else.
-inline constexpr int kIconCount = 57;
+inline constexpr int kIconCount = 54;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

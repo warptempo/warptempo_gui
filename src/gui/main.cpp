@@ -663,7 +663,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // content at the foot of the tall ground the gap and the lane paint together.
 // Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-seven view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-four view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
 // relayout, whose roster commit removed that lane and renumbered these, and
 // the history group's seven close them since 2026-08-18 —
