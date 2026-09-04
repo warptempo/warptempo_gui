@@ -439,7 +439,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // standing right there. Bare `;` still cannot open the editor on a
         // locked tab at all, being off that allowlist one level up.
         if (gv.b == band.read_only) { unchanged(); return true; }
-        band.read_only = gv.b;
+        // The bit's one setter, shared with bare `o` (the contract is at
+        // GuiInputHandler::set_tab_read_only, input_handler.h): it writes the
+        // named band and, when that band is the active one, damages the top
+        // strip so the icon row's Lock glyph stops showing the state the tab
+        // just left. applied() below damages the modal area alone, so a typed
+        // self-lock or self-unlock would otherwise close the editor onto a
+        // stale padlock.
+        input->set_tab_read_only(tab_char, gv.b);
         applied(); return true;
     }
     if (suffix == "trim_begin" || suffix == "trim_end") {
@@ -854,7 +861,15 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // AppState::projects_repo); the two path keys have no field beside the
     // struct's own.
     if (key == "projects_repo") app.projects_repo = value;
-    if (auto failure = write_device_config(*app.device_config)) {
+    // The write is advisory in the ruling's sense: it may fail, the live value
+    // stands either way, and the failure is the press's answer on a card. The
+    // verdict is kept because the applies-card below is a claim about the next
+    // launch, which only a written file can make true — a failed write leaves
+    // the old path on disk, so the two cards together would have said the
+    // persist failed and then that it survives a relaunch, with the second one
+    // topmost. On failure the device-config card is the whole answer.
+    const auto failure = write_device_config(*app.device_config);
+    if (failure) {
         std::fprintf(stderr, "warptempo_gui: %s\n",
                      failure->diagnostic.c_str());
         notifications.notify(AppState::NotificationClass::Normal,
@@ -865,7 +880,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         key.c_str(), value.c_str());
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
-    if (key == "projects_path") {
+    if (key == "projects_path" && !failure) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kProjectsPathAppliesCard);
     }

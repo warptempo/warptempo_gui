@@ -995,7 +995,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // button whose chord the lock drops does reach it, and is answered
         // exactly as its key is. The bare literal kTabReadOnlyCard stays the
         // word of the three sites that KNOW THEIR ACT and so need no chord in
-        // the sentence — the Settings dropdown's item click, the render
+        // the sentence — re-greped 2026-09-04, when the settings editor's lock
+        // moved off the opener: the editor's engine-key commit, the render
         // player's Load in place, and the `h` view's bare `v` fork above.
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
@@ -1101,29 +1102,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the other tab. THE TAB'S PADLOCK IS
     // THE WHOLE VISIBLE CUE since row 7 deleted the bottom strip's
     // "(read-only)" token as a restatement of it.
+    // The write and the damage that goes with it live in set_tab_read_only
+    // (its contract is at the declaration, input_handler.h), which this road
+    // shares with the settings editor's `tab_a_read_only=` /
+    // `tab_b_read_only=` commit — the bit's second and only other writer, and
+    // the reason the setter takes a tab rather than assuming the active one.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
-        ViewState& vs = active_view_state(app);
-        vs.read_only = !vs.read_only;
-        // (A SECOND DAMAGE STOOD HERE and is deleted 2026-08-29: it took the
-        // TAB ROW's lane, where the status chain lived, on the reading that
-        // the flag moved that row's own face — and the top-strip damage below
-        // already covers that lane as a superset. The chain is gone and its
-        // two surviving STATE strings are ROW 8'S STATE CELL's; the read-only
-        // bit writes neither, so the call had no producer left on either
-        // surface.
-        // The bottom row's own greyed faces ride the tick comparator, as they
-        // always did.)
-        // THE TOP STRIP: the read-only bit WEARS A FACE up there — the
-        // icon row's read-only toggle since 2026-08-14 (the active tab's own
-        // padlock slot, 2026-08-01..14, before that). The button's LAMP does
-        // ride the tick comparator's `selected` bit, but its GLYPH swaps
-        // closed-for-open on the same flag and no stashed bit carries that, so
-        // the one damage at the one writer stays the cheaper and more honest
-        // answer than a fifth stashed bit.
-        // (The toolbar four's ENABLED faces — icon-row members since the
-        // 2026-08-12 relayout — also move with this flag, and those
-        // the comparator does catch — this damage merely arrives first.)
-        viewport.invalidate_top_strip();
+        set_tab_read_only(app.active_tab_view,
+                          !active_view_state(app).read_only);
         return;
     }
 
@@ -3865,4 +3851,16 @@ void GuiInputHandler::apply_waveform_magnification_level(int level) {
     // level and rebuilds inside the same frame. Nothing about the audio is
     // touched — no playback session is disturbed and no render is dispatched.
     viewport.kick_waveform_sync();
+}
+
+void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
+    // The contract — sole writer, band resolved by tab, damage only when the
+    // named band is the active one, history-less — is at the declaration
+    // (input_handler.h). The two callers are the bare-`o` arm above, which the
+    // icon row's Lock button reaches by synthesizing that press, and the
+    // settings editor's per-tab read_only commit.
+    ViewState& band = (tab_view == 'B') ? app.tab_b : app.tab_a;
+    if (band.read_only == value) return;
+    band.read_only = value;
+    if (tab_view == app.active_tab_view) viewport.invalidate_top_strip();
 }

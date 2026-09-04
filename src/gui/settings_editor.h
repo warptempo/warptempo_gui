@@ -50,6 +50,10 @@ struct GuiInputHandler;
 //    mirroring the load schema) then applies through the key's own gesture
 //    chokepoint. These are launch/view state: no undo entry, no dirty; a
 //    same-value commit no-op-deactivates like the engine no-op gate.
+//    per-tab read_only was the one arm that wrote its band directly, and so
+//    left the icon row's Lock glyph stale on a typed self-lock or self-unlock;
+//    since 2026-09-04 it goes through set_tab_read_only (input_handler.h) with
+//    bare `o`, and the promise above holds for every key in the list.
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
@@ -89,7 +93,8 @@ struct GuiSettingsEditor {
     // the same shape as the viewport request_* callbacks). Used to reach the
     // gesture chokepoints that live on GuiInputHandler:
     // handle_active_audio_view_toggle, apply_gui_scale,
-    // apply_waveform_magnification_level, commit_trim_mutation.
+    // apply_waveform_magnification_level, commit_trim_mutation,
+    // set_tab_read_only.
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,

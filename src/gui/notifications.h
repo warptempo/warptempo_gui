@@ -292,6 +292,9 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // the new folder at once (the whole account is at
 // GuiSettingsEditor::commit_device_setting, settings_editor.cpp). A press
 // whose result nothing paints says where it applies; one clause.
+// It is raised only when the config write succeeded (2026-09-04): the next
+// launch reads the file, so a failed write makes that half of the sentence
+// false, and the write's own failure card is then the press's whole answer.
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 

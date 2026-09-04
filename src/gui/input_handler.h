@@ -3753,6 +3753,34 @@ private:
     // playback path and no render input.
     void apply_waveform_magnification_level(int level);
 
+    // The read-only bit's one setter (2026-09-04, converting a codex finding
+    // that the two roads had drifted apart on damage). Two roads write the
+    // bit: bare `o` on the active tab, which the icon row's Lock button
+    // reaches by synthesizing that press, and the settings editor's
+    // `tab_a_read_only=` / `tab_b_read_only=` commit, which may name either
+    // tab. Both come here, so the damage is decided once. `tab_view` is 'A' or
+    // 'B' and resolves the band exactly as every other per-tab route does;
+    // read_only lives in the band for both tabs and is never mirrored to a
+    // live field.
+    //
+    // What it does: writes the named band's bit, and invalidates the top strip
+    // when that band is the active one. The damage is for the icon row's Lock
+    // button, whose glyph swaps closed-for-open on this flag with no stashed
+    // bit behind it, so the tick comparator cannot catch it; the button's lamp
+    // and the toolbar faces that also move with the flag do ride the
+    // comparator and merely arrive after this. A write to the parked band
+    // changes no painted pixel and so takes no damage at all.
+    //
+    // The tab row's own lane took a second damage call until 2026-08-29, on
+    // the reading that the flag moved that row's face; the top-strip damage is
+    // a superset of that lane, and the status chain that lived there is gone.
+    //
+    // History-less, like every band key: no undo entry, no dirty bit; the
+    // value persists on the next ordinary Ctrl+S, which a locked tab may run
+    // itself. A same-value write is a no-op here as well as at the editor's
+    // own unchanged() gate one step earlier.
+    void set_tab_read_only(char tab_view, bool value);
+
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare
     // horizontal arrows step one painted column per press; the lane decides WHAT
