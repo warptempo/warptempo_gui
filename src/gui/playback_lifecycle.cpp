@@ -57,10 +57,10 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // 2026-09-01 (the record is at render_player.cpp's retirement comment).
     // The FENCE is the same: playback.stop() proves the callback
     // is out of the item's buffer before a rebind or a free, exactly as it
-    // proves it out of the source's. Every player stop — the pause, the
-    // natural end, the close, the rebind ahead of the next item — comes here
-    // and nowhere else, which is what keeps the keyboard stop rule and the
-    // fence-before-rebind ordering one body.
+    // proves it out of the source's. Every player stop — the pause, the Up
+    // act, the natural end, the close, the rebind ahead of the next item —
+    // comes here and nowhere else, which is what keeps the keyboard stop rule
+    // and the fence-before-rebind ordering one body.
     if (app.render_player.active) {
         if (!playback.is_playing() &&
             app.render_player.transport != RenderPlayerTransport::Live)
@@ -70,15 +70,17 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         viewport.invalidate_modal_dialog_area();
         // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE
         // (2026-08-28): this fork is the one place every player stop passes
-        // — the pause, the natural end, the dead device, the close, the
-        // rebind ahead of the next item — so the push lives inside it and no
-        // caller can forget it. The callers that go on to a "playing" or an
+        // — the pause, the Up act, the natural end, the dead device, the
+        // close, the rebind ahead of the next item — so the push lives inside
+        // it and no caller can forget it. The callers that go on to a
+        // "playing" or an
         // "inactive" push (play_wav's tail, the close) supersede this one a
         // moment later, two binder calls where one would do; accepted, the
         // alternative being one push per caller that the next caller
         // forgets. The resume point the push reads is the caller's to have
-        // written BEFORE calling here (toggle_pause and the tick's dead-device
-        // arm do; the natural end writes its 0 first for the same reason).
+        // written BEFORE calling here (toggle_pause, the tick's dead-device
+        // arm and up() do; the natural end writes its 0 first for the same
+        // reason).
         if (render_player) render_player->publish_media_state();
         return;
     }

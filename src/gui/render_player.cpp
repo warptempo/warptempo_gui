@@ -192,6 +192,26 @@ void GuiRenderPlayer::up() {
     // said it before. The wall is asked through the predicate above, which the
     // button's face reads too, so the key and the button cannot disagree.
     if (!render_player_up_actionable(app)) return;
+    // Up pauses what is sounding, and the pause belongs here rather than at
+    // the stop body (architect 2026-09-04, from a road test on the tablet).
+    // The play/pause face reads the highlight ahead of the transport
+    // (render_player_highlight_act_row), and the listing this act builds is
+    // the root's folder rows, which hold no row for the item — so the
+    // highlight lands on a folder, the face repaints as a play-class glyph,
+    // and a transport left live under it would be a face that lies about the
+    // sound. On the tablet the row carries no stop button, so this is the one
+    // road where the sound could keep running under such a face. The resume
+    // point is read before the stop exactly as toggle_pause's pause arm reads
+    // it, so this is a pause and nothing more: the item stays the transport's,
+    // and re-entering its batch folder seats the highlight back on it
+    // (rebuild_rows) where the Play button reads the transport tail and
+    // resumes. At the root the highlight is a folder row and the face says
+    // "open folder" over a paused transport, which is what both of them are
+    // doing.
+    AppState::RenderPlayer& rp = app.render_player;
+    if (rp.transport == Transport::Live)
+        rp.resume_frame = std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
+    playback_lifecycle.stop_playback_if_playing();
     enter(Folder::Root, {});
 }
 
@@ -685,8 +705,10 @@ void GuiRenderPlayer::toggle_pause() {
         // the same call, so the picture does not step at the pause.
         // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
         // stop_playback_if_playing leaves app.playhead_cursor_sample where
-        // the user put it, so the player's two pauses are the whole
-        // resting-write set.
+        // the user put it, so the player's own pauses are the whole
+        // resting-write set — this arm, the tick's dead-device arm and, since
+        // 2026-09-04, up(), each reading the predictor's position exactly as
+        // this one does and each writing it before the stop body.
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();

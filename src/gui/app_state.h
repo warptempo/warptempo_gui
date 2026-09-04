@@ -8271,8 +8271,10 @@ struct AppState {
     //              the folder's two ends and Home's previous-track window walk
     //              this folder
     //              and never another, and the item keeps playing while the
-    //              listing is navigated elsewhere — the displayed listing and
-    //              the item's folder are two things), and the item's index in
+    //              highlight walks and while a folder is entered — the
+    //              displayed listing and the item's folder are two things;
+    //              GuiRenderPlayer::up() is the one navigation that pauses
+    //              it), and the item's index in
     //              that list. A row whose path is the item's wears the
     //              transport glyph, and since R38 the HIGHLIGHT FOLLOWS the
     //              item at every change the transport makes on its own, where
@@ -8297,8 +8299,9 @@ struct AppState {
     //              (GuiRenderPlayer::play_wav and toggle_pause's resume arm),
     //              PAUSED at the ONE STOP BODY'S PLAYER FORK
     //              (GuiPlaybackLifecycle::stop_playback_if_playing — every
-    //              live transport that stops passes there, the pause, the
-    //              dead device, the natural end and the close alike), and IDLE
+    //              live transport that stops passes there, the pause, the Up
+    //              act, the dead device, the natural end and the close
+    //              alike), and IDLE
     //              at the THREE acts that mean "resting at the start": the
     //              natural end's own rest, open() and close(), each written
     //              AFTER that fork — open()'s reset alone never meeting it,

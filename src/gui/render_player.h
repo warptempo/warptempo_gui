@@ -144,9 +144,10 @@ struct GuiInputHandler;
 // TRANSPORT SECOND (architect 2026-08-31, R6, narrowing R40's "it never reads
 // the highlight, in any state" — the table is at play_button_act). THE
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
-// the listing is navigated elsewhere, it wears the transport glyph on its
-// row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW and the two
-// Shift+Home / Shift+End ENDS walk ITS
+// the highlight walks and while a folder is entered — up() is the one
+// navigation that pauses it, and the reason is at that body — it wears the
+// transport glyph on its row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW
+// and the two Shift+Home / Shift+End ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
 // folder and never a wrap. Every listing is built when its folder is entered
 // and never kept fresh.
@@ -217,12 +218,13 @@ struct GuiInputHandler;
 // is the decoded buffer's own [0, frames). So play_item / resume / seek call
 // playback.play directly against that domain, and the state that says the
 // transport is live is the player's own (`transport`'s LIVE value, the
-// scanner flag's mirror). THE STOP IS STILL THE ONE STOP BODY: every pause,
-// natural end and close takes GuiPlaybackLifecycle::stop_playback_if_playing,
-// which carries the player's fork inside it (the fence, then the transport
-// moved to PAUSED and the modal row damaged instead of the scanner teardown),
-// so the keyboard stop rule and the fence-before-rebind ordering hold by
-// construction.
+// scanner flag's mirror). THE STOP IS STILL THE ONE STOP BODY: every pause —
+// the transport's own, the tick's dead-device arm and, since 2026-09-04, the
+// Up act — every natural end, every close and the rebind ahead of the next
+// item takes GuiPlaybackLifecycle::stop_playback_if_playing, which carries the
+// player's fork inside it (the fence, then the transport moved to PAUSED and
+// the modal row damaged instead of the scanner teardown), so the keyboard stop
+// rule and the fence-before-rebind ordering hold by construction.
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
 // `h` view and, since 2026-09-01, ONE icon-row button (Play renders) all reach
@@ -328,7 +330,10 @@ struct GuiRenderPlayer {
     // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE, one act, since
     // the `..` row retired (2026-09-01); a SILENT consumed no-op at the root,
     // which is `tmp/` (the wall's one owner is render_player_up_actionable,
-    // app_state.h, which the button's face reads too).
+    // app_state.h, which the button's face reads too). Past that wall it
+    // pauses a live transport before it enters the root, through the one stop
+    // body and with the resume point read as toggle_pause reads it; the
+    // reasoning is at the body and nowhere else.
     void up();
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
@@ -595,10 +600,11 @@ struct GuiRenderPlayer {
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
-    // covers the pause, the natural end's last-wav rest, the dead device and
-    // the rebind ahead of the next item; seek_to — both arms, so the head
-    // unit's clock stays honest (which is also what publishes the car Stop's
-    // seek to the top, that command being a pause and then this seek); and
+    // covers the pause, the Up act, the natural end's last-wav rest, the dead
+    // device and the rebind ahead of the next item; seek_to — both arms, so
+    // the head unit's clock stays honest (which is also what publishes the
+    // car Stop's seek to the top, that command being a pause and then this
+    // seek); and
     // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last
     // push at speed 1.0. Title = the item's path relative to the project
