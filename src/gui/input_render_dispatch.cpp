@@ -751,12 +751,15 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // the label reading as the plural noun the two numerals count rather than
     // as a category in a trailing parenthetical ("Rendering 3 of 8 (BPM)...",
     // which said neither what the 8 were nor what the render was doing to
-    // them). BOTH LABELS ARE THE MENU ROWS' OWN WORDS since the 2026-08-31
-    // rebrand (kSeriesPopupItems): the counted noun IS the command's name, so
-    // the progress line and the row the user pressed say the same thing. THE
-    // WORDS ARE SHARED, THE CASE IS EACH SURFACE'S — the rows took Title Case
-    // 2026-09-03 ("Grid Iterations" / "BPM Iterations", a menu item being a
-    // control's NAME) and this line, a card and a stderr tag, stays
+    // them). BOTH LABELS ARE THE TWO COMMANDS' OWN WORDS since the 2026-08-31
+    // rebrand: the counted noun IS the command's name, so
+    // the progress line and the control the user pressed say the same thing.
+    // The vocabulary's owner was the menu rows until 2026-09-04 and is the two
+    // ICON-ROW TOOLTIPS since, that menu having been deleted and its commands
+    // sent back to the row (redesign_button_tooltip, app_state.h). THE
+    // WORDS ARE SHARED, THE CASE IS EACH SURFACE'S — the names are Title Case
+    // ("Grid Iterations" / "BPM Iterations", a control's NAME) and this line, a
+    // card and a stderr tag, stays
     // sentence case like every other card, a card being a DESCRIPTION (the
     // two-class rule; paint_handler.cpp's capitalization block owns it). The label is one string shared
     // with the stderr summary above,
@@ -1067,10 +1070,10 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     // The batch's DISPLAY label — the progress line's counted noun and the
     // stderr summary's tag, both fed from this one string. "BPM iterations"
-    // since the 2026-08-31 rebrand, which put ONE noun through the menu row,
-    // this line and the sweep's twin: the counted things ARE the menu row's
-    // iterations. It is NOT the row's constant — the row says "BPM
-    // Iterations" in the Title Case a control's name takes since 2026-09-03
+    // since the 2026-08-31 rebrand, which put ONE noun through the control's
+    // own name, this line and the sweep's twin: the counted things ARE the
+    // command's iterations. It is NOT that name's constant — the button says
+    // "BPM Iterations" in the Title Case a control's name takes
     // and this string is a card's, a description, so they share the words and
     // not the spelling. It read "BPM values" from 2026-08-29
     // (architect: the line says what the numbers count, and "BPM" alone named

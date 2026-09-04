@@ -55,14 +55,14 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. FIVE roster entries are absent — row 1's FILE, EDIT, SERIES
-// (the ITERATIONS label's enumerator), SETTINGS and HELP anchors (re-greped
-// 2026-09-03 against kDropdownMenus), each of whose action is a POPUP TOGGLE,
+// the same ids. FOUR roster entries are absent — row 1's FILE, EDIT, SETTINGS
+// and HELP anchors (re-greped 2026-09-04 against kDropdownMenus), each of
+// whose action is a POPUP TOGGLE,
 // not a chord at all, since no keyboard chord opens or closes a dropdown. All
-// five are spelled at their own claim, which walks kDropdownMenus rather than
+// four are spelled at their own claim, which walks kDropdownMenus rather than
 // naming them.
 // THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
-// table, which is what makes "the table's length plus those five IS the
+// table, which is what makes "the table's length plus those four IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
 // The `shift` column is each button's OWN chord — THREE rows set it: Redo's
@@ -292,16 +292,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // admission IconPaste carried for Ctrl+Alt+Shift+P went too, that chord
     // being a menu row of its own now; the trim scissors' deletion above is the
     // same shape.)
-    // (THE BPM AND ITERATION ROWS ARE DELETED — 2026-08-27, with their
-    // buttons, and it is the propagate relocation's shape exactly: the
-    // architect's Series relocation gave bare `m` and bare `i` the new SERIES
-    // MENU as their one pointer home, so both reach the pointer as MENU ITEMS
-    // now. Neither chord died with its row — a menu item dispatches through
+    // (THE BPM AND ITERATION ROWS SPENT 2026-08-27 TO 2026-09-04 OUT OF THIS
+    // TABLE, with their buttons, and it was the propagate relocation's shape
+    // exactly: the Series relocation gave bare `m` and bare `i` a MENU ROW
+    // each. Neither chord died with its row — a menu item dispatches through
     // on_key exactly as a button's chord does — and neither carried a modifier
-    // admission to move. BPM'S KEY IS BARE `m`, NOT `b`, which is worth
-    // keeping here now that the row is gone: the arm is at handle_mode_keys,
-    // input_key_dispatch.cpp, and the menu ROW spells the key the keyboard
-    // actually has.)
+    // admission to move, which is why both rows come back below unchanged when
+    // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
+    // which puts them past the viewport group rather than here.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
     // THE CENTERED PIN (2026-08-31, R11) — Follow's neighbour and its shape
     // exactly: bare `y`, a TOGGLE with a lamp on the live bit its own chord
@@ -329,6 +327,24 @@ constexpr ToolbarChord kToolbarChords[] = {
     // greys this face in there.
     {RedesignButton::IconRestrictUndo,
      GuiKeys::Z, false, false, false, false, true},                                // bare z
+    // THE ITERATION GROUP (architect 2026-09-04) — two rows back from the menu
+    // row, and their 2026-08-27 rows verbatim: the architect deleted the
+    // Iterations dropdown once the icon row had room again, so both commands
+    // are BUTTONS once more and this table is their chord half. BPM'S KEY IS
+    // BARE `m`, NOT `b` — the brief that first asked for this button expected
+    // `b` and the code says otherwise (the arm is at handle_mode_keys,
+    // input_key_dispatch.cpp); the button is its chord, so it takes the chord
+    // the keyboard actually has.
+    //
+    // NEITHER ADMITS A MODIFIER and neither repeats: the BPM opener raises a
+    // modal editor, which a repeat could only raise onto itself, and the mode
+    // toggle is one bit. Both are TOGGLES-or-acts rather than radios — the
+    // mode flag presses through in both directions — and both are consumed by
+    // the `h` view, which greys them through the derived partition below with
+    // nothing hand-listed, the answer the ITERATIONS ANCHOR needed a hand-named
+    // arm for while it was a menu.
+    {RedesignButton::IconBpm,  GuiKeys::M,   false, false, false, false, true},     // bare m
+    {RedesignButton::IconIter, GuiKeys::I,   false, false, false, false, true},     // bare i
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
     // 2026-09-01, the LOAD IN PLACE having moved to the history group below
@@ -687,8 +703,18 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FIVE menu anchors carries a chord here — 49
-// rows against the roster's 54 since 2026-09-04'S RESTRICT-UNDO-TO-VIEWPORT
+// every RedesignButton but the FOUR menu anchors carries a chord here — 51
+// rows against the roster's 55 since 2026-09-04'S ITERATIONS DELETION, which
+// moved BOTH numbers in one act and is the SERIES RELOCATION'S OWN SHAPE RUN
+// BACKWARDS: the architect deleted the menu-row dropdown once the icon row had
+// room again, so `IconBpm` and `IconIter` joined this table on bare `m` and
+// bare `i` while the ITERATIONS ANCHOR left the roster carrying no chord — the
+// table gained two and the roster gained one. Its two commands were untouched
+// on the keyboard throughout; what moved is where a POINTER reaches them, and
+// the pair OPENED a group (the group arithmetic is
+// redesign_button_opens_icon_group's, never this table's).
+// It was 49 against 54 earlier that day, at 2026-09-04'S
+// RESTRICT-UNDO-TO-VIEWPORT
 // LAMP, one more pure addition inside an existing group (a chord, so the pair
 // moved together): `IconRestrictUndo` arrived on bare `z` and no separator or
 // group boundary moved with it. THE ROW WAS REGROUPED LATER THAT SAME DAY and
@@ -754,7 +780,7 @@ constexpr ToolbarChord kToolbarChords[] = {
 // that day it was 45 against 48: the marker walk's three in, the collapsed
 // play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
 // so its removal moved the roster and not this table — so the
-// table's length plus THE FIVE ANCHORS IS the roster. The check is not
+// table's length plus THE FOUR ANCHORS IS the roster. The check is not
 // bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
@@ -762,11 +788,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 // drift a build error instead. (The addend has walked the anchor count: + 2
 // until 2026-08-13, when the Quit button became the File menu's one item — the
 // roster's total did not move, the split did — then + 3 with Edit
-// 2026-08-20, + 4 with Iterations 2026-08-27 and + 5 with Help 2026-09-03.)
-static_assert(std::size(kToolbarChords) + 5 ==
+// 2026-08-20, + 4 with Iterations 2026-08-27, + 5 with Help 2026-09-03 and
+// back to + 4 later that day, when the Iterations anchor was deleted and its
+// two commands became chord rows here.)
+static_assert(std::size(kToolbarChords) + 4 ==
                   static_cast<std::size_t>(kRedesignButtonCount),
               "kToolbarChords must cover every RedesignButton except the "
-              "File, Edit, Series, Settings and Help anchors");
+              "File, Edit, Settings and Help anchors");
 
 // (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
 // drop the Save reach through". From 2026-08-11 a plain left press on a roster
@@ -839,7 +867,7 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // two SKIPS since 2026-08-24, whose ctrl-click is Ctrl+Home / Ctrl+End — which
 // is why the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
-// of any row, or on one of the five dropdown anchors (which carry no chord row
+// of any row, or on one of the four dropdown anchors (which carry no chord row
 // at all) is refused exactly as it always was. The walk is kToolbarChords in the
 // arm's own order, so the button this answers about is the button that would
 // arm.
@@ -1245,7 +1273,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 //   button's grey are one decision, this walk's.
 //   and THE FILE ANCHOR since 2026-08-13 — THE ONE LIVE ENTRY THAT IS NOT A
 //   CHORD'S ADMISSION, which is why it is spelled in the body rather than
-//   derived: an anchor has no chord to ask about, so the four anchor arms
+//   derived: an anchor has no chord to ask about, so the anchor arms
 //   answer ONE criterion by hand — an anchor is dead iff every row of its menu
 //   is dead — and File is the one that answers it the other way. ITS MENU IS
 //   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
@@ -1308,12 +1336,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // arrows paint unconditionally and every roster button publishes a real rect in
 // every state.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
-    // THE FIVE ANCHORS ARE ONE ARM AND ONE OWNER (menu_anchor_dead_in_mode,
+    // THE FOUR ANCHORS ARE ONE ARM AND ONE OWNER (menu_anchor_dead_in_mode,
     // app_state.h — the predicate the OPEN reads too, at toggle_dropdown).
     // SETTINGS is dead because
     // its items reach the settings editor by a DIRECT call that meets no gate
-    // at all; EDIT (2026-08-20) and ITERATIONS (2026-08-27) because every one
-    // of their rows is a CHORD the mode's allowlist drops, so the menu would
+    // at all; EDIT (2026-08-20) because every one
+    // of its rows is a CHORD the mode's allowlist drops, so the menu would
     // open onto nothing — the face promising more than the keys deliver, which
     // is what this partition exists to prevent; HELP (2026-09-03) for the same
     // reason since its one row gained Shift+L that evening, a chord the
@@ -5248,9 +5276,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // roster admits it on, CTRL+SHIFT never), a SHIFT press binding only where
     // the roster admits one, and any press in the band that is not on a button
     // a consumed nothing. Each band differs ONLY in its rect
-    // and (row 1) in the dropdown toggle of its FIVE non-chord buttons — the
-    // menu anchors File, Edit, Iterations, Settings and Help (re-greped
-    // 2026-09-03 against kDropdownMenus) — so the press is ONE arm body,
+    // and (row 1) in the dropdown toggle of its FOUR non-chord buttons — the
+    // menu anchors File, Edit, Settings and Help (re-greped
+    // 2026-09-04 against kDropdownMenus) — so the press is ONE arm body,
     // arm_redesign_press, driven
     // by the table's per-button flags — and the act one release body,
     // finish_chrome_press_release, in on_button_release.
@@ -5285,8 +5313,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // which no keyboard chord performs, so they take the walk below
                 // rather than a row in the chord table. Their ITEMS lead to
                 // routes the keyboard already has — the bare `;` still opens
-                // the settings editor DIRECTLY, and every File, Edit and
-                // Iterations row carries its own accelerator — so a
+                // the settings editor DIRECTLY, and every File, Edit and Help
+                // row carries its own accelerator — so a
                 // dropdown is a pointer affordance for an existing road, never a
                 // second one; Help's one item is the sanctioned exception, an
                 // item that genuinely cannot have a chord (the record is at
@@ -7247,10 +7275,10 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's five menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
+// (row 1's four menu anchors and the view bar's three, row 3's two
+// tabs, row 4's twenty-eight — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 54, the enum's
+// eighteen since 2026-08-29: 55, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -8786,15 +8814,16 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // used, read the other way: the face must not promise more than the keys
     // deliver. Its anchor greys beside this (history_mode_disables_button).
     //
-    // THE SERIES MENU JOINED THE LOCKOUT ON 2026-08-27 on that same criterion,
-    // with nothing re-argued: it is a COMMAND menu, and BOTH its rows (bare
-    // `m` and bare `i`) are chords the mode's allowlist drops — the mass-marker
-    // category was the one group the view dropped whole, and the relocation
-    // moved where those two commands are reached without moving what the mode
-    // does to them. Its anchor greys beside this one too.
+    // (THE SERIES MENU JOINED THE LOCKOUT ON 2026-08-27 on that same
+    // criterion and left it with its own deletion on 2026-09-04: both of its
+    // rows — bare `m` and bare `i` — were chords the mode's allowlist drops,
+    // and they still are. What changed is where the face lives: the two
+    // commands are icon-row BUTTONS again, so the DERIVED walk below greys
+    // them with nothing hand-listed, which is what a chord-bearing button buys
+    // that an anchor cannot.)
     //
     // THE HELP MENU JOINED THE LOCKOUT ON 2026-09-03, and it is the COMMAND
-    // menu case Edit and Series are refused under, with nothing re-argued: its
+    // menu case Edit is refused under, with nothing re-argued: its
     // single row is an ordinary chord row, Shift+L, dispatched through on_key
     // exactly as a redesigned button's chord is (kHelpPopupItems, act
     // GuiPopupAct::Chord), and the mode answers that chord for itself — the

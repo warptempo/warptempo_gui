@@ -155,26 +155,25 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (250 since 2026-09-04 — the walk's own paragraph below) are
+// ceiling (232 since 2026-09-04 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 918 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-six-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it wide (2304/2.25 = 1024 logical px, 106 past
-// the walk) and 250 is the fit ceiling on that panel since the row was
-// REGROUPED on 2026-09-04, the two view lamps merging into one group and the
-// RESTRICT UNDO TO VIEWPORT lamp moving to the viewport-class group's tail:
-// one separator off the walk and one gap on, seven authored px (249 at the
-// 925-px walk that lamp had left earlier the same day, 258 at the 891-px walk
-// the Center on next marker lamp left before it, 268 at the 857-px walk the
-// radio collapse left before that, 240 at the 959-px walk the
+// 993 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-eight-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it by 31 (2304/2.25 = 1024 logical px) and 232
+// is the fit ceiling on that panel since the ITERATIONS MENU WAS DELETED on
+// 2026-09-04 and its two commands came back to the row as a group of their
+// own: two boxes, one gap and one separator, seventy-five authored px (250 at
+// the 918-px walk the same day's regrouping left, 249 at the
+// 925-px walk the restrict-undo lamp had left before it, 258 at the 891-px walk
+// the Center on next marker lamp left before that, 268 at the 857-px walk the
+// radio collapse left, 240 at the 959-px walk the
 // centered lamp left on 2026-08-31, and 249 at the 2026-08-27 relocation's own
-// 925-px walk, which is the same walk and the same ceiling arrived at from the
-// other direction; 250 was tried as the TEMPLATE for
+// 925-px walk, which is the 925 reached from the other direction; 250 was
+// tried as the TEMPLATE for
 // an afternoon on 2026-08-27 and stepped back the same evening for the ~3
-// authored px it shaved off the rightmost history icon, which is one step past
-// that day's ceiling and exactly at this one) — and the redesign
+// authored px it shaved off the rightmost history icon) — and the redesign
 // carries no collision rule anywhere — the crop-at-the-floor allowance recorded
 // at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
 // VOCABULARY; which of its values lays out well is the architect's call on his

@@ -922,6 +922,73 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
                         : nullptr;
 }
 
+// THE BPM SWEEP'S OPEN VERDICT — the contract, the reader list and the arm
+// inventory are at the declaration (app_state.h). It sits here, beside
+// tempo_cent_step_group_verdict, because it is the same kind of thing: a const
+// walk of the warp store that the ACT reads for its refusal and a BUTTON'S FACE
+// reads for its grey, extracted so the two cannot be two spellings of one
+// ladder.
+//
+// THE ARMS ARE THE DISPATCH'S OWN, IN ITS OWN ORDER, and each is argued at the
+// dispatch where its sentence is raised (input_key_dispatch.cpp's bare `m`
+// arm). What is worth stating HERE is the one thing the extraction changed:
+// the coincident-collapse test reads warp_red_flag_set_cached's `collapsed`
+// set rather than calling warp_coincident_collapse_members fresh. It is the
+// SAME verdict — that cache's pass 1 is that classifier over the same slice of
+// the same committed store (warp_frame_map_view.cpp) — memoized on the store's
+// generation, which is what makes a per-tick face read cost nothing.
+BpmSweepPlan bpm_sweep_plan(const AppState& a, const GuiAudio& audio) {
+    const auto refused = [](BpmSweepRefusal r) {
+        BpmSweepPlan p;
+        p.refusal = r;
+        return p;
+    };
+    if (a.active_markers_view != 'W')
+        return refused(BpmSweepRefusal::WrongColumn);
+    if (!active_column_authoring_allowed(a))
+        return refused(BpmSweepRefusal::OffHomeView);
+    if (a.selected_markers.empty())
+        return refused(BpmSweepRefusal::NothingSelected);
+
+    const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
+    const int n        = static_cast<int>(mv.size());
+    const int owner    = *a.selected_markers.begin();
+    const int last_sel = *a.selected_markers.rbegin();
+    if (owner < 0 || last_sel >= n)
+        return refused(BpmSweepRefusal::StaleSelection);
+    // std::set is ascending, so a run [owner .. last_sel] is contiguous iff
+    // its extent equals its count.
+    if (last_sel - owner + 1 != static_cast<int>(a.selected_markers.size()))
+        return refused(BpmSweepRefusal::NotOneRun);
+
+    const int boundary = section_end_index(mv, last_sel);
+    const int scan_end = std::min(boundary, n - 1);
+    for (int i = owner; i <= scan_end; ++i) {
+        if (!mv[static_cast<size_t>(i)].label_ref.empty() &&
+            !effective_disabled(mv, i))
+            return refused(BpmSweepRefusal::LabelRefInSpan);
+    }
+    if (!bpm_popup_eligible_marker(mv[static_cast<size_t>(owner)]))
+        return refused(BpmSweepRefusal::OwnerIneligible);
+    if (warp_red_flag_set_cached(a, audio.sample_rate(),
+                                 static_cast<long>(audio.total_frames()))
+            .collapsed.count(owner))
+        return refused(BpmSweepRefusal::OwnerCoincident);
+    for (int i = owner + 1; i <= last_sel; ++i) {
+        const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
+        if (m.tempo_inherits)      continue;
+        if (effective_disabled(mv, i)) continue;
+        if (m.tempo_cents != mv[static_cast<size_t>(owner)].tempo_cents ||
+            m.tempo_scale != mv[static_cast<size_t>(owner)].tempo_scale)
+            return refused(BpmSweepRefusal::MixedTempos);
+    }
+
+    BpmSweepPlan plan;
+    plan.owner    = owner;
+    plan.boundary = boundary;
+    return plan;
+}
+
 // The DIRECTIONAL half of the Up / Down face, forking exactly where
 // adjust_tempo_cents forks — the group scan above at 2+, the focused OWNER's
 // own clamped landing at a singleton. The full ruling, the deliberate

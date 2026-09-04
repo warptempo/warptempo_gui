@@ -289,8 +289,8 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // site states its own class and points here.
 //
 //   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
-//     "Synchronize to External Storage", "Paste Phase Reset State", "BPM
-//     Iterations", "AV Sync Stats"), a modal row's WORD button ("Copy to
+//     "Synchronize to External Storage", "Paste Phase Reset State", "AV Sync
+//     Stats"), a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
 //     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Trim Region ([)").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
@@ -309,10 +309,11 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     than a carve-out: a CARD naming an act stays a sentence because a card
 //     is a description ("BPM iterations work in source view"), while the
 //     TOOLTIP naming the same act is that control's name ("Render Grid
-//     Iterations (Ctrl+Alt+R)") and the dropdown row above it says "BPM
-//     Iterations". No reader compares any of these as strings — the five item
+//     Iterations (Ctrl+Alt+R)"), which is also the icon-row button's own
+//     ("BPM Iterations (M)"). No reader compares any of these as strings — the
+//     four item
 //     tables are read by index (kFilePopupItems, kEditPopupItems,
-//     kSeriesPopupItems, kSettingsPopupItems, kHelpPopupItems, app_state.h) —
+//     kSettingsPopupItems, kHelpPopupItems, app_state.h) —
 //     so each surface is free to spell its own class.
 //   * TITLE CASE SPELLING: principal words capitalized; articles,
 //     conjunctions and prepositions of three letters or fewer lowercase unless
@@ -360,9 +361,10 @@ struct MenuButtonDef {
 // float is adjacent with no gap and the walk below is a pure shaped-run walk, so
 // the order lives HERE and in the roster enum (app_state.h, whose comment states
 // that enum order IS painted order and carries the rule in full) and in nothing
-// else — no width, pad or anchor term reads it. THE FLOAT IS FIVE BUTTONS
-// SINCE 2026-09-03; it was two from 2026-08-15, when the Navigation anchor was
-// deleted with its menu.
+// else — no width, pad or anchor term reads it. THE FLOAT IS FOUR BUTTONS
+// SINCE 2026-09-04, when the Iterations anchor was deleted with its menu; it
+// was five from 2026-09-03, and two from 2026-08-15, when the Navigation
+// anchor was deleted the same way.
 constexpr MenuButtonDef kMenuButtons[] = {
     // THE FILE MENU (architect 2026-08-13) — the row's THIRD dropdown when it
     // landed, and one of TWO since the Navigation anchor's deletion on
@@ -383,24 +385,18 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // does re-enter the right float's collision corner, which is recorded (and
     // deliberately not acted on) in that note below.
     {RedesignButton::Edit,       "Edit"},
-    // THE ITERATIONS MENU (architect 2026-08-27 as "Series", REBRANDED
-    // "Iterations" 2026-08-31) — the row's FOURTH dropdown, painted between
-    // Edit and Settings. THE ORDER RULE IS SETTINGS-LAST
-    // (architect 2026-08-03): File and Edit lead as the standard pair, the
-    // application's own menus follow, and Settings paints last in the left
-    // float — so this landed in front of it without re-opening that ruling.
-    // A COMMAND MENU of TWO rows, "BPM Iterations" and "Grid Iterations", and
-    // a RELOCATION:
-    // IconBpm and IconIter were deleted from the icon row in the same ruling,
-    // so this menu is those two commands' one pointer home rather than a
-    // second road to them. Nothing here needed a width or pad term — the row
-    // is one left-to-right accumulation over this table — but the LABEL'S
-    // WIDTH re-enters the right float's collision corner, which is recorded
-    // (and deliberately not acted on) in that note below; the rebrand widened
-    // this slot by 21px at 100% and the answer there did not change.
-    // (The ENUMERATOR keeps its `Series` spelling: the rebrand is labels and
-    // docs, and no identifier here is user-visible.)
-    {RedesignButton::Series,     "Iterations"},
+    // (THE ITERATIONS MENU WAS THE ROW'S FOURTH DROPDOWN from 2026-08-27 to
+    // 2026-09-04, painted between Edit and Settings — a COMMAND MENU of TWO
+    // rows, "BPM Iterations" and "Grid Iterations", landing as "Series" and
+    // rebranded 2026-08-31, its enumerator keeping the first spelling
+    // throughout. The architect DELETED IT once the icon row had room again
+    // and both commands went back to that row as a group of two buttons, so
+    // the 2026-08-27 relocation runs in reverse and the doctrine it satisfied
+    // is satisfied from the other side. This table simply lost a row: the
+    // float is one left-to-right accumulation over it, with no width, pad,
+    // total or anchor expression to update — and what the deletion gives the
+    // LEFT FLOAT back is the 85px slot that label cost, which the right
+    // float's collision note below re-measures.)
     // (THE SECOND DROPDOWN, "Navigation" — architect 2026-08-02, a COMMAND MENU
     // of the zoom and stepping commands — painted between these two from that
     // day until 2026-08-15, when the architect deleted it whole: every one of
@@ -432,13 +428,20 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // Color" bar, the one row the redesign had left out) reborn as the three
 // ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3.
 //
-// THE FIFTH ANCHOR'S ROOM, measured 2026-09-03 with the Help label: the LEFT
-// float is 312 authored px at 100% (File 47 + Edit 48 + Iterations 85 +
-// Settings 78 + Help 54, each a shaped run plus 2 x 10px pad) and 692 device px
-// at the tablet's 225%; the RIGHT float below is 183 and 409. So the two meet
-// only once the window is narrower than 495 device px at 100% or 1101 at
-// 225% — the laptop's 1920 leaves 1425 of clear ground and the tablet's 2304
-// leaves 1203, and even the 640px DEFENSIVE FLOOR at 100% keeps 145. The row
+// THE FLOAT'S ROOM, re-measured 2026-09-04 when the ITERATIONS ANCHOR was
+// deleted: the LEFT
+// float is 227 authored px at 100% (File 47 + Edit 48 +
+// Settings 78 + Help 54, each a shaped run plus 2 x 10px pad) and ~503 device
+// px at the tablet's 225% — the Iterations slot's own ~189 off the 692 the
+// five-anchor float measured, the device figure carrying its tilde because a
+// shaped run's width is not exactly proportional to its scale (the same
+// caveat the collision note below states in full); the RIGHT float below is
+// 183 and 409. So the two meet
+// only once the window is narrower than 410 device px at 100% or ~912 at
+// 225% — the laptop's 1920 leaves 1510 of clear ground and the tablet's 2304
+// leaves ~1392, and even the 640px DEFENSIVE FLOOR at 100% keeps 230. THE
+// FIVE-ANCHOR FIGURES WERE 312 and 692, meeting at 495 and 1101; the deletion
+// moved the corner further away in every column. The row
 // still carries NO COLLISION RULE, which is the redesign's own answer
 // everywhere (the statement is at kMinWindowWidthPx, render.h): a window driven
 // under those figures crops, and no host of this product is near them.
@@ -969,7 +972,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // Mathmode had been iteration mode's since 2026-08-18, when it took the
     // summation sigma's slot and the sigma moved to the CUMULATIVE toggle), and
     // the separator went too — FOLLOW, the survivor, joined the ZOOM GROUP
-    // above rather than standing alone behind a divider.)
+    // above rather than standing alone behind a divider. THE TWO BUTTONS AND
+    // BOTH GLYPHS CAME BACK ON 2026-09-04 in a group of their own, further
+    // down this table; the mass-marker group itself did not.)
     // Follow's icon walked twice: the provisional "F" letter, then
     // media-seek-forward (2026-07-31), then go-jump (2026-08-01) — the architect
     // settling on the chevron-and-dot, which reads as GOING to a place rather
@@ -999,6 +1004,25 @@ constexpr IconRowDef kIconRowButtons[] = {
     // no box and no gap; what the same ruling took off the walk is one
     // separator, the view lamps' own.
     {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
+    // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
+    // and grid iteration mode (bare `i`), back from the menu row behind a
+    // separator of their own, just ahead of the render-entry pair. The
+    // architect deleted the ITERATIONS dropdown once this row had room again,
+    // which is the 2026-08-27 Series relocation run in reverse — the two
+    // commands have ONE pointer home and it is these buttons. The row gains
+    // two boxes, one 2px gap and ONE separator, so the group count moves too
+    // (the leader is IconBpm, redesign_button_opens_icon_group).
+    //
+    // THE GLYPHS ARE THE ONES THAT LEFT WITH THE BUTTONS: music-note-16th,
+    // Breeze's flagged quaver, for the BPM opener — a tempo in beats per
+    // minute asks for a note — and mathmode, an italic f beside a
+    // multiplication cross reading as f(x), for the mode lamp, whose slot has
+    // kept a MATH SYMBOL since 2026-08-18 (it took the summation sigma's place
+    // when that glyph moved to the CUMULATIVE toggle). Both files came back
+    // verbatim from the installed 22px set with their provenance assets, so
+    // neither is a fresh pick and neither metaphor was re-argued.
+    {RedesignButton::IconBpm,  icons::Icon::MusicNote16th},
+    {RedesignButton::IconIter, icons::Icon::Mathmode},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the
@@ -1225,9 +1249,9 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // right margin − 8 chrome, at 100%):
 //
 //   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
-//   Iterations "BPM Iterations" | "M"                         -> 209   FLOOR
 //   Settings   "Projects Repository" (no column)              -> estimate FLOOR
 //   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P" -> 374   content
+//   Help       "AV Sync Stats" | "Shift+L"                    -> estimate FLOOR
 //
 // EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels
 // carried until 2026-09-03, when the dropdown items took Title Case (the one
@@ -1251,17 +1275,21 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // larger of the two terms at every paint, so which wins is never in doubt,
 // only which term it is.
 //
-// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENU: ITERATIONS, two rows of
-// "BPM Iterations"/"Grid Iterations" beside single letters. THE 2026-08-31
-// REBRAND WIDENED BOTH ROWS AND THE FLOOR STILL WINS: the widest label is
-// "BPM Iterations" at 104px (the advance-width method this file's collision
-// note uses), for a content ask of 209 — the pre-rebrand pair, "BPM" and
-// "Iterations", asked 171. It is still under 242, so the
-// floor IS its width — which is what gives a two-row menu a box that reads as a
-// menu at all, and is the whole of what this constant is for. (This is the
-// one measurement the rebrand had to make: had it crossed the 242 the box
-// would simply have derived like Settings' and Edit's, so the answer was
-// never in doubt, only which term won.)
+// WHAT THE FLOOR HOLDS UP TODAY IS THE SHORT MENUS: SETTINGS and HELP, whose
+// widest labels are short enough that the content ask stays under the 242 —
+// which is what gives a short menu a box that reads as a menu at all, and is
+// the whole of what this constant is for. Neither figure is stated: the
+// painter takes the LARGER of floor and content at every paint, so which term
+// wins is the only thing this table has to say.
+//
+// THE ITERATIONS MENU HELD THE FLOOR UP FROM 2026-08-27 UNTIL ITS DELETION ON
+// 2026-09-04 and is worth one line as the measurement that showed the floor
+// doing its work: two rows of "BPM Iterations"/"Grid Iterations" beside single
+// letters, the widest label 104px by the advance-width method this file's
+// collision note uses, for a content ask of 209 — the pre-rebrand pair, "BPM"
+// and "Iterations", asked 171. Both were under 242, so the floor was that
+// box's width in either spelling; the 2026-08-31 rebrand's one owed check
+// was never in doubt, only which term won.
 //
 // FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
 // when the table above was written and asked 168; it carries THREE rows now —
@@ -1639,9 +1667,24 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // era's and the same corner, answered the same way. THIS IS THE CHECK
         // THE REBRAND OWED, and it is why the record is kept as numbers: a
         // longer label is one term in a sum this note already spells.
+        //
+        // AND THE CORNER RECEDES ON 2026-09-04, the first move here that makes
+        // it SMALLER: the architect deleted the ITERATIONS ANCHOR and sent its
+        // two commands back to the icon row, so the float loses that 86px
+        // slot outright. By the same advance-width method the three
+        // application anchors come to 172 at 100% (46 + 48 + 78) and, with
+        // HELP'S OWN 74px slot (a 54px shaped run plus its two pads, the one
+        // term this note never carried — the five-anchor total is the view
+        // bar's note above), the FOUR-button float is 246 at 100% and ~492 at
+        // 200%. At 100%: 246 + 183 = 429 of the 640px floor, nowhere. At 200%:
+        // ~492 + 366 = ~858 on that floor, an overlap of ~218px — 24 LESS than
+        // the rebrand era's and the same corner, answered the same way. The
+        // deletion is the first term this sum has ever lost, and it is worth
+        // the line for exactly that reason: the record is a running one and it
+        // subtracts as readily as it adds.
         // THE DEPLOYMENTS ARE NOT
         // NEAR IT: 1920 on the laptop at 100%, and the tablet's 2304 at its
-        // own 225% is 1024 logical px against a ~441 logical-px float pair.
+        // own 225% is 1024 logical px against a ~429 logical-px float pair.
         // IT WAS REAL WHILE THE NAVIGATION
         // ANCHOR STOOD (2026-08-02..15): with its 96px slot the left float was
         // 220px at 100% and 439 at 200%, which OVERLAPPED the div by 165px on
@@ -2204,8 +2247,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members
-    // in FIVE groups since 2026-09-04, RE-COUNTED off the roster enum and the
+    // width, separator-divided groups of 32x32 buttons — TWENTY-EIGHT members
+    // in SIX groups since 2026-09-04, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
     // sharing one group since the second of that day's rulings deleted the
@@ -2219,7 +2262,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // it (2026-08-31, R11), THE CENTER ON NEXT MARKER LAMP and THE RESTRICT
     // UNDO TO VIEWPORT LAMP closing the group
     // (both 2026-09-04, the second arriving from the toolbar group later that
-    // day because it is a viewport gesture too) — the RENDER-ENTRY group
+    // day because it is a viewport gesture too) — THE ITERATION PAIR (the BPM
+    // opener and grid iteration mode, back from the deleted menu row later
+    // that same day) — the RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
     // 2026-09-01) and THE HISTORY GROUP, the opener leading THE WALK LAMP,
@@ -2228,7 +2273,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-six paint on every
+    // hiding/showing icons in top icon row"): all twenty-eight paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2244,21 +2289,29 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 26·32 + (26−5)·2 + (5−1)·9 = 8 + 832 + 42 + 36 = 918px,
+    //   8 + 28·32 + (28−6)·2 + (6−1)·9 = 8 + 896 + 44 + 45 = 993px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 926.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 1001.
     //
-    // THE REGROUPING'S ARITHMETIC (architect 2026-09-04, the day's third row
-    // ruling): the row lost ONE SEPARATOR and gained ONE GAP, which is −9 and
-    // +2 off the 925 the restrict-undo lamp had left that morning, so it stands
-    // at 918 authored px. No box moved either way — the two view lamps merged
-    // into one group and the restrict-undo lamp changed groups, and a member
-    // changing groups is free. The tablet fit ceiling is 250 — the walk fits
-    // while 918·factor ≤ 2304, 918·2.50 = 2295, and 251 overruns by ~1 device
-    // px. The tablet's first-run scale is 225 and the walk clears it wide:
-    // 918·2.25 = 2065 against the panel's 2304, 238 px of slack where the
-    // 959-px row had 146 — and 918 of the panel's 1024 logical px at that
-    // scale.
+    // THE ITERATIONS DELETION'S ARITHMETIC (architect 2026-09-04, the day's
+    // fourth row ruling and its only ADDITION): the row gained TWO BOXES, ONE
+    // GAP and ONE SEPARATOR — +64, +2 and +9 off the 918 the regrouping had
+    // left it — so it stands at 993 authored px. THE TABLET FIT CEILING GOES
+    // 250 → 232: the walk fits while 993·factor ≤ 2304, 993·2.32 = 2303.8, and
+    // 233 overruns by ten device px. The tablet's first-run scale is
+    // 225 and the walk still clears it: 993·2.25 = 2234 against the panel's
+    // 2304, 70 device px of slack where the 918-px row had 238 — and 993 of
+    // the panel's 1024 logical px at that scale, which is the narrowest margin
+    // this row has run at on that panel and the number to watch if anything
+    // else joins it.
+    //
+    // THE 918 IT GREW ON was the day's third ruling, the REGROUPING: the row
+    // lost ONE SEPARATOR and gained ONE GAP, −9 and +2 off the 925 the
+    // restrict-undo lamp had left that morning. No box moved either way — the
+    // two view lamps merged into one group and the restrict-undo lamp changed
+    // groups, and a member changing groups is free. Its ceiling was 250
+    // (918·2.50 = 2295, 251 overrunning by ~1 device px) and the tablet's 225
+    // left it 238 px of slack.
     //
     // THE 925 IT CAME OFF was the RESTRICT UNDO TO VIEWPORT lamp's own, earlier
     // on 2026-09-04: one box and one gap (+34) onto the 891 the Center on Next
@@ -2292,13 +2345,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 248 rather than 250 — 926 is
-    // the ink plus the pad, 926·2.48 = 2296 fits and 249 overruns — but the pad
-    // is ground, not ink, so the icons themselves are the thing measured.)
-    // Both older deployments clear it outright: 926 of 1024 at 100% on the
-    // retired Pi panel, 926 of 1920 on the laptop.
+    // (Counting the trailing pad the ceiling is 230 rather than 232 — 1001 is
+    // the ink plus the pad, 1001·2.30 = 2302 fits and 231 overruns — but the
+    // pad is ground, not ink, so the icons themselves are the thing measured.)
+    // The laptop clears it outright at 1001 of 1920; the retired Pi panel's
+    // 1024 at 100% would have cleared it by 23.
     //
-    // (It was 925px at twenty-six in six groups for the hours of 2026-09-04
+    // (It was 918px at twenty-six in five groups for the hours of 2026-09-04
+    // between the regrouping and the Iterations deletion; 925px at twenty-six
+    // in six groups earlier that day,
     // between the restrict-undo lamp landing in the toolbar group and the
     // regrouping that moved it; 891px at twenty-five in six groups earlier that
     // day, from the Center on Next Marker lamp; 857px at twenty-four in six
@@ -2316,7 +2371,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
-    // against its panel.)
+    // against its panel — and after the Iterations deletion there are 70 of
+    // those device px left at 225%, so the NEXT addition is the one that
+    // crops.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -2353,9 +2410,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // which is what the per-press refusals above cannot express: the `h`
     // HISTORY VIEW greys every button in this row whose act it consumes
     // (architect 2026-08-04, at the face code below), and since 2026-08-15 the
-    // per-tab READ-ONLY LOCK greys what it blocks — SIX of them on this row
-    // (the copy/paste pair, the BPM and iteration openers, listen and the
-    // load-in-place; the four marker verbs carried the same term down to the
+    // per-tab READ-ONLY LOCK greys what it blocks — TWO of them on this row
+    // (the ITERATION PAIR, back from the deleted menu on 2026-09-04; the four
+    // marker verbs carried the same term down to the
     // bottom row on 2026-08-18, and the membership is inventoried once at
     // redesign_button_enabled) — so the lock looks the way the view already
     // looks (architect; the read-only-LEGAL buttons beside them stay lit, which
@@ -2487,11 +2544,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // THE LOCK'S SET IS HAND-LISTED at redesign_button_enabled with
         // read_only_key_blocked named as its owner, and that arm's own case
         // list is where the membership is stated — the four marker verbs and
-        // the measure are the BOTTOM row's since 2026-08-18, leaving LISTEN and
-        // the LOAD-IN-PLACE as this row's two (the copy/paste pair left with
-        // the 2026-08-20 propagate relocation and the BPM and iteration
-        // openers with the 2026-08-27 Series one; all four are still blocked
-        // by the gate and simply have no face here to grey) — the one place in
+        // the measure are the BOTTOM row's since 2026-08-18, leaving THE
+        // ITERATION PAIR as this row's two since 2026-09-04, when the two
+        // buttons came back from the deleted Iterations menu (the copy/paste
+        // pair left with the 2026-08-20 propagate relocation and the lock
+        // still eats their chords with no face here to grey; Listen left the
+        // set outright on 2026-08-28, bare `l` joining the allowlist with the
+        // in-app player, and the Load in place took its lock term into the
+        // history group's own arm on 2026-09-01) — the one place in
         // this face's membership that is not
         // derived, for reasons recorded there. This painter decides none of
         // the three.
@@ -3978,21 +4038,23 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
     // and the accelerator's right margin.
     //
-    // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD: the
-    // ITERATIONS menu's "Grid Iterations" row toggles a MODE, which is the
-    // first item
-    // in this product that could have worn one, and it does not — the label is
-    // the constant act's name and the mode says what it is doing on the screen
-    // itself (every warp flag grows its iteration bracket, and the Render
-    // button's hint reads "Render Grid Iterations"). A checkbox column would
-    // exist
-    // for one row in one menu, and the roster's own no-blink argument answers
-    // it: a badge would restate what the picture already shows. The full
-    // record is at kSeriesPopupItems (app_state.h).
+    // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD, and
+    // it has no producer at all again since 2026-09-04: the ITERATIONS menu's
+    // "Grid Iterations" row toggled a MODE, which is the only item this
+    // product has ever had that could have worn one, and it did not — the
+    // label was the constant act's name and the mode said what it was doing on
+    // the screen itself (every warp flag grows its iteration bracket, and the
+    // Render button's hint reads "Render Grid Iterations"). A checkbox column
+    // would have existed
+    // for one row in one menu, and the roster's own no-blink argument answered
+    // it: a badge would restate what the picture already shows. That row is a
+    // ROSTER BUTTON now and the mode wears the icon row's own LAMP, which is
+    // the state cue a menu row never had. The full record is at the deleted
+    // table's own note (app_state.h).
     //
     // THE MENUS DIFFER IN EXACTLY ONE PLACE since 2026-08-03: the
     // accelerator COLUMN, which the three COMMAND menus (File, Edit since
-    // 2026-08-20 and Series since 2026-08-27) have and Settings does not. The
+    // 2026-08-20 and Help since 2026-09-03) have and Settings does not. The
     // width FOLLOWS from it — one expression with an optional term — rather
     // than being a second difference of its own, and everything else (chrome,
     // item height, insets, separator, faces, baseline, and now the label

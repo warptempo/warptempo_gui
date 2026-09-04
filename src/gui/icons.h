@@ -197,24 +197,22 @@ enum class Icon {
     // clipboard, transcribed from the shipped SVGs; the provenance files went
     // with them, the trim scissors' own precedent. A menu ROW carries text and
     // an accelerator, never a glyph, so nothing replaced them.)
-    // (MUSIC-NOTE-16TH AND MATHMODE ARE DELETED — 2026-08-27, with their
-    // buttons: the architect's Series relocation gave the BPM opener (bare
-    // `m`) and iteration mode (bare `i`) the new SERIES MENU as their one
-    // pointer home, and neither glyph had a second consumer. Breeze's
-    // music-note-16th (the flagged quaver) and mathmode (an italic f beside a
-    // multiplication cross, f(x)), transcribed from the shipped SVGs; the
-    // provenance files went with them, edit-copy and edit-paste's own
-    // precedent seven days earlier. A menu ROW carries text and an
-    // accelerator, never a glyph, so nothing replaced them. Mathmode had held
-    // iteration mode's slot only since 2026-08-18, when the SUMMATION SIGMA
-    // below left it for the cumulative reading.)
+    // (MUSIC-NOTE-16TH AND MATHMODE SPENT 2026-08-27 TO 2026-09-04 OUT OF
+    // THIS ENUM. The Series relocation gave the BPM opener and iteration mode
+    // a menu row each and deleted their buttons, and a menu ROW carries text
+    // and an accelerator, never a glyph, so both files left with their one
+    // consumer — enumerators, defs and assets together, edit-copy and
+    // edit-paste's own precedent seven days earlier. The architect deleted
+    // that menu on 2026-09-04 and both buttons came back, so both glyphs did;
+    // their entries are above, at the icon row's own order.)
     // THE SUMMATION SIGMA, ON THE CUMULATIVE READING SINCE 2026-08-18
     // (architect): a cumulative delta is a SUM over the walk's members, read
     // against the iterative reading's one step at a time — the Σ says exactly
     // that, which deep-history's swept clock only implied. It dressed
     // ITERATION MODE from 2026-08-01 until this move (an iteration sweep is
-    // also a sum over cells), and that slot took mathmode, which is deleted
-    // with the button on 2026-08-27.
+    // also a sum over cells), and that slot took mathmode, which wears it
+    // still — no two buttons ever wore one math symbol, which is what the move
+    // bought.
     BlackSum,            // The cumulative reading (`u`)
     GoJump,              // Follow mode
     // Breeze's align-horizontal-center (2026-08-31, R11): two boxes riding
@@ -233,6 +231,25 @@ enum class Icon {
     // restore would carry the camera off the stretch on screen. A verbatim
     // 22px transcription, and the roster's fourth two-colour file.
     TimelineLift,        // Toggle restrict undo to viewport (`z`)
+    // THE ITERATION GROUP'S TWO GLYPHS, BACK WITH THEIR BUTTONS (architect
+    // 2026-09-04): the row had room again, so the Iterations dropdown was
+    // deleted and the BPM opener (bare `m`) and grid iteration mode (bare `i`)
+    // returned to the icon row in a group of their own. Both files are the
+    // ones the 2026-08-27 relocation deleted, re-transcribed verbatim from the
+    // shipped SVGs and re-committed under assets/icons/breeze/ — Breeze's
+    // music-note-16th, the flagged quaver, for the BPM opener, and mathmode,
+    // an italic f beside a multiplication cross reading as f(x), for the mode
+    // lamp. Neither picture moved while it was away and neither is a fresh
+    // pick, so the metaphors below are the 2026-08-01 and 2026-08-18 rulings'
+    // own, unchanged.
+    //
+    // MATHMODE'S SLOT KEEPS A MATH SYMBOL and f(x) names the OPERATION — a
+    // render as a function of a variable swept across a bracket, which is what
+    // a grid iteration sweep is — where the SUMMATION SIGMA it yielded to on
+    // 2026-08-18 says summing, which is the reading the history walk wanted
+    // (BlackSum below carries that succession).
+    MusicNote16th,       // BPM iterations (bare `m`)
+    Mathmode,            // Toggle grid iterations (bare `i`)
     PreviewRenderOn,     // Listen to a render
     // THE CHECKMARK HAS TWO READERS SINCE 2026-09-01, one per surface that
     // runs a load in place: the ICON ROW's button (the `h` view's load, its
@@ -570,6 +587,14 @@ enum class Icon {
 // dialog-error and window-close — the card's two class glyphs and its X,
 // three fresh verbatim transcriptions with no departures beside them (the
 // two dialog files are two-colour, media-record's shape).
+// 58 SINCE 2026-09-04, THE ITERATIONS MENU'S DELETION: 56 + music-note-16th
+// and mathmode, back with the two buttons the architect returned to the icon
+// row when the row had room for them again. Both files are the ones the
+// 2026-08-27 Series relocation deleted, re-transcribed verbatim from the
+// installed breeze-dark 22px set and re-committed under assets/icons/breeze/,
+// so the enumerators, the defs and the provenance assets came back together
+// exactly as they left. The number above is a re-COUNT of the enumerators (56
+// before this ruling), not an increment of a stale value.
 // 54 SINCE 2026-09-04, THE RADIO-PAIR COLLAPSE: 57 − document-export,
 // speedometer and deep-history, deleted with the six buttons the architect
 // collapsed into three lamps. Each lamp wears the LIT state's glyph, so
@@ -591,7 +616,7 @@ enum class Icon {
 // stale value, per the inventory-retell rule; the drift cost exactly what this
 // header says it costs — one icon's once-per-icon diagnostic latch, the latch
 // being bounds-checked — and nothing else.
-inline constexpr int kIconCount = 56;
+inline constexpr int kIconCount = 58;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

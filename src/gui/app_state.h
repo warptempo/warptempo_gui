@@ -1819,12 +1819,10 @@ struct TrimBarPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's FIVE MENU ANCHORS
-// (File, Edit, Iterations, Settings and Help, re-greped 2026-09-03 against
-// kDropdownMenus — the ENUMERATOR for the third keeps
-// its `Series` spelling, the 2026-08-31 rebrand being labels and prose alone)
+// button the kdenlive rows carry, in painted order: row 1's FOUR MENU ANCHORS
+// (File, Edit, Settings and Help, re-greped 2026-09-04 against kDropdownMenus)
 // plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-SIX
+// TABS, row 4's TWENTY-EIGHT
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -1849,14 +1847,15 @@ struct TrimBarPressSeed {
 // no disabled face of their own — which is stated at each face's site rather
 // than modelled here (row 4 takes the click face but not the disabled one; the
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
-// and is the one exception, at redesign_button_enabled below). ROW 1'S FIVE MENU
-// ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit, Iterations, Settings
-// and Help, re-greped 2026-09-03 against kDropdownMenus and the chord table (50
-// chord rows + 5 anchors = kRedesignButtonCount); the count was TWO, File and
+// and is the one exception, at redesign_button_enabled below). ROW 1'S FOUR MENU
+// ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit, Settings and Help,
+// re-greped 2026-09-04 against kDropdownMenus and the chord table (51 chord
+// rows + 4 anchors = kRedesignButtonCount); the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
-// 2026-08-15): each press TOGGLES ITS OWN
-// DROPDOWN, which no keyboard chord does, and all five are spelled at the menu
+// 2026-08-15, and ITERATIONS a fourth from 2026-08-27 until its own deletion on
+// 2026-09-04): each press TOGGLES ITS OWN
+// DROPDOWN, which no keyboard chord does, and all four are spelled at the menu
 // claim rather than in the chord table.
 //
 // The enum ORDER is painted order, and redesign_button_index depends on the
@@ -1866,7 +1865,7 @@ struct TrimBarPressSeed {
 // two of them (as row 1's Settings and Navigation were, 2026-08-03) renumbers
 // the stash harmlessly.
 enum class RedesignButton {
-    // Row 1, the menu row: the five LEFT-FLOATING anchors, then the three of
+    // Row 1, the menu row: the four LEFT-FLOATING anchors, then the three of
     // the RIGHT-FLOATING view bar (2026-08-02) in their painted order — the
     // absolute view selectors S+W / T+P / T+W, which are bare 1/2/3.
     //
@@ -1911,9 +1910,17 @@ enum class RedesignButton {
     // count is three again for the first time since 2026-08-15, and nothing in
     // the dropdown machinery counts menus — kDropdownMenus grew one row.
     //
-    // THE ITERATIONS MENU IS THE FOURTH ANCHOR SINCE 2026-08-27 (architect;
-    // it read "Series" until the 2026-08-31 rebrand),
-    // painted between Edit and Settings.
+    // (THE ITERATIONS MENU WAS THE FOURTH ANCHOR FROM 2026-08-27 TO
+    // 2026-09-04, painted between Edit and Settings; it read "Series" until
+    // the 2026-08-31 rebrand and its enumerator kept that spelling throughout.
+    // It was a COMMAND MENU of TWO ROWS — "BPM Iterations" (bare `m`) and
+    // "Grid Iterations" (bare `i`) — and the architect DELETED IT whole once
+    // the icon row had room again, sending both commands back to that row as
+    // a group of two buttons. So the relocation ran in reverse: the MENU is
+    // the second road now and the BUTTONS are the one pointer home, which is
+    // the no-second-road doctrine satisfied from the other side, exactly as
+    // the Navigation menu's own 2026-08-15 deletion was. The buttons are
+    // IconBpm and IconIter below and the naming record is at their entries.)
     //
     // THE ORDER RULE IS THE ROW'S OWN, AND IT IS TWO CLAUSES SINCE 2026-09-03
     // (architect, restating his 2026-08-03 SETTINGS-LAST ruling rather than
@@ -1927,16 +1934,7 @@ enum class RedesignButton {
     // the one Help occupies, and the ruling it rests on — that the
     // application's own menus end at Settings — is untouched.)
     //
-    // IT IS A COMMAND MENU OF TWO ROWS — "BPM Iterations" (bare `m`) and
-    // "Grid Iterations" (bare `i`) — and the vocabulary is the architect's
-    // (the naming record, both rounds of it, is at kSeriesPopupItems).
-    // LIKE EDIT'S IT IS A
-    // RELOCATION rather than an addition: IconBpm and IconIter were deleted
-    // from the icon row in the same ruling, so the two commands have exactly
-    // ONE pointer home and the no-second-road doctrine is SATISFIED rather
-    // than amended. The chords are untouched — bare `m` and bare `i` are what
-    // the keyboard has and what the items dispatch.
-    // THE HELP MENU IS THE FIFTH ANCHOR SINCE 2026-09-03 (architect), painted
+    // THE HELP MENU IS THE ROW'S LAST ANCHOR SINCE 2026-09-03 (architect), painted
     // AFTER Settings under the order rule above. Its one row is **AV Sync
     // Stats**, the text panel that measures the audio device's output latency
     // and the display's commit-to-light interval while it stands
@@ -1952,7 +1950,7 @@ enum class RedesignButton {
     // allowlist drops it and the three routers swallow it — so the anchor
     // would open onto a row that could do nothing
     // (menu_anchor_dead_in_mode, below).
-    File, Edit, Series, Settings, Help, ViewSW, ViewTP, ViewTW,
+    File, Edit, Settings, Help, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -1985,7 +1983,8 @@ enum class RedesignButton {
     // leading the zoom four (2026-08-12, the architect's live placement "after
     // the trim"), the magnification pair, Follow and the three lamps behind
     // them, the last of which arrived from the toolbar group later on
-    // 2026-09-04 — the
+    // 2026-09-04 — THE ITERATION PAIR, back from the menu row later that same
+    // day, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
@@ -2247,6 +2246,51 @@ enum class RedesignButton {
     // allowlist drops the chord — the derived partition greys the face with
     // nothing hand-listed.
     IconRestrictUndo,
+    // THE ITERATION GROUP (architect 2026-09-04) — TWO BUTTONS BACK FROM THE
+    // MENU ROW, in a separator-led group of their own just ahead of the
+    // render-entry pair. The Iterations dropdown carried both commands from
+    // 2026-08-27; the icon row had room again, so the architect deleted that
+    // menu and put the buttons back. It is the 2026-08-27 relocation run in
+    // REVERSE and it satisfies the same doctrine from the other side: the two
+    // commands have exactly ONE pointer home, and it is these buttons rather
+    // than a menu — which is what the Navigation menu's own 2026-08-15
+    // deletion did for the zoom four. The chords never moved: bare `m` and
+    // bare `i` are what the keyboard has had throughout, and each button is
+    // its chord through the ordinary table.
+    //
+    // THE VOCABULARY IS THE MENU'S, WHICH IS THE ARCHITECT'S OWN (his
+    // 2026-08-31 rebrand of his 2026-08-27 naming): BPM Iterations and Grid
+    // Iterations, the noun shared and the qualifier saying which axis is
+    // swept — BPM values, or the Cartesian GRID of the markers' inline
+    // brackets. The words survive the menu on the two TOOLTIPS, which is where
+    // the vocabulary's one owner is now (redesign_button_tooltip below); the
+    // render button's iteration hint, the two batches' counted nouns and every
+    // card that names a mode read the same words, and the marker's own payload
+    // keeps its own ("iteration bracket", "iteration ranges").
+    //
+    // THE BPM OPENER IS A MOMENTARY ACT, not a mode: bare `m` opens the BPM
+    // sweep's editor over the selected run, so there is no bit for a lamp and
+    // the button carries none. ITS FACE READS THE SWEEP'S OWN VERDICT
+    // (bpm_sweep_plan, below) — the whole ten-arm ladder bare `m` refuses on,
+    // extracted rather than mirrored so the face and the card are one
+    // decision — under the READ-ONLY LOCK, which drops the chord. Its glyph is
+    // Breeze's music-note-16th, the flagged quaver, back from the deletion
+    // with the button.
+    //
+    // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
+    // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
+    // drift; the tooltip names the TOGGLE for the reason every lamp's does.
+    // ITS GATE IS THE WARP COLUMN ALONE — both audio views, the toggle being
+    // MODE STATE rather than authoring (the record is at the `i` arm,
+    // input_key_dispatch.cpp) — under the same lock. Its glyph is mathmode,
+    // the italic f beside a multiplication cross.
+    //
+    // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
+    // hand-listed, which is what their chord rows buy: bare `m` and bare `i`
+    // are neither the mode's own vocabulary nor on its allowlist, so
+    // history_mode_disables_button answers dead for both — the answer the
+    // ITERATIONS ANCHOR needed a hand-named arm for while it was a menu.
+    IconBpm, IconIter,
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
@@ -2771,15 +2815,23 @@ enum class RedesignButton {
     TransportWalkPrev, TransportWalkNext, TransportWalkBoth,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above: EIGHT in row 1, two
-// in row 3, TWENTY-SIX in row 4 and EIGHTEEN in the bottom row — 54. Of
+// THE ROSTER, re-derived by counting the enumerators above: SEVEN in row 1, two
+// in row 3, TWENTY-EIGHT in row 4 and EIGHTEEN in the bottom row — 55. Of
 // those,
-// FORTY-NINE carry a chord in kToolbarChords and FIVE are the dropdown
-// anchors (File, Edit, Iterations, Settings and Help; the third's enumerator is
-// still spelled `Series`), which is the split the chord
+// FIFTY-ONE carry a chord in kToolbarChords and FOUR are the dropdown
+// anchors (File, Edit, Settings and Help), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 55 SINCE 2026-09-04'S ITERATIONS DELETION, and the arithmetic is a NET GAIN
+// OF ONE over one deletion and two additions — the 2026-08-27 Series
+// relocation's shape run backwards: the ITERATIONS ANCHOR left row 1 (a
+// non-chord entry) while ICONBPM and ICONITER joined row 4 with their
+// chord-table rows — 54 − 1 + 2, split 49 + 5 to 51 + 4. Bare `m` and bare `i`
+// are untouched on the keyboard; what moved is where a POINTER reaches them.
+// THE SAME RULING OPENED ONE GROUP: the pair stands behind a separator of its
+// own ahead of the render-entry group, which the group arithmetic's owner
+// carries (redesign_button_opens_icon_group).
 // 54 SINCE 2026-09-04, which is a net gain of one over that day's three row
 // rulings. THE RADIO-PAIR COLLAPSE took three boxes and three chords out of
 // row 4 when IconS/IconT, IconW/IconP and the two walk radios became three
@@ -2910,7 +2962,7 @@ enum class RedesignButton {
 // of that day, and the ruling that moved it here also merged the two view
 // lamps into one group — a member changing groups and a leader deleted, which
 // moves the COUNT not at all and the width by the one separator it drops.)
-inline constexpr int kRedesignButtonCount = 54;
+inline constexpr int kRedesignButtonCount = 55;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2940,15 +2992,15 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
 // not a dropdown anchor CLOSES it, because only one button in that row is lit at
 // a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
-// inherited: row 1 is EIGHT buttons and FIVE of them are anchors, so the close
+// inherited: row 1 is SEVEN buttons and FOUR of them are anchors, so the close
 // rule covers THE VIEW BAR'S THREE alone — the same three it covered while
-// Navigation was a third anchor, since EDIT became one (2026-08-20), since
-// SERIES became a fourth (2026-08-27) and since HELP became a fifth
+// Navigation was a third anchor, since EDIT became one (2026-08-20), while
+// ITERATIONS was a fourth (2026-08-27 to 2026-09-04) and since HELP joined
 // (2026-09-03). It was "Quit or the view bar's three"
 // while the Quit button
 // existed; the Navigation anchor's 2026-08-15 deletion moved this membership
-// not at all and neither Edit's arrival nor Series's moved it either, an anchor
-// JOINING
+// not at all and neither Edit's arrival nor the Iterations anchor's arrival and
+// departure moved it either, an anchor JOINING
 // or LEAVING the row being the one change this rule cannot feel — which is why
 // the count above is re-derived here rather than the membership being edited.
 // It was briefly the hover predicate's too — an exemption letting row 1
@@ -2964,7 +3016,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     switch (b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
-        case RedesignButton::Series:
         case RedesignButton::Settings:
         case RedesignButton::Help:
         case RedesignButton::ViewSW:
@@ -2990,6 +3041,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconFollow:
         case RedesignButton::IconCentered:
         case RedesignButton::IconCenterOnNext:
+        case RedesignButton::IconBpm:
+        case RedesignButton::IconIter:
         case RedesignButton::IconListen:
         case RedesignButton::IconReadOnly:
         case RedesignButton::IconHistory:
@@ -3120,15 +3173,25 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE FIVE GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
+// THE SIX GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
 // THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom four,
 // the waveform magnification pair, FOLLOW, the centered pin, the walk's
-// framing lamp and the restrict-undo lamp), the render-entry group (listen and
+// framing lamp and the restrict-undo lamp), THE ITERATION PAIR, the
+// render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
 // load-in-place at the tail.
 //
-// FIVE SINCE THE SECOND OF 2026-09-04'S ROW RULINGS, which deleted ONE LEADER
+// SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
+// no other boundary: the architect deleted the menu-row dropdown and put
+// IconBpm and IconIter back in the icon row behind a separator of their own,
+// just ahead of the render-entry group, so IconBpm leads and IconListen still
+// opens the group behind it. That is the 2026-08-27 relocation's own leader
+// edit read backwards — IconBpm had led the MASS-MARKER group until that day,
+// when it left the roster and Follow, the survivor, fell into the zoom group.
+//
+// FIVE FOR THE HOURS BETWEEN THE SECOND OF 2026-09-04'S ROW RULINGS AND THE
+// FOURTH, which deleted ONE LEADER
 // and moved ONE MEMBER between groups. IconMarkerColumn stopped opening a
 // group, so the two view lamps the radio-pair collapse had left as a group of
 // one each are one group of two, which is what they read as: one lamp per view
@@ -3197,6 +3260,11 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // survivor, and a lone button behind a divider — the architect put
         // that survivor in this group and the boundary went with the pair.)
         case RedesignButton::IconShowRegion:
+        // THE ITERATION PAIR'S LEADER SINCE 2026-09-04, and it is the same
+        // button that led the mass-marker group from 2026-08-20 until the
+        // Series relocation deleted it: bare `m` opens the group again, with
+        // bare `i` behind it and nothing else in it.
+        case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
         case RedesignButton::IconHistory:
             return true;
@@ -3216,18 +3284,19 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // been two, three, two and three again without a single route changing is the
 // shape's own proof: nothing here counts menus. EDIT joined 2026-08-20 with the
 // propagate relocation and cost the shape nothing either, SERIES joined
-// 2026-08-27 with the BPM/iteration relocation, and HELP joined 2026-09-03
-// with the AV sync panel — a fifth value in a field that holds one, which is
-// the whole of what a new menu costs here.
-enum class DropdownMenu { None, File, Edit, Series, Settings, Help };
+// 2026-08-27 with the BPM/iteration relocation and LEFT 2026-09-04 when the
+// architect sent both commands back to the icon row, and HELP joined
+// 2026-09-03 with the AV sync panel — a value gained or lost in a field that
+// holds one, which is the whole of what a menu costs here either way.
+enum class DropdownMenu { None, File, Edit, Settings, Help };
 
 // EVERY MENU THERE IS, in one place, so the routes that must walk them all —
 // the press claim's anchor test, the hover switch, the armed hover open — walk
 // this instead of naming a pair (or a triple). `None` is deliberately absent:
 // it is the closed state, not a menu.
 inline constexpr DropdownMenu kDropdownMenus[] = {
-    DropdownMenu::File, DropdownMenu::Edit, DropdownMenu::Series,
-    DropdownMenu::Settings, DropdownMenu::Help,
+    DropdownMenu::File, DropdownMenu::Edit, DropdownMenu::Settings,
+    DropdownMenu::Help,
 };
 
 // WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
@@ -3238,7 +3307,6 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
     switch (m) {
         case DropdownMenu::File:     return RedesignButton::File;
         case DropdownMenu::Edit:     return RedesignButton::Edit;
-        case DropdownMenu::Series:   return RedesignButton::Series;
         case DropdownMenu::Help:     return RedesignButton::Help;
         case DropdownMenu::Settings:
         case DropdownMenu::None:     break;
@@ -3342,7 +3410,8 @@ inline constexpr int kSettingsPopupItemCount =
 // the painter or the release at all), one for five days, two again, and three
 // now. That
 // the type survived its lone-instance stretch unchanged is what made the Edit
-// menu a TABLE and nothing else, and Series a second one. What it names is the
+// menu a TABLE and nothing else, and Iterations a second one for the eight days
+// that menu stood (2026-08-27 to 2026-09-04). What it names is the
 // KIND of menu, which is
 // what the release body forks on; the kind is still two-valued, however many
 // tables the command kind holds.
@@ -3452,10 +3521,11 @@ struct CommandPopupItem {
 // crop, dropdown_full_hotkeys.png, is the anatomy). The Navigation menu the
 // column was authored for is deleted, and the column's metrics and its layout
 // term survive on the command tables that remain — this one, Edit's five rows
-// and Series' two — so nothing about it is producer-less. The crop's spelling
+// and Help's one — so nothing about it is producer-less. The crop's spelling
 // convention is "modifiers spelled out with `+`", which "Ctrl+Q" and "Ctrl+O"
-// both are; the convention's OTHER half — a bare letter written UPPERCASE — is
-// the SERIES table's two rows ("M", "I") and is the PRODUCT'S spelling since
+// both are; the convention's OTHER half — a bare letter written UPPERCASE — had
+// its only rows in the deleted ITERATIONS table ("M", "I", whose spelling the
+// two icon-row tooltips carry now) and is the PRODUCT'S spelling since
 // 2026-09-01, stated once at spell_chord's head (gui_input.h) and followed by
 // the tooltips too, so this column no longer contrasts with anything. The
 // Synchronize row's accelerator is `\` since 2026-08-31, the bare-letter
@@ -3523,8 +3593,9 @@ inline constexpr int kFilePopupItemCount =
 //
 // EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
 // carried alone since 2026-08-15 — the column had six producers instead of one
-// from this ruling and has eight since the Series menu's two rows joined it on
-// 2026-08-27, and its metrics and layout term are unchanged throughout. The
+// from this ruling, eight while the Iterations menu's two rows stood
+// (2026-08-27 to 2026-09-04) and nine since File grew its third and Help
+// landed, and its metrics and layout term are unchanged throughout. The
 // spelling convention is the crop's: modifiers spelled out with `+`, and a
 // non-letter key written as itself (`/`).
 //
@@ -3551,75 +3622,41 @@ inline constexpr CommandPopupItem kEditPopupItems[] = {
 inline constexpr int kEditPopupItemCount =
     static_cast<int>(std::size(kEditPopupItems));
 
-// THE ITERATIONS DROPDOWN'S ITEMS (architect 2026-08-27) — THE TWO SWEEP
-// MODES, one category and no separator: "BPM Iterations" (bare `m`, the BPM
-// sweep's editor) and "Grid Iterations" (bare `i`, the iteration-mode toggle).
+// (THE ITERATIONS DROPDOWN'S ITEMS ARE DELETED — architect 2026-09-04. From
+// 2026-08-27 kSeriesPopupItems held TWO rows in one category with no
+// separator: "BPM Iterations" `M` (the BPM sweep's editor) and "Grid
+// Iterations" `I` (the iteration-mode toggle). The architect deleted the menu
+// whole once the icon row had room again and both commands went back to that
+// row as a group of two buttons — IconBpm and IconIter, the roster's own
+// entries — so the NO-SECOND-ROAD DOCTRINE is satisfied from the other side,
+// the Navigation menu's own 2026-08-15 shape: not one command was removed,
+// and each keeps its key and gains back the button it had until 2026-08-27.
 //
-// THE VOCABULARY IS THE ARCHITECT'S SECOND ONE (2026-08-31, rebranding his own
-// 2026-08-27 naming): the anchor was "Series" over rows "BPM" and
-// "Iterations" — one word for what the two rows had in common, a BPM SERIES
-// and a SERIES OF ITERATIONS, chosen over "Sweep" and "Group". It is
-// "Iterations" over "BPM Iterations" and "Grid Iterations" now, so the anchor
-// and both rows say the SAME NOUN and the row word says only which axis is
-// swept: BPM values, or the Cartesian GRID of the markers' inline brackets
-// ("grid is the catchiest; matrix is a bit pretentious"; "brackets", "value"
-// and "settings" were all vetoed). ONE VOCABULARY RUNS THROUGH the surfaces
-// the two commands own — the render button's iteration-mode hint, the two
-// batches' counted nouns and every card that NAMES a mode — while the marker's
-// own payload keeps its word ("iteration bracket", "iteration ranges"): the
-// qualifier separates the two ROWS, and a bracket exists only under the inline
-// one, so there is nothing there to disambiguate. THE CODE IDENTIFIERS ARE
-// UNTOUCHED (kSeriesPopupItems, DropdownMenu::Series, iteration_mode_enabled):
-// none of them is user-visible, and a rename is churn a label change does not
-// buy.
+// THE VOCABULARY SURVIVES THE MENU AND ITS OWNER MOVES TO THE TOOLTIPS
+// (redesign_button_tooltip, below): "BPM Iterations" and "Grid Iterations" are
+// the architect's SECOND naming (2026-08-31, rebranding his own 2026-08-27
+// "Series" over rows "BPM" and "Iterations"), chosen so the two rows say the
+// SAME NOUN and the qualifier says only which axis is swept — BPM values, or
+// the Cartesian GRID of the markers' inline brackets ("grid is the catchiest;
+// matrix is a bit pretentious"; "brackets", "value" and "settings" were all
+// vetoed). ONE VOCABULARY RUNS THROUGH the surfaces the two commands own — the
+// render button's iteration-mode hint, the two batches' counted nouns and
+// every card that NAMES a mode — while the marker's own payload keeps its word
+// ("iteration bracket", "iteration ranges").
 //
-// THIS MENU IS THE TWO COMMANDS' ONE POINTER HOME. IconBpm and IconIter were
-// deleted from the icon row in the same ruling, so nothing here duplicates a
-// button: the no-second-road doctrine is SATISFIED rather than amended, the
-// Edit menu's own 2026-08-20 shape one week on. Both modes are used a handful
-// of times per session at most, which is what a menu is for and what a
-// permanent icon slot is not.
-//
-// THE ACCELERATORS ARE THIS PRODUCT'S FIRST BARE-LETTER MENU ROWS, and they
-// are written UPPERCASE — "M" and "I" — from the crop (dropdown_full_hotkeys.
-// png). That was one sampled surface against the tooltip table's lowercase
-// until 2026-09-01, when the whole product took kdenlive's spelling (the one
+// THE ACCELERATORS WERE THIS PRODUCT'S FIRST BARE-LETTER MENU ROWS, written
+// UPPERCASE — "M" and "I" — from the crop (dropdown_full_hotkeys.png). That
+// was one sampled surface against the tooltip table's lowercase until
+// 2026-09-01, when the whole product took kdenlive's spelling (the one
 // convention at spell_chord's head, gui_input.h) and these rows stopped being
-// the exception. (The deleted Navigation menu's "C" for center-on-focus was
-// the previous instance.)
+// the exception; the two tooltips carry the same capitals now.
 //
-// AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
-// command that cannot act right now — the phase-reset marker view, a locked
-// tab, a selection the BPM gate refuses — still dispatches, and its own arm
-// answers exactly as the key does, which for both of these is a notification
-// card naming the rule it failed (2026-08-30; `m`'s ladder cards the first
-// rule the selection broke and bare `i` cards the P view). THE PAIR'S TWO GATES CAME ACROSS WITH THE MOVE UNCHANGED
-// AND UNMIRRORED: the READ-ONLY LOCK blocked bare `m` and bare `i` and still
-// does — blocked, with no face left to grey, exactly as the propagate pair was
-// left in 2026-08-20 (the record is at redesign_button_enabled's read-only
-// arm) — and the `h` HISTORY VIEW consumes both, which is why THE ANCHOR is
-// dead in that view (toggle_dropdown's lockout, on the Edit precedent: every
-// row here is a chord the mode's allowlist drops, so the menu would be a box
-// that opens onto nothing).
-//
-// THE ITERATION ROW SHOWS NO STATE, and that is the popup's own standing
-// ruling rather than an omission: this product's menus carry NO ICONS, NO
-// CHECKBOXES AND NO SUBMENU ARROWS (paint_dropdown, paint_handler.cpp — the
-// crops reserve all three columns and the redesign dropped them), so there is
-// no check for a lit mode to wear. The label is the constant act's name — the
-// shape the lamp toggles' tooltips had until 2026-09-01 (they name the toggle
-// now, the rule at redesign_button_tooltip's head) with the lamp left off; WHAT THE
-// MODE IS DOING IS ON THE SCREEN ITSELF — every warp flag grows its iteration
-// bracket the moment the mode comes on, and the Render button's own hint reads
-// "Render Grid Iterations" — which is the same argument that keeps
-// refusal-predicting greys off this roster: a badge would restate what the
-// picture already says.
-inline constexpr CommandPopupItem kSeriesPopupItems[] = {
-    {"BPM Iterations",  "M", GuiKeys::M, false, false, false, false},
-    {"Grid Iterations", "I", GuiKeys::I, false, false, false, false},
-};
-inline constexpr int kSeriesPopupItemCount =
-    static_cast<int>(std::size(kSeriesPopupItems));
+// THE ITERATION ROW SHOWED NO STATE, which was the popup's own standing ruling
+// rather than an omission and is the one thing the deletion settles for good:
+// this product's menus carry NO ICONS, NO CHECKBOXES AND NO SUBMENU ARROWS
+// (paint_dropdown, paint_handler.cpp), so the one row in the product that
+// could have worn a check never did — and the mode is a LAMP now, which is the
+// state cue a roster button has and a menu row does not.)
 
 // THE HELP DROPDOWN'S ITEMS (architect 2026-09-03) — ONE ROW, **AV Sync
 // Stats**, Title Case like every other dropdown item — a control's name under
@@ -3691,8 +3728,8 @@ inline constexpr int kHelpPopupItemCount =
 // the widest and is in the expression anyway — the rule is "the widest menu",
 // not "the menus that happen to be long".)
 inline constexpr int kDropdownMaxItemCount =
-    std::max({kFilePopupItemCount, kEditPopupItemCount, kSeriesPopupItemCount,
-              kSettingsPopupItemCount, kHelpPopupItemCount});
+    std::max({kFilePopupItemCount, kEditPopupItemCount, kSettingsPopupItemCount,
+              kHelpPopupItemCount});
 
 // IS THIS A COMMAND MENU? The two kinds of menu differ in what a row DOES — a
 // settings key to prefill, a chord to dispatch — and this names the second kind
@@ -3700,9 +3737,11 @@ inline constexpr int kDropdownMaxItemCount =
 // PREDICATE over the menu rather than a comparison at each site, which is what
 // let the second command menu join it in one line: the kind is the fact the
 // release forks on, and Edit landed on it 2026-08-20 exactly as anticipated.
+// The Series menu was a term here 2026-08-27..2026-09-04 and its removal cost
+// one clause, which is the same thing said the other way round.
 inline constexpr bool dropdown_is_command_menu(DropdownMenu m) {
     return m == DropdownMenu::File || m == DropdownMenu::Edit ||
-           m == DropdownMenu::Series || m == DropdownMenu::Help;
+           m == DropdownMenu::Help;
 }
 // THE COMMAND ROW ITSELF — the ONE place that maps a command menu to its table,
 // read by the shared view below and by the release body that dispatches the
@@ -3710,15 +3749,14 @@ inline constexpr bool dropdown_is_command_menu(DropdownMenu m) {
 // with the File table's row, which no caller reaches. It forked between two
 // tables until 2026-08-15, the fork went with the Navigation menu, it came
 // BACK on 2026-08-20 with the Edit menu — the parameter that was kept
-// deliberately unread through that stretch is read again — and it forks three
-// ways since 2026-08-27. No call site changed on any of those days, which is
-// what keeping the parameter bought.
+// deliberately unread through that stretch is read again — and it forked FOUR
+// ways from 2026-08-27 to 2026-09-04, when the Series arm left with its menu.
+// No call site changed on any of those days, which is what keeping the
+// parameter bought.
 inline constexpr const CommandPopupItem& command_popup_item(DropdownMenu m,
                                                             int i) {
     if (m == DropdownMenu::Edit)
         return kEditPopupItems[static_cast<size_t>(i)];
-    if (m == DropdownMenu::Series)
-        return kSeriesPopupItems[static_cast<size_t>(i)];
     if (m == DropdownMenu::Help)
         return kHelpPopupItems[static_cast<size_t>(i)];
     return kFilePopupItems[static_cast<size_t>(i)];
@@ -3738,7 +3776,6 @@ inline constexpr int dropdown_item_count(DropdownMenu m) {
     switch (m) {
         case DropdownMenu::File:     return kFilePopupItemCount;
         case DropdownMenu::Edit:     return kEditPopupItemCount;
-        case DropdownMenu::Series:   return kSeriesPopupItemCount;
         case DropdownMenu::Settings: return kSettingsPopupItemCount;
         case DropdownMenu::Help:     return kHelpPopupItemCount;
         case DropdownMenu::None:     break;
@@ -11273,6 +11310,69 @@ inline bool iteration_sweep_actionable(const AppState& a) {
     return iteration_sweep_plan(a).refusal == IterationSweepRefusal::None;
 }
 
+// THE BPM SWEEP'S OPEN VERDICT (2026-09-04, with the BPM ITERATIONS button's
+// return to the icon row) — bare `m`'s WHOLE guard ladder as one const owner,
+// the iteration sweep's plan above in the sibling act's domain and
+// tempo_cent_step_group_verdict's shape in a longer one.
+//
+// IT IS EXTRACTED RATHER THAN MIRRORED, which is the roster's structural rule:
+// a face never restates an act's condition, it reads the predicate the act's
+// own refusal reads. The ladder is TEN tests deep and each of its arms raises
+// its own sentence, so a boolean alone would have left the face and the cards
+// two spellings of one thing; the VERDICT is what both read — the dispatch
+// switches on it for the card (input_key_dispatch.cpp) and the button's face
+// asks the wrapper below. The plan also carries the two indices the act needs
+// past the ladder (the span's OWNER and its section BOUNDARY), so the act
+// derives nothing twice either.
+//
+// THE ARMS ARE IN THE ACT'S OWN ORDER and their reasons are stated at the
+// dispatch, where the sentences are: the warp column, warp's SOURCE home
+// (the sweep derives tempo from source durations — the one member of the warp
+// status/value family deliberately left out of the 2026-08-24 target-view
+// admission), a non-empty selection, an in-range one, CONTIGUITY, no
+// effectively-enabled label ref in [owner .. boundary], an eligible owner, an
+// owner outside every coincident-collapse run, and ONE TEMPO across the
+// selected run.
+//
+// IT ALLOCATES NOTHING AND RUNS PER TICK. The collapse membership comes from
+// warp_red_flag_set_cached's `collapsed` set — the same classifier verdict the
+// dispatch used to build fresh, memoized on the warp store's generation — and
+// everything else is a walk of tens of markers. `audio` is what that cache
+// keys on, which is why this takes it where iteration_sweep_plan does not.
+//
+// TWO READERS: the bare `m` dispatch (input_key_dispatch.cpp) and the BPM
+// Iterations button's face (redesign_button_enabled below), which composes it
+// with the read-only lock. Defined in warpmarkers_ops.cpp beside
+// tempo_cent_step_group_verdict, the other const owner over this store.
+enum class BpmSweepRefusal {
+    None,             // the editor would open on `owner`
+    WrongColumn,      // the phase-reset column carries no tempo to sweep
+    OffHomeView,      // warp's home is source view
+    NothingSelected,  // no marker selected
+    StaleSelection,   // a selected index no longer names a marker
+    NotOneRun,        // the selection is not one contiguous run
+    LabelRefInSpan,   // an effectively-enabled ref inside or at the span's end
+    OwnerIneligible,  // the first selected marker passes, refs or is disabled
+    OwnerCoincident,  // the first selected marker shares its frame
+    MixedTempos,      // the run's members do not agree on one tempo
+};
+
+struct BpmSweepPlan {
+    BpmSweepRefusal refusal  = BpmSweepRefusal::None;
+    // Both valid only when `refusal` is None: the span's owner (the first
+    // selected marker) and its closing section boundary, section_end_index's
+    // answer for the LAST selected marker — `n` at the song end.
+    int             owner    = -1;
+    int             boundary = -1;
+};
+
+BpmSweepPlan bpm_sweep_plan(const AppState& a, const GuiAudio& audio);
+
+inline bool bpm_sweep_open_actionable(const AppState& a,
+                                      const GuiAudio& audio) {
+    return bpm_sweep_plan(a, audio).refusal == BpmSweepRefusal::None;
+}
+
 // (THE MENUS' ONE PER-ITEM DISABLED STATE IS DELETED — dropdown_item_enabled,
 // 2026-08-08 to 2026-08-15, gone PRODUCER-LESS with the Navigation dropdown.
 // It answered "is this dropdown item live", and FOUR readers went through it:
@@ -11340,10 +11440,14 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // THE CRITERION: an anchor whose every row the mode consumes would open onto
 // nothing, which is the face promising more than the keys deliver. SETTINGS is
 // dead because its rows reach the settings editor by a DIRECT call that meets
-// no gate at all; EDIT (2026-08-20), ITERATIONS (2026-08-27) and HELP
+// no gate at all; EDIT (2026-08-20) and HELP
 // (2026-09-03) because every one of their rows is a chord the view's allowlist
 // drops — Help's one row is Shift+L since that evening, and the allowlist does
-// not name it, so the menu would open onto nothing. (Help was Settings' case
+// not name it, so the menu would open onto nothing. (ITERATIONS answered the
+// same way from 2026-08-27 until its own deletion on 2026-09-04, both of its
+// rows being chords the allowlist drops; its two commands are icon-row buttons
+// again and the DERIVED partition greys them with nothing hand-listed, which
+// is what a chord-bearing button buys that an anchor cannot.) (Help was Settings' case
 // for the hours its row had no chord at all and reached the panel by a direct
 // call the opener refuses in here; the binding moved it one criterion over and
 // the answer did not change.) That is the criterion working rather than a
@@ -11352,7 +11456,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // `\` — are all on the allowlist, so its menu opens onto three working rows.
 //
 // THE FOLDER OVERLAY TAKES THE SAME PARTITION AS THE `h` VIEW — FILE LIVE,
-// THE OTHER FOUR DEAD (architect 2026-09-03 evening, at his first look at the
+// THE OTHER THREE DEAD (architect 2026-09-03 evening, at his first look at the
 // closed gap: "File, Edit, Iterations, etc. looks odd disabled when the
 // player's on, especially because the title bar is still the regular one —
 // the window has focus. So leave File open, because Quit should still be
@@ -11374,9 +11478,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // Project is the one row the routers consume in silence there (the
 // unbound-keys ruling, each router's catch-all) — one row of three, which is
 // not "every row would open onto nothing" and so not a reason to kill the
-// anchor. The other four die under the band for their `h`-view reasons said
+// anchor. The other three die under the band for their `h`-view reasons said
 // once above: Settings is a direct call its act refuses under a modal, and
-// Edit, Iterations and Help are chords every router drops.
+// Edit and Help are chords every router drops.
 //
 // THE FACE IS redesign_button_enabled's FIRST ARM (which asks this owner for
 // the anchors and greys everything else under the band) and THE PRESS IS THE
@@ -11573,17 +11677,19 @@ inline bool playback_launch_playable(const AppState& a,
 //     switch below rather than as a blanket line, because it is no longer a
 //     blanket fact. (It was one until this ruling, when "a locked tab greys the
 //     whole toolbar" was recorded here as code truth.) THE LOCK REACHES
-//     ELEVEN MORE BUTTONS — seven since 2026-08-15 (the authoring chords it
+//     THIRTEEN MORE BUTTONS — seven since 2026-08-15 (the authoring chords it
 //     blocks that still have a face to grey, spread across the icon row and
-//     the bottom one since the 2026-08-18 relayout) and the FOUR CARDINAL
+//     the bottom one since the 2026-08-18 relayout), the FOUR CARDINAL
 //     ARROWS since 2026-08-30 (planner decision 52 under the truthful-buttons
 //     ruling: Up/Down whenever the tab is locked, Left/Right only while a
-//     selection stands, the transport block's arrow arms) — and its own entry
-//     is below. THE ELEVEN ARE NO LONGER ELEVEN ARMS since 2026-09-01: the
-//     LOAD IN PLACE moved to the history group and took its lock term into
-//     THAT arm, where it composes with the mode and the walk's admission, so
-//     the read-only arm below holds six and the button greys for the mode
-//     outside the view and for the lock inside it.
+//     selection stands, the transport block's arrow arms) and THE ITERATION
+//     PAIR since 2026-09-04, back in the icon row from the deleted Iterations
+//     menu with faces to grey again — and its own entry
+//     is below. THEY ARE NOT THIRTEEN ARMS: the
+//     LOAD IN PLACE moved to the history group on 2026-09-01 and took its lock
+//     term into THAT arm, where it composes with the mode and the walk's
+//     admission, so the read-only arm below holds eight and the button greys
+//     for the mode outside the view and for the lock inside it.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
@@ -11611,7 +11717,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     reintroduce the blink the same ruling removed from the arrows. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return and bare `/` — SIX as of
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/`, bare `m` and
+//     bare `i` — EIGHT as of 2026-09-04, when the ITERATION PAIR came back to
+//     the icon row from the deleted Iterations menu and the two chords the gate
+//     had gone on eating got faces again. It was SIX from
 //     2026-09-01, when BARE `'` LEFT for the history group's own arm with the
 //     Load in place BUTTON (its lock term composed there with the mode and the
 //     walk's admission; the gate still drops the chord inside the view, and
@@ -11625,7 +11734,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     answers do not survive the walk (below), and Ctrl+P and Ctrl+Alt+P
 //     made the point: they left this list with
 //     their BUTTONS (the Edit-menu relocation) though the lock still eats the
-//     chords — blocked, with no face to grey. (THE MEASURE, bare `/`, was off
+//     chords — blocked, with no face to grey. (BARE `m` AND BARE `i` MADE THE
+//     POINT TWICE, leaving this list with their buttons at the 2026-08-27
+//     Series relocation and coming back with them on 2026-09-04: the gate's
+//     answer never moved either time, only whether a face existed to wear it.) (THE MEASURE, bare `/`, was off
 //     this list for one day — 2026-08-20 to the 2026-08-21 sunset — while its
 //     shift half was the lock-legal score-video jump; the jump's removal
 //     returned it.) The mirror is a membership, never an equivalence, in both
@@ -11998,14 +12110,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // terms — no button on this row has a disabled face of its own — and the
         // three join the same arm. THE VIEW BAR STAYS LIVE IN THE HISTORY VIEW
         // (its 1/2/3 are on the mode's allowlist), so the two faces never meet
-        // there either. (EDIT joined the row and this arm 2026-08-20 and SERIES
-        // 2026-08-27: an anchor
-        // is a popup toggle and has nothing to refuse, so both are never-grey
-        // here like their siblings. Their `h`-view greys are the derived
+        // there either. (EDIT joined the row and this arm 2026-08-20, and
+        // ITERATIONS did too for the eight days it stood, 2026-08-27 to
+        // 2026-09-04: an anchor
+        // is a popup toggle and has nothing to refuse, so each is never-grey
+        // here like its siblings. Their `h`-view greys are the derived
         // partition's, hand-named at history_mode_disables_button.)
         case RedesignButton::File:
         case RedesignButton::Edit:
-        case RedesignButton::Series:
         case RedesignButton::Settings:
         case RedesignButton::Help:
         case RedesignButton::ViewSW:
@@ -12160,12 +12272,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // The PROPAGATE PAIR (Ctrl+P, Ctrl+Alt+P) is still blocked by the gate
         // and is no longer here, its two buttons having left with the Edit-menu
         // relocation: blocked, with no face left to grey. THE BPM OPENER AND
-        // ITERATION MODE (bare `m`, bare `i`) left the same way on 2026-08-27
-        // with the Series-menu relocation — both still blocked by the gate,
-        // both with no face left to grey, and their menu ITEMS never grey by
-        // the command menus' own standing rule (kFilePopupItems), so a locked
-        // tab's click on either closes the menu and the chord refuses silently
-        // exactly as the key does. THE MEASURE (bare
+        // GRID ITERATION MODE (bare `m`, bare `i`) left the same way on
+        // 2026-08-27 with the Series-menu relocation — blocked by the gate
+        // with no face to grey, their menu ITEMS never greying by the command
+        // menus' own standing rule (kFilePopupItems), so a locked tab's click
+        // on either closed the menu and the chord refused silently exactly as
+        // the key did — AND THEY ARE BACK HERE SINCE 2026-09-04, that menu
+        // deleted and both buttons in the icon row again, each with its own
+        // arm below. THE MEASURE (bare
         // `/`) sits here since the 2026-08-21 sunset returned it: its one
         // chord opens an editor over serialized content, exactly the class
         // every other member is in. (It was out for one day while its shift
@@ -12263,6 +12377,36 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconMarkerMeasure:
             return !active_view_state(a).read_only &&
                    marker_focus_standing(a);
+        // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
+        // buttons the architect brought back from the deleted Iterations menu.
+        // The LOCK is their first term for the reason it is every other
+        // member's: bare `m` and bare `i` sit on no read_only_key_blocked
+        // allowlist entry — a tempo sweep rewrites the warp store and the mode
+        // bit selects what Ctrl+Alt+R renders — so the gate eats both chords,
+        // and from 2026-08-27 to 2026-09-04 it ate them with no face left to
+        // grey (the record is at this arm's head, beside the propagate pair's
+        // identical case). Neither admits a modified press, so the twin rule
+        // has nothing to compose here.
+        //
+        // BPM ITERATIONS READS THE SWEEP'S WHOLE VERDICT past the lock —
+        // bpm_sweep_open_actionable over bpm_sweep_plan, the const owner the
+        // `m` dispatch switches on for its card — so the face and the ten
+        // sentences are one decision with nothing to drift, the shape Undo and
+        // Redo have always had. It is the roster's DEEPEST mirrored refusal
+        // and it costs nothing per tick: the walk is tens of markers and the
+        // one classifier it needs comes off the red-flag cache.
+        case RedesignButton::IconBpm:
+            return !active_view_state(a).read_only &&
+                   bpm_sweep_open_actionable(a, audio);
+        // GRID ITERATIONS READS THE `i` ARM'S ONE TEST past the lock: the WARP
+        // COLUMN, both audio views (the toggle is mode state rather than
+        // authoring, the 2026-08-07 relaxation at the arm itself). In the P
+        // column the key cards and the button greys, one decision again; there
+        // is nothing else to mirror, the toggle being meaningful in either
+        // direction on any loaded piece.
+        case RedesignButton::IconIter:
+            return !active_view_state(a).read_only &&
+                   a.active_markers_view == 'W';
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
@@ -12965,6 +13109,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // face and the refusal cannot drift.
         case RedesignButton::IconRestrictUndo:
             return a.restrict_undo_to_viewport;
+        // GRID ITERATION MODE'S LAMP (2026-08-01, away with its button
+        // 2026-08-27 to 2026-09-04 and back with it): the same toggle pattern
+        // once more, reading the live bit bare `i` flips, so the lit face and
+        // the mode cannot drift. It is the state cue the MENU ROW could not
+        // give the mode — this product's dropdowns carry no checkboxes by
+        // ruling — which is one of the things the button's return puts back.
+        case RedesignButton::IconIter: return a.iteration_mode_enabled;
         // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
         // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
         // bit bare `[` flips, so the lit face and the surface on screen
@@ -13034,7 +13185,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                    a.history_mode.source == GuiHistoryWalkSource::Local;
         case RedesignButton::File:
         case RedesignButton::Edit:
-        case RedesignButton::Series:
         case RedesignButton::Settings:
         case RedesignButton::Help:
         case RedesignButton::Save:
@@ -13073,6 +13223,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // the jump its shifted twin runs. Nothing stays true afterwards for a
         // lamp to report.
         case RedesignButton::IconCopyValue:
+        // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
+        // 2026-09-04): it opens an editor and the editor's own session is the
+        // state, exactly as the measure and the edit-flag buttons answer. Its
+        // neighbour on the same separator IS a lamp, which is the pair's whole
+        // asymmetry — one opens a dialog, the other flips a mode.
+        case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
         case RedesignButton::IconLoadInPlace:
         // THE REVERT BUTTON IS MOMENTARY TOO, and more plainly than the arrows:
@@ -13501,7 +13657,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the combinations themselves, so a hint could only restate them.
         case RedesignButton::File:
         case RedesignButton::Edit:
-        case RedesignButton::Series:
         case RedesignButton::Settings:
         case RedesignButton::Help:
         case RedesignButton::ViewSW:
@@ -13613,6 +13768,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (the stateful overload below).
         case RedesignButton::IconRestrictUndo:
             return {"Toggle Restrict Undo to Viewport (Z)", nullptr};
+        // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
+        // menu), one line each: neither chord has a shifted twin, so neither
+        // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
+        // now that the menu rows are gone — "BPM Iterations" and "Grid
+        // Iterations", the architect's own 2026-08-31 naming, the noun shared
+        // and the qualifier saying which axis is swept — and the render
+        // button's iteration hint, the batches' counted nouns and the cards
+        // that name a mode all read the same words. THE BPM OPENER'S LINE IS A
+        // NAME because the act completes (the editor is the state), while the
+        // MODE'S reads "Toggle <Mode>", the lamp rule at this table's head:
+        // "Grid Iterations" alone would lie on the lit face. The accelerators
+        // are bare letters and so uppercase, this table's rule and the
+        // product's since 2026-09-01 — which is the spelling the two deleted
+        // menu rows had carried from the crop since 2026-08-27.
+        case RedesignButton::IconBpm:
+            return {"BPM Iterations (M)", nullptr};
+        case RedesignButton::IconIter:
+            return {"Toggle Grid Iterations (I)", nullptr};
         // PLAY RENDERS IS THE PLAYER'S ONE ICON-ROW OPENER since 2026-09-01
         // (architect, on the tooltip survey): both buttons opened it until
         // then — bare `l` and bare `'` being TWO KEYS onto one act outside the
@@ -13942,9 +14115,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
-// "Render Grid Iterations" now, taking the mode's own name off the menu row
-// "Grid Iterations" (the
-// vocabulary's owner is kSeriesPopupItems). Each is a chord
+// "Render Grid Iterations" now, taking the mode's own name from the surface
+// that owns it: the menu row "Grid Iterations" until 2026-09-04, and the
+// GRID ITERATIONS BUTTON'S OWN TOOLTIP since, that menu having been deleted
+// and its two commands sent back to the icon row. Each is a chord
 // whose MEANING is selected by a mode bit, and the button's hint says
 // whichever command it currently is:
 //

@@ -1458,9 +1458,10 @@ inline int tab_row_h_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
-// tabs (row 4 of the redesign: TWENTY-SIX view/mode/action buttons since
+// tabs (row 4 of the redesign: TWENTY-EIGHT view/mode/action buttons since
 // 2026-09-04, when the radio collapse took three off the row and the Center on
-// next marker lamp and the Restrict undo to viewport lamp put two back — the
+// next marker lamp, the Restrict undo to viewport lamp and the ITERATION PAIR
+// back from the deleted menu row put four back — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a

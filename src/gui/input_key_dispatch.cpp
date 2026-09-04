@@ -27,8 +27,10 @@
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
                                   // cycle's playhead-anchored seed)
 #include "warpmarkers.h"
-#include "warp_frame_map_build.h"  // warp_coincident_collapse_members (the `m`
-                                   // gate's coincident-owner refusal)
+#include "warp_frame_map_build.h"  // slice_to_warp_markers (the `m` gate's own
+                                   // coincident-owner refusal moved into
+                                   // bpm_sweep_plan on 2026-09-04; the slice
+                                   // has other callers here)
 
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -2328,11 +2330,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the five anchors alone, which have no chord to ask about: Settings,
-// Edit since 2026-08-20, Series since 2026-08-27 and Help since 2026-09-03 all
+// for the four anchors alone, which have no chord to ask about: Settings,
+// Edit since 2026-08-20 and Help since 2026-09-03 all
 // dead on the toggle_dropdown lockout, File live
-// since 2026-08-13 — another, Navigation, was live from 2026-08-08 until its
-// 2026-08-15 deletion), never
+// since 2026-08-13 — Navigation was live from 2026-08-08 until its
+// 2026-08-15 deletion, and Iterations dead from 2026-08-27 until its own on
+// 2026-09-04, which put its two commands back on chord-bearing buttons the
+// walk answers for), never
 // hand-listed —
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory.
@@ -4362,9 +4366,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // user had to be shown — and that prompt kind retired whole with this
         // move, its other caller (the target-view entry gate) having become a
         // silent one. The sentence was unchanged by that move; the 2026-08-31
-        // rebrand renamed its subject alone ("Iteration sweep" -> the menu
-        // row's own name, kSeriesPopupItems; the row wears Title Case since
-        // 2026-09-03 and this card keeps sentence case).
+        // rebrand renamed its subject alone ("Iteration sweep" -> the
+        // command's own name, which the Grid Iterations button's tooltip owns
+        // since that menu's 2026-09-04 deletion; the name wears Title Case and
+        // this card keeps sentence case).
         //
         // ONE CLAUSE, ONE NUMBER, NO PERIOD (architect 2026-09-01, the
         // capitalization sweep's sentence-shape rule — messaging.md's card
@@ -4507,7 +4512,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
 
     // The batch's DISPLAY label — the progress line's counted noun and the
     // stderr summary's tag. "grid iterations" since the 2026-08-31 rebrand,
-    // which is the menu row's own name for this mode (kSeriesPopupItems):
+    // which is the command's own name for this mode (the Grid Iterations
+    // button's tooltip owns it since that menu's 2026-09-04 deletion):
     // the GUI line reads "Rendering 3 of 8 grid iterations...", the label
     // naming what the two numerals count, and "render" fell out of it
     // because the sentence already leads with "Rendering". (It was plain
@@ -7133,7 +7139,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // until then, which pinned the toggle to warp's SOURCE home. The
             // relaxation is about MODE STATE rather than authoring, which is
             // why it is not a home-view-binding exception: the bit selects
-            // what Ctrl+Alt+R means and what the flags show. (Bracket
+            // what Ctrl+Alt+R means and what the flags show. IT IS ALSO THE
+            // WHOLE OF WHAT THE GRID ITERATIONS BUTTON'S FACE READS
+            // (redesign_button_enabled, app_state.h) since that button came
+            // back to the icon row on 2026-09-04 — this column test under the
+            // read-only lock, one test rather than a predicate of its own. (Bracket
             // AUTHORING was source-only at the flag editor's own gate until
             // 2026-08-24, when the editor became the binding's FIFTH ruled
             // exception and the grammar rode into target view with it.) The
@@ -7172,12 +7182,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // ruling): iteration brackets are a WARP payload — a phase reset
             // carries no tempo to iterate — so the card names the COLUMN and
             // not a view, the bit being legal in both audio views of warp.
-            // THE SUBJECT IS THE MENU ROW'S OWN NAME (2026-08-31 rebrand,
-            // kSeriesPopupItems): this card and the BPM ladder's twin below
-            // say "Grid iterations" / "BPM iterations", the words the user
-            // pressed, rather than a "mode" noun that appears nowhere else —
-            // the words alone, in the cards' sentence case, the rows
-            // themselves wearing Title Case since 2026-09-03.
+            // THE SUBJECT IS THE COMMAND'S OWN NAME (2026-08-31 rebrand;
+            // the vocabulary's owner is the two icon-row tooltips since that
+            // menu's 2026-09-04 deletion): this card and the BPM ladder's twin
+            // below say "Grid iterations" / "BPM iterations", the words the
+            // user pressed, rather than a "mode" noun that appears nowhere
+            // else — the words alone, in the cards' sentence case, the names
+            // themselves wearing Title Case.
             notifications.notify(AppState::NotificationClass::Normal,
                                  "Grid iterations work on warp markers");
         }
@@ -7200,7 +7211,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // across the run (each selected marker a pass or the owner's own value)
     // and an owner outside every coincident-collapse run; any other selection
     // is refused, and SAYS WHICH RULE IT BROKE since 2026-08-30 (the arm-by-arm
-    // ruling is at the first test below). Under the contiguity rule every in-span marker up to the last
+    // ruling is at the first test below). THE LADDER IS bpm_sweep_plan SINCE
+    // 2026-09-04, a const owner this arm and the BPM Iterations button's face
+    // share (the contract is at its declaration, app_state.h).
+    // Under the contiguity rule every in-span marker up to the last
     // selected one IS selected, so a selected span-internal marker may be
     // disabled — and since 2026-08-29 the sweep cell LEAVES IT EXACTLY AS IT
     // IS rather than converting it to a plain pass, as it leaves the disabled
@@ -7222,141 +7236,127 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // ONE press raises ONE card carrying the FIRST rule the selection
         // failed; the sweep's own later refusals (the commit gate's bracket
         // walls) belong to the editor and are untouched.
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "BPM iterations work on warp markers");
-            return true;
-        }
-        // The bpm editor is DELIBERATELY OMITTED from the warp status/value
-        // family admitted in W+target on 2026-08-24 (architect: "add the ones
-        // we can, and omit the ones we must omit"; the inventory is at
-        // active_column_authoring_allowed, app_state.h). Its reason is its
-        // own rather than placement: it rewrites tempo through a DERIVATION
-        // over a SPAN — the selected run's sections and their durations —
-        // rather than editing one marker's value, so it keeps warp's home
-        // (source) view; off home the card names that view.
-        if (!active_column_authoring_allowed(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "BPM iterations work in source view");
-            return true;
-        }
-        // Section-based span gate. A non-empty, contiguous run of selected
-        // markers; the first owns, and the run covers the sections owned by
-        // every selected marker (the last one's section included).
-        if (app.selected_markers.empty()) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Select the markers whose sections to sweep");
-            return true;
-        }
-        const auto& mv = app.warpmarkers.markers();
-        const int n = static_cast<int>(mv.size());
-        const int owner    = *app.selected_markers.begin();
-        const int last_sel = *app.selected_markers.rbegin();
-        // A BELT against the selection layer's own invariant (indices in
-        // range), carded like the rest rather than left mute: it is the one
-        // arm whose sentence describes a state the user cannot read off the
-        // screen, so silence here would be the worst of the ten.
-        if (owner < 0 || last_sel >= n) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "The selection no longer matches the markers");
-            return true;
-        }
-        // Contiguity: the sweep writes ONE owner tempo over ONE contiguous
-        // span, and the shift-range select produces exactly contiguous runs;
-        // a disjoint set has no single-span meaning here. The COPY takes the
-        // SAME contiguity gate (its paste walks labeled blocks in lockstep, so
-        // a gap would misalign the two label sequences). std::set is ascending,
-        // so a run [owner .. last_sel] is contiguous iff its extent equals its
-        // count.
-        if (last_sel - owner + 1 != static_cast<int>(app.selected_markers.size())) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneRun);
-            return true;
-        }
-        // The last selected marker's section ends at the next marker that
-        // PARTICIPATES IN THE RENDER, not at the next store marker
-        // (architect 2026-08-24): section_end_index (warpmarkers.h) is that
-        // rule's one owner, shared with the phase-reset propagate. When
-        // boundary < n the marker there is the closing boundary — effectively
-        // enabled, owning the following section, outside the span; boundary
-        // == n is the song end, no enabled marker following the selection, so
-        // the last section runs to total_frames. A DISABLED marker is dropped
-        // before the warp map is built, so bounding the span at one measured
-        // the duration short by the whole remainder and mistuned every derived
-        // cell tempo.
-        const int boundary = section_end_index(mv, last_sel);
-        // No EFFECTIVELY-ENABLED label_ref anywhere in
-        // [owner .. min(boundary, n-1)] inclusive: every in-span marker
-        // rewrites its tempo (a ref cannot take one), and the boundary marker
-        // (when it exists) still cannot bound the span cleanly. At song end
-        // there is no boundary marker, so the scan clamps to n-1. An
-        // effectively-disabled ref does not refuse — it takes no part in the
-        // render, so it neither receives a rewritten tempo nor bounds
-        // anything, which is exactly how the boundary walk above reads it. The
-        // scan now also covers the disabled markers between the last selected
-        // one and the boundary, and passes over each for the same reason.
-        const int scan_end = std::min(boundary, n - 1);
-        for (int i = owner; i <= scan_end; ++i) {
-            if (!mv[i].label_ref.empty() && !effective_disabled(mv, i)) {
+        //
+        // THE LADDER ITSELF LEFT THIS BODY ON 2026-09-04, when the BPM
+        // ITERATIONS BUTTON came back to the icon row and its face needed the
+        // same verdict: it is bpm_sweep_plan (warpmarkers_ops.cpp, declared in
+        // app_state.h) now, one const walk this arm switches on for its card
+        // and redesign_button_enabled asks for its grey — the roster's own
+        // rule that a face never restates an act's condition. THE SENTENCES
+        // STAY HERE, where the notifications are; the plan carries the verdict
+        // and the two indices the act needs past it, the span's OWNER and its
+        // section BOUNDARY. Each arm's reasoning follows its case.
+        const BpmSweepPlan plan = bpm_sweep_plan(app, audio);
+        switch (plan.refusal) {
+            case BpmSweepRefusal::WrongColumn:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     "BPM iterations work on warp markers");
+                return true;
+            // The bpm editor is DELIBERATELY OMITTED from the warp
+            // status/value family admitted in W+target on 2026-08-24
+            // (architect: "add the ones we can, and omit the ones we must
+            // omit"; the inventory is at active_column_authoring_allowed,
+            // app_state.h). Its reason is its own rather than placement: it
+            // rewrites tempo through a DERIVATION over a SPAN — the selected
+            // run's sections and their durations — rather than editing one
+            // marker's value, so it keeps warp's home (source) view; off home
+            // the card names that view.
+            case BpmSweepRefusal::OffHomeView:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     "BPM iterations work in source view");
+                return true;
+            // Section-based span gate. A non-empty, contiguous run of selected
+            // markers; the first owns, and the run covers the sections owned
+            // by every selected marker (the last one's section included).
+            case BpmSweepRefusal::NothingSelected:
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "Select the markers whose sections to sweep");
+                return true;
+            // A BELT against the selection layer's own invariant (indices in
+            // range), carded like the rest rather than left mute: it is the
+            // one arm whose sentence describes a state the user cannot read
+            // off the screen, so silence here would be the worst of the ten.
+            case BpmSweepRefusal::StaleSelection:
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "The selection no longer matches the markers");
+                return true;
+            // Contiguity: the sweep writes ONE owner tempo over ONE contiguous
+            // span, and the shift-range select produces exactly contiguous
+            // runs; a disjoint set has no single-span meaning here. The COPY
+            // takes the SAME contiguity gate (its paste walks labeled blocks
+            // in lockstep, so a gap would misalign the two label sequences).
+            case BpmSweepRefusal::NotOneRun:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kSelectOneRun);
+                return true;
+            // No EFFECTIVELY-ENABLED label_ref anywhere in
+            // [owner .. min(boundary, n-1)] inclusive: every in-span marker
+            // rewrites its tempo (a ref cannot take one), and the boundary
+            // marker (when it exists) still cannot bound the span cleanly. An
+            // effectively-disabled ref does not refuse — it takes no part in
+            // the render, so it neither receives a rewritten tempo nor bounds
+            // anything, which is exactly how the plan's boundary walk reads
+            // it. That walk also covers the disabled markers between the last
+            // selected one and the boundary, and passes over each for the same
+            // reason.
+            case BpmSweepRefusal::LabelRefInSpan:
                 notifications.notify(
                     AppState::NotificationClass::Normal,
                     "A label reference lies inside or at the end of the span");
                 return true;
-            }
-        }
-        // Owner must satisfy the BPM-eligibility predicate (owning, no ref,
-        // and — now — enabled).
-        if (!bpm_popup_eligible_marker(mv[owner])) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "The first selected marker must own its tempo and be enabled");
-            return true;
-        }
-        // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (codex 2026-08-26,
-        // the ref refusal's own class): the resolver's stage 2 collapses an
-        // exact-frame run with two or more effectively-enabled members to
-        // ONE synthetic 1.00 owner, so a span owned from inside such a run
-        // renders at 1.00 in every cell whatever the editor derived — and
-        // when the coincident partner is the boundary itself the span's
-        // duration is zero, the commit gate has nothing to measure and the
-        // sweep derives nothing, closing the mode on an empty batch. The
-        // verdict is the classifier's, warp_coincident_collapse_members
-        // (warp_frame_map_build.h — the render's stage 2 and the lane's red
-        // cue consult the same one), never re-spelled here.
-        if (warp_coincident_collapse_members(
-                slice_to_warp_markers(mv))[static_cast<size_t>(owner)]) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "The first selected marker shares its frame with another");
-            return true;
-        }
-        // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected marker
-        // is a pass or carries the owner's own tempo — cents AND typed scale,
-        // the effective value — else `m` refuses and says so, like the other
-        // arrangement refusals above. The sweep rewrites the span to ONE
-        // tempo and rescales everything outside it by THE OWNER'S change
-        // (bpm_cell_warp_markers, input_handler.h), so a run whose members
-        // disagreed would have its internal differences erased while the
-        // rest of the map kept its shape — the very deformation the rescale
-        // exists to prevent — and the rule is what makes the owner's change
-        // the whole span's. Effectively-disabled members pass over for the
-        // reason the ref scan passes over them: they contribute no tempo to
-        // the render, and the cell never rewrites them (2026-08-29), so a
-        // disagreeing disabled member has nothing to erase. The scan covers
-        // the SELECTED run [owner .. last_sel];
-        // the disabled markers the boundary walk sweeps in past it are
-        // render-inert by construction and were never selected.
-        for (int i = owner + 1; i <= last_sel; ++i) {
-            if (mv[i].tempo_inherits)      continue;
-            if (effective_disabled(mv, i)) continue;
-            if (mv[i].tempo_cents != mv[owner].tempo_cents ||
-                mv[i].tempo_scale != mv[owner].tempo_scale) {
+            // Owner must satisfy the BPM-eligibility predicate (owning, no
+            // ref, and — now — enabled).
+            case BpmSweepRefusal::OwnerIneligible:
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "The first selected marker must own its tempo and be enabled");
+                return true;
+            // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (codex 2026-08-26,
+            // the ref refusal's own class): the resolver's stage 2 collapses
+            // an exact-frame run with two or more effectively-enabled members
+            // to ONE synthetic 1.00 owner, so a span owned from inside such a
+            // run renders at 1.00 in every cell whatever the editor derived —
+            // and when the coincident partner is the boundary itself the
+            // span's duration is zero, the commit gate has nothing to measure
+            // and the sweep derives nothing, closing the mode on an empty
+            // batch. The verdict is the classifier's,
+            // warp_coincident_collapse_members (warp_frame_map_build.h — the
+            // render's stage 2 and the lane's red cue consult the same one,
+            // and the plan reads it off that cue's own cache), never
+            // re-spelled here.
+            case BpmSweepRefusal::OwnerCoincident:
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "The first selected marker shares its frame with another");
+                return true;
+            // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected
+            // marker is a pass or carries the owner's own tempo — cents AND
+            // typed scale, the effective value — else `m` refuses and says so,
+            // like the other arrangement refusals above. The sweep rewrites
+            // the span to ONE tempo and rescales everything outside it by THE
+            // OWNER'S change (bpm_cell_warp_markers, input_handler.h), so a
+            // run whose members disagreed would have its internal differences
+            // erased while the rest of the map kept its shape — the very
+            // deformation the rescale exists to prevent — and the rule is what
+            // makes the owner's change the whole span's. Effectively-disabled
+            // members pass over for the reason the ref scan passes over them:
+            // they contribute no tempo to the render, and the cell never
+            // rewrites them (2026-08-29), so a disagreeing disabled member has
+            // nothing to erase. The scan covers the SELECTED run
+            // [owner .. last_sel]; the disabled markers the boundary walk
+            // sweeps in past it are render-inert by construction and were
+            // never selected.
+            case BpmSweepRefusal::MixedTempos:
                 notifications.notify(AppState::NotificationClass::Normal,
                                      "Selected markers carry different tempos");
                 return true;
-            }
+            case BpmSweepRefusal::None:
+                break;
         }
+        const int owner    = plan.owner;
+        const int boundary = plan.boundary;
         // enter_bpm_mode tags the owner and flips the mode flag; the span
         // endpoint is explicit, so record it on the owner and keep the whole
         // selected run highlighted as the span cue.

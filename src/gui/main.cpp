@@ -663,9 +663,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // content at the foot of the tall ground the gap and the lane paint together.
 // Lane 1 is the TAB row (the "A" / "B"
 // Breeze tabs and
-// its border-bottom); lane 2 is the ICON row (the twenty-six view/mode/action
+// its border-bottom); lane 2 is the ICON row (the twenty-eight view/mode/action
 // buttons — the deleted toolbar row's four lead them since the 2026-08-12
-// relayout, whose roster commit removed that lane and renumbered these, and
+// relayout, whose roster commit removed that lane and renumbered these, the
+// ITERATION PAIR came back from the menu row on 2026-09-04, and
 // the history group's seven close them since 2026-08-18 —
 // and its border-bottom); lane 3 is the OVERVIEW STRIP (the whole-song lane at
 // its one fixed tiny height, moved here from the bottom strip by commit B — its

@@ -1450,9 +1450,10 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's five menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
-    // toolbar four included since the 2026-08-12 relayout, the history group's
+    // writer serving the WHOLE roster — row 1's four menu anchors and
+    // the view bar's three, row 3's two tabs, row 4's twenty-eight (the
+    // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
+    // back from the menu row since 2026-09-04, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
@@ -1488,8 +1489,8 @@ struct GuiInputHandler {
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of EVERY non-chord button — the five of kDropdownMenus, File,
-    // Edit, Iterations, Settings and Help (re-greped 2026-09-03): it closes the
+    // action of EVERY non-chord button — the four of kDropdownMenus, File,
+    // Edit, Settings and Help (re-greped 2026-09-04): it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
     // than a rule. Its ONE refusal is the `h` history view's, and it is
@@ -1650,13 +1651,14 @@ struct GuiInputHandler {
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
     // being a consumed nothing). The five buttons
-    // outside it are row 1's anchors — File, Edit, Iterations, Settings and
-    // Help (re-greped 2026-09-03 against kDropdownMenus) — whose action is a
+    // outside it are row 1's anchors — File, Edit, Settings and
+    // Help (re-greped 2026-09-04 against kDropdownMenus) — whose action is a
     // dropdown
     // toggle — the recorded press-time exception, stated at their claim (row 1
     // had a chord button, Quit, inside it until 2026-08-13, when its act became
-    // the File menu's one item, and one of the anchors was Navigation until its
-    // menu was deleted 2026-08-15).
+    // the File menu's one item; one of the anchors was Navigation until its
+    // menu was deleted 2026-08-15, and one was Iterations until its own
+    // deletion on 2026-09-04).
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed

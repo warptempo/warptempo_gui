@@ -1159,14 +1159,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, joining as the sixth of
     //       the six the count then stood at). EVERY menu — re-greped
-    //       2026-09-03, the five of kDropdownMenus: File, Edit, Series,
+    //       2026-09-04, the four of kDropdownMenus: File, Edit,
     //       Settings and Help — is this ONE
     //       binding: they
     //       share one popup state and one gate, so the second dropdown
     //       (Navigation, 2026-08-02), the third (File, 2026-08-13), the
     //       fourth-then-third (Edit, 2026-08-20), the Series menu
     //       (2026-08-27) and the Help menu (2026-09-03) added no
-    //       place of their own and the Navigation one's deletion (2026-08-15) took
+    //       place of their own and the Navigation one's deletion (2026-08-15)
+    //       and the Iterations one's (2026-09-04) took
     //       none away — the count is a property of the GATE, not of the menu
     //       list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms

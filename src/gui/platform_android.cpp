@@ -470,23 +470,25 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 250 % (the icon row's walk has been 918 authored px since the
-// 2026-09-04 regrouping merged the two view lamps into one group and moved the
-// Restrict Undo to Viewport lamp to the viewport group's tail, which cost the
-// walk one separator and gained it one gap; the ceiling was 249 at the 925-px
-// walk earlier that same day, 258 at the 891-px one before it, 268 at the
+// fit ceiling is 232 % (the icon row's walk has been 993 authored px since the
+// architect deleted the Iterations menu on 2026-09-04 and its two commands came
+// back to the row as a group of their own, which cost the walk two boxes, one
+// gap and one separator; the ceiling was 250 at the 918-px walk the same day's
+// regrouping left, 249 at the 925-px
+// walk before that, 258 at the 891-px one, 268 at the
 // 857-px walk the radio collapse left, 240 at the 959-px walk before that day
 // and 249 at the 2026-08-27 relocation's own 925-px one) and anything past it
-// crops the rightmost history icons.
+// crops the rightmost history icons. 225 CLEARS IT BY 31 LOGICAL PX, the
+// narrowest margin this row has run at on the panel.
 // 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the
 // finger's sake — a
 // marker flag has to be tappable without the second tap of a double-tap landing
 // on the waveform instead — and stepped back that evening: it was one step too
 // far for a ~3 authored px crop, and with the press-road thresholds now scaling
 // with gui_scale (and the double-click window on the product's one beat, same
-// evening) the double-tap holds together at 225 anyway. The row has since
-// narrowed to where that scale would fit, but 225 is what the template stamps
-// and the architect's own answer on the glass.
+// evening) the double-tap holds together at 225 anyway. The row narrowed to
+// where that scale would have fitted and has widened past it again, but 225 is
+// what the template stamps and the architect's own answer on the glass.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into

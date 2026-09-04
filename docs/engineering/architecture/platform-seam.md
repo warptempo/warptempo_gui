@@ -982,11 +982,13 @@ differs by host.
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
-wide, and the icon row fits WHOLE up to gui_scale 250 since the row was REGROUPED on
-2026-09-04 — the two view lamps merged into one group and the RESTRICT UNDO TO
-VIEWPORT lamp moved to the viewport-class group's tail, which took one
-separator off the walk and put one gap on, leaving it 918 authored px
-(249 for the hours that same day's RESTRICT UNDO TO VIEWPORT lamp had it at 925
+wide, and the icon row fits WHOLE up to gui_scale 232 since the ITERATIONS MENU
+WAS DELETED on 2026-09-04 and its two commands came back to the row as a group
+of their own — two boxes, one gap and one separator, leaving the walk 993
+authored px (250 for the hours the day's earlier REGROUPING had it at 918, the
+two view lamps merging into one group and the RESTRICT UNDO TO VIEWPORT lamp
+moving to the viewport-class group's tail;
+249 for the hours that same day's RESTRICT UNDO TO VIEWPORT lamp had it at 925
 in the toolbar group; 258 for the hours the CENTER ON NEXT MARKER lamp before
 it had it at 891;
 268 for the hours the radio collapse before it had it at 857; 240 at the centered
@@ -994,8 +996,8 @@ lamp's 959 from 2026-08-31; 249 at the 2026-08-27
 Series relocation's 925, the same walk and the same ceiling reached from the
 other direction; 228 at the 1007-px row before that, and 221 for the one
 day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (918*2.25 = 2065 of the panel's 2304, 238 px of slack
-where the 959-px row had 146) and the layout is the one the redesign was drawn
+the whole icon row lands (993*2.25 = 2234 of the panel's 2304, 70 px of slack
+where the 918-px row had 238) and the layout is the one the redesign was drawn
 against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is
 TAPPABLE, whether the second tap of a double-tap lands on the flag rather than

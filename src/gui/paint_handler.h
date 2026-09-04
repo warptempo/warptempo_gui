@@ -813,8 +813,9 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 2, row 4: the twenty-six view/mode/action buttons —
-    // the deleted toolbar row's four lead them since the 2026-08-12 relayout
+    // ICON ROW (top lane 2, row 4: the twenty-eight view/mode/action buttons —
+    // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
+    // the ITERATION PAIR came back from the menu row on 2026-09-04
     // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button

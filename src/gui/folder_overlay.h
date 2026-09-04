@@ -42,7 +42,7 @@
 // history ... Leave that for the player, the picker and the AV stats"). So
 // FILE IS LIVE above the band on every content — its press exempted from the
 // three veils at press_on_live_menu_anchor, its menu opening onto Quit and
-// Synchronize — while Edit, Iterations, Settings and Help grey and refuse at
+// Synchronize — while Edit, Settings and Help grey and refuse at
 // menu_anchor_dead_in_mode, and the view bar's 1/2/3 grey through
 // redesign_button_enabled's first arm and the bar's own inactive ground
 // (view_bar_focused). The header behind them keeps its FOCUSED ground: the
