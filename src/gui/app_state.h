@@ -1822,7 +1822,7 @@ struct TrimBarPressSeed {
 // kDropdownMenus — the ENUMERATOR for the third keeps
 // its `Series` spelling, the 2026-08-31 rebrand being labels and prose alone)
 // plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-FIVE
+// TABS, row 4's TWENTY-SIX
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -1978,10 +1978,12 @@ enum class RedesignButton {
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
-    // living on as the tooltips), the two view lamps, the TRIM GROUP
-    // (the Show trim region button alone since 2026-08-18), the ZOOM GROUP
-    // (2026-08-12, the architect's live placement "after the trim"), the
-    // phase-reset clipboard pair with the three mode/editor buttons, the
+    // living on as the tooltips), the TWO VIEW LAMPS sharing one group since
+    // 2026-09-04, THE VIEWPORT-CLASS GROUP — the Show trim region button
+    // leading the zoom four (2026-08-12, the architect's live placement "after
+    // the trim"), the magnification pair, Follow and the three lamps behind
+    // them, the last of which arrived from the toolbar group later on
+    // 2026-09-04 — the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
@@ -2012,30 +2014,7 @@ enum class RedesignButton {
     // is DELETED WHOLE with that ruling, and the argument the 2026-08-13
     // group order was built on — keeping the history opener's x fixed across
     // the toggle — is answered by construction now rather than by placement.
-    Save, Undo, Redo,
-    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the `z` lamp, and it
-    // sits HERE, inside the toolbar group and touching the pair it governs,
-    // rather than at the viewport group's tail behind the centered pin and the
-    // Center on next marker lamp. The rule it carries is about UNDO first and
-    // the camera second: with it lit, an undo or redo whose restore would carry
-    // the viewport somewhere else refuses instead, cards, and leaves both
-    // stacks exactly as they were. A user reading Undo, Redo and this lamp
-    // together is reading one sentence; the same lamp four buttons away, among
-    // the zoom acts, would advertise a camera preference and hide which two
-    // buttons it changes.
-    //
-    // SESSION-ONLY, unlike every lamp in the viewport group: the bit is
-    // AppState::restrict_undo_to_viewport, default OFF at every launch, in no
-    // settings file and in no vocabulary. It is a working posture — "hold my
-    // place while I take these back" — not a property of the piece.
-    //
-    // LIVE ON A LOCKED TAB (bare `z` authors nothing; the lamp's own chord is
-    // on the lock's allowlist even though the undo pair it governs is not) and
-    // DEAD IN THE `h` VIEW, where both undo stacks are frozen and the mode's
-    // allowlist drops the chord — the derived partition greys the face with
-    // nothing hand-listed.
-    IconRestrictUndo,
-    Render,
+    Save, Undo, Redo, Render,
     // The two view lamps (architect 2026-09-04). The row's three radio PAIRS
     // collapsed into three lamp TOGGLES that day — six buttons to three, to
     // make room on the tablet's row — so IconS/IconT and IconW/IconP are
@@ -2241,6 +2220,28 @@ enum class RedesignButton {
     // The derived partition greys the face on that answer with nothing
     // hand-listed.
     IconCenterOnNext,
+    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the `z` lamp, closing
+    // the viewport-class group behind the Center on next marker lamp, because
+    // it is also a viewport gesture. That is the architect's own reason for
+    // moving it here later the same day it landed, from the toolbar group,
+    // where it had stood between Redo and Render touching the pair it governs:
+    // what the lamp decides is whether an undo or redo may take the CAMERA
+    // somewhere else, which is the question Follow, the centered pin and the
+    // walk's framing lamp beside it all answer for their own gestures. Lit, a
+    // step whose restore would move the viewport refuses instead, cards, and
+    // leaves both stacks exactly as they were.
+    //
+    // SESSION-ONLY, unlike every other lamp in this group: the bit is
+    // AppState::restrict_undo_to_viewport, default OFF at every launch, in no
+    // settings file and in no vocabulary. It is a working posture — "hold my
+    // place while I take these back" — not a property of the piece.
+    //
+    // LIVE ON A LOCKED TAB (bare `z` authors nothing; the lamp's own chord is
+    // on the lock's allowlist even though the undo pair it governs is not) and
+    // DEAD IN THE `h` VIEW, where both undo stacks are frozen and the mode's
+    // allowlist drops the chord — the derived partition greys the face with
+    // nothing hand-listed.
+    IconRestrictUndo,
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen (bare `l`), load
     // in place (`'`) and THE READ-ONLY TOGGLE, in the order he dictated ("make
     // the last section of the icon row: listen, load-in-place, readonly,
@@ -2766,14 +2767,31 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: EIGHT in row 1, two
-// in row 3, TWENTY-FIVE in row 4 and EIGHTEEN in the bottom row — 53. Of
+// in row 3, TWENTY-SIX in row 4 and EIGHTEEN in the bottom row — 54. Of
 // those,
-// FORTY-EIGHT carry a chord in kToolbarChords and FIVE are the dropdown
+// FORTY-NINE carry a chord in kToolbarChords and FIVE are the dropdown
 // anchors (File, Edit, Iterations, Settings and Help; the third's enumerator is
 // still spelled `Series`), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 54 SINCE 2026-09-04, which is a net gain of one over that day's three row
+// rulings. THE RADIO-PAIR COLLAPSE took three boxes and three chords out of
+// row 4 when IconS/IconT, IconW/IconP and the two walk radios became three
+// lamps — 55 − 3 = 52, split 50 + 5 to 47 + 5. THE CENTER ON NEXT MARKER LAMP
+// put one back at the viewport-class group's tail on bare `n` — 53, split
+// 48 + 5, one pure chord addition inside an existing group. THE RESTRICT UNDO
+// TO VIEWPORT LAMP put the second back on bare `z` — 54, split 49 + 5, the
+// same shape; it landed in the toolbar group and moved to the viewport group's
+// tail later the same day, a member changing groups, which moves neither
+// number.
+// 55 SINCE 2026-09-03'S HELP ANCHOR: a non-chord entry joining row 1, so the
+// ROSTER moved and the chord table did not — 54 + 1, split 50 + 4 to 50 + 5.
+// It is the SERIES ANCHOR'S own 2026-08-27 shape less that day's two
+// deletions.
+// 54 SINCE 2026-08-31'S CENTERED LAMP: one pure chord addition inside an
+// existing group, the viewport-class group gaining a lamp on bare `y` — 53 + 1,
+// split 49 + 4 to 50 + 4, no separator and no group boundary moved.
 // 53 SINCE 2026-08-29'S COPY VALUE BUTTON: one pure chord addition inside an
 // existing group, the bottom row's verb group gaining a fifth box on bare `j`
 // (the group is EIGHT now) — 52 + 1, split 48 + 4 to 49 + 4, no separator and
@@ -2880,10 +2898,13 @@ enum class RedesignButton {
 // four days on.
 // 54 = 53 + THE RESTRICT-UNDO-TO-VIEWPORT LAMP (architect 2026-09-04, later
 // the same day): one more pure chord addition inside an existing group —
-// IconRestrictUndo on bare `z`, standing between Redo and Render in the
-// TOOLBAR group so it touches the pair it governs — so the split goes 48 + 5
-// to 49 + 5, one box and one 2px gap join the icon row's walk and no separator
-// or group boundary moves.
+// IconRestrictUndo on bare `z`, closing row 4's viewport-class group behind
+// the Center on next marker lamp — so the split goes 48 + 5 to 49 + 5, one box
+// and one 2px gap join the icon row's walk and no separator or group boundary
+// moves. (It stood in the TOOLBAR group between Redo and Render for the hours
+// of that day, and the ruling that moved it here also merged the two view
+// lamps into one group — a member changing groups and a leader deleted, which
+// moves the COUNT not at all and the width by the one separator it drops.)
 inline constexpr int kRedesignButtonCount = 54;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
@@ -3094,18 +3115,30 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE SIX GROUPS, in painted order: the toolbar four, THE AUDIO-VIEW LAMP
-// alone, THE MARKER-COLUMN LAMP alone, THE ZOOM GROUP (the Show trim region
-// button leading the zoom four, the waveform magnification pair and FOLLOW),
-// the render-entry group (listen and the read-only toggle — the load-in-place
-// left it on 2026-09-01) and THE HISTORY GROUP — the opener, its WALK LAMP,
-// its four companions and that load-in-place at the tail.
+// THE FIVE GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
+// THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom four,
+// the waveform magnification pair, FOLLOW, the centered pin, the walk's
+// framing lamp and the restrict-undo lamp), the render-entry group (listen and
+// the read-only toggle — the load-in-place left it on 2026-09-01) and THE
+// HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
+// load-in-place at the tail.
 //
-// THE 2026-09-04 RADIO-PAIR COLLAPSE COST NO BOUNDARY, which is the arithmetic
-// worth stating: the two view groups were PAIRS and are single buttons now, and
-// a group of one is a group (the trim group's own precedent, alone from
-// 2026-08-18 until it merged into the zoom group). Six leaders, six groups,
-// three fewer boxes.
+// FIVE SINCE THE SECOND OF 2026-09-04'S ROW RULINGS, which deleted ONE LEADER
+// and moved ONE MEMBER between groups. IconMarkerColumn stopped opening a
+// group, so the two view lamps the radio-pair collapse had left as a group of
+// one each are one group of two, which is what they read as: one lamp per view
+// axis, side by side. And the RESTRICT UNDO TO VIEWPORT lamp left the toolbar
+// group for the viewport-class group's tail — the architect's reason is that
+// "it is also a viewport gesture" — putting the toolbar group back at the four
+// it had held all day. No box was added or taken away; exactly one separator
+// went.
+//
+// (THE RADIO-PAIR COLLAPSE EARLIER THAT DAY COST NO BOUNDARY, and the
+// arithmetic is worth keeping beside the ruling that undid half of it: the two
+// view groups were PAIRS and became single buttons, and a group of one is a
+// group — the trim group's own precedent, alone from 2026-08-18 until it
+// merged into the zoom group. Six leaders, six groups, three fewer boxes; the
+// separator between the two lamps is the one the ruling above took out.)
 //
 // SIX SINCE 2026-08-27, DOWN FROM EIGHT, and the two boundaries that went are
 // the architect's own ruling that Follow and the Show trim region button JOIN
@@ -3144,10 +3177,11 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
-        // The two view lamps lead groups of exactly themselves since the
-        // 2026-09-04 collapse, where IconS and IconW each led a pair.
+        // The audio-view lamp opens the pair of view lamps, which is one group
+        // since the second of 2026-09-04's row rulings; IconMarkerColumn led a
+        // group of itself for the hours between the radio-pair collapse and
+        // that ruling, and IconW led the marker pair before the collapse.
         case RedesignButton::IconAudioView:
-        case RedesignButton::IconMarkerColumn:
         // THE ZOOM GROUP'S LEADER, and the merged group's since 2026-08-27:
         // the boundary that used to stand in front of IconZoomIn is deleted,
         // so this one separator now opens the whole viewport class. (The

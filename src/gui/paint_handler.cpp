@@ -836,9 +836,7 @@ struct IconRowDef {
 constexpr IconRowDef kIconRowButtons[] = {
     // THE TOOLBAR GROUP — the row's FIRST since the 2026-08-12 grand
     // relayout dissolved row 2 (architect: the labeled lane goes, "the icon
-    // to represent all those various meanings"): Save, Undo, Redo, THE
-    // RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04, the group's fifth) and
-    // Render at
+    // to represent all those various meanings"): Save, Undo, Redo and Render at
     // the row's left, the SAME chords, gates, disabled derivations and
     // stateful faces the labeled buttons carried — only the FACE is a glyph
     // in the 32px box now (Save's VcsCommit swap and Render's DialogCancel
@@ -848,18 +846,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
-    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) stands inside the
-    // toolbar group and TOUCHING THE PAIR IT GOVERNS, which is why it is here
-    // rather than at the viewport group's tail behind the centered pin: the
-    // rule is about undo first and the camera second, and a lamp four buttons
-    // away among the zoom acts would hide which two buttons it changes.
-    // Breeze's timeline-lift, a clip's two end brackets with a red cross
-    // between them — a stretch of timeline the editor declines to travel. It
-    // joins the group rather than opening one, so the row gains one box and one
-    // 2px gap and no separator moves.
-    {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
-    // THE TWO VIEW LAMPS (architect 2026-09-04, the radio-pair collapse): one
+    // THE TWO VIEW LAMPS SHARE ONE GROUP since later on 2026-09-04, where the
+    // radio-pair collapse had left each of them alone behind a separator of its
+    // own: one lamp per view axis, side by side, is what the pair reads as, so
+    // the architect deleted the divider between them. The group is the row's
+    // second and IconAudioView opens it.
+    //
+    // THE COLLAPSE ITSELF (architect 2026-09-04): one
     // button per axis where four radios stood. Each wears THE LIT STATE'S OWN
     // GLYPH, which is the collapse's rule across all three lamps — the audio
     // lamp lights in Target and wears document-import, the marker lamp lights
@@ -993,6 +987,18 @@ constexpr IconRowDef kIconRowButtons[] = {
     // It joins the group rather than opening one, so the row gains one box and
     // one 2px gap and no separator moves.
     {RedesignButton::IconCenterOnNext, icons::Icon::ZoomNext},
+    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) closes the same group
+    // behind the Center on next marker lamp, "it is also a viewport gesture"
+    // being the architect's own reason for moving it here from the toolbar
+    // group, where it had stood between Redo and Render for the hours of its
+    // first day. What it decides is whether an undo or redo may take the CAMERA
+    // somewhere else, which is the question every lamp in this group answers
+    // for its own gesture. Breeze's timeline-lift, a clip's two end brackets
+    // with a red cross between them — a stretch of timeline the editor declines
+    // to travel. It joins the group rather than opening one, so the move adds
+    // no box and no gap; what the same ruling took off the walk is one
+    // separator, the view lamps' own.
+    {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
     // the icon row: listen, load-in-place, readonly, history". The render-entry
     // pair keeps its separator-led group and gained the READ-ONLY toggle, the
@@ -2198,19 +2204,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // content ground the SELECTED TAB above opens into — and that the tab row's
     // own bar paints, the three surfaces being one value by measurement — under
     // a 1px border-bottom across the WHOLE window
-    // width, separator-divided groups of 32x32 buttons — TWENTY-FIVE members
-    // in SIX groups since 2026-09-04, RE-COUNTED off the roster enum and the
+    // width, separator-divided groups of 32x32 buttons — TWENTY-SIX members
+    // in FIVE groups since 2026-09-04, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
-    // Redo / Render, the deleted row 2's, leading the row), THE AUDIO-VIEW
-    // LAMP and THE MARKER-COLUMN LAMP, each alone in a group of its own since
-    // the radio-pair collapse, THE ZOOM GROUP — the VIEWPORT CLASS whole since the
+    // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
+    // sharing one group since the second of that day's rulings deleted the
+    // divider the radio-pair collapse had left standing between them, THE ZOOM
+    // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom four (2026-08-12), the waveform
     // magnification pair (2026-08-26), FOLLOW, which came in from the
     // dissolved mass-marker group the same day, THE CENTERED LAMP beside
-    // it (2026-08-31, R11) and THE CENTER ON NEXT MARKER LAMP closing the group
-    // (2026-09-04) — the RENDER-ENTRY group
+    // it (2026-08-31, R11), THE CENTER ON NEXT MARKER LAMP and THE RESTRICT
+    // UNDO TO VIEWPORT LAMP closing the group
+    // (both 2026-09-04, the second arriving from the toolbar group later that
+    // day because it is a viewport gesture too) — the RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
     // 2026-08-14 less the load-in-place, which left for the history group on
     // 2026-09-01) and THE HISTORY GROUP, the opener leading THE WALK LAMP,
@@ -2219,7 +2228,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-five paint on every
+    // hiding/showing icons in top icon row"): all twenty-six paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2235,22 +2244,32 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 25·32 + (25−6)·2 + (6−1)·9 = 8 + 800 + 38 + 45 = 891px,
+    //   8 + 26·32 + (26−5)·2 + (5−1)·9 = 8 + 832 + 42 + 36 = 918px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 899.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 926.
     //
-    // THE RADIO-PAIR COLLAPSE'S ARITHMETIC (architect 2026-09-04): three boxes
-    // and three gaps (−102) off the 959 the centered lamp left, no separator
-    // moving — the two view groups went from two members to one each and a
-    // group of one is still a group. That is the widest single cut the row has
-    // taken (959 to 857), and it was taken to make room for new lamps landing
-    // after that arc: the Center on Next Marker lamp landed later the same day,
-    // one box and one gap (+34) at the viewport group's tail, so the row stands
-    // at 891 authored px. The tablet fit ceiling is 258 — the walk fits while
-    // 891·factor ≤ 2304, 891·2.58 = 2299, and 259 overruns by ~4 device px. The
-    // tablet's first-run scale is 225 and the walk clears it wide: 891·2.25 =
-    // 2005 against the panel's 2304, 299 px of slack where the 959-px row had
-    // 146 — and 891 of the panel's 1024 logical px at that scale.
+    // THE REGROUPING'S ARITHMETIC (architect 2026-09-04, the day's third row
+    // ruling): the row lost ONE SEPARATOR and gained ONE GAP, which is −9 and
+    // +2 off the 925 the restrict-undo lamp had left that morning, so it stands
+    // at 918 authored px. No box moved either way — the two view lamps merged
+    // into one group and the restrict-undo lamp changed groups, and a member
+    // changing groups is free. The tablet fit ceiling is 250 — the walk fits
+    // while 918·factor ≤ 2304, 918·2.50 = 2295, and 251 overruns by ~1 device
+    // px. The tablet's first-run scale is 225 and the walk clears it wide:
+    // 918·2.25 = 2065 against the panel's 2304, 238 px of slack where the
+    // 959-px row had 146 — and 918 of the panel's 1024 logical px at that
+    // scale.
+    //
+    // THE 925 IT CAME OFF was the RESTRICT UNDO TO VIEWPORT lamp's own, earlier
+    // on 2026-09-04: one box and one gap (+34) onto the 891 the Center on Next
+    // Marker lamp had left hours before it, which itself was +34 onto the 857
+    // the RADIO-PAIR COLLAPSE left. THAT COLLAPSE IS THE WIDEST SINGLE CUT THE
+    // ROW HAS TAKEN (959 to 857): three boxes and three gaps (−102) off the 959
+    // the centered lamp left, no separator moving, the two view groups going
+    // from two members to one each — and it was taken to make room for the
+    // lamps that landed after it, which is exactly what the day then spent it
+    // on. The ceilings walked 240 → 268 → 258 → 249 → 250 with those four
+    // moves.
     //
     // THE 959 IT SHRANK FROM WAS THE CENTERED LAMP'S (2026-08-31, R11): one box
     // and one gap (+34) onto the 925 the Series relocation left, which had
@@ -2273,16 +2292,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 256 rather than 258 — 899 is
-    // the ink plus the pad, 899·2.56 = 2301 fits and 257 overruns — but the pad
+    // (Counting the trailing pad the ceiling is 248 rather than 250 — 926 is
+    // the ink plus the pad, 926·2.48 = 2296 fits and 249 overruns — but the pad
     // is ground, not ink, so the icons themselves are the thing measured.)
-    // Both older deployments clear it outright: 899 of 1024 at 100% on the
-    // retired Pi panel, 899 of 1920 on the laptop.
+    // Both older deployments clear it outright: 926 of 1024 at 100% on the
+    // retired Pi panel, 926 of 1920 on the laptop.
     //
-    // (It was 857px at twenty-four in six groups for the few hours of
-    // 2026-09-04 between the radio-pair collapse and the Center on Next Marker
-    // lamp; 959px at twenty-seven in six groups from 2026-08-31; 925px at
-    // twenty-six in six groups from 2026-08-27; 1007px at
+    // (It was 925px at twenty-six in six groups for the hours of 2026-09-04
+    // between the restrict-undo lamp landing in the toolbar group and the
+    // regrouping that moved it; 891px at twenty-five in six groups earlier that
+    // day, from the Center on Next Marker lamp; 857px at twenty-four in six
+    // groups for the few hours before it, from the radio-pair collapse;
+    // 959px at twenty-seven in six groups from 2026-08-31; 925px at
+    // twenty-six in six groups from 2026-08-27 — the same width as this day's
+    // own 925 and the same fit ceiling, reached from the other direction;
+    // 1007px at
     // twenty-eight in eight groups from 2026-08-26; 939px at
     // twenty-six earlier on 2026-08-18, before the WALK RADIOS landed; 973 at
     // twenty-seven from 2026-08-16; and 939 at twenty-six before that — the

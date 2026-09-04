@@ -172,16 +172,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true},   // Ctrl+Shift+Z
-    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the group's fifth
-    // member and the centered pin's shape on a different letter: bare `z`, a
-    // TOGGLE reading the live bit its own chord flips. It sits beside the pair
-    // it governs and shares their letter, which is the whole argument for the
-    // key. Live on a locked tab (the switch authors nothing, so its chord is on
-    // the lock's allowlist even though Ctrl+Z is not) and DEAD in the `h` view,
-    // where both undo stacks are frozen and the mode's allowlist drops the
-    // chord, so the derived partition greys this face in there.
-    {RedesignButton::IconRestrictUndo,
-     GuiKeys::Z, false, false, false, false, true},                                // bare z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
@@ -326,6 +316,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     // chord, so the derived partition greys this face in there.
     {RedesignButton::IconCenterOnNext,
      GuiKeys::N, false, false, false, false, true},                                // bare n
+    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the same shape again,
+    // closing the same group: bare `z`, a TOGGLE reading the live bit its own
+    // chord flips. It shares its letter with the pair it governs, which is the
+    // whole argument for the key, and it stood beside that pair in the toolbar
+    // group for the hours of its first day before the architect moved it here
+    // because it is a viewport gesture too. Live on a locked tab (the switch
+    // authors nothing, so its chord is on the lock's allowlist even though
+    // Ctrl+Z is not) and DEAD in the `h` view, where both undo stacks are
+    // frozen and the mode's allowlist drops the chord, so the derived partition
+    // greys this face in there.
+    {RedesignButton::IconRestrictUndo,
+     GuiKeys::Z, false, false, false, false, true},                                // bare z
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
     // 2026-09-01, the LOAD IN PLACE having moved to the history group below
@@ -687,9 +689,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 // every RedesignButton but the FIVE menu anchors carries a chord here — 49
 // rows against the roster's 54 since 2026-09-04'S RESTRICT-UNDO-TO-VIEWPORT
 // LAMP, one more pure addition inside an existing group (a chord, so the pair
-// moved together): `IconRestrictUndo` joined the TOOLBAR group on bare `z`,
-// between Redo and Render so it touches the pair it governs, and no separator
-// or group boundary moved. It was 48 against 53 earlier that day, at
+// moved together): `IconRestrictUndo` arrived on bare `z` and no separator or
+// group boundary moved with it. THE ROW WAS REGROUPED LATER THAT SAME DAY and
+// this table felt none of it: the lamp left the toolbar group for the
+// viewport-class group's tail and the two view lamps merged into one group, so
+// a member changed groups and a leader was deleted — neither of which is a
+// chord. The rows below are kept in the row's new order all the same, for the
+// reason stated at the row-4 block. It was 48 against 53 earlier that day, at
 // 2026-09-04'S CENTER-ON-NEXT-MARKER LAMP,
 // one pure addition inside an existing group (a chord, so the pair moved
 // together): `IconCenterOnNext` closed row 4's viewport-class group on bare
@@ -7241,9 +7247,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's five menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-five — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 53, the enum's
+// eighteen since 2026-08-29: 54, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
