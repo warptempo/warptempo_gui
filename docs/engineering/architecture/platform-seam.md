@@ -960,12 +960,23 @@ Linux target's flags and object set are byte-identical to before the port.
 
 WHAT THE APK DOES NOT CARRY, and the one behaviour that follows (recorded
 2026-09-02, the four-tier review's R-18): GIT. The GitHub recheck shells out
-to a `git` binary, and there is none on the tablet — so bare `h` REFUSES
-there, with the entry's own `History is unavailable: <reason>` card, and the
-mode's buttons grey with it. That is not a stub or an omission to fill: the
-checkpoint workflow is the authoring laptop's, the tablet being the glass the
-work is played and judged on. HELP's history section says so, this being one
-of the few places behaviour differs by host.
+to a `git` binary, and there is none on the tablet, so the remote walk's very
+first question — which clone holds the source — has no answer there. THAT IS
+NOT A STUB OR AN OMISSION TO FILL: the checkpoint workflow is the authoring
+laptop's, the tablet being the glass the work is played and judged on.
+
+**AND `h` WORKS ON THE TABLET SINCE 2026-09-04, ON THE LOCAL WALK** (architect,
+from the car on the first real road test, SUPERSEDING "bare `h` REFUSES there,
+with the entry's own `History is unavailable: <reason>` card, and the mode's
+buttons grey with it"). The view opens on the session's own undo/redo timeline
+read as states, and everything that walk supports works there exactly as it
+does when bare `g` chooses it on the laptop — `,` / `.`, the diff lane, `'`,
+bare `v`, the paired march, Ctrl+Tab. WHAT NEEDS GIT IS REFUSED TRUTHFULLY: the
+walk lamp greys and bare `g` cards the bootstrap's own reason, Save and Commit
+greys and Ctrl+S cards the same, and the entry itself says nothing on screen
+(one stderr line, as ever). github-recheck.md's own section owns the ruling;
+HELP's history section says so, this being one of the few places behaviour
+differs by host.
 
 ## Device facts (Galaxy Tab S10 FE, SM-X520)
 

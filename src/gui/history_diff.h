@@ -20,15 +20,24 @@ struct UndoEntry;
 class GuiHistoryPrefetch;
 
 // THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29; moved here
-// 2026-08-30, when the mode's ENTRY refusal became a card too). The fact has
-// FOUR reporters across two translation units and each has always said the
-// same words: this module's own init(), which prints it on stderr with the
-// store's reason appended; the entry owner, which raises that same composed
-// line on a notification card when init() refuses (open_history_mode_fresh);
-// the prefetch arrival that closes a standing view, which does both; and
-// run_history_commit's !active arm, which raises it bare. It lives beside the
-// reason it prefixes rather than in one of the readers, so no reader can
-// drift from the producer.
+// 2026-08-30, when the mode's ENTRY refusal became a card too). Every reporter
+// of the fact says these same words, and the reporters are re-greped on this
+// name rather than inherited: this module's own init(), which prints it on
+// stderr with the store's reason appended; the WALK LAMP'S REFUSAL, which
+// raises that same composed line on a card when bare `g` asks for the remote
+// walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
+// the CHECKPOINT ACT'S, which raises it for the same reason
+// (open_history_commit_editor); the prefetch arrival that closes a standing
+// view, which does both; run_history_commit's !active arm, which raises it
+// bare; and the two DEAD-BUTTON TOOLTIPS that name it as the reason the walk
+// lamp and Save-and-Commit are greyed (redesign_button_tooltip's stateful
+// overload). It lives beside the reason it prefixes rather than in one of the
+// readers, so no reader can drift from the producer.
+//
+// THE ENTRY IS NO LONGER AMONG THEM (architect 2026-09-04): a bootstrap the
+// remote walk cannot answer opens the view on the LOCAL walk instead of
+// refusing it, so the fact belongs to the press that asks for git rather than
+// to the press that opens the view.
 inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
@@ -752,7 +761,12 @@ public:
     // load — plus the now-side capture and the delta caches.
     //
     // Returns available(). TWO FAMILIES OF FAILURE, one stderr line and nothing
-    // else either way. THE HEADER'S: the repo root missing, no `origin` remote, a
+    // else either way — AND A FAILURE NO LONGER REFUSES THE VIEW (architect
+    // 2026-09-04): the entry owner opens on the LOCAL walk instead, so what
+    // this answers is whether the REMOTE walk bootstrapped, and it is the
+    // stored verdict every reader of that question asks for the visit's whole
+    // life (available() below owns the readers). THE HEADER'S: the repo root
+    // missing, no `origin` remote, a
     // `projects_repo` that is empty or that names a different repository than
     // this clone's FETCH url or than any of its effective PUSH urls, and a source
     // that is not in a folder under `projects/` — which repository, and where
@@ -775,9 +789,17 @@ public:
     // history would otherwise have passed for a read one.
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
+    // IS THE REMOTE WALK AVAILABLE? — the bootstrap's verdict, ANSWERED ONCE
+    // PER ENTRY and read back from here all visit long (architect 2026-09-04).
+    // A visit whose bootstrap refused still opens, on the local walk, so this
+    // is what every surface that NEEDS git asks. ITS ONE PREDICATE IN THE GUI'S
+    // OWN VOCABULARY IS AppState's history_remote_walk_available, which is what
+    // those readers spell and which carries their inventory — nothing re-runs
+    // git to ask this, and a run that succeeds under a standing visit does not
+    // change the answer that visit opened with.
     bool               available() const { return available_; }
     // The refusal's two clauses (GuiFailure, failure.h): init() printed the
-    // diagnostic, the entry owner cards the display.
+    // diagnostic, and the display clause is what the two cards above name.
     const GuiFailure&  unavailable_reason() const { return unavailable_reason_; }
 
     // How many eligible commits the bound store has DELIVERED so far. It only
@@ -850,9 +872,13 @@ public:
     // against the same three strings this session captured at init(), and it
     // takes them from here rather than building a second set: one capture per
     // visit is what makes "the two walks agree about now" structural instead of
-    // a coincidence of two calls made a microsecond apart. Empty until init()
-    // succeeds, which is also the only state a caller can reach it in — an
-    // unavailable session never opens the view.
+    // a coincidence of two calls made a microsecond apart.
+    //
+    // IT IS CAPTURED WHETHER OR NOT THE BOOTSTRAP ANSWERED (2026-09-04), which
+    // is what the local fallback needs: a visit that opens with no remote walk
+    // still reads its whole undo/redo timeline against this side, so the
+    // capture sits ABOVE init()'s refusal arms rather than at its successful
+    // tail. It is empty only before init() has run at all.
     const GuiHistoryNowSide& now_side() const { return now_; }
 
 private:

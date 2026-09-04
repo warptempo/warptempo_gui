@@ -2433,8 +2433,17 @@ bool GuiHistoryDiff::init(const AppState&           app,
         c.clear();
     }
 
+    // THE NOW SIDE IS CAPTURED FIRST, ABOVE EVERY REFUSAL (2026-09-04), because
+    // the visit's OTHER walk needs it even when this one cannot be
+    // bootstrapped: a bootstrap the remote walk fails opens the view on the
+    // LOCAL walk, whose every member is measured against these three strings.
+    // It costs three in-memory formats and no git, so paying it on the refusing
+    // path costs the refusal nothing.
+    now_ = build_history_now_side(app);
+
     // Every failure arm lands here: one stderr line, and the whole session
-    // left in its documented empty shape.
+    // left in its documented empty shape (the now side above excepted — it is
+    // the local walk's, not the commit walk's).
     auto unavailable = [this](GuiFailure why) {
         unavailable_reason_ = std::move(why);
         repo_root_.clear();
@@ -2533,10 +2542,11 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // (history_prefetch.cpp): the two message strings that stood here died with
     // the refusal rather than becoming informational prints beside it.
 
-    // The now side is captured once, here: every delta this session hands out
-    // is measured against these exact bytes. (The delta caches are NOT sized
-    // here any more — membership grows during a visit, so delta_at grows them.)
-    now_ = build_history_now_side(app);
+    // (THE NOW SIDE IS CAPTURED AT THE HEAD OF THIS BODY since 2026-09-04, the
+    // local fallback needing it on the refusing path too. Every delta this
+    // session hands out is measured against those exact bytes. The delta caches
+    // are NOT sized here — membership grows during a visit, so delta_at grows
+    // them.)
     available_ = true;
     return true;
 }

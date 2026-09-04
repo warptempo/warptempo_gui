@@ -4442,9 +4442,10 @@ private:
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
     //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
-    //     it began closing the view instead. False (with init's own stderr line
-    //     already printed) when there is no history to show; the mode is then
-    //     left exactly as it was.
+    //     it began closing the view instead. IT ALWAYS OPENS since 2026-09-04:
+    //     a bootstrap the REMOTE walk refuses lands the visit on the LOCAL one
+    //     (the fallback's ruling is at the owner), so the old bool answer had
+    //     no false left to report and is gone with it.
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published content — the two pointer stashes and the diff-flag list
     //     their indices name — at every mode edge: the entry, the exit, each
@@ -4502,7 +4503,7 @@ private:
     // Tab arm and its Ctrl+Shift+Tab march, which composes this with the A/B
     // switch. Every walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward);
-    bool open_history_mode_fresh();
+    void open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
     void republish_history_lane_now();
     void set_history_delta(GuiHistoryWalkSource source,

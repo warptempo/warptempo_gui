@@ -7051,6 +7051,14 @@ struct AppState {
         // applied by the whole-struct machinery at both edges exactly as the
         // compare bit's is: a visit never inherits the last visit's walk.
         //
+        // WITH ONE FORK, AND IT IS THE ENTRY OWNER'S (architect 2026-09-04): a
+        // visit whose REMOTE walk could not be bootstrapped opens on LOCAL,
+        // the fallback that makes `h` useful where there is no git at all.
+        // open_history_mode_fresh writes it beside local_index, an assignment
+        // the entry makes because only a run bootstrap can answer it; the
+        // switch owner then refuses every route back toward Commit for the
+        // visit's life (history_remote_walk_available).
+        //
         // EACH SOURCE KEEPS ITS OWN POSITION across a switch, which is what makes
         // the pair of walks two places rather than one place with a changing
         // subject: read three checkpoints back, look at what your last two undo
@@ -11033,11 +11041,46 @@ inline bool history_revert_actionable(const AppState& a) {
            !active_view_state(a).read_only;
 }
 
-// WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own two session
-// terms in one word (architect 2026-09-01): something to commit (the head
+// DID THIS VISIT'S REMOTE WALK BOOTSTRAP? — the ONE predicate for "git can be
+// asked about this piece", and the GUI's whole vocabulary for it (architect
+// 2026-09-04, from the car: on the tablet there is no git binary at all, and
+// bare `h` used to card `could not ask git which clone holds '550 - 1'` and
+// refuse). LOCAL HISTORY IS THE FALLBACK now — the view opens on the session's
+// own undo/redo timeline — so what needs git is refused HERE and truthfully,
+// while everything the local walk supports works exactly as it does when `g`
+// chooses it on the laptop.
+//
+// IT IS THE ENTRY'S STORED VERDICT AND NOTHING RUNS GIT TO ASK IT:
+// GuiHistoryDiff::init answers the bootstrap once per entry and keeps both the
+// answer and its reason, so this is a field read at any cadence a face wants.
+// A run that succeeds under a standing visit does not change it — the next `h`
+// bootstraps afresh.
+//
+// SIX READERS, re-greped on this name and paired act-to-face so no glyph can
+// disagree with its key: the WALK LAMP'S ACT (GuiInputHandler::set_history_-
+// delta, which refuses a switch toward the remote walk and cards the reason)
+// and its FACE (redesign_button_enabled's HistoryWalk arm); the CHECKPOINT ACT
+// (open_history_commit_editor, which cards the same sentence) and Save's face,
+// composed one predicate down at history_checkpoint_actionable; the DEAD-BUTTON
+// TOOLTIP fork that names the reason over both of those greyed faces; and the
+// FAILED-SCAN ARRIVAL (on_history_prefetch_ready), which is the odd one out —
+// it does not refuse an act but CARVES A FALLBACK VISIT OUT of the closer that
+// ends a visit whose remote premise failed, such a visit never having had that
+// premise. The reason itself is the session's own
+// (history_mode.session.unavailable_reason(), whose display clause the cards
+// carry and whose kHistoryUnavailable prefix is the one composer).
+inline bool history_remote_walk_available(const AppState& a) {
+    return a.history_mode.session.available();
+}
+
+// WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own session terms
+// in one word (architect 2026-09-01): something to commit (the head
 // delta, measured once per visit) and no checkpoint already publishing (single
 // in flight, a bit that OUTLIVES the view, which is why this takes the whole
-// AppState rather than the mode struct).
+// AppState rather than the mode struct) — AND, since 2026-09-04, A REMOTE WALK
+// TO COMMIT INTO, the act's outermost premise: a visit standing on the local
+// fallback has no clone this program could ask about, so the button greys and
+// the chord cards the bootstrap's own reason.
 //
 // IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
 // admitted into the `h` view's vocabulary only while both held from 2026-08-08
@@ -11055,6 +11098,7 @@ inline bool history_revert_actionable(const AppState& a) {
 // names WHAT IS HAPPENING rather than what a press would do.
 inline bool history_checkpoint_actionable(const AppState& a) {
     return a.history_mode.active &&
+           history_remote_walk_available(a) &&
            !a.history_mode.head_delta_empty &&
            !a.history_checkpoint_in_flight;
 }
@@ -11915,9 +11959,10 @@ inline bool redesign_button_enabled(const AppState& a,
     // so (2026-08-18, with their return to the icon row): this whole test is
     // inside `a.history_mode.active`, so it has no opinion about a button out
     // there at all. Their own arm below carries that answer and states why it
-    // owns it — and since 2026-08-30 the walk's two WALLS with it, which the
-    // partition cannot see (bare `,` and `.` are the mode's own vocabulary and
-    // answer LIVE here whatever the index).
+    // owns it — and since 2026-08-30 the walk's two WALLS with it, and since
+    // 2026-09-04 the WALK LAMP'S OWN BOOTSTRAP TERM, all of which the
+    // partition cannot see (bare `,`, `.` and `g` are the mode's own
+    // vocabulary and answer LIVE here whatever the walk turned out to be).
     if (a.history_mode.active && history_mode_disables_button(a, b)) {
         return false;
     }
@@ -12650,7 +12695,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // so the derived partition answers LIVE for it inside the view all by
         // itself — what it cannot answer is the RESTING grey out here, the
         // partition running only while `active`.
+        //
+        // AND THE WALK LAMP TAKES A SECOND TERM SINCE 2026-09-04, which its
+        // two neighbours do not: the axis it toggles has a half that needs
+        // GIT, so on a visit that opened with no remote walk to bootstrap
+        // (history_remote_walk_available) every admitted press would be
+        // refused, and the truthful-buttons ruling greys it. The KEY still
+        // cards the bootstrap's reason — the grey is the message for the
+        // button, the sentence is the key's.
         case RedesignButton::HistoryWalk:
+            return a.history_mode.active && history_remote_walk_available(a);
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryCumulative:
             return a.history_mode.active;
@@ -13592,6 +13646,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Cumulative toggle beside it owns "reading". The hint shows over a
         // DEAD button outside the `h` view, the tooltips-on-disabled ruling's
         // own case (architect 2026-08-07), exactly as its four neighbours' do.
+        // INSIDE the view the stateful overload forks it once, naming the
+        // bootstrap as the reason when the visit opened on the local fallback.
         case RedesignButton::HistoryWalk:
             return {"Toggle History Walk (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
@@ -13900,6 +13956,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   surface that runs the save first belongs on the save's own slot, and Render
 //   went back to being a render in every mode.
 //
+//   SAVE OR THE WALK LAMP, ON A VISIT THAT OPENED ON THE LOCAL FALLBACK
+//   (2026-09-04) → "History is unavailable", the sentence the two keys' cards
+//   carry with the clone-specific reason appended. Both faces are greyed by one
+//   predicate (history_remote_walk_available), so both name it; Save's fork is
+//   ranked under the publishing hint above and over the act's own name below,
+//   each button owing ONE reason.
+//
 //   SAVE, WITH A CHECKPOINT PUBLISHING → the same commit icon, DISABLED, in
 //   EVERY view (the act outlives the view it was launched from), the hint
 //   "Committing the checkpoint (Ctrl+S)". Ranked FIRST because it is the
@@ -13994,6 +14057,20 @@ inline RedesignTooltipText redesign_button_tooltip(
     // already says as much.
     if (b == RedesignButton::Save && a.history_checkpoint_in_flight) {
         return {"Committing the checkpoint (Ctrl+S)", nullptr};
+    }
+    // THE TWO DEAD-BUTTON REASONS THE LOCAL FALLBACK ADDED (2026-09-04), in
+    // the iteration sweep's and the undo lamp's own shape: where a visit
+    // opened with no remote walk, the walk lamp and Save-and-Commit are both
+    // greyed by that one predicate, so each names it. The words are the
+    // product's one spelling of the fact (kHistoryUnavailable, history_diff.h)
+    // — the CARDS the two keys raise append the clone-specific reason, which a
+    // constant tooltip line cannot carry, and the shorter sentence is the true
+    // half of the same one. Save's clause is ranked under the in-flight
+    // override above and over the act's own name below, each button owing ONE
+    // reason and this being the standing one.
+    if ((b == RedesignButton::HistoryWalk || b == RedesignButton::Save) &&
+        a.history_mode.active && !history_remote_walk_available(a)) {
+        return {kHistoryUnavailable, nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
         return {"Save and Commit (Ctrl+S)", nullptr};

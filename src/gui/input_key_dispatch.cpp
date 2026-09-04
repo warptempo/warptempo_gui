@@ -914,12 +914,20 @@ void GuiInputHandler::republish_history_lane_now() {
 // cleared focus, head delta, generation bump, lane-stash drop — instead of
 // reproducing part of it.
 //
-// UNAVAILABLE IS A CONSUMED NO-OP: init() has already put its own one line on
-// stderr naming the reason, and that is the whole story — no new UI surface, no
-// red flash, and above all no half-open mode. The existing mode state, if any,
-// is left untouched, because the fresh session is built beside it and only moved
-// in once it is known good.
-bool GuiInputHandler::open_history_mode_fresh() {
+// A BOOTSTRAP THAT REFUSES OPENS THE VIEW ANYWAY, ON THE LOCAL WALK (architect
+// 2026-09-04, from the car on the first real road test: the tablet carries no
+// git binary, `h` answered `could not ask git which clone holds '550 - 1'` and
+// nothing opened, and he does not need git history there). LOCAL HISTORY IS THE
+// FALLBACK — the session's own undo/redo timeline as states — and everything
+// that walk supports works exactly as it does when bare `g` chooses it on the
+// laptop: `,`/`.`, the diff lane, `'`, bare `v`, the paired march, Ctrl+Tab.
+// WHAT NEEDS GIT IS REFUSED TRUTHFULLY AND ELSEWHERE, at the press that asks
+// for it: the walk lamp's own chord and the checkpoint act each card the
+// bootstrap's reason, and both faces grey off the one predicate
+// (history_remote_walk_available, app_state.h). SO THE ENTRY RAISES NO CARD —
+// init() has already put its one line on stderr naming the reason, and the lit
+// local lamp beside a greyed Save is the cue that this visit has no git.
+void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
     // prefetch store now, and a store describing another source, another
     // projects_repo or a branch tip that has moved would answer this visit out
@@ -929,21 +937,21 @@ bool GuiInputHandler::open_history_mode_fresh() {
     kick_history_prefetch_if_stale();
     AppState::HistoryMode fresh;
     if (!fresh.session.init(app, history_prefetch)) {
-        // THE REFUSED ENTRY SAYS SO (architect 2026-08-30). init() already
-        // prints the line on stderr with the store's own reason appended;
-        // the card is that same composed sentence on screen — one composer
-        // (kHistoryUnavailable, history_diff.h), the stderr line unchanged —
-        // so a `h` that opens nothing is not a dead key on the tablet, where
-        // there is no terminal to read. THE CARD IS THIS OWNER'S, not
-        // init()'s: the module has no notifications and this is the ONE
-        // entry, so there is exactly one card per press by construction.
-        // (The OTHER reporter of the same fact — the prefetch arrival that
-        // closes a standing view — raises its own, an event the user was not
-        // watching rather than an answer to a press.)
-        notifications.notify(AppState::NotificationClass::Normal,
-                             std::string(kHistoryUnavailable) + ": " +
-                                 fresh.session.unavailable_reason().display);
-        return false;
+        // THE FALLBACK, IN ONE ASSIGNMENT. The session keeps the verdict and
+        // its reason (GuiHistoryDiff::available), so every surface that needs
+        // git reads one stored answer for the visit's whole life and nothing
+        // re-runs git per frame. The walk source is written HERE rather than
+        // through the switch owner for the reason local_index is: the mode is
+        // not `active` yet — set_history_delta returns on that — and the entry
+        // already does everything a switch does (focus cleared below, the lane
+        // stash dropped, the lane republished, the window damaged), so routing
+        // through it would only run that work twice.
+        //
+        // THE CARD THIS ARM USED TO RAISE IS GONE (2026-08-30 to 2026-09-04):
+        // it answered a press that opened nothing, and this press opens the
+        // view. The fact keeps its other reporters (kHistoryUnavailable,
+        // history_diff.h, enumerates them).
+        fresh.source = GuiHistoryWalkSource::Local;
     }
     // THE SECOND WALK, BOUND TO THE SAME NOW SIDE (2026-08-07). It costs no git
     // and no formatting here — the undo stack's size, the settings writer's GUI
@@ -952,13 +960,16 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // reason that matters: the now side it takes is the session's own capture,
     // so the two walks cannot come to disagree about what "now" is.
     //
-    // IT RIDES THE MODE, IT DOES NOT CARRY IT: entry is gated on the COMMIT
-    // side's HEADER resolving and on nothing else — which repository, which
-    // piece, which source — never on how many members the walk turned out to
-    // have. So a piece whose every checkpoint refuses the strict load opens
-    // just as one with a hundred good ones does, and the local walk is read in
-    // there beside a blank Remote lane (architect 2026-08-09; the empty walk's
-    // ruling is at GuiHistoryDiff::init).
+    // IT CARRIES THE MODE WHERE THE COMMIT SIDE CANNOT (architect 2026-09-04,
+    // superseding "it rides the mode, it does not carry it"). Entry was gated
+    // on the COMMIT side's HEADER resolving — which repository, which piece,
+    // which source — and never on how many members the walk turned out to have,
+    // so a piece whose every checkpoint refuses the strict load opened just as
+    // one with a hundred good ones did, beside a blank Remote lane (architect
+    // 2026-08-09; the empty walk's ruling is at GuiHistoryDiff::init). NOW THE
+    // HEADER'S OWN REFUSAL OPENS TOO, on this walk alone, which is what makes
+    // `h` a working key where there is no git at all — the fallback's ruling is
+    // at the head of this owner.
     fresh.local.init(app, fresh.session.now_side());
     // AND IT OPENS WHERE THE SESSION STANDS (architect 2026-08-08), which is the
     // one place the two walks' entry positions differ. The commit walk opens at
@@ -1015,7 +1026,6 @@ bool GuiInputHandler::open_history_mode_fresh() {
     // on the next tick. The edges' one shape — its owner carries the reasoning.
     republish_history_lane_now();
     viewport.invalidate_all();
-    return true;
 }
 
 // THE HEAD DELTA'S ONE MEASUREMENT SITE (architect 2026-08-07, generalizing the
@@ -1187,8 +1197,11 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // BEFORE the close so each gesture ends against the state it was made in, and
 // the close's own region hide and band restore then land over the top.
 //
-// ONE PRODUCER, and it is narrow: a view opened mid-scan whose run then fails.
-// A run that had already failed refuses at init and never opens a view at all.
+// ONE PRODUCER, and it is narrow: a view opened mid-scan ON A BOOTSTRAPPED
+// REMOTE WALK whose run then fails. A run that had already failed lands the
+// entry on the LOCAL fallback instead (2026-09-04, superseding "refuses at init
+// and never opens a view at all"), and such a visit is carved out at the site
+// below — it never had the premise this closer protects.
 //
 // AND IT RETIRES THE VIEW'S OWN STANDING QUESTION BEFORE IT CLOSES (2026-08-29).
 // TWO SURFACES CAN BE UP WHEN THIS FIRES, and the visit's end has to answer for
@@ -1211,7 +1224,16 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
-    if (r.became_done && history_prefetch.run_failed()) {
+    // A VISIT ON THE LOCAL FALLBACK IS NOT ENDED BY THIS (2026-09-04). The
+    // closer below exists because the view's premise — that this session knows
+    // the piece's committed history — failed under it; a visit whose bootstrap
+    // never answered opened without that premise, on the session's own
+    // undo/redo timeline, and a run failing behind it takes nothing away. Its
+    // remote half is already refused truthfully at the walk lamp and at the
+    // checkpoint act (history_remote_walk_available), which is where that fact
+    // belongs.
+    if (r.became_done && history_prefetch.run_failed() &&
+        history_remote_walk_available(app)) {
         // A view closing under the user is an event he was not watching, so
         // the arrival's sentence is a notification card beside its stderr
         // line (2026-08-29), the store's own reason appended on both — its
@@ -1285,6 +1307,14 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // rule.) The `!active` guard is the same defensive shape
 // the two framers carry — the callers are gated by the mode already.
 //
+// AND IT REFUSES ONE SWITCH SINCE 2026-09-04: toward the REMOTE walk on a
+// visit that could not bootstrap it. That is the local fallback's other half —
+// the entry lands such a visit on Local, and this is what keeps it there for
+// the visit's life whatever route asks. The refusal is here rather than in
+// bare `g`'s arm because the SOURCE WRITE is this owner's, so the answer is
+// one line covering every present and future route; the reasoning and the card
+// are at the site.
+//
 // IT WRITES THE PAIR ACROSS TWO HOMES since 2026-08-08, and the split is the
 // reading's session scope rather than a second owner: the WALK SOURCE is
 // per-visit state on HistoryMode, while the READING is the program-session
@@ -1300,6 +1330,25 @@ void GuiInputHandler::on_history_prefetch_ready() {
 void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
                                         GuiHistoryCompare    compare) {
     if (!app.history_mode.active) return;
+    // THE REMOTE WALK NEEDS GIT, AND THIS VISIT MAY NOT HAVE HAD IT (architect
+    // 2026-09-04). A bootstrap that could not answer opens the view on the
+    // LOCAL walk (open_history_mode_fresh), and the half that reads committed
+    // checkpoints then has nothing behind it for the visit's whole life — so
+    // the refusal lives at the ONE switch owner rather than at bare `g`'s arm,
+    // and no route toward the remote walk, present or future, can get past it.
+    // The card is the bootstrap's own reason under the product's one spelling
+    // of the fact (kHistoryUnavailable, history_diff.h), which is the same
+    // sentence the ENTRY used to raise before the fallback took its place; the
+    // walk lamp's face reads the same predicate and greys, so the press that
+    // reaches here is the KEY's.
+    if (source == GuiHistoryWalkSource::Commit &&
+        !history_remote_walk_available(app)) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            std::string(kHistoryUnavailable) + ": " +
+                app.history_mode.session.unavailable_reason().display);
+        return;
+    }
     const bool cumulative = (compare == GuiHistoryCompare::Cumulative);
     if (app.history_mode.source == source &&
         app.history_cumulative == cumulative) {
@@ -1593,8 +1642,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         }
         // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
         // the visit must measure against the state the user is looking at.
-        // UNAVAILABLE IS A CONSUMED NO-OP — the entry owner reports it and this
-        // arm has nothing to add.
+        // AND IT ALWAYS OPENS since 2026-09-04 — a bootstrap the remote walk
+        // refuses lands on the LOCAL one, so this arm has no refusal to report
+        // and never had anything to add to one.
         open_history_mode_fresh();
         return true;
     }
@@ -1618,6 +1668,12 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare shapes
     // that DO repeat and leaves this one out, exactly as it leaves `u` out): a
     // held toggle over two walks can only flap.
+    //
+    // A STEP TOWARD A WALK THIS VISIT NEVER BOOTSTRAPPED IS REFUSED AT THE
+    // SWITCH OWNER (2026-09-04), which is why this arm carries no term of its
+    // own: it names the next walk in row order and the owner answers whether
+    // that walk exists for this visit, carding the bootstrap's reason when it
+    // does not — one decision, which the lamp's greyed face reads too.
     //
     // (THE CHORD WAS CTRL+TAB FROM 2026-08-05 TO 2026-08-18, with
     // Ctrl+Shift+Tab as its reverse from 2026-08-07, because row 3's tabs were
@@ -2567,6 +2623,20 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 void GuiInputHandler::open_history_commit_editor() {
     if (!app.history_mode.active) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
+    // THERE MUST BE A CLONE TO COMMIT INTO, and that is this act's outermost
+    // premise (architect 2026-09-04): a visit standing on the LOCAL fallback
+    // opened without a bootstrapped remote walk, so there is no repository this
+    // program could ask about, let alone write to. It cards the bootstrap's own
+    // reason under the product's one spelling of the fact — the same sentence
+    // the walk lamp's refusal raises — and the Save button greys off the same
+    // predicate, composed once at history_checkpoint_actionable.
+    if (!history_remote_walk_available(app)) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            std::string(kHistoryUnavailable) + ": " +
+                app.history_mode.session.unavailable_reason().display);
+        return;
+    }
     if (app.history_checkpoint_in_flight) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kCheckpointPublishing);
