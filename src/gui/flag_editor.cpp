@@ -342,11 +342,13 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     }
 
     // ONE BRACKET-ONLY ENTRY (affects_persistence false — session-only
-    // fields, never serialized, so the dirty dot stays where it is). The
-    // snapshot is taken before the write, the store's own convention.
+    // fields, never serialized, so the dirty dot stays where it is), carrying
+    // the ADDRESSED CELL this editor seated at its open, so undoing the commit
+    // leaves the focus bright on the cell it was typed into. The snapshot is
+    // taken before the write, the store's own convention.
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/false);
+    undo.push_undo_iter_bracket(std::move(pre_state));
     undo.recompute_dirty();
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded

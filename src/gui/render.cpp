@@ -2122,8 +2122,9 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
 // anchor: the seam column's offset from the flag fill's left edge, and the
 // cell's own fill width. Off the same eligibility, the same tokens and the
 // same font the flag pass lays the cells out with (warp_iter_cells), so the
-// field opens on exactly the column the resting cell's seam stands on and
-// is never narrower than the cell it replaces. Zero widths where no cells
+// field opens on exactly the column the resting cell's seam stands on and is
+// exactly as wide as the cell it replaces — the width is the field's, not a
+// floor under it (render_flag_editor_box's pin). Zero widths where no cells
 // paint — the editor cannot be open then, the open having asked.
 struct CommittedCellGeometry {
     int seam_off = 0;
@@ -2219,16 +2220,27 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const int edge_h   = marker_flag_edge_h_px();
     const int border_w = marker_flag_border_px();
     // CARET ROOM. The caret at end-of-text stands one column past the last
-    // glyph, so the box must own a column the run does not; without it the
-    // caret would sit on the right pad or, at the clamp, off the box entirely.
+    // glyph, so a field that GROWS WITH ITS TEXT must own a column the run
+    // does not; without it the caret would sit on the right pad or, at the
+    // clamp, off the box entirely. (The bound field, which does not grow,
+    // deliberately does put it on that pad — the note below.)
     // One authored pixel, scaled like every other row-5 length, with the tree's
     // own per-metric floor: it rounds to 0 at gui_scale 50, which would leave
     // the caret no column to stand in. (The hand-rolled `< 1 ? 1 :` this used
     // to spell is now the shared scaled_px floor form.)
     const int caret_px = scaled_px(1.0, 1);
+    // THE BOUND FIELD BORROWS ITS CARET COLUMN FROM ITS OWN RIGHT PAD instead
+    // of adding one (architect 2026-09-05, with the ruling below that the
+    // field IS its cell): that field's width is pinned to the cell's, so a
+    // column added here would be a column stolen from the neighbour box, and
+    // a column simply dropped would scroll the token sideways the moment the
+    // caret sat at its end. The pad is two authored pixels and the caret one,
+    // so the borrow always leaves the fill a pad on that side; the text
+    // viewport below is what widens by it, the box never does.
+    const int caret_room = bound_kind ? 0 : caret_px;
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
-    int box_w = pad_l + run_w + caret_px + pad_r;
+    int box_w = pad_l + run_w + caret_room + pad_r;
 
     // THE CLAMP, in two stages. First the box is capped at the LANE's own width
     // — a payload wider than the window cannot be shown whole, and this is
@@ -2256,14 +2268,20 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // itself is painted below, outside this fill on its left, which is that
     // border's own geometry). The BOUND field opens past its cell's own seam
     // the same way (committed_cell_geometry), the marker's other boxes
-    // standing where they are; and it is NEVER NARROWER THAN THE CELL IT
-    // REPLACES — the box below is floored at the cell's fill width — so no
-    // committed pixel can show past a shortened token, which is what lets
-    // the flag pass keep painting the cell underneath instead of suppressing
-    // it (a wider field covers the next box, and a press there is the
-    // editor's own claim, resolved first). The PAYLOAD field opens on the
-    // marker's own column, the flag unrolling from itself — and the cells
-    // yield to it whole.
+    // standing where they are; and it IS ITS CELL, exactly (architect
+    // 2026-09-05, who saw the open field paint past its cell into the measure
+    // box beside it): the box below is PINNED to the cell's fill width rather
+    // than floored at it, so the field covers the committed cell and not one
+    // column more, whatever is typed into it. The pin is what lets the flag
+    // pass keep painting the cell underneath instead of suppressing it —
+    // nothing can show past a shortened token, and nothing of the neighbour
+    // box is hidden by a long one. The cell's width is read off the LIVE
+    // store, which the modal editor freezes, so the field does not resize
+    // while it is typed in; text too wide for it SCROLLS under the minimal-
+    // travel view offset below, the field's own rule for a run wider than its
+    // window, and the commit refuses an over-wide token by its grammar. The
+    // PAYLOAD field opens on the marker's own column, the flag unrolling from
+    // itself — and the cells yield to it whole.
     const MarkerCell bound_side = iter_bound_editor_side(ed);
     const CommittedCellGeometry cell_geom = bound_kind
         ? committed_cell_geometry(app, font, idx, bound_side, iteration_on)
@@ -2272,8 +2290,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         ? committed_flag_box_w(app, font, phase, idx, iteration_on) + border_w
         : bound_kind ? cell_geom.seam_off + border_w
                      : 0;
-    if (bound_kind && box_w < cell_geom.fill_w) box_w = cell_geom.fill_w;
-    if (box_w > lane.w) box_w = lane.w;   // the lane cap, restated over the floor
+    // The pin, guarded on a cell that actually paints: the open's own gates
+    // ask that (enter_iter_bound_edit) and the mode cannot go off under a
+    // keyboard-modal editor, so a zero here is unreachable — the guard only
+    // keeps an invisible field impossible.
+    if (bound_kind && cell_geom.fill_w > 0) box_w = cell_geom.fill_w;
+    if (box_w > lane.w) box_w = lane.w;   // the lane cap, restated over the pin
 
     const double min_left = static_cast<double>(lane.x);
     const double max_left = static_cast<double>(lane.x + lane.w - box_w);
@@ -2285,10 +2307,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the
     // width the view offset is measured against. The caret column belongs to it
-    // (a caret at the end must be inside the clip to be seen), which is why
-    // caret room is added to the viewport and not just to the box.
+    // (a caret at the end must be inside the clip to be seen), which is why the
+    // two growing fields carry their caret room in the box, and so in the
+    // viewport, rather than only in one of them.
     const double view_x0 = static_cast<double>(bx + pad_l);
-    const double view_x1 = static_cast<double>(bx + box_w - pad_r);
+    // THE BOUND FIELD IS THE ONE THAT DOES NOT GROW, so its viewport reaches
+    // one column INTO its right pad instead — the caret column the box no
+    // longer carries (caret_room above) — and a caret at end-of-text is inside
+    // the clip with the run standing exactly where the committed token stood.
+    const int view_pad_r = bound_kind ? std::max(pad_r - caret_px, 0) : pad_r;
+    const double view_x1 = static_cast<double>(bx + box_w - view_pad_r);
     const double view_w  = view_x1 - view_x0;
 
     // THE MINIMAL-TRAVEL VIEW OFFSET (the field's contract is at

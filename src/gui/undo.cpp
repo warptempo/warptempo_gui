@@ -132,7 +132,8 @@ void Undo::recompute_dirty() {
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                           bool affects_persistence,
                           std::vector<int> touched_snapshot,
-                          std::vector<int> touched_live) {
+                          std::vector<int> touched_live,
+                          MarkerCell addressed_cell) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
@@ -143,8 +144,21 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
+    e.addressed_cell     = addressed_cell;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
+}
+
+// The contract is at the declaration. It is a spelling of the push above and
+// not a second entry builder: the two fields it fixes are what make an entry
+// bracket-only, and reading the live axis HERE rather than at the three call
+// sites is what keeps "the entry carries the cell it changed" one statement.
+void Undo::push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
+                                  std::vector<int> touched) {
+    std::vector<int> touched_live = touched;
+    push_undo_warp(std::move(pre_state), /*affects_persistence=*/false,
+                   std::move(touched), std::move(touched_live),
+                   app.addressed_cell);
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
@@ -626,9 +640,11 @@ void apply_post_restore_rules_impl(Selection& selection,
     // Through the Selection mutator (the whole-set replace, focus on the
     // earliest touched member): the focus write is the mutator's own, which
     // is what resets the addressed cell (Selection::seat_focus) — a restore
-    // is not a marker press, so the restored focus is addressed at its
-    // payload. The mutator's two clears are the ones sanitize already made,
-    // and its top-strip damage is inside the restore's whole-window repaint.
+    // is not a marker press, so the restored focus rests on its payload
+    // unless the entry itself names a cell, which restore_history_entry's
+    // tail writes back behind this call. The mutator's two clears are the
+    // ones sanitize already made, and its top-strip damage is inside the
+    // restore's whole-window repaint.
     const int focus = *target_set.begin();
     selection.replace_selection(std::move(target_set), focus);
 }
@@ -710,6 +726,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // authoring view undoing it did.
     counter.audio_view          = entry.audio_view;
     counter.affects_persistence = entry.affects_persistence;
+    // The addressed cell travels verbatim for the three tags' own reason: it
+    // describes the OP, so redoing a bound step must brighten the cell that
+    // undoing it brightened.
+    counter.addressed_cell      = entry.addressed_cell;
     // The touched-set identity hints SWAP coordinate spaces on the counter: the
     // counter's snapshot is the op's after-state, so the rows touched by a
     // restore of the counter (= redoing this op) are entry.touched_live, and the
@@ -1091,6 +1111,26 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         // sel_size == 0: nothing — the removal branch cleared, viewport/playhead
         // stay put.
     }
+
+    // THE BRACKET-ONLY RESTORE ADDRESSES THE CELL IT CHANGED (architect
+    // 2026-09-05): an undo or redo of an iteration bound step — the arrows'
+    // and the bound editor's alike — leaves the restored focus bright on the
+    // bound it moved, so the next Up/Down goes on stepping what the undo just
+    // stepped, and a GROUP entry addresses that one cell on its focus, the
+    // whole selection having stepped the same bound.
+    //
+    // AT THE TAIL, BEHIND EVERY SELECTION WRITE IN THIS BODY, which is the
+    // marker click's own ordering: each of those writes seats the focus
+    // through Selection::seat_focus, which puts the axis back on the payload,
+    // so the cell is said AFTER the selection and never before it. EVERY
+    // OTHER ENTRY CARRIES Payload — the field's one producer is
+    // push_undo_iter_bracket — so for every other restore this writes back
+    // exactly what the mutator just wrote. Where the cell names a box the
+    // restored marker no longer paints, the flag painter falls back to the
+    // payload on its own (render_flag_boxes_impl), so nothing is asked here.
+    // Ahead of the synchronous plate render below, whose flag cache reads the
+    // axis as a fingerprint field (fp_addressed_cell).
+    app.addressed_cell = entry.addressed_cell;
 
     recompute_dirty();
     viewport.invalidate_waveform_area();

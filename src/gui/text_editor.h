@@ -69,7 +69,9 @@ constexpr int kMaxPendingChars = 52;
 // the widest value the walls admit is five bytes (`-3.75`, the clamp window
 // at a base on a tempo wall), and 8 leaves room for the over-wide spellings
 // the commit refuses by name rather than the cap swallowing them as
-// `This field is full`.
+// `This field is full`. The FIELD is exactly its cell and never grows
+// (render_flag_editor_box's pin), so a token past the cell's width scrolls
+// under the caret rather than painting over the box beside it.
 constexpr int kMaxPendingCharsIterBound = 8;
 // BPM popup. `<beats>@[<lo>,<hi>]`: beats a positive int (up to 10
 // digits), lo/hi full doubles in shortest round-trip form (up to 23 chars

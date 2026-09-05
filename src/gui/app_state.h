@@ -284,6 +284,20 @@ struct UndoEntry {
     // after-state), which becomes the snapshot coordinate of the counter-entry.
     std::vector<int>          touched_snapshot;
     std::vector<int>          touched_live;
+    // THE CELL THE OP ADDRESSED, Payload for every op that addresses none
+    // (architect 2026-09-05). A restore of a BRACKET-ONLY entry puts the
+    // restored focus back on the cell the entry changed rather than on the
+    // payload, so an undone Lower step leaves the lower cell bright and the
+    // next Up/Down goes on stepping the bound the undo just moved. ONE
+    // PRODUCER writes it non-Payload, Undo::push_undo_iter_bracket — the
+    // bracket-only push, called by the two arms of the Up/Down bound step and
+    // by the bound editor's commit, which are the only ops whose subject IS a
+    // cell. Every other push leaves it Payload, which is exactly what the
+    // restore's own selection write has already seated (Selection::seat_focus),
+    // so the write-back at the tail of restore_history_entry changes nothing
+    // for them. The counter-entry carries it verbatim like the three context
+    // tags: redoing the op must address the cell undoing it addressed.
+    MarkerCell                addressed_cell       = MarkerCell::Payload;
 };
 
 // THE REGION IS THE TRIM (architect 2026-08-18, uniting two loose ends into one
@@ -8176,11 +8190,14 @@ struct AppState {
     // reach over all four cells and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
     // all four, on all three click shapes), the measure editor's open
-    // (Measure) and the bound editor's open (Lower or Upper) — an editor
-    // open seats the cell it edits.
+    // (Measure), the bound editor's open (Lower or Upper) — an editor open
+    // seats the cell it edits — and the RESTORE OF A BRACKET-ONLY UNDO ENTRY
+    // (the tail of Undo::restore_history_entry, writing the cell the entry
+    // carries: an undo or redo of an iteration bound step brightens the bound
+    // it moved, and every other entry carries Payload).
     //
     // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
     // chokepoint: every Selection mutator writes the focus through
@@ -8190,7 +8207,9 @@ struct AppState {
     // coincidence auto-select at the four entry chokepoints and the flag
     // editor's open all reach the focus through those mutators and inherit
     // the reset (the undo restore's touched-set select goes through
-    // replace_selection for exactly this reason). The reorder remap
+    // replace_selection for exactly this reason; a BRACKET-ONLY entry's
+    // restore then writes its own cell back at the tail, the one restore that
+    // does not come to rest on the payload). The reorder remap
     // (remap_marker_indices_after_reorder) is not a focus change — the same
     // marker keeps its cell. And the mode going off puts a Lower or Upper
     // axis back on the payload (wipe_iter_state, which every exit runs),
@@ -8201,7 +8220,9 @@ struct AppState {
     // editor fork, the flag painter's bright cell (render_flags through the
     // flag cache's fp_addressed_cell), the Up/Down and Edit Flag buttons'
     // face and tooltip (redesign_button_enabled / redesign_button_tooltip),
-    // and the bound step's coalescing stamp (Undo::coalesce_gesture).
+    // the bound step's coalescing stamp (Undo::coalesce_gesture) and the
+    // bracket-only push, which stamps it onto the entry
+    // (Undo::push_undo_iter_bracket).
     MarkerCell addressed_cell = MarkerCell::Payload;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually

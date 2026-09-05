@@ -92,7 +92,10 @@ struct GuiInputHandler;
 // keeps a nudge burst and a tempo burst separate) and, since 2026-09-04, the
 // same arrows' ITERATION BOUND STEP (IterBoundStep, singleton and group — the
 // arrows' second body, stepping a bound cell of the bracket; its own kind
-// because the two bodies write different fields and a burst has one subject).
+// because the two bodies write different fields and a burst has one subject,
+// and the one kind whose ENTRY carries the addressed cell too, so a restore
+// lands the focus back on the bound the burst moved —
+// UndoEntry::addressed_cell, pushed by push_undo_iter_bracket).
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h).
 enum class GestureKind {
@@ -172,10 +175,29 @@ struct Undo {
     // (UndoEntry — the reposition drag and the two nudges, one marker each):
     // defaulted empty for every other caller, which then uses the
     // diff-based touched-set reconstruction in the post-restore rules.
+    // `addressed_cell` stamps UndoEntry::addressed_cell and has exactly one
+    // caller, push_undo_iter_bracket below; every other push leaves the
+    // entry on the payload.
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         bool affects_persistence = true,
                         std::vector<int> touched_snapshot = {},
-                        std::vector<int> touched_live = {});
+                        std::vector<int> touched_live = {},
+                        MarkerCell addressed_cell = MarkerCell::Payload);
+    // THE BRACKET-ONLY WARP ENTRY — the iteration bracket's own push, and the
+    // one entry kind that carries an addressed cell. Three callers: the
+    // singleton and group arms of the Up/Down bound step
+    // (GuiWarpMarkersOps::adjust_iter_bound_cents and its group twin) and the
+    // bound editor's commit (GuiFlagEditor::commit_iter_bound_edit). It fixes
+    // affects_persistence FALSE — iteration bounds are session-only fields
+    // that never serialize, so crossing such an entry must not move the dirty
+    // dot — and stamps the LIVE addressed cell onto the entry, so an undo or
+    // redo of the step lands the focus back on the bound it moved (the field's
+    // contract is at UndoEntry::addressed_cell, app_state.h). `touched` is the
+    // group arm's identity hint and fills BOTH coordinate spaces: a bound step
+    // moves no marker, so the entry's snapshot rows and its live rows are the
+    // same indices.
+    void push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
+                                std::vector<int> touched = {});
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
                              std::vector<int> touched_live = {});

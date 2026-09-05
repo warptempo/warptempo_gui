@@ -1330,11 +1330,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // The bracket-only entry: session-only fields, never serialized, so the
-    // dirty dot stays where it is (recompute_dirty honours the flag). A
-    // coalesced repeat skips the push, the burst's opener owning the
-    // pre-burst snapshot.
-    if (!merge) undo.push_undo_warp(std::move(pre_state),
-                                    /*affects_persistence=*/false);
+    // dirty dot stays where it is (recompute_dirty honours the flag), and it
+    // carries the ADDRESSED CELL, so undoing this step brightens the bound it
+    // moved (push_undo_iter_bracket, undo.h). A coalesced repeat skips the
+    // push, the burst's opener owning the pre-burst snapshot — and its cell,
+    // which the coalesce verdict has already found equal to this press's.
+    if (!merge) undo.push_undo_iter_bracket(std::move(pre_state));
     // Settle the burst, POST-mutation: the stamp, or the byte-equal pop of a
     // merged press that stepped the bound back to the burst entry's own
     // snapshot (the rule at Undo::record_gesture; the row comparator reads
@@ -1390,12 +1391,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
     // Defensive (a fully-stale selection): the all-ineligible selection never
     // reaches it — that is the Empty verdict above.
     if (touched.empty()) return std::nullopt;
-    // ONE bracket-only entry per press with identity hints (no reorder —
-    // positions untouched — so touched_snapshot == touched_live); a coalesced
-    // repeat skips the push, the burst's opener owning the snapshot.
-    if (!merge) undo.push_undo_warp(std::move(pre_state),
-                                    /*affects_persistence=*/false,
-                                    touched, touched);
+    // ONE bracket-only entry per press with its identity hints (no reorder —
+    // positions untouched — so the push fills both coordinate spaces from the
+    // one list) and with the ADDRESSED CELL, which the restore puts back on
+    // the focus; a coalesced repeat skips the push, the burst's opener owning
+    // the snapshot.
+    if (!merge)
+        undo.push_undo_iter_bracket(std::move(pre_state), std::move(touched));
     undo.record_gesture(GestureKind::IterBoundStep, merge);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();

@@ -3069,12 +3069,13 @@ void render_flags(cairo_t* cr,
 //                   untruncated pending plus caret room; for the measure editor
 //                   the blue measure box in the same role, anchored past the
 //                   committed flag; for the bound editor the bound cell in the
-//                   same role, anchored at that cell's own seam and never
-//                   narrower than the cell. CLAMPED fully on-window in every
-//                   case. Every box spans its 1px LEFT BORDER too (the flag's
-//                   own for the payload editor, the seam divider for the other
-//                   two), so its x is one column left of the fill and its w one
-//                   wider.
+//                   same role, anchored at that cell's own seam and EXACTLY as
+//                   wide as the cell — that one field never grows with its
+//                   text, which scrolls inside it instead. CLAMPED fully
+//                   on-window in every case. Every box spans its 1px LEFT
+//                   BORDER too (the flag's own for the payload editor, the
+//                   seam divider for the other two), so its x is one column
+//                   left of the fill and its w one wider.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].

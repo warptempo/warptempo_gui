@@ -88,11 +88,12 @@ struct Selection {
     // in the product writes that field except the reorder remap (which
     // follows the same marker to its new index — not a focus change). It is
     // the chokepoint because the ADDRESSED CELL rides the focus: a focus
-    // reached by any route but a marker press or a cell editor's open is
-    // addressed at its payload by default, so the reset lives here and the
-    // three routes that address another cell write it AFTER their mutator
-    // returns (the inventory is at AppState::addressed_cell). No damage of
-    // its own — every caller damages the top strip.
+    // reached by any route but a marker press, a cell editor's open or a
+    // bracket-only entry's restore is addressed at its payload by default, so
+    // the reset lives here and the FOUR routes that address another cell write
+    // it AFTER their mutator returns (the inventory is at
+    // AppState::addressed_cell). No damage of its own — every caller damages
+    // the top strip.
     void seat_focus(int idx);
 
     // Damage the waveform when the overlay subject changed across a mutation.
