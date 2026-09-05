@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <utility>
 
 namespace text_editor {
 
@@ -178,6 +179,33 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
     return best;
 }
 
+namespace {
+
+// The maximal run of the character class under byte index `pos` of a
+// NON-EMPTY string, as [start, end) — never crossing a class change, the
+// desktop double-click convention (GTK/Qt/Kate/Firefox), deliberately
+// distinct from the Ctrl+Left/Right skip-separators scanners: a click on
+// punctuation selects that punctuation run, not the following word. pos == n
+// (a click past the last glyph) has no character AT n, so it classifies by
+// n-1 and yields the trailing run. THE ONE RUN WALK, read by the
+// double-click's select and by the double-click-drag's word-wise extension so
+// the two cannot disagree about where a word ends.
+std::pair<int, int> class_run_at(const std::string& text, int pos) {
+    const int n = static_cast<int>(text.size());
+    pos = std::clamp(pos, 0, n);
+    const int probe = (pos == n) ? pos - 1 : pos;
+    const CharClass cls = classify(text[static_cast<size_t>(probe)]);
+    int start = probe;
+    while (start > 0 &&
+           classify(text[static_cast<size_t>(start - 1)]) == cls) --start;
+    int end = probe + 1;
+    while (end < n &&
+           classify(text[static_cast<size_t>(end)]) == cls) ++end;
+    return {start, end};
+}
+
+} // namespace
+
 void select_word_at(State& s, int pos) {
     const int n = static_cast<int>(s.pending.size());
     if (n <= 0) {
@@ -185,25 +213,38 @@ void select_word_at(State& s, int pos) {
         s.cursor_pos = 0;
         return;
     }
-    pos = std::clamp(pos, 0, n);
-    // Select the maximal run of the clicked character's class, never crossing a
-    // class change — the desktop double-click convention (GTK/Qt/Kate/Firefox),
-    // deliberately distinct from the Ctrl+Left/Right skip-separators scanners. A
-    // click on punctuation selects that punctuation run, not the following word.
-    // pos == n (click past the last glyph) has no character AT n, so classify by
-    // n-1 and select the trailing run.
-    const int probe = (pos == n) ? pos - 1 : pos;
-    const CharClass cls = classify(s.pending[static_cast<size_t>(probe)]);
-    int start = probe;
-    while (start > 0 &&
-           classify(s.pending[static_cast<size_t>(start - 1)]) == cls) --start;
-    int end = probe + 1;
-    while (end < n &&
-           classify(s.pending[static_cast<size_t>(end)]) == cls) ++end;
     // A run is always at least one character when pending is non-empty, so the
     // empty-selection arm above survives only for the empty-pending case.
+    const auto [start, end] = class_run_at(s.pending, pos);
     s.selection_anchor = start;
     s.cursor_pos       = end;
+    touch_blink(s);
+}
+
+void extend_selection_by_words(State& s, int anchor_start, int anchor_end,
+                               int pos) {
+    const int n = static_cast<int>(s.pending.size());
+    if (n <= 0) {
+        s.selection_anchor = -1;
+        s.cursor_pos = 0;
+        return;
+    }
+    anchor_start = std::clamp(anchor_start, 0, n);
+    anchor_end   = std::clamp(anchor_end, anchor_start, n);
+    const auto [run_start, run_end] = class_run_at(s.pending, pos);
+    // The anchor run stands and the moving end snaps outward past it: the
+    // cursor rides the moving end, exactly as a shift-extended keyboard walk
+    // leaves it, so a later shift+arrow keeps growing from the same anchor.
+    if (run_end <= anchor_start) {
+        s.selection_anchor = anchor_end;
+        s.cursor_pos       = run_start;
+    } else if (run_start >= anchor_end) {
+        s.selection_anchor = anchor_start;
+        s.cursor_pos       = run_end;
+    } else {
+        s.selection_anchor = anchor_start;
+        s.cursor_pos       = anchor_end;
+    }
     touch_blink(s);
 }
 

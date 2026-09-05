@@ -86,10 +86,6 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     skips admit a modified press, so their long press reaches the same twin
 //     a shift-click does, one constant and one term;
 //   * the touch pan zone's region hold (kTouchRegionHoldMs, input_core.cpp);
-//   * the editor field's SELECT HOLD (kEditorSelectHoldMs, app_state.h, since
-//     2026-09-05): a press at least this old when its drag crosses the drag
-//     gate selects, a younger press's drag moves the caret — the phone's text
-//     vocabulary, one vocabulary for mouse and finger;
 //   * the hold-repeating buttons' FIRST fire (input_pointer.cpp's arm, where
 //     every LATER fire is the compositor's advertised repeat interval);
 //   * the Android backend's key-repeat DELAY (platform_android.cpp — the one
@@ -1006,3 +1002,29 @@ struct GuiTouchNavFrame {
     // rule), so the answer travels on the frame.
     bool   down_on_thin_lane = false;
 };
+
+// THE EDITOR-FIELD QUERY'S ANSWER (2026-09-05) — what the platform asks the
+// GUI once at a first finger's down, beside the pan-zone and thin-lane
+// queries (the contract at GuiInputCore::set_touch_nav_hooks). It names the
+// one surface whose plain drag diverges by device: inside an OPEN EDITOR'S
+// FIELD a finger that drags moves the caret through the caret-drag hook trio
+// and never becomes a pointer drag (touch.md's caret-drag section), while a
+// mouse drag there is the ordinary press road's selection sweep.
+//   * Outside     — not in the active editor's field (or no editor is open):
+//                   the ordinary window, whatever surface it is.
+//   * Field       — in the field: a tap is still the pointer burst at the
+//                   lift, but the window's slop crossing and its expiry both
+//                   resolve to the CARET DRAG, so the pointer's press is
+//                   reached there by a tap and by the double press alone.
+//   * DoublePress — in the field AND a double-click candidate on this
+//                   editor's text stands within the double-click window and
+//                   slack of this point: the down can only be the SECOND
+//                   PRESS, so the translation delivers it at the down (the
+//                   third clause, conventions.md), the GUI's consumed second
+//                   press selects the word, and the finger's later motion
+//                   extends that selection by words through the GUI's own
+//                   drag arm — the desk's double-click-drag, one arm.
+// The GUI answers it from the field rect its press claim reads and from the
+// double-click seed it already holds, so the platform keeps no memory of taps
+// and no second spelling of the field exists.
+enum class GuiTouchEditorField { Outside, Field, DoublePress };

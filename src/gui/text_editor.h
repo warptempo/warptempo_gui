@@ -459,4 +459,20 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // (byte_index_from_shaped_x).
 void select_word_at(State& s, int pos);
 
+// THE DOUBLE-CLICK-DRAG'S EXTENSION (2026-09-05): grow the selection BY WORDS
+// from a fixed anchor run — [anchor_start, anchor_end), the run
+// select_word_at selected at the double-click — toward the byte under the
+// pointer, `pos`. The moving end snaps OUTWARD to the boundary of the run
+// under the pointer (select_word_at's own three-class rule, never a different
+// one): a pointer past the anchor's end selects from anchor_start to that
+// run's end, a pointer before the anchor's start selects from that run's
+// start to anchor_end, and a pointer back inside the anchor run leaves just
+// that run selected. It writes selection_anchor and cursor_pos so the
+// cursor rides the moving end (the keyboard's shift-extend shape) and
+// restarts the blink; an empty pending selects nothing. Called by the input
+// handler's text-drag motion while the drag it armed at a double-click is
+// live (EditorTextDragState::by_words).
+void extend_selection_by_words(State& s, int anchor_start, int anchor_end,
+                               int pos);
+
 } // namespace text_editor

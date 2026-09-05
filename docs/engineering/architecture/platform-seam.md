@@ -21,9 +21,10 @@ contract. The port split them:
   inline accessors that end in `}` rather than `;`, which the count has
   always included and which the words "semicolon-terminated" alone used to
   leave out. The identity is proved by diffing those two stripped sections,
-  which come out line-for-line equal — 86 lines each at this writing, the
+  which come out line-for-line equal — 90 lines each at this writing, the
   count being 77 because three declarations wrap (`set_touch_nav_hooks`'s
-  eight lines, and one wrapped line each in `set_history_prefetch_completion_fd`
+  twelve lines since the caret trio and the editor-field query joined it on
+  2026-09-05, and one wrapped line each in `set_history_prefetch_completion_fd`
   and `synthesize_key`). The
   count FELL BY ONE on 2026-08-30, `removable_volume` retiring with the
   mirror's discovery — Synchronize is told its destination by the device

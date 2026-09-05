@@ -1317,7 +1317,8 @@ struct GuiInputHandler {
     // 2026-09-05 the OPEN MARKER-LANE EDITOR'S BOX — the edited flag publishes
     // no hit rect while its editor stands, so the flag-box carve-out could not
     // reach it and a finger dragging in the field panned the view; the clause
-    // lets it reach the field's caret drag instead. SURFACE GEOMETRY ONLY:
+    // takes the box off the zone so the platform's editor-field query (below)
+    // can route it to the caret drag instead. SURFACE GEOMETRY ONLY:
     // every refusal (modal, prompt, dropdown, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
@@ -1401,6 +1402,50 @@ struct GuiInputHandler {
     void begin_touch_region(int x, int y);
     void update_touch_region(int x, int y);
     void end_touch_region();
+
+    // THE EDITOR-FIELD QUERY (2026-09-05) — the pan-zone query's third
+    // sibling, asked at the same down: does this point lie in the ACTIVE
+    // EDITOR'S FIELD, and does a double-click candidate on that editor's
+    // text stand here (GuiTouchEditorField, gui_input.h, is the answer's
+    // contract)? It reads the ONE field rect the press claim reads
+    // (ActiveEditorText::field — the marker lane's published box, or the
+    // bottom-row dialog's inset field) and the double-click seed the release
+    // already keeps, through the press arm's own predicate, so the platform
+    // learns nothing about text and keeps no memory of taps. Wired at
+    // main.cpp's set_touch_nav_hooks call. Non-const because the active
+    // editor's resolution is (it yields the editor's own state pointer).
+    GuiTouchEditorField touch_point_in_editor_field(int x, int y);
+
+    // THE TOUCH CARET DRAG (architect 2026-09-05, on the tablet: "make the
+    // tiny text box not feel broken" — a finger dragged inside the open
+    // editor moves the caret, the phone's own text vocabulary, while the
+    // mouse's drag there stays the selection sweep; the THIRD ruled touch
+    // divergence, taking the region hold's shape — touch.md's caret-drag
+    // section is the record). These three are the GUI's answer to the
+    // platform's caret trio, and they are STATELESS over the active editor:
+    // no record is armed, nothing joins any_pointer_gesture_active, and
+    // each body guards on the editor's own existence (active_editor_text
+    // valid), so an editor closed under the stream — Enter from a physical
+    // keyboard, say — makes the rest of the stream a no-op rather than a
+    // fallback.
+    //
+    // begin_touch_caret_drag(x, y): the down point — clear the double-click
+    // seed (a caret drag is motion, and motion between two taps breaks a
+    // candidate; the stream's own end never seeds), drop any selection, seat
+    // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
+    // which restarts the blink) and damage the editor's surface.
+    // update_touch_caret_drag(x, y): the same seat per delivered frame,
+    // nothing selecting — the I-beam follows the finger.
+    // end_touch_caret_drag(): THE DRAIN RULE — the caret stays where it was
+    // last seated, nothing selects, nothing commits, nothing seeds, the
+    // editor stays open and Enter remains its one commit route; the body
+    // restarts the blink so the resting caret is lit the instant the finger
+    // leaves, and damages for it. Fired on the finger's lift and on the hard
+    // ends alike (the platform's end split delivers or drops the staged
+    // final frame ahead of it, its record).
+    void begin_touch_caret_drag(int x, int y);
+    void update_touch_caret_drag(int x, int y);
+    void end_touch_caret_drag();
 
     // Re-derive and apply the pointer cursor at the REMEMBERED pointer position
     // with the modifier state handed in. The zone map it consults, and every

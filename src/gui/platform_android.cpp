@@ -2029,11 +2029,17 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<bool(int x, int y)> thin_lane,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
-    std::function<void()> region_end) {
+    std::function<void()> region_end,
+    std::function<GuiTouchEditorField(int x, int y)> editor_field,
+    std::function<void(int x, int y)> caret_begin,
+    std::function<void(int x, int y)> caret_update,
+    std::function<void()> caret_end) {
     input_.set_touch_nav_hooks(std::move(update), std::move(end),
                                std::move(pan_zone), std::move(thin_lane),
                                std::move(region_begin), std::move(region_update),
-                               std::move(region_end));
+                               std::move(region_end), std::move(editor_field),
+                               std::move(caret_begin), std::move(caret_update),
+                               std::move(caret_end));
 }
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }

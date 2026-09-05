@@ -250,7 +250,11 @@ public:
         std::function<bool(int x, int y)> thin_lane,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
-        std::function<void()> region_end);
+        std::function<void()> region_end,
+        std::function<GuiTouchEditorField(int x, int y)> editor_field,
+        std::function<void(int x, int y)> caret_begin,
+        std::function<void(int x, int y)> caret_update,
+        std::function<void()> caret_end);
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS. Contract at
     // GuiInputCore::touch_contact_active, input_core.h.

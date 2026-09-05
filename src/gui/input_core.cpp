@@ -1023,8 +1023,9 @@ void GuiInputCore::pointer_frame() {
 // The phase machine, the translation contract and the AUTHORITATIVE edge
 // inventory live at the touch state block in input_core.h; each body
 // below states only its own clause. The GUI sees ordinary pointer deliveries
-// (one finger), the touch-nav hooks (the pan and the pinch) or the region
-// hooks (the hold) and nothing else.
+// (one finger), the touch-nav hooks (the pan and the pinch), the region
+// hooks (the hold) or the caret hooks (the editor field's drag) and nothing
+// else.
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::maybe_resolve_touch_window() {
@@ -1037,9 +1038,16 @@ void GuiInputCore::maybe_resolve_touch_window() {
     // down point, so hold-then-drag sweeps a region; OFF it the hold unlocks
     // the POINTER (hold-then-drag is the old pointer drag — what keeps the
     // endcap/bridge grabs, the flag drags and every off-zone press-and-hold
-    // gesture alive on glass).
+    // gesture alive on glass) — EXCEPT IN AN OPEN EDITOR'S FIELD (2026-09-05),
+    // where the expiry is the CARET DRAG: a finger that rests on the field
+    // and then drags moves the caret exactly as one that drags at once does,
+    // so a slow-starting drag can never turn into the desk's selection sweep
+    // by resting sixty milliseconds first (the field's whole vocabulary is at
+    // the editor_field query's contract, input_core.h).
     if (touch_down_in_pan_zone_)
         resolve_touch_window_to_region();
+    else if (touch_down_in_editor_field_ != GuiTouchEditorField::Outside)
+        resolve_touch_window_to_caret();
     else
         resolve_touch_window_to_pointer();
 }
@@ -1156,6 +1164,30 @@ void GuiInputCore::resolve_touch_window_to_region() {
             containing_pixel(touch_down_x_),
             containing_pixel(touch_down_y_));
     touch_region_frame_dirty_ =
+        touch_window_moved_ &&
+        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_);
+    touch_window_moved_ = false;
+}
+
+void GuiInputCore::resolve_touch_window_to_caret() {
+    // Pending -> Caret (2026-09-05; contract at the declaration and at the
+    // editor_field query): the finger crossed the slop, or rested to the
+    // window's expiry, with its down point in an open editor's field, so it
+    // now DRIVES THE EDITOR'S CARET through the caret trio and NOTHING
+    // pointer-shaped starts — no entry motion, no press, the touch hold
+    // never raised (the region model, not the Pointer one). The begin fires
+    // at the DOWN point — the GUI seats the caret where the finger landed —
+    // and whatever travel the window saw is the drag's own first leg,
+    // staged for the frame boundary exactly as the region resolver stages
+    // its drift: the crossing position for a quick drag, so the caret is
+    // seated at the landing and then under the finger in one burst, or
+    // sub-slop drift for a hold.
+    touch_phase_ = TouchPhase::Caret;
+    if (touch_caret_begin_hook_)
+        touch_caret_begin_hook_(
+            containing_pixel(touch_down_x_),
+            containing_pixel(touch_down_y_));
+    touch_caret_frame_dirty_ =
         touch_window_moved_ &&
         (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_);
     touch_window_moved_ = false;
@@ -1360,6 +1392,19 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
                 touch_thin_lane_hook_ &&
                 touch_thin_lane_hook_(containing_pixel(x),
                                       containing_pixel(y));
+            // THE EDITOR-FIELD ANSWER rides beside them (2026-09-05), the
+            // same shape once more: asked once here, captured, cleared with
+            // them. It forks BOTH of the window's one-finger resolutions
+            // toward the caret drag (the crossing at the motion site, the
+            // expiry at maybe_resolve_touch_window) — the field is off the
+            // pan zone by the GUI's carve-out, so the two bits cannot both
+            // be true — and its DoublePress answer resolves the window
+            // BELOW, on this very down.
+            touch_down_in_editor_field_ =
+                touch_editor_field_hook_
+                    ? touch_editor_field_hook_(containing_pixel(x),
+                                               containing_pixel(y))
+                    : GuiTouchEditorField::Outside;
             // THE TWO-DEADLINE FORK (the eighth glass ruling, 2026-08-12 —
             // the dead trim-band beat's pattern reborn): ON the zone the
             // window runs to the REGION-HOLD beat (kTouchRegionHoldMs, the
@@ -1376,6 +1421,22 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
                 static_cast<uint64_t>(touch_down_in_pan_zone_
                                           ? kTouchRegionHoldMs
                                           : kTouchDisambiguateMs) * 1000ull;
+            // THE DOUBLE PRESS RESOLVES ON CONTACT (2026-09-05, the third
+            // clause: content acts the moment its identity is certain). A
+            // down inside the editor's field within the double-click window
+            // and slack of a seed the GUI holds can only be the SECOND PRESS
+            // — a tap would have been one already, and a drag from it is the
+            // double-click-drag, which the pointer road carries — so the
+            // window is opened and resolved in one call: the entry motion
+            // and the press land at this down point, the GUI's consumed
+            // second press selects the word and arms its word-wise drag, and
+            // every motion from here is Pointer motion driving that arm.
+            // Nothing is queued (the finger has not moved yet). A lift
+            // without motion is then the release, exactly the double-tap the
+            // lift-time burst used to deliver, only earlier.
+            if (touch_down_in_editor_field_ ==
+                GuiTouchEditorField::DoublePress)
+                resolve_touch_window_to_pointer();
             break;
         case TouchPhase::Pending: {
             if (id == touch_owner_id_) break;  // protocol nonsense; ignore
@@ -1541,6 +1602,12 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
             // recorded (the count above), not routed: a committed gesture,
             // the moved-drag rule's family (the edge inventory's clause).
             break;
+        case TouchPhase::Caret:
+            // A second finger during the caret drag is IGNORED whole on the
+            // region clause's own terms: the finger becomes nothing, not a
+            // pinch pivot inside the field (the field's pinch is a pair
+            // landing inside the WINDOW, the Pending arm above).
+            break;
         case TouchPhase::Drain:  // fingers landing mid-drain are ignored
             break;
     }
@@ -1688,6 +1755,17 @@ void GuiInputCore::touch_up(int32_t id) {
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
             break;
+        case TouchPhase::Caret:
+            if (id != touch_owner_id_) break;  // an ignored finger lifting
+            // The owner's lift ends the caret drag on the region arm's
+            // terms: the staged dirty frame delivers first (the finger's own
+            // final leg — the caret lands where the finger lifted), then
+            // caret_end (the drain rule at the contract). No release and no
+            // translation end: nothing pointer-shaped ever started.
+            end_touch_caret_gesture(/*deliver_final_frame=*/true);
+            touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
+                                                  : TouchPhase::Idle;
+            break;
         case TouchPhase::Drain:
             break;
     }
@@ -1712,10 +1790,17 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // touch_slop_px_ IS the GUI's own drag gate — the one number pushed
             // down scaled — it crosses that gate in the same burst as the press
             // (the invariant at set_touch_slop_px, input_core.h).
+            // IN AN OPEN EDITOR'S FIELD the crossing is the CARET DRAG
+            // (2026-09-05): the field is off the pan zone, and its quick
+            // drag moves the caret rather than reaching the pointer's press
+            // (the editor_field query's contract).
             if (std::max(std::abs(x - touch_down_x_),
                          std::abs(y - touch_down_y_)) >= touch_slop_px_) {
                 if (touch_down_in_pan_zone_)
                     resolve_touch_window_to_single_nav();
+                else if (touch_down_in_editor_field_ !=
+                         GuiTouchEditorField::Outside)
+                    resolve_touch_window_to_caret();
                 else
                     resolve_touch_window_to_pointer();
             }
@@ -1762,6 +1847,13 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // The Nav dirty-frame cadence: one region_update per touch_frame.
             touch_region_frame_dirty_ = true;
             break;
+        case TouchPhase::Caret:
+            if (id != touch_owner_id_) break;   // ignored fingers stay ignored
+            touch_last_x_ = x;
+            touch_last_y_ = y;
+            // The same cadence: one caret_update per touch_frame.
+            touch_caret_frame_dirty_ = true;
+            break;
         case TouchPhase::Idle:
         case TouchPhase::Drain:
             break;
@@ -1770,8 +1862,8 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
 
 void GuiInputCore::touch_frame() {
     // The per-frame drain, the pointer_frame precedent: one motion delivery
-    // (Pointer), one nav update (Nav) or one region update (Region) per
-    // logical touch frame, whatever the sensor rate.
+    // (Pointer), one nav update (Nav), one region update (Region) or one
+    // caret update (Caret) per logical touch frame, whatever the sensor rate.
     maybe_resolve_touch_window();
     if (touch_phase_ == TouchPhase::Pointer) {
         flush_touch_frame_motion();
@@ -1783,6 +1875,13 @@ void GuiInputCore::touch_frame() {
         touch_region_frame_dirty_ = false;
         if (touch_region_update_hook_)
             touch_region_update_hook_(
+                containing_pixel(touch_last_x_),
+                containing_pixel(touch_last_y_));
+    } else if (touch_phase_ == TouchPhase::Caret &&
+               touch_caret_frame_dirty_) {
+        touch_caret_frame_dirty_ = false;
+        if (touch_caret_update_hook_)
+            touch_caret_update_hook_(
                 containing_pixel(touch_last_x_),
                 containing_pixel(touch_last_y_));
     }
@@ -1916,6 +2015,25 @@ void GuiInputCore::end_touch_region_gesture(bool deliver_final_frame) {
     if (touch_region_end_hook_) touch_region_end_hook_();
 }
 
+void GuiInputCore::end_touch_caret_gesture(bool deliver_final_frame) {
+    // The Region end restated for the caret trio (the contract at the
+    // declaration): the finger's own lift delivers the staged frame first —
+    // the caret lands where the finger lifted — while the hard ends drop it
+    // (a touch the system takes away seats nothing more). caret_end then
+    // fires UNCONDITIONALLY: the GUI's drain rule owes nothing to the text
+    // but the blink restart, and a body that fires every time is one fewer
+    // gate to keep in step with a begin that always fired.
+    if (deliver_final_frame && touch_caret_frame_dirty_) {
+        touch_caret_frame_dirty_ = false;
+        if (touch_caret_update_hook_)
+            touch_caret_update_hook_(
+                containing_pixel(touch_last_x_),
+                containing_pixel(touch_last_y_));
+    }
+    touch_caret_frame_dirty_ = false;
+    if (touch_caret_end_hook_) touch_caret_end_hook_();
+}
+
 void GuiInputCore::touch_cancel() {
     // The window system claims the touches (its own gesture recognition, a
     // grab; wl_touch.cancel on Wayland).
@@ -1998,6 +2116,14 @@ void GuiInputCore::hard_end_touch_stream() {
             // nothing pointer-shaped ever started.
             end_touch_region_gesture(/*deliver_final_frame=*/false);
             break;
+        case TouchPhase::Caret:
+            // The Region arm's shape for the caret trio — staged frame
+            // DROPPED (no seat), then caret_end: no selection, no
+            // double-click seed, the caret where the last delivered frame
+            // put it and the editor still open, so a back-swipe mid-drag
+            // leaves the edit standing (the drain rule at the contract).
+            end_touch_caret_gesture(/*deliver_final_frame=*/false);
+            break;
         case TouchPhase::Pending:
             // Nothing was delivered, so there is nothing to end.
             break;
@@ -2023,7 +2149,9 @@ void GuiInputCore::forget_touch_state() {
     touch_frame_motion_pending_ = false;
     touch_down_in_pan_zone_     = false;
     touch_down_on_thin_lane_    = false;
+    touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
     touch_region_frame_dirty_   = false;
+    touch_caret_frame_dirty_    = false;
     touch_translation_moved_    = false;
     touch_nav_single_ = false;
     touch_nav_id2_ = 0;
@@ -2326,7 +2454,11 @@ void GuiInputCore::set_touch_nav_hooks(
     std::function<bool(int x, int y)> thin_lane,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
-    std::function<void()> region_end) {
+    std::function<void()> region_end,
+    std::function<GuiTouchEditorField(int x, int y)> editor_field,
+    std::function<void(int x, int y)> caret_begin,
+    std::function<void(int x, int y)> caret_update,
+    std::function<void()> caret_end) {
     touch_nav_update_hook_    = std::move(update);
     touch_nav_end_hook_       = std::move(end);
     touch_pan_zone_hook_      = std::move(pan_zone);
@@ -2334,6 +2466,10 @@ void GuiInputCore::set_touch_nav_hooks(
     touch_region_begin_hook_  = std::move(region_begin);
     touch_region_update_hook_ = std::move(region_update);
     touch_region_end_hook_    = std::move(region_end);
+    touch_editor_field_hook_  = std::move(editor_field);
+    touch_caret_begin_hook_   = std::move(caret_begin);
+    touch_caret_update_hook_  = std::move(caret_update);
+    touch_caret_end_hook_     = std::move(caret_end);
 }
 void GuiInputCore::set_codepoint_probe(
     std::function<uint32_t(uint32_t stable_code)> probe) {

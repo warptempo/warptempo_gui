@@ -3109,8 +3109,9 @@ void render_flags(cairo_t* cr,
 // published — clicking a field's padding should put the caret at the nearest
 // end, and the nearest-boundary search gives exactly that with no extra term.
 // The touch pan zone yields inside this same rect (touch_point_in_pan_zone,
-// 2026-09-05), so a finger landing in the field reaches that press — the
-// caret drag and the selection sweep — rather than the phone-model pan.
+// 2026-09-05) and the platform's editor-field query reads it too
+// (touch_point_in_editor_field), so a finger landing in the field reaches
+// the caret drag — a tap its press — rather than the phone-model pan.
 struct FlagEditorBox {
     bool                valid         = false;
     GuiRect             box{0, 0, 0, 0};

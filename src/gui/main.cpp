@@ -1484,8 +1484,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // begin at the down point, one update per frame, an end that always
     // fires — the dead trim-move hooks' exact pattern reborn (contracts at
     // GuiPlatform::set_touch_nav_hooks; the GUI bodies at
-    // begin_touch_region's declaration). A one-finger gesture off the zone
-    // needs no wiring: it
+    // begin_touch_region's declaration). THE EDITOR-FIELD QUERY AND THE
+    // CARET TRIO are the third divergence's (2026-09-05): the platform asks
+    // whether the down lies in the open editor's field — and whether a
+    // double-click seed stands there — and a drag or a hold from that field
+    // drives the editor's caret through the trio, the region trio's exact
+    // shape (the GUI bodies at begin_touch_caret_drag's declaration).
+    // A one-finger gesture off the zone and the field needs no wiring: it
     // is translated into the ordinary pointer deliveries above, and nothing
     // on this side can tell which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
@@ -1504,7 +1509,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         },
         [&](int x, int y) { input_handler.begin_touch_region(x, y); },
         [&](int x, int y) { input_handler.update_touch_region(x, y); },
-        [&]() { input_handler.end_touch_region(); });
+        [&]() { input_handler.end_touch_region(); },
+        [&](int x, int y) {
+            return input_handler.touch_point_in_editor_field(x, y);
+        },
+        [&](int x, int y) { input_handler.begin_touch_caret_drag(x, y); },
+        [&](int x, int y) { input_handler.update_touch_caret_drag(x, y); },
+        [&]() { input_handler.end_touch_caret_drag(); });
 
     auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
