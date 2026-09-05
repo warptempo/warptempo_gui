@@ -1149,7 +1149,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       since it can only fire while one of the editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all six kinds, through route_modal_editor_key: Esc
+    //   (b) THE EDITORS — all seven kinds, through route_modal_editor_key: Esc
     //       closes / cancels the edit (the editor blocks above, bit-for-bit
     //       unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
@@ -1479,44 +1479,70 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare Return / KpEnter opens the flag editor on the focused marker — the
+    // Bare Return / KpEnter opens the ADDRESSED CELL'S editor on the focused
+    // marker (architect 2026-09-05; the flag editor alone until then) — the
     // click-to-edit replacement (Enter is already the editor's commit key, so
     // the open/commit round-trip is symmetric). While any editor is open the
     // editor blocks above consume Enter first (commit), so this is reached only
-    // with no editor active. Repair the focus first, then: a focused warp
-    // marker (last_selected_marker >= 0) in W view opens its canonical-line
-    // editor with the seeded content fully selected (open-selected, like every
-    // open route — the first keystroke replaces it). P view (phase resets have
-    // no per-flag editor) and no focused marker are no-ops.
-    // Read-only already dropped Return at the allowlist gate above (the editor
-    // is an authoring surface — the old click-to-edit refused read-only too).
-    // Modifier-strict: only the plain, unmodified press binds.
+    // with no editor active. Repair the focus first, then fork on
+    // AppState::addressed_cell: the payload by default — every focus reached
+    // by a walk, a jump, a restore or a clear is addressed there, so the
+    // standing behaviour holds for every non-click focus — opens the
+    // canonical-line editor, a bound cell its bound editor, the measure box
+    // the measure editor, each with its seeded content fully selected
+    // (open-selected, like every open route — the first keystroke replaces
+    // it). The Edit Flag button is this chord and inherits the fork.
+    // Read-only already dropped Return at the allowlist gate above (every
+    // one of these is an authoring surface — the old click-to-edit refused
+    // read-only too). Modifier-strict: only the plain, unmodified press binds.
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
         !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        // THE WARP COLUMN IS THE WHOLE VIEW GATE SINCE 2026-08-24 (architect):
-        // the flag editor edits the marker's PAYLOAD — tempo, label_def /
-        // label_ref, per-marker scale, the disabled bit, the iter bracket —
-        // and never its position, so it is a member of the fifth ruled
-        // exception to the home-view binding and opens in W+target as well as
-        // W+source (the inventory is at active_column_authoring_allowed,
-        // app_state.h; the commit's own tail carries the target-view re-warp
-        // and playhead re-land). P view still refuses — phase resets have no
-        // per-flag editor — and read-only already dropped Return at the
-        // allowlist gate above. THE TWO REFUSALS ARE ONE PREDICATE since
-        // 2026-08-30 (flag_editor_open_actionable, app_state.h), which the
-        // Edit flag button's face reads too — the truthful-buttons ruling.
-        // AND THEY SHARE ONE SENTENCE (architect 2026-08-30): the P column
-        // and an unfocused selection are the same answer from the user's
-        // side — the editor wants a warp marker and does not have one — so
-        // the card names the subject it needs rather than forking on which
-        // half of the predicate said no. The greyed button never reaches it.
+        // THE WARP COLUMN IS THE PAYLOAD EDITOR'S VIEW GATE SINCE 2026-08-24
+        // (architect): the flag editor edits the marker's PAYLOAD — tempo,
+        // label_def / label_ref, per-marker scale, the disabled bit — and
+        // never its position, so it is a member of the fifth ruled exception
+        // to the home-view binding and opens in W+target as well as W+source
+        // (the inventory is at active_column_authoring_allowed, app_state.h;
+        // the commit's own tail carries the target-view re-warp and playhead
+        // re-land). P view still refuses it — phase resets have no per-flag
+        // editor — while the measure editor is both columns' and a bound
+        // cell is only ever addressed on a warp marker. THE REFUSALS ARE ONE
+        // PREDICATE since 2026-08-30 (flag_editor_open_actionable,
+        // app_state.h, forking on the axis since 2026-09-05), which the Edit
+        // flag button's face reads too — the truthful-buttons ruling. AND
+        // THEY SHARE ONE SENTENCE (architect 2026-08-30): the P column and
+        // an unfocused selection are the same answer from the user's side —
+        // the editor wants a warp marker and does not have one — so the
+        // card names the subject it needs rather than forking on which half
+        // of the predicate said no. The greyed button never reaches it.
         if (!flag_editor_open_actionable(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  "Select a warp marker to edit its line");
             return;
         }
-        flag_editor.enter_top_flag_edit(app.last_selected_marker);
+        const int focus = app.last_selected_marker;
+        switch (app.addressed_cell) {
+        case MarkerCell::Payload:
+            flag_editor.enter_top_flag_edit(focus);
+            return;
+        case MarkerCell::Lower:
+        case MarkerCell::Upper:
+            // A bound cell addressed on a marker that has since lost its
+            // live bracket (an owner disabled after its cell was pressed)
+            // cards the bound step's own kind sentence — a fact about the
+            // marker's kind, behind a live face, the Up/Down pair's shape.
+            if (const char* refusal = iter_bound_step_kind_refusal(app)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     refusal);
+                return;
+            }
+            flag_editor.enter_iter_bound_edit(focus, app.addressed_cell);
+            return;
+        case MarkerCell::Measure:
+            flag_editor.enter_measure_edit(app.active_markers_view, focus);
+            return;
+        }
         return;
     }
 
@@ -1941,24 +1967,37 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modifier, and the card names the chord that was pressed.
     //
     // THE ADDRESSED CELL PICKS THE BODY (architect 2026-09-04, the iteration
-    // bound cells): with a bound cell addressed (AppState::iter_step_cell,
-    // written by a marker press on that cell, Tempo again the moment the mode
-    // goes off) the same chord at the same magnitude runs the SECOND step body,
-    // adjust_iter_bound_cents, whose refusal this arm cards exactly as it cards
-    // the tempo step's. Same ladder, same repeat bit, same coalescing shape;
-    // the Up/Down buttons' face forks on the same bit.
+    // bound cells): with a bound cell addressed (AppState::addressed_cell,
+    // written by a marker press on that cell, back on the payload the moment
+    // the mode goes off) the same chord at the same magnitude runs the SECOND
+    // step body, adjust_iter_bound_cents, whose refusal this arm cards exactly
+    // as it cards the tempo step's; with the MEASURE addressed there is
+    // nothing to step and the press cards its one sentence
+    // (addressed_cell_step_refusal, the buttons' own grey). Same ladder, same
+    // repeat bit, same coalescing shape; the Up/Down buttons' face forks on
+    // the same axis.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
         const int64_t delta_cents = (key == GuiKeys::Up ? +1 : -1) *
                                     arrow_step_magnitude(mods);
-        card_op_refusal(
-            notifications,
-            app.iter_step_cell == IterStepCell::Tempo
-                ? warpops.adjust_tempo_cents(delta_cents,
-                                             mods.synthesized_repeat)
-                : warpops.adjust_iter_bound_cents(app.iter_step_cell,
-                                                  delta_cents,
-                                                  mods.synthesized_repeat));
+        switch (app.addressed_cell) {
+        case MarkerCell::Payload:
+            card_op_refusal(notifications,
+                            warpops.adjust_tempo_cents(
+                                delta_cents, mods.synthesized_repeat));
+            return;
+        case MarkerCell::Lower:
+        case MarkerCell::Upper:
+            card_op_refusal(notifications,
+                            warpops.adjust_iter_bound_cents(
+                                app.addressed_cell, delta_cents,
+                                mods.synthesized_repeat));
+            return;
+        case MarkerCell::Measure:
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 addressed_cell_step_refusal(app));
+            return;
+        }
         return;
     }
     // THE FOUR STEP CHORDS ON `=` AND `-`, TWO AXES ONE MODIFIER APART: BARE

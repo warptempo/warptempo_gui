@@ -43,6 +43,10 @@ void remap_marker_indices_after_reorder(AppState& app,
         s = std::move(out);
     };
     remap_set(app.selected_markers);
+    // The focus FOLLOWS its marker, and so does the addressed cell
+    // (AppState::addressed_cell) by doing nothing: a reorder is not a focus
+    // change — the same marker keeps the same cell — so this is not one of
+    // the writes that reset the axis (those go through Selection::seat_focus).
     app.last_selected_marker = mapped(app.last_selected_marker);
     // The SHIFT-RANGE ANCHOR is index-shaped live state over the same active
     // column's store, so it FOLLOWS its marker exactly like the focus above
@@ -302,21 +306,21 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
     return nullptr;
 }
 
-MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
-                                   int mouse_x, int mouse_y) {
+MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
+                              int mouse_x, int mouse_y) {
     (void)audio;
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     // THE PAINTER'S OWN BOUNDARIES, never a re-derivation: each is the seam
     // column of the box it introduces, and each collapses onto the next where
     // that box did not paint (FlagHitRect's contract), so the walk from the
     // rightmost box inward can only answer a box with pixels — a cell-less,
-    // measureless flag answers Flag everywhere by construction.
-    if (!r) return MarkerClickSpan::Flag;
+    // measureless flag answers Payload everywhere by construction.
+    if (!r) return MarkerCell::Payload;
     const double x = static_cast<double>(mouse_x);
-    if (x >= r->measure_boundary_x)    return MarkerClickSpan::Measure;
-    if (x >= r->iter_upper_boundary_x) return MarkerClickSpan::IterUpper;
-    if (x >= r->iter_lower_boundary_x) return MarkerClickSpan::IterLower;
-    return MarkerClickSpan::Flag;
+    if (x >= r->measure_boundary_x)    return MarkerCell::Measure;
+    if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
+    if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
+    return MarkerCell::Payload;
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,

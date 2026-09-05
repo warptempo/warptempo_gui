@@ -64,11 +64,13 @@ namespace text_editor {
 // non-growing edits are always accepted, so an over-cap pending loaded from
 // a hand-edited file can be trimmed back to canonical form.
 constexpr int kMaxPendingChars = 52;
-// Iteration-mode FlagPayload editing widens the accepted grammar
-// to admit the inline `+[lo, hi]` bracket (`+[-99.99, +99.99]`, 17 chars
-// with the display space), so the cap is the full-precision payload plus
-// the bracket: 52 + 17 = 69.
-constexpr int kMaxPendingCharsFlagIter = 69;
+// The ITERATION BOUND editor (a double-click or Enter on one of the two bound
+// cells a flag grows in iteration mode). Holds one signed two-decimal bound;
+// the widest value the walls admit is five bytes (`-3.75`, the clamp window
+// at a base on a tempo wall), and 8 leaves room for the over-wide spellings
+// the commit refuses by name rather than the cap swallowing them as
+// `This field is full`.
+constexpr int kMaxPendingCharsIterBound = 8;
 // BPM popup. `<beats>@[<lo>,<hi>]`: beats a positive int (up to 10
 // digits), lo/hi full doubles in shortest round-trip form (up to 23 chars
 // each): 10 + 2 + 23 + 1 + 23 + 1 = 60.
@@ -119,26 +121,32 @@ constexpr int kMaxPendingCharsMeasureOffset = 6;
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
 // (handle_key accepts any character-bearing key and defers grammar to the
-// commit-time validator). The flag editor uses FlagPayload (payload text,
-// iteration grammar included); the BPM popup uses BpmBracket;
-// the settings-prompt editor uses SettingsAssignment (`key=value`); the
-// history mode's commit-title editor uses CommitTitle (free one-line text,
-// the message the checkpoint commit carries); the MARKER MEASURE editor uses
-// MeasureText (the ` //<measure>` suffix a marker line may carry — an ASCII
-// GRAMMAR since the field's 2026-08-20 rebrand, judged at the commit by
-// marker_measure.h and not at all on the keyboard); and the MEASURE
-// PROPAGATE's paste-offset editor uses MeasureOffset (one signed decimal
-// integer, likewise judged at its commit and not on the keyboard). THERE ARE
-// SIX KINDS AND FOUR OF THEM ARE DIALOG EDITORS — the MeasureText kind was
-// architect-blessed 2026-08-19 and MeasureOffset arrived with the measure
-// propagate on 2026-08-20; TWO KINDS RETIRED WHOLE on 2026-08-28 (architect,
-// R22/R23: "we're not allowing free-form typing there") — LoadInPlace, the
-// `h` view's typed load prompt, and OpenProject, the Open project prompt's
-// field, both replaced by the FIELD-LESS PICKER over the folder overlay
-// (AppState::Picker, app_state.h), which is a modal owner and not an editor.
-// THIS ENUM IS THE AUTHORITATIVE LIST of the editors, and the roster that
-// matters for modality is AppState::dialog_editor_session, which NAMES the
-// four.
+// commit-time validator). The flag editor uses FlagPayload (the plain
+// canonical payload — tempo, scale, labels, never a bracket); the BPM popup
+// uses BpmBracket; the settings-prompt editor uses SettingsAssignment
+// (`key=value`); the history mode's commit-title editor uses CommitTitle
+// (free one-line text, the message the checkpoint commit carries); the
+// MARKER MEASURE editor uses MeasureText (the ` //<measure>` suffix a marker
+// line may carry — an ASCII GRAMMAR since the field's 2026-08-20 rebrand,
+// judged at the commit by marker_measure.h and not at all on the keyboard);
+// the MEASURE PROPAGATE's paste-offset editor uses MeasureOffset (one signed
+// decimal integer, likewise judged at its commit and not on the keyboard);
+// and the ITERATION BOUND editor uses IterBound (one signed two-decimal
+// bound, the text of one of the two bound cells a flag grows in iteration
+// mode — which of the two is State::iter_upper below — judged at its commit
+// against the bracket's walls). THERE ARE SEVEN KINDS AND FOUR OF THEM ARE
+// DIALOG EDITORS; the three top-strip kinds (FlagPayload, MeasureText,
+// IterBound) share the flag editor's State and paint in the marker lane.
+// The MeasureText kind was architect-blessed 2026-08-19, MeasureOffset
+// arrived with the measure propagate on 2026-08-20 and IterBound on
+// 2026-09-05, when every cell became a mini flag with its own editor; TWO
+// KINDS RETIRED WHOLE on 2026-08-28 (architect, R22/R23: "we're not allowing
+// free-form typing there") — LoadInPlace, the `h` view's typed load prompt,
+// and OpenProject, the Open project prompt's field, both replaced by the
+// FIELD-LESS PICKER over the folder overlay (AppState::Picker, app_state.h),
+// which is a modal owner and not an editor. THIS ENUM IS THE AUTHORITATIVE
+// LIST of the editors, and the roster that matters for modality is
+// AppState::dialog_editor_session, which NAMES the four.
 enum class Kind {
     FlagPayload,
     BpmBracket,
@@ -146,6 +154,7 @@ enum class Kind {
     CommitTitle,
     MeasureText,
     MeasureOffset,
+    IterBound,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,
@@ -194,11 +203,12 @@ struct State {
     // the keystroke handler routes printable detection accordingly.
     Kind kind = Kind::FlagPayload;
 
-    // When true on a FlagPayload editor, the accepted grammar is
-    // widened to admit the inline iteration bracket characters
-    // (`+ - [ ] ,`) and the longer FlagIter length cap. Set at `enter()`
-    // from iteration_mode_enabled; does nothing for other kinds.
-    bool iter_grammar = false;
+    // WHICH BOUND AN IterBound SESSION EDITS: false the lower cell, true the
+    // upper. A property of the session beside `target`, set at `enter()` and
+    // meaningless on every other kind (the flag editor derives the cell from
+    // it through iter_bound_editor_side, app_state.h, so no reader spells
+    // the bool's meaning twice).
+    bool iter_upper = false;
 
     // Editable text — the whole of what the editor holds and the whole of what
     // its painter draws. A surface whose value has uneditable neighbours (the
@@ -285,11 +295,13 @@ void deactivate(State& s);
 
 // Begin editing `target` with the given seed pending.
 // Cursor lands at end of pending. `kind` selects the vocabulary the
-// keystroke handler will accept while this editor is active.
+// keystroke handler will accept while this editor is active; `iter_upper`
+// names the bound an IterBound session edits and is ignored by every other
+// kind.
 void enter(State& s, int target,
            std::string initial_pending,
            Kind kind = Kind::FlagPayload,
-           bool iter_grammar = false);
+           bool iter_upper = false);
 
 // Apply a key event to the editor. Returns true if the key was consumed
 // — the caller should NOT route a consumed key to other handlers.

@@ -779,23 +779,23 @@ struct EditorTextDragState {
     bool shift_extend = false;
 };
 
-// WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON (2026-08-19; four-way since
-// 2026-09-04). The flag, its two iteration BOUND CELLS and its blue MEASURE
-// box are one clickable surface for press, drag and select — one marker, one
-// rect — and the span decides two things. THE ADDRESSED CELL: a press on the
-// flag span, the lower cell or the upper cell writes AppState::iter_step_cell
-// (Tempo / Lower / Upper) inside run_marker_click_act on all three click
-// shapes, so the vertical arrows then step that cell; a measure press leaves
-// the axis alone. THE DOUBLE-CLICK'S EDITOR: the measure span opens the
-// MEASURE editor (both columns, both views) and every other span opens the
-// PAYLOAD editor (warp only, its own gates) — a cell's double-click is the
-// flag's own act, the bracket being typed there as inline text. It is
-// resolved from the painter's own published boundaries
-// (FlagHitRect::iter_lower_boundary_x / iter_upper_boundary_x /
-// measure_boundary_x) and never re-derived, and the seed is stamped at the
-// FIRST press so the pair of clicks agrees about what it is opening even if
-// the box has since been repainted at a different width.
-enum class MarkerClickSpan { Flag, IterLower, IterUpper, Measure };
+// WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON is a MarkerCell
+// (warpmarkers.h — the one enum for the press, the addressed cell and the
+// editors since 2026-09-05; a four-way span of its own from 2026-08-19).
+// The flag, its two iteration BOUND CELLS and its blue MEASURE box are one
+// clickable surface for press, drag and select — one marker, one rect — and
+// the pressed cell decides two things. THE ADDRESSED CELL: every marker press
+// writes AppState::addressed_cell from the cell it landed on, inside
+// run_marker_click_act on all three click shapes and behind the selection
+// mutator that reset it, so the bright cell, the vertical arrows and Enter
+// all follow the press. THE DOUBLE-CLICK'S EDITOR: each cell opens its own —
+// the payload editor on the flag box (warp only, its own gates), the bound
+// editor on a bound cell, the measure editor on the measure box (both
+// columns, both views). It is resolved from the painter's own published
+// boundaries (FlagHitRect::iter_lower_boundary_x / iter_upper_boundary_x /
+// measure_boundary_x, hit_test_flag_cell) and never re-derived, and the seed
+// is stamped at the FIRST press so the pair of clicks agrees about what it is
+// opening even if the box has since been repainted at a different width.
 
 // THE MARKER FLAG'S PENDING PRESS — armed by the PLAIN flag-box press ALONE,
 // AFTER the click has already acted (architect 2026-08-17: CONTENT ACTS THE
@@ -860,14 +860,14 @@ struct PendingMarkerPress {
     int  marker         = -1; // marker index the press hit (active view's list)
     int  press_x        = 0;  // press position (window px): the gate + drag
     int  press_y        = 0;  //   anchor + the release-side seed's position
-    // WHICH BOX OF THE RUN THE PRESS LANDED ON, resolved once at the press
+    // WHICH CELL OF THE RUN THE PRESS LANDED ON, resolved once at the press
     // from the painter's published boundaries (the addressed cell is written
     // from the same answer there) and carried to the double-click seed at the
     // motionless release — the same reason the POSITION is carried: the seed
     // describes the press, and only the release knows the press was a click.
     // It reaches nothing else; the drag this pending may become is one gesture
-    // on one marker whatever box started it.
-    MarkerClickSpan span = MarkerClickSpan::Flag;
+    // on one marker whatever cell started it.
+    MarkerCell cell = MarkerCell::Payload;
 };
 
 // (No pending TEMPO drag, and no TempoDragState: the whole target-view tempo drag
@@ -1789,11 +1789,11 @@ struct DoubleClickCandidate {
     int     press_x   = 0;      // seed x: all four surfaces seed at a motionless
     int     press_y   = 0;      //   release, Marker with its PRESS coordinates
     int     target    = -1;     // marker index for Marker; unused otherwise
-    // WHICH SPAN THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
+    // WHICH CELL THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
     // The consume forks on THE SEED and not on the second press's own position,
-    // so a pair of clicks straddling the seam opens the editor the FIRST one
+    // so a pair of clicks straddling a seam opens the editor the FIRST one
     // named — the same "the seed decides" rule the target field already carries.
-    MarkerClickSpan span = MarkerClickSpan::Flag;
+    MarkerCell cell = MarkerCell::Payload;
 };
 
 // THE TRIM-BAR FRAMING DOUBLE-CLICK'S FIRST HALF, recorded at the press because
@@ -7726,16 +7726,18 @@ struct AppState {
     // re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
-    // Shared text-editor state for THREE editors distinguished by Kind: the
+    // Shared text-editor state for FOUR editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other four dialog editors (2026-08-13), and the marker MEASURE editor
+    // other four dialog editors (2026-08-13), the marker MEASURE editor
     // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
-    // like the flag editor and carries no red-flash edge of its own. The
-    // editor owns the keyboard while active.
+    // like the flag editor and carries no red-flash edge of its own, and the
+    // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
+    // paints over its bound cell in the top strip and carries no stem flash
+    // either. The editor owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
     // invalidate the top strip without redundant repaints.
@@ -8117,24 +8119,43 @@ struct AppState {
     // is visible directly on the flags (it is a flag-cache fingerprint field
     // for exactly that reason). THE THREE WRITERS OF THE OFF EDGE all run
     // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm, the sweep's
-    // fire and BPM mode's forced exit — which is where the addressed cell
-    // below falls back to Tempo.
+    // fire and BPM mode's forced exit — which is where an addressed bound
+    // cell below falls back to the payload.
     bool iteration_mode_enabled = false;
 
-    // Which cell of the focused warp marker the vertical arrows step
-    // (IterStepCell, warpmarkers.h — Tempo, or one of the two bound cells;
-    // architect 2026-09-04). Session-only, in no settings vocabulary, Tempo at
-    // every launch. WRITTEN BY A MARKER PRESS'S SPAN inside
-    // run_marker_click_act (flag → Tempo, lower cell → Lower, upper cell →
-    // Upper, the measure leaving it) on all three click shapes, and RESET TO
-    // Tempo by wipe_iter_state, which every exit from iteration mode runs — so
-    // outside the mode it is Tempo by construction. It persists across focus
-    // changes: Tab to the next marker and Up steps the same cell there — one
-    // column address over every marker, the W/P column's own shape. READERS:
-    // the Up/Down dispatch's fork (input_handler.cpp), the flag painter's cue
-    // (the flag cache's fp_iter_step_cell), and the Up/Down buttons' face and
-    // tooltip (redesign_button_enabled / redesign_button_tooltip).
-    IterStepCell iter_step_cell = IterStepCell::Tempo;
+    // THE ADDRESSED CELL: which cell of the FOCUSED marker is the bright one,
+    // the one the vertical arrows step and the one Enter opens (MarkerCell,
+    // warpmarkers.h; architect 2026-09-04 for the axis, 2026-09-05 for its
+    // reach over all four cells and its reset). Session-only, in no settings
+    // vocabulary, Payload at every launch.
+    //
+    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
+    // rides: a marker press inside run_marker_click_act (the pressed cell,
+    // all four, on all three click shapes), the measure editor's open
+    // (Measure) and the bound editor's open (Lower or Upper) — an editor
+    // open seats the cell it edits.
+    //
+    // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
+    // chokepoint: every Selection mutator writes the focus through
+    // Selection::seat_focus (selection.cpp), which resets the axis — the Tab
+    // walk, the paired march, Shift+J's jump, the load's and the undo/redo
+    // restores' auto-select and sanitize, `p` / Ctrl+Tab's clear, the
+    // coincidence auto-select at the four entry chokepoints and the flag
+    // editor's open all reach the focus through those mutators and inherit
+    // the reset (the undo restore's touched-set select goes through
+    // replace_selection for exactly this reason). The reorder remap
+    // (remap_marker_indices_after_reorder) is not a focus change — the same
+    // marker keeps its cell. And the mode going off puts a Lower or Upper
+    // axis back on the payload (wipe_iter_state, which every exit runs),
+    // the cells going with the mode; a Measure axis survives it.
+    //
+    // READERS: the Up/Down dispatch's fork (input_handler.cpp; a Measure
+    // axis refuses through addressed_cell_step_refusal), the Return arm's
+    // editor fork, the flag painter's bright cell (render_flags through the
+    // flag cache's fp_addressed_cell), the Up/Down and Edit Flag buttons'
+    // face and tooltip (redesign_button_enabled / redesign_button_tooltip),
+    // and the bound step's coalescing stamp (Undo::coalesce_gesture).
+    MarkerCell addressed_cell = MarkerCell::Payload;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
     // exclusive with iteration_mode_enabled (toggling one ON forces the
@@ -9889,8 +9910,10 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 //
 // The vertical arrows' SECOND step body, GuiWarpMarkersOps::adjust_iter_bound_
 // cents (warpmarkers_ops.cpp), steps one bound of the focused marker's
-// iteration bracket while the addressed cell (AppState::iter_step_cell) is
-// Lower or Upper. Its predicates mirror the tempo step's above one for one —
+// iteration bracket while the addressed cell (AppState::addressed_cell) is
+// Lower or Upper; a Payload axis is the tempo step and a Measure axis
+// refuses whole (addressed_cell_step_refusal below). Its predicates mirror
+// the tempo step's above one for one —
 // the stable-state refusals, the landing owner, the group verdict, the
 // directional face, the kind refusal — and each has the same readers: the act,
 // the Up/Down buttons' face, their tooltip and the card. What differs is the
@@ -9901,11 +9924,25 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 // THE BOUND STEP'S STABLE-STATE REFUSALS: iteration mode on, then the tempo
 // step's own three terms — the warp column, a standing selection, a valid
 // focus — which are the same terms and are read rather than restated. The
-// mode term is a belt: the axis falls back to Tempo the moment the mode goes
-// off, so no dispatch reaches the bound body outside it. TWO READERS: the
-// act's leading refusal and the Up/Down face with a bound addressed.
+// mode term is a belt: a bound axis falls back to the payload the moment the
+// mode goes off, so no dispatch reaches the bound body outside it. TWO
+// READERS: the act's leading refusal and the Up/Down face with a bound
+// addressed.
 inline bool iter_bound_step_actionable(const AppState& app) {
     return app.iteration_mode_enabled && tempo_cent_step_actionable(app);
+}
+
+// A MEASURE HAS NO VALUE TO STEP (architect 2026-09-05): with the measure
+// box addressed, the vertical arrows have nothing to step — a measure is a
+// score position, not a number the arrows move — so the press refuses whole
+// on this one sentence and the two buttons grey on it. Returns the card's
+// sentence or nullptr. THREE READERS: the Up/Down dispatch's fork
+// (input_handler.cpp), the Up/Down face (redesign_button_enabled) and their
+// tooltip, which drops its ladder line on it.
+inline const char* addressed_cell_step_refusal(const AppState& app) {
+    return app.addressed_cell == MarkerCell::Measure
+               ? "A measure has no value to step"
+               : nullptr;
 }
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
@@ -9923,16 +9960,16 @@ inline bool iter_bound_step_actionable(const AppState& app) {
 // iter_bound_step_write below and the directional face compares it against the
 // resting value.
 inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
-                                       IterStepCell side,
+                                       MarkerCell side,
                                        int64_t delta_cents) {
     const int64_t lo = m.iter_start_cents.value_or(0);
     const int64_t hi = m.iter_end_cents.value_or(0);
-    const int64_t start   = side == IterStepCell::Upper ? hi : lo;
-    const int64_t partner = side == IterStepCell::Upper ? lo : hi;
+    const int64_t start   = side == MarkerCell::Upper ? hi : lo;
+    const int64_t partner = side == MarkerCell::Upper ? lo : hi;
     const int64_t windowed =
         std::clamp(start + delta_cents, kTempoMinCents - m.tempo_cents,
                    kTempoMaxCents - m.tempo_cents);
-    return side == IterStepCell::Upper ? std::max(windowed, partner)
+    return side == MarkerCell::Upper ? std::max(windowed, partner)
                                        : std::min(windowed, partner);
 }
 
@@ -9944,12 +9981,13 @@ inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
 //
 // A pair of two zeroes clears instead of resting, because [0, 0] is the blank
 // bracket on every authoring road (planner-ruled 2026-09-04, converting a
-// codex finding). The flag editor's grammar has always read an explicit
-// `+[+0.00,+0.00]` as blank rather than as a zero-width sweep
-// (extract_iter_bracket, flag_editor.cpp), so a step that could rest on [0, 0]
-// would have made one seed mean two things depending on which surface authored
-// it. The step from blank still starts at [0, 0] — a blank reads +0.00 in both
-// cells — it simply cannot come to rest there, exactly as the editor cannot.
+// codex finding, when the flag editor's bracket grammar read two typed
+// zeroes as blank and the step had to agree with it). Both roads that
+// remain — the arrows' step and the bound cell's own editor
+// (GuiFlagEditor::commit_iter_bound_edit) — write through this one site, so
+// two cells reading +0.00 mean the blank bracket whichever authored them.
+// The step from blank still starts at [0, 0] — a blank reads +0.00 in both
+// cells — it simply cannot come to rest there.
 //
 // Two consequences, both wanted. A tap up then a tap down on a blank bracket
 // leaves the store byte-equal to what it was, so the merge tail's byte-equal
@@ -9963,12 +10001,12 @@ inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
 // a bracket the caller did not mean to move: a landing on [0, 0] is admitted
 // only when it differs from the resting bound, which for an already-blank
 // bracket it cannot (start is 0 and the partner walls the landing there).
-inline void iter_bound_step_write(GuiWarpMarker& m, IterStepCell side,
+inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
                                   int64_t landing) {
     const int64_t lo = m.iter_start_cents.value_or(0);
     const int64_t hi = m.iter_end_cents.value_or(0);
-    const int64_t new_lo = side == IterStepCell::Lower ? landing : lo;
-    const int64_t new_hi = side == IterStepCell::Upper ? landing : hi;
+    const int64_t new_lo = side == MarkerCell::Lower ? landing : lo;
+    const int64_t new_hi = side == MarkerCell::Upper ? landing : hi;
     if (new_lo == 0 && new_hi == 0) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
@@ -9989,10 +10027,10 @@ inline void iter_bound_step_write(GuiWarpMarker& m, IterStepCell side,
 // face reads the boolean wrapper.
 enum class IterBoundStepGroupVerdict { Steps, Walled, Empty };
 IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
-                                                        IterStepCell side,
+                                                        MarkerCell side,
                                                         int64_t delta_cents);
 inline bool iter_bound_step_group_actionable(const AppState& a,
-                                             IterStepCell side,
+                                             MarkerCell side,
                                              int64_t delta_cents) {
     return iter_bound_step_group_verdict(a, side, delta_cents) ==
            IterBoundStepGroupVerdict::Steps;
@@ -10010,7 +10048,7 @@ inline bool iter_bound_step_group_actionable(const AppState& a,
 // equals the resting value iff the bound rests on a wall, the same for one
 // cent, three or ten, and the group scan walls a superset as the step grows.
 bool iter_bound_step_direction_actionable(const AppState& a,
-                                          IterStepCell side,
+                                          MarkerCell side,
                                           int64_t delta_cents);
 
 // WOULD A SINGLETON BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
@@ -10262,14 +10300,35 @@ inline bool inherit_toggle_actionable(const AppState& app) {
            marker_selection_standing(app) && marker_focus_standing(app);
 }
 
-// THE FLAG EDITOR'S OPEN REFUSAL, composed (architect 2026-08-30): bare
-// Return opens the editor on the FOCUSED marker, and the P view has no
-// per-flag editor. READERS: the Return arm (input_handler.cpp) and the Edit
-// flag button's disabled face. The MEASURE editor's open (bare `/`) asks
-// marker_focus_standing alone — measures are both columns' — and its button
-// reads that atom directly.
+// WHICH BOUND AN OPEN IterBound SESSION EDITS, read off the session's own
+// side bit (text_editor::State::iter_upper) — the one place the bool is
+// given its cell name, so the painter (render_flag_editor_box), the commit
+// (commit_iter_bound_edit) and the reopen test cannot read it two ways.
+// Meaningful on Kind::IterBound alone.
+inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
+    return ed.iter_upper ? MarkerCell::Upper : MarkerCell::Lower;
+}
+
+// BARE RETURN'S OPEN REFUSAL, composed (architect 2026-08-30; over the
+// addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
+// on the FOCUSED marker, so it wants a focus first, and then the cell's own
+// column — the flag's payload editor is the warp column's (the P view has no
+// per-flag editor), while the measure editor is both columns' and a bound
+// cell can only be addressed on a warp marker. A bound cell's kind refusal
+// (an owner disabled after its cell was addressed) stays the act's own
+// card behind a live face, as the Up/Down pair's is. READERS: the Return arm
+// (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
+// editor's own key (bare `/`) asks marker_focus_standing alone and its
+// button reads that atom directly.
 inline bool flag_editor_open_actionable(const AppState& app) {
-    return marker_focus_standing(app) && app.active_markers_view != 'P';
+    if (!marker_focus_standing(app)) return false;
+    switch (app.addressed_cell) {
+    case MarkerCell::Payload: return app.active_markers_view != 'P';
+    case MarkerCell::Lower:
+    case MarkerCell::Upper:
+    case MarkerCell::Measure: return true;
+    }
+    return false;
 }
 
 // Restore ascending time_frame order after a mutation that may have
@@ -10812,7 +10871,7 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // it means, which is exactly what a defaulted bool would have let it skip.
 // No `Gui` prefix: that convention rides the marker-side data types
 // (GuiWarpMarker, GuiPhaseResetMarker), while the small policy and verdict
-// enums beside this one — MarkerClickSpan, TrimHit, PayloadEligibility — carry
+// enums beside this one — MarkerCell, TrimHit, PayloadEligibility — carry
 // none.
 enum class MarkerLandingFrame { Center, FollowPage };
 
@@ -12893,11 +12952,14 @@ inline bool redesign_button_enabled(const AppState& a,
             const int64_t delta = b == RedesignButton::TransportUp ? +1 : -1;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
-            // owners, otherwise the tempo step's — the same fork the dispatch
-            // makes, so the face and the act read one decision either way.
-            if (a.iter_step_cell != IterStepCell::Tempo) {
+            // owners, with the measure addressed nothing steps
+            // (addressed_cell_step_refusal), otherwise the tempo step's — the
+            // same fork the dispatch makes, so the face and the act read one
+            // decision either way.
+            if (addressed_cell_step_refusal(a)) return false;
+            if (a.addressed_cell != MarkerCell::Payload) {
                 if (!iter_bound_step_actionable(a)) return false;
-                if (!iter_bound_step_direction_actionable(a, a.iter_step_cell,
+                if (!iter_bound_step_direction_actionable(a, a.addressed_cell,
                                                           delta))
                     return false;
                 break;
@@ -14722,14 +14784,19 @@ inline RedesignTooltipText redesign_button_tooltip(
         // with the same ladder line, dropped on the bound step's own kind
         // refusal (iter_bound_step_kind_refusal: a marker without a tempo of
         // its own, a disabled owner — magnitude-blind, every rung carding
-        // alike). A second line only where the table already binds one:
-        // these two carry both admissions.
+        // alike). WITH THE MEASURE ADDRESSED the pair is dead on every rung
+        // (addressed_cell_step_refusal, the face's own grey), so the ladder
+        // line drops and the table's name stands over the grey. A second
+        // line only where the table already binds one: these two carry both
+        // admissions.
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown: {
-            if (a.iter_step_cell != IterStepCell::Tempo) {
+            if (addressed_cell_step_refusal(a))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            if (a.addressed_cell != MarkerCell::Payload) {
                 const bool up = b == RedesignButton::TransportUp;
                 const char* name =
-                    a.iter_step_cell == IterStepCell::Lower
+                    a.addressed_cell == MarkerCell::Lower
                         ? (up ? "Lower Bound Up (Up)" : "Lower Bound Down (Down)")
                         : (up ? "Upper Bound Up (Up)" : "Upper Bound Down (Down)");
                 return {name, iter_bound_step_kind_refusal(a)
@@ -14740,6 +14807,22 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         }
+        // EDIT FLAG OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05):
+        // the button is bare Return, and Return opens whichever cell of the
+        // focus is addressed, so the name follows the axis — the table's
+        // "Edit Flag" on the payload, the cell's own name otherwise. One
+        // line, the button admitting no modifier.
+        case RedesignButton::IconMarkerEditFlag:
+            switch (a.addressed_cell) {
+            case MarkerCell::Payload: break;
+            case MarkerCell::Lower:
+                return {"Edit Lower Bound (Return)", nullptr};
+            case MarkerCell::Upper:
+                return {"Edit Upper Bound (Return)", nullptr};
+            case MarkerCell::Measure:
+                return {"Edit Measure (Return)", nullptr};
+            }
+            break;
         // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE
         // through the home-view binding's own owner ("Markers are moved in
         // source view", the dispatch's card) — the lane term first, because
@@ -14910,17 +14993,18 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
-// WHICH BOX of that run the point landed on — the topmost rect's three
+// WHICH CELL of that run the point landed on — the topmost rect's three
 // published boundaries compared against mouse_x, nothing more. Its ONE
 // consumer is the marker press (run_marker_click_act), which writes the
 // addressed cell from the answer and stamps it onto the double-click seed so
-// the boxes can open their editors (MarkerClickSpan states the whole rule).
-// It answers Flag for a point that hits no flag at all, which is the harmless
-// answer: a caller with no hit has nothing to fork. Same backward walk, same
-// topmost-wins arbitration as hit_test_flag — literally the same walk, so the
-// two can never disagree about which box was hit.
-MarkerClickSpan hit_test_flag_span(const AppState& app, const GuiAudio& audio,
-                                   int mouse_x, int mouse_y);
+// each cell can open its own editor (the MarkerCell block at
+// PendingMarkerPress states the whole rule). It answers Payload for a point
+// that hits no flag at all, which is the harmless answer: a caller with no
+// hit has nothing to fork. Same backward walk, same topmost-wins arbitration
+// as hit_test_flag — literally the same walk, so the two can never disagree
+// about which box was hit.
+MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
+                              int mouse_x, int mouse_y);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box

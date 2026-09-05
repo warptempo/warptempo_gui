@@ -239,12 +239,12 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // reads it (converted 2026-09-04 from a codex finding). That kind's
     // subject is not the marker set but a field of it: Lower and Upper are two
     // different bounds, and a press on the other cell of the same selected
-    // marker changes only AppState::iter_step_cell, so none of the three terms
+    // marker changes only AppState::addressed_cell, so none of the three terms
     // below moves — a Lower tap followed by an Upper tap inside
     // kTapCoalesceMs merged, and one Ctrl+Z reverted both. The other three
     // kinds ignore it because their subject has no cell: both position nudges
     // move the focus's frame and the tempo step moves its base, one field
-    // each, and the axis is Tempo by construction outside iteration mode
+    // each, and a bound cell is never addressed outside iteration mode
     // anyway. That is why this is a term of the one kind that needs it rather
     // than a fifth stamp field every kind pays for. Both arms read it: a held
     // run cannot change the cell mid-burst (a marker press disarms both hold
@@ -252,7 +252,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // reason clause (c) gives.
     const bool cell_matches =
         kind != GestureKind::IterBoundStep ||
-        last_gesture_cell_ == app.iter_step_cell;
+        last_gesture_cell_ == app.addressed_cell;
 
     bool merge = false;
     if (stamp_matches) {
@@ -522,7 +522,7 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // The addressed cell rides with them, read by IterBoundStep alone (the
     // argument is at coalesce_gesture's compare). It is stamped on every kind
     // so the field is never stale for the one kind that does read it.
-    last_gesture_cell_       = app.iter_step_cell;
+    last_gesture_cell_       = app.addressed_cell;
 }
 
 void Undo::note_saved() {
@@ -611,8 +611,7 @@ namespace {
 // the universal land-on-the-focus rule at land_playhead_on_marker) and the
 // offscreen framing/recenter — lives in restore_history_entry AFTER sanitize.
 template <class M, class FieldsDiffer>
-void apply_post_restore_rules_impl(AppState& app,
-                                   Selection& selection,
+void apply_post_restore_rules_impl(Selection& selection,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
@@ -624,8 +623,14 @@ void apply_post_restore_rules_impl(AppState& app,
         return;
     }
 
-    app.selected_markers = target_set;
-    app.last_selected_marker = *target_set.begin();
+    // Through the Selection mutator (the whole-set replace, focus on the
+    // earliest touched member): the focus write is the mutator's own, which
+    // is what resets the addressed cell (Selection::seat_focus) — a restore
+    // is not a marker press, so the restored focus is addressed at its
+    // payload. The mutator's two clears are the ones sanitize already made,
+    // and its top-strip damage is inside the restore's whole-window repaint.
+    const int focus = *target_set.begin();
+    selection.replace_selection(std::move(target_set), focus);
 }
 
 }  // namespace
@@ -636,7 +641,7 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
     // file — this matcher's own field list until 2026-09-01, when the net-zero
     // pop became its second reader.
     apply_post_restore_rules_impl(
-        app, selection, entry, before, app.warpmarkers.markers(),
+        selection, entry, before, app.warpmarkers.markers(),
         warp_row_fields_differ);
 }
 
@@ -646,7 +651,7 @@ void Undo::apply_post_restore_rules_phase_reset(
     // The row equality basis is the shared enumeration at the head of this
     // file (the warp twin's rule verbatim).
     apply_post_restore_rules_impl(
-        app, selection, entry, before,
+        selection, entry, before,
         app.phaseresetmarkers.markers(),
         phase_reset_row_fields_differ);
 }

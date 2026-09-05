@@ -22,10 +22,11 @@ namespace {
 
 // Strict signed two-decimal parse straight to integer cents (sign, >=1
 // integer digit, '.', exactly two fraction digits; direct digit-to-cents
-// conversion — no strtod, no doubles). Leading/trailing ASCII whitespace
-// is trimmed first so the bracket's `, ` separator round-trips. A digit
-// run whose cents would overflow int64 is refused (unreachable under the
-// caller's delta bracket; adversarial typing earns the plain refusal).
+// conversion — no strtod, no doubles) — the iteration bound editor's
+// grammar, the one form a bound cell shows (format_iter_bound_cell) read
+// back. Leading/trailing ASCII whitespace is trimmed first. A digit run
+// whose cents would overflow int64 is refused (unreachable under the
+// caller's walls; adversarial typing earns the plain refusal).
 bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
     size_t a = 0, b = raw.size();
     while (a < b && std::isspace(static_cast<unsigned char>(raw[a]))) ++a;
@@ -54,57 +55,12 @@ bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
     return true;
 }
 
-// Extract the inline iteration bracket from a flag payload edited
-// under the widened grammar. Searches for the `+[` segment after the
-// tempo token; on match, removes `+[ ... ]` from `payload` and writes the
-// parsed bounds in integer cents (lo <= hi, each within
-// [-kIterDeltaMaxCents, kIterDeltaMaxCents]) to `lo_out`/`hi_out`. The
-// all-zero blank (`+[+0.00, +0.00]`) and an absent bracket both yield
-// nullopt (clear) — the rule the arrows' bound step takes from this surface
-// (iter_bound_step_write, app_state.h). The FlagPayload tempo/scale/label
-// vocabulary never produces a `+`, so `+[` is an unambiguous marker. Returns
-// false on a malformed bracket (the caller red-flashes and cards); true
-// otherwise.
-bool extract_iter_bracket(std::string& payload,
-                          std::optional<int64_t>& lo_out,
-                          std::optional<int64_t>& hi_out) {
-    lo_out.reset();
-    hi_out.reset();
-    const auto open = payload.find("+[");
-    if (open == std::string::npos) return true;          // absent → clear
-    const auto close = payload.find(']', open + 2);
-    if (close == std::string::npos) return false;        // unterminated
-    const std::string inner = payload.substr(open + 2, close - (open + 2));
-    const auto comma = inner.find(',');
-    if (comma == std::string::npos) return false;
-    int64_t lo = 0, hi = 0;
-    if (!parse_signed_2dp_cents(inner.substr(0, comma), lo)) return false;
-    if (!parse_signed_2dp_cents(inner.substr(comma + 1), hi)) return false;
-    if (lo > hi) return false;
-    // Iteration deltas live in [-kIterDeltaMaxCents, kIterDeltaMaxCents]
-    // (value_format.h) — exact integer compares, like every tempo-domain
-    // bracket.
-    if (lo < -kIterDeltaMaxCents || lo > kIterDeltaMaxCents ||
-        hi < -kIterDeltaMaxCents || hi > kIterDeltaMaxCents) {
-        return false;
-    }
-    payload.erase(open, close - open + 1);
-    // All-zero blank is the cleared state, not a zero-width sweep, and since
-    // 2026-09-04 that is the rule on both authoring roads: the bound step's
-    // write site clears a pair that lands on two zeroes, so this seed and that
-    // step cannot mean two different things by the same [0, 0].
-    if (lo != 0 || hi != 0) {
-        lo_out = lo;
-        hi_out = hi;
-    }
-    return true;
-}
-
 } // namespace
 
-// Flag-editor cluster: the top-strip flag editor's enter / commit / exit
-// paths, the iter grammar, and the bpm-bracket editor session, reaching
-// undo and viewport through the struct's reference members. The popup
+// Flag-editor cluster: the marker lane's three editors (the flag's
+// canonical-line editor, the measure editor, the iteration bound editor) —
+// their enter / commit / exit paths — and the bpm-bracket editor session,
+// reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
 // iter_popup_eligible_marker, bpm_popup_eligible_marker, ...) live in
 // warpmarkers.h alongside effective_disabled, so this TU sees them via
@@ -132,11 +88,10 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 
 // Shared core for the enter-editor flows. Wrappers below
 // (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
-// gates and seed-text builders, then delegate here. `iter_grammar` widens
-// the FlagPayload editor's accepted vocabulary/cap for the inline
-// iteration bracket. The live open routes are: Enter on the focused
-// marker, the marker double-click (both -> enter_top_flag_edit), and the
-// BPM editor open (enter_bpm_edit). Every route opens the editor with its
+// gates and seed-text builders, then delegate here. The live open routes
+// are: Enter on the focused marker with the payload addressed, the flag
+// box's double-click (both -> enter_top_flag_edit), and the BPM editor
+// open (enter_bpm_edit). Every route opens the editor with its
 // SEEDED content fully selected (open-selected) — typing replaces
 // wholesale, bare Left/Right collapse to the extremes — so there is no
 // clicked-glyph caret to seat; a specific caret spot is a click inside the
@@ -145,8 +100,7 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // blank-seeded bottom editors.
 void GuiFlagEditor::enter_text_edit(int idx,
                                     text_editor::Kind kind,
-                                    std::string initial_pending,
-                                    bool iter_grammar) {
+                                    std::string initial_pending) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
@@ -201,8 +155,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
     text_editor::enter(
         app.top_flag_editor, idx,
         std::move(initial_pending),
-        kind,
-        iter_grammar);
+        kind);
 
     // Open-selected: fully select the seeded content (mirrors Ctrl+A's
     // anchor=0 / cursor=end assignments) so the first keystroke replaces it
@@ -221,37 +174,186 @@ void GuiFlagEditor::enter_text_edit(int idx,
     viewport.invalidate_top_strip();
 }
 
-// The two flag-editor open routes (bare Return and the marker double-click) end
-// here. NO PLAYBACK STOP, and that is an explicit exemption rather than an
-// omission: the top-strip flag editor is the one modal surface that keeps
-// playing, so a live audition survives the open. The decision and its rationale
-// are recorded at GuiPlaybackLifecycle::stop_playback_for_modal_open, the one
-// owner of the modal-open stop the dialog surfaces call.
+// The two flag-editor open routes (bare Return with the payload addressed,
+// and the flag box's double-click) end here. NO PLAYBACK STOP, and that is
+// an explicit exemption rather than an omission: the top-strip flag editor
+// is the one modal surface that keeps playing, so a live audition survives
+// the open. The decision and its rationale are recorded at
+// GuiPlaybackLifecycle::stop_playback_for_modal_open, the one owner of the
+// modal-open stop the dialog surfaces call.
+//
+// THE SEED IS THE PLAIN COMPOSER'S LINE in every mode (architect 2026-09-05):
+// the same tempo, scale and label the flag paints, and never a bracket. The
+// iteration bounds are the two cells' own, each with its own editor
+// (enter_iter_bound_edit), so this editor neither shows nor writes them; its
+// commit's one contact with the bracket is the carrier-loss clear.
 void GuiFlagEditor::enter_top_flag_edit(int idx) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
-    // In iteration mode the whole-flag editor opens over the
-    // bracketed flag (seed = the iteration-aware composed text) and runs
-    // the widened grammar. THE GRAMMAR FOLLOWS THE CARRIER, NOT THE SWEEP
-    // (architect 2026-09-02, R-12): a pass / label_ref flag edits as a plain
-    // canonical line even with iter on (no bracket to carry), while a DISABLED
-    // owner edits its DORMANT bracket — the seed is composed in the Authored
-    // mode, so the bracket the flag does not paint is in the text, and a plain
-    // Return commits it back unchanged (the widened grammar writes the bounds
-    // from the text, so a seed without them would clear a bracket the user
-    // never touched). Authoring survives disablement as the measure's does;
-    // only the flag and the sweep are blind to the disabled owner.
-    const bool iter_on =
-        app.iteration_mode_enabled &&
-        app.active_markers_view == 'W' &&
-        iter_bracket_carrier(mv[idx]);
-    this->enter_text_edit(
-        idx,
-        text_editor::Kind::FlagPayload,
-        flag_text_iter(mv, idx, iter_on ? IterBracketSplice::Authored
-                                        : IterBracketSplice::None),
-        /*iter_grammar=*/iter_on);
+    this->enter_text_edit(idx, text_editor::Kind::FlagPayload,
+                          flag_text(mv, idx));
+}
+
+// The contract is at the declaration; this is enter_measure_edit's mechanics
+// on the warp store with the cell's own eligibility in front.
+void GuiFlagEditor::enter_iter_bound_edit(int idx, MarkerCell side) {
+    if (idx < 0) return;
+    const auto& mv = app.warpmarkers.markers();
+    if (idx >= static_cast<int>(mv.size())) return;
+    if (side != MarkerCell::Lower && side != MarkerCell::Upper) return;
+    // NO CELL, NO EDITOR: the cell paints on exactly the markers the sweep
+    // reads while the mode is on (warp_iter_cells, render.cpp, off the same
+    // predicate), so an editor opens on exactly those. The callers card the
+    // kind refusal ahead of this belt; a mode-off call cannot arrive, the
+    // axis falling back to the payload with the mode.
+    if (!app.iteration_mode_enabled) return;
+    if (!iter_popup_eligible_marker(mv, idx)) return;
+
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::IterBound &&
+        app.top_flag_editor.target == idx &&
+        iter_bound_editor_side(app.top_flag_editor) == side) {
+        // Re-open on the live session's own cell: preserve the pending text
+        // and any in-progress state, just repaint (the payload editor's rule).
+        viewport.invalidate_top_strip();
+        return;
+    }
+
+    // The focus repaired, then single-selected and landed — the measure
+    // editor's open verbatim (its comments carry the why). The select resets
+    // the addressed cell to the payload through the Selection chokepoint, so
+    // the cell is written AFTER it: an editor open seats the cell it edits.
+    selection.repair_last_selected();
+    selection.set_single_selection(idx);
+    land_playhead_on_marker(app, audio, viewport, idx);
+    app.addressed_cell = side;
+
+    if (text_editor::is_active(app.top_flag_editor)) {
+        text_editor::deactivate(app.top_flag_editor);
+    }
+    // THE SEED IS THE CELL'S OWN TOKEN — the one spelling the cell paints
+    // (format_iter_bound_cell, `+0.00` on a blank bracket), so what the cell
+    // shows and what its editor opens with cannot differ.
+    text_editor::enter(app.top_flag_editor, idx,
+                       format_iter_bound_cell(mv[static_cast<size_t>(idx)],
+                                              side),
+                       text_editor::Kind::IterBound,
+                       /*iter_upper=*/side == MarkerCell::Upper);
+
+    // Open-selected, the family's rule: the token is fully selected so the
+    // first keystroke replaces it wholesale. The seed is never empty here.
+    app.top_flag_editor.selection_anchor = 0;
+    app.top_flag_editor.cursor_pos =
+        static_cast<int>(app.top_flag_editor.pending.size());
+
+    viewport.invalidate_top_strip();
+}
+
+// The contract is at the declaration. THE REFUSAL IS THE TOP-STRIP FAMILY'S
+// OWN SHAPE: `red = true`, a top-strip repaint, one stderr line, a normal
+// card carrying the same composed sentence, and the session left standing
+// with the offending text in place. TYPED INPUT GATES LOUD: a bound typed
+// here is authored input arriving at its own surface, so the walls the
+// arrows' step clamps at silently (iter_bound_step_landing) are refusals
+// here, each named — the grammar, the partner bound, the tempo window.
+void GuiFlagEditor::commit_iter_bound_edit() {
+    if (!text_editor::is_active(app.top_flag_editor)) return;
+    if (app.top_flag_editor.kind != text_editor::Kind::IterBound) return;
+    const int idx = app.top_flag_editor.target;
+    const MarkerCell side = iter_bound_editor_side(app.top_flag_editor);
+    const std::string next = app.top_flag_editor.pending;
+
+    const auto& mv_const = app.warpmarkers.markers();
+    // The target may have gone out from under the editor, or stopped being a
+    // carrier (the store is frozen under the modal editor, so neither can
+    // happen today; the belts are the payload commit's own): drop the edit.
+    if (idx < 0 || idx >= static_cast<int>(mv_const.size()) ||
+        !iter_bracket_carrier(mv_const[static_cast<size_t>(idx)])) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+    const GuiWarpMarker& live = mv_const[static_cast<size_t>(idx)];
+
+    auto refuse = [&](const std::string& why) {
+        app.top_flag_editor.red = true;
+        viewport.invalidate_top_strip();
+        // ONE COMPOSER, TWO READERS: the stderr line keeps the offending
+        // token after the sentence; the card does not, that text standing in
+        // the red field the refusal leaves.
+        const std::string refusal = "Range bound rejected: " + why;
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                     refusal.c_str(), next.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+    };
+
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
+    if (next.empty()) {
+        // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
+        // one bound alone is not representable, so emptying either cell is
+        // the removal — the measure's own empty-removes rule.
+        m.iter_start_cents.reset();
+        m.iter_end_cents.reset();
+    } else {
+        int64_t value = 0;
+        if (!parse_signed_2dp_cents(next, value)) {
+            refuse("a bound is a sign and two decimals, as +0.00");
+            return;
+        }
+        // THE WALLS, the landing owner's two, refused rather than clamped:
+        // the tempo window clamp_iter_bracket_to_tempo_bracket states —
+        // every sweep cell renders base + delta, so the base plus either
+        // bound must stay inside the tempo bracket — and the partner bound,
+        // the lower never above the upper and the upper never below the
+        // lower (0 for a blank bracket, the step's own start).
+        const int64_t lo_wall = kTempoMinCents - live.tempo_cents;
+        const int64_t hi_wall = kTempoMaxCents - live.tempo_cents;
+        if (value < lo_wall || value > hi_wall) {
+            refuse("the base tempo plus the bound leaves the tempo bracket [" +
+                   format_tempo_cents(kTempoMinCents) + ", " +
+                   format_tempo_cents(kTempoMaxCents) + "]");
+            return;
+        }
+        const int64_t partner = side == MarkerCell::Upper
+                                    ? live.iter_start_cents.value_or(0)
+                                    : live.iter_end_cents.value_or(0);
+        if (side == MarkerCell::Lower && value > partner) {
+            refuse("the lower bound cannot rise above the upper");
+            return;
+        }
+        if (side == MarkerCell::Upper && value < partner) {
+            refuse("the upper bound cannot fall below the lower");
+            return;
+        }
+        // THE ONE WRITE SITE: the addressed side takes the value, the partner
+        // keeps what it had, and a pair landing on two zeroes clears — the
+        // same rule the arrows' step writes under, so a typed +0.00 pair and
+        // a stepped one mean one thing.
+        iter_bound_step_write(m, side, value);
+    }
+
+    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no store
+    // bump — the shape every no-op commit in the product takes.
+    if (m.iter_start_cents == live.iter_start_cents &&
+        m.iter_end_cents   == live.iter_end_cents) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+
+    // ONE BRACKET-ONLY ENTRY (affects_persistence false — session-only
+    // fields, never serialized, so the dirty dot stays where it is). The
+    // snapshot is taken before the write, the store's own convention.
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(proposed);
+    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/false);
+    undo.recompute_dirty();
+
+    // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded
+    // from build_warp_frame_map and the render recipe alike), so the cell is
+    // the only thing that moved and the strip is the only damage.
+    text_editor::deactivate(app.top_flag_editor);
+    viewport.invalidate_top_strip();
 }
 
 // THE MEASURE EDITOR'S OPEN. The contract is at the declaration; this is the
@@ -296,6 +398,11 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
     // store, which is the column this open was called with.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
+    // THE OPEN SEATS THE CELL IT EDITS (architect 2026-09-05): the select
+    // above reset the addressed cell to the payload through the Selection
+    // chokepoint, and the measure box is the cell this editor is, so it is
+    // written here, behind the select — the bright cell follows the field.
+    app.addressed_cell = MarkerCell::Measure;
 
     // Discard any prior edit silently before switching surfaces.
     if (text_editor::is_active(app.top_flag_editor)) {
@@ -446,27 +553,10 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // In iteration mode the buffer may carry the inline bracket
-    // after the tempo. Strip and capture it here (iteration-mode
-    // wrapper) so parse_single_canonical_line stays bracket-unaware.
-    // nullopt bounds mean "blank/clear"; a malformed bracket red-flashes
-    // without touching the marker.
-    const bool iter_grammar = app.top_flag_editor.iter_grammar;
-    std::string payload = app.top_flag_editor.pending;
-    std::optional<int64_t> iter_lo;
-    std::optional<int64_t> iter_hi;
-    if (iter_grammar) {
-        if (!extract_iter_bracket(payload, iter_lo, iter_hi)) {
-            app.top_flag_editor.red = true;
-            viewport.invalidate_top_strip();
-            const std::string refusal =
-                "Edit rejected: malformed iteration bracket";
-            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                refusal.c_str(), app.top_flag_editor.pending.c_str());
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-    }
+    // The buffer is the plain payload: no bracket rides in it (the bounds
+    // are the cells' own, each with its own editor), so
+    // parse_single_canonical_line reads it as it reads a sidecar line.
+    const std::string& payload = app.top_flag_editor.pending;
 
     // Assemble the parse candidate in SERIALIZER form. The editor holds the
     // PAYLOAD alone, so the two fields ahead of the pipe come from the marker's
@@ -519,49 +609,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
         return;
     }
 
-    // Iteration cell-range gate, an exact integer-cents compare. Every
-    // sweep cell mutates this owner's tempo_cents to tempo_cents + delta
-    // (input_key_dispatch.cpp), and the deltas run from iter_start_cents to
-    // iter_end_cents inclusive, so the two bracket endpoints bound every
-    // cell. If the committed base tempo plus either bound lands outside the
-    // tempo bracket [kTempoMinCents, kTempoMaxCents], some cell would
-    // render a marker whose tempo cannot re-parse at a later promote (the
-    // strict sidecar parse), so the bracket is refused at its own input
-    // surface — the same red-flash a malformed bracket earns. THE BRACKET
-    // TYPED HERE IS AUTHORED INPUT, and that is the whole reason this gate is
-    // LOUD: it answers what the user just typed. A LATER base-tempo change
-    // under a live bracket is not answered here at all — it silently drags
-    // the bracket with it (THE BRACKET RIDES ITS BASE, architect 2026-08-02:
-    // clamp_iter_bracket_to_tempo_bracket, warpmarkers.h, called below on this
-    // very commit path and by the Up/Down cent step). The division is
-    // deliberate: typed brackets gate loud, later base motion clamps silent —
-    // and between them no sweep cell can leave the tempo bracket, so nothing
-    // rides on a downstream backstop. The cleared/blank bracket (nullopt
-    // bounds) and any marker that carries no bracket (a pass or label_ref —
-    // no carrier per iter_bracket_carrier; the base the sweep reads is
-    // tempo_cents of an owning numeric marker) carry no cells, so both skip
-    // the check. A DISABLED owner does NOT skip it: its bracket is dormant,
-    // not absent, and what returns to the sweep on re-enable must already be
-    // in-bracket, so the gate reads the carrier and not the sweep's own
-    // eligibility.
-    if (iter_grammar && iter_lo.has_value() && iter_hi.has_value() &&
-        !parsed.tempo_inherits && parsed.label_ref.empty()) {
-        const int64_t base_cents = parsed.tempo_cents;
-        if (base_cents + *iter_lo < kTempoMinCents ||
-            base_cents + *iter_hi > kTempoMaxCents) {
-            app.top_flag_editor.red = true;
-            viewport.invalidate_top_strip();
-            const std::string refusal =
-                "Edit rejected: iteration bracket cells leave the tempo "
-                "bracket [" + format_tempo_cents(kTempoMinCents) + ", " +
-                format_tempo_cents(kTempoMaxCents) + "]";
-            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                refusal.c_str(), app.top_flag_editor.pending.c_str());
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-    }
-
     // No first-marker special case: a marker at time 0 accepts any payload
     // the grammar allows — pass, label ref, label def. The parser resolver
     // normalizes the frame-0 arrangement at render/preview time (a missing
@@ -574,11 +621,12 @@ void GuiFlagEditor::commit_top_flag_edit() {
     const std::string new_def = parsed.label_def;
 
     // Snapshot the canonical (serialized) fields before writing so we can
-    // tell whether the engine/dirty state actually moved. An iteration-only
-    // commit (bracket changed, tempo/scale/label unchanged) does not mark
-    // dirty — its undo entry pushes with affects_persistence=false, which
-    // recompute_dirty honors — while the commit tail below still repaints and
-    // triggers unconditionally like any store mutation.
+    // tell whether the engine/dirty state actually moved. A bracket-only
+    // commit (the carrier-loss clear or the clamp moving a bound under an
+    // unchanged line) does not mark dirty — its undo entry pushes with
+    // affects_persistence=false, which recompute_dirty honors — while the
+    // commit tail below still repaints and triggers unconditionally like any
+    // store mutation.
     const GuiWarpMarker before = m;
 
     // Time stays locked; preserve it (the candidate assembled above carried
@@ -634,40 +682,32 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    // Apply the parsed iteration bracket. Session-only; nullopt bounds
-    // clear the sweep. The accepted live-vector assignment bumps the warp
-    // generation, so the flag cache repaints the bracket regardless of
-    // whether the canonical fields moved.
+    // THE BRACKET IS THE STORE'S, NOT THIS EDITOR'S: no line above writes a
+    // bound (the bounds are the cells' own, each with its own editor), and
+    // the two writes below are the store's rules about a bracket the marker
+    // already carries.
     //
     // Invariant: a committed NON-CARRIER never keeps a bracket. A bracket
     // exists only on a carrier (iter_bracket_carrier, warpmarkers.h); a
     // commit that makes the marker a non-carrier (a pass, or a &ref) clears
-    // both bounds unconditionally — regardless of iter_grammar, so a mode-off
+    // both bounds unconditionally — in the mode and out of it, so a mode-off
     // pass conversion of an undo-restored bracketed owner also drops the
     // fields. This mirrors Ctrl+N's owner->pass / ref->pass carrier-loss
     // clears; undo is the sole sanctioned route that resurrects a cleared
     // bracket. A commit that DISABLES the owner (the `#`) is no loss: the
-    // bracket stays on it dormant — off the flag and out of the sweep until
-    // re-enabled, still in this editor — which is why the test below is the
-    // carrier and not the sweep's eligibility (R-12, 2026-09-02).
-    if (iter_grammar) {
-        m.iter_start_cents = iter_lo;
-        m.iter_end_cents   = iter_hi;
-    }
+    // bracket stays on it dormant — off the flag, out of the sweep and
+    // reachable by no editor until re-enabled — which is why the test below
+    // is the carrier and not the sweep's eligibility (R-12, 2026-09-02).
     if (!iter_bracket_carrier(m)) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }
     // THE BRACKET RIDES ITS BASE: this commit may have moved the tempo under a
-    // bracket it did not type — the mode-off commit (iter_grammar false, so the
-    // bounds above were left alone) over a bracket an undo restored, since undo
-    // is deliberately ungated and outlives the mode's exit wipe. Fold the
-    // surviving bracket onto the committed base (the one owner,
-    // clamp_iter_bracket_to_tempo_bracket in warpmarkers.h). A no-op for the
-    // bracket this commit DID type: the loud gate above already proved both its
-    // ends land inside the tempo bracket at this very base. Placed before the
-    // change compares below, so a clamp that moves a bound counts as a bracket
-    // change and earns its repaint and its undo entry.
+    // bracket it did not type. Fold the surviving bracket onto the committed
+    // base (the one owner, clamp_iter_bracket_to_tempo_bracket in
+    // warpmarkers.h). Placed before the change compares below, so a clamp
+    // that moves a bound counts as a bracket change and earns its repaint
+    // and its undo entry.
     clamp_iter_bracket_to_tempo_bracket(m);
 
     // Did any serialized field change? Cascade renames imply a label_def
@@ -682,9 +722,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
         n_refs_renamed > 0;
 
     // Did the session-only iteration bracket move? Compare the ACTUAL
-    // final fields, not the parsed input: this is correct on every path,
-    // including an ineligibility clear that resets the bounds on a commit
-    // whose canonical fields did not move (the mode-off pass conversion).
+    // final fields: this is correct on every path, including an
+    // ineligibility clear that resets the bounds on a commit whose canonical
+    // fields did not move (the mode-off pass conversion).
     // optional<int64_t> equality: two bounds are equal when both are
     // nullopt or when the held cents compare equal. A bracket-only edit
     // does not mark dirty (iter values are session-only), but it is still a
@@ -732,7 +772,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the
-    // disabled bit, the iter bracket — and never a placement one, so it is a
+    // disabled bit — and never a placement one, so it is a
     // member of the warp status/value family admitted in W+target, and it owes
     // that family's contract: the contract is stated once at the head of
     // warpmarkers_ops.cpp, and the target-view re-warp inventory it joins is
@@ -748,9 +788,10 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // moves.
     // AND canonical_changed IS THE SECOND TERM, which is where this site
     // differs from its three siblings: they write nothing BUT map inputs,
-    // while this commit can land an ITER-BRACKET-ONLY change — session-only
-    // fields, excluded from build_warp_frame_map and from the render recipe
-    // alike — which moves no image and would make the kick a wasted
+    // while this commit can land a BRACKET-ONLY change (the carrier-loss
+    // clear, the clamp) — session-only fields, excluded from
+    // build_warp_frame_map and from the render recipe alike — which moves
+    // no image and would make the kick a wasted
     // synchronous plate render and the re-land a write of the value the
     // playhead already holds. canonical_changed is exactly the map-input set
     // (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
@@ -791,16 +832,20 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // a bracketless exit leaves the undo stack untouched; plain undo is
 // deliberately ungated and may restore a previously accepted bracket set.
 // Callers own the mode-flag flip and the repaint invalidation.
-// AND IT RESETS THE ADDRESSED CELL (architect 2026-09-04): the vertical
-// arrows' cell axis (AppState::iter_step_cell) falls back to Tempo here,
-// ahead of the bracket test, because this body is the one thing every exit
-// from the mode runs — there is no single mode setter, the three writers of
-// the off edge each flip the bit themselves after calling this — so a step
-// outside the mode can only ever be the tempo step. History-less: the axis is
-// a session address, not content, and the snapshot below carries no such
-// field.
+// AND IT PUTS AN ADDRESSED BOUND CELL BACK ON THE PAYLOAD (architect
+// 2026-09-04): the cells go with the mode, so a Lower or Upper axis
+// (AppState::addressed_cell) falls back to Payload here, ahead of the
+// bracket test, because this body is the one thing every exit from the mode
+// runs — there is no single mode setter, the three writers of the off edge
+// each flip the bit themselves after calling this — so a step outside the
+// mode can only ever be the tempo step. An addressed MEASURE is left alone:
+// that cell is not the mode's. History-less: the axis is a session address,
+// not content, and the snapshot below carries no such field.
 void GuiFlagEditor::wipe_iter_state() {
-    app.iter_step_cell = IterStepCell::Tempo;
+    if (app.addressed_cell == MarkerCell::Lower ||
+        app.addressed_cell == MarkerCell::Upper) {
+        app.addressed_cell = MarkerCell::Payload;
+    }
     auto& mv = app.warpmarkers.markers_mut();
     bool any = false;
     for (const auto& m : mv) {

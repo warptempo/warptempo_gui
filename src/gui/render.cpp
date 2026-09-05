@@ -21,14 +21,14 @@
 // main.cpp's invalidation, with its provenance and its authored value stated at
 // the definition.
 
-namespace {
-
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
-// (b=/e=/#) never appears in it. This is the base composer flag_text_iter
-// wraps, and every surface that shows a marker's label (the FLAG BOX itself,
-// truncated at the nine-glyph budget, and the Enter flag editor's seeded
-// initial text) routes through that wrapper, so what they show mirrors this
-// exactly.
+// (b=/e=/#) never appears in it, and neither does the iteration bracket —
+// the bounds are the two cells beside the flag, each with its own editor.
+// This is the ONE composer for warp flag text: the FLAG BOX paints it
+// (truncated at the nine-glyph budget), the flag editor seeds from it
+// (enter_top_flag_edit) and the measure field's anchor measures it
+// (committed_flag_box_w), so what they show and open with are one string
+// by construction. The contract is at the declaration (render.h).
 //
 // Variants:
 //   label_ref              → "a.42"
@@ -66,6 +66,8 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     return text;
 }
 
+namespace {
+
 // Forward-translate a per-marker effective position (a source-frame
 // double) to the paint-sample position used by the stem, flag, and
 // hit-rect loops. In target view (warp_frame_map
@@ -95,39 +97,6 @@ static inline double frame_to_paint_sample(
 
 } // namespace
 
-// The flag editor's composer over flag_text. Returns the plain flag_text for a
-// non-carrier or when iteration mode is off; for a carrier with the mode on,
-// splices the inline bracket after the tempo and before any `*scale`/`:label`
-// (e.g. `1.23+[+1.50,-0.50]*1.2345:a.aa`). The flag itself paints flag_text
-// and shows the bounds as cells (render_flags below); the contract is at the
-// declaration.
-std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, IterBracketSplice splice) {
-    if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
-    const auto& m = markers[idx];
-    // The mode names its predicate (the enum's contract, render.h): the
-    // editor seeds what the marker carries.
-    bool spliced = false;
-    switch (splice) {
-    case IterBracketSplice::None:     spliced = false; break;
-    case IterBracketSplice::Authored: spliced = iter_bracket_carrier(m); break;
-    }
-    if (!spliced) return flag_text(markers, idx);
-    // A carrier (tempo_inherits == false, no label_ref): tempo, then the
-    // bracket, then optional scale and label. Values print in the same
-    // serializer forms as flag_text.
-    std::string text = format_tempo_cents(m.tempo_cents);
-    text += format_iter_bracket_inline(m);
-    if (m.tempo_scale.has_value()) {
-        text += "*";
-        text += format_value_double(*m.tempo_scale, 4);
-    }
-    if (!m.label_def.empty()) {
-        text += ":";
-        text += m.label_def;
-    }
-    return text;
-}
 
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
@@ -969,8 +938,8 @@ static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
     if (!iteration_on || !iter_popup_eligible_marker(markers, i)) return c;
     const GuiWarpMarker& m = markers[static_cast<size_t>(i)];
     c.present = true;
-    c.lower   = format_iter_bound_cell(m, IterStepCell::Lower);
-    c.upper   = format_iter_bound_cell(m, IterStepCell::Upper);
+    c.lower   = format_iter_bound_cell(m, MarkerCell::Lower);
+    c.upper   = format_iter_bound_cell(m, MarkerCell::Upper);
     return c;
 }
 
@@ -1194,10 +1163,10 @@ void render_flag_boxes_impl(
     // cells. Which flags paint cells is the cells lambda's business, so this
     // body never asks whether a given marker is eligible.
     bool iteration_on,
-    // The addressed cell's cue (render_flags' declaration): the marker whose
-    // cell wears the underline, or -1, and which of its cells.
-    int cue_marker,
-    IterStepCell cue_cell) {
+    // The focus and its addressed cell (render_flags' declaration): the one
+    // selected marker whose bright cell is not the payload, or -1.
+    int focus_marker,
+    MarkerCell focus_cell) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1342,24 +1311,29 @@ void render_flag_boxes_impl(
             const bool dis = disabled_of(i);
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
-            const FlagFace face = resolve_flag_face(dis, red, sel);
-
-            // THE ADDRESSED CELL'S CUE — an underline on the box's bottom row,
-            // inside the box, across the cell's fill width, in the face's
-            // resolved label ink, one authored pixel tall through the seam
-            // column's own scaled metric (the derivation is at
-            // kMarkerFlagLabel, render.h). Aliased like every rectangle in
-            // this lane so it is exactly one row.
-            const auto paint_cell_cue = [&](int fill_x, int fill_w) {
-                cairo_save(cr);
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgb(cr, face.label.r, face.label.g,
-                                     face.label.b);
-                cairo_rectangle(cr, fill_x, lane.y + lane.h - border_w,
-                                fill_w, border_w);
-                cairo_fill(cr);
-                cairo_restore(cr);
+            // THE SELECTED PAIR IS ONE CELL'S (architect 2026-09-05, "light
+            // the colour of only the flag that's clicked"): a selected marker
+            // paints its ADDRESSED cell in the selected pair and its other
+            // cells in its ordinary class pair. The addressed cell is the
+            // payload for every selected marker but the focus, whose
+            // addressed cell is the axis — and where the axis names a cell
+            // this marker does not paint (a bound cell on an owner disabled
+            // after its press, a measure since removed), the payload is
+            // bright, so a selected marker always shows its selection
+            // somewhere. Disabled and red blend as they always did, cell by
+            // cell through the same ladders; the stem and the border read the
+            // class alone, so the payload face carries them for the marker.
+            MarkerCell bright = i == focus_marker ? focus_cell
+                                                  : MarkerCell::Payload;
+            const bool bright_cell_paints =
+                bright == MarkerCell::Payload ||
+                (bright == MarkerCell::Measure ? paint_measure : paint_cells);
+            if (!bright_cell_paints) bright = MarkerCell::Payload;
+            const auto cell_selected = [&](MarkerCell c) {
+                return sel && c == bright;
             };
+            const FlagFace face =
+                resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload));
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1430,56 +1404,49 @@ void render_flag_boxes_impl(
                                      face.label.b);
                 text_shape::show_shaped_run(
                     cr, run, static_cast<double>(bx + pad_l), baseline);
-                // THE TEMPO CELL'S CUE: the flag box is the addressed cell
-                // while the arrows step the tempo (the derivation is at
-                // kMarkerFlagLabel, render.h).
-                if (i == cue_marker && cue_cell == IterStepCell::Tempo)
-                    paint_cell_cue(bx, bw);
             }
 
             // THE BOUND CELLS: the flag CONTINUED rightward, twice, in the
-            // flag's OWN face — fill, top edge, seam column and ink all off
-            // the same resolved class, so a cell reads as another payload of
-            // the same flag and not as a second surface (the measure's blue is
-            // the score position's; a bound is tempo, and wears tempo's
-            // colour). The seam is the flag's own left-border column laid on
-            // each cell's left edge, exactly the measure's seam. No budget and
-            // no truncation: the token is fixed-width by grammar
-            // (kIterCellGlyphs). The lower cell first, then the upper — the
-            // bracket's own order — and the addressed one wears the cue.
+            // flag's OWN class — fill, top edge, seam column and ink all off
+            // the same ladder, so a cell reads as another payload of the same
+            // flag and not as a second surface (the measure's blue is the
+            // score position's; a bound is tempo, and wears tempo's colour).
+            // Each cell resolves its own face, because the selected pair is
+            // the addressed cell's alone (above). The seam is the flag's own
+            // left-border column laid on each cell's left edge, exactly the
+            // measure's seam. No budget and no truncation: the token is
+            // fixed-width by grammar (kIterCellGlyphs). The lower cell first,
+            // then the upper — the bracket's own order.
             if (paint_cells) {
                 const auto paint_cell = [&](int seam_x, int fill_w,
                                             const text_shape::ShapedRun& crun,
-                                            bool cued) {
+                                            MarkerCell which) {
+                    const FlagFace cf =
+                        resolve_flag_face(dis, red, cell_selected(which));
                     cairo_save(cr);
                     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                    cairo_set_source_rgb(cr, face.border.r, face.border.g,
-                                         face.border.b);
+                    cairo_set_source_rgb(cr, cf.border.r, cf.border.g,
+                                         cf.border.b);
                     cairo_rectangle(cr, seam_x, lane.y, border_w, lane.h);
                     cairo_fill(cr);
-                    cairo_set_source_rgb(cr, face.fill.r, face.fill.g,
-                                         face.fill.b);
+                    cairo_set_source_rgb(cr, cf.fill.r, cf.fill.g, cf.fill.b);
                     cairo_rectangle(cr, seam_x + border_w, lane.y, fill_w,
                                     lane.h);
                     cairo_fill(cr);
-                    cairo_set_source_rgb(cr, face.edge.r, face.edge.g,
-                                         face.edge.b);
+                    cairo_set_source_rgb(cr, cf.edge.r, cf.edge.g, cf.edge.b);
                     cairo_rectangle(cr, seam_x + border_w, lane.y, fill_w,
                                     edge_h);
                     cairo_fill(cr);
                     cairo_restore(cr);
-                    cairo_set_source_rgb(cr, face.label.r, face.label.g,
-                                         face.label.b);
+                    cairo_set_source_rgb(cr, cf.label.r, cf.label.g,
+                                         cf.label.b);
                     text_shape::show_shaped_run(
                         cr, crun,
                         static_cast<double>(seam_x + border_w + pad_l),
                         baseline);
-                    if (cued) paint_cell_cue(seam_x + border_w, fill_w);
                 };
-                paint_cell(lower_x, lower_w, lower_run,
-                           i == cue_marker && cue_cell == IterStepCell::Lower);
-                paint_cell(upper_x, upper_w, upper_run,
-                           i == cue_marker && cue_cell == IterStepCell::Upper);
+                paint_cell(lower_x, lower_w, lower_run, MarkerCell::Lower);
+                paint_cell(upper_x, upper_w, upper_run, MarkerCell::Upper);
             }
 
             // THE MEASURE BOX: the flag CONTINUED rightward. Same lane y and
@@ -1511,7 +1478,11 @@ void render_flag_boxes_impl(
             // it covers an over-long label — the note is simply longer ink on
             // the same box, and it needs no rule of its own.
             if (paint_measure) {
-                const MeasureFace cface = resolve_measure_face(dis, sel);
+                // The measure's own pair, selected iff the measure is the
+                // bright cell (the rule above; the seam stays the marker's
+                // border, a class fact).
+                const MeasureFace cface = resolve_measure_face(
+                    dis, cell_selected(MarkerCell::Measure));
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
                 cairo_set_source_rgb(cr, face.border.r, face.border.g,
@@ -1584,7 +1555,7 @@ void render_flag_boxes_impl(
                 // every span is ORDINARY FLAG SURFACE for press, drag and
                 // select — one marker, one clickable box. What forks on the
                 // span is the press's ADDRESSED CELL and the DOUBLE-CLICK'S
-                // editor (hit_test_flag_span, app_state.cpp), and both fork on
+                // editor (hit_test_flag_cell, app_state.cpp), and both fork on
                 // the boundaries published beside the rect rather than on a
                 // re-derivation, so paint and hit cannot drift. A suppressed
                 // measure contributes nothing and its boundary falls back to
@@ -1636,8 +1607,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
                   bool iteration_on,
-                  int iter_cue_marker,
-                  IterStepCell iter_cue_cell,
+                  int focus_marker,
+                  MarkerCell focus_cell,
                   std::vector<FlagHitRect>* out_hit_rects,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -1648,9 +1619,8 @@ void render_flags(cairo_t* cr,
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
-        // The plain composer, the base the editor's seed wraps
-        // (flag_text_iter, render.h): the flag shows the tempo, scale and label
-        // its editor opens with, and the bracket the editor adds is the two
+        // The one composer (flag_text, render.h): the flag shows the tempo,
+        // scale and label its editor opens with, and the bounds are the two
         // cells beside it.
         [&](int i) { return flag_text(markers, i); },
         // The warp column's disabled verdict follows the label_ref cascade.
@@ -1673,7 +1643,7 @@ void render_flags(cairo_t* cr,
         [&](int i) { return warp_iter_cells(markers, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
         editing_marker_index, editing_measure_index, iteration_on,
-        iter_cue_marker, iter_cue_cell);
+        focus_marker, focus_cell);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -1686,6 +1656,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            int focus_marker,
+                            MarkerCell focus_cell,
                             std::vector<FlagHitRect>* out_hit_rects,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -1727,10 +1699,12 @@ void render_phase_reset_flags(cairo_t* cr,
         // exception to the home-view binding), so this column DOES suppress —
         // the one place the two arguments differ.
         editing_measure_index,
-        // No cells on this column, so the cull's bound needs no widening and
-        // no cell can be addressed: the cue is the warp column's.
+        // No cells on this column, so the cull's bound needs no widening;
+        // the focus and its addressed cell still arrive, because a phase
+        // reset's MEASURE box is a cell of its own and is the bright one
+        // when addressed.
         /*iteration_on=*/false,
-        /*cue_marker=*/-1, IterStepCell::Tempo);
+        focus_marker, focus_cell);
 }
 
 void render_history_diff_flags(
@@ -2144,6 +2118,42 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
            static_cast<int>(std::nearbyint(run.width_px)) + cells_w;
 }
 
+// Where one bound CELL of the committed flag sits, for the bound editor's
+// anchor: the seam column's offset from the flag fill's left edge, and the
+// cell's own fill width. Off the same eligibility, the same tokens and the
+// same font the flag pass lays the cells out with (warp_iter_cells), so the
+// field opens on exactly the column the resting cell's seam stands on and
+// is never narrower than the cell it replaces. Zero widths where no cells
+// paint — the editor cannot be open then, the open having asked.
+struct CommittedCellGeometry {
+    int seam_off = 0;
+    int fill_w   = 0;
+};
+static CommittedCellGeometry committed_cell_geometry(
+        const AppState& app, cairo_scaled_font_t* font, int idx,
+        MarkerCell side, bool iteration_on) {
+    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, cap_marker_label(flag_text(mv, idx)));
+    const int pads   = marker_flag_pad_left_px() + marker_flag_pad_right_px();
+    const int flag_w = pads + static_cast<int>(std::nearbyint(run.width_px));
+    const IterCellText cells = warp_iter_cells(mv, idx, iteration_on);
+    CommittedCellGeometry g;
+    if (!cells.present) { g.seam_off = flag_w; return g; }
+    const text_shape::ShapedRun lo = text_shape::shape_text_run(font, cells.lower);
+    const text_shape::ShapedRun hi = text_shape::shape_text_run(font, cells.upper);
+    const int lower_w = pads + static_cast<int>(std::nearbyint(lo.width_px));
+    const int upper_w = pads + static_cast<int>(std::nearbyint(hi.width_px));
+    if (side == MarkerCell::Upper) {
+        g.seam_off = flag_w + marker_flag_border_px() + lower_w;
+        g.fill_w   = upper_w;
+    } else {
+        g.seam_off = flag_w;
+        g.fill_w   = lower_w;
+    }
+    return g;
+}
+
 // The contract (the face, the clamp, the view truncation, the non-const
 // AppState) is at the declaration in render.h. What follows is the mechanics.
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
@@ -2155,12 +2165,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     text_editor::State& ed = app.top_flag_editor;
     if (!text_editor::is_active(ed)) return;
-    // TWO KINDS PAINT IN THE MARKER LANE. FlagPayload unrolls the flag ITSELF
-    // to hold the payload; MeasureText opens the BLUE MEASURE BOX as the field,
-    // leaving the flag standing beside it. The BpmBracket kind paints in the
-    // bottom row's modal instead and returns here.
+    // THREE KINDS PAINT IN THE MARKER LANE. FlagPayload unrolls the flag
+    // ITSELF to hold the payload; MeasureText opens the BLUE MEASURE BOX as
+    // the field, leaving the flag standing beside it; IterBound opens ONE
+    // BOUND CELL as the field, the flag and the marker's other cells standing
+    // as they were. The BpmBracket kind paints in the bottom row's modal
+    // instead and returns here.
     const bool measure_kind = (ed.kind == text_editor::Kind::MeasureText);
-    if (ed.kind != text_editor::Kind::FlagPayload && !measure_kind) return;
+    const bool bound_kind   = (ed.kind == text_editor::Kind::IterBound);
+    const bool payload_kind = (ed.kind == text_editor::Kind::FlagPayload);
+    if (!payload_kind && !measure_kind && !bound_kind) return;
 
     // The PAYLOAD editor is a WARP-COLUMN surface by its own open gates, in
     // EITHER audio view since 2026-08-24 (the home-view binding's fifth ruled
@@ -2233,19 +2247,33 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const GuiRect area = waveform_area(app);
 
     // ITERATION MODE ADDS THE TWO BOUND CELLS TO THE COMMITTED FLAG, so the
-    // anchor below must ask under the same bit the flag pass paints under.
+    // anchors below must ask under the same bit the flag pass paints under.
     const bool iteration_on = app.iteration_mode_enabled;
-    // THE MEASURE FIELD OPENS WHERE THE MEASURE BOX SITS — past the committed
-    // flag, past its cells, AND past the seam divider standing on their right
-    // edge, so the field's fill begins on exactly the column the resting box's
-    // fill begins on (2026-08-20's experiment; the divider itself is painted
-    // below, outside this fill on its left, which is that border's own
-    // geometry). The payload field opens on the marker's own column, the flag
-    // unrolling from itself — and the cells yield to it, carried as the
-    // bracket in its text.
+    // EVERY FIELD OPENS WHERE ITS CELL SITS. The MEASURE field opens past the
+    // committed flag, past its cells, AND past the seam divider standing on
+    // their right edge, so the field's fill begins on exactly the column the
+    // resting box's fill begins on (2026-08-20's experiment; the divider
+    // itself is painted below, outside this fill on its left, which is that
+    // border's own geometry). The BOUND field opens past its cell's own seam
+    // the same way (committed_cell_geometry), the marker's other boxes
+    // standing where they are; and it is NEVER NARROWER THAN THE CELL IT
+    // REPLACES — the box below is floored at the cell's fill width — so no
+    // committed pixel can show past a shortened token, which is what lets
+    // the flag pass keep painting the cell underneath instead of suppressing
+    // it (a wider field covers the next box, and a press there is the
+    // editor's own claim, resolved first). The PAYLOAD field opens on the
+    // marker's own column, the flag unrolling from itself — and the cells
+    // yield to it whole.
+    const MarkerCell bound_side = iter_bound_editor_side(ed);
+    const CommittedCellGeometry cell_geom = bound_kind
+        ? committed_cell_geometry(app, font, idx, bound_side, iteration_on)
+        : CommittedCellGeometry{};
     const int anchor_off = measure_kind
         ? committed_flag_box_w(app, font, phase, idx, iteration_on) + border_w
-        : 0;
+        : bound_kind ? cell_geom.seam_off + border_w
+                     : 0;
+    if (bound_kind && box_w < cell_geom.fill_w) box_w = cell_geom.fill_w;
+    if (box_w > lane.w) box_w = lane.w;   // the lane cap, restated over the floor
 
     const double min_left = static_cast<double>(lane.x);
     const double max_left = static_cast<double>(lane.x + lane.w - box_w);
@@ -2311,19 +2339,31 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         warp_red_flag_set_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).red.count(idx) > 0;
+    // THE SELECTED PAIR IS THE ADDRESSED CELL'S ALONE (the flag pass's own
+    // rule, render_flags): this field is bright iff the marker is selected
+    // and the cell it edits is the focus's addressed cell — which every
+    // open makes true by seating the cell it edits, and is still read off
+    // the state rather than assumed. The payload editor's box and its
+    // measure pad ask the same question of their own cells.
     const bool sel = app.selected_markers.count(idx) > 0;
-    FlagFace face = resolve_flag_face(dis, red_class, sel);
-    // The border column the box wears: the flag's for the payload editor, none
-    // at all for the measure field.
+    const MarkerCell bright = idx == app.last_selected_marker
+                                  ? app.addressed_cell : MarkerCell::Payload;
+    const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
+    const MarkerCell field_cell = measure_kind ? MarkerCell::Measure
+                                : bound_kind   ? bound_side
+                                               : MarkerCell::Payload;
+    FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell));
     // The border column the box wears: the flag's own for the payload editor,
-    // and since 2026-08-20 the SEAM DIVIDER for the measure field — the same
-    // constant, the same width, the same face.border, standing on the same
-    // column the resting box's divider stands on. Both are "the border outside
-    // the fill on its left"; only which seam it marks differs. (The field wore
-    // none at all for the one day the seam was borderless.)
+    // and the SEAM DIVIDER for the measure field and the bound field — the
+    // same constant, the same width, the same face.border, standing on the
+    // same column the resting box's divider stands on. All are "the border
+    // outside the fill on its left"; only which seam it marks differs. (The
+    // measure field wore none at all for the one day the seam was
+    // borderless.)
     const int left_border_w = border_w;
     if (measure_kind) {
-        const MeasureFace cface = resolve_measure_face(dis, sel);
+        const MeasureFace cface =
+            resolve_measure_face(dis, cell_selected(MarkerCell::Measure));
         face.fill  = cface.fill;
         face.edge  = cface.edge;
         face.label = cface.label;
@@ -2535,7 +2575,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // length of the edit — and it must not: the note is what the user is often
     // reading while retyping a tempo. It paints HERE instead, at the unrolled
     // box's right edge, so it slides with the field as the field grows and
-    // shrinks.
+    // shrinks. The other two kinds suppress no measure (the bound field
+    // stands in one cell's slot, the measure field IS the box), so neither
+    // paints a pad.
     //
     // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`. The caret /
     // text-drag claim seats a caret for ANY press inside `box` and the cursor
@@ -2544,14 +2586,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // editing where none is. What the pad IS for is at FlagEditorBox::
     // measure_pad: the outside-press close treats box UNION pad as inside, so a
     // press on it is consumed and neither closes nor acts.
-    if (!measure_kind) {
+    if (payload_kind) {
         const std::string& ctext = mv[static_cast<std::size_t>(idx)].measure;
         if (!ctext.empty()) {
             const text_shape::ShapedRun crun =
                 text_shape::shape_text_run(font, ctext);
             const int cw = pad_l + pad_r +
                 static_cast<int>(std::nearbyint(crun.width_px));
-            const MeasureFace cface = resolve_measure_face(dis, sel);
+            const MeasureFace cface =
+                resolve_measure_face(dis, cell_selected(MarkerCell::Measure));
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             // THE SEAM DIVIDER TRAVELS WITH THE BOX (2026-08-20's experiment,

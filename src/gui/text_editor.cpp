@@ -160,7 +160,7 @@ CharClass classify(char c) {
 } // namespace
 
 // Nearest boundary, ties to the lower index — the contract is at the
-// declaration. Linear over at most kMaxPendingCharsFlagIter + 1 entries, run
+// declaration. Linear over at most the field's byte cap + 1 entries, run
 // once per click; a binary search would be the same answer with more code.
 int byte_index_from_shaped_x(double click_x, double text_origin_x,
                              const std::vector<double>& boundaries) {
@@ -276,8 +276,7 @@ bool replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
     if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
     if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-    if (s.kind == Kind::FlagPayload && s.iter_grammar)
-        cap = kMaxPendingCharsFlagIter;
+    if (s.kind == Kind::IterBound)         cap = kMaxPendingCharsIterBound;
     // Atomic cap: compute the result size BEFORE mutating anything. Refuse
     // exactly when the operation would push the pending past the cap AND grow
     // it — a non-growing edit (shorter replacement, empty insert from cut) is
@@ -306,7 +305,7 @@ bool replace_selection(State& s, const std::string& raw) {
 void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;
-    s.iter_grammar      = false;
+    s.iter_upper        = false;
     s.pending.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
@@ -325,7 +324,7 @@ uint64_t next_session_id() {
 void enter(State& s, int target,
            std::string initial_pending,
            Kind kind,
-           bool iter_grammar) {
+           bool iter_upper) {
     // EVERY ACTIVATION IS A NEW SESSION, including a retarget of a live editor
     // (the flag editor's) and a reopen of the same editor a keystroke after it
     // closed: the published geometry of the old session must never be able to
@@ -333,7 +332,7 @@ void enter(State& s, int target,
     s.session           = next_session_id();
     s.target            = target;
     s.kind              = kind;
-    s.iter_grammar      = iter_grammar;
+    s.iter_upper        = iter_upper;
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
@@ -632,8 +631,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
         if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
         if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-        if (s.kind == Kind::FlagPayload && s.iter_grammar)
-            cap = kMaxPendingCharsFlagIter;
+        if (s.kind == Kind::IterBound)         cap = kMaxPendingCharsIterBound;
         // Atomic cap: compute the result size BEFORE erasing the selection,
         // so a refusal leaves the buffer (selection included) untouched.
         // Refuse exactly when the insert would push past the cap AND grow the

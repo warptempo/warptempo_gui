@@ -564,15 +564,25 @@ inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
 // (kMarkerFlagBorder, below, where its provenance is recorded); there is no
 // right and no bottom outline in any crop.
 //
-// SELECTION IS A COLOR SWAP AND NOTHING ELSE (row 5): a selected marker paints
-// the bright pair, an unselected one the calm pair, and the geometry, the stem
-// and the hit rect are identical either way. This RETIRES the "selection is not
-// a class" ruling for the marker flags — that rule existed because a selected
-// OUTLINE would have outranked the disabled pair; here the swap can never
-// outrank disabled, because since 2026-08-01 it happens INSIDE it: a selected
+// SELECTION IS A COLOR SWAP AND NOTHING ELSE (row 5), AND THE SWAP IS ONE
+// CELL'S (architect 2026-09-05, "light the colour of only the flag that's
+// clicked"): a selected marker paints its ADDRESSED cell in the bright pair
+// and every other cell of its run — the flag box, the two iteration bound
+// cells, the measure box, each a cell — in its calm pair; the addressed cell
+// is the payload for every selected marker but the focus, whose addressed
+// cell is AppState::addressed_cell (the cell a press landed on, or the cell
+// an editor opened; a focus reached any other way is addressed at its
+// payload). The measure box swaps its own blue pair by the same rule
+// (kMarkerMeasureFillSel below). The geometry, the stem and the hit rect are
+// identical either way. This RETIRES the "selection is not a class" ruling
+// for the marker flags — that rule existed because a selected OUTLINE would
+// have outranked the disabled pair; here the swap can never outrank
+// disabled, because since 2026-08-01 it happens INSIDE it: a selected
 // disabled marker blends THIS pair toward the lane ground through
 // kMarkerDisabledMix, so it lifts like a live selection and still reads
 // switched off, and the defect the old rule guarded against has no site left.
+// The bright cell is the whole of the addressed cell's cue: it carries no
+// underline and no mark of its own.
 //
 // The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
 // regular class's (the architect's own instruction).
@@ -657,20 +667,6 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 // against the old ~2.1); it is the architect's own call and is flagged for his
 // glass check rather than pre-corrected here.
 inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
-
-// The addressed cell's cue is this same ink, as a derivation and not a sample
-// (architect 2026-09-04, the iteration bound cells; a first guess for the
-// glass). While iteration mode is on, the focused marker's addressed cell —
-// its flag box when the vertical arrows step the tempo, its lower or upper
-// bound cell when they step a bound — wears an underline on the box's bottom
-// row, inside the box, across the cell's fill width, one authored pixel tall
-// through marker_flag_border_px so it rides gui_scale exactly as the seam
-// column does. It is the lane's text ink because it belongs to the text: the
-// cue says "this is the value the arrows change", and the value is the box's
-// text. It takes the face's resolved label ink (resolve_flag_face), so on a
-// disabled marker's tempo cell it damps as the label damps; a disabled owner
-// paints no bound cells at all, so no dimmed bound cue exists. No constant of
-// its own, and nothing paints outside the mode.
 
 // THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
 // WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
@@ -2341,11 +2337,11 @@ inline int playhead_half_px() {
 // measure's seam begins (`measure_boundary_x`). They are non-decreasing, and
 // each collapses onto the next when its box did not paint — a cell-less flag
 // publishes both cell boundaries AT the measure boundary, a measureless flag
-// its measure boundary AT the rect's own right edge — so hit_test_flag_span's
-// walk (Measure first, then Upper, then Lower, else Flag) can never answer a
-// span that has no pixels. ONE READER, hit_test_flag_span (app_state.cpp),
-// whose four-way answer the marker press reads for the addressed cell and the
-// double-click seed.
+// its measure boundary AT the rect's own right edge — so hit_test_flag_cell's
+// walk (Measure first, then Upper, then Lower, else Payload) can never answer
+// a cell that has no pixels. ONE READER, hit_test_flag_cell (app_state.cpp),
+// whose MarkerCell answer the marker press reads for the addressed cell and
+// the double-click seed.
 struct FlagHitRect {
     int    marker_index;
     double x;
@@ -2980,21 +2976,27 @@ struct MarkerStem {
 // mode is on, every marker the sweep reads (iter_popup_eligible_marker,
 // warpmarkers.h — so a disabled owner's dormant bracket paints no cells)
 // extends its flag rightward with two more boxes, the LOWER bound then the
-// UPPER, each painted exactly as the flag box is — the marker's own resolved
-// face, the seam column on its left, the top edge, the lane's ink — carrying
-// the bound in its signed two-decimal form (format_iter_bound_cell). A cell
+// UPPER, each painted exactly as the flag box is — the marker's own class,
+// the seam column on its left, the top edge, the lane's ink — carrying the
+// bound in its signed two-decimal form (format_iter_bound_cell). A cell
 // reads as another flag payload, and the sign is its whole syntax: a flag
 // payload never carries one and a cell always does, so no bracket or
 // separator opens in one cell to close in the next. The measure box, when one
-// paints, follows the cells. The flag's own text is the plain composer's in
-// every state; the bracket the editor seeds (flag_text_iter's Authored mode)
-// never paints on a flag.
+// paints, follows the cells. The flag's own text is the plain composer's
+// (flag_text) in every state; no bracket paints anywhere.
 //
-// `iter_cue_marker` / `iter_cue_cell` PAINT THE ADDRESSED CELL'S CUE: while
-// the mode is on, the focused marker's addressed cell — the flag box itself
-// when the cell is Tempo — wears a one-pixel underline in the lane's ink on the
-// box's bottom row (the derivation is at kMarkerFlagLabel's block). The caller
-// passes -1 outside the mode, and nothing paints then.
+// `focus_marker` / `focus_cell` NAME THE BRIGHT CELL (architect 2026-09-05):
+// a selected marker paints its ADDRESSED cell in the selected pair and its
+// other cells in its ordinary class pair, and the addressed cell is the
+// payload for every selected marker but the focus, whose addressed cell is
+// `focus_cell` (AppState::addressed_cell — a press's cell or an editor's;
+// every other focus route resets it to the payload). Where the focus does
+// not paint the cell the axis names, its payload is bright instead, so a
+// selected marker always shows its selection. The rule is stated once at
+// the selected pair's palette block (kMarkerFlagFillSel) and applies on both
+// columns — a phase reset's measure box is a cell too. Disabled and red
+// blend cell by cell through the same ladders; the stem and the border read
+// the class alone.
 //
 // `cr`'s scaled font is set by this function (the redesign sans face at
 // redesign_font_size_px) and restored.
@@ -3043,8 +3045,8 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
                   bool iteration_on,
-                  int iter_cue_marker,
-                  IterStepCell iter_cue_cell,
+                  int focus_marker,
+                  MarkerCell focus_cell,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
@@ -3056,20 +3058,23 @@ void render_flags(cairo_t* cr,
 // render_flag_editor_box and consumed by the pointer path. Every field is
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
-// pixels. TWO EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the flag
-// unrolled) and the MEASURE editor (the blue box as the field) — and the
-// pointer path reads it identically for both, which is why the consumers test
-// the published rect and never the kind.
+// pixels. THREE EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the
+// flag unrolled), the MEASURE editor (the blue box as the field) and the
+// ITERATION BOUND editor (one bound cell as the field) — and the pointer path
+// reads it identically for all three, which is why the consumers test the
+// published rect and never the kind.
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
 //                   untruncated pending plus caret room; for the measure editor
 //                   the blue measure box in the same role, anchored past the
-//                   committed flag. CLAMPED fully on-window either way. The
-//                   payload box spans the 1px LEFT BORDER too (the flag's,
-//                   which it also wears), so its x is one column left of the
-//                   fill and its w one wider; the measure box wears no border,
-//                   so its rect is its fill exactly.
+//                   committed flag; for the bound editor the bound cell in the
+//                   same role, anchored at that cell's own seam and never
+//                   narrower than the cell. CLAMPED fully on-window in every
+//                   case. Every box spans its 1px LEFT BORDER too (the flag's
+//                   own for the payload editor, the seam divider for the other
+//                   two), so its x is one column left of the fill and its w one
+//                   wider.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -3094,7 +3099,7 @@ void render_flags(cairo_t* cr,
 //                   "outside" press. On close the box settles back into the
 //                   cached pass and the pad goes with it.
 //
-// `valid` is false whenever neither of the two marker-lane editors is open, and
+// `valid` is false whenever none of the three marker-lane editors is open, and
 // the painter writes that state on every frame it runs, so a stale box can
 // never outlive its session.
 //
@@ -3152,7 +3157,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // The phase-reset column's flags: the identical box, the identical class ladder
 // and the identical publication contract render_flags documents above. Their
 // LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
-// payload), so there is no iteration_on parameter — nothing to compose.
+// payload), so there is no iteration_on parameter — nothing to compose. The
+// focus and its addressed cell arrive all the same: this column's measure box
+// is a cell, and it is the bright one when addressed.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -3163,6 +3170,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            int focus_marker,
+                            MarkerCell focus_cell,
                             std::vector<FlagHitRect>* out_hit_rects = nullptr,
                             std::vector<MarkerStem>* out_stems = nullptr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
@@ -3320,6 +3329,10 @@ struct HistoryDiffFlag {
 // verbatim, while a CHANGED PAIR KEEPS ITS STEM whichever halves are disabled,
 // because the pair as a whole is a live EDIT being displayed rather than a line
 // in a switched-off state.
+// NO CELLS AND NO ADDRESSED CELL ON THIS LANE: a bracket is session-only and
+// in no commit, so a diff flag carries no bound cells, and the view's focus is
+// its own diff-flag cycle's with nothing for AppState::addressed_cell to
+// address — the focus swap lifts the whole half, as it always has.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,
@@ -3333,33 +3346,16 @@ void render_history_diff_flags(cairo_t* cr,
                                std::vector<MarkerStem>* out_stems,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
-// WHETHER THE COMPOSER SPLICES THE BRACKET THE MARKER CARRIES. The bracket is
-// the flag EDITOR'S seed alone since the bound cells landed (architect
-// 2026-09-04): the flag paints the plain composer's text and shows the two
-// bounds as cells beside it (render_flags), while the editor opens on the
-// canonical line with `+[lo,hi]` spliced after the tempo, on every carrier
-// (iter_bracket_carrier, warpmarkers.h) — a disabled owner's dormant bracket
-// included, so it can be seen and authored while the marker is disabled and
-// returns whole when it is re-enabled. The composer asks the predicate here so
-// that no caller spells the verdict. (A third mode, Swept, painted the
-// sweep's own eligibility onto the flag text from 2026-09-02 until the cells
-// took that job.)
-enum class IterBracketSplice {
-    None,      // iteration mode off (or the P column): the plain flag text
-    Authored,  // the flag editor's seed: iter_bracket_carrier
-};
-
-// The flag editor's text composer over the plain flag text. Returns the plain
-// text under `IterBracketSplice::None` or for a non-carrier; otherwise splices
-// the inline `+[lo,hi]` bracket after the tempo. The plain text underneath is
-// the ONE base composer for warp flag text (flag_text, render.cpp): the FLAG
-// paints it (its LABEL truncated at the nine-glyph budget) and the editor
-// seeds from it through this wrapper, so the tempo, scale and label a flag
-// shows and the ones its editor opens with are one string by construction,
-// and the bracket the editor adds is the same two values the flag's cells
-// show (format_iter_bound_cell owns both spellings).
-std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
-                           int idx, IterBracketSplice splice);
+// THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
+// line's payload — tempo, `*scale`, `:label` or the pass / ref forms — and
+// never a bracket. The FLAG paints it (its LABEL truncated at the nine-glyph
+// budget), the flag editor seeds from it (enter_top_flag_edit) and the
+// measure field's anchor measures it (committed_flag_box_w), so the tempo,
+// scale and label a flag shows and the ones its editor opens with are one
+// string by construction. The iteration bounds are the two cells beside the
+// flag (format_iter_bound_cell owns their spelling), each with its own
+// editor, so no composer splices them anywhere.
+std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
 
 // (THE MEASURED MONOSPACE GRID IS GONE — row 7, 2026-08-01: monospace_advance,
 // monospace_text_box_h, monospace_text_row_baseline_offset,
@@ -3386,7 +3382,7 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 
 // THE PHASE-RESET DISPLAY TOKEN, and the one statement of it: what a phase
 // reset's FLAG shows, where a warp marker shows its composed line
-// (flag_text_iter). DISPLAY ONLY — a phase reset authors no payload and
+// (flag_text). DISPLAY ONLY — a phase reset authors no payload and
 // serializes as a bare frame, so this string exists nowhere but the flag.
 //
 // THE WORDS THEMSELVES (architect 2026-08-18: "phase reset flags should read

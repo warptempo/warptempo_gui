@@ -13,9 +13,10 @@
 
 struct GuiTargetRender;
 
-// Flag-editor cluster. Covers the top-flag canonical-line editor, the
-// iteration popup editor, the BPM popup editor, and the BPM-mode
-// enter/exit transitions. Damage is reached through viewport.
+// Flag-editor cluster. Covers the marker lane's three editors — the flag's
+// canonical-line editor, the measure editor and the iteration bound editor
+// — the BPM dialog editor, and the BPM-mode enter/exit transitions. Damage
+// is reached through viewport.
 struct GuiFlagEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -49,8 +50,36 @@ struct GuiFlagEditor {
           notifications(notifications_) {}
 
     void exit_top_flag_edit_no_commit();
+    // THE FLAG EDITOR'S OPEN: the marker's plain canonical payload — tempo,
+    // scale, labels, the disabled bit — fully selected. It carries no
+    // bracket: a bound is authored in its own cell's editor below.
     void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
+
+    // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
+    // architect 2026-09-05: "each should be like a mini flag with its own
+    // double-click"). `side` is Lower or Upper — the cell the editor opens
+    // over — and the open takes the cell's own eligibility
+    // (iter_popup_eligible_marker under a lit mode: no cell, no editor),
+    // refusing on the bound step's kind sentence where the marker carries no
+    // live bracket. It is enter_measure_edit's shape on the warp store: the
+    // focus repaired, the marker single-selected and landed, the addressed
+    // cell written to `side` behind that select, the seed the cell's own
+    // token (`+0.00` on a blank bracket) fully selected. Keyboard-modal,
+    // pointer/wheel-transparent, no playback stop — the top-strip family's
+    // recorded exemption. Read-only refuses at the callers, as the flag
+    // editor's open does.
+    void enter_iter_bound_edit(int idx, MarkerCell side);
+    // Commit the open bound session: an EMPTY buffer CLEARS THE WHOLE
+    // BRACKET (the measure's empty-removes precedent; one bound alone is not
+    // representable), a non-empty one must parse as the signed two-decimal
+    // grammar (sign and both decimals mandatory) and satisfy the walls — the
+    // partner bound and the tempo window — else the editor stands, red, and
+    // a card says which. On success the pair is written through the one
+    // write site iter_bound_step_write (so two zeroes clear there too), one
+    // bracket-only undo entry, no render, the editor closing on every path
+    // except the refusal.
+    void commit_iter_bound_edit();
 
     // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is
     // 'P' for the phase-reset store and anything else for the warp store, and
@@ -87,8 +116,9 @@ struct GuiFlagEditor {
     // forced iter-off, and the iteration sweep's success tail (the S->T
     // audio-view toggle left the list 2026-08-07; the load in place is NOT a
     // route since 2026-09-02 — it leaves the mode bit alone, the record at
-    // apply_recipe_in_place). Undo entry when something cleared; callers own
-    // the mode flip and repaint.
+    // apply_recipe_in_place). It also puts an addressed BOUND cell back on
+    // the payload, the cells going with the mode. Undo entry when something
+    // cleared; callers own the mode flip and repaint.
     void wipe_iter_state();
     // Wipe every marker's session-only bpm state (owner flag, beats,
     // bracket bounds, endpoint). History-less; callers own the repaint. TWO
@@ -105,6 +135,5 @@ struct GuiFlagEditor {
     // seeding, top-strip invalidate.
     void enter_text_edit(int idx,
                          text_editor::Kind kind,
-                         std::string initial_pending,
-                         bool iter_grammar = false);
+                         std::string initial_pending);
 };

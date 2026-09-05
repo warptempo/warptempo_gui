@@ -1179,8 +1179,10 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 //
 // The vertical arrows' second body. On the road he does not type, and grid
 // iterations was the one mode that needed the keyboard — the bracket was
-// typed into the flag editor as `+[lo,hi]` — so the two bounds became CELLS on
-// the flag, each addressable by a click and stepped by the arrows. What
+// typed into the flag editor as text — so the two bounds became CELLS on
+// the flag, each addressable by a click and stepped by the arrows (and since
+// 2026-09-05 each with its own editor, the flag editor carrying no bracket
+// at all). What
 // follows mirrors adjust_tempo_cents' shape one clause at a time: the leading
 // refusal block named whole in a predicate the face reads, the 2+ fork onto an
 // all-or-nothing group arm, the wall asked through the directional face AHEAD
@@ -1197,9 +1199,10 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // arm SKIPS those members as the tempo arm skips a disabled one, and the
 // singleton REFUSES them on a card. A blank bracket starts at [0, 0] and the
 // first step authors it, both bounds written through the one write site
-// (iter_bound_step_write, app_state.h) — which is also where the step meets
-// the editor's own rule that a pair of two zeroes is the cleared bracket, so a
-// step can author a bracket but never come to rest on the blank one. AND
+// (iter_bound_step_write, app_state.h) — which is also where the step and
+// the cell editor's commit meet one rule, that a pair of two zeroes is the
+// cleared bracket, so a step can author a bracket but never come to rest on
+// the blank one. AND
 // NOTHING
 // RENDERS: a bracket is not a map input (excluded from build_warp_frame_map
 // and from the render recipe alike, the flag editor's bracket-only commit
@@ -1213,7 +1216,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // was: the act reads the verdict and the Up/Down face reads its boolean
 // wrapper, so the wall set has one spelling.
 IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
-                                                        IterStepCell side,
+                                                        MarkerCell side,
                                                         int64_t delta_cents) {
     const auto& mv = a.warpmarkers.markers();
     const int   n  = static_cast<int>(mv.size());
@@ -1227,7 +1230,7 @@ IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
         // the delta domain: the landing owner clamps at the window and at the
         // partner, and the clamp bites iff the member cannot take the full
         // step, which is what GROUP RIGIDITY refuses on.
-        const int64_t start = side == IterStepCell::Upper
+        const int64_t start = side == MarkerCell::Upper
                                   ? m.iter_end_cents.value_or(0)
                                   : m.iter_start_cents.value_or(0);
         if (iter_bound_step_landing(m, side, delta_cents) != start + delta_cents)
@@ -1240,7 +1243,7 @@ IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
 // The DIRECTIONAL half of the Up/Down face with a bound addressed — the
 // contract is at the declaration (app_state.h). Forks where the act forks.
 bool iter_bound_step_direction_actionable(const AppState& a,
-                                          IterStepCell side,
+                                          MarkerCell side,
                                           int64_t delta_cents) {
     if (a.selected_markers.size() >= 2)
         return iter_bound_step_group_actionable(a, side, delta_cents);
@@ -1252,7 +1255,7 @@ bool iter_bound_step_direction_actionable(const AppState& a,
     // its wall is the landing owner's own answer.
     if (!iter_popup_eligible_marker(mv, f)) return true;
     const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
-    const int64_t start = side == IterStepCell::Upper
+    const int64_t start = side == MarkerCell::Upper
                               ? m.iter_end_cents.value_or(0)
                               : m.iter_start_cents.value_or(0);
     return iter_bound_step_landing(m, side, delta_cents) != start;
@@ -1276,7 +1279,7 @@ const char* iter_bound_step_kind_refusal(const AppState& a) {
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
-        IterStepCell side, int64_t delta_cents, bool synthesized_repeat) {
+        MarkerCell side, int64_t delta_cents, bool synthesized_repeat) {
     // THE LEADING REFUSAL BLOCK, named whole (iter_bound_step_actionable) and
     // read by the Up/Down face too, so no lift reaches it. One sentence for
     // the mode, the column, an empty selection and a missing focus: the step
@@ -1309,8 +1312,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // Both bounds go through the one write site (iter_bound_step_write): a
     // blank bracket becomes [0, 0] with the step applied to its addressed
     // side, a set one keeps its partner as it was, and a pair that lands on
-    // two zeroes clears — the editor's blank rule, which the group arm below
-    // takes from the same owner. The landing owner already holds lo <= hi and
+    // two zeroes clears — the blank rule, which the group arm below and the
+    // cell editor's commit take from the same owner. The landing owner
+    // already holds lo <= hi and
     // the clamp window, so the retroactive clamp has nothing to do here and is
     // not called.
     iter_bound_step_write(m, side, landing);
@@ -1346,7 +1350,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
-        IterStepCell side, int64_t delta_cents, bool synthesized_repeat) {
+        MarkerCell side, int64_t delta_cents, bool synthesized_repeat) {
     // THE WALL SCAN, ahead of the coalesce verdict, carded AND greyed — the
     // group pairing the tempo step argues (adjust_tempo_cents_group): a group
     // step would have moved every selected cell, so it is not the

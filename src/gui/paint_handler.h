@@ -356,13 +356,14 @@ struct FlagCache {
     // the rebuild is fingerprint-guarded, so without this field the damage
     // would repaint the same cached bytes.
     bool      fp_iteration_mode           = false;
-    // THE ADDRESSED CELL (IterStepCell, stored as its integer value): the
-    // focused marker's addressed cell wears the cue underline while the mode
-    // is on, and a marker press moves the axis without necessarily moving
+    // THE ADDRESSED CELL (MarkerCell, stored as its integer value): the
+    // focused marker's addressed cell is the one that wears the selected
+    // pair, and a marker press moves the axis without necessarily moving
     // the selection (a re-press of the focused flag's other cell), so the
     // axis is a content fact of this surface in its own right. The marker
-    // the cue sits on is the focus, already keyed by fp_selection_hash.
-    int       fp_iter_step_cell           = 0;
+    // the bright cell sits on is the focus, already keyed by
+    // fp_selection_hash.
+    int       fp_addressed_cell           = 0;
     // THE MARKER WHOSE FLAG EDITOR IS OPEN, or -1. In the fingerprint because
     // that marker's box is SKIPPED in the cached pass (the open editor paints it
     // unrolled instead), so opening, closing or retargeting the editor changes
@@ -609,8 +610,8 @@ struct GuiPaintHandler {
     //     fp_phase_reset_generation, fp_drag_overlay_hash, fp_selection_hash,
     //     fp_active_markers_view;
     //   - CONTENT, four more: fp_iteration_mode (it changes what the flags
-    //     SHOW — the bound cells), fp_iter_step_cell (which cell of the focus
-    //     wears the cue), fp_editing_flag_target (the payload editor's marker,
+    //     SHOW — the bound cells), fp_addressed_cell (which cell of the focus
+    //     is the bright one), fp_editing_flag_target (the payload editor's marker,
     //     whose box this pass SKIPS whole) and fp_editing_measure_target (the
     //     measure editor's marker, whose MEASURE BOX alone this pass skips);
     //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth

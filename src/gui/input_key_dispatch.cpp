@@ -4869,8 +4869,8 @@ void GuiInputHandler::apply_recipe_in_place(
     // (load_history_local_entry_in_place) copies a typed undo-timeline
     // snapshot, whose brackets ride in EXACTLY as an undo restore's do, the
     // snapshot being the same struct an UndoEntry holds. With the mode lit, a
-    // bracketless store shows the blank `+[+0.00,+0.00]` form on every
-    // eligible flag and the Render button greys on NoBracketAuthored
+    // bracketless store shows two `+0.00` cells on every eligible flag and
+    // the Render button greys on NoBracketAuthored
     // (iteration_sweep_plan); nothing reads a lit mode as a promise that a
     // bracket exists.
     //
@@ -8278,14 +8278,15 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
 // settings editor; its damage is that row's own lane owner) and commits into a
 // render sweep, the FlagPayload editor draws in the TOP strip and commits the
-// flag's own payload, and the MeasureText editor draws in the TOP strip too and
-// commits the marker's measure. None passes a bare-Tab hook, having no
-// vocabulary to complete: in the BPM editor, a DIALOG, bare Tab walks the
-// modal's focus ring from the first press, while for the two top-strip kinds it
-// never reaches this route at all — the on_key gate swallows it, a flag editor
-// publishing no dialog and so no ring (route_modal_editor_key).
-// For all three, Ctrl+S saves with the editor left open and Esc / Enter are the
-// session's only exits.
+// flag's own payload, the MeasureText editor draws in the TOP strip too and
+// commits the marker's measure, and the IterBound editor draws over its bound
+// cell in the TOP strip and commits that bound. None passes a bare-Tab hook,
+// having no vocabulary to complete: in the BPM editor, a DIALOG, bare Tab
+// walks the modal's focus ring from the first press, while for the three
+// top-strip kinds it never reaches this route at all — the on_key gate
+// swallows it, a flag editor publishing no dialog and so no ring
+// (route_modal_editor_key). For all four, Ctrl+S saves with the editor left
+// open and Esc / Enter are the session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
@@ -8331,6 +8332,19 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             },
             [this] { viewport.invalidate_modal_dialog_area(); });
     }
+    if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
+        // The ITERATION BOUND editor: the measure editor's route exactly —
+        // the same modal route, the same top-strip repaint, and no waveform
+        // edge, its red reaching no stem (the flash is gated on
+        // Kind::FlagPayload at paint_marker_stems) and its whole surface
+        // being the cell in the strip.
+        return route_modal_editor_key(
+            app.top_flag_editor, key, mods,
+            /*autocomplete=*/nullptr,
+            [this] { flag_editor.commit_iter_bound_edit(); },
+            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
+            [this] { viewport.invalidate_top_strip(); });
+    }
     if (app.top_flag_editor.kind == text_editor::Kind::MeasureText) {
         // The MEASURE editor: the same modal route, the same top-strip repaint
         // as the payload editor's — and STILL no waveform red-flash edge, even
@@ -8364,11 +8378,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     const bool consumed = route_modal_editor_key(
         app.top_flag_editor, key, mods,
         /*autocomplete=*/nullptr,
-        [this] {
-            // Iteration editing is a widened-grammar FlagPayload
-            // commit (commit_top_flag_edit), not a separate bracket editor.
-            flag_editor.commit_top_flag_edit();
-        },
+        [this] { flag_editor.commit_top_flag_edit(); },
         [this] { flag_editor.exit_top_flag_edit_no_commit(); },
         [this] { viewport.invalidate_top_strip(); });
     if (app.top_flag_editor.red != was_red) viewport.invalidate_waveform_area();

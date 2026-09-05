@@ -574,14 +574,19 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the editor on the marker under the finger — while this button names the
     // KEY, which has no marker under it at all.
     //
-    // ITS GATES ARE THE MEASURE'S but one exception narrower: the `h` view
-    // consumes bare Return and greys it with the verbs, and so does the
+    // IT OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05), because
+    // Return does: the payload editor by default, a bound cell's or the
+    // measure's editor where a press or an editor open addressed that cell,
+    // and its tooltip names whichever (redesign_button_tooltip's stateful
+    // arm). ITS GATES ARE THE MEASURE'S but one exception narrower: the `h`
+    // view consumes bare Return and greys it with the verbs, and so does the
     // READ-ONLY lock (the canonical line is serialized content). Where it
-    // differs from the Measure is the P VIEW — phase resets have no per-flag
-    // editor, so the act refuses there — and that refusal GREYS the button
-    // since 2026-08-30 (flag_editor_open_actionable, the Return arm's own
-    // predicate, under the truthful-buttons ruling; it was a consumed no-op
-    // with a live face under the 2026-08-15 no-blink ruling until then).
+    // differs from the Measure is the P VIEW with the payload addressed —
+    // phase resets have no per-flag editor, so the act refuses there — and
+    // that refusal GREYS the button since 2026-08-30
+    // (flag_editor_open_actionable, the Return arm's own predicate, under
+    // the truthful-buttons ruling; it was a consumed no-op with a live face
+    // under the 2026-08-15 no-blink ruling until then).
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
     // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
@@ -3912,34 +3917,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // refuses (read-only still selects and lands, and the index came from a
     // live hit test).
     playback_lifecycle.stop_playback_if_playing();
-    // WHICH BOX THE PRESS LANDED ON, from the painter's published boundaries
-    // (MarkerClickSpan, app_state.h), asked ONCE for the press's two readers:
-    // the addressed cell written here and the double-click seed the plain arm
-    // stamps below.
-    //
-    // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
-    // bound cells): a press on the flag box addresses the tempo, on a bound
-    // cell that bound, and a measure press leaves the axis where it stands —
-    // on ALL THREE click shapes, because the press already selects and lands
-    // on every shape and the axis is one more thing the press says. Read-only
-    // does not refuse it: the axis is navigation, as the selection is, and the
-    // step it addresses meets the lock at its own gate. The cue moves with
-    // it, so a changed axis damages the marker lane even where the selection
-    // stood still (a re-press of the focused flag's other cell).
-    const MarkerClickSpan span = hit_test_flag_span(app, audio, x, y);
-    {
-        IterStepCell addressed = app.iter_step_cell;
-        switch (span) {
-        case MarkerClickSpan::Flag:      addressed = IterStepCell::Tempo; break;
-        case MarkerClickSpan::IterLower: addressed = IterStepCell::Lower; break;
-        case MarkerClickSpan::IterUpper: addressed = IterStepCell::Upper; break;
-        case MarkerClickSpan::Measure:   break;
-        }
-        if (addressed != app.iter_step_cell) {
-            app.iter_step_cell = addressed;
-            viewport.invalidate_top_strip();
-        }
-    }
+    // WHICH CELL THE PRESS LANDED ON, from the painter's published boundaries
+    // (hit_test_flag_cell; the MarkerCell block at PendingMarkerPress,
+    // app_state.h), asked ONCE for the press's two readers: the addressed
+    // cell written below the selection fork and the double-click seed the
+    // plain arm stamps at the tail.
+    const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
     // 2026-08-18): while the mode stands, a PLAIN press on a flag is a ctrl
     // press in every respect — same branch, same land, same nothing-armed
@@ -4010,6 +3993,24 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         selection.set_single_selection(hit);
         land_playhead_on_marker(app, audio, viewport, hit);
     }
+    // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
+    // bound cells; every cell since 2026-09-05 — "light the colour of only
+    // the flag that's clicked"): the cell the press landed on becomes the
+    // focus's addressed cell — the bright one, the one the arrows step, the
+    // one Enter opens — on ALL THREE click shapes, because the press already
+    // selects and lands on every shape and the axis is one more thing the
+    // press says. Written AFTER the fork, because every mutator above resets
+    // the axis to the payload as it seats the focus (Selection::seat_focus —
+    // a focus reached any other way is addressed at its payload), and a
+    // press is the exception that names a cell. Read-only does not refuse
+    // it: the axis is navigation, as the selection is, and the act it
+    // addresses meets the lock at its own gate. The bright cell moves with
+    // it, so a changed axis damages the marker lane even where the selection
+    // stood still (a re-press of the focused flag's other cell).
+    if (app.addressed_cell != cell) {
+        app.addressed_cell = cell;
+        viewport.invalidate_top_strip();
+    }
     // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND CLAUSE rather than
     // a leftover call site (architect 2026-08-19: the overlay hides when the
     // playhead's position in the music changes AND WHEN A MARKER IS TOUCHED —
@@ -4053,38 +4054,48 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // and the return ahead of the arm below is what makes "nothing arms a
     // marker drag after a consumed open" structural rather than policed.
     //
-    // AND THE SPAN DECIDES WHICH EDITOR (2026-08-19). The seed carries which
-    // box of the run the FIRST press landed on (MarkerClickSpan): the MEASURE
-    // span opens the measure editor and every other span — the flag box and,
-    // since 2026-09-04, the two iteration bound cells — opens the payload
-    // editor, a cell's double-click being the flag's own act (the bracket is
-    // typed there as inline text), and a pair straddling a seam opens the one
-    // the first click named. The gates differ with them:
-    // the PAYLOAD editor keeps read-only and the P view, while the MEASURE
-    // editor asks read-only ALONE — measures are the fourth ruled exception to
-    // the home-view binding, so the phase column's measure double-click is
-    // that column's FIRST pointer authoring gesture, measure-scoped and
-    // nothing wider. Since 2026-08-24 the two no longer differ about the AUDIO
-    // view either: the payload editor is the fifth exception's member and
-    // opens off warp's home as well.
+    // AND THE CELL DECIDES WHICH EDITOR (2026-08-19; every cell its own since
+    // 2026-09-05 — "each should be like a mini flag with its own
+    // double-click"). The seed carries which cell of the run the FIRST press
+    // landed on (MarkerCell): the flag box opens the payload editor, a bound
+    // cell its bound editor, the measure box the measure editor, and a pair
+    // straddling a seam opens the one the first click named. The gates
+    // differ with them: the PAYLOAD editor keeps read-only and the P view,
+    // the BOUND editor read-only and the cell's own eligibility (a cell that
+    // paints is eligible, and the open is a belt behind that), while the
+    // MEASURE editor asks read-only ALONE — measures are the fourth ruled
+    // exception to the home-view binding, so the phase column's measure
+    // double-click is that column's FIRST pointer authoring gesture,
+    // measure-scoped and nothing wider. Since 2026-08-24 the payload editor
+    // no longer differs about the AUDIO view either: it is the fifth
+    // exception's member and opens off warp's home as well. Every open route
+    // opens fully SELECTED (open-selected), so there is no clicked-glyph
+    // caret to seat; a specific caret spot is a click inside the already-open
+    // editor (the F2.1 path).
     if (dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         !active_view_state(app).read_only) {
-        if (dc_at_press.span == MarkerClickSpan::Measure) {
-            // Every open route opens fully SELECTED (open-selected); the seed
-            // is the marker's own measure, which is the whole of what a
-            // measure is — nothing inherits.
-            flag_editor.enter_measure_edit(app.active_markers_view, hit);
+        switch (dc_at_press.cell) {
+        case MarkerCell::Payload:
+            if (app.active_markers_view != 'P') {
+                flag_editor.enter_top_flag_edit(hit);
+                return;
+            }
+            break;
+        case MarkerCell::Lower:
+        case MarkerCell::Upper:
+            // A bound cell only paints on the warp column's eligible
+            // markers under a lit mode, so a seed naming one came from
+            // there; the open's own belts re-ask it.
+            flag_editor.enter_iter_bound_edit(hit, dc_at_press.cell);
             return;
-        }
-        if (app.active_markers_view != 'P') {
-            // Every open route opens fully SELECTED (open-selected), so there
-            // is no clicked-glyph caret to seat. A specific caret spot is a
-            // click inside the already-open editor (the F2.1 path).
-            flag_editor.enter_top_flag_edit(hit);
+        case MarkerCell::Measure:
+            // The seed is the marker's own measure, which is the whole of
+            // what a measure is — nothing inherits.
+            flag_editor.enter_measure_edit(app.active_markers_view, hit);
             return;
         }
     }
@@ -4099,11 +4110,10 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     app.pending_marker_press.marker  = hit;
     app.pending_marker_press.press_x = x;
     app.pending_marker_press.press_y = y;
-    // WHICH BOX THIS PRESS LANDED ON, the span resolved at the head and
-    // carried to the seed at the motionless release. Only the double-click
-    // reads it here; the drag this may become is the same gesture from any
-    // box.
-    app.pending_marker_press.span = span;
+    // WHICH CELL THIS PRESS LANDED ON, resolved at the head and carried to
+    // the seed at the motionless release. Only the double-click reads it
+    // here; the drag this may become is the same gesture from any cell.
+    app.pending_marker_press.cell = cell;
 }
 
 // ARM THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (BEGIN) /
@@ -7146,7 +7156,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // moved-drag rule.)
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
-        // THE SPAN IS THE PRESS'S TOO, for the position's own reason: the seed
+        // THE CELL IS THE PRESS'S TOO, for the position's own reason: the seed
         // describes the press, and the box may be repainted at a different
         // width before the second click arrives.
         app.double_click = DoubleClickCandidate{
@@ -7154,7 +7164,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             .time_ms = monotonic_ms(),
             .press_x = press.press_x, .press_y = press.press_y,
             .target  = press.marker,
-            .span    = press.span};
+            .cell    = press.cell};
         return;
     }
     if (!app.drag.active) return;

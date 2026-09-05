@@ -126,13 +126,21 @@ void Selection::repair_last_selected() {
     // harmlessly (both damage the same subject change, a benign damage-union).
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.empty()) {
-        app.last_selected_marker = -1;
+        seat_focus(-1);
     } else {
         // Pick the largest remaining index in selected_markers (or -1
         // if empty).
-        app.last_selected_marker = *app.selected_markers.rbegin();
+        seat_focus(*app.selected_markers.rbegin());
     }
     damage_overlay_on_subject_change(old_subject);
+}
+
+// The contract is at the declaration. The addressed cell is reset here and
+// nowhere else in this file, which is what lets a mutator added later
+// inherit it by construction.
+void Selection::seat_focus(int idx) {
+    app.last_selected_marker = idx;
+    app.addressed_cell       = MarkerCell::Payload;
 }
 
 void Selection::set_single_selection(int idx) {
@@ -151,7 +159,7 @@ void Selection::set_single_selection(int idx) {
     app.add_to_selection = false;
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
-    app.last_selected_marker = (idx >= 0) ? idx : -1;
+    seat_focus((idx >= 0) ? idx : -1);
     viewport.invalidate_top_strip();
     // ONE DAMAGE OWNER, THE TOP STRIP, since 2026-08-29: a selection change
     // moves nothing on the bottom row any more. It used to damage that row's
@@ -173,8 +181,7 @@ void Selection::replace_selection(std::set<int> members, int focus) {
     app.shift_range_anchor = -1;
     app.add_to_selection   = false;
     app.selected_markers   = std::move(members);
-    app.last_selected_marker =
-        app.selected_markers.count(focus) ? focus : -1;
+    seat_focus(app.selected_markers.count(focus) ? focus : -1);
     viewport.invalidate_top_strip();
     damage_overlay_on_subject_change(old_subject);
 }
@@ -192,7 +199,7 @@ void Selection::clear_selection() {
         return;   // nothing selected (already empty)
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers.clear();
-    app.last_selected_marker = -1;
+    seat_focus(-1);
     viewport.invalidate_top_strip();
     // Clearing the focus erases any overlay it annotated (subject frame -> none).
     damage_overlay_on_subject_change(old_subject);
@@ -262,7 +269,7 @@ bool Selection::toggle_selection_membership(int idx) {
     auto it = app.selected_markers.find(idx);
     if (it == app.selected_markers.end()) {
         app.selected_markers.insert(idx);
-        app.last_selected_marker = idx;
+        seat_focus(idx);
         added = true;
     } else {
         app.selected_markers.erase(it);
@@ -322,7 +329,7 @@ void Selection::select_range_from_anchor(int idx) {
         // damage pair) and additionally anchor on idx.
         app.selected_markers.clear();
         app.selected_markers.insert(idx);
-        app.last_selected_marker = idx;
+        seat_focus(idx);
         app.shift_range_anchor   = idx;
         viewport.invalidate_top_strip();
         damage_overlay_on_subject_change(old_subject);
@@ -342,7 +349,7 @@ void Selection::select_range_from_anchor(int idx) {
     const int hi = anchor < idx ? idx : anchor;
     app.selected_markers.clear();
     for (int i = lo; i <= hi; ++i) app.selected_markers.insert(i);
-    app.last_selected_marker = idx;
+    seat_focus(idx);
     viewport.invalidate_top_strip();
     damage_overlay_on_subject_change(old_subject);
 }
@@ -364,7 +371,7 @@ void Selection::sanitize_selection_after_restore(int n) {
     }
     app.selected_markers = std::move(cleaned);
     if (!app.selected_markers.count(app.last_selected_marker)) {
-        app.last_selected_marker = -1;
+        seat_focus(-1);
     }
     // Pruning the focused reset out of range erases its overlay (subject ->
     // none). The sole caller (undo/redo restore) full-repaints the waveform, so

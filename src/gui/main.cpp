@@ -105,7 +105,7 @@ namespace {
 
 // resolved_marker_payload lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
-// unit from the GUI flag-text composer (flag_text_iter), which stays in
+// unit from the GUI flag-text composer (flag_text), which stays in
 // render.cpp over GuiWarpMarker. (It was compute_hover_popup_text until
 // 2026-08-29, when the resolved READOUT retired with the one-day status bar
 // and the function became the value pair's composer — the pasteable payload

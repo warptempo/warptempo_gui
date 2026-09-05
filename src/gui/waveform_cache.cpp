@@ -1044,10 +1044,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const char      mv         = app.active_markers_view;
     // The flags carry TEXT since row 5, and iteration mode changes what an
     // eligible flag shows (the two bound cells beside it). See
-    // fp_iteration_mode — and fp_iter_step_cell for the addressed cell's cue,
-    // which the same pass paints on the focus.
+    // fp_iteration_mode — and fp_addressed_cell for the focus's bright cell,
+    // which the same pass paints in the selected pair.
     const bool      iter_on    = app.iteration_mode_enabled;
-    const int       iter_cell  = static_cast<int>(app.iter_step_cell);
+    const int       addressed  = static_cast<int>(app.addressed_cell);
     // THE EDITED MARKER (or -1): its flag box is suppressed below, so it is a
     // fingerprint input like any other content fact. Resolved with the SAME two
     // gates render_flag_editor_box opens on — an active editor of kind
@@ -1125,7 +1125,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_iteration_mode          == iter_on &&
-        flag_cache.fp_iter_step_cell          == iter_cell &&
+        flag_cache.fp_addressed_cell          == addressed &&
         flag_cache.fp_editing_flag_target     == editing_flag_target &&
         flag_cache.fp_editing_measure_target  == editing_measure_target &&
         flag_cache.fp_history_active          == history_active &&
@@ -1264,6 +1264,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             app.selected_markers,
             pr_red,
+            // The focus and its addressed cell — the bright cell, which on
+            // this column can be the payload or the measure box
+            // (render_flags' declaration).
+            app.last_selected_marker,
+            app.addressed_cell,
             &app.flag_hit_rects,
             &app.marker_stems,
             tmap_arg,
@@ -1281,10 +1286,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.selected_markers,
                      warp_red,
                      iter_on,
-                     // The cue: the focus's addressed cell, and nothing
-                     // outside the mode (render_flags' declaration).
-                     iter_on ? app.last_selected_marker : -1,
-                     app.iter_step_cell,
+                     // The focus and its addressed cell — the bright cell
+                     // (render_flags' declaration).
+                     app.last_selected_marker,
+                     app.addressed_cell,
                      &app.flag_hit_rects,
                      &app.marker_stems,
                      tmap_arg,
@@ -1308,7 +1313,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_iteration_mode          = iter_on;
-    flag_cache.fp_iter_step_cell          = iter_cell;
+    flag_cache.fp_addressed_cell          = addressed;
     flag_cache.fp_editing_flag_target     = editing_flag_target;
     flag_cache.fp_editing_measure_target  = editing_measure_target;
     flag_cache.fp_history_active          = history_active;

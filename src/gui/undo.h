@@ -339,7 +339,7 @@ struct Undo {
     // above can see. The other three kinds each move one field by
     // construction and ignore it. Stamped with the rest on every accepted
     // fire; the compare and its derivation are at coalesce_gesture.
-    IterStepCell  last_gesture_cell_ = IterStepCell::Tempo;
+    MarkerCell    last_gesture_cell_ = MarkerCell::Payload;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab
