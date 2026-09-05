@@ -4086,7 +4086,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all six editor kinds, top strip included (the list is
+    // Ctrl+Q). It serves all seven editor kinds, top strip included (the list is
     // text_editor::Kind).
     bool modal_dialog_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);

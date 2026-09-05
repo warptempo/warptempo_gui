@@ -69,7 +69,7 @@ All in `docs/engineering/architecture/` unless noted. Each file holds the full h
 | The platform seam (`GuiPlatform` per backend over the ONE portable `GuiInputCore`; the loop contract; pixel containment's owner; the playback split; the font owner; `gui_main`; the Android stubs, the Java sliver, the APK build, the freeze posture, the tablet's facts) | `platform-seam.md` |
 | Home-view binding, the bare Up/Down tempo cent step (singleton + group), propagate paste | `tempo-and-home-view.md` |
 | Parser phase-reset compilation, engine geometry, trim prepost stage, render dispatch/cancel/reuse | `render-pipeline.md` |
-| Modality (all six editor kinds, the field-less picker), the keyup retirement record + the third clause (content acts at the press when its identity is certain; the certainty audit), strict modifier validation, the alt vocabulary, bare-`e` mouse key, type names, warp/phase-reset naming symmetry | `conventions.md` |
+| Modality (all seven editor kinds, the field-less picker), the keyup retirement record + the third clause (content acts at the press when its identity is certain; the certainty audit), strict modifier validation, the alt vocabulary, bare-`e` mouse key, type names, warp/phase-reset naming symmetry | `conventions.md` |
 | Messages: row 8's state cell (state), the notification cards (events), what is notified and what is silent | `messaging.md` |
 | Any color, ground recolors, disabled/trim/line color classes | `src/gui/render.h` palette block (code comments are authoritative) |
 | Any guard/validator (add/move/remove) | `docs/engineering/validation_topology.md` |

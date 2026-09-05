@@ -5971,8 +5971,8 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in the two of its six kinds the top-strip flag
-    // editor takes (FlagPayload and MeasureText, text_editor.h), so
+    // pointer-transparent in three of its seven kinds the top-strip flag
+    // editor takes (FlagPayload, MeasureText and IterBound, text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
