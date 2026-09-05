@@ -871,6 +871,13 @@ void GuiTargetRender::complete_successful_buffer(
         // player's close re-expresses the view through ensure_ready, whose
         // clean path rebinds exactly this finished buffer. The dirty bit
         // still clears below: the buffer IS current, only the bind waits.
+        // The close itself is not "under the player" (2026-09-04, codex round
+        // 3): its unload lowers the mode bit behind the stop fence and ahead
+        // of that re-express, precisely so a completion arriving inside the
+        // close — the synchronous one a cache or artifact rung resolves inside
+        // ensure_ready's own call — takes this bind rather than deferring to a
+        // re-express that has already happened. Only the Up tail leaves the
+        // bit standing, and it is the tail that still has a close to wait for.
         if (!app.render_player.active) {
             playback.rebind_buffer(app.target_buffer.data(),
                                    app.target_buffer_frames,
@@ -1051,8 +1058,12 @@ void GuiTargetRender::ensure_ready() {
     // parked in pending_, stamped with the very generation the last mutation
     // made, so this entry has nothing to add. Its completion lands the buffer
     // and rebinds through complete_successful_buffer — which binds whenever
-    // the view is target and the player is down, and every caller reaching
-    // this arm has the player down or never up. Calling trigger() here would
+    // the view is target and the player is down. Every caller reaching this
+    // arm has the player down, never up, or owes itself a later re-express:
+    // the close's unload lowers the bit before it calls in, and the Up tail
+    // leaves it up on purpose — that road ends with the player still standing,
+    // and the close it will eventually take re-expresses the view again.
+    // Calling trigger() here would
     // find the worker busy, cancel that render, park pending_ again and
     // redispatch the SAME recipe after the cancelled completion: the load-in-
     // place-then-close double dispatch, the S→T tail's and
@@ -1060,11 +1071,12 @@ void GuiTargetRender::ensure_ready() {
     // the "Updating..." label is already up (the standing dispatch stamped it
     // where it went asynchronous), queue_cancel_requested was set by the
     // trigger that raised the dispatch, and the audition clear trigger() would
-    // run is owed by nothing here — the S→T flip and the player's close both
+    // run is owed by nothing here — the S→T flip and the player's unload both
     // took the one stop body ahead of this call, and the reestablish caller
     // never reaches here with a dispatch standing (it gates on
-    // !is_updating()). THE PLAYER'S CLOSE IS MEMORY-SAFE WHILE WAITING
-    // (re-verified 2026-09-02 at GuiRenderPlayer::close): it binds the SOURCE
+    // !is_updating()). THE PLAYER'S UNLOAD IS MEMORY-SAFE WHILE WAITING, on
+    // both of its tails (re-verified 2026-09-02 at GuiRenderPlayer::close,
+    // re-read 2026-09-04 with the Up tail beside it): it binds the SOURCE
     // directly, ahead of this fork and behind its stop, precisely because
     // this arm may leave the engine without a target bind until the
     // completion, and only after the fork returns does it free the item's

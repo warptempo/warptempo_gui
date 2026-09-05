@@ -58,13 +58,21 @@
 // player's rest reaches the device: suspend_stream (below) requests the stream
 // stopped and clears `started`, and the next play() starts it again through
 // start_stream, which is the same road a reopen takes. It is called from the
-// stop body's player fork alone (playback_lifecycle.cpp), so the main window's
-// auditions, its Space and the A/B act keep the no-click lifecycle exactly as
-// the 2026-08-27 ruling left it. The architect's words for the trade: "all I
-// need is for the car and the player to work as expected", the resume
-// transient on the tablet's own speaker accepted outright ("I don't use the
-// speakers ever — leave it") and the Bluetooth resume delay accepted only as
-// the moment the link takes to come back after a pause.
+// player's own rest act alone (GuiRenderPlayer::rest_stream, whose declaration
+// carries the five roads that reach it), so the main window's auditions, its
+// Space and the A/B act keep the no-click lifecycle exactly as the 2026-08-27
+// ruling left it. The narrowing is to a rest and not to a stop: the player's
+// live-to-live transitions — a Next, another row pressed while live, the
+// natural end's Repeat One replay and its auto-advance — take the same stop
+// fence and are deliberately outside it, because a track change that stopped
+// the stream would pay the settle wait below and the link's reactivation on an
+// act that has to be immediate. (The rest act lived inside the stop body's
+// player fork for one evening, 2026-09-04, which is exactly the set it could
+// not tell apart.) The architect's words for the trade: "all I need is for the
+// car and the player to work as expected", the resume transient on the
+// tablet's own speaker accepted outright ("I don't use the speakers ever —
+// leave it") and the Bluetooth resume delay accepted only as the moment the
+// link takes to come back after a pause.
 //
 // So the transient happens once per session, at launch, with no audition under
 // it, and no play() or stop() touches the device's run state at all. BETWEEN
@@ -363,9 +371,13 @@ void fence_quiesced(GuiPlayback::Impl& impl) {
 // state alone — which on the player's road would close the device over a pause
 // and a resume pressed back to back. The only producer of that window in this
 // file is suspend_stream, so the ordinary start (a settled stream, an open one,
-// a dead one) reads the state once and waits for nothing. A timeout leaves the
-// state where it is and the start takes its own failure arm; the deadline is
-// generous because it is never reached in the sequence it exists for.
+// a dead one) reads the state once and waits for nothing. A live-to-live track
+// change never reaches it: the suspension is the player's rest act's alone and
+// no transition calls that act, so the one start that can meet a STOPPING
+// stream is a resume pressed straight after a pause — which is also the one
+// place the ruling accepts a delay. A timeout leaves the state where it is and
+// the start takes its own failure arm; the deadline is generous because it is
+// never reached in the sequence it exists for.
 constexpr int64_t kStateSettleTimeoutNs = 200 * 1000 * 1000;
 
 void settle_stopping_state(GuiPlayback::Impl& impl) {
@@ -420,8 +432,8 @@ void close_stream(GuiPlayback::Impl& impl) {
     // ONE OF THE FILE'S TWO requestStop calls, and it is here because the
     // stream is being CLOSED (shutdown, or the dead-stream reopen) — never
     // between the main window's plays; the other is suspend_stream's, which
-    // rests the device under the render player's pause and keeps the stream
-    // open for the resume. The
+    // rests the device under the render player's own rest act and keeps the
+    // stream open for the resume. The
     // close is the stronger fence anyway: it blocks until the callback thread
     // is gone, which is what makes it safe on a stream this function may be
     // stopping while a callback is mid-flight.
@@ -685,11 +697,12 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
 
     // ORDINARILY A NO-OP, and that is the point of the new lifecycle: the
     // stream was started at open and has been running ever since, so an
-    // ordinary play makes no device call at all. Two paths still arrive here
+    // ordinary play makes no device call at all. Three paths still arrive here
     // with a stopped stream and are started by this call — the reopen just
-    // above (the head's, or the launch press's a moment earlier), and an init
-    // whose own start was refused — and a refusal here disables the device
-    // until the next press reopens it.
+    // above (the head's, or the launch press's a moment earlier), an init whose
+    // own start was refused, and the render player's resume after its rest act
+    // suspended the stream (2026-09-04) — and a refusal here disables the
+    // device until the next press reopens it.
     if (!start_stream(*impl_)) {
         impl_->state.session.fetch_and(~kSessionPlayingBit,
                                        std::memory_order_release);
@@ -732,11 +745,12 @@ void GuiPlayback::stop() {
     report_xrun_count(*impl_);
 }
 
-// Rest the device under the render player's pause (the contract at the
-// declaration, and the narrowing at the head of this file). The caller is the
-// stop body's player fork and it has just returned from stop(), so the session
-// word's playing bit is down and the fence has proved the callback out of the
-// sample buffer — this adds no fence and needs none.
+// Rest the device under the render player's rest (the contract at the
+// declaration, and the narrowing at the head of this file). The caller is
+// GuiRenderPlayer::rest_stream and every road into it has just returned from
+// the stop body, so the session word's playing bit is down and the fence has
+// proved the callback out of the sample buffer — this adds no fence and needs
+// none.
 //
 // What it changes is the stream's run state and `started` with it, so the next
 // play() reaches start_stream and starts the stream it left stopped, exactly

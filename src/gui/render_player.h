@@ -243,14 +243,17 @@ struct GuiInputHandler;
 // states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
-// listing and a whole-window damage. close() clears the mode and takes the
-// panel down around unload_item(), which is THE ONE OWNER of the ordering
-// the engine's pointer demands — the stop body's fence, THE VIEW'S buffer
-// rebound through the S/T flip's own tail fork verbatim (ensure_ready in
-// target view, rebind_to_source in source view), and only THEN the item's
-// fields cleared and its buffer freed. up() calls that same body past its
-// root wall, which is why going up leaves the player standing with nothing
-// loaded, exactly as an open leaves it.
+// listing and a whole-window damage. close() takes the panel down around
+// unload_item(), which is THE ONE OWNER of the ordering the engine's pointer
+// demands — the stop body's fence, THE VIEW'S buffer rebound through the S/T
+// flip's own tail fork verbatim (ensure_ready in target view, rebind_to_source
+// in source view), and only THEN the item's fields cleared and its buffer
+// freed. The mode bit travels inside that body, because the two ends of it
+// want opposite answers: the fence needs the player active and the close's
+// re-express needs it down, so the unload takes a required tail
+// (UnloadTail::Up / ::Close) and lowers the bit between them. up() calls the
+// same body past its root wall with the Up tail, which is why going up leaves
+// the player standing with nothing loaded, exactly as an open leaves it.
 //
 // THE LOAD ROAD is not here: the Load in place button (bare `'` inside the
 // player) and its confirmation live on GuiInputHandler, which owns the shared
@@ -655,15 +658,57 @@ struct GuiRenderPlayer {
     void publish_media_state();
 
 private:
+    // The transport's rest act takes the device out of its running state once
+    // the player has come to rest with nothing about to sound again. The
+    // mechanism is GuiPlayback::suspend_stream (nothing on JACK, and its
+    // declaration owns why the player needs it at all); what this body owns is
+    // which rests reach the device, a question the stop body cannot answer,
+    // since every player stop takes that fence, transitions included.
+    //
+    // Five call sites, each of them immediately past the fence that the
+    // suspension requires and does not take: toggle_pause's pause arm, the
+    // tick's dead-device arm, on_natural_end's two rests — its terminal rest
+    // (the arm that neither replays nor advances) and its Repeat One arm where
+    // the replay refused to decode, a rest being a rest whichever way the
+    // player arrived at it — and unload_item on both of its tails. The
+    // live-to-live transitions are deliberately absent (2026-09-04, moving the
+    // suspension off the stop body's player fork, where it lived for one
+    // evening): play_wav's fence ahead of another item — the deliberate Next,
+    // another row pressed while live — and the natural end's Repeat One replay
+    // and auto-advance all sound again within microseconds, and stopping the
+    // device across them would pay the AAudio start's settle wait and, over
+    // Bluetooth, the link's own reactivation on the very acts that must stay
+    // responsive, with a failed restart free to publish Live for a tick before
+    // the dead-device arm parks the transport. Only the link's reactivation
+    // after a pause is an accepted cost.
+    void rest_stream();
+    // Which tail the unload is running. It is required, with no default,
+    // because the two roads want the mode bit in different places and a third
+    // caller must choose rather than inherit one of them:
+    //   Up    — the bit stays up. The player goes on standing with nothing
+    //           loaded, and a preview dispatched by the re-express below still
+    //           owes its rebind to the close's own re-express later
+    //           (complete_successful_buffer's guard is what defers it).
+    //   Close — the bit comes down before the re-express. The target arm's
+    //           ensure_ready can resolve synchronously on a cache or artifact
+    //           rung, and that same guard refuses to rebind while the player
+    //           is active: with the bit still up the mode would end in T view
+    //           with is_dirty_ cleared and the engine on source.wav, one Space
+    //           from playing source audio under the target picture.
+    // The bit cannot move earlier on either road: the stop body's player fork
+    // asks it, and a mode taken down ahead of the fence would send the stop
+    // down the project's arm and leave the engine unfenced.
+    enum class UnloadTail { Up, Close };
     // THE ONE OWNER OF THE UNLOAD ORDERING, shared by close() and up(): the
-    // stop body's fence, then THE VIEW'S buffer rebound, then the item's
+    // stop body's fence, then the transport's rest act, then the mode bit
+    // where the tail wants it, then THE VIEW'S buffer rebound, then the item's
     // fields cleared to their open() values and its buffer freed. The order
     // is load-bearing — the engine may hold the item's pointer until the
-    // rebind — and the two callers add only what is theirs (close() the mode
-    // bit and the panel teardown, up() the root entry and the head unit's
-    // push). It publishes nothing itself: the fork inside the stop body
-    // pushes a paused state that both callers supersede with their own.
-    void unload_item();
+    // rebind — and the two callers add only what is theirs (close() the panel
+    // teardown, up() the root entry and the head unit's push). It publishes
+    // nothing itself: the fork inside the stop body pushes a paused state that
+    // both callers supersede with their own.
+    void unload_item(UnloadTail tail);
     // Rebuild the listing for the live folder: rows, scroll 0, the highlight
     // on the transport's item's row if it is here else row 0, hover and press
     // cleared. Damages the band.

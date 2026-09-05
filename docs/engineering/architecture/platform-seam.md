@@ -163,9 +163,18 @@ drag coordinates floor instead of truncating.
   takes; a start that finds the stream still STOPPING waits briefly for the
   transition it asked for, which is the only place this can add a delay and
   is reached only by a resume pressed straight after a pause. THE ONE CALL
-  SITE IS THE STOP BODY'S PLAYER FORK (`playback_lifecycle.cpp`), so the main
-  window's Space, the waveform scrub and the A/B audition's four plays keep
-  the 2026-08-27 lifecycle whole. WHAT IT COSTS, both accepted at the ruling:
+  SITE IS THE PLAYER'S OWN REST ACT (`GuiRenderPlayer::rest_stream`), whose
+  five roads are the pause, the tick's dead-device arm, the natural end's TWO
+  rests (its terminal rest and its Repeat One arm where the replay refused to
+  decode) and the unload on both of its tails — so the main window's
+  Space, the waveform scrub and the A/B audition's four plays keep the
+  2026-08-27 lifecycle whole, AND SO DO THE PLAYER'S OWN LIVE-TO-LIVE
+  TRANSITIONS (codex round 3, the same evening, moving the suspension off the
+  stop body's player fork, which every player stop takes and which therefore
+  could not tell a rest from a track change): a Next, another row pressed
+  while live, and the natural end's Repeat One replay and auto-advance all
+  sound again within microseconds and never touch the device. WHAT IT COSTS,
+  both accepted at the ruling:
   the start transient is back at the player's resume on the tablet's own
   speaker (*"I don't use the speakers ever — leave it"*), and over Bluetooth a
   resume waits for the link to come back — accepted as that and as nothing

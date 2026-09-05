@@ -209,14 +209,15 @@ void GuiRenderPlayer::up() {
     // sound.
     //
     // The ordering the engine's pointer demands is the shared body's (the
-    // contract at unload_item's declaration). What is UP'S OWN is the root
-    // entry — the listing rebuilt with no item, so the band seats on row 0 as
-    // at an open — and the head unit's push, which must be THE LAST WORD: the
-    // stop body's fork inside the unload has already published a paused state
-    // carrying the very item this act is dropping. REPEAT ONE IS UNTOUCHED:
-    // the lamp is session state, off at every open() and at no other time, and
-    // going up a folder is not an open.
-    unload_item();
+    // contract at unload_item's declaration), and the Up tail is what keeps
+    // the mode bit standing through it — the player is not going anywhere.
+    // What is UP'S OWN is the root entry — the listing rebuilt with no item,
+    // so the band seats on row 0 as at an open — and the head unit's push,
+    // which must be THE LAST WORD: the stop body's fork inside the unload has
+    // already published a paused state carrying the very item this act is
+    // dropping. REPEAT ONE IS UNTOUCHED: the lamp is session state, off at
+    // every open() and at no other time, and going up a folder is not an open.
+    unload_item(UnloadTail::Up);
     enter(Folder::Root, {});
     publish_media_state();
 }
@@ -697,6 +698,18 @@ void GuiRenderPlayer::toggle_repeat_one() {
     damage_row();
 }
 
+// The device leaves its running state where the player has come to rest, and
+// nowhere else (the five callers and the reasoning are at the declaration).
+// Deliberately thin: the mechanism is GuiPlayback::suspend_stream's and the
+// JACK backend answers it with nothing, so what this body exists for is to be
+// a name the five rest roads call and the live-to-live transitions do not — a
+// distinction the stop body's fence, taken by both classes alike, could never
+// draw. The caller has just returned from that fence, which is the quiescence
+// proof the suspension needs and does not take for itself.
+void GuiRenderPlayer::rest_stream() {
+    playback.suspend_stream();
+}
+
 void GuiRenderPlayer::toggle_pause() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
@@ -735,6 +748,12 @@ void GuiRenderPlayer::toggle_pause() {
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
+        // The pause is the rest this whole mechanism exists for: the device
+        // comes out of its running state behind the fence, so a head unit
+        // reading the Bluetooth link stops seeing an active player under a
+        // session that says paused (rest_stream's declaration owns the
+        // membership; the ruling is at the head of playback_aaudio.cpp).
+        rest_stream();
         return;
     }
     // RESUME: from the resume point; a point at or past the item's end (the
@@ -986,7 +1005,16 @@ void GuiRenderPlayer::on_natural_end() {
         const int i = rp.item_index;
         const bool replayed =
             play_wav(folder[static_cast<size_t>(i)].path, folder, i);
-        if (!replayed) damage_row();
+        if (!replayed) {
+            // A refused replay is a rest like any other, so the device rests
+            // under it: the lamp's arm is terminal, nothing follows this
+            // return, and the transport is left idle on an item that will not
+            // decode. The fence is this body's own, taken above — play_wav's
+            // decode refusals all return ahead of the fence it would take, so
+            // the last stop is still the one at the head of this function.
+            rest_stream();
+            damage_row();
+        }
         return;
     }
     // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (R2), never across folders
@@ -1012,6 +1040,16 @@ void GuiRenderPlayer::on_natural_end() {
     // its reader in play_button_act and its clears; nothing distinguishes this
     // rest from any other idle rest at an item's start now, which is the
     // simplification itself.
+    //
+    // This is the natural end's terminal rest (rest_stream's declaration owns
+    // the membership): a replay and an advance that sound both sound again
+    // within microseconds and must not stop the stream between the two items,
+    // while here the player has finished and the head unit is looking at a
+    // session that says so. It is one of this body's two rests, the other
+    // being the refused Repeat One replay above — a rest is a rest, so that
+    // arm takes the act too, and no road out of this function leaves an idle
+    // transport over a running stream.
+    rest_stream();
     damage_row();
 }
 
@@ -1048,6 +1086,15 @@ void GuiRenderPlayer::tick() {
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
+        // The rest act, as the pause arm this one copies takes it: nothing
+        // follows this stop, so the device rests behind the fence. The two
+        // shapes this arm covers meet it differently and both are right: a
+        // device that never came up has no stream and the suspension returns
+        // at once, while one that went away under a started stream is asked to
+        // stop like any other rest — a refusal there is the suspension's own
+        // stderr line and changes nothing, the reopen the next press takes
+        // being what really closes that stream.
+        rest_stream();
         // ONE CLAUSE (2026-09-01, the capitalization sweep's sentence
         // shape): it read "No audio device; the wav cannot be played".
         status("No audio device to play the wav");
@@ -1134,16 +1181,23 @@ bool GuiRenderPlayer::open() {
 }
 
 // THE UNLOAD, and THE ONE OWNER of the order the engine's pointer demands
-// (the contract at the declaration). Two callers: close(), which adds the mode
-// bit and the panel teardown, and up(), which adds the root entry — so the
-// player standing with nothing loaded and the player gone are the same act
-// with different tails, and the ordering cannot drift between them.
-void GuiRenderPlayer::unload_item() {
+// (the contract at the declaration). Two callers, each naming its tail:
+// close(), which adds the panel teardown, and up(), which adds the root entry
+// — so the player standing with nothing loaded and the player gone are the
+// same act with different tails, and the ordering cannot drift between them.
+// The mode bit is the one thing the tail itself moves, since the two roads
+// need it in different places (the reasons are at UnloadTail).
+void GuiRenderPlayer::unload_item(UnloadTail tail) {
     AppState::RenderPlayer& rp = app.render_player;
-    // THE ORDER IS LOAD-BEARING: stop (the fence) → the VIEW's buffer rebound
-    // → only then the item's buffer freed, the engine holding the pointer
-    // until the rebind.
+    // THE ORDER IS LOAD-BEARING: stop (the fence) → the rest act → the mode
+    // bit where the tail wants it → the VIEW's buffer rebound → only then the
+    // item's buffer freed, the engine holding the pointer until the rebind.
     playback_lifecycle.stop_playback_if_playing();
+    // The transport has come to rest and nothing follows it, on either tail,
+    // so the device rests with it (the caller inventory and the reasons are at
+    // rest_stream's declaration). Past the fence, which is what the suspension
+    // requires and does not take.
+    rest_stream();
     // IDLE OVER THE FORK'S PAUSED: the stop body's player fork parks every
     // LIVE transport at PAUSED, and an unloaded transport has nothing to
     // resume — so this write lands after that fork, exactly as open()'s reset
@@ -1152,6 +1206,14 @@ void GuiRenderPlayer::unload_item() {
     rp.transport      = Transport::Idle;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
+    // The mode bit goes where the tail puts it (the two roads' reasons are at
+    // UnloadTail, render_player.h): the fence above was taken with the player
+    // active on both roads, and the close's re-express below must run with the
+    // player already down, so that a target completion resolving synchronously
+    // on a reuse rung rebinds the engine instead of deferring to a re-express
+    // that will never come. The Up tail writes the bit nowhere: the player goes
+    // on standing.
+    if (tail == UnloadTail::Close) rp.active = false;
     // THE ENGINE LEAVES THE ITEM'S BUFFER BEFORE THAT BUFFER DIES: bind the
     // source (valid memory for the whole session, offset 0) ahead of the fork
     // below, because the fork's target arm may DISPATCH rather than rebind —
@@ -1168,11 +1230,14 @@ void GuiRenderPlayer::unload_item() {
     // UNCONDITIONAL, with an item or without one: a preview that completed
     // while the player stood did not rebind (GuiTargetRender::
     // complete_successful_buffer's guard), so re-expressing the view is what
-    // this body owes whatever the transport was doing. Under up() the player
-    // is still standing, so a preview dispatched here meets that same guard
-    // when it completes and waits for the close's own re-express; the engine
-    // rests on the source meanwhile, which is where an unloaded player leaves
-    // it.
+    // this body owes whatever the transport was doing. The two tails meet that
+    // guard from opposite sides: under Up the player is still standing, so a
+    // preview dispatched here waits for the close's own re-express when it
+    // completes and the engine rests on the source meanwhile, which is where
+    // an unloaded player leaves it; under Close the bit is already down, so a
+    // completion rebinds as it would with no player at all — the synchronous
+    // one a cache or artifact rung resolves inside this very call, and an
+    // asynchronous one when it lands.
     if (app.active_audio_view == 'T') {
         target_render.ensure_ready();
     } else {
@@ -1196,13 +1261,14 @@ void GuiRenderPlayer::unload_item() {
 void GuiRenderPlayer::close() {
     AppState::RenderPlayer& rp = app.render_player;
     if (!rp.active) return;
-    // THE UNLOAD FIRST, THE MODE BIT AFTER IT: the stop body's player fork is
-    // what fences the engine out of the item's buffer, and that fork asks
-    // `active` — a mode taken down ahead of the unload would send the stop
-    // down the project's arm and leave the fence untaken. What is the CLOSE'S
-    // OWN is the mode's two takedowns, the bit and the panel.
-    unload_item();
-    rp.active = false;
+    // The unload carries the mode bit down, in the middle of its own body: the
+    // stop body's player fork is what fences the engine out of the item's
+    // buffer and that fork asks `active`, while the view's re-express behind
+    // the fence must find the player already gone or a synchronous target
+    // completion refuses to rebind — so the bit belongs between them and the
+    // tail is what says so (UnloadTail::Close; the reasons are at the enum).
+    // What is the CLOSE'S OWN is the panel's teardown.
+    unload_item(UnloadTail::Close);
     // The panel comes down with the mode: the reset restores Owner::None,
     // which IS the band's standing predicate answering false.
     app.folder_overlay = AppState::FolderOverlay{};

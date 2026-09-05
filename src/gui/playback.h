@@ -220,8 +220,11 @@ public:
     // active player and resolves against the session's "paused" by flipping
     // its display back to playing — so the player's pause must reach the
     // device, and this is how. It is the render player's alone: the ONE call
-    // site is the stop body's player fork (playback_lifecycle.cpp), and the
-    // main window's plays keep the no-click lifecycle whole (the head of
+    // site is that player's own rest act (GuiRenderPlayer::rest_stream), whose
+    // declaration carries the five roads that leave the transport at rest —
+    // and, just as deliberately, does not carry the live-to-live transitions,
+    // which take the same stop fence and must not stop the device. The main
+    // window's plays keep the no-click lifecycle whole (the head of
     // playback_aaudio.cpp owns that ruling and this narrowing of it).
     // JACK does nothing here: the laptop has no head unit and no link to
     // suspend, and its client stays connected between plays exactly as
