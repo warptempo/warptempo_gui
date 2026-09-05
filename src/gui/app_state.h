@@ -5696,6 +5696,12 @@ struct AppState {
     // open), read by the pointer path for the in-box test, the click-to-caret
     // mapping and the drag-select. See FlagEditorBox (render.h) for the field
     // contract, including why `byte_x` is what click-to-byte searches.
+    // ITS `riding_cells` IS A SECOND FLAG STASH, and the one publication here
+    // that is not about the field at all: the edited marker's own bound cells
+    // and measure box, which the flag pass suppresses with the box and this
+    // painter re-paints at the unrolled field's right edge. hit_test_flag's
+    // walk reads it beside the vector above, so those boxes take presses as
+    // the resting ones do (FlagEditorBox::riding_cells, render.h).
     FlagEditorBox flag_editor_box;
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
@@ -15052,6 +15058,15 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
 // edge (the flag continued in blue), and it is part of the same rect: one
 // marker, one clickable surface for press, drag and select.
+// AND SINCE 2026-09-05 IT ALSO READS THE OPEN PAYLOAD EDITOR'S RIDING CELLS
+// (AppState::flag_editor_box.riding_cells): while that editor stands the flag
+// pass suppresses its marker whole, and the editor's own painter re-paints
+// that marker's bound cells and measure box at the unrolled field's right edge
+// and publishes them as a flag rect of their own. The walk asks it FIRST — the
+// editor paints last — so those boxes answer this and hit_test_flag_cell
+// exactly as the resting ones do, which is what makes a press on one an
+// ordinary marker press (the ruling is at FlagEditorBox::riding_cells,
+// render.h).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 

@@ -1333,7 +1333,7 @@ void render_flag_boxes_impl(
             // too: that editor unrolls over this marker's whole column, so the
             // measure travels with it and paints past the cells re-painted at
             // the unrolled box's right edge, keeping its place at the end of
-            // the run (render_flag_editor_box's riding_pad).
+            // the run (render_flag_editor_box's riding_cells).
             const std::string& measure_text = measure_of(i);
             const bool paint_measure = !measure_text.empty() &&
                                        i != suppress_box_index &&
@@ -1580,6 +1580,15 @@ void render_flag_boxes_impl(
             // is still PAINTED for the whole editing session, so it is
             // legitimately hit-testable by the same paint-equals-claim rule that
             // takes the box's rect away.
+            //
+            // AND THE MARKER'S CELLS AND MEASURE ARE THE SECOND EXCEPTION SINCE
+            // 2026-09-05, on that same rule rather than against it: they too are
+            // painted for the whole session — at the unrolled field's right edge,
+            // by the editor's own painter — so they are legitimately clickable,
+            // and it is THAT painter which publishes their rect, at the pixels it
+            // put them on (FlagEditorBox::riding_cells, render.h). What this pass
+            // suppresses is the geometry it does not draw; what it must never do
+            // is claim it, and neither must anyone else.
             if (out_hit_rects && i != suppress_box_index) {
                 // THE RECT IS THE WHOLE BOX, BORDER INCLUDED — a click on the
                 // border is a click on the flag. It is the painted extent, as
@@ -2673,14 +2682,19 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // in one cell's slot, the measure field IS the measure box), so neither
     // paints a pad.
     //
-    // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`. The caret /
-    // text-drag claim seats a caret for ANY press inside `box` and the cursor
-    // map shows the I-beam over exactly that rect, so a pad folded in would
-    // map presses on painted cell and measure ink to payload bytes and promise
-    // text editing where none is. What the pad IS for is at FlagEditorBox::
-    // riding_pad: the outside-press close treats box UNION pad as inside, so a
-    // press on it is consumed and neither closes nor acts — no cell editor
-    // opens through the payload editor, Enter and Esc staying its own roads.
+    // IT IS PUBLISHED AS A SECOND RECT, NEVER FOLDED INTO `box`, and that rect
+    // is a FLAG HIT RECT — the same shape and the same three boundaries the
+    // flag pass publishes for a resting run, because THE RIDING CELLS ARE THE
+    // MARKER'S OWN CELLS FOR THE POINTER TOO (architect 2026-09-05). A press
+    // on one closes this editor as any outside press does and then acts on the
+    // cell it landed on, so the run has to answer "which marker, which cell"
+    // exactly as the resting boxes answer it — one walk, one idiom, no second
+    // derivation (the contract is at FlagEditorBox::riding_cells). Folding it
+    // into `box` would be the wrong union all the same: the caret / text-drag
+    // claim seats a caret for ANY press inside `box` and the cursor map shows
+    // the I-beam over exactly that rect, so a run folded in would map presses
+    // on painted cell and measure ink to payload bytes and promise text
+    // editing where none is.
     if (payload_kind) {
         // THE RUN'S SEAM COLUMNS ARE THE MARKER'S CLASS BORDER, never the
         // field's: `face` above may be the RED FLASH, which is a state of the
@@ -2698,9 +2712,17 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // width from the cell it stands in for.
         const IterCellLayout cl =
             measure_iter_cells(font, warp_iter_cells(mv, idx, iteration_on));
+        // The run's THREE SEAM COLUMNS, spelled exactly as the flag pass spells
+        // its own (`lower_x` / `upper_x` / `measure_x`) and off the same
+        // measurer, so the boundaries published below are the painted ones. The
+        // upper seam collapses onto the lower where no cell paints, and the
+        // measure seam onto both, which is the same falling-onto-the-next rule
+        // FlagHitRect states.
+        const int lower_seam   = bx + box_w;
+        const int upper_seam   = cl.present ? lower_seam + border_w + cl.lower_w
+                                            : lower_seam;
+        const int measure_seam = lower_seam + cl.span_w;
         if (cl.present) {
-            const int lower_seam = bx + box_w;
-            const int upper_seam = lower_seam + border_w + cl.lower_w;
             paint_iter_bound_cell(
                 cr, lane, lower_seam, cl.lower_w, border_w, edge_h, pad_l,
                 baseline, cl.lower_run,
@@ -2716,7 +2738,6 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // The measure, past whatever the cells took — the flag pass's own
         // ordering (`measure_x = bx + bw + cells_span_w`), read here off the
         // unrolled box instead of the committed one.
-        const int measure_seam = bx + box_w + cl.span_w;
         int measure_span_w = 0;
         const std::string& ctext = mv[static_cast<std::size_t>(idx)].measure;
         if (!ctext.empty()) {
@@ -2754,13 +2775,33 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             measure_span_w = border_w + cw;
         }
 
-        // The pad's rect is the WHOLE re-painted run's painted extent, both
-        // dividers included — the same paint-equals-claim rule the flag rects
-        // take. Zero-width where the marker paints neither cells nor a
-        // measure, and an empty rect contains no point.
-        const int pad_w = cl.span_w + measure_span_w;
-        if (pad_w > 0)
-            out.riding_pad = GuiRect{bx + box_w, lane.y, pad_w, lane.h};
+        // THE RUN IS PUBLISHED AS A FLAG HIT RECT, keyed to the marker being
+        // edited: its rect is the WHOLE re-painted run's painted extent, both
+        // seam dividers included — the same paint-equals-claim rule the flag
+        // rects take — and its three boundaries are the seam columns above, so
+        // hit_test_flag_cell's walk answers Measure, Upper or Lower over
+        // exactly the pixels that show one. No point in the rect can answer
+        // Payload: the run begins ON the lower seam, which is the lower
+        // boundary itself, and the payload's own box is the FIELD, published
+        // as `box` and claimed by the caret. Nothing is published where the
+        // marker paints neither cells nor a measure — the cold marker_index
+        // -1 and the zero rect, which contains no point.
+        const int run_w = cl.span_w + measure_span_w;
+        if (run_w > 0) {
+            FlagHitRect& r = out.riding_cells;
+            r.marker_index          = idx;
+            r.x                     = static_cast<double>(lower_seam);
+            r.y                     = static_cast<double>(lane.y);
+            r.w                     = static_cast<double>(run_w);
+            r.h                     = static_cast<double>(lane.h);
+            r.iter_lower_boundary_x = static_cast<double>(lower_seam);
+            r.iter_upper_boundary_x = static_cast<double>(upper_seam);
+            // ONE EXPRESSION FOR BOTH CASES: with no measure painted the seam
+            // column IS the run's right edge (the cells' span is the whole
+            // width), which is exactly where a measureless flag's boundary
+            // falls at rest, so no point answers Measure without one.
+            r.measure_boundary_x    = static_cast<double>(measure_seam);
+        }
     }
 
     cairo_restore(cr);   // the font state

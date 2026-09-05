@@ -2051,9 +2051,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // the box reaches, and outside is exactly where this arm stops. A cold or
     // closed editor publishes a zero rect, which contains no point. It covers
     // the MEASURE editor's field too, which publishes the same rect through the
-    // same painter — and covers the RIDING PAD deliberately NOT: that rect is
+    // same painter — and covers the RIDING CELLS deliberately NOT: that run is
     // the marker's own boxes painted beside the field, not editable text, so an
-    // I-beam over it would promise a caret the press does not seat.
+    // I-beam over it would promise a caret the press does not seat. What the
+    // run promises instead is the MARKER LANE'S OWN CUE, and it needs no arm
+    // here to get it: the flag arm far below reads hit_test_flag, which
+    // resolves the riding cells to their marker (the walk asks the editor's
+    // published run first), so the pointer over a riding cell says exactly
+    // what it says over a resting one — which is what the press now does
+    // there.
     // IT IS THE HOVER'S ARM ALONE: a live text drag out of this box is
     // answered at the top of the map, by the drag's own record.
     if (rect_contains(app.flag_editor_box.box, x, y))
@@ -3284,12 +3290,16 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // caret-drag section). ONE
     // SPELLING OF "IN THE FIELD": the painter's
     // published box, the same rect the press claim and the cursor map's
-    // I-beam read, so the three cannot disagree. The RIDING PAD beside it —
+    // I-beam read, so the three cannot disagree. The RIDING CELLS beside it —
     // the marker's bound cells and its measure box, re-painted at the
-    // unrolled field's right edge — is deliberately not in the clause: a
+    // unrolled field's right edge — are deliberately not in the clause: a
     // press there seats no caret and wears no I-beam, so a finger there
-    // keeps the lane's own answer, and a tap that does reach the pointer is
-    // consumed by the pad's own arm and acts on nothing. The
+    // keeps the lane's own answer. That answer is the FLAG BOX'S, not the
+    // pan's, and it needs no clause of its own either: the zone's flag
+    // carve-out (point_on_nav_surface) reads hit_test_flag, which resolves a
+    // riding cell to its marker since 2026-09-05, so a finger there is in the
+    // same class as a finger on a resting cell — a tap presses the cell, and
+    // a hold reaches whatever a hold on a resting cell reaches. The
     // pinch is untouched, as under the flag box: this clause moves the first
     // finger off the zone, and a second finger inside the window is the
     // ordinary two-finger nav, which the flag editor is transparent to.
@@ -3537,17 +3547,19 @@ void GuiInputHandler::end_touch_caret_drag() {
 void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (rect_contains(app.flag_editor_box.box, x, y)) return;
-    // AND THE RIDING PAD COUNTS AS INSIDE — the marker's own bound cells and
+    // AND THE RIDING CELLS ARE OUTSIDE — the marker's own bound cells and
     // measure box, painted by the same publisher at the unrolled box's right
     // edge while the payload editor stands (contract at
-    // FlagEditorBox::riding_pad, render.h). It is the editor's OWN painted
-    // surface, so a press on it is not an outside press. THE CONSUME IS THE
-    // CALLER'S, one line past this call: this owner only refuses to close, and
-    // on_button_press returns on the same test so the press acts on nothing at
-    // all (it is not the FIELD either, so no caret is seated). Empty under the
-    // other two editor kinds and on a marker painting neither cells nor a
-    // measure, and an empty rect contains no point.
-    if (rect_contains(app.flag_editor_box.riding_pad, x, y)) return;
+    // FlagEditorBox::riding_cells, render.h). They wear the editor's paint
+    // pass but they are the MARKER'S boxes, not the field, so a press on one
+    // is an ordinary outside press: it closes this session without committing
+    // and then falls through to act on the cell it landed on, exactly as a
+    // press on any other cell does under the bound and measure editors
+    // (architect 2026-09-05 — the three editors are transparent to each other
+    // for the pointer as they already are graphically). The refusal that stood
+    // here until then, and the caller's consume that went with it, are both
+    // gone; the FIELD is still the one thing this owner refuses on, because a
+    // press there is caret work the F2.1 block already claimed.
     flag_editor.exit_top_flag_edit_no_commit();
 }
 
@@ -5889,24 +5901,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // documented "double-click opens the
         // editor"; there is no own-marker special case.
         //
-        // THE RIDING PAD IS THE ONE PRESS THIS OWNER LEAVES STANDING AND THE
-        // ONE THIS FRAME CONSUMES OUTRIGHT: the marker's two bound cells and
-        // its measure box, painted by the editor's own publisher at the
-        // unrolled box's right edge while the payload editor stands
-        // (FlagEditorBox::riding_pad, render.h). It is the editor's own
-        // painted surface, so it is not an "outside" press and must not close
-        // the session — and it is not the FIELD either, so it must not seat a
-        // caret. A press there therefore does NOTHING and ends here, rather
-        // than falling through to arm a nav press on lane pixels the editor is
-        // currently occupying; no cell editor opens through the payload
-        // editor either, Enter and Esc staying its own roads. Empty under the
-        // other two editor kinds and on a marker painting neither cells nor a
-        // measure, and an empty rect contains no point.
-        const bool on_riding_pad =
-            text_editor::is_active(app.top_flag_editor) &&
-            rect_contains(app.flag_editor_box.riding_pad, x, y);
+        // THE RIDING CELLS TAKE THAT SAME ROAD (architect 2026-09-05): the
+        // marker's two bound cells and its measure box, painted by the
+        // editor's own publisher at the unrolled box's right edge while the
+        // payload editor stands, are the MARKER'S boxes for the pointer as
+        // well as graphically, so a press on one is an ordinary outside press
+        // — it closes the session here and falls through to the marker claim
+        // below like every other press does. Nothing forks for them on this
+        // path: they resolve through the one flag walk, which asks the
+        // editor's published run (FlagEditorBox::riding_cells) ahead of the
+        // lane's stash, so hit_test_flag answers the edited marker and
+        // hit_test_flag_cell answers the pressed cell — a single click
+        // selects, lands and addresses that cell, and a double click's second
+        // press opens that cell's own editor through the consume-open road.
+        // (The one press this owner still leaves standing is a press in the
+        // FIELD, which the caret / text-drag block far above already claimed
+        // and returned on.)
         close_top_flag_editor_for_outside_press(x, y);
-        if (on_riding_pad) return;
 
         // The marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item and that item is now its FLAG BOX alone

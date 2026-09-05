@@ -2344,12 +2344,22 @@ inline int playhead_half_px() {
 // a cell that has no pixels. ONE READER, hit_test_flag_cell (app_state.cpp),
 // whose MarkerCell answer the marker press reads for the addressed cell and
 // the double-click seed.
+//
+// TWO PRODUCERS SINCE 2026-09-05, and the second is why this shape is a struct
+// rather than a lane-pass local: the flag pass emits one of these per painted
+// flag into AppState::flag_hit_rects, and the marker-lane EDITOR'S painter
+// emits ONE MORE for the RIDING CELLS it paints beside the payload field
+// (FlagEditorBox::riding_cells below). Both go through the same walk
+// (topmost_flag_rect, app_state.cpp) and the same boundary idiom, which is
+// what makes a press on a riding cell resolve to the same marker and the same
+// MarkerCell a press on the resting one resolves to. A cold or absent run
+// reads marker_index -1 with a zero rect, which contains no point.
 struct FlagHitRect {
-    int    marker_index;
-    double x;
-    double y;
-    double w;
-    double h;
+    int    marker_index = -1;
+    double x            = 0.0;
+    double y            = 0.0;
+    double w            = 0.0;
+    double h            = 0.0;
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
     double measure_boundary_x    = 0.0;
@@ -3095,29 +3105,46 @@ void render_flags(cairo_t* cr,
 //                   The caret, both selection edges and click-to-byte all index
 //                   it, so what is drawn and what is grabbed are one vector.
 //
-//   `riding_pad`    the marker's OTHER BOXES — its two iteration bound cells,
+//   `riding_cells`  the marker's OTHER BOXES — its two iteration bound cells,
 //                   then its MEASURE BOX — painted in that order at the
 //                   unrolled box's right edge while the PAYLOAD editor stands,
 //                   so the row reads as it reads at rest with only the flag
-//                   box wider (architect 2026-09-05). Zero-sized where the
-//                   marker paints none of them, and always zero-sized under
-//                   the other two kinds, whose fields ARE one of those boxes
-//                   and which suppress nothing beside them. It is a SECOND
-//                   rect and is deliberately not folded into `box`: the caret
-//                   / text-drag claim seats a caret for any press inside `box`
-//                   and the cursor map shows the I-beam over exactly that
-//                   rect, so a folded pad would map presses on cell and
-//                   measure ink to payload bytes and promise editing where
-//                   none is. ITS ONE RULE has two sites, both the LEFT PRESS'S
-//                   (input_pointer.cpp): the outside-press close treats box
-//                   UNION pad as INSIDE, and its caller consumes the press on
-//                   the same test — so a press on the pad neither closes the
-//                   editor nor acts on the marker (no cell editor opens
-//                   through the payload editor; Enter and Esc stay its roads),
-//                   because the pad is the editor's own painted surface and a
-//                   press on it is not an "outside" press. On close the boxes
-//                   settle back into the cached pass and the pad goes with
-//                   them.
+//                   box wider (architect 2026-09-05). Published as a
+//                   FlagHitRect: the run's whole painted extent, both seam
+//                   dividers included, keyed to the edited marker and carrying
+//                   the same three boundaries the resting run publishes, so
+//                   the pointer resolves WHICH CELL out of it exactly as it
+//                   does at rest. marker_index -1 with a zero rect where the
+//                   marker paints none of them, and always so under the other
+//                   two kinds, whose fields ARE one of those boxes and which
+//                   suppress nothing beside them.
+//
+//                   THE RIDING CELLS ARE THE MARKER'S OWN CELLS FOR THE
+//                   POINTER TOO (architect 2026-09-05, completing the
+//                   one-graphic-principle ruling for the press: the three
+//                   editors are transparent to each other for the pointer as
+//                   they already are graphically). The one flag walk
+//                   (topmost_flag_rect, app_state.cpp) asks this rect FIRST,
+//                   because the editor paints last and so covers whatever the
+//                   lane pass drew under it — and the suppressed marker
+//                   publishes no resting rect of its own, so there is nothing
+//                   to arbitrate against. A press on a riding cell is
+//                   therefore an ORDINARY OUTSIDE PRESS: the payload editor
+//                   closes without committing like it does for every other
+//                   outside press, and the press then acts on the cell under
+//                   it — single-select, land, address that cell, and a
+//                   double-click's second press opening that cell's own
+//                   editor through the ordinary consume-open road. It is
+//                   still a SECOND rect and still deliberately not folded into
+//                   `box`: the caret / text-drag claim seats a caret for any
+//                   press inside `box` and the cursor map shows the I-beam
+//                   over exactly that rect, so a folded run would map presses
+//                   on cell and measure ink to payload bytes and promise
+//                   editing where none is. What the run promises instead is
+//                   the marker-lane cue, which it gets for free from the same
+//                   walk. On close the boxes settle back into the cached pass
+//                   and this publication goes with them, on the frame the
+//                   close's own damage repaints.
 //
 // `valid` is false whenever none of the three marker-lane editors is open, and
 // the painter writes that state on every frame it runs, so a stale box can
@@ -3134,7 +3161,7 @@ void render_flags(cairo_t* cr,
 struct FlagEditorBox {
     bool                valid         = false;
     GuiRect             box{0, 0, 0, 0};
-    GuiRect             riding_pad{0, 0, 0, 0};
+    FlagHitRect         riding_cells{};
     double              text_origin_x = 0.0;
     std::vector<double> byte_x;
 };

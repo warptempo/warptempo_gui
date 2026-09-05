@@ -292,9 +292,40 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 
 // The topmost published flag rect under the point, or nullptr — the ONE walk
 // both public answers below take, so "which marker" and "which box of its run"
-// cannot disagree.
+// cannot disagree. It reads TWO publications, the lane pass's stash and the
+// open payload editor's riding cells, and that too is why it is one body: a
+// riding cell must resolve to the marker and the cell a resting one resolves
+// to, and the only way to be sure of that is to answer both out of the same
+// walk with the same boundary idiom.
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
                                             int mouse_x, int mouse_y) {
+    // THE OPEN PAYLOAD EDITOR'S RIDING CELLS ARE ASKED FIRST — the marker's own
+    // bound cells and measure box, re-painted at the unrolled field's right
+    // edge by the editor's painter and published there as a flag rect of their
+    // own (FlagEditorBox::riding_cells, render.h; architect 2026-09-05, THE
+    // RIDING CELLS ARE THE MARKER'S OWN CELLS FOR THE POINTER TOO). They are
+    // asked ahead of the lane's stash because the editor paints LAST, so its
+    // run covers whatever the lane pass drew under it — the same
+    // last-painted-wins rule the backward walk below applies inside the stash.
+    // There is nothing of this marker to arbitrate against in any case: the
+    // flag pass suppresses the edited marker whole, cells and measure with the
+    // box, so its resting rect is absent for exactly as long as this one
+    // stands.
+    //
+    // IT IS THE LAST PAINTED FRAME'S TRUTH, like the stash below and for the
+    // same reason: the press that closes the editor resolves its marker hit
+    // AFTER the close, in the same event, and what it must resolve against is
+    // the run the user pressed on. The publication is rewritten (and zeroed)
+    // by the next paint, which the close's own damage schedules. It cannot
+    // outlive its column into the `h` view either — the editor is
+    // keyboard-modal and swallows bare `h`, so the mode cannot be entered with
+    // one open, and the mode's own paint zeroes this.
+    const FlagHitRect& rc = app.flag_editor_box.riding_cells;
+    if (rc.marker_index >= 0 &&
+        mouse_x >= rc.x && mouse_x < rc.x + rc.w &&
+        mouse_y >= rc.y && mouse_y < rc.y + rc.h) {
+        return &rc;
+    }
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
         const FlagHitRect& r = *it;
