@@ -50,7 +50,8 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the three coalescing kinds (both position nudges and the tempo cent step)
+// the four coalescing kinds (both position nudges, the tempo cent step and the
+// iteration bound step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing
@@ -234,6 +235,25 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     const bool stamp_matches =
         last_gesture_kind_ == kind && !app.history.undo_stack.empty();
 
+    // The addressed cell is a fourth subject term, and IterBoundStep alone
+    // reads it (converted 2026-09-04 from a codex finding). That kind's
+    // subject is not the marker set but a field of it: Lower and Upper are two
+    // different bounds, and a press on the other cell of the same selected
+    // marker changes only AppState::iter_step_cell, so none of the three terms
+    // below moves — a Lower tap followed by an Upper tap inside
+    // kTapCoalesceMs merged, and one Ctrl+Z reverted both. The other three
+    // kinds ignore it because their subject has no cell: both position nudges
+    // move the focus's frame and the tempo step moves its base, one field
+    // each, and the axis is Tempo by construction outside iteration mode
+    // anyway. That is why this is a term of the one kind that needs it rather
+    // than a fifth stamp field every kind pays for. Both arms read it: a held
+    // run cannot change the cell mid-burst (a marker press disarms both hold
+    // producers), but the repeat arm tests its subject terms anyway for the
+    // reason clause (c) gives.
+    const bool cell_matches =
+        kind != GestureKind::IterBoundStep ||
+        last_gesture_cell_ == app.iter_step_cell;
+
     bool merge = false;
     if (stamp_matches) {
         if (synthesized_repeat) {
@@ -275,7 +295,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // replaced the retired kGestureCoalesceMs.
             //
             // (c) AND THE SUBJECT IS TESTED ANYWAY, since 2026-08-29 — the tap
-            // arm's own three terms, minus the clock. Halves (a) and (b) argue
+            // arm's own subject terms, minus the clock. Halves (a) and (b)
+            // argue
             // that no COMMAND runs between a burst's opener and its repeats,
             // and layer (1) does disarm at every input edge; what neither can
             // see is the RUN LOOP'S TICK, which is not an input edge and which
@@ -288,12 +309,13 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // arrival-invalidate below was written to kill, arriving on the
             // repeat side through the one edge the premise did not cover. A
             // MISMATCH OPENS A NEW ENTRY; a legitimate burst still merges,
-            // record_gesture re-taking all three on every accepted fire, so
+            // record_gesture re-taking them all on every accepted fire, so
             // the terms compare a repeat against the fire before it. The
             // clock stays out: a hold must coalesce at any repeat rate.
             merge = last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
-                 && last_gesture_selection_ == app.selected_markers;
+                 && last_gesture_selection_ == app.selected_markers
+                 && cell_matches;
         } else {
             // ARM (2), THE TAP WINDOW — a physical press merging into the previous
             // one. Two extra conditions, because a tap has NONE of the repeat
@@ -314,8 +336,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     hints — one Ctrl+Z reverting two unrelated edits, which is the
             //     exact composition the arrival-invalidate was introduced to kill
             //     on the repeat side. The selection is the honest subject for all
-            //     three eligible kinds (the nudges act on its focus, the tempo step
-            //     on its members) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
+            //     four eligible kinds (the nudges act on its focus, the
+            //     tempo step and the bound step on its members, the bound
+            //     step carrying the addressed cell beside it — the compare
+            //     above) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
             //     THREE TAGS THE ENTRY IS FILED UNDER — the restore writes the
             //     A/B tab, the W/P column and the S/T audio view back, so a `t`
             //     between two taps must open a new entry exactly as a Ctrl+Tab
@@ -335,7 +359,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             merge = elapsed <= std::chrono::milliseconds{kTapCoalesceMs}
                  && last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
-                 && last_gesture_selection_ == app.selected_markers;
+                 && last_gesture_selection_ == app.selected_markers
+                 && cell_matches;
         }
     }
 
@@ -429,7 +454,10 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // which is how a tap Right then a tap Left inside kTapCoalesceMs left the
     // burst's surviving entry byte-equal to the live store: one Ctrl+Z that
     // changed nothing at all, and a dirty dot lit over a store equal to the
-    // file. The same hole stood on all three coalesce-eligible kinds.
+    // file. The same hole stood on all four coalesce-eligible kinds. On the
+    // iteration bound step it is what retires a tap up then a tap down on a
+    // blank bracket: the step's own [0, 0] clearing rule puts the store back
+    // byte for byte (iter_bound_step_write, app_state.h), so the entry goes.
     //
     // SO THE MERGE TAIL ASKS THE PRODUCERS' OWN QUESTION, and it asks it
     // POST-MUTATION because that is the only place the answer exists — the
@@ -442,12 +470,14 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // still merge — they now merge into nothing), and the kind, the window and
     // the subject terms are untouched.
     //
-    // ONE SEAM FOR ALL THREE KINDS: every eligible route reaches this call
-    // post-mutation on its accepted path (the two position nudges through their
-    // shared commit tail, both arms of the Up/Down cent step at their own
-    // tails), so the equality question has ONE owner here rather than three
-    // copies — the per-column readers it uses are the row enumerations at the
-    // head of this file.
+    // ONE SEAM FOR ALL FOUR KINDS: every eligible route reaches this call
+    // post-mutation on its accepted path — SIX routes over FIVE call sites: the
+    // two position nudges through their shared commit tail, and the singleton
+    // and group arms of the Up/Down cent step and of the Up/Down bound step at
+    // their own tails — so the equality question has ONE owner here rather than
+    // six copies; the per-column readers it uses are the row enumerations at
+    // the head of this file. Those row comparators read the session-only iter
+    // fields too, which is what lets the bound step's wobble pop.
     // IT CANNOT FIRE ON A NO-OP PRESS: a route reaches this call only past its
     // own refusals and past its own mutation, and a press refused AT A WALL
     // never even asks the coalesce verdict (the wall-before-stamp order,
@@ -489,12 +519,16 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     last_gesture_tab_        = app.active_tab_view;
     last_gesture_audio_view_ = app.active_audio_view;
     last_gesture_selection_  = app.selected_markers;
+    // The addressed cell rides with them, read by IterBoundStep alone (the
+    // argument is at coalesce_gesture's compare). It is stamped on every kind
+    // so the field is never stale for the one kind that does read it.
+    last_gesture_cell_       = app.iter_step_cell;
 }
 
 void Undo::note_saved() {
     // THE SAVE ENDS THE TAP WINDOW (architect 2026-09-02, the four-tier
-    // review's R-2). The tap arm's merge test reads the clock and the three
-    // subject terms, and a Ctrl+S changes none of them and no stack top — so
+    // review's R-2). The tap arm's merge test reads the clock and the subject
+    // terms, and a Ctrl+S changes none of them and no stack top — so
     // before this a save inside a burst left the stamp standing, and the next
     // press inside kTapCoalesceMs MERGED: the store mutated with no push, the
     // reference (just rebound to 0, the burst's live state) stayed at 0, and

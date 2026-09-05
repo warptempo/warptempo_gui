@@ -9877,17 +9877,18 @@ inline bool iter_bound_step_actionable(const AppState& app) {
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
 // tempo_cent_step_landing in the bracket's delta domain. The start is the
-// bound's resting value, 0 for a blank bracket (a step from blank authors the
-// bracket at [0, 0] plus the step). Two walls, both inclusive: the clamp
-// window clamp_iter_bracket_to_tempo_bracket already states,
+// bound's resting value, 0 for a blank bracket (a blank reads +0.00 in both
+// cells, so a step from blank starts there). Two walls, both inclusive: the
+// clamp window clamp_iter_bracket_to_tempo_bracket already states,
 // [kTempoMinCents − base, kTempoMaxCents − base] (inside ±kIterDeltaMaxCents
 // for free — that owner's comment), and the PARTNER bound — the lower never
 // rises above the upper, the upper never falls below the lower, the trim
 // endcap's own clamp at its partner. The partner is inside the window by the
 // retroactive clamp's invariant (and 0 is inside it for a blank bracket, the
 // window always containing the zero delta), so clamping to the window and
-// then to the partner lands inside both. The act commits exactly this number
-// and the directional face compares it against the resting value.
+// then to the partner lands inside both. The act commits this number through
+// iter_bound_step_write below and the directional face compares it against the
+// resting value.
 inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
                                        IterStepCell side,
                                        int64_t delta_cents) {
@@ -9900,6 +9901,48 @@ inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
                    kTempoMaxCents - m.tempo_cents);
     return side == IterStepCell::Upper ? std::max(windowed, partner)
                                        : std::min(windowed, partner);
+}
+
+// Commit a bound step's landing — the step's one write site, singleton arm and
+// group arm alike, because the rule it carries is about the PAIR and the
+// landing owner above can only answer for one bound. It writes both: the
+// addressed side takes the landing, the partner keeps what it had (0 when the
+// bracket was blank, which is what makes a step from blank author it).
+//
+// A pair of two zeroes clears instead of resting, because [0, 0] is the blank
+// bracket on every authoring road (planner-ruled 2026-09-04, converting a
+// codex finding). The flag editor's grammar has always read an explicit
+// `+[+0.00,+0.00]` as blank rather than as a zero-width sweep
+// (extract_iter_bracket, flag_editor.cpp), so a step that could rest on [0, 0]
+// would have made one seed mean two things depending on which surface authored
+// it. The step from blank still starts at [0, 0] — a blank reads +0.00 in both
+// cells — it simply cannot come to rest there, exactly as the editor cannot.
+//
+// Two consequences, both wanted. A tap up then a tap down on a blank bracket
+// leaves the store byte-equal to what it was, so the merge tail's byte-equal
+// pop retires the coalesced entry and the wobble leaves no invisible restore
+// (Undo::record_gesture). And a marker whose two cells read +0.00 is never in
+// the sweep: one look, one meaning.
+//
+// The walls do not move for it. The clearing is what the write does with a
+// landing, never a term of where a step may land, so the directional face and
+// the group scan still read iter_bound_step_landing alone. Nor can this clear
+// a bracket the caller did not mean to move: a landing on [0, 0] is admitted
+// only when it differs from the resting bound, which for an already-blank
+// bracket it cannot (start is 0 and the partner walls the landing there).
+inline void iter_bound_step_write(GuiWarpMarker& m, IterStepCell side,
+                                  int64_t landing) {
+    const int64_t lo = m.iter_start_cents.value_or(0);
+    const int64_t hi = m.iter_end_cents.value_or(0);
+    const int64_t new_lo = side == IterStepCell::Lower ? landing : lo;
+    const int64_t new_hi = side == IterStepCell::Upper ? landing : hi;
+    if (new_lo == 0 && new_hi == 0) {
+        m.iter_start_cents.reset();
+        m.iter_end_cents.reset();
+        return;
+    }
+    m.iter_start_cents = new_lo;
+    m.iter_end_cents   = new_hi;
 }
 
 // THE GROUP BOUND STEP'S WALL SCAN, the tempo scan's shape over the sweep's

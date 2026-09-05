@@ -19,10 +19,13 @@ struct GuiInputHandler;
 // pure repeat-identity model's "separate presses are separate entries" clause on
 // the live complaint that rapid manual taps each pushed their own entry). A burst
 // of eligible keyboard
-// gestures — THREE of them, re-derived 2026-07-29 when the W+target tempo-IMAGE
-// step was deleted with the whole tempo-image family (marker_drag.h): the warp and
+// gestures — FOUR of them, re-grepped 2026-09-04 (it was three from 2026-07-29,
+// when the W+target tempo-IMAGE step was deleted with the whole tempo-image
+// family, marker_drag.h): the warp and
 // phase-reset position nudges (Left/Right in the
-// marker lane) and the tempo cent step (Up/Down; no wheel route) — each in the
+// marker lane), the tempo cent step (Up/Down; no wheel route) and the same
+// arrows' ITERATION BOUND STEP (Up/Down on an addressed bound cell) — each in
+// the
 // step ladder's three magnitudes since 2026-08-31, which the coalescing is
 // blind to exactly as it is blind to direction (the record is at
 // coalesce_gesture) — collapses
@@ -233,15 +236,18 @@ struct Undo {
     //     commit-on-NET-CHANGE principle every PUSH site already gates on
     //     (stated at marker_drag.cpp's commit), extended to the one path that
     //     skips the push; direction-blind merging is untouched. THE MERGE TAIL
-    //     IS THE ONE SEAM all three eligible kinds share, which is why the
-    //     question is asked here and not at the three call sites.
+    //     IS THE ONE SEAM all four eligible kinds share, which is why the
+    //     question is asked here and not at the five call sites.
     //   * OTHERWISE THE STAMP, written as one unit: the KIND, the
     //     ACCEPTED-EVENT TIMESTAMP the tap window measures from, and the
-    //     SUBJECT — THREE tags since 2026-08-29: the selection, the A/B tab and
-    //     the S/T AUDIO VIEW, which both the tap arm and the held-key arm
+    //     SUBJECT — the selection, the A/B tab and
+    //     the S/T AUDIO VIEW since 2026-08-29, which both the tap arm and the
+    //     held-key arm
     //     re-test (the audio view joined when the A/B audition's tick-driven
     //     switch was found able to land between a burst's opener and its
-    //     repeats).
+    //     repeats), plus the ADDRESSED CELL since 2026-09-04, which the
+    //     iteration bound step alone reads (Lower and Upper are two different
+    //     fields of one selection; the argument is at coalesce_gesture).
     // Call after the push / skip and after the mutation — and ONLY on the
     // accepted path, which is what makes a refusing press leave the stamp
     // invalid and is what keeps the pop off every no-op press.
@@ -303,24 +309,37 @@ struct Undo {
     // constructed epoch value is never consulted — the kind stamp gates every
     // read and starts None.
     std::chrono::steady_clock::time_point last_gesture_time_{};
-    // THE SUBJECT the stamped burst acted on, read ONLY by the tap arm — standing
-    // in for the structural adjacency the platform's repeat contract gives arm (1)
-    // for free and arm (2) not at all. Both eligible gesture families derive their
-    // target from the selection (the nudges from its focus, the tempo step from
-    // its members) and AN UNDO ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
+    // THE SUBJECT the stamped burst acted on. It was the tap arm's alone until
+    // 2026-08-29, standing in for the structural adjacency the platform's
+    // repeat contract gives arm (1) for free and arm (2) not at all; the
+    // repeat arm now tests it too (clause (c) at coalesce_gesture — the run
+    // loop's tick is not an input edge, so the A/B audition can switch tabs
+    // between a burst's opener and its repeats). All four eligible gesture
+    // families derive their target from the selection (the nudges from its
+    // focus, the tempo step and the bound step from its members) and AN UNDO
+    // ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
     // tab, the W/P column and the S/T audio view, all three of which the restore
     // writes back — so a tap that follows a marker click, a Tab, a range
     // extension, a Ctrl+Tab or a `t` finds a CHANGED subject and opens its own
     // entry instead of merging into an entry filed elsewhere. THE COLUMN NEEDS
     // NO TERM OF ITS OWN: switch_active_markers_view_to CLEARS the selection
-    // (the scope rule), and both eligible families refuse without one, so a
+    // (the scope rule), and every eligible family refuses without one, so a
     // column switch between two taps is already a subject change the selection
-    // term sees. Captured POST-act (record_gesture), so the position
-    // nudges' focus collapse and their reorder remap are already reflected and a
-    // steady run of taps compares like against like.
+    // term sees. The bound step needs one more term than the selection can
+    // carry, the addressed cell below. Captured POST-act (record_gesture), so
+    // the position nudges' focus collapse and their reorder remap are already
+    // reflected and a steady run of taps compares like against like.
     std::set<int> last_gesture_selection_;
     char          last_gesture_tab_ = 0;
     char          last_gesture_audio_view_ = 0;
+    // The addressed cell, the fourth subject term and the only kind-specific
+    // one: IterBoundStep alone reads it, because that kind's subject is a
+    // field of the selected markers (Lower or Upper) rather than the markers
+    // themselves, so a press on the other cell moves nothing the three terms
+    // above can see. The other three kinds each move one field by
+    // construction and ignore it. Stamped with the rest on every accepted
+    // fire; the compare and its derivation are at coalesce_gesture.
+    IterStepCell  last_gesture_cell_ = IterStepCell::Tempo;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab

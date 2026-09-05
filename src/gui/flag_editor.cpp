@@ -60,9 +60,11 @@ bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
 // parsed bounds in integer cents (lo <= hi, each within
 // [-kIterDeltaMaxCents, kIterDeltaMaxCents]) to `lo_out`/`hi_out`. The
 // all-zero blank (`+[+0.00, +0.00]`) and an absent bracket both yield
-// nullopt (clear). The FlagPayload tempo/scale/label vocabulary never
-// produces a `+`, so `+[` is an unambiguous marker. Returns false on a
-// malformed bracket (the caller red-flashes and cards); true otherwise.
+// nullopt (clear) — the rule the arrows' bound step takes from this surface
+// (iter_bound_step_write, app_state.h). The FlagPayload tempo/scale/label
+// vocabulary never produces a `+`, so `+[` is an unambiguous marker. Returns
+// false on a malformed bracket (the caller red-flashes and cards); true
+// otherwise.
 bool extract_iter_bracket(std::string& payload,
                           std::optional<int64_t>& lo_out,
                           std::optional<int64_t>& hi_out) {
@@ -87,7 +89,10 @@ bool extract_iter_bracket(std::string& payload,
         return false;
     }
     payload.erase(open, close - open + 1);
-    // All-zero blank is the cleared state, not a zero-width sweep.
+    // All-zero blank is the cleared state, not a zero-width sweep, and since
+    // 2026-09-04 that is the rule on both authoring roads: the bound step's
+    // write site clears a pair that lands on two zeroes, so this seed and that
+    // step cannot mean two different things by the same [0, 0].
     if (lo != 0 || hi != 0) {
         lo_out = lo;
         hi_out = hi;

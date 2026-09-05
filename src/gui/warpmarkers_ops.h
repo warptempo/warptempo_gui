@@ -94,7 +94,10 @@ struct GuiWarpMarkersOps {
     // shape one for one (app_state.h, the bound step's block) and its undo
     // entry is the bracket-only kind (affects_persistence false, the flag
     // editor's own bracket commit's), coalescing as the tempo step does under
-    // GestureKind::IterBoundStep. It changes no map: no render trigger, no
+    // GestureKind::IterBoundStep with the addressed cell as one more subject
+    // term (undo.h, the stamp). Its write goes through iter_bound_step_write
+    // (app_state.h), which is where a pair landing on two zeroes clears back
+    // to the blank bracket. It changes no map: no render trigger, no
     // re-land, no target-view refusal — a bracket is target-legal. Never
     // stops playback, for the tempo step's own reason.
     GuiOpRefusal adjust_iter_bound_cents(IterStepCell side, int64_t delta_cents,

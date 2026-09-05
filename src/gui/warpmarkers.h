@@ -34,7 +34,12 @@ struct GuiWarpMarker : WarpMarker {
     // base + delta is plain integer addition. nullopt means "blank" (both
     // cells read `+0.00` and the editor seeds `+[+0.00,+0.00]` — the one
     // blank rule at format_iter_bound_cell below); when set, both are set and
-    // iter_start_cents <= iter_end_cents.
+    // iter_start_cents <= iter_end_cents. A pair of two zeroes is the blank,
+    // not a zero-width sweep: both authoring roads clear it — the editor's
+    // grammar (extract_iter_bracket, flag_editor.cpp) and the arrows' bound
+    // step (iter_bound_step_write, app_state.h) — so two cells reading +0.00
+    // always mean the same thing. The retroactive clamp below is the one
+    // writer that does not ask, and its own comment says why.
     std::optional<int64_t> iter_start_cents;
     std::optional<int64_t> iter_end_cents;
 
@@ -349,7 +354,14 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // bound. A bracket that lands FULLY outside degenerates to a zero-width delta
 // at the window edge: a valid one-cell sweep and the accepted result, never
 // cleared to nullopt (a clear would silently drop the marker from the sweep's
-// delta CSV and change the product's shape). Clamping both bounds into the
+// delta CSV and change the product's shape). That edge is [0, 0] only when the
+// base rests exactly on a tempo wall (kTempoMinCents or kTempoMaxCents, where
+// one limit is zero) and the whole bracket lies outside it, and this owner
+// still does not clear there: the ruling above is the base's passenger rule,
+// and it outranks the blank rule the two authoring roads keep (the field's own
+// comment). The accepted residue is that one degenerate bracket reading +0.00
+// in both cells — a cell the user authored elsewhere and the base then walked
+// onto, not a bracket this file invented. Clamping both bounds into the
 // SAME interval is monotone, so lo <= hi survives. The result also stays
 // inside the session delta bracket [-kIterDeltaMaxCents, +kIterDeltaMaxCents]
 // for free: an in-bracket base bounds either limit by

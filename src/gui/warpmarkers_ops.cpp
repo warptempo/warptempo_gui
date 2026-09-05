@@ -1196,8 +1196,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // bracket to step, and a disabled owner's bracket is dormant — so the group
 // arm SKIPS those members as the tempo arm skips a disabled one, and the
 // singleton REFUSES them on a card. A blank bracket starts at [0, 0] and the
-// first step authors it, both bounds written, and nothing normalizes back to
-// blank — the editor's `+[+0.00,+0.00]` stores the same thing. AND NOTHING
+// first step authors it, both bounds written through the one write site
+// (iter_bound_step_write, app_state.h) — which is also where the step meets
+// the editor's own rule that a pair of two zeroes is the cleared bracket, so a
+// step can author a bracket but never come to rest on the blank one. AND
+// NOTHING
 // RENDERS: a bracket is not a map input (excluded from build_warp_frame_map
 // and from the render recipe alike, the flag editor's bracket-only commit
 // being the precedent), so there is no trigger, no target-view re-warp, no
@@ -1303,18 +1306,20 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[static_cast<size_t>(f)];
     const int64_t landing = iter_bound_step_landing(m, side, delta_cents);
-    // BOTH BOUNDS ARE WRITTEN: a blank bracket becomes [0, 0] with the step
-    // applied to its addressed side, and a set one keeps its partner as it
-    // was. The landing owner already holds lo <= hi and the clamp window, so
-    // the retroactive clamp has nothing to do here and is not called.
-    const int64_t lo = m.iter_start_cents.value_or(0);
-    const int64_t hi = m.iter_end_cents.value_or(0);
-    m.iter_start_cents = side == IterStepCell::Lower ? landing : lo;
-    m.iter_end_cents   = side == IterStepCell::Upper ? landing : hi;
+    // Both bounds go through the one write site (iter_bound_step_write): a
+    // blank bracket becomes [0, 0] with the step applied to its addressed
+    // side, a set one keeps its partner as it was, and a pair that lands on
+    // two zeroes clears — the editor's blank rule, which the group arm below
+    // takes from the same owner. The landing owner already holds lo <= hi and
+    // the clamp window, so the retroactive clamp has nothing to do here and is
+    // not called.
+    iter_bound_step_write(m, side, landing);
     // Unreachable past the wall test above: the directional face admitted
-    // this press only because the landing differs from the resting bound
-    // (0 for a blank bracket, which the write above sets on both sides), so
-    // at least one field moved. Kept as the belt it is.
+    // this press only because the landing differs from the resting bound, and
+    // the write moves the store either way — it sets the addressed side to a
+    // value the bracket did not hold, or it clears a bracket that was set (an
+    // already-blank one cannot land on [0, 0]: its start is 0 and the partner
+    // walls the landing there). Kept as the belt it is.
     if (m.iter_start_cents == mv_const[static_cast<size_t>(f)].iter_start_cents &&
         m.iter_end_cents   == mv_const[static_cast<size_t>(f)].iter_end_cents)
         return std::nullopt;
@@ -1363,8 +1368,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
     std::vector<GuiWarpMarker> pre_state = mv;
     // Every SURVIVOR steps its addressed bound by the full delta — none is
     // walled (checked above through the landing owner, so the add lands
-    // exactly where the landing says) — with both bounds written, a blank
-    // bracket authored at [0, 0] plus the step. An ineligible member is
+    // exactly where the landing says) — through the same write site the
+    // singleton uses, so a blank bracket is authored at [0, 0] plus the step
+    // and the blank rule reaches every member alike. An ineligible member is
     // skipped on the same predicate the scan skipped it on; the store is
     // unchanged between the two walks, so the survivor set is one.
     std::vector<int> touched;
@@ -1374,10 +1380,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
         const int64_t landing = iter_bound_step_landing(*m, side, delta_cents);
-        const int64_t lo = m->iter_start_cents.value_or(0);
-        const int64_t hi = m->iter_end_cents.value_or(0);
-        m->iter_start_cents = side == IterStepCell::Lower ? landing : lo;
-        m->iter_end_cents   = side == IterStepCell::Upper ? landing : hi;
+        iter_bound_step_write(*m, side, landing);
         touched.push_back(idx);
     }
     // Defensive (a fully-stale selection): the all-ineligible selection never
