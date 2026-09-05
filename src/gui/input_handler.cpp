@@ -1486,8 +1486,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor blocks above consume Enter first (commit), so this is reached only
     // with no editor active. Repair the focus first, then fork on
     // AppState::addressed_cell: the payload by default — every focus reached
-    // by a walk, a jump, a restore or a clear is addressed there, so the
-    // standing behaviour holds for every non-click focus — opens the
+    // by a walk, a jump, a clear or a restore is addressed there, the one
+    // exception being the restore of a BRACKET-ONLY entry, which brings back
+    // the bound cell it changed (UndoEntry::addressed_cell), so the standing
+    // behaviour holds for every other non-click focus — opens the
     // canonical-line editor, a bound cell its bound editor, the measure box
     // the measure editor, each with its seeded content fully selected
     // (open-selected, like every open route — the first keystroke replaces

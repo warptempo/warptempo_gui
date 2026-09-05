@@ -1422,21 +1422,34 @@ struct GuiInputHandler {
     // mouse's drag there stays the selection sweep; the THIRD ruled touch
     // divergence, taking the region hold's shape — touch.md's caret-drag
     // section is the record). These three are the GUI's answer to the
-    // platform's caret trio, and they are STATELESS over the active editor:
-    // no record is armed, nothing joins any_pointer_gesture_active, and
-    // each body guards on the editor's own existence (active_editor_text
-    // valid), so an editor closed under the stream — Enter from a physical
-    // keyboard, say — makes the rest of the stream a no-op rather than a
-    // fallback.
+    // platform's caret trio. They arm no drag record and nothing joins
+    // any_pointer_gesture_active; what they DO keep is ONE NUMBER, the
+    // EDITING SESSION THE STREAM BEGAN ON (AppState::touch_caret_session,
+    // stamped from text_editor::State::session at the begin), and the update
+    // and the end are NO-OPS unless the editor active right now is that same
+    // session. The stream must be able to survive nothing else: the caret
+    // phase is deliberately outside any_pointer_gesture_active, so a
+    // physical keyboard can commit the editor under a finger still down and
+    // open ANOTHER one (Enter, then `;`), and a body that asked only "is
+    // some editor open" would seat the new editor's caret and restart its
+    // blink from a finger that never touched it. Closing the editor under
+    // the stream therefore makes the rest of it a no-op WHATEVER opens
+    // behind it — the session id names one raise of one surface for the life
+    // of the process (text_editor::next_session_id), so a reopen of the SAME
+    // editor on the same marker is a different stream too. The end clears
+    // the record on every road, its own and the hard ends' alike.
     //
-    // begin_touch_caret_drag(x, y): the down point — clear the double-click
+    // begin_touch_caret_drag(x, y): the down point — record the session,
+    //                               clear the double-click
     // seed (a caret drag is motion, and motion between two taps breaks a
     // candidate; the stream's own end never seeds), drop any selection, seat
     // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
     // which restarts the blink) and damage the editor's surface.
     // update_touch_caret_drag(x, y): the same seat per delivered frame,
-    // nothing selecting — the I-beam follows the finger.
-    // end_touch_caret_drag(): THE DRAIN RULE — the caret stays where it was
+    // nothing selecting — the I-beam follows the finger; a foreign session
+    // (or none) is a no-op.
+    // end_touch_caret_drag(): the record is cleared FIRST, so a foreign
+    // session leaves nothing behind; then THE DRAIN RULE — the caret stays where it was
     // last seated, nothing selects, nothing commits, nothing seeds, the
     // editor stays open and Enter remains its one commit route; the body
     // restarts the blink so the resting caret is lit the instant the finger

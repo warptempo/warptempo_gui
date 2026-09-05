@@ -570,9 +570,11 @@ inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
 // and every other cell of its run — the flag box, the two iteration bound
 // cells, the measure box, each a cell — in its calm pair; the addressed cell
 // is the payload for every selected marker but the focus, whose addressed
-// cell is AppState::addressed_cell (the cell a press landed on, or the cell
-// an editor opened; a focus reached any other way is addressed at its
-// payload). The measure box swaps its own blue pair by the same rule
+// cell is AppState::addressed_cell (the cell a press landed on, the cell an
+// editor opened, or the cell a BRACKET-ONLY undo entry's restore brought
+// back — an undone or redone iteration bound step is bright on the bound it
+// moved, UndoEntry::addressed_cell; a focus reached any other way is
+// addressed at its payload). The measure box swaps its own blue pair by the same rule
 // (kMarkerMeasureFillSel below). The geometry, the stem and the hit rect are
 // identical either way. This RETIRES the "selection is not a class" ruling
 // for the marker flags — that rule existed because a selected OUTLINE would
@@ -2989,8 +2991,9 @@ struct MarkerStem {
 // a selected marker paints its ADDRESSED cell in the selected pair and its
 // other cells in its ordinary class pair, and the addressed cell is the
 // payload for every selected marker but the focus, whose addressed cell is
-// `focus_cell` (AppState::addressed_cell — a press's cell or an editor's;
-// every other focus route resets it to the payload). Where the focus does
+// `focus_cell` (AppState::addressed_cell — a press's cell, an editor's, or
+// the one a bracket-only undo entry's restore brings back; every other focus
+// route resets it to the payload). Where the focus does
 // not paint the cell the axis names, its payload is bright instead, so a
 // selected marker always shows its selection. The rule is stated once at
 // the selected pair's palette block (kMarkerFlagFillSel) and applies on both

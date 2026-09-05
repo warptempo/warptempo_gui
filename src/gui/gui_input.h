@@ -1012,10 +1012,14 @@ struct GuiTouchNavFrame {
 // mouse drag there is the ordinary press road's selection sweep.
 //   * Outside     — not in the active editor's field (or no editor is open):
 //                   the ordinary window, whatever surface it is.
-//   * Field       — in the field: a tap is still the pointer burst at the
-//                   lift, but the window's slop crossing and its expiry both
-//                   resolve to the CARET DRAG, so the pointer's press is
-//                   reached there by a tap and by the double press alone.
+//   * Field       — in the field: the window's slop crossing resolves to the
+//                   CARET DRAG, and the window is given NO DEADLINE at all
+//                   (the field spends no hold, so a motionless finger stays
+//                   Pending however long it rests and its lift is the
+//                   ordinary tap burst — press and release, seeding the
+//                   double-tap candidate as a quick tap does). The pointer's
+//                   press is reached there by a tap and by the double press
+//                   alone.
 //   * DoublePress — in the field AND a double-click candidate on this
 //                   editor's text stands within the double-click window and
 //                   slack of this point: the down can only be the SECOND

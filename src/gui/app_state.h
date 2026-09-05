@@ -5563,6 +5563,22 @@ struct AppState {
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
 
+    // THE TOUCH CARET DRAG'S ONE RECORD (2026-09-05): the EDITING SESSION
+    // the live caret stream began on (text_editor::State::session, the
+    // process-wide id every `enter` takes), or 0 for no stream. It is an
+    // IDENTITY and not a gesture flag — nothing gates on its truthiness but
+    // the two bodies that compare it — and it exists because the caret phase
+    // is deliberately outside any_pointer_gesture_active: a physical
+    // keyboard can commit the editor the finger is dragging in and open a
+    // different one while that finger is still down, and without an identity
+    // the stream's remaining frames would seat THAT editor's caret. The
+    // begin stamps it, the update and the end refuse a session that is not
+    // it, and the end clears it on every road — the lift and the hard ends
+    // alike, since the platform fires caret_end unconditionally once the
+    // drag began. Session-only, and nothing else reads or writes it (the
+    // trio's contract is at begin_touch_caret_drag, input_handler.h).
+    uint64_t touch_caret_session = 0;
+
 
     // THE REDESIGNED ROWS' BUTTONS — hit geometry PUBLISHED BY THE PAINTER, the
     // displayed-basis doctrine applied to proportional surfaces. Each button's

@@ -3276,10 +3276,12 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // phone-model pan — no press ever delivered, the nav frames punching
     // through the keyboard-modal editor exactly as the wheel does. Answering
     // false takes the box off the zone, and the platform's editor-field
-    // query (touch_point_in_editor_field) then routes a drag or a hold there
-    // to the CARET DRAG — the finger moves the caret and no press is
-    // delivered — while a tap and the double press reach the field's own
-    // press (the third ruled divergence, touch.md's caret-drag section). ONE
+    // query (touch_point_in_editor_field) then routes a DRAG there to the
+    // CARET DRAG — the finger moves the caret and no press is delivered —
+    // while a tap and the double press reach the field's own press, a rest
+    // deciding nothing there (the field's window carries no expiry, so a
+    // slow tap is still a tap: the third ruled divergence, touch.md's
+    // caret-drag section). ONE
     // SPELLING OF "IN THE FIELD": the painter's
     // published box, the same rect the press claim and the cursor map's
     // I-beam read, so the three cannot disagree. The MEASURE PAD beside it
@@ -3439,10 +3441,11 @@ void GuiInputHandler::end_touch_region() {
     commit_region_sweep();
 }
 
-// --- The touch caret drag (a finger's drag or hold in the editor's field) ---
+// --- The touch caret drag (a finger's drag in the editor's field) ---
 //
 // The third ruled divergence (architect 2026-09-05) — the contract, the
-// drain rule and why the bodies keep no record are at the declarations
+// drain rule and the one record the bodies keep (the editing session the
+// stream began on) are at the declarations
 // (input_handler.h); touch.md's caret-drag section is the ruling's home.
 // Every seat is THE ONE POINTER SEAT (set_editor_caret_from_x), which is
 // what keeps the finger's caret and the mouse's on one byte rule and one
@@ -3464,8 +3467,17 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
 
 void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     (void)y;
+    // THE STREAM'S ONE RECORD: the editing session it begins on, so the
+    // frames behind it can tell the editor under the finger from any other
+    // editor a physical keyboard opens meanwhile (the contract at the
+    // declaration; AppState::touch_caret_session). Written here and nowhere
+    // else, and written UNCONDITIONALLY — a begin that finds no editor
+    // leaves a dead stream (0, which no live session can equal since the ids
+    // start at 1) rather than whatever the last one held.
+    app.touch_caret_session = 0;
     const ActiveEditorText g = active_editor_text(app, audio);
     if (!g.valid) return;
+    app.touch_caret_session = g.ed->session;
     // A caret drag is motion between two taps, so the seed the last tap
     // left cannot become a double-click across it (the C8 rule the nav
     // frames apply); the stream's own end seeds nothing.
@@ -3479,7 +3491,11 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
 void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     (void)y;
     const ActiveEditorText g = active_editor_text(app, audio);
-    if (!g.valid) return;
+    // THE SESSION IS THE GATE, not "is an editor open": the editor this
+    // stream began on may have been committed and a different one opened
+    // from the physical keyboard while the finger stayed down, and this
+    // finger has no business in that one's text.
+    if (!g.valid || g.ed->session != app.touch_caret_session) return;
     // The I-beam follows the finger and nothing selects — the anchor is
     // dropped at every seat, so a selection a physical keyboard made
     // mid-stream cannot be dragged either.
@@ -3490,8 +3506,15 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
 }
 
 void GuiInputHandler::end_touch_caret_drag() {
+    // The record dies here whatever the end is worth — the platform fires
+    // this hook unconditionally once the drag began, on the lift and on both
+    // hard ends, so this is the one road every stream leaves by.
+    const uint64_t began_on  = app.touch_caret_session;
+    app.touch_caret_session  = 0;
     const ActiveEditorText g = active_editor_text(app, audio);
-    if (!g.valid) return;
+    // A foreign editor gets nothing, not even the blink restart: the update
+    // arm's reason, at the gesture's own end.
+    if (!g.valid || g.ed->session != began_on) return;
     // THE DRAIN RULE: the caret stays where the last delivered frame seated
     // it, nothing selects, nothing commits (Enter remains the one commit
     // route), nothing seeds, and the editor stays open. What the end owes
@@ -4122,9 +4145,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // one Enter opens — on ALL THREE click shapes, because the press already
     // selects and lands on every shape and the axis is one more thing the
     // press says. Written AFTER the fork, because every mutator above resets
-    // the axis to the payload as it seats the focus (Selection::seat_focus —
-    // a focus reached any other way is addressed at its payload), and a
-    // press is the exception that names a cell. Read-only does not refuse
+    // the axis to the payload as it seats the focus (Selection::seat_focus),
+    // and a press is one of the FOUR routes that name a cell — the measure
+    // editor's open, the bound editor's open and the restore of a
+    // BRACKET-ONLY undo entry are the others, each writing behind its own
+    // selection write; a focus reached by none of them is addressed at its
+    // payload. Read-only does not refuse
     // it: the axis is navigation, as the selection is, and the act it
     // addresses meets the lock at its own gate. The bright cell moves with
     // it, so a changed axis damages the marker lane even where the selection

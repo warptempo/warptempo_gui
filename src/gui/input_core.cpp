@@ -60,8 +60,24 @@ namespace {
 // value the GUI pushes down scaled (set_touch_slop_px, input_core.h — the
 // contract, the three uses and the twin-gate invariant are all stated there,
 // since the value's owner is now the door rather than this block).
+//
+// AND THERE IS A THIRD ANSWER: NO DEADLINE AT ALL. Inside an OPEN EDITOR'S
+// FIELD the window never expires (architect's tablet vocabulary for the
+// field, 2026-09-05: a TAP seats the caret and seeds the double tap, a DRAG
+// moves it, a DOUBLE TAP selects the word — there is no hold meaning there,
+// no handles and no toolbar, so no duration can decide anything). A finger
+// resting in the field therefore stays Pending however long it rests and its
+// LIFT delivers the ordinary tap burst, seeding the double-tap candidate
+// exactly as a quick tap does; only the SLOP CROSSING resolves it, to the
+// caret drag. That is what keeps a resting finger out of the desk's
+// selection sweep — the field's contact can no longer expire onto the
+// pointer road at all — while a slow tap still opens a double tap.
 constexpr int    kTouchDisambiguateMs = 60;
 constexpr int    kTouchRegionHoldMs   = kHoldBeatMs;
+// The deadline a window that must never expire carries: no monotonic reading
+// can reach it, so maybe_resolve_touch_window's one time compare is the whole
+// mechanism and no second predicate exists to drift from it.
+constexpr uint64_t kTouchWindowNoExpiry = UINT64_MAX;
 
 } // namespace
 
@@ -1038,16 +1054,17 @@ void GuiInputCore::maybe_resolve_touch_window() {
     // down point, so hold-then-drag sweeps a region; OFF it the hold unlocks
     // the POINTER (hold-then-drag is the old pointer drag — what keeps the
     // endcap/bridge grabs, the flag drags and every off-zone press-and-hold
-    // gesture alive on glass) — EXCEPT IN AN OPEN EDITOR'S FIELD (2026-09-05),
-    // where the expiry is the CARET DRAG: a finger that rests on the field
-    // and then drags moves the caret exactly as one that drags at once does,
-    // so a slow-starting drag can never turn into the desk's selection sweep
-    // by resting sixty milliseconds first (the field's whole vocabulary is at
-    // the editor_field query's contract, input_core.h).
+    // gesture alive on glass).
+    //
+    // THE EDITOR FIELD REACHES NEITHER ARM, because its window has no
+    // deadline to expire (kTouchWindowNoExpiry at the down site): a finger
+    // resting in the field is still Pending, and its lift is a TAP. There is
+    // no third arm here for that reason and none is owed — the field's two
+    // resolutions are the slop crossing (the caret drag, at the motion site)
+    // and the lift (the tap, at touch_up), so nothing about it is decided by
+    // a duration.
     if (touch_down_in_pan_zone_)
         resolve_touch_window_to_region();
-    else if (touch_down_in_editor_field_ != GuiTouchEditorField::Outside)
-        resolve_touch_window_to_caret();
     else
         resolve_touch_window_to_pointer();
 }
@@ -1056,12 +1073,15 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // Pending -> Pointer, delivering what the window withheld: the synthesized
     // entry motion at the ORIGINAL down point (the pointer enter's own shape —
     // the first "the pointer is here" notification), the left press there, and
-    // any queued motion. Shared by all three pointer resolutions (the slop
-    // crossing and the expiry both reach here only OUTSIDE the pan zone —
-    // the crossing's pan-surface arm resolves to single-finger nav, the
-    // phone model's fork at the Pending motion site, and the on-zone expiry
-    // to the region hold, the eighth ruling's fork at
-    // maybe_resolve_touch_window); the tap's
+    // any queued motion. Shared by all four pointer resolutions (the slop
+    // crossing and the expiry both reach here only OUTSIDE the pan zone and
+    // OUTSIDE the editor's field — the crossing's pan-surface arm resolves
+    // to single-finger nav and its field arm to the caret drag, the forks at
+    // the Pending motion site, while the on-zone expiry goes to the region
+    // hold and the field has no expiry at all, the forks at
+    // maybe_resolve_touch_window; the TAP reaches here from every surface,
+    // the field included, and so does the field's DOUBLE PRESS at its very
+    // down); the tap's
     // caller delivers the release and the focus-forked translation end itself
     // (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;
@@ -1171,17 +1191,19 @@ void GuiInputCore::resolve_touch_window_to_region() {
 
 void GuiInputCore::resolve_touch_window_to_caret() {
     // Pending -> Caret (2026-09-05; contract at the declaration and at the
-    // editor_field query): the finger crossed the slop, or rested to the
-    // window's expiry, with its down point in an open editor's field, so it
-    // now DRIVES THE EDITOR'S CARET through the caret trio and NOTHING
-    // pointer-shaped starts — no entry motion, no press, the touch hold
-    // never raised (the region model, not the Pointer one). The begin fires
-    // at the DOWN point — the GUI seats the caret where the finger landed —
-    // and whatever travel the window saw is the drag's own first leg,
+    // editor_field query): the finger CROSSED THE SLOP with its down point
+    // in an open editor's field, so it now DRIVES THE EDITOR'S CARET through
+    // the caret trio and NOTHING pointer-shaped starts — no entry motion, no
+    // press, the touch hold never raised (the region model, not the Pointer
+    // one). THE CROSSING IS THE ONLY ROAD HERE: the field's window carries
+    // no deadline, so a motionless finger never arrives at this resolution
+    // however long it rests — it stays Pending and its lift is a tap (the
+    // constants block's no-expiry ruling). The begin fires at the DOWN
+    // point — the GUI seats the caret where the finger landed — and the
+    // window's travel is the drag's own first leg, the crossing position
     // staged for the frame boundary exactly as the region resolver stages
-    // its drift: the crossing position for a quick drag, so the caret is
-    // seated at the landing and then under the finger in one burst, or
-    // sub-slop drift for a hold.
+    // its drift, so the caret is seated at the landing and then under the
+    // finger in one burst.
     touch_phase_ = TouchPhase::Caret;
     if (touch_caret_begin_hook_)
         touch_caret_begin_hook_(
@@ -1394,33 +1416,43 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
                                       containing_pixel(y));
             // THE EDITOR-FIELD ANSWER rides beside them (2026-09-05), the
             // same shape once more: asked once here, captured, cleared with
-            // them. It forks BOTH of the window's one-finger resolutions
-            // toward the caret drag (the crossing at the motion site, the
-            // expiry at maybe_resolve_touch_window) — the field is off the
-            // pan zone by the GUI's carve-out, so the two bits cannot both
-            // be true — and its DoublePress answer resolves the window
-            // BELOW, on this very down.
+            // them. It forks the window's SLOP CROSSING toward the caret
+            // drag (at the motion site) — the field is off the pan zone by
+            // the GUI's carve-out, so the two bits cannot both be true — it
+            // takes the window's DEADLINE AWAY ALTOGETHER just below, and
+            // its DoublePress answer resolves the window at the bottom of
+            // this arm, on this very down.
             touch_down_in_editor_field_ =
                 touch_editor_field_hook_
                     ? touch_editor_field_hook_(containing_pixel(x),
                                                containing_pixel(y))
                     : GuiTouchEditorField::Outside;
             // THE TWO-DEADLINE FORK (the eighth glass ruling, 2026-08-12 —
-            // the dead trim-band beat's pattern reborn): ON the zone the
+            // the dead trim-band beat's pattern reborn), AND SINCE
+            // 2026-09-05 A THIRD ANSWER, NO DEADLINE: ON the zone the
             // window runs to the REGION-HOLD beat (kTouchRegionHoldMs, the
-            // product's one hold beat); OFF it the 60 ms disambiguation
-            // window as before. The arithmetic at this site:
+            // product's one hold beat); IN AN OPEN EDITOR'S FIELD it runs to
+            // NOTHING (kTouchWindowNoExpiry — the field has no hold meaning,
+            // so a motionless finger stays Pending and its lift is the tap
+            // that seeds the double tap; the constants block carries the
+            // ruling); OFF both the 60 ms disambiguation window as before.
+            // The arithmetic at this site:
             // on the zone a tap still lifts long before that beat and delivers
             // whole at the lift, a drag still crosses the 8 px slop into the
             // pan within the first frames, so the stretch costs neither —
             // only the deliberate motionless hold ever reaches the beat.
             // Monotonic, not the event
             // timestamp (whose base this program never compares against).
+            // The DoublePress answer takes the off-zone deadline and never
+            // uses it: the resolution below leaves Pending on this very call.
             touch_window_deadline_us_ =
-                gui_monotonic_us() +
-                static_cast<uint64_t>(touch_down_in_pan_zone_
-                                          ? kTouchRegionHoldMs
-                                          : kTouchDisambiguateMs) * 1000ull;
+                touch_down_in_editor_field_ == GuiTouchEditorField::Field
+                    ? kTouchWindowNoExpiry
+                    : gui_monotonic_us() +
+                          static_cast<uint64_t>(touch_down_in_pan_zone_
+                                                    ? kTouchRegionHoldMs
+                                                    : kTouchDisambiguateMs) *
+                              1000ull;
             // THE DOUBLE PRESS RESOLVES ON CONTACT (2026-09-05, the third
             // clause: content acts the moment its identity is certain). A
             // down inside the editor's field within the double-click window

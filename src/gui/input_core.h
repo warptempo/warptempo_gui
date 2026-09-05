@@ -624,22 +624,28 @@ public:
     //     or the bottom-row dialog's inset field, whichever editor is open —
     //     and the GUI's own double-click seed, so the platform keeps no
     //     memory of taps and no second spelling of the field. It forks THREE
-    //     things: the window's SLOP CROSSING and its EXPIRY both resolve to
-    //     the CARET DRAG (below) when the answer is Field or DoublePress —
-    //     the field is off the pan zone by the GUI's own carve-out, so no
-    //     pan and no region hold can be meant there, and a finger that rests
-    //     in the field and then drags moves the caret exactly as one that
-    //     drags at once does — and a DoublePress answer resolves the window
-    //     to the POINTER AT THE DOWN ITSELF, the press delivered on contact:
-    //     a second down inside the double-click window and slack of a seed
-    //     can only be the double press, so nothing waits (the third clause,
-    //     conventions.md), the GUI's consumed second press selects the word,
-    //     and the finger's motion from there is ordinary Pointer motion
-    //     driving the GUI's word-wise extension. A TAP in the field (up
-    //     inside the window) is the pointer burst at the lift, unchanged.
+    //     things. (1) The window's SLOP CROSSING resolves to the CARET DRAG
+    //     (below) — the field is off the pan zone by the GUI's own carve-out,
+    //     so no pan and no region hold can be meant there. (2) A Field answer
+    //     TAKES THE WINDOW'S DEADLINE AWAY (kTouchWindowNoExpiry,
+    //     input_core.cpp's constants block): the architect's field
+    //     vocabulary is tap / drag / double tap and carries NO hold meaning,
+    //     so nothing there may be decided by a duration — a motionless
+    //     finger stays Pending however long it rests and its LIFT is the
+    //     ordinary tap burst, seeding the double-tap candidate exactly as a
+    //     quick tap does, while a finger that rests and then drags still
+    //     moves the caret through the crossing and can never fall into the
+    //     desk's selection sweep. (3) A DoublePress answer resolves the
+    //     window to the POINTER AT THE DOWN ITSELF, the press delivered on
+    //     contact: a second down inside the double-click window and slack of
+    //     a seed can only be the double press, so nothing waits (the third
+    //     clause, conventions.md), the GUI's consumed second press selects
+    //     the word, and the finger's motion from there is ordinary Pointer
+    //     motion driving the GUI's word-wise extension.
     //     Null — or answering Outside — means no field: the plain window.
-    //   * caret_begin(x, y): the window resolved to the caret drag — at the
-    //     slop crossing or at the expiry — and this is the DOWN point: the
+    //   * caret_begin(x, y): the window resolved to the caret drag at the
+    //     SLOP CROSSING (its one road — the field's window never expires)
+    //     and this is the DOWN point: the
     //     GUI seats the caret under it through its one pointer seat body,
     //     drops any selection, clears the double-click seed (a caret drag is
     //     motion, and motion between two taps breaks a candidate), and
@@ -1210,7 +1216,10 @@ private:
     //     ON THE DOWN POINT'S PAN-ZONE ANSWER (the eighth glass ruling,
     //     2026-08-12 — the two-deadline fork, the dead trim-band beat's exact
     //     pattern): ON the zone the window runs to kTouchRegionHoldMs (the
-    //     region-hold beat), OFF it kTouchDisambiguateMs as before.
+    //     region-hold beat), OFF it kTouchDisambiguateMs as before — and IN
+    //     AN OPEN EDITOR'S FIELD it runs to NOTHING AT ALL
+    //     (kTouchWindowNoExpiry, 2026-09-05: the field's vocabulary has no
+    //     hold meaning, so a resting finger there simply stays Pending).
     //     It resolves to Pointer on the finger lifting inside it (a TAP —
     //     the whole burst delivers at the lift, and on the navigation
     //     surface that burst's motionless press-release IS the deferred
@@ -1222,17 +1231,19 @@ private:
     //     drag, which is what keeps the endcap/bridge grabs, the flag drags
     //     and every off-zone press-and-hold gesture alive on glass), ON the
     //     zone the beat's expiry is THE REGION HOLD (-> Region below —
-    //     hold-then-drag sweeps a region, the deliberate act's glass form);
+    //     hold-then-drag sweeps a region, the deliberate act's glass form),
+    //     and IN THE FIELD there is no expiry to fork on;
     //     on MOTION beyond the touch slop it FORKS on the same
     //     captured pan-zone answer (the PHONE MODEL, second glass session
     //     2026-08-11): inside the pan surface -> SINGLE-FINGER Nav (the
     //     finger drags the pan; no press was ever delivered — nothing to
     //     unwind, the window's whole purpose), outside -> Pointer — EXCEPT
     //     INSIDE AN OPEN EDITOR'S FIELD (2026-09-05, the editor_field
-    //     query), where BOTH the crossing and the expiry resolve to the
-    //     CARET DRAG (-> Caret below) and only the tap and the double press
-    //     reach the pointer; a DoublePress answer at the down resolves to
-    //     Pointer on contact, the window never opening. A second
+    //     query), where the crossing resolves to the CARET DRAG (-> Caret
+    //     below) and the TAP — a lift from a window that never expires,
+    //     however long the finger rested — is the field's one road to the
+    //     pointer beside the double press; a DoublePress answer at the down
+    //     resolves to Pointer on contact, the window never opening. A second
     //     finger landing inside the window resolves to two-finger Nav
     //     wherever the down point was — the jump-free pinch, the window's
     //     whole point in the field.
@@ -1302,7 +1313,10 @@ private:
     // authoritative here (the one-authoritative-site rule; each fire site
     // states only its own clause):
     //   * touch UP, owner, Pending  — a TAP, whichever deadline the window
-    //     rides: resolve (enter-motion + press at
+    //     rides AND HOWEVER LONG THE FINGER RESTED where it rides none (the
+    //     editor field, 2026-09-05 — its window has no expiry, so a slow tap
+    //     there is still a tap and still seeds the double-tap candidate the
+    //     release owes): resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> Idle (a lone finger
     //     cannot leave a survivor). On the navigation surface the burst's
@@ -1321,16 +1335,18 @@ private:
     //     word-wise drag.
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — FORK on the
-    //     down point's captured answers (the eighth glass ruling, and the
-    //     editor field since 2026-09-05):
+    //     down point's captured pan-zone answer (the eighth glass ruling):
     //     ON the zone -> Region (the region hold at the kTouchRegionHoldMs
     //     beat; the begin hook fires at the down point, and any sub-slop
-    //     drift inside the window stages as the gesture's first frame); IN
-    //     THE EDITOR'S FIELD -> Caret at the kTouchDisambiguateMs mark (the
-    //     caret begin at the down point, sub-slop drift staged as the first
-    //     frame — a finger that rests on the field and then drags moves the
-    //     caret, never a sweep); OFF both -> Pointer at that same mark
-    //     (hold-unlocks-the-pointer, the Pending clause above).
+    //     drift inside the window stages as the gesture's first frame); OFF
+    //     it -> Pointer at the kTouchDisambiguateMs mark
+    //     (hold-unlocks-the-pointer, the Pending clause above). THE EDITOR'S
+    //     FIELD HAS NO EXPIRY EDGE AT ALL (2026-09-05): its window carries
+    //     kTouchWindowNoExpiry, so a finger resting there is still Pending
+    //     at any age and leaves this phase only by the slop crossing (Caret)
+    //     or by its own lift (the tap) — the field's vocabulary spends no
+    //     hold, and a resting finger can therefore never fall onto the
+    //     pointer road and into the desk's selection sweep.
     //   * motion beyond the touch slop inside the window — FORK on the down
     //     point's captured answers (the phone model, and the editor field
     //     since 2026-09-05): pan surface ->
@@ -1343,7 +1359,10 @@ private:
     //     (the crossing position delivered as the queued motion — a quick
     //     flag drag is the immediate marker drag, a quick trim drag trims).
     //   * second DOWN inside the window — Pending -> two-finger Nav, nothing
-    //     delivered, whatever the zone answer.
+    //     delivered, whatever the zone answer and whatever the owner's dwell
+    //     (in the editor's field, where the window never closes, a pair is
+    //     the pinch at any age — the flag editor is wheel-transparent and a
+    //     dialog editor's veil refuses the frames, as before).
     //   * second DOWN during Pointer — FORK ON THE MOVED LATCH (the sixth
     //     glass ruling, 2026-08-12 — the one piece of the timer-free model
     //     kept):
@@ -1572,9 +1591,11 @@ private:
     // The down point's EDITOR-FIELD answer (2026-09-05), captured ONCE beside
     // the two bits above at the first finger's down (the editor_field query
     // at set_touch_nav_hooks) and cleared with them in forget_touch_state.
-    // Field forks the window's crossing and expiry to the caret drag;
-    // DoublePress resolves the down to the pointer on contact (the edge
-    // inventory above). Outside is the plain window.
+    // Field forks the window's crossing to the caret drag AND GIVES THE
+    // WINDOW NO DEADLINE (kTouchWindowNoExpiry — a rest in the field decides
+    // nothing, so the tap survives any dwell); DoublePress resolves the down
+    // to the pointer on contact (the edge inventory above). Outside is the
+    // plain window.
     GuiTouchEditorField touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
     // Region: a finger position staged for the touch_frame boundary
     // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
