@@ -2051,9 +2051,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // the box reaches, and outside is exactly where this arm stops. A cold or
     // closed editor publishes a zero rect, which contains no point. It covers
     // the MEASURE editor's field too, which publishes the same rect through the
-    // same painter — and covers the measure PAD deliberately NOT: that rect is
-    // painted ink beside the field, not editable text, so an I-beam over it
-    // would promise a caret the press does not seat.
+    // same painter — and covers the RIDING PAD deliberately NOT: that rect is
+    // the marker's own boxes painted beside the field, not editable text, so an
+    // I-beam over it would promise a caret the press does not seat.
     // IT IS THE HOVER'S ARM ALONE: a live text drag out of this box is
     // answered at the top of the map, by the drag's own record.
     if (rect_contains(app.flag_editor_box.box, x, y))
@@ -3284,9 +3284,12 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // caret-drag section). ONE
     // SPELLING OF "IN THE FIELD": the painter's
     // published box, the same rect the press claim and the cursor map's
-    // I-beam read, so the three cannot disagree. The MEASURE PAD beside it
-    // is deliberately not in the clause: a press there seats no caret and
-    // wears no I-beam, so a finger there keeps the lane's own answer. The
+    // I-beam read, so the three cannot disagree. The RIDING PAD beside it —
+    // the marker's bound cells and its measure box, re-painted at the
+    // unrolled field's right edge — is deliberately not in the clause: a
+    // press there seats no caret and wears no I-beam, so a finger there
+    // keeps the lane's own answer, and a tap that does reach the pointer is
+    // consumed by the pad's own arm and acts on nothing. The
     // pinch is untouched, as under the flag box: this clause moves the first
     // finger off the zone, and a second finger inside the window is the
     // ordinary two-finger nav, which the flag editor is transparent to.
@@ -3534,16 +3537,17 @@ void GuiInputHandler::end_touch_caret_drag() {
 void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (rect_contains(app.flag_editor_box.box, x, y)) return;
-    // AND THE MEASURE PAD COUNTS AS INSIDE — the marker's measure box, painted
-    // by the same publisher at the unrolled box's right edge while the payload
-    // editor stands (contract at FlagEditorBox::measure_pad, render.h). It is
-    // the editor's OWN painted surface, so a press on it is not an outside
-    // press. THE CONSUME IS THE CALLER'S, one line past this call: this owner
-    // only refuses to close, and on_button_press returns on the same test so
-    // the press acts on nothing at all (it is not the FIELD either, so no caret
-    // is seated). Empty under the measure editor and when the marker carries no
+    // AND THE RIDING PAD COUNTS AS INSIDE — the marker's own bound cells and
+    // measure box, painted by the same publisher at the unrolled box's right
+    // edge while the payload editor stands (contract at
+    // FlagEditorBox::riding_pad, render.h). It is the editor's OWN painted
+    // surface, so a press on it is not an outside press. THE CONSUME IS THE
+    // CALLER'S, one line past this call: this owner only refuses to close, and
+    // on_button_press returns on the same test so the press acts on nothing at
+    // all (it is not the FIELD either, so no caret is seated). Empty under the
+    // other two editor kinds and on a marker painting neither cells nor a
     // measure, and an empty rect contains no point.
-    if (rect_contains(app.flag_editor_box.measure_pad, x, y)) return;
+    if (rect_contains(app.flag_editor_box.riding_pad, x, y)) return;
     flag_editor.exit_top_flag_edit_no_commit();
 }
 
@@ -5885,22 +5889,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // documented "double-click opens the
         // editor"; there is no own-marker special case.
         //
-        // THE MEASURE PAD IS THE ONE PRESS THIS OWNER LEAVES STANDING AND THE
-        // ONE THIS FRAME CONSUMES OUTRIGHT: the marker's measure box, painted
-        // by the editor's own publisher at the unrolled box's right edge while
-        // the payload editor stands (FlagEditorBox::measure_pad, render.h). It
-        // is the editor's own painted surface, so it is not an "outside" press
-        // and must not close the session — and it is not the FIELD either, so
-        // it must not seat a caret. A press there therefore does NOTHING and
-        // ends here, rather than falling through to arm a nav press on lane
-        // pixels the editor is currently occupying. Empty under the measure
-        // editor and on a measureless marker, and an empty rect contains no
-        // point.
-        const bool on_measure_pad =
+        // THE RIDING PAD IS THE ONE PRESS THIS OWNER LEAVES STANDING AND THE
+        // ONE THIS FRAME CONSUMES OUTRIGHT: the marker's two bound cells and
+        // its measure box, painted by the editor's own publisher at the
+        // unrolled box's right edge while the payload editor stands
+        // (FlagEditorBox::riding_pad, render.h). It is the editor's own
+        // painted surface, so it is not an "outside" press and must not close
+        // the session — and it is not the FIELD either, so it must not seat a
+        // caret. A press there therefore does NOTHING and ends here, rather
+        // than falling through to arm a nav press on lane pixels the editor is
+        // currently occupying; no cell editor opens through the payload
+        // editor either, Enter and Esc staying its own roads. Empty under the
+        // other two editor kinds and on a marker painting neither cells nor a
+        // measure, and an empty rect contains no point.
+        const bool on_riding_pad =
             text_editor::is_active(app.top_flag_editor) &&
-            rect_contains(app.flag_editor_box.measure_pad, x, y);
+            rect_contains(app.flag_editor_box.riding_pad, x, y);
         close_top_flag_editor_for_outside_press(x, y);
-        if (on_measure_pad) return;
+        if (on_riding_pad) return;
 
         // The marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item and that item is now its FLAG BOX alone

@@ -3087,21 +3087,29 @@ void render_flags(cairo_t* cr,
 //                   The caret, both selection edges and click-to-byte all index
 //                   it, so what is drawn and what is grabbed are one vector.
 //
-//   `measure_pad`   the marker's MEASURE BOX, painted at the unrolled box's
-//                   right edge while the PAYLOAD editor stands (zero-sized
-//                   otherwise, and always zero-sized under the measure editor,
-//                   whose field IS that box). It is a SECOND rect and is
-//                   deliberately not folded into `box`: the caret / text-drag
-//                   claim seats a caret for any press inside `box` and the
-//                   cursor map shows the I-beam over exactly that rect, so a
-//                   folded pad would map presses on measure ink to payload
-//                   bytes and promise editing where none is. ITS ONE READER is
-//                   the outside-press close, which treats box UNION pad as
-//                   INSIDE — a press on the pad is consumed and neither closes
-//                   the editor nor acts on the marker, because the pad is the
-//                   editor's own painted surface and a press on it is not an
-//                   "outside" press. On close the box settles back into the
-//                   cached pass and the pad goes with it.
+//   `riding_pad`    the marker's OTHER BOXES — its two iteration bound cells,
+//                   then its MEASURE BOX — painted in that order at the
+//                   unrolled box's right edge while the PAYLOAD editor stands,
+//                   so the row reads as it reads at rest with only the flag
+//                   box wider (architect 2026-09-05). Zero-sized where the
+//                   marker paints none of them, and always zero-sized under
+//                   the other two kinds, whose fields ARE one of those boxes
+//                   and which suppress nothing beside them. It is a SECOND
+//                   rect and is deliberately not folded into `box`: the caret
+//                   / text-drag claim seats a caret for any press inside `box`
+//                   and the cursor map shows the I-beam over exactly that
+//                   rect, so a folded pad would map presses on cell and
+//                   measure ink to payload bytes and promise editing where
+//                   none is. ITS ONE RULE has two sites, both the LEFT PRESS'S
+//                   (input_pointer.cpp): the outside-press close treats box
+//                   UNION pad as INSIDE, and its caller consumes the press on
+//                   the same test — so a press on the pad neither closes the
+//                   editor nor acts on the marker (no cell editor opens
+//                   through the payload editor; Enter and Esc stay its roads),
+//                   because the pad is the editor's own painted surface and a
+//                   press on it is not an "outside" press. On close the boxes
+//                   settle back into the cached pass and the pad goes with
+//                   them.
 //
 // `valid` is false whenever none of the three marker-lane editors is open, and
 // the painter writes that state on every frame it runs, so a stale box can
@@ -3118,7 +3126,7 @@ void render_flags(cairo_t* cr,
 struct FlagEditorBox {
     bool                valid         = false;
     GuiRect             box{0, 0, 0, 0};
-    GuiRect             measure_pad{0, 0, 0, 0};
+    GuiRect             riding_pad{0, 0, 0, 0};
     double              text_origin_x = 0.0;
     std::vector<double> byte_x;
 };
