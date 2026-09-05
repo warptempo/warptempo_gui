@@ -3069,16 +3069,24 @@ void render_flags(cairo_t* cr,
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
-//                   untruncated pending plus caret room; for the measure editor
-//                   the blue measure box in the same role, anchored past the
-//                   committed flag; for the bound editor the bound cell in the
-//                   same role, anchored at that cell's own seam and EXACTLY as
-//                   wide as the cell — that one field never grows with its
-//                   text, which scrolls inside it instead. CLAMPED fully
-//                   on-window in every case. Every box spans its 1px LEFT
-//                   BORDER too (the flag's own for the payload editor, the
-//                   seam divider for the other two), so its x is one column
-//                   left of the fill and its w one wider.
+//                   untruncated pending; for the measure editor the blue
+//                   measure box in the same role, anchored past the committed
+//                   flag; for the bound editor the bound cell in the same
+//                   role, anchored at that cell's own seam and EXACTLY as wide
+//                   as the cell. NO FIELD BUYS A CARET COLUMN: every box is
+//                   its two pads plus its run and nothing more, and the caret
+//                   takes its column from the field's own right pad instead
+//                   (the borrow, render_flag_editor_box). So each field OPENS
+//                   AT the width of the box it stands in for, to the column —
+//                   the payload's one deliberate step being the untruncated
+//                   run where the resting label was capped at nine glyphs —
+//                   and grows only PAST it: the payload and measure fields
+//                   widen with what is typed into them, while the bound field
+//                   stays pinned to its cell and its text scrolls inside it.
+//                   CLAMPED fully on-window in every case. Every box spans its
+//                   1px LEFT BORDER too (the flag's own for the payload
+//                   editor, the seam divider for the other two), so its x is
+//                   one column left of the fill and its w one wider.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -3132,15 +3140,18 @@ struct FlagEditorBox {
 };
 
 // THE FLAG EDITOR'S UNROLL (row 5's last piece, 2026-08-01): the marker's flag
-// box EXPANDS to hold its full untruncated payload plus room for the caret, and
-// the editor's text is drawn inside it — kdenlive's flag-becomes-the-text-box,
-// which is also how this product's own editor read before the marker-text lane
-// took the payload away.
+// box EXPANDS to hold its full untruncated payload, and the editor's text is
+// drawn inside it — kdenlive's flag-becomes-the-text-box, which is also how
+// this product's own editor read before the marker-text lane took the payload
+// away.
 //
 // THE BOX WEARS THE MARKER'S OWN FACE: the class fill, the top edge and the 1px
 // left border render_flags would have given it (disabled blend, red, selected
 // swap, all through the one ladder; the border class-invariant), so opening an
-// editor changes the flag's SIZE and nothing else about how it reads. An
+// editor changes the flag's SIZE and nothing else about how it reads — and
+// since no field buys a caret column, even the size only changes where the
+// resting label was capped, the field opening at the committed run's own width
+// and growing only with what is typed past it. An
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
 // kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since

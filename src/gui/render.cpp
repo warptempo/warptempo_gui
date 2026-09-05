@@ -1397,8 +1397,9 @@ void render_flag_boxes_impl(
             // always covered it, which held only while the editor's text was at
             // least as wide as the committed label — true at open (the editor
             // shows the FULL payload where the label is capped at nine glyphs,
-            // plus caret room) and false the moment the user replaces that
-            // auto-selected text with something shorter. The overlay then
+            // and exactly the committed run, to the column, where it is not)
+            // and false the moment the user replaces that auto-selected text
+            // with something shorter. The overlay then
             // shrank while THIS box kept its committed width, and the tail of
             // the cached label stayed on screen to the right of the editor —
             // read as a stale-pixel/invalidation fault, but the damage was
@@ -2254,28 +2255,36 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const int pad_r    = marker_flag_pad_right_px();
     const int edge_h   = marker_flag_edge_h_px();
     const int border_w = marker_flag_border_px();
-    // CARET ROOM. The caret at end-of-text stands one column past the last
-    // glyph, so a field that GROWS WITH ITS TEXT must own a column the run
-    // does not; without it the caret would sit on the right pad or, at the
-    // clamp, off the box entirely. (The bound field, which does not grow,
-    // deliberately does put it on that pad — the note below.)
-    // One authored pixel, scaled like every other row-5 length, with the tree's
-    // own per-metric floor: it rounds to 0 at gui_scale 50, which would leave
-    // the caret no column to stand in. (The hand-rolled `< 1 ? 1 :` this used
-    // to spell is now the shared scaled_px floor form.)
+    // THE CARET'S COLUMN, AND WHERE EVERY FIELD FINDS IT. The caret at
+    // end-of-text stands one column past the last glyph, so a field must own a
+    // column its run does not — and IT BORROWS THAT COLUMN FROM ITS OWN RIGHT
+    // PAD rather than buying one, on all three kinds alike (architect
+    // 2026-09-05: "all flag editors should work under the same principle
+    // graphically ... graphically to the user it should be transparent
+    // switching between the comments, the bounds and the main payload; the
+    // main difference should be the colour of the comments and the syntax").
+    // So the box below is exactly two pads plus its run, which is exactly what
+    // the resting box it stands in for is: at the open — where the run is the
+    // committed text on the same font — the payload field IS the flag, the
+    // measure field IS the measure box and the bound field IS its cell, and
+    // nothing riding past the field steps sideways when it opens. What still
+    // moves afterwards is what is TYPED: the payload and measure fields grow
+    // past the committed width with their free-length text, while the bound
+    // field stays pinned to its cell and scrolls inside it.
+    // The pad is two authored pixels and the caret one, so the borrow leaves
+    // the fill a pad on that side at every scale but the smallest, where both
+    // floor to one column: the viewport then ends on the box's own right edge
+    // and the caret's column is the box's last fill column — visible ink, not
+    // a lost one, so the travel arithmetic below needs no floor of its own.
+    // The TEXT VIEWPORT is what widens by the borrowed column; the box never
+    // does.
+    // One authored pixel, scaled like every other row-5 length, with the
+    // tree's own per-metric floor: it rounds to 0 at gui_scale 50, which would
+    // leave the caret no column to stand in.
     const int caret_px = scaled_px(1.0, 1);
-    // THE BOUND FIELD BORROWS ITS CARET COLUMN FROM ITS OWN RIGHT PAD instead
-    // of adding one (architect 2026-09-05, with the ruling below that the
-    // field IS its cell): that field's width is pinned to the cell's, so a
-    // column added here would be a column stolen from the neighbour box, and
-    // a column simply dropped would scroll the token sideways the moment the
-    // caret sat at its end. The pad is two authored pixels and the caret one,
-    // so the borrow always leaves the fill a pad on that side; the text
-    // viewport below is what widens by it, the box never does.
-    const int caret_room = bound_kind ? 0 : caret_px;
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
-    int box_w = pad_l + run_w + caret_room + pad_r;
+    int box_w = pad_l + run_w + pad_r;
 
     // THE CLAMP, in two stages. First the box is capped at the LANE's own width
     // — a payload wider than the window cannot be shown whole, and this is
@@ -2317,7 +2326,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // window, and the commit refuses an over-wide token by its grammar. The
     // PAYLOAD field opens on the marker's own column, the flag unrolling from
     // itself — and the cells yield the column to it and are re-painted at its
-    // right edge below, the measure past them.
+    // right edge below, the measure past them, which at the open is exactly
+    // where they rest: the field buys no column of its own (the borrow above),
+    // so `bx + box_w` is the committed flag's own right edge until something
+    // is typed.
     const MarkerCell bound_side = iter_bound_editor_side(ed);
     const CommittedCellGeometry cell_geom = bound_kind
         ? committed_cell_geometry(app, font, idx, bound_side, iteration_on)
@@ -2343,15 +2355,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the
     // width the view offset is measured against. The caret column belongs to it
-    // (a caret at the end must be inside the clip to be seen), which is why the
-    // two growing fields carry their caret room in the box, and so in the
-    // viewport, rather than only in one of them.
+    // (a caret at the end must be inside the clip to be seen), and THIS IS
+    // WHERE THE BORROW IS SPENT, on every kind: the viewport reaches one column
+    // INTO the right pad — the column the box above deliberately does not buy —
+    // so a caret at end-of-text is inside the clip with the run standing
+    // exactly where the committed text stands. Where the pad has floored to the
+    // caret's own width (gui_scale 50) the borrow takes the whole pad and the
+    // viewport ends on the box's right edge, the caret's column being the box's
+    // last fill column.
     const double view_x0 = static_cast<double>(bx + pad_l);
-    // THE BOUND FIELD IS THE ONE THAT DOES NOT GROW, so its viewport reaches
-    // one column INTO its right pad instead — the caret column the box no
-    // longer carries (caret_room above) — and a caret at end-of-text is inside
-    // the clip with the run standing exactly where the committed token stood.
-    const int view_pad_r = bound_kind ? std::max(pad_r - caret_px, 0) : pad_r;
+    const int view_pad_r = std::max(pad_r - caret_px, 0);
     const double view_x1 = static_cast<double>(bx + box_w - view_pad_r);
     const double view_w  = view_x1 - view_x0;
 
@@ -2645,8 +2658,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // editor carrying the bracket as text — that expired when the flag editor
     // lost the bracket grammar the day before). They paint HERE instead, from
     // the unrolled box's right edge, so the whole run slides with the field as
-    // it grows and shrinks and THE ROW READS AS IT READS AT REST, only the
-    // flag box wider. Each box wears its resting anatomy through the resting
+    // it grows and shrinks and THE ROW READS AS IT READS AT REST. At the open
+    // the run does not move at all — the field buys no caret column, so its
+    // right edge is the committed flag's own — and it moves afterwards only by
+    // what is typed. Each box wears its resting anatomy through the resting
     // painters (paint_iter_bound_cell for the cells, the measure's own
     // rectangles below), and each asks the selected-cell question its resting
     // twin asks — which under this editor answers no on every one of them, the
