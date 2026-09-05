@@ -2405,10 +2405,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE MEASURE FIELD TAKES THE MEASURE BOX'S FACE by the same argument, one
     // ladder narrower (resolve_measure_face: selection swaps, disabled damps,
     // red does not reach it) — the open field IS the blue box, only wider — and
-    // it carries NO LEFT BORDER, because the resting box has none: the seam
-    // against the flag is a colour change and nothing else. The red flash is
-    // still this box's own state and still overrides the pair; on this kind its
-    // one producer is the editor's byte-cap refusal.
+    // it carries the SEAM DIVIDER as its left border, exactly as the resting
+    // box and the riding pad do (the border geometry a few lines below): the
+    // colour change and the divider column mark the boundary together, not
+    // the colour alone. The red flash is still this box's own state and still
+    // overrides the pair; on this kind its one producer is the editor's
+    // byte-cap refusal.
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
     const bool red_class =
