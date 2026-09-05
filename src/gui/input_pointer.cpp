@@ -3722,9 +3722,10 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
-            // plain act is HOME or END since 2026-08-31 — the main window's
-            // own transport pair, "just like the regular GUI" — and their
-            // shifted twin — a Shift+click on plastic, a long press on glass,
+            // keys are Home and End since 2026-08-31 — the main window's
+            // own transport pair, "just like the regular GUI" — with the
+            // right one's plain act the NEXT TRACK since 2026-09-04, and
+            // their shifted twin — a Shift+click on plastic, a long press on glass,
             // ONE term either way — is the item folder's END, the keys' own
             // Shift+Home / Shift+End. THE
             // ARMS THAT READ `shifted` ARE THE ADMISSION'S OWN MEMBERS
@@ -3741,9 +3742,9 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
                 return true;
             // (STOP dispatched here between the two of them until 2026-09-01,
             // when the player's Stop retired whole with its button.)
-            case AppState::PlayerButtonAct::End:
+            case AppState::PlayerButtonAct::NextTrack:
                 if (shifted) render_player.last_in_item_folder();
-                else         render_player.end();
+                else         render_player.next_track();
                 return true;
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();

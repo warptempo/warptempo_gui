@@ -146,9 +146,35 @@ drag coordinates floor instead of truncating.
   glass — starting a stream unmutes the device's output path and that
   transient was audible as a click at the head of every audition): it is
   started at open, stopped only where it is about to be closed (shutdown,
-  the dead-stream reopen — `close_stream` holds the file's one
-  `requestStop`), and between plays it runs while the callback's gate on the
-  session word's playing bit writes silence and reads no sample. So the fence is now the SAME
+  the dead-stream reopen — `close_stream` holds one of the file's two
+  `requestStop` calls), and between plays it runs while the callback's gate on the
+  session word's playing bit writes silence and reads no sample.
+  THE RENDER PLAYER'S PAUSE IS THE ONE NARROWING OF THAT RULING (architect
+  2026-09-04, after a road test): a stream left started through the player's
+  pause keeps the Bluetooth link fed with silence, so the head unit sees an
+  active player under a session that says paused and resolves the
+  contradiction by flipping its display back to playing — after which its one
+  toggle button sends the already-true direction forever (AVRCP has no
+  play/pause opcode). So the pause reaches the device: `GuiPlayback::
+  suspend_stream`, a member of the playback header both backends implement
+  (JACK: nothing — the laptop has no head unit and no link to suspend), asks
+  the stream stopped after `stop()`'s own fence and clears `started`, and the
+  next `play()` starts it again through the SAME `start_stream` a reopen
+  takes; a start that finds the stream still STOPPING waits briefly for the
+  transition it asked for, which is the only place this can add a delay and
+  is reached only by a resume pressed straight after a pause. THE ONE CALL
+  SITE IS THE STOP BODY'S PLAYER FORK (`playback_lifecycle.cpp`), so the main
+  window's Space, the waveform scrub and the A/B audition's four plays keep
+  the 2026-08-27 lifecycle whole. WHAT IT COSTS, both accepted at the ruling:
+  the start transient is back at the player's resume on the tablet's own
+  speaker (*"I don't use the speakers ever — leave it"*), and over Bluetooth a
+  resume waits for the link to come back — accepted as that and as nothing
+  else, the player's and the GUI's responsiveness over the link being good and
+  staying so. `device_unavailable()` and `device_absent()` are untouched
+  across a suspension: a suspended stream is neither dead nor absent, and the
+  quiescence fence's `!started` early return stays sound because the session
+  word's playing bit is already down when the suspend runs — a callback still
+  retiring reads no sample at all. So the fence is now the SAME
   PROOF ON BOTH BACKENDS — counting callback invocations, two after the
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback

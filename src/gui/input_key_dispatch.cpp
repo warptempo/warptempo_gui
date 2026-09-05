@@ -3939,13 +3939,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // highlight walk (Up/Down) and the seeks (Left/Right) — AND NOTHING ELSE
     // DOES, on any modifier. Enter and Space are the modal's one-shot press or
     // the open/play acts; the closers and the load chord are
-    // one-shot commands; HOME AND END ARE ABSOLUTE (architect 2026-08-31, and
-    // that is why the two skips' keys are one-shot on BOTH shapes: the plain
-    // pair lands the item's start or its end — or, inside Home's
-    // previous-track window, a whole file back, which a hold would then walk
-    // through the folder a file per repeat — and the SHIFTED pair lands the
+    // one-shot commands; THE TWO SKIPS ARE ONE-SHOT ON BOTH SHAPES (architect
+    // 2026-08-31, and more plainly so since 2026-09-04): each plain press is a
+    // whole FILE — the next track on End, and on Home the item's start or,
+    // inside the previous-track window, a whole file back — so a hold would
+    // walk the folder a file per repeat, while the SHIFTED pair lands the
     // folder's first and last wav, where a hold could only re-reach the wall
-    // it just hit); and the ring's Tab repeats through this arm's own first
+    // it just hit; and the ring's Tab repeats through this arm's own first
     // line exactly as every ring's does. The item's two NEIGHBOURS were
     // repeat-eligible on bare `,` / `.` with their shifted ends from
     // 2026-08-30 to 2026-08-31 and left the mode with them. A prompt over the
@@ -7617,21 +7617,23 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.home();
             return true;
         case GuiKeys::End:
-            // THE TRACK'S OWN END (architect 2026-08-30), Home's twin and NOT
-            // "next": it writes the position the scrub's right end writes and
-            // nothing more — the item is unchanged and no folder is walked.
-            // What happens after is the NATURAL END's, unaltered: a live
-            // transport plays out the last frames and then advances to the
-            // next entry where one exists, rests idle on the item at the
-            // folder's last, or replays under a lit Repeat one. A PAUSED one just moves
-            // its rest, which the resume arm reads as "at or past the end" and
-            // replays from the start (toggle_pause), and an IDLE one meets
-            // seek_to's own carded refusal — Home's twin here too, except
-            // that HOME'S PREVIOUS-TRACK WINDOW can carry an idle press to
-            // the previous entry before the seek is ever asked. End has no
-            // window of its own: "next" at a track's end is what the natural
-            // end already does.
-            render_player.end();
+            // THE NEXT SONG (architect 2026-09-04, from the car: "Next should
+            // always skip to the next song. The home/end analogy doesn't quite
+            // work — this isn't a playhead, this is audio playback"). It plays
+            // the next wav of the TRANSPORT ITEM's folder from its start,
+            // whatever the transport was doing and whatever the Repeat one
+            // lamp says; at the folder's last wav it is a silent walled no-op,
+            // nothing looping, and the button greys on that same wall.
+            // IT WAS THE TRACK'S OWN END from 2026-08-30 to that day — a seek
+            // to the position the scrub's right edge writes, on the reasoning
+            // that a LIVE transport would play its last frames out and the
+            // natural end would advance from there. That held for a live
+            // transport and for nothing else: paused, the seek only moved the
+            // rest, whose resume replayed the same file; idle, it met
+            // seek_to's own refusal; and under a lit Repeat one even the live
+            // road came back to the same file, which is the shape the
+            // architect met in the car.
+            render_player.next_track();
             return true;
         case GuiKeys::BackSpace:
             render_player.up();

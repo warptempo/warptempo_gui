@@ -87,7 +87,8 @@ struct GuiInputHandler;
 // cells, THE PLAYER'S WHOLE SUBJECT since 2026-09-01 (the ruling below) — and
 // the bottom row's modal carries the transport (THE MAIN WINDOW'S OWN
 // TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
-// acts on the same three keys as the roster's — then the play-scrub, the
+// keys as the roster's, and the same three acts until 2026-09-04, when the
+// right one became the NEXT TRACK — then the play-scrub, the
 // clock, the Repeat one lamp, the UP button, and Load in place / Close flush
 // right — the row's order and faces are the painter's, R25/R36).
 //
@@ -147,8 +148,8 @@ struct GuiInputHandler;
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while
 // the highlight walks and while a folder is entered — up() is the one
 // navigation that unloads it, and the reason is at that body — it wears the
-// transport glyph on its row, and AUTO-ADVANCE, HOME'S PREVIOUS-TRACK WINDOW
-// and the two Shift+Home / Shift+End ENDS walk ITS
+// transport glyph on its row, and AUTO-ADVANCE, THE NEXT-TRACK SKIP, HOME'S
+// PREVIOUS-TRACK WINDOW and the two Shift+Home / Shift+End ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
 // folder and never a wrap. Every listing is built when its folder is entered
 // and never kept fresh.
@@ -180,7 +181,10 @@ struct GuiInputHandler;
 // start, never the folder's next wav. It is the
 // whole of the exception: nothing else in the product plays anything twice by
 // itself, and the state is session-only (false at every open, serialized
-// nowhere).
+// nowhere). THE LAMP GOVERNS THE NATURAL END ALONE: a deliberate Next
+// (next_track) walks to the folder's next wav under a lit lamp exactly as
+// under a dark one, because a press is not a file reaching its end (architect
+// 2026-09-04 — under the old act Next did nothing at all with the lamp lit).
 //
 // AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
 // item resting at its start AND THAT IS ALL IT MEANS — the next Play replays
@@ -431,12 +435,13 @@ struct GuiRenderPlayer {
     // a wrap, and a SILENT refusal with no item AND on an item already at that
     // end (both went silent on 2026-08-31, the end's own first and the no-item
     // arm with the idle family that evening — the record is at the header's
-    // retired sentences). They are the folder walk's whole surface now: the item's two
-    // NEIGHBOURS were `previous()` / `next()` on bare `,` / `.` and the two
-    // skips' plain acts until 2026-08-31, when the skips became Home and End
-    // and the step back moved inside Home as its previous-track window (the
-    // constant above) — the step FORWARD has no producer left and is gone, the
-    // natural end's own advance never having gone through it.
+    // retired sentences). The item's two NEIGHBOURS were `previous()` /
+    // `next()` on bare `,` / `.` and the two skips' plain acts until
+    // 2026-08-31, when the skips became Home and End and the step back moved
+    // inside Home as its previous-track window (the constant above); the step
+    // FORWARD lost its producer that day and has one again since 2026-09-04 —
+    // next_track, the right skip's own plain act, which shares the natural
+    // end's walk rather than carrying a body of its own.
     void first_in_item_folder();
     void last_in_item_folder();
     // REPEAT ONE (architect 2026-08-28, R26) — the row's one lamp, flipped by
@@ -466,22 +471,31 @@ struct GuiRenderPlayer {
     // render_player_home_takes_previous (app_state.h), which the button's
     // hint reads too ("Previous file" / "Go to start").
     void home();
-    // THE ITEM'S END (architect 2026-08-30) — Home's twin, the RIGHT SKIP's
-    // plain act and the head unit's Next since 2026-08-31, and NOT the
-    // folder's
-    // walk: it seeks to `frames`, the very position the scrub's right end
-    // writes, and does nothing else — the item and the folder are untouched.
-    // IT TOOK NO WINDOW OF ITS OWN when Home took one: at the end of a track
-    // "next" is what the NATURAL END already does, and this act reaches it by
-    // playing the last frames out.
-    // A LIVE transport therefore plays the last frames out and the NATURAL END
-    // takes it from there, unaltered (advance where a next entry exists, an
-    // ordinary idle rest on the item at the folder's last, a replay under a
-    // lit Repeat
-    // one); a PAUSED one moves its rest, which the resume arm reads as at-or-
-    // past the end and replays from the start; an IDLE one meets seek_to's own
-    // silent refusal, exactly as Home does.
-    void end();
+    // THE NEXT TRACK (architect 2026-09-04, in his words: "Next should always
+    // skip to the next song. The home/end analogy doesn't quite work — this
+    // isn't a playhead, this is audio playback") — Home's twin, the RIGHT
+    // SKIP's plain act, bare End's and the head unit's Next. It plays the NEXT
+    // WAV OF THE TRANSPORT ITEM'S OWN FOLDER as that folder was listed when
+    // the item was played, from its start, whatever the transport was doing:
+    // live, paused or idle alike, the one act (advance_to_next_in_item_folder,
+    // the body the natural end's auto-advance shares).
+    // IT OUTRANKS REPEAT ONE, and the lamp is not read here at all: the lamp
+    // governs what a file does when it REACHES ITS END, and a press is not a
+    // natural end.
+    // AT THE FOLDER'S LAST WAV IT IS A SILENT WALLED NO-OP — nothing loops —
+    // and the wall is one owner, render_player_next_track_actionable
+    // (app_state.h), which the button's face and the head unit's own arm read
+    // too. THE SHIFTED TWIN IS UNCHANGED (Shift+End, the folder's last wav).
+    //
+    // IT WAS THE ITEM'S END until that day (architect 2026-08-30): a seek to
+    // `frames`, the position the scrub's right edge writes, on the reasoning
+    // that at the end of a track "next" is what the NATURAL END already does
+    // — true of a LIVE transport, which played its last frames out, and of
+    // nothing else: a paused one only moved its rest, whose resume replayed
+    // the same file from the start, and under a lit Repeat One even the live
+    // arm came back to the same file. In the car that made Next a button that
+    // did nothing, which is what this act replaces.
+    void next_track();
     // Left / Right's step: 5 s at the project source's rate (R6).
     int64_t seek_step_frames() const;
 
@@ -553,7 +567,16 @@ struct GuiRenderPlayer {
     // them); Play -> THE TRANSPORT TOGGLE ONLY WITH THE TRANSPORT DOWN; Pause,
     // FocusLost and FocusLostTransient -> THE TRANSPORT TOGGLE ONLY WITH THE
     // TRANSPORT LIVE (a focus loss pauses, ALWAYS, Android's one imposed
-    // interrupt); STOP -> PAUSE AND THEN HOME, direct (architect 2026-09-01,
+    // interrupt);
+    // A REFUSED DIRECTION RE-PUBLISHES (architect 2026-09-04): the two
+    // PRESSED directions, Play and Pause, push the standing state where their
+    // gate refuses, because a head unit's toggle sends the direction its own
+    // display believes and a display that has drifted would otherwise send
+    // the already-true verb forever, silently dropped. The state does not
+    // move, so the push is the last edge's own said again. THE FOCUS LOSSES
+    // STAY SILENT — an imposed interrupt carries no display belief to
+    // correct — and Pause has an arm of its own for exactly that split;
+    // STOP -> PAUSE AND THEN HOME, direct (architect 2026-09-01,
     // with the player's own Stop act retired: a live transport takes the
     // directional pause, and a session standing after it takes seek_to(0) —
     // never bare Home's act, whose previous-track window would change TRACKS
@@ -568,7 +591,11 @@ struct GuiRenderPlayer {
     // track act, its first three seconds stepping back a file and everything
     // past them restarting this one — the behaviour of the architect's own
     // car. They were Period / Comma from 2026-08-30 and PageDown / PageUp
-    // before that);
+    // before that. END IS THE NEXT SONG since 2026-09-04, so the wheel's Next
+    // is a track change on every road and in every transport state, and this
+    // arm asks the act's own wall before it presses: at the folder's last wav
+    // the press changes nothing, so it publishes instead — a re-publish on a
+    // refusal, the directional arms' own rule);
     // FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
@@ -597,9 +624,10 @@ struct GuiRenderPlayer {
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep at each retell (EIGHT call sites across SEVEN
-    // functions — seven across six between the player's Stop retiring on
-    // 2026-09-01 and up() taking its own push on 2026-09-04): open() —
+    // re-derived by grep at each retell (ELEVEN call sites across EIGHT
+    // functions — eight across seven before on_media_command's three
+    // re-publishes landed on 2026-09-04, seven across six before up() took its
+    // own push earlier that day): open() —
     // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
@@ -611,7 +639,13 @@ struct GuiRenderPlayer {
     // is unloading; seek_to — both arms, so
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
-    // seek); and
+    // seek);
+    // on_media_command's THREE REFUSAL ARMS (2026-09-04) — a Play said to a
+    // live transport, a Pause said to a resting one and a Next at the item
+    // folder's last wav: the state has not moved, so each pushes the standing
+    // one AS AN ANSWER TO THE PRESS, which is what keeps a head unit whose
+    // display has drifted from sending the same dead verb forever (the
+    // reasoning is at those arms; the focus losses are not among them); and
     // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last
     // push at speed 1.0. Title = the item's path relative to the project
@@ -644,10 +678,17 @@ private:
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index);
+    // THE FOLDER'S FORWARD STEP, one body for its two callers (2026-09-04):
+    // the natural end's auto-advance below and the deliberate next_track
+    // above. The next wav of the item's folder as listed, played from its
+    // start; never across folders and never a wrap, the wall being
+    // render_player_next_track_actionable. Returns whether it played — a
+    // refused decode has raised its own card and left the item untouched.
+    bool advance_to_next_in_item_folder();
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
-    // exception at the head of this file), else the next wav of the item's
-    // folder, else the ordinary idle rest at the item's start (R7 — the
+    // exception at the head of this file), else the shared forward step
+    // above, else the ordinary idle rest at the item's start (R7 — the
     // folder's end is no longer a state of its own).
     // THE LAMP'S ARM IS TERMINAL: it returns on a REFUSED replay too, so a
     // lit lamp never falls through to the advance.

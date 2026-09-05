@@ -359,6 +359,17 @@ bool render_player_last_in_item_folder_actionable(const AppState& a) {
     return rp.item_index >= 0 && rp.item_index < n && rp.item_index + 1 < n;
 }
 
+// THE NEXT TRACK'S WALL (the contract at the declaration, app_state.h): an
+// item must be bound, and it must not be the last of its folder — nothing
+// loops, so the folder's end is where the act stops. The two terms are the
+// act's own leading refusals in its own order, and the second is the shifted
+// twin's own owner above, read rather than restated.
+bool render_player_next_track_actionable(const AppState& a) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    if (rp.item.empty() || rp.frames <= 0) return false;
+    return render_player_last_in_item_folder_actionable(a);
+}
+
 // THE MODAL ROW'S DISABLED FACE — the contract, the per-act arms' rationale
 // and the reader inventory are at the declaration (app_state.h). Each arm
 // below is the act's own leading refusals in the act's own order.
@@ -382,16 +393,20 @@ bool render_player_button_enabled(const AppState& a,
             if (rp.transport == Transport::Paused && rp.resume_frame != 0)
                 return true;
             return render_player_first_in_item_folder_actionable(a);
-        case AppState::PlayerButtonAct::End:
-            // The twin DOES add a term here: at an idle rest with a next
-            // entry the seek to `frames` refuses while the jump to the
-            // folder's LAST wav acts, so the button stays live for it — the
-            // twin's own owner (2026-09-01).
-            if (render_player_last_in_item_folder_actionable(a)) return true;
-            if (rp.item.empty() || rp.frames <= 0) return false;
-            if (rp.transport == Transport::Live) return true;
-            return rp.transport == Transport::Paused &&
-                   rp.resume_frame != rp.frames;
+        case AppState::PlayerButtonAct::NextTrack:
+            // ONE WALL CARRIES BOTH HALVES (2026-09-04, the plain act become
+            // THE NEXT TRACK): the plain press plays the item folder's next
+            // wav and the shifted twin its last, and each acts exactly where a
+            // next entry exists — the plain act's predicate being that wall
+            // plus the bound-item terms the wall already implies (item_index
+            // is written with the item in play_wav and cleared with it in
+            // unload_item, so a live index means a bound item). The OR the
+            // twin rule asks for is therefore one term, and it is the act's
+            // own owner rather than a copy of its conditions.
+            // (The seek to `frames` was the plain act until that day and this
+            // arm carried its live and paused positions; a next track is a
+            // folder walk and reads no position at all.)
+            return render_player_next_track_actionable(a);
         case AppState::PlayerButtonAct::PlayPause: {
             // THE HIGHLIGHT'S ARM FIRST, the act's own order since R6: a row
             // to open is an act in every transport state, so the button is
@@ -901,14 +916,34 @@ void GuiRenderPlayer::home() {
     seek_to(0);
 }
 
-// THE ITEM'S END (architect 2026-08-30) — the contract is at the declaration.
-// `frames` is the scrub's own right-hand end (render_player_scrub_frame_at
-// clamps there), so the key writes exactly the position a press on the far
-// right of the slider writes, and every arm below it — the live seek's
-// one-frame-short landing into the natural end, the paused rest, the idle
-// refusal — is seek_to's, unchanged and unbranched.
-void GuiRenderPlayer::end() {
-    seek_to(app.render_player.frames);
+// THE NEXT TRACK (architect 2026-09-04, from the car: "Next should always skip
+// to the next song. The home/end analogy doesn't quite work — this isn't a
+// playhead, this is audio playback"). The contract is at the declaration; the
+// walk itself is the natural end's own, shared below.
+//
+// IT OUTRANKS REPEAT ONE, and that is this act's own sentence rather than an
+// omission: the lamp governs what happens when a file REACHES ITS END, and a
+// press is not a natural end. Under a lit lamp the old act seeked to the
+// item's end and the replay took it straight back to the same file, so Next
+// did nothing at all in the car — this is the fix, and the act reads the lamp
+// nowhere.
+void GuiRenderPlayer::next_track() {
+    advance_to_next_in_item_folder();
+}
+
+// THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS TWO CALLERS (2026-09-04): the
+// natural end's auto-advance and the deliberate Next of the right skip. Never
+// across folders and never a wrap — the wall is the act's own owner above, so
+// the button's face and both callers ask one question. Returns whether the
+// next wav played; a refused decode has raised its own card and left the item
+// where it was, which is what lets the natural end's Repeat One arm and its
+// rest read this as "nothing happened".
+bool GuiRenderPlayer::advance_to_next_in_item_folder() {
+    if (!render_player_next_track_actionable(app)) return false;
+    const AppState::RenderPlayer& rp = app.render_player;
+    const std::vector<Row> folder = rp.item_folder;
+    const int i = rp.item_index + 1;
+    return play_wav(folder[static_cast<size_t>(i)].path, folder, i);
 }
 
 void GuiRenderPlayer::on_natural_end() {
@@ -956,15 +991,10 @@ void GuiRenderPlayer::on_natural_end() {
     }
     // AUTO-ADVANCE WITHIN THE ITEM'S FOLDER ONLY (R2), never across folders
     // and never a wrap: the next wav of the list the item was played from, or
-    // the rest at the item's start.
-    const bool has_next =
-        rp.item_index >= 0 &&
-        rp.item_index + 1 < static_cast<int>(rp.item_folder.size());
-    if (has_next) {
-        const std::vector<Row> folder = rp.item_folder;
-        const int i = rp.item_index + 1;
-        if (play_wav(folder[static_cast<size_t>(i)].path, folder, i)) return;
-    }
+    // the rest at the item's start. THE WALK IS ONE BODY SINCE 2026-09-04,
+    // shared with the deliberate Next the right skip runs, so the two cannot
+    // walk different folders.
+    if (advance_to_next_in_item_folder()) return;
     // THE FOLDER IS AT ITS END (or the next wav refused to decode, its own
     // words on a card and the item unchanged) and the transport rests at the
     // item's start, IDLE — so the next Play replays THIS item. This rest,
@@ -1252,9 +1282,36 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // retired). A WHEEL WALKS NO BAND, and this act reads none: the
             // head unit's Play means the transport's Play, whatever row the
             // band happens to rest on.
-            if (rp.transport != Transport::Live) transport_toggle_act();
+            if (rp.transport != Transport::Live) {
+                transport_toggle_act();
+                return;
+            }
+            // A REFUSED DIRECTION RE-PUBLISHES (architect 2026-09-04, after
+            // the car's stuck pause). A head unit's toggle button sends the
+            // direction ITS OWN DISPLAY believes — AVRCP has no play/pause
+            // opcode, only PLAY and PAUSE — so a display that has drifted out
+            // of step sends the verb that is already true, forever, and a
+            // gate that drops it silently leaves the unit believing what it
+            // believed. Telling it the truth at the press is what breaks the
+            // loop: the state is unchanged, so this push is the same one the
+            // last edge made, and the next press comes back with the other
+            // direction. The act is still refused — a "play" said to a live
+            // transport must not toggle it off, which is the gate.
+            publish_media_state();
             return;
         case Kind::Pause:
+            // Pause's own arm since 2026-09-04, lifted out of the focus
+            // losses' below so that a refused PAUSE can answer as a refused
+            // PLAY does (the record is at the Play arm): the gate is
+            // unchanged — a "pause" said to a resting transport must not
+            // start it — and the refusal now re-publishes instead of going
+            // silent. This is the arm the car's stuck pause was pressing.
+            if (rp.transport == Transport::Live) {
+                transport_toggle_act();
+                return;
+            }
+            publish_media_state();
+            return;
         case Kind::FocusLost:
         case Kind::FocusLostTransient:
             // A focus loss pauses (Android's one imposed interrupt), and now
@@ -1262,6 +1319,9 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // the act it reaches is the transport's own, so nothing the band
             // is doing can turn an imposed interrupt into a play. A "pause"
             // said to a resting transport must not start it — the gate.
+            // THESE TWO STAY SILENT WHERE THE GATE REFUSES: an imposed
+            // interrupt is not a press, and there is no display belief behind
+            // it to correct.
             if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::Stop:
@@ -1292,13 +1352,28 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // 2026-08-31): End and Home, the keys the row's buttons carry and
             // the main window's transport carries before them. The road is
             // the one synthesis, so the head unit inherits whatever those
-            // keys mean — including HOME'S PREVIOUS-TRACK WINDOW, which is
-            // what gives the wheel a real previous-TRACK act again: inside
-            // the item's first kPlayerPreviousThresholdMs a Previous steps
-            // back a file and past them it restarts the file, the behaviour
-            // of the architect's own car. (Period / Comma from 2026-08-30,
-            // Page Down / Page Up before that.) NOTHING ON A WHEEL ASKS FOR
-            // THE FOLDER'S ENDS, so no command carries the shift.
+            // keys mean — SINCE 2026-09-04 THE NEXT SONG on End ("Next should
+            // always skip to the next song") and HOME'S PREVIOUS-TRACK WINDOW
+            // unchanged, which is what gives the wheel a real previous-TRACK
+            // act: inside the item's first kPlayerPreviousThresholdMs a
+            // Previous steps back a file and past them it restarts the file,
+            // the behaviour of the architect's own car. (Period / Comma from
+            // 2026-08-30, Page Down / Page Up before that.) NOTHING ON A
+            // WHEEL ASKS FOR THE FOLDER'S ENDS, so no command carries the
+            // shift.
+            //
+            // AT THE FOLDER'S LAST FILE THE PRESS IS A WALLED NO-OP AND THE
+            // UNIT IS TOLD SO, the directional arms' own rule read once more
+            // (the record is at the Play arm above): nothing loops, so there
+            // is nothing to walk to, and a re-publish is what keeps a head
+            // unit's picture of the track from drifting on a press that
+            // changes nothing. The wall is the act's own owner, asked here
+            // rather than restated — the key this arm presses asks the very
+            // same predicate inside the act.
+            if (!render_player_next_track_actionable(app)) {
+                publish_media_state();
+                return;
+            }
             press(GuiKeys::End);
             return;
         case Kind::Previous:

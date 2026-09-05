@@ -205,6 +205,29 @@ public:
     // itself.
     void stop();
 
+    // Take the device out of its running state, so that a player at rest is
+    // not an active audio output. Call it only after stop(), whose fence is
+    // what proves the callback is out of the sample buffer; this adds no
+    // fence of its own. The next play() brings the device back through the
+    // same start the reopen roads take, so a caller need do nothing to
+    // resume, and neither device_unavailable() nor device_absent() changes
+    // meaning across it: a suspended device is neither dead nor absent, it is
+    // one that will sound at the next press.
+    //
+    // It exists for the car (architect 2026-09-04). On Android an AAudio
+    // stream that stays started while the render player is paused keeps the
+    // Bluetooth link streaming silence, which the head unit reads as an
+    // active player and resolves against the session's "paused" by flipping
+    // its display back to playing — so the player's pause must reach the
+    // device, and this is how. It is the render player's alone: the ONE call
+    // site is the stop body's player fork (playback_lifecycle.cpp), and the
+    // main window's plays keep the no-click lifecycle whole (the head of
+    // playback_aaudio.cpp owns that ruling and this narrowing of it).
+    // JACK does nothing here: the laptop has no head unit and no link to
+    // suspend, and its client stays connected between plays exactly as
+    // before. Main thread only.
+    void suspend_stream();
+
     // Re-anchor the free-running cursor predictor on the audio thread's cycle
     // stamp: the read cursor at the instant its frame enters the output port
     // (the design note). Call from the main thread at events where a small

@@ -66,6 +66,28 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
             app.render_player.transport != RenderPlayerTransport::Live)
             return;
         playback.stop();
+        // THE DEVICE RESTS WITH THE PLAYER, AND ONLY WITH IT (architect
+        // 2026-09-04, from the car). An Android stream left running through a
+        // pause keeps the Bluetooth link fed with silence, and a head unit
+        // that sees an active player under a session saying "paused" resolves
+        // the contradiction toward playing — its display flips back, and from
+        // then on its one toggle button sends the direction that is already
+        // true, which this player drops. So the pause reaches the device
+        // here: suspend_stream stops the stream and the next play starts it
+        // again (a no-op on JACK, whose laptop has no head unit). It sits
+        // inside the player's fork because the fork IS "the player's
+        // transport left LIVE", which is exactly the state the head unit
+        // reads; the main window's Space and the A/B audition never reach it,
+        // so the 2026-08-27 no-click lifecycle stands whole for the project's
+        // own audio and is narrowed for the player alone (the ruling and the
+        // mechanism are at the head of playback_aaudio.cpp).
+        // WHAT IT COSTS, both accepted by the architect that evening: the
+        // start transient is back at the player's resume on the tablet's own
+        // speaker ("I don't use the speakers ever — leave it"), and over
+        // Bluetooth a resume waits for the link to come back — the only delay
+        // this may introduce, the player's and the GUI's responsiveness
+        // everywhere else being good and staying untouched.
+        playback.suspend_stream();
         app.render_player.transport = RenderPlayerTransport::Paused;
         viewport.invalidate_modal_dialog_area();
         // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE

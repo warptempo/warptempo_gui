@@ -301,6 +301,14 @@ void GuiPlayback::stop() {
     }
 }
 
+// Nothing to suspend on this backend (the contract at the declaration). The
+// member exists for the car, where an Android stream left running through the
+// render player's pause keeps the Bluetooth link active and the head unit's
+// display lying; the laptop has no head unit, and this client stays connected
+// between plays exactly as it always has — a JACK client that unregistered
+// itself at every rest would only churn the graph the architect wires by hand.
+void GuiPlayback::suspend_stream() {}
+
 bool GuiPlayback::is_playing() const {
     return playback_is_playing(impl_->state);
 }

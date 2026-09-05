@@ -6860,15 +6860,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.play_face     = render_player_play_face(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
-        // END'S IDLE BIT IS seek_to's SECOND REFUSAL, ASKED IN ITS OWN ORDER
-        // (2026-09-01): the act refuses first for NO ITEM and then for an idle
-        // transport, so the hint may say "At the end" only past the first —
-        // otherwise a freshly opened player, which is idle with nothing bound,
-        // said where a track it does not have was standing.
-        hint.end_idle      = !app.render_player.item.empty() &&
-                             app.render_player.frames > 0 &&
-                             app.render_player.transport ==
-                                 AppState::RenderPlayer::Transport::Idle;
+        // (END'S IDLE BIT STOOD HERE and retired 2026-09-04 with the act it
+        // described: it was seek_to's second refusal asked past its first, so
+        // that the hint said "At the end" only with an item bound. The right
+        // skip's press is the NEXT TRACK now, whose one refusal greys the
+        // button, and its word names that act in every state.)
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
         // (codex round A, 2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
@@ -6889,11 +6885,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.home_shift_differs =
             render_player_first_in_item_folder_actionable(app) &&
             home_plain_index != 0;
-        // END HAS NO SUCH WINDOW: the plain act is seek_to(frames), always
-        // inside the item and never a track change, so it can never reach the
-        // folder's last wav — the twin's own wall is the whole question.
+        // THE RIGHT SKIP COMPARES DESTINATIONS TOO SINCE 2026-09-04, and for
+        // the first time: its plain act is the NEXT TRACK now, so on the
+        // folder's SECOND-TO-LAST item both presses play the folder's last
+        // wav and the line goes, exactly as Home's does on the second item.
+        // Both destinations are indices into the ITEM's folder — the plain
+        // act's is the item's own plus one, the twin's is that folder's last
+        // — and the wall, still asked from the twin's own owner, is what
+        // answers on the last item, where the twin is dead outright. (The bit
+        // was that wall alone while the plain act was a seek inside the item,
+        // which could never reach another file.)
+        const int end_plain_index = app.render_player.item_index + 1;
+        const int end_twin_index =
+            static_cast<int>(app.render_player.item_folder.size()) - 1;
         hint.end_shift_differs =
-            render_player_last_in_item_folder_actionable(app);
+            render_player_last_in_item_folder_actionable(app) &&
+            end_plain_index != end_twin_index;
         const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {
@@ -6913,10 +6920,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // owners' word buttons are built in their own branches below and the
         // walk's word arm still paints them; what went is this owner's copy of
         // the builder, not the kind.)
-        // THE SKIP GLYPHS ARE UNTOUCHED BY THE 2026-08-31 REMAP: the acts
-        // are Home and End (the roster's own two transport skips wear the
-        // same pair over the same keys), so the icon says what it always
-        // said — skip to this track's start, skip to its end.
+        // THE SKIP GLYPHS ARE UNTOUCHED BY EITHER REMAP: the roster's own two
+        // transport skips wear this pair over the same keys, and
+        // MediaSkipForward says "skip forward" whether the press lands the
+        // track's end (2026-08-31) or the next track (2026-09-04) — a
+        // skip-forward glyph over a skip-forward act, so nothing is owed
+        // here.
         glyph_button(AppState::PlayerButtonAct::Home,
                      icons::Icon::MediaSkipBackward);
         // PLAY/PAUSE WEARS THE PAUSE GLYPH ON THE PAUSE FACE (above), not the
@@ -6931,7 +6940,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::PlayPause,
                      pause_face ? icons::Icon::MediaPlaybackPause
                                 : icons::Icon::MediaPlaybackStart);
-        glyph_button(AppState::PlayerButtonAct::End,
+        glyph_button(AppState::PlayerButtonAct::NextTrack,
                      icons::Icon::MediaSkipForward);
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      icons::Icon::MediaRepeatSingle,
