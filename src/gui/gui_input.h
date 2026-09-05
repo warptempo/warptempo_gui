@@ -86,6 +86,10 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     skips admit a modified press, so their long press reaches the same twin
 //     a shift-click does, one constant and one term;
 //   * the touch pan zone's region hold (kTouchRegionHoldMs, input_core.cpp);
+//   * the editor field's SELECT HOLD (kEditorSelectHoldMs, app_state.h, since
+//     2026-09-05): a press at least this old when its drag crosses the drag
+//     gate selects, a younger press's drag moves the caret — the phone's text
+//     vocabulary, one vocabulary for mouse and finger;
 //   * the hold-repeating buttons' FIRST fire (input_pointer.cpp's arm, where
 //     every LATER fire is the compositor's advertised repeat interval);
 //   * the Android backend's key-repeat DELAY (platform_android.cpp — the one

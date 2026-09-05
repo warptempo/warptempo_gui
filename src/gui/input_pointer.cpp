@@ -1093,8 +1093,14 @@ int editor_byte_index_at(const ActiveEditorText& g, int mouse_x) {
         static_cast<double>(mouse_x), g.text_left, *g.byte_x);
 }
 
+// THE ONE POINTER SEAT: every press and every drag motion that puts the caret
+// under the pointer comes through here — the plain press, the shift press, the
+// caret drag and the selection sweep — and it restarts the blink phase as the
+// keyboard's own motion keys do, so a caret being dragged is lit where it
+// lands rather than possibly caught in the dark half of a period.
 void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
     g.ed->cursor_pos = editor_byte_index_at(g, mouse_x);
+    text_editor::touch_blink(*g.ed);
 }
 
 } // namespace
@@ -3231,6 +3237,28 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // overlay no longer sweeps a new window — a hold started outside it, or a
     // tap to hide the overlay first, both still do.
     if (region_manipulation_hit(x, y) != RegionHit::None) return false;
+    // AND IT YIELDS INSIDE THE OPEN MARKER-LANE EDITOR'S BOX (architect
+    // 2026-09-04, on the tablet: "if I tap and drag inside the editor,
+    // instead of moving the caret like I would expect on a touch screen, it
+    // drags the viewport and the waveform"). The flag box carve-out does NOT
+    // reach the editor by itself: the edited marker's flag is not painted
+    // while its editor stands and publishes no hit rect (render.cpp's flag
+    // pass), so hit_test_flag answers nothing there, the marker lane is nav
+    // surface under it, and a finger landing in the box became the
+    // phone-model pan — no press ever delivered, the nav frames punching
+    // through the keyboard-modal editor exactly as the wheel does. Answering
+    // false lets the finger resolve to the pointer translation and reach the
+    // field's own press, where the caret drag and the selection sweep live
+    // (the form fork is on_motion's editor arm, the ruling at
+    // EditorTextDragState). ONE SPELLING OF "IN THE FIELD": the painter's
+    // published box, the same rect the press claim and the cursor map's
+    // I-beam read, so the three cannot disagree. The MEASURE PAD beside it
+    // is deliberately not in the clause: a press there seats no caret and
+    // wears no I-beam, so a finger there keeps the lane's own answer. The
+    // pinch is untouched, as under the flag box: this clause moves the first
+    // finger off the zone, and a second finger inside the window is the
+    // ordinary two-finger nav, which the flag editor is transparent to.
+    if (rect_contains(app.flag_editor_box.box, x, y)) return false;
     // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27), for the overlay
     // clause's reason exactly: the keyboard paints over the waveform's lower
     // part, the whole waveform is the pan zone, and a finger landing on a key
@@ -5167,11 +5195,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (arm_modal_dialog_press(x, y)) return;
     }
 
-    // F2.1: mouse drag-to-select inside the active text editor. A press on
-    // the active editor's text region places the caret and arms a selection
-    // drag (anchor == caret until the pointer moves). Resolved before the
-    // per-editor modal swallows below so the gesture reaches the four dialog
-    // editors too. A press outside the active editor's
+    // THE EDITOR FIELD'S PRESS: a press on the active editor's field places
+    // the caret and arms the text drag, whose form — the caret drag or the
+    // selection sweep — the first motion past the drag gate decides by the
+    // press's age (EditorTextDragState and kEditorSelectHoldMs, app_state.h,
+    // carry the ruling; the motion arm in on_motion decides). Resolved before
+    // the per-editor modal swallows below so the gesture reaches the four
+    // dialog editors too. A press outside the active editor's
     // region falls through: the dialog editors stay modal — the VEIL — and
     // swallow it, while the top flag editor closes guard-free below and the
     // press then acts normally.
@@ -5217,24 +5247,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // rect is disjoint from the field's).
                 // IT IS AHEAD OF THE DOUBLE-CLICK TEST because a shifted
                 // second press is a shift-click, not a word select; and the
-                // arm below is the plain press's own, so a drag that follows
-                // keeps extending from the SAME anchor (the motion moves
-                // `cursor_pos` alone). The `shift_extend` bit rides the arm
-                // for the release's seed alone (EditorTextDragState).
+                // drag it arms is ARMED AS THE SWEEP OUTRIGHT (Form::Select —
+                // shift always sweeps, with no beat and no gate), so a drag
+                // that follows keeps extending from the SAME anchor (the
+                // motion moves `cursor_pos` alone) and its release seeds no
+                // double-click candidate, the form being decided.
                 // PLASTIC ONLY, recorded rather than fixed: the touch
                 // translation carries `current_mods()` like every other
                 // delivery (touch.md), and the on-screen keyboard's Shift is
                 // ONE-SHOT FOR THE NEXT CHARACTER KEY — it produces a capital
                 // codepoint through shifted_char and sets no modifier bit — so
                 // a tablet with no physical shift key has no road onto this
-                // act, and none is built. Glass extends a selection by
-                // dragging the field, which it already could.
+                // act, and none is built. Glass selects by resting a finger
+                // on the field for the beat and then dragging (the plain
+                // press's own hold form, below).
                 if (mods.shift && !mods.ctrl && !mods.alt) {
                     if (g.ed->selection_anchor < 0)
                         g.ed->selection_anchor = g.ed->cursor_pos;
-                    g.ed->cursor_pos = editor_byte_index_at(g, x);
-                    app.editor_text_drag.active       = true;
-                    app.editor_text_drag.shift_extend = true;
+                    set_editor_caret_from_x(g, x);
+                    app.editor_text_drag = EditorTextDragState{
+                        .active   = true,
+                        .form     = EditorTextDragState::Form::Select,
+                        .press_ms = monotonic_ms(),
+                        .press_x  = x,
+                        .press_y  = y};
                     if (g.dialog) viewport.invalidate_modal_dialog_area();
                     else          viewport.invalidate_top_strip();
                     return;
@@ -5259,11 +5295,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
                 set_editor_caret_from_x(g, x);
-                // Collapsed anchor — extends to a real selection only if the
-                // pointer then moves.
+                // Collapsed anchor, and the drag's form left UNDECIDED: the
+                // first motion past the drag gate decides it by this press's
+                // age — the sweep keeps this anchor and extends from it, the
+                // caret drag drops it and moves the caret alone — and a
+                // release before any crossing collapses it back to a caret.
                 g.ed->selection_anchor = g.ed->cursor_pos;
-                app.editor_text_drag.active       = true;
-                app.editor_text_drag.shift_extend = false;
+                app.editor_text_drag = EditorTextDragState{
+                    .active   = true,
+                    .form     = EditorTextDragState::Form::Undecided,
+                    .press_ms = monotonic_ms(),
+                    .press_x  = x,
+                    .press_y  = y};
                 if (g.dialog) viewport.invalidate_modal_dialog_area();
                 else          viewport.invalidate_top_strip();
                 return;
@@ -6932,17 +6975,21 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (button == GuiMouseButton::Left && app.editor_text_drag.active) {
         const ActiveEditorText g = active_editor_text(app, audio);
         // Read before the finalize, which clears the arm whole.
-        const bool shift_extend = app.editor_text_drag.shift_extend;
+        const bool clicked = app.editor_text_drag.form ==
+                             EditorTextDragState::Form::Undecided;
         finalize_editor_text_drag();
-        // Double-click seeding: a MOTIONLESS release (a pure click that left a
-        // caret, no selection) seeds an editor-text candidate so a second click
-        // within the window selects the clicked character class's run (word /
-        // punctuation / whitespace). A drag that made a selection seeds nothing.
-        // NEITHER DOES A SHIFT+CLICK (architect 2026-08-30): it is the
-        // selection extend, not the first half of a word select, and a
-        // shift-click that landed on the caret's own byte would otherwise seed
-        // one by leaving no selection behind.
-        if (!shift_extend && g.valid && !text_editor::has_selection(*g.ed)) {
+        // Double-click seeding: a release whose press NEVER CROSSED THE DRAG
+        // GATE — a pure click that left a caret — seeds an editor-text
+        // candidate so a second click within the window selects the clicked
+        // character class's run (word / punctuation / whitespace). A drag
+        // seeds nothing whichever form it took: the sweep left a selection,
+        // and the caret drag left none but MOVED, which is the family rule
+        // (a drag that moved records nothing). NEITHER DOES A SHIFT+CLICK
+        // (architect 2026-08-30): it is the selection extend, not the first
+        // half of a word select, and its form is Select from the press, so a
+        // shift-click that landed on the caret's own byte cannot seed one by
+        // leaving no selection behind.
+        if (clicked && g.valid) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::EditorText,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
@@ -9740,14 +9787,36 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             finalize_editor_text_drag();
             return;
         }
+        EditorTextDragState& d = app.editor_text_drag;
+        // THE FORM IS DECIDED AT THE GATE CROSSING AND ONCE (the ruling is at
+        // EditorTextDragState / kEditorSelectHoldMs, app_state.h): below the
+        // drag gate the press is still a click and the motion is ignored
+        // outright — the family's one latch shape, and what lets a finger
+        // rest on the field through the beat without its sub-slop drift
+        // deciding anything — and the crossing asks the press's age: a press
+        // at least the beat old is the SELECTION SWEEP, a younger one the
+        // CARET DRAG. A shift press arrives here already Select.
+        if (d.form == EditorTextDragState::Form::Undecided) {
+            if (std::max(std::abs(mouse_x - d.press_x),
+                         std::abs(mouse_y - d.press_y)) <
+                drag_moved_threshold_px())
+                return;
+            d.form = monotonic_ms() - d.press_ms >= kEditorSelectHoldMs
+                         ? EditorTextDragState::Form::Select
+                         : EditorTextDragState::Form::Caret;
+        }
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
-            // The anchor set at press stays put; moving cursor_pos extends
-            // the selection. IT IS THE SAME MOTION FOR BOTH ARMS — the plain
-            // press seats the anchor at the caret it just placed, the SHIFT
-            // press keeps the anchor that was already standing, and neither
-            // rewrites it from here — so a shift+click's drag goes on
-            // extending from the original anchor (architect 2026-08-30).
+            // THE SWEEP: the anchor set at the press stays put and moving
+            // cursor_pos extends the selection — the same motion for the
+            // plain press (anchor at the caret it placed) and the shift press
+            // (the anchor that was already standing), neither rewriting it
+            // from here, so a shift+click's drag goes on extending from the
+            // original anchor (architect 2026-08-30). THE CARET DRAG: no
+            // anchor at all — the caret follows the pointer and nothing
+            // selects, which is what the phone does under a quick drag.
+            if (d.form == EditorTextDragState::Form::Caret)
+                g.ed->selection_anchor = -1;
             set_editor_caret_from_x(g, mouse_x);
             if (g.dialog) viewport.invalidate_modal_dialog_area();
             else          viewport.invalidate_top_strip();

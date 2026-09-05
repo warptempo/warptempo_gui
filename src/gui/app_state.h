@@ -761,22 +761,45 @@ struct RegionDragState {
     int64_t anchor_source_frame = 0;
 };
 
-// F2.1: mouse drag-to-select inside the active text editor. Only one
-// editor is active at a time, so the active editor (and thus its text
-// geometry) is discoverable from the per-editor is_active checks; a single
-// armed flag is enough. Set on a press that lands on the active editor's
-// text region; cleared on release, on a lost button mid-drag, and on file
-// load (the motion / release handlers also self-heal if the backing editor
-// closes out from under an in-flight drag).
+// The editor field's press-and-drag: one gesture with two forms, decided by
+// the press's age (architect 2026-09-04, on the tablet, asking for the phone's
+// text vocabulary: "if I tap and drag inside the editor, instead of moving the
+// caret like I would expect on a touch screen, it drags the viewport and the
+// waveform"). A press inside the active editor's field seats the caret and
+// arms this record; the first motion past the drag gate
+// (drag_moved_threshold_px) decides the FORM once and latches it: a press
+// younger than kEditorSelectHoldMs is a CARET DRAG — the caret follows the
+// pointer and nothing selects — and a press at least that old is the SELECTION
+// SWEEP from the press byte. A shift press is a sweep from the standing anchor
+// with no beat and no gate (shift always sweeps, the region former's own rule
+// on the navigation surface). It is ONE vocabulary for the mouse and the
+// finger — GUI code over ordinary pointer deliveries, the chrome shift long
+// press's pattern, with no device branch anywhere — so the desk's quick drag
+// moves the caret too, and its immediate selection is the shift drag or the
+// hold (touch.md's caret-drag section carries the ruling and the glass
+// verification). Only one editor is active at a time, so the active editor
+// (and thus its text geometry) is discoverable from the per-editor is_active
+// checks; a single armed record is enough. Set on a press that lands on the
+// active editor's field; cleared on release, on a lost button mid-drag, and on
+// file load (the motion / release handlers also self-heal if the backing
+// editor closes out from under an in-flight drag).
 struct EditorTextDragState {
     bool active = false;
-    // TRUE WHEN THE ARMING PRESS CARRIED SHIFT (architect 2026-08-30, the
-    // shift+click extend). The drag itself is identical either way — the
-    // motion moves `cursor_pos` alone and the anchor never moves — so this bit
-    // exists for ONE reader, the release's double-click SEED: a shift press is
-    // an extend and never the first half of a word select, so it seeds no
-    // candidate whatever the selection it leaves behind.
-    bool shift_extend = false;
+    // THE DRAG'S FORM, decided at the gate crossing and never re-derived:
+    // Undecided until the pointer has left the press by the drag gate — a
+    // press that LIFTS Undecided was a click, the one shape that seeds the
+    // EditorText double-click candidate — then Caret or Select for the rest
+    // of the gesture. The shift press arms Select outright, so a shifted
+    // press seeds no candidate whatever it leaves behind: it is the extend,
+    // never the first half of a word select (architect 2026-08-30).
+    enum class Form { Undecided, Caret, Select };
+    Form    form     = Form::Undecided;
+    // The press's own monotonic_ms() stamp and point: the age the gate
+    // crossing measures against kEditorSelectHoldMs, and the origin the gate
+    // is measured from (Chebyshev, like every press-becomes-drag surface).
+    int64_t press_ms = 0;
+    int     press_x  = 0;
+    int     press_y  = 0;
 };
 
 // WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON is a MarkerCell
@@ -3905,14 +3928,32 @@ inline int double_click_slack_px() {
 // built for this constant; the ruling's home is the read site.
 constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 
+// THE EDITOR FIELD'S SELECT HOLD (architect 2026-09-04, on the tablet): how
+// old a press inside an editor's field must be, at the moment its drag crosses
+// the drag gate, for that drag to be the SELECTION SWEEP; a younger press's
+// drag is the CARET DRAG, the caret following the pointer with nothing
+// selected (EditorTextDragState carries the gesture, on_motion's editor arm
+// decides it). The phone's own text vocabulary — a quick drag moves the
+// caret, a hold then a drag selects — kept as ONE vocabulary for mouse and
+// finger. It reads kHoldBeatMs like the shift hold above, for the same reason:
+// one cadence for the hand, and a duration rides no scale. It passes
+// silently, as the shift hold does — the gesture is the glass's, where no
+// hint could show — and on glass the press it is measured from lands one
+// disambiguation window (~60 ms) AFTER the finger's contact, so a finger must
+// rest that much longer than the beat before its drag selects: a constant
+// offset well inside the beat's own tolerance, deliberately not compensated
+// (the shift hold's own arithmetic, in the other direction).
+constexpr int64_t kEditorSelectHoldMs = kHoldBeatMs;
+
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
 // DRAG (architect-tunable), shared by EVERY press-becomes-drag surface. THE
 // LIST IS RE-DERIVED FROM THE GATES THEMSELVES (codex round 19 — it named
 // "strip, region, trim, and the marker flag" long after the strip drag's
 // deletion and the two 2026-08-15 additions; re-derived again 2026-08-18, when
 // the region's editor was deleted into the trim drags it had been borrowing),
-// and it is SIX states — five that latch their own `moved` in on_motion, plus
-// one that resolves at the crossing without latching anything:
+// and it is SEVEN states — five that latch their own `moved` in on_motion,
+// one that resolves at the crossing without latching anything, and one whose
+// crossing decides the drag's form (the editor text drag, last below):
 //   * ScrollDragState — THE ONE NAV DRAG, the pending click whose crossing
 //     becomes the grab-pan or, with ctrl, the zoom (the capture begins at that
 //     crossing);
@@ -3936,7 +3977,13 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 //     surviving lift act, 2026-08-17), which is the one member that latches NO
 //     `moved` of its own: its crossing RESOLVES the arm outright, running the
 //     set and handing over to the endcap drag above, so there is no moved
-//     phase for it to be in.
+//     phase for it to be in;
+//   * EditorTextDragState — the editor field's text drag (2026-09-05): its
+//     crossing DECIDES the drag's form by the press's age against
+//     kEditorSelectHoldMs — a caret drag or a selection sweep — and latches
+//     it; below the gate the press stays a click, which is what lets a
+//     finger rest on the field through the beat without its sub-slop drift
+//     deciding anything.
 // (A derived reader sat outside that list until 2026-08-18: the region
 // former's SLIVER FLOOR, end_region_drag_min_size_check, measured a rested span
 // against this same constant so that "never became a drag" and "never left the
@@ -3993,7 +4040,7 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 constexpr int     kDragMovedThresholdPx = 8;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
-// SURFACE in the list above (six `<` compares in input_pointer.cpp) and the
+// SURFACE in the list above (seven `<` compares in input_pointer.cpp) and the
 // value pushed into the input core's touch slop at both gui_scale application
 // points. Floor 1: a zero gate would make every click a drag.
 inline int drag_moved_threshold_px() {

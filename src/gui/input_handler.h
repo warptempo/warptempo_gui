@@ -1311,7 +1311,13 @@ struct GuiInputHandler {
     // which destroys the
     // region. Drawing a fresh region over a standing one therefore needs one tap
     // to clear it first, or a hold started OUTSIDE it (the sweep may then run
-    // through it freely — only the DOWN point is asked). SURFACE GEOMETRY ONLY:
+    // through it freely — only the DOWN point is asked). THE BODY IS THE
+    // CARVE-OUT'S ONE INVENTORY: the region above, the notification cards, the
+    // on-screen keyboard's band, the folder overlay's band, and since
+    // 2026-09-05 the OPEN MARKER-LANE EDITOR'S BOX — the edited flag publishes
+    // no hit rect while its editor stands, so the flag-box carve-out could not
+    // reach it and a finger dragging in the field panned the view; the clause
+    // lets it reach the field's caret drag instead. SURFACE GEOMETRY ONLY:
     // every refusal (modal, prompt, dropdown, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
