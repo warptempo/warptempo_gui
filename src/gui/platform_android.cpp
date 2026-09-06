@@ -625,10 +625,11 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // failed attach or lookup logs and leaves the id null, and every call
     // then drops or falls back with this line already written.
     //
-    // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
-    // mediaState (2026-08-28) and the clipboard's pair (2026-09-03). Each is
-    // independent — a missing clipboardSet leaves the head unit's display
-    // working and vice versa — so each has its own arm and its own line.
+    // THE FOUR IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
+    // mediaState (2026-08-28), the clipboard's pair (2026-09-03) and the
+    // status bar's windowActive (2026-09-06). Each is independent — a missing
+    // clipboardSet leaves the head unit's display working and vice versa — so
+    // each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
         JNIEnv* env = nullptr;
         if (app_->activity->vm->AttachCurrentThread(&env, nullptr) == JNI_OK &&
@@ -672,12 +673,25 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "found; pastes read this process's own copies "
                              "only\n");
             }
+            window_active_method_ =
+                env->GetMethodID(cls, "windowActive", "(Z)V");
+            if (!window_active_method_) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                std::fprintf(stderr,
+                             "warptempo_gui: MainActivity.windowActive not "
+                             "found; the status bar will keep its active "
+                             "colour through a focus loss\n");
+            }
             env->DeleteLocalRef(cls);
         } else {
             std::fprintf(stderr,
                          "warptempo_gui: AttachCurrentThread failed; the "
-                         "head unit's display will show nothing and the "
-                         "clipboard stays inside this process\n");
+                         "head unit's display will show nothing, the "
+                         "clipboard stays inside this process and the status "
+                         "bar keeps one colour\n");
         }
     }
 
@@ -946,6 +960,7 @@ void GuiPlatform::shutdown() {
     media_state_method_   = nullptr;
     clipboard_set_method_ = nullptr;
     clipboard_get_method_ = nullptr;
+    window_active_method_ = nullptr;
     if (timerfd_ >= 0) {
         unwatch_fd(timerfd_);
         close(timerfd_);
@@ -1506,6 +1521,11 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // this hook is the EDGE, the same shape the Wayland backend's
             // configure-driven one takes for the same reason.
             if (activation_changed_hook_) activation_changed_hook_();
+            // THE STATUS BAR TAKES THIS EDGE TOO, and it is the one surface
+            // that darkens on it which this backend cannot paint: the bar is
+            // the framework's, so the same bool goes UP to Java (the whole
+            // rule is at publish_window_active).
+            publish_window_active(active);
             if (!active) {
                 // FOCUS LEAVING IS A HARD END FOR TOUCH: the window system has
                 // taken the contacts (a notification shade pull, a task
@@ -1941,6 +1961,46 @@ std::string GuiPlatform::clipboard_get_text() {
     }
     env->PopLocalFrame(nullptr);
     return text;
+}
+
+// ---------------------------------------------------------------------------
+// The status bar's activation edge (the third JNI road up, the fourth id)
+// ---------------------------------------------------------------------------
+
+// THE STATUS BAR IS THIS WINDOW'S TITLE BAR (architect 2026-08-27), so it
+// takes BOTH of the labwc title bar's colours and not only the active one
+// (architect 2026-09-06, on a shade pull with the cover open: the bar "does
+// not change to the disabled/inactive color that labwc uses"). Rows 1 and 2
+// already swap their ground on this very edge, kRedesignRowGround to
+// kRedesignRowGroundUnfocused (render.h owns the pair); the bar above them is
+// the FRAMEWORK'S surface, which nothing on this side of the seam can paint,
+// so the edge goes up to MainActivity.windowActive and Java recolours it with
+// the same two values. That method posts the setter to the UI thread —
+// Window's own setters are not the binder calls the session's and the
+// clipboard's are — and the two numbers live in the Java file because no
+// build can check them against their owners here (the media command table's
+// rule, gui_media.h, for the same reason).
+//
+// THE SHAPE IS publish_media_state's, whole: the glue thread's env attached
+// once in init(), an id looked up once in the same block, the guard on all
+// four terms, and a Java exception described, cleared and swallowed rather
+// than propagated. No local frame, because this call creates no references.
+//
+// NO SPECIAL CASE FOR THE FIRST EDGE: onCreate paints the bar active and the
+// first APP_CMD_GAINED_FOCUS arrives after it, so the opening push sets the
+// colour that is already there.
+void GuiPlatform::publish_window_active(bool active) {
+    if (!app_ || !app_->activity || !jni_env_ || !window_active_method_) return;
+    JNIEnv* env = jni_env_;
+    env->CallVoidMethod(app_->activity->clazz, window_active_method_,
+                        static_cast<jboolean>(active));
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        std::fprintf(stderr,
+                     "warptempo_gui: MainActivity.windowActive threw; the "
+                     "status bar kept the colour it had\n");
+    }
 }
 
 // ---------------------------------------------------------------------------

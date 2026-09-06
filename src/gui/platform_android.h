@@ -540,18 +540,21 @@ private:
     std::vector<GuiMediaCommand> media_queue_;
     std::function<void(GuiMediaCommand)> on_media_command_;
     // UP: the glue thread's JNIEnv (attached once in init(), detached in
-    // shutdown() — a thread that exits attached is a VM abort) and the one
-    // method id, looked up once. Null when the attach or the lookup failed,
+    // shutdown() — a thread that exits attached is a VM abort) and the
+    // method ids, looked up once. Null when the attach or the lookup failed,
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
-    // The clipboard's two ids (2026-09-03) are looked up in the same block
-    // off the same class object, and clipboard_road_open() is the one
-    // predicate both clipboard roads ask.
+    // FOUR IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
+    // independent of the others: the car's mediaState (2026-08-28), the
+    // clipboard's pair (2026-09-03) — clipboard_road_open() is the one
+    // predicate both clipboard roads ask — and windowActive (2026-09-06),
+    // the status bar's activation edge (contract at publish_window_active).
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
     struct _jmethodID* clipboard_set_method_ = nullptr;
     struct _jmethodID* clipboard_get_method_ = nullptr;
+    struct _jmethodID* window_active_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
@@ -668,6 +671,13 @@ private:
     // One pass of the loop body: the blocking drain, then the fixed dispatch
     // order, the settled hook and the paint.
     void pump();
+    // Hand the window's activation state up to MainActivity.windowActive so
+    // the STATUS BAR — this window's title bar, and the framework's surface
+    // rather than ours — takes the same darkening rows 1-2 take on the same
+    // edge. Called from the APP_CMD_GAINED_FOCUS / APP_CMD_LOST_FOCUS arm
+    // beside activation_changed_hook_; a silent no-op when the JNI road is
+    // not open. The whole rule is at the definition.
+    void publish_window_active(bool active);
 
     // -- Lifecycle and input handlers (called from the file-static glue hooks) --
     void on_app_cmd(int32_t cmd);

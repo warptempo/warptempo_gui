@@ -817,7 +817,28 @@ architect's own labwc theme gives one (architect 2026-08-27): `setStatusBarColor
 which IS `kRedesignRowGround`, with its `window.active.label.text.color: #fcfcfc`
 = `kRedesignLabel` the reason the bar's icons stay light (the
 `APPEARANCE_LIGHT_STATUS_BARS` bit is CLEARED — it means dark icons for a light
-bar). `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand beside it because
+bar). AND IT TAKES BOTH OF THAT TITLE BAR'S COLOURS, ON THE ACTIVATION EDGE THE
+ROWS ALREADY TAKE (architect 2026-09-06, on a shade pull with the cover open —
+the bar *"does not change to the disabled/inactive color that labwc uses"*): the
+ruling's second half. `window.inactive.title.bg.color: #202326` IS
+`kRedesignRowGroundUnfocused`, the value rows 1–2 swap to on deactivation
+(kdenlive-redesign.md's UNFOCUSED-WINDOW GROUND), and the bar is the only one of
+those surfaces the backend cannot paint — it is the FRAMEWORK'S — so the edge
+goes UP: the `APP_CMD_GAINED_FOCUS` / `APP_CMD_LOST_FOCUS` arm calls
+`publish_window_active(active)` beside `activation_changed_hook_`, and
+`MainActivity.windowActive(boolean)` POSTS `setStatusBarColor` to the UI thread
+(`runOnUiThread`, a `Window` setter not being the binder call the other roads
+up are), guarded inside the runnable on `isDestroyed()`/`isFinishing()` for a
+post that outlives `onDestroy`. The two literals live at `STATUS_BAR_ACTIVE` /
+`STATUS_BAR_INACTIVE` in the sliver and are copies of their native owners,
+edited in one act like the media command table. NO SPECIAL CASE FOR THE FIRST
+EDGE: `onCreate` paints the bar active and the first `GAINED_FOCUS` arrives
+after it. The bar's ICONS do not change with the ground —
+`window.inactive.label.text.color` is the same `#fcfcfc` — so
+`APPEARANCE_LIGHT_STATUS_BARS` is untouched, and the TASKBAR'S BAND below takes
+no second colour either: `kRedesignContentGround` is a content colour with no
+active/inactive pair, and labwc's inactive theme darkens nothing it corresponds
+to. `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand beside it because
 `setStatusBarColor` needs it and the legacy theme below does not set it; both
 are deprecated at API 35 and honoured at the 34 the manifest targets. THE
 TASKBAR'S ICONS ARE THE LAUNCHER'S and nothing here touches them — the
@@ -847,7 +868,10 @@ dlopen does not register the library for name-based JNI resolution), its
 one `native` method `nativeMediaCommand(int, long)` — STILL the only one,
 the clipboard's pair going UP rather than down — the first of the instance
 methods the native side calls up (`mediaState(...)`, joined 2026-09-03 by
-`clipboardSet` / `clipboardGet`), an inner
+`clipboardSet` / `clipboardGet` and 2026-09-06 by `windowActive(boolean)`, the
+status bar's activation edge and the one up-call that POSTS to the UI thread
+rather than running on the caller's — FOUR IDS IN THE ONE LOOKUP BLOCK, each
+independent and each with its own failure line), an inner
 `MediaSession.Callback` (an inner class, not a second top-level one) and
 the first lifecycle override beside `onCreate` — `onDestroy`, which
 releases the session after `super.onDestroy()` has joined the native
