@@ -297,16 +297,19 @@ struct WaveformCache {
 // ONE authoritative copy at maybe_rebuild_flag_cache's declaration below — do
 // not restate it here. The cache
 // holds the marker/phase-reset flag BOXES ONLY (trim's bar and endcaps left it
-// for the live trim pass); the paint pass is a pure blit. THE EDITING TARGET'S
-// BOX IS SKIPPED IN THIS CACHE (2026-08-02): the open flag editor's UNROLLED box
-// renders live as an overlay after the blit, and it does NOT reliably cover the
-// committed box it replaces — a shortened payload makes the overlay the narrower
-// of the two — so the cached pass omits that marker's box, label and hit rect
-// outright and the editor owns the flag whole. The editing target is a
-// fingerprint field (fp_editing_flag_target) precisely so open, close and
-// retarget rebuild this surface. THE MEASURE EDITOR HAS THE SAME SHAPE ONE BOX
-// SMALLER: its target's MEASURE box alone is skipped here (the flag keeps
-// painting) and it has its own fingerprint field, fp_editing_measure_target.
+// for the live trim pass); the paint pass is a pure blit. THE EDITED BOX IS
+// SKIPPED IN THIS CACHE (2026-08-02): an open marker-lane field renders live as
+// an overlay after the blit, and it does NOT reliably cover the committed box it
+// replaces — a shortened payload makes the overlay the narrower of the two — so
+// the cached pass omits that box, its label and its hit rect outright and the
+// editor owns it whole. SINCE 2026-09-05 THAT IS ONE RULE FOR ALL THREE KINDS
+// (SuppressedBox, render.h): the pass omits the edited box AND everything right
+// of it, those boxes riding the field's edge under the editor's own painter, so
+// a payload field takes its marker's whole column, a bound field takes its cell
+// and whatever follows, and a measure field takes the measure box alone. The
+// suppression is a fingerprint field in both its halves
+// (fp_suppressed_box_index, fp_suppressed_box_cell) precisely so open, close,
+// retarget and a move between one marker's own cells all rebuild this surface.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -364,21 +367,23 @@ struct FlagCache {
     // the bright cell sits on is the focus, already keyed by
     // fp_selection_hash.
     int       fp_addressed_cell           = 0;
-    // THE MARKER WHOSE FLAG EDITOR IS OPEN, or -1. In the fingerprint because
-    // that marker's box is SKIPPED in the cached pass (the open editor paints it
-    // unrolled instead), so opening, closing or retargeting the editor changes
-    // what this surface must contain. Without it the cache would keep the
-    // suppressed frame after the editor closed — and keep the drawn box while it
-    // opened. Contract at render_flags' editing_marker_index (render.h).
-    int       fp_editing_flag_target      = -1;
-    // THE MARKER WHOSE MEASURE EDITOR IS OPEN, or -1 — the sibling of the field
-    // above, for the sibling suppression: that marker's MEASURE BOX alone is
-    // skipped in the cached pass (its flag keeps painting), the live field
-    // taking its place after the blit. A SECOND field rather than a kind flag
-    // beside the first, which is what lets the two together distinguish KIND
-    // AND TARGET: a payload session reads (i, -1) and a measure session
-    // (-1, i). Contract at render_flags' editing_measure_index (render.h).
-    int       fp_editing_measure_target   = -1;
+    // THE STANDING MARKER-LANE EDITOR'S SUPPRESSION — WHICH MARKER and WHICH
+    // OF ITS BOXES the cached pass does not paint (SuppressedBox, render.h,
+    // where the one model is stated). Both halves are content facts of this
+    // surface: opening, closing or retargeting an editor changes which boxes
+    // the pass must contain, and so does moving between a marker's own cells,
+    // since a lower-bound field and an upper-bound field on the SAME marker
+    // suppress different boxes. Without them the cache would keep the
+    // suppressed frame after the editor closed — and keep the drawn box while
+    // it opened.
+    //
+    // ONE FACT IN TWO FIELDS, replacing the two independent target indices
+    // this carried while the payload and measure editors were the only kinds
+    // that suppressed anything: the bound editors joined them on 2026-09-05
+    // and a bare index could not have said WHICH cell. The value is the one
+    // derivation's (suppressed_flag_box), read here and by the painter alike.
+    int       fp_suppressed_box_index     = -1;
+    int       fp_suppressed_box_cell      = 0;
     // THE HISTORY MODE'S SIX INPUTS (the `h` view — AppState::HistoryMode).
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
@@ -611,9 +616,10 @@ struct GuiPaintHandler {
     //     fp_active_markers_view;
     //   - CONTENT, four more: fp_iteration_mode (it changes what the flags
     //     SHOW — the bound cells), fp_addressed_cell (which cell of the focus
-    //     is the bright one), fp_editing_flag_target (the payload editor's marker,
-    //     whose box this pass SKIPS whole) and fp_editing_measure_target (the
-    //     measure editor's marker, whose MEASURE BOX alone this pass skips);
+    //     is the bright one), and the standing editor's suppression in its two
+    //     halves, fp_suppressed_box_index and fp_suppressed_box_cell (which
+    //     marker, and which of its boxes this pass skips along with everything
+    //     right of it);
     //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
     //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
     //     fp_history_active, fp_history_index, fp_history_focus,

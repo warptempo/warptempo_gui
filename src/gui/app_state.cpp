@@ -293,24 +293,26 @@ bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
 // The topmost published flag rect under the point, or nullptr — the ONE walk
 // both public answers below take, so "which marker" and "which box of its run"
 // cannot disagree. It reads TWO publications, the lane pass's stash and the
-// open payload editor's riding cells, and that too is why it is one body: a
-// riding cell must resolve to the marker and the cell a resting one resolves
+// open marker-lane editor's riding boxes, and that too is why it is one body: a
+// riding box must resolve to the marker and the cell a resting one resolves
 // to, and the only way to be sure of that is to answer both out of the same
 // walk with the same boundary idiom.
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
                                             int mouse_x, int mouse_y) {
-    // THE OPEN PAYLOAD EDITOR'S RIDING CELLS ARE ASKED FIRST — the marker's own
-    // bound cells and measure box, re-painted at the unrolled field's right
+    // THE OPEN EDITOR'S RIDING BOXES ARE ASKED FIRST — whichever of the
+    // marker's boxes stand to the RIGHT of the field, re-painted at its right
     // edge by the editor's painter and published there as a flag rect of their
     // own (FlagEditorBox::riding_cells, render.h; architect 2026-09-05, THE
     // RIDING CELLS ARE THE MARKER'S OWN CELLS FOR THE POINTER TOO). They are
     // asked ahead of the lane's stash because the editor paints LAST, so its
     // run covers whatever the lane pass drew under it — the same
     // last-painted-wins rule the backward walk below applies inside the stash.
-    // There is nothing of this marker to arbitrate against in any case: the
-    // flag pass suppresses the edited marker whole, cells and measure with the
-    // box, so its resting rect is absent for exactly as long as this one
-    // stands.
+    // In practice there is nothing to arbitrate: the two publications cannot
+    // overlap. Under the PAYLOAD field the lane pass suppresses that marker
+    // whole and it has no resting rect at all; under a BOUND field it publishes
+    // one covering what the pass DID draw — the flag box, plus the lower cell
+    // beneath an upper field — which ends exactly where the field begins, the
+    // riding run starting past the field's far side.
     //
     // IT IS THE LAST PAINTED FRAME'S TRUTH, like the stash below and for the
     // same reason: the press that closes the editor resolves its marker hit

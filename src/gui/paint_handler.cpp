@@ -166,10 +166,12 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // live paint_trim pass.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
     // that used to show it beneath them is gone — so the only thing painted
     // after this blit in that band is the open editor's overlay
-    // (render_flag_editor_box) — which is why the editing target's box is NOT in
-    // this surface at all: it is skipped at cache-build time (2026-08-02) rather
-    // than painted here and covered, because the overlay is narrower than the
-    // committed box whenever the edited text is shorter. Like the other
+    // (render_flag_editor_box) — which is why the EDITED BOX, and every box of
+    // that marker standing to its right, are NOT in this surface at all: they
+    // are skipped at cache-build time (2026-08-02, one rule for all three
+    // editor kinds since 2026-09-05) rather than painted here and covered,
+    // because the overlay is narrower than the committed box whenever the
+    // edited text is shorter and the boxes past it ride its edge. Like the other
     // caches, the surface may be null on the very first paint after a load
     // (before the first rebuild fires); the blit is skipped and the background
     // shows through for that one frame.
