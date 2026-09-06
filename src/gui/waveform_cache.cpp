@@ -327,7 +327,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
     job.surface        = wf_cache.pending_surface;
-    // The audio the worker reads: always the one process-immortal source audio.
+    // The audio the worker reads: always the project's one source audio, fixed
+    // for the whole lifetime of this cache and this worker.
     job.audio          = in.audio;
 
     wf_cache.pending_fp_vp_start    = in.vp_start;
@@ -461,7 +462,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
-        // The superseding job reads the one process-immortal source audio.
+        // The superseding job reads the project's one source audio, fixed for
+        // the whole lifetime of this cache and this worker.
         job.audio          = &audio;
 
         wf_cache.pending_fp_vp_start    = wf_cache.supersede_vp_start;

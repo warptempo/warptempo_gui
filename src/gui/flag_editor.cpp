@@ -577,20 +577,15 @@ void GuiFlagEditor::commit_top_flag_edit() {
         err = std::move(result.error());
     }
 
-    // Cross-marker check (edit target excluded). A dangling label_ref is
-    // deliberately not gated here — the parser resolver normalizes a
-    // dangling ref to a plain 1.00 owner at render/preview time (one
-    // stderr line per timestamp); def uniqueness is a load rule, so the
-    // editor still gates it.
-    if (ok && !parsed.label_def.empty()) {
-        for (int i = 0; i < static_cast<int>(mv_const.size()); ++i) {
-            if (i == idx) continue;
-            if (mv_const[i].label_def == parsed.label_def) {
-                ok = false;
-                err = "duplicate label definition: " + parsed.label_def;
-                break;
-            }
-        }
+    // Cross-marker check (edit target excluded), through the rule's ONE owner
+    // label_def_taken (warpmarkers.h), which the history revert asks of its own
+    // proposed store. A dangling label_ref is deliberately not gated here — the
+    // parser resolver normalizes a dangling ref to a plain 1.00 owner at
+    // render/preview time (one stderr line per timestamp); def uniqueness is a
+    // load rule, so the editor still gates it.
+    if (ok && label_def_taken(mv_const, parsed.label_def, idx)) {
+        ok = false;
+        err = "duplicate label definition: " + parsed.label_def;
     }
     // Removing a label_def whose refs remain is legal: the refs go
     // dangling, keep their `a.NN` payload (so the file still parses),

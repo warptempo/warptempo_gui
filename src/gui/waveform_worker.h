@@ -12,7 +12,8 @@
 #include <thread>
 #include <vector>
 // <memory> is intentionally not included: the job carries a raw GuiAudio*,
-// no shared_ptr (the source audio is process-immortal and needs no keepalive).
+// no shared_ptr (the source audio outlives every job of its own project — the
+// lifetime invariant below — and needs no keepalive).
 
 class GuiAudio;
 
@@ -24,10 +25,13 @@ class GuiAudio;
 // never destroys.
 //
 // The job-payload owns no audio bytes. It carries `const GuiAudio*` whose
-// lifetime invariant is: audio outlives all in-flight jobs because main.cpp's
-// GuiAudio is constructed before the worker and destroyed after
-// gui.shutdown(), and the source is loaded once at launch and never replaced
-// in-session, so no move-assignment ever races a live job. The only
+// lifetime invariant is: audio outlives all in-flight jobs because
+// `run_project` declares its GuiAudio ahead of this worker and so destroys it
+// after (main.cpp), and the source is loaded ONCE PER PROJECT and never
+// replaced inside one, so no move-assignment ever races a live job. An Open
+// Project reopen is not an exception to that but the reason it is stated per
+// project: the reopen tears this worker down with its GuiAudio and builds a
+// new pair, rather than swapping a buffer under a live job. The only
 // synchronous drain (GuiWaveformWorker::wait_until_idle) is the paint path's
 // force_synchronous_waveform_rebuild, which takes over the cache surfaces
 // before a one-shot rebuild.

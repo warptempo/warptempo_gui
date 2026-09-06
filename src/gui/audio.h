@@ -51,11 +51,16 @@ public:
     // goes away (see GuiPlayback::shutdown).
     const float* samples_ptr() const { return samples_ ? samples_->data() : nullptr; }
 
-    // Shared handle to the one launch-time immutable sample buffer. A render
-    // dispatch copies this handle into its RenderRequest so the worker's handle
-    // keeps the buffer alive until the request dies.
-    // Contract: the source is loaded once at launch and the pointed-to vector
-    // is never mutated after publish.
+    // Shared handle to the one immutable sample buffer this instance published.
+    // A render dispatch copies this handle into its RenderRequest so the
+    // worker's handle keeps the buffer alive until the request dies.
+    // Contract: the source is loaded ONCE PER PROJECT and the pointed-to vector
+    // is never mutated after publish. A GuiAudio is built and torn down inside
+    // `run_project` (main.cpp), so an Open Project reopen arrives at a NEW
+    // GuiAudio over a new source rather than swapping this buffer under a
+    // reader; inside one project nothing loads a source at all (`'` load in
+    // place replaces the marker stores and the engine block, never the
+    // samples).
     std::shared_ptr<const std::vector<float>> samples_shared() const;
 
     // Total number of pyramid levels, counting level 0 (raw samples).

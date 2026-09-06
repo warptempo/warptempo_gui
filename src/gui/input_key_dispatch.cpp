@@ -3418,6 +3418,14 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // rather than a hole in it. The mitigation is the one every authoring act has —
 // ONE undo entry for the whole act, so Ctrl+Z takes back the lot.
 //
+// THE ONE THING IT WILL NOT FORCE IS THE GRAMMAR (architect 2026-09-06): a
+// proposed store that defines one label at two rows would not LOAD, in either
+// binary, so the act refuses whole on a card and installs nothing. That is not
+// a coherence veto and does not narrow the ruling above by a word — the states
+// the always-forcing rule is about (walls, coincident frames, the red-flag
+// normalizations) all load and render. The check and the distinction are stated
+// once, at the check itself below.
+//
 // THE PER-CLASS INVERSE, read off the flag's own two bits:
 //   * ADDED ONLY (`[+]`, the newer side has this line and the older did not) →
 //     DELETE the live marker at that exact frame. None there is NOTHING
@@ -3530,18 +3538,6 @@ void GuiInputHandler::run_history_revert() {
         }
     }
 
-    // THE MODE'S OWN STOP-UP-FRONT REGIME, unconditional and ahead of the loop —
-    // the shape its Tab cycle, its Home/End and its `c` all take, and the
-    // load-in-place's reason besides (a store rewrite under a live audition).
-    // NOT gated on anything this act finds: the stop is refusal-gated at its own
-    // owner, and in this mode it is a formality either way — the entry owner
-    // stops a session that was running before `h` and nothing in the view can
-    // start one (open_history_mode_fresh; bare Space is consumed and no scrub
-    // act exists here). The doc says exactly this rather than folding the stop into
-    // the "only when something changed" claim below, which covers the three
-    // effects that do wait on a change.
-    playback_lifecycle.stop_playback_if_playing();
-
     // ONE SNAPSHOT FOR THE WHOLE ACT, taken before the first write — the shape
     // every multi-marker single-store mutation in the product takes (the two
     // delete-selected bodies, the two status toggles). The undo push is at the
@@ -3565,6 +3561,15 @@ void GuiInputHandler::run_history_revert() {
     // view and two compares there — and used only on the warp arm below.
     const int64_t playhead_source_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+
+    // THE PROPOSED STORE, BUILT WHOLE BEFORE ANYTHING IS INSTALLED (2026-09-06).
+    // The loop below writes THESE copies and the live stores are untouched until
+    // the install at the tail, which is what lets the grammar check between the
+    // two judge the finished state and refuse the act with nothing to undo. Both
+    // columns are copied and the act writes exactly one; the other copy is one
+    // vector's worth of allocation on a keypress and is discarded.
+    GuiWarpMarkers       proposed_warp  = app.warpmarkers;
+    GuiPhaseResetMarkers proposed_phase = app.phaseresetmarkers;
 
     bool changed = false;
 
@@ -3605,7 +3610,7 @@ void GuiInputHandler::run_history_revert() {
     for (int idx : subject) {
         const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
         if (phase) {
-            const auto& mv = app.phaseresetmarkers.markers();
+            const auto& mv = proposed_phase.markers();
             int&       sk  = skip[f.time_frame];
             const int  at  = next_occupant(mv, f.time_frame, sk);
             if (!f.removed) {
@@ -3615,7 +3620,7 @@ void GuiInputHandler::run_history_revert() {
                 // takes the one after it, and neither can take a marker a
                 // removed flag in the same subject just restored.
                 if (at >= 0) {
-                    app.phaseresetmarkers.remove_marker(at);
+                    proposed_phase.remove_marker(at);
                     changed = true;
                 }
                 continue;
@@ -3649,22 +3654,22 @@ void GuiInputHandler::run_history_revert() {
                     format_phaseresetmarkers_text({nm})) {
                     continue;
                 }
-                GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(at);
+                GuiPhaseResetMarker* m = proposed_phase.marker_mut(at);
                 if (m) *m = nm;
             } else {
-                app.phaseresetmarkers.insert_marker(nm);
+                proposed_phase.insert_marker(nm);
                 ++sk;
             }
             changed = true;
             continue;
         }
 
-        const auto& mv = app.warpmarkers.markers();
+        const auto& mv = proposed_warp.markers();
         int&       sk  = skip[f.time_frame];
         const int  at  = next_occupant(mv, f.time_frame, sk);
         if (!f.removed) {
             if (at >= 0) {
-                app.warpmarkers.remove_marker(at);
+                proposed_warp.remove_marker(at);
                 changed = true;
             }
             continue;
@@ -3715,22 +3720,95 @@ void GuiInputHandler::run_history_revert() {
                 format_warpmarkers_text({nm})) {
                 continue;
             }
-            GuiWarpMarker* m = app.warpmarkers.marker_mut(at);
+            GuiWarpMarker* m = proposed_warp.marker_mut(at);
             if (m) *m = nm;
         } else {
-            app.warpmarkers.insert_marker(std::move(nm));
+            proposed_warp.insert_marker(std::move(nm));
             ++sk;
         }
         changed = true;
     }
 
-    // THE THREE EFFECTS THAT WAIT ON A CHANGE, and `changed` is "the state
-    // DIFFERED", not "a store call happened": a subject whose every member found
-    // the live state already carrying its then side leaves no undo entry, no
-    // dirty bit and no re-render behind, exactly as one that found nothing at all
-    // does. (The stop above is the one effect that does not wait — its own
-    // comment says why.)
+    // THE GRAMMAR'S OWN UNIQUENESS RULE, ASKED ONCE ON THE PROPOSED STORE AND
+    // REFUSING THE WHOLE ACT (architect 2026-09-06, on Astra's P1). A label
+    // definition may stand at exactly ONE row of the warp column, and a
+    // `.warpmarkers` file that defines one twice is LOAD-FATAL in both binaries
+    // (parse_warpmarkers_file's seen_def set). A REMOVED flag's inverse
+    // re-inserts the definition the checkpoint carried, and the label may since
+    // have moved to another marker or been reassigned — so this act, alone
+    // among the store's writers, could commit GUI-authored work that the next
+    // load refuses. THE REFUSAL IS WHOLE on the past-EOF wall's own reasoning: a
+    // partially applied delta leaves a state the user did not ask for and cannot
+    // name. Nothing is installed, no undo entry is pushed, the view stays open
+    // and the selection stands, so the press costs the user nothing.
+    //
+    // THIS IS THE GRAMMAR, NOT A COHERENCE VETO, and the distinction is the
+    // whole rule: "fully manual and always forcing" still governs POSITIONAL
+    // coherence — walls, coincident frames, the red-flag normalizations — every
+    // one of which loads and renders and is the user's to author. A duplicate
+    // definition is not that: it is the same rule the flag editor's commit
+    // enforces at the other producer, and both ask the ONE owner
+    // label_def_taken (warpmarkers.h). A duplicate found here is this act's own
+    // by construction — the loader refuses one and the column's only other
+    // producer gates it, so the live store carried none.
+    //
+    // THE PHASE COLUMN IS CARVED OUT BY ITS GRAMMAR: phase resets carry no
+    // labels at all, so there is nothing to collide and no check to run.
+    if (!phase) {
+        const auto& pv = proposed_warp.markers();
+        for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
+            const std::string& def = pv[static_cast<std::size_t>(i)].label_def;
+            if (!label_def_taken(pv, def, i)) continue;
+            // "<Act> refused: <reason>" is ONE sentence, so the appended reason
+            // is lowercase (the convention's owner is at paint_handler.cpp's
+            // capitalization block), and the label is DATA, quoted verbatim.
+            const std::string reason =
+                "label '" + def + "' is already defined at another marker";
+            std::fprintf(stderr,
+                "warptempo_gui: Revert refused: %s\n", reason.c_str());
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Revert refused: " + reason);
+            return;
+        }
+    }
+
+    // THE MODE'S OWN STOP-UP-FRONT REGIME, unconditional and ahead of the
+    // INSTALL — the shape its Tab cycle, its Home/End and its `c` all take, and
+    // the load-in-place's reason besides (a store rewrite under a live
+    // audition). It sits BELOW the two refusals above because a refusal is not
+    // the act, and below the loop because the loop writes only the proposed
+    // copies; nothing live has moved yet. NOT gated on anything this act finds:
+    // the stop is refusal-gated at its own owner, and in this mode it is a
+    // formality either way — the entry owner stops a session that was running
+    // before `h` and nothing in the view can start one
+    // (open_history_mode_fresh; bare Space is consumed and no scrub act exists
+    // here). The doc says exactly this rather than folding the stop into the
+    // "only when something changed" claim below, which covers the four effects
+    // that do wait on a change.
+    playback_lifecycle.stop_playback_if_playing();
+
+    // THE FOUR EFFECTS THAT WAIT ON A CHANGE, the install among them, and
+    // `changed` is "the state DIFFERED", not "a store call happened": a subject
+    // whose every member found the live state already carrying its then side
+    // leaves no undo entry, no dirty bit and no re-render behind, exactly as one
+    // that found nothing at all does — and no store bump either, the proposed
+    // copy being discarded unread. (The stop above is the one effect that does
+    // not wait — its own comment says why.)
     if (changed) {
+        // THE INSTALL, the act's one live write: the proposed column moves into
+        // the store whole. THE ORDER IS ASCENDING BY CONSTRUCTION — the insert
+        // arm placed by lower_bound, the replace arm wrote a marker at the
+        // occupant's own frame and the delete arm removed one — so the store's
+        // resting invariant needs no reorder pass here. markers_mut() is what
+        // bumps the generation, which is what the map memo and the flag cache
+        // read.
+        if (phase) {
+            app.phaseresetmarkers.markers_mut() =
+                std::move(proposed_phase.markers_mut());
+        } else {
+            app.warpmarkers.markers_mut() =
+                std::move(proposed_warp.markers_mut());
+        }
         // THE LIVE SELECTION GOES, the wholesale-store-change convention (the
         // load-in-place's own line, and the deletes'): it is a set of STORE
         // indices, and this act inserts and removes under them.

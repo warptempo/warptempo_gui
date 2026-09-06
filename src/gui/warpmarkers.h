@@ -143,6 +143,38 @@ public:
 // this instant, with no file anywhere.
 std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 
+// IS THIS LABEL DEFINITION ALREADY TAKEN? — the warp column's
+// duplicate-label-definition rule in ONE owner. True when some row of `mv`
+// other than `except` already defines `def`; an empty `def` is never taken
+// (a marker that defines nothing collides with nothing), and `except` may be
+// -1 for a caller judging a definition that belongs to no row yet.
+//
+// THIS IS THE LOADER'S RULE, RESTATED ON THIS SIDE OF THE BOUNDARY. A
+// `.warpmarkers` file that defines one label twice is LOAD-FATAL in both
+// binaries (parse_warpmarkers_file's seen_def set, warpmarkers_parse.cpp), so
+// a GUI act that wrote one would make its own saved work unloadable. THE
+// DISABLE BIT IS NOT ASKED, exactly as the loader does not ask it: a disabled
+// row's definition still occupies the name.
+//
+// TWO CALLERS, both producers that can write a definition:
+//   * GuiFlagEditor::commit_top_flag_edit — the candidate line's own def
+//     against the rest of the column, the edited row excepted; a hit
+//     red-flashes the field and commits nothing.
+//   * GuiInputHandler::run_history_revert — every def of the store the act
+//     PROPOSES, each row excepting itself; a hit refuses the whole act on a
+//     card.
+// The phase reset column carries no labels at all, so it owes no counterpart
+// here (the recorded asymmetry the naming rule asks for).
+inline bool label_def_taken(const std::vector<GuiWarpMarker>& mv,
+                            const std::string& def, int except) {
+    if (def.empty()) return false;
+    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+        if (i == except) continue;
+        if (mv[static_cast<size_t>(i)].label_def == def) return true;
+    }
+    return false;
+}
+
 // True if the marker at `idx` should render as disabled. `disabled` is allowed
 // on any marker — a locally set flag always counts. For an active
 // (non-locally-disabled) `label_ref`, the cascade rule applies: the ref

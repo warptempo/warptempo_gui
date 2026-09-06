@@ -252,9 +252,10 @@ struct WaveformCache {
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
-    // The superseding job always reads the one process-immortal source audio
-    // (WaveformJob.audio), so the slot carries no audio pointer or keepalive —
-    // the deferred redispatch just names &audio.
+    // The superseding job always reads the project's one source audio
+    // (WaveformJob.audio), which is fixed for this cache's whole lifetime, so
+    // the slot carries no audio pointer or keepalive — the deferred redispatch
+    // just names &audio.
 
     void destroy_surface() {
         if (surface) {
@@ -773,9 +774,10 @@ private:
         // The translation map: the target-view map in target view, empty in
         // source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
-        // The audio the plate reads from: always the one process-immortal
-        // source audio. Set by compute_waveform_render_inputs; routed into
-        // WaveformJob.audio and into the synchronous render path.
+        // The audio the plate reads from: always the project's one source
+        // audio, fixed for this painter's whole lifetime. Set by
+        // compute_waveform_render_inputs; routed into WaveformJob.audio and
+        // into the synchronous render path.
         const GuiAudio* audio = nullptr;
         bool     valid         = false;        // false if degenerate / loading
     };
