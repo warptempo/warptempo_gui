@@ -876,6 +876,31 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             static_cast<int>(app.warpmarkers.markers().size()));
     }
 
+    // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a
+    // settings-only restore rewrites engine_settings and rebuilds the map under
+    // every marker INDEX and IMAGE, so no marker keeps the identity a focus
+    // named. It is the SYMMETRIC twin of the engine-key
+    // settings COMMIT, which clears both at its own chokepoint
+    // (settings_editor.cpp); GUI-kind keys are history-less, so 'S' is the only
+    // settings entry kind there is and the pair covers the whole surface. Together
+    // they are what let the never-span-less ENFORCEMENT be deleted — these were its
+    // last two producers, and closing them symmetrically means no collapse protocol
+    // is owed. It does not
+    // violate the 'S' gate's no-SELECT half: emptying a selection is not selecting.
+    // The non-'S' entries need nothing here — they re-select the touched set.
+    //
+    // IT STANDS BESIDE THE POST-RESTORE RULES, NOT AFTER THE AUDIO-VIEW SWITCH,
+    // so that EVERY entry kind reaches that switch with a SETTLED selection.
+    // The switch re-expresses the playhead through a surviving focus
+    // (switch_active_audio_view_to, input_handler.h), so an 'S' entry that also
+    // flips the audio view used to move the cursor through a focus this very
+    // line then cleared — the one path on which "an 'S' restore selects nothing
+    // and lands nothing" was not literally true. The five-axis restore order is
+    // untouched (tab, data with its re-land, column, audio view, addressed
+    // cell): the selection is not one of those axes, and both the marker arms
+    // and this one now write it in the same place.
+    if (entry.op_mode == 'S') selection.clear_selection();
+
     // THE S/T RESTORE, through the set-to spelling of the `t` chokepoint (the
     // contract is at its declaration, input_handler.h). Unconditional like the
     // tab restore above — a settings-only entry carries the view it was typed in
@@ -943,21 +968,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // SHOW an overlay, and the whole land/framing block stays inside it. The
     // no-LAND half is EXCEPTIONLESS again:
     // the target-view re-land it briefly allowed — onto a selection
-    // surviving the restore — died with the selection clear directly below, which
+    // surviving the restore — died with the selection clear above, which
     // leaves no focus to land on.
-    // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a
-    // settings-only restore rewrites engine_settings and rebuilds the map under
-    // every marker INDEX and IMAGE, so no marker keeps the identity a focus
-    // named. It is the SYMMETRIC twin of the engine-key
-    // settings COMMIT, which clears both at its own chokepoint
-    // (settings_editor.cpp); GUI-kind keys are history-less, so 'S' is the only
-    // settings entry kind there is and the pair covers the whole surface. Together
-    // they are what let the never-span-less ENFORCEMENT be deleted — these were its
-    // last two producers, and closing them symmetrically means no collapse protocol
-    // is owed. It does not
-    // violate the 'S' gate's no-SELECT half: emptying a selection is not selecting.
-    // The non-'S' entries need nothing here — they re-select the touched set.
-    if (entry.op_mode == 'S') selection.clear_selection();
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {

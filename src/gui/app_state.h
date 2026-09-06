@@ -266,17 +266,17 @@ struct UndoEntry {
     // make recompute_dirty report a warp-file difference.
     bool                      affects_persistence  = true;
     // Explicit touched-set IDENTITY HINTS for the post-restore selection, filled
-    // ONLY by producers whose touched row the diff reconstruction cannot
-    // recover by marker identity — the position movers (the drags and the two
-    // nudges), where a moved row can
-    // land field-identical to an untouched row (the moved marker column-snapped
-    // exactly onto a row-identical marker). ALWAYS SINGLETON-SCOPED since
-    // 2026-07-29: every one of those gestures moves exactly one marker (groups are
-    // never moved — the doctrine at the head of position_nudge.h), so a
-    // multi-member hint has no producer left. The vectors stay vectors because the
-    // RESTORE side is group-capable — an undo/redo restore may re-select a whole
-    // set it took in wholesale. Empty means "no hint — use the diff reconstruction"
-    // (every other producer). COORDINATE SPACES (kept distinct because the
+    // ONLY by producers whose touched rows the diff reconstruction cannot
+    // recover — either because a moved row can land field-identical on an
+    // untouched one, or because a row added or removed inside a COINCIDENT
+    // GROUP is indistinguishable to a by-frame match. THE PRODUCER ENUMERATION
+    // LIVES AT ONE SITE, restore_touched_indices below, which is where the arms
+    // that consume the hints are ranked; nothing restates it here. A hint may
+    // name ONE row or MANY (the group tempo and bound steps, the deletes and
+    // the propagate paste all name several), and either side may be empty on
+    // its own: an added row is absent from the snapshot, a removed one from
+    // live. Empty means "no hint on this side — use the diff reconstruction".
+    // COORDINATE SPACES (kept distinct because the
     // counter-entry SWAPS them, restore_history_entry): touched_snapshot indexes
     // THIS entry's `snapshot` — the state a restore of this entry PRODUCES, so
     // apply_post_restore_rules reads it directly as the selection; touched_live
@@ -11075,14 +11075,43 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 // view" over one touched set while the act decides it over another.
 //
 // THE ARMS, in the order they rank:
-//   * EXPLICIT IDENTITY HINTS FIRST (the position movers — the reposition drag
-//     and the two nudges): entry.touched_snapshot names the touched marker
-//     directly in `after` coordinates. Used verbatim, bounds-filtered against
-//     `after` defensively; only when they are absent (every hint-less producer)
-//     or filter empty (defensive) does the diff reconstruction run. The hints
-//     exist because the diff matcher cannot tell a moved row from an untouched
-//     one when a column-snapped move lands field-identical at another row's
-//     position.
+//   * EXPLICIT IDENTITY HINTS FIRST: entry.touched_snapshot names the touched
+//     rows directly in `after` coordinates. Used verbatim, bounds-filtered
+//     against `after` defensively; only when they are absent or filter empty
+//     (defensive) does the diff reconstruction run.
+//
+//     THE HINT PRODUCERS, THE ONE ENUMERATION (every other producer pushes
+//     none and takes the reconstruction below). TWO REASONS, and a producer
+//     owes a hint under either:
+//       (a) A MOVED ROW CAN LAND FIELD-IDENTICAL ON AN UNTOUCHED ROW (a
+//           column-snapped move onto a row-identical marker), which the
+//           same-count arm cannot tell apart: the reposition drag
+//           (marker_drag.cpp) and the two position nudges
+//           (GuiWarpMarkersOps::nudge_selected_markers,
+//           GuiPhaseResetMarkersOps::nudge_selected_phase_resets), all three
+//           filling BOTH coordinate spaces. The two GROUP value steps
+//           (GuiWarpMarkersOps::adjust_tempo_cents_group and
+//           adjust_iter_bound_cents_group, the latter through
+//           push_undo_iter_bracket, undo.h) fill both with their SURVIVORS
+//           alone — a skipped ineligible member changed nothing and must not
+//           be re-selected; their singleton arms move one row's fields in
+//           place and take the same-count arm.
+//       (b) A ROW IS ADDED OR REMOVED INSIDE A COINCIDENT GROUP, which the
+//           grown arm below cannot tell apart: it consumes by time_frame alone,
+//           front-to-back, so with k rows at frame F before and k+1 after it
+//           names the LAST row of the group — while insert_marker places by
+//           lower_bound (marker_store.h) and so lands a new marker FIRST in it,
+//           the exact opposite. Coincident drops are legal on both columns, so
+//           the two drops hint their inserted row on the LIVE side (their
+//           snapshot side is empty by construction — the row does not exist
+//           there — and takes the removal arm), the two deletes
+//           (delete_selected_marker, delete_selected_phase_reset) hint their
+//           deleted rows on the SNAPSHOT side (their live side is empty for the
+//           same reason), and the phase-reset propagate paste
+//           (PhaseResetPropagate::paste_apply) hints its materialized rows on
+//           the LIVE side. Shift+S's lead-in drop and the `s` drop are not
+//           separate producers: every drop road funnels through the two drop
+//           bodies named.
 //   * A GROWN COLUMN: the after-rows whose time_frame no before-row can be
 //     spent on, one match per row.
 //   * A SHRUNK COLUMN: a removal leaves no touched row at all, so the answer is
@@ -11108,10 +11137,19 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 //     row consumption exactly like the add/remove arms. This matcher CANNOT
 //     distinguish a moved row that lands field-identical to an untouched row (a
 //     column-snapped move onto a row-identical marker) from that untouched row
-//     — it would flag the wrong subset. The position movers therefore supply
-//     explicit touched_snapshot hints (consumed above), and this diff matcher is
-//     only the fallback for hint-less producers, where such collisions do not
-//     arise.
+//     — it would flag the wrong subset, which is reason (a) above.
+//
+// THE RECONSTRUCTION IS THE FALLBACK, AND IT STILL HAS PRODUCERS. The grown
+// arm's by-frame consumption survives because three hint-less roads can still
+// grow a column: the `h` view's REVERT (GuiInputHandler::run_history_revert),
+// which inserts and removes wholesale under a cleared selection; the
+// render-entry LOAD IN PLACE (push_undo_both, which carries no hint parameters
+// at all — it replaces both stores from a file and has no touched row to name);
+// and the UNDO direction of the propagate paste, whose restored rows are the
+// ones its per-block clear destroyed and which the act does not enumerate. For
+// those three, a coincident group is still resolved by position alone and the
+// answer names the group's last row — accepted, all three being wholesale
+// re-writes that rest no meaningful selection of their own.
 //
 // AN EMPTY ANSWER MEANS "NOTHING TOUCHED" and the applier must not fall through
 // to whatever the user had (the rule's argument is at the applier, undo.cpp).

@@ -51,7 +51,17 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     nm.time_frame = drop_frame;
     const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
     selection.set_single_selection(new_idx);
-    undo.push_undo_phase_reset(std::move(pre_state));
+    // THE IDENTITY HINT, the warp drop's twin (drop_marker, warpmarkers_ops.cpp;
+    // the contract and the producer enumeration are at restore_touched_indices,
+    // app_state.h): the new row is absent from this entry's snapshot, so the
+    // UNDO side names nothing and takes the removal arm's empty answer, while
+    // touched_live names the inserted row so the counter-entry's swap hands the
+    // REDO the right index. Exactly-coincident drops are legal here too, and
+    // insert_marker's lower_bound placement puts the new reset FIRST in its
+    // group where the diff matcher's grown arm would name the last.
+    undo.push_undo_phase_reset(std::move(pre_state),
+                               /*touched_snapshot=*/{},
+                               /*touched_live=*/{new_idx});
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
@@ -280,7 +290,15 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // the deleted positions is gone with the SPAN FORM, and there is no span
     // state left for one to write into — the region IS the trim.
     selection.clear_selection();
-    undo.push_undo_phase_reset(std::move(pre_state));
+    // THE IDENTITY HINT, the warp delete's twin (delete_selected_marker,
+    // warpmarkers_ops.cpp): live_idx names the deleted rows in the PRE-delete
+    // store, which is this entry's snapshot, so an undo re-selects the rows it
+    // put back rather than the last row of each coincident group the diff
+    // matcher's by-frame arm would name. The live side names nothing — the rows
+    // are gone, and a redone delete rests an empty selection as the act does.
+    undo.push_undo_phase_reset(std::move(pre_state),
+                               /*touched_snapshot=*/std::move(live_idx),
+                               /*touched_live=*/{});
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     target_render.trigger();

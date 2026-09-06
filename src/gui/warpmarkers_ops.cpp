@@ -132,7 +132,19 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
     // Newly-dropped marker becomes the sole selection.
     selection.set_single_selection(new_idx);
-    undo.push_undo_warp(std::move(pre_state));
+    // THE IDENTITY HINT, AND A DROP OWES ONE (the contract and the producer
+    // enumeration are at restore_touched_indices, app_state.h). The new row
+    // does not exist in the entry's snapshot, so the UNDO side names nothing
+    // and falls to the removal arm's empty answer — which is exactly right, an
+    // undone drop resting no selection. touched_live names the inserted row, so
+    // the counter-entry's swap hands the REDO the right index. It has to: a
+    // drop onto an OCCUPIED frame is legal, insert_marker places by lower_bound
+    // (marker_store.h) and so lands the new marker FIRST in its coincident
+    // group, while the diff matcher's grown arm consumes by time_frame alone
+    // front-to-back and would name the LAST row of that group — the
+    // pre-existing twin, silently, both painting at one column.
+    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/true,
+                        /*touched_snapshot=*/{}, /*touched_live=*/{new_idx});
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
 
@@ -301,7 +313,18 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // one to write into — the region IS the trim. The delete leaves the trim
     // and the overlay's visibility exactly as it found them.
     selection.clear_selection();
-    undo.push_undo_warp(std::move(pre_state));
+    // THE IDENTITY HINT, AND A DELETE OWES ONE (the contract and the producer
+    // enumeration are at restore_touched_indices, app_state.h). live_idx names
+    // the deleted rows in the PRE-delete store, which is precisely this entry's
+    // snapshot, so an undo re-selects the rows it just put back. It has to: a
+    // deleted row need not be the LAST of a coincident group, and the diff
+    // matcher's grown arm consumes by time_frame alone front-to-back, so it
+    // would name the group's last row — a surviving twin, silently, both
+    // painting at one column. The LIVE side names nothing: the rows are gone,
+    // and a redone delete rests an empty selection exactly as the act does.
+    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/true,
+                        /*touched_snapshot=*/std::move(live_idx),
+                        /*touched_live=*/{});
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A

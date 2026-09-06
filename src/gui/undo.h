@@ -171,10 +171,12 @@ struct Undo {
           target_render(target_render_) {}
 
     void recompute_dirty();
-    // touched_snapshot / touched_live are the position movers' identity hints
-    // (UndoEntry — the reposition drag and the two nudges, one marker each):
-    // defaulted empty for every other caller, which then uses the
-    // diff-based touched-set reconstruction in the post-restore rules.
+    // touched_snapshot / touched_live are the touched-set identity hints
+    // (UndoEntry, app_state.h, for the two coordinate spaces; the producer
+    // enumeration and the reasons a producer owes a hint are at
+    // restore_touched_indices, one site): defaulted empty for every caller that
+    // owes none, which then uses the diff-based touched-set reconstruction in
+    // the post-restore rules.
     // `addressed_cell` stamps UndoEntry::addressed_cell and has exactly one
     // caller, push_undo_iter_bracket below; every other push leaves the
     // entry on the payload.

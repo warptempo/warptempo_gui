@@ -32,6 +32,9 @@ namespace {
 // direct — no strtod, no doubles — and needs no overflow arm at all, one
 // integer digit and two decimals never leaving [-9.99, +9.99]; the tempo
 // window's own wall, refused below, is what holds a bound inside +/-3.75.
+// ZERO HAS ONE SIGN AND IT IS '+': the writer spells zero `+0.00` (its sign is
+// `cents < 0 ? '-' : '+'`), so `-0.00` is a SECOND spelling of a value that
+// already has one and is refused here like any other non-canonical token.
 bool parse_signed_2dp_cents(const std::string& v, int64_t& out) {
     if (v.size() != 5) return false;
     if (v[0] != '+' && v[0] != '-') return false;
@@ -42,6 +45,7 @@ bool parse_signed_2dp_cents(const std::string& v, int64_t& out) {
     }
     const int64_t mag = (digits[0] - '0') * 100 + (digits[1] - '0') * 10 +
                         (digits[2] - '0');
+    if (mag == 0 && v[0] == '-') return false;   // -0.00: zero's second spelling
     out = (v[0] == '-') ? -mag : mag;
     return true;
 }

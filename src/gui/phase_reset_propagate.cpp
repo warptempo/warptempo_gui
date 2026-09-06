@@ -480,7 +480,22 @@ void PhaseResetPropagate::paste_apply() {
         }
     }
     if (store_changed) {
-        undo.push_undo_phase_reset(std::move(pre_state));
+        // THE IDENTITY HINT ON THE LIVE SIDE (the contract and the producer
+        // enumeration are at restore_touched_indices, app_state.h):
+        // created_indices already names every materialized reset's FINAL index,
+        // which is what the act itself selects at the landing below, so a REDO
+        // of the paste re-selects exactly what the paste selected. Without it
+        // the diff matcher's grown arm would consume by time_frame alone and
+        // name the last row of each coincident group — and this act stacks
+        // materialized resets on surviving occupants by construction (the
+        // out-of-window rescalings and the zero clamp above). The SNAPSHOT side
+        // stays empty: the rows an undo puts back are the ones the per-block
+        // clear destroyed, which this act does not enumerate, so that direction
+        // keeps the by-frame fallback.
+        std::vector<int> touched_live = created_indices;
+        undo.push_undo_phase_reset(std::move(pre_state),
+                                   /*touched_snapshot=*/{},
+                                   std::move(touched_live));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         target_render.trigger();
