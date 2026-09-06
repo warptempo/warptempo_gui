@@ -477,7 +477,7 @@ drag coordinates floor instead of truncating.
 
 The glass has no hardware keys, so the product paints its own (2026-08-27): a
 four-row Maliit-shaped surface standing while ANY OF THE TEXT EDITORS
-(`text_editor::Kind` is the authoritative list — six today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
+(`text_editor::Kind` is the authoritative list — seven today) stands on a backend that asks for one (`wants_onscreen_keyboard`), sitting
 directly above the bottom row over the waveform area's lower part, whose every
 key press goes through `synthesize_key` into the ORDINARY key path — so the
 editors' grammars, their refusals, the undo coalescing and the core's repeat
@@ -493,7 +493,11 @@ on Wayland, which is what makes the laptop build's behaviour identical by
 construction rather than by care.
 
 THE BAND HAS A SECOND TENANT SINCE 2026-08-28 and the keyboard yields it: the
-RENDER PLAYER'S FOLDER OVERLAY paints in this exact rect. `onscreen_keyboard::
+FOLDER OVERLAY paints in this same bottom-anchored SLOT — the band's x, its
+width and its bottom edge, one owner (`keyboard_slot_band`) — but NOT in the
+same rect: the height is each tenant's own, this keyboard's four key rows
+against the overlay's ceiling at the tab row's first pixel, and the slot's
+show/hide damage is therefore the taller of the two (`slot_damage_rect`). `onscreen_keyboard::
 stands` gained a third term for it that same day and LOST IT AGAIN when the
 pickers lost their fields — the exclusion is structural, no editor and the
 overlay being able to stand together (the record is at the predicate) — while
@@ -526,8 +530,9 @@ through the same `synthesize_key` road; the blank role is deleted with its last
 slot). IT IS NO LONGER THE OPEN PROMPT'S GLASS ROAD: that prompt's PICKER
 landed 2026-08-28 and takes this keyboard's own band, so the glass gesture is
 File → Open Project, tap the row — the tap's lift both highlights and opens
-it, the row's Cancel button its only other reach — and typing a name is the
-laptop's.
+it, the row's Cancel button its only other reach — and THE FIELD-LESS LIST IS
+THE ONLY ROAD ON BOTH BACKENDS: the typed prompt was deleted rather than left
+as the laptop's second road, so no name is typed anywhere for this act.
 The key stays for every OTHER prompt's completion and ring walk.
 The symbol layer's SECOND SPACE is not that row's leading slot either but a
 deliberate duplicate CHARACTER key beside its `_`, so a hand already in the
