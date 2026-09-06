@@ -8,7 +8,7 @@ One habit the program is built around: when a key or a click refuses, the progra
 
 Build requires a C++23 toolchain (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, and the development headers for fftw3. That is the complete dependency set for the headless render interface (`warptempo_cli`); none of the GUI packages below are needed for it.
 
-The default GUI build — the Linux desktop product, and what the rest of this guide describes — additionally requires the wayland-scanner tool and the development headers for cairo, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
+The default GUI build — the Linux desktop product, and what the rest of this guide describes — additionally requires the wayland-scanner tool and the development headers for cairo (including its FreeType backend, cairo-ft), HarfBuzz, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, and JACK. JACK can be the native jackd2 server or a PipeWire-shimmed JACK provider (modern distros default to the latter).
 
 The `std::expected`-based parser is what pins the compiler floor at GCC 12 / Clang 16. On distributions whose default compiler is older — Ubuntu 22.04 ships GCC 11, for example — install a newer toolchain (`g++-12` or later) and select it with `-DCMAKE_CXX_COMPILER=g++-12`.
 
@@ -16,7 +16,7 @@ Arch Linux:
 
 ```bash
 sudo pacman -S base-devel cmake pkgconf \
-    cairo fftw \
+    cairo harfbuzz fftw \
     wayland wayland-protocols libxkbcommon \
     pipewire-jack
 ```
@@ -25,7 +25,7 @@ Debian / Ubuntu:
 
 ```bash
 sudo apt install build-essential cmake pkg-config \
-    libcairo2-dev libfftw3-dev \
+    libcairo2-dev libharfbuzz-dev libfftw3-dev \
     libwayland-dev wayland-protocols libxkbcommon-dev \
     libjack-jackd2-dev
 ```
@@ -36,12 +36,12 @@ Fedora:
 
 ```bash
 sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config \
-    cairo-devel fftw-devel \
+    cairo-devel harfbuzz-devel fftw-devel \
     wayland-devel wayland-protocols-devel libxkbcommon-devel \
     pipewire-jack-audio-connection-kit-devel
 ```
 
-For a headless build — `warptempo_cli` with no GUI — only the core dependencies are needed. Omit the cairo / wayland / libxkbcommon / JACK packages and configure with `-DWARPTEMPO_BUILD_GUI=OFF` (see Build). On Debian / Ubuntu that reduces to:
+For a headless build — `warptempo_cli` with no GUI — only the core dependencies are needed. Omit the cairo / HarfBuzz / wayland / libxkbcommon / JACK packages and configure with `-DWARPTEMPO_BUILD_GUI=OFF` (see Build). On Debian / Ubuntu that reduces to:
 
 ```bash
 sudo apt install build-essential cmake pkg-config \
@@ -495,7 +495,7 @@ In both readings green is the newer side and red the older: green flags are mark
 
 `,` steps to an older member and `.` back toward the newest, holding either walks steadily; `Shift+,` / `Shift+.` jump to the ends. The two arrow buttons in the icon row are those keys. The state text's left end names where you are in the walk, with the commit's short id on the git readings, and — only when the checkpoint's `scale` differs — the two values old and new. `Tab` / `Shift+Tab` walk the difference flags, `C` recentres on the brightened one, `Ctrl+Shift+Tab` marches the differences on both tabs. `Home` / `End` jump to the piece's ends here — the view is about the whole piece. The `A`/`B` tabs stay the tabs, `Ctrl+Tab` switches them, and the S/T and W/P switches work — a difference is line-shaped, and each view shows one column of it.
 
-Differences can be selected and put back. A plain click on a diff flag brightens it and lands the playhead there; `Shift`+click ranges, `Ctrl`+click toggles. `V` — the revert button — applies the selected differences *backwards* into your session and closes the view: a green flag's marker is deleted, a red flag's put back as the checkpoint had it, a two-colour flag's set back to the checkpoint's value. It is deliberately unguarded — reverting half of a change is exactly as possible as reverting all of it, and that freedom is the point. The whole act is one undo step. A read-only tab refuses it, and `'`, but not Save and commit.
+Differences can be selected and put back. A plain click on a diff flag brightens it and lands the playhead there; `Shift`+click ranges, `Ctrl`+click toggles. `V` — the revert button — applies the selected differences *backwards* into your session and closes the view: a green flag's marker is deleted, a red flag's put back as the checkpoint had it, a two-colour flag's set back to the checkpoint's value. It is deliberately unguarded about the music — reverting half of a change is exactly as possible as reverting all of it, and that freedom is the point: markers land on top of each other, sections stretch, red flags appear, all of it yours to fix. What it will not do is write a file the program could not read back. Two things stop it, and both refuse the *whole* press rather than part of it, leaving the view open, your selection standing and nothing changed: a revert whose finished markers would give the same label to two markers (a disabled one counts) answers `Revert refused: label '<name>' is already defined at another marker`, and one that would put a marker past the end of this recording — a checkpoint taken against a longer file — answers `Revert refused: warp marker past end of audio at <time>` (`phase reset marker` in the other column). Otherwise the whole act is one undo step. A read-only tab refuses it, and `'`, but not Save and commit.
 
 `'` inside the view asks about the member you are looking at — `Load '<id>' in place?` — and its `OK` loads that checkpoint's (or session state's) markers and engine settings in place: the same in-memory load a render entry takes, one undo entry, nothing written to disk, nothing of the checkpoint's trim, tabs or preferences; the view closes as it loads. It is not a rewind — `Ctrl+Z` immediately after brings back what you left, which is what makes walking to the very first state and loading it a safe way to audition where you started.
 

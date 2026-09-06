@@ -3841,9 +3841,12 @@ void GuiInputHandler::run_history_revert() {
     // just rewritten the very state the session's frozen now side was measured
     // against, so every flag in the lane now describes a state that no longer
     // exists — the load-in-place's own argument, applied to a narrower write.
-    // Closing AFTER the mutations is what lets the exit owner's entry-band
-    // restore run over the finished state, and it is why the act needs no damage
-    // of its own: close_history_mode invalidates the window whole.
+    // Closing AFTER the mutations is what lets the exit owner's own live-lane
+    // republish run over the FINISHED state — the view owns no navigation state
+    // and puts nothing back (the parked-band restore died 2026-08-18; the record
+    // is at close_history_mode), so the republish is the whole of what the order
+    // buys. It is also why the act needs no damage of its own:
+    // close_history_mode invalidates the window whole.
     //
     // IT CLOSES EVEN WHEN NOTHING CHANGED — a subject of added flags with no
     // live markers under them, the always-force rule's own quiet case. The act
