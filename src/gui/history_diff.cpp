@@ -200,15 +200,30 @@ long long monotonic_ms() {
 // pre-flight would read a FAILED `status` as "nothing to commit" and tell the
 // user the checkpoint already carries bytes that are in fact still uncommitted.
 //
-// Failed covers both shapes of not-having-answered: git never ran at all (the
-// spawn's own refusal, or the child's 127 — see run_git_capture below), or it
-// ran and exited nonzero.
+// THREE ANSWERS, EACH A DIFFERENT FACT ABOUT THE INVOCATION, and the split
+// between the first two is the one only this enum can carry.
+//
+// `Failed` — GIT NEVER RAN. The spawn's own refusal, a pipe or file-actions
+// build that never got that far, a `waitpid` that did not answer with our own
+// normally-exited child, and BIONIC'S EXIT 127 (run_git_capture's head owns the
+// two spellings of could-not-exec). `out` is empty.
+//
+// `Exited` — GIT RAN AND REFUSED: it exec'd and exited NONZERO, which is git's
+// own verdict on the question it was asked — a `rev-parse` outside a clone
+// (128), a rejected pathspec, a locked index. `out` is CLEARED, because a
+// failed command's stdout is never handed on.
 //
 // WHAT `Ran` PROMISES, stated because two callers must know it: GIT WAS EXECUTED
 // AND ITS EXIT STATUS WAS ZERO. The status is read at every call — SIGCHLD
-// carries its default disposition, so it is always there to read — and a git
-// that started and then failed with nothing on stdout, a rejected pathspec or a
-// locked index, is Failed here.
+// carries its default disposition, so it is always there to read.
+//
+// ONE CALLER TELLS `Failed` FROM `Exited` (re-greped 2026-09-06): the ROOT
+// DERIVATION, where "could not ask git which clone holds this folder" and "this
+// folder is not inside a clone" are two different things to tell the user, and
+// only the first is a read that did not answer. resolve_ref_capture hands the
+// verdict on for the same distinction, though its one caller today drops it.
+// EVERY OTHER READER COMPARES AGAINST `Ran` ALONE, so `Exited` falls exactly
+// where `Failed` fell for all of them.
 //
 // WHAT `Ran` DOES NOT PROMISE is anything about the OUTPUT: a `log` with no
 // commits, a `rev-parse` that resolved nothing and an `ls-tree` of a tree with
@@ -221,8 +236,9 @@ long long monotonic_ms() {
 // alone; what the enum adds is the case no output-shaped witness could ever
 // cover, that git never ran.
 enum class GitCapture {
-    Failed,
-    Ran,  // git was executed; `out` is its whole stdout, possibly empty
+    Failed,  // git never ran; `out` is empty
+    Exited,  // git ran and exited nonzero; `out` is cleared
+    Ran,     // git ran and exited zero; `out` is its stdout, possibly empty
 };
 
 // Run `git -C <repo> <args...>` and capture its stdout.
@@ -274,7 +290,8 @@ enum class GitCapture {
 // so there the verdict is the EXIT STATUS, readable because SIGCHLD carries its
 // default disposition and unambiguous because git's own failure codes are 1 and
 // 128/129 for the reads below, never 127. Both spellings land on Failed, which
-// is the case no output-shaped witness could ever cover: that git never ran.
+// is the case no output-shaped witness could ever cover: that git never ran —
+// the 127 half being mapped at the status read below, the one site that sees it.
 //
 // `root` IS THE CLONE, and it is a parameter rather than a constant since
 // 2026-08-11: it is derived from the loaded source and handed down through every
@@ -363,29 +380,49 @@ GitCapture run_git_capture(const std::string&              root,
     }
     close(fds[0]);
 
-    // THE STATUS IS THE VERDICT. The child is ours and unreaped and SIGCHLD
-    // carries its default disposition, so the wait answers with our own pid; a
-    // status we could not read is Failed on the same footing as a nonzero one,
-    // since `Ran` promises a zero status and nothing here may promise it blind.
-    // Bionic's could-not-exec arrives here as 127 (see the head).
+    // THE STATUS IS THE VERDICT, AND IT SPLITS TWO WAYS. The child is ours and
+    // unreaped and SIGCHLD carries its default disposition, so the wait answers
+    // with our own pid; zero is `Ran`, and a nonzero exit is `Exited` — git ran
+    // and refused, which is an ANSWER and not the absence of one.
+    //
+    // A STATUS WE COULD NOT READ IS `Failed`, on the same footing as a spawn
+    // that never happened: `Ran` promises a zero status and nothing here may
+    // promise it blind, and a child that died on a SIGNAL never reached a
+    // verdict of its own, so calling it a refusal would put words in git's
+    // mouth — the root derivation below turns `Exited` into "this folder is not
+    // a clone", and a killed `rev-parse` must never say that.
+    //
+    // 127 IS BIONIC'S COULD-NOT-EXEC AND IS MAPPED HERE, the one site that sees
+    // it (the head owns the two spellings): bionic reports the exec's own
+    // failure only through the child's `_exit(127)`, git itself never exits 127
+    // for the reads above (its own codes are 1 and 128/129), and glibc never
+    // yields it here at all, having reported the failure as posix_spawnp's
+    // return before any pid was handed out.
     int   status = 0;
     pid_t w      = 0;
     do {
         w = waitpid(pid, &status, 0);
     } while (w < 0 && errno == EINTR);
-    if (w != pid || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    if (w != pid || !WIFEXITED(status)) {
         out.clear();
         return GitCapture::Failed;
     }
+    const int code = WEXITSTATUS(status);
+    if (code == 0) return GitCapture::Ran;
 
-    return GitCapture::Ran;
+    // A failed command's stdout is never handed on, whichever verdict it takes.
+    out.clear();
+    return (code == 127) ? GitCapture::Failed : GitCapture::Exited;
 }
 
-// THE ORDINARY READING — ran AND said something — which is what every caller
+// THE ORDINARY READING — `Ran` AND said something — which is what every caller
 // wants whose question is answered by the output itself: a `log` with no commits,
 // a `rev-parse` that resolved nothing and an `ls-tree` of a tree with no matching
-// path are all "no history here" and all correctly fail this. SEVEN CALL SITES
-// (re-derived by grep 2026-08-09): the guard's two `remote get-url` reads, the
+// path are all "no history here" and all correctly fail this, as do both
+// not-having-answered states (`Failed` and `Exited` alike, which this reading
+// deliberately does not tell apart — the two callers that must are below).
+// SEVEN CALL SITES (re-derived by grep 2026-09-06): the guard's two
+// `remote get-url` reads, the
 // per-commit `ls-tree`, two `rev-parse --verify`s, the walk's `log`, and
 // `rev-parse --abbrev-ref`. THE WALK'S `log` IS ONE OF THEM AGAIN, and only
 // because it is no longer the emptiness verdict: `rev-list --count` decides
@@ -393,9 +430,10 @@ GitCapture run_git_capture(const std::string&              root,
 // silence from it is a contradiction rather than an empty history.
 //
 // SEVEN CALLERS READ run_git_capture DIRECTLY INSTEAD (re-derived by grep
-// 2026-08-11 — the count stood at four and then five while the list was EDITED
+// 2026-09-06 — the count stood at four and then five while the list was EDITED
 // rather than RE-DERIVED, which is the retell rule's own failure mode caught in
-// this very comment), and they fall in three groups.
+// this very comment; eight call sites in the file, this helper being the
+// eighth), and they fall in three groups.
 //
 // ONE ACCEPTS AN EMPTY ANSWER AS CONTENT: the load-in-place's BLOB reads
 // (read_snapshot_at), where an empty sidecar is a valid whole file in both marker
@@ -410,10 +448,11 @@ GitCapture run_git_capture(const std::string&              root,
 // sidecar paths, REFUSING an empty answer outright.
 //
 // TWO WANT THE RAN-VERSUS-COULD-NOT-RUN BIT ITSELF, which is not a question about
-// the output at all: the ROOT DERIVATION, whose two refusals ARE those two states
-// (a `rev-parse` that could not run against one that ran and printed nothing), and
-// resolve_ref_capture, which hands the verdict on beside the object name because
-// the distinction is real even where its one caller today drops it.
+// the output at all: the ROOT DERIVATION, whose two refusals ARE `Failed` and
+// `Exited` (a `rev-parse` that could not run against one that ran and told us
+// this folder is not in a clone), and resolve_ref_capture, which hands the
+// verdict on beside the object name because the distinction is real even where
+// its one caller today drops it.
 bool git_output(const std::string& root, const std::vector<std::string>& args,
                 std::string& out) {
     return run_git_capture(root, args, out) == GitCapture::Ran && !out.empty();
@@ -1404,9 +1443,11 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // paths, a merge whose diff git suppressed (usually — the default merge display
 // is a COMBINED diff, so an EVIL merge that changed a sidecar relative to both
 // parents does emit the path, which is why silence was never a witness for
-// "this is a merge"), and a `show` that ran and FAILED, exit status being
-// unreadable here. Nothing downstream can tell them apart and nothing should
-// try: each means this program cannot say which folder the commit is about.
+// "this is a merge"), and a `show` that ran and FAILED — which the capture
+// layer now names `Exited` and this reader folds in with the rest, since it
+// takes `!= Ran` and there is nothing different to do about it. Nothing
+// downstream can tell the three apart and nothing should try: each means this
+// program cannot say which folder the commit is about.
 //
 // THE ANSWER IS ACCEPTED ONLY IN A WELL-FORMED SHAPE, and the shape is derived
 // from what a checkpoint can actually be rather than assumed. THE ACT WRITES ONE
@@ -1973,13 +2014,26 @@ GuiHistoryNowSide build_history_now_side(const AppState& app) {
 // canonicalizing against the working directory is what makes a program launched
 // from inside the piece's folder answer that folder's clone.
 //
-// THE TWO REFUSALS ARE TOLD APART BY THE CAPTURE'S TRI-STATE, which is the only
-// instrument there is — exit codes are unreadable in this program. A `rev-parse`
-// that RAN and printed nothing is the ruled NOT-A-CLONE (that is exactly what git
-// does outside a repository), and its fix is a clone or a file move. One that
-// could not run at all, or whose answer is not an existing directory, is a READ
-// THAT DID NOT ANSWER and says so through `read_failed`, which the scan turns
-// into a not-ok run so an unread repository never passes for a read one.
+// THE TWO REFUSALS ARE TOLD APART BY THE CAPTURE'S TRI-STATE, and this is the
+// one caller that reads all three of its states. A `rev-parse` that RAN AND
+// EXITED NONZERO is the ruled NOT-A-CLONE — that is exactly what git does
+// outside a repository, measured on git 2.55: exit 128 with nothing on stdout,
+// for a folder in no clone and for a `.git` with no work tree alike — and its
+// fix is a clone or a file move, not a `read_failed`. One that COULD NOT RUN at
+// all, or whose answer is not an existing directory, is a READ THAT DID NOT
+// ANSWER and says so through `read_failed`, which the scan turns into a not-ok
+// run so an unread repository never passes for a read one.
+//
+// THERE IS NO EMPTY-OUTPUT ARM, and the reason is that nothing produces one: a
+// `--show-toplevel` that exits ZERO has named a work tree, and every shape that
+// has none refuses with 128 instead (both measured above). An error arm exists
+// iff a producer exists (validation_topology.md), so the arm that stood here
+// until 2026-09-06 — written when a nonzero exit was indistinguishable from a
+// silent success — is folded into the `Exited` refusal above rather than kept
+// as an unreachable second road onto it. Were a future git to print nothing and
+// exit zero anyway, the empty spelling falls through to the not-a-directory
+// refusal below, which is a read that did not answer: conservative, and the
+// direction that never launders silence into a clone.
 //
 // THE ANSWER IS CANONICALIZED before it leaves: git prints a real absolute path,
 // and canonicalizing it once here is what lets every consumer — the
@@ -2022,19 +2076,23 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
     std::string out;
     const GitCapture capture =
         run_git_capture(dir, {"rev-parse", "--show-toplevel"}, out);
-    if (capture != GitCapture::Ran) {
+    if (capture == GitCapture::Failed) {
         r.read_failed = true;
         r.reason = path_failure("could not ask git which clone holds ",
                                 dir_path, dir_name, "");
         return r;
     }
-    const std::string toplevel = trim_trailing_ws(out);
-    if (toplevel.empty()) {
+    if (capture == GitCapture::Exited) {
+        // Git answered, and the answer is no. NOT a `read_failed`: a project
+        // folder outside every clone is a supported configuration (projects_path
+        // need not be under the clone), and the mode's local fallback is what it
+        // gets.
         r.reason = path_failure(
             "the source's folder is not inside a git clone: ", dir_path,
             dir_name, "");
         return r;
     }
+    const std::string toplevel = trim_trailing_ws(out);
 
     const std::filesystem::path root =
         std::filesystem::weakly_canonical(std::filesystem::path(toplevel), ec);
@@ -2340,13 +2398,19 @@ void scan_history_walk(
     // THE ENUMERATION MUST MATCH THE WITNESS, EXACTLY. A `log` that prints a
     // PREFIX and then dies is the shape this catches, and it is measured rather
     // than imagined: with an older object damaged, `git log --format=%H` printed
-    // the newest SHA and exited 128. Nothing here can see that exit status, and
-    // a non-empty answer alone would have accepted the truncation — a walk
-    // silently missing its older half, which then reads as a piece with fewer
-    // checkpoints than it has. So EVERY line must be a full object name and the
-    // COUNT of them must equal the count that witnessed the read. Either
-    // failing is a contradiction between two reads of one history, and a
-    // contradiction is not an answer.
+    // the newest SHA and exited 128 — a non-empty answer, which alone would have
+    // accepted the truncation as a walk silently missing its older half, read
+    // afterwards as a piece with fewer checkpoints than it has.
+    //
+    // THAT PARTICULAR SHAPE IS NOW CAUGHT TWICE, and this check is still the one
+    // that must hold. The capture layer reads the child's status, so the
+    // measured 128 comes back `Exited` and git_output above already refused it;
+    // but a truncation whose STATUS IS ZERO is a producer this side still owns —
+    // our own read loop breaks on a pipe error and hands on what it got, and git
+    // exits fine behind it. So EVERY line must be a full object name and the
+    // COUNT of them must equal the count that witnessed the read. Either failing
+    // is a contradiction between two reads of one history, and a contradiction
+    // is not an answer.
     std::vector<std::string> candidates;
     bool malformed_line = false;
     for (std::string& sha : split_lines(log_out)) {
@@ -2964,8 +3028,10 @@ namespace {
 //
 // THE TWO RETURNS ARE TWO DIFFERENT FACTS. `object_name` answers WHAT THE REF
 // NAMES and is empty when the ref did not resolve; the returned GitCapture
-// answers WHETHER THE INVOCATION RAN, which an empty name cannot carry and which
-// no later probe can reconstruct — a second question answered now proves the
+// answers HOW THE INVOCATION ENDED — all three states, so an absent ref
+// (`Exited`, git's own refusal of the spelling) and an unreachable repository
+// (`Failed`) are told apart — which an empty name cannot carry and which no
+// later probe can reconstruct: a second question answered now proves the
 // repository speaks now, never that an earlier invocation ever executed.
 //
 // NOBODY NEEDS BOTH TODAY (re-derived 2026-08-09): the one caller is
@@ -3296,11 +3362,13 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // anything less — so success is an OBSERVATION, and an unanswerable observation
 // is simply not a yes.
 //
-// AND SUCCESS IS AN OBSERVATION AT BOTH MUTATING STEPS, which is what the
-// subprocess layer forces rather than a preference: run_git_mutate CANNOT SEE A
-// CHILD'S EXIT STATUS (its header states exactly what its `false` covers), so a
-// git that exits nonzero within the deadline reads as `true` here. FAILURES may
-// therefore be decided on the advisory return OR on an observation — a commit
+// AND SUCCESS IS AN OBSERVATION AT BOTH MUTATING STEPS, which is the strict
+// model's own ruling and not a limit of the subprocess layer: run_git_mutate
+// COULD read the child's exit status — the capture helper beside it does — and
+// DELIBERATELY DOES NOT, because git's status is not this act's outcome (its
+// header states exactly what its `false` covers and why), so a git that exits
+// nonzero within the deadline reads as `true` here. FAILURES may therefore be
+// decided on the advisory return OR on an observation — a commit
 // whose tip did not move, a push whose remote demonstrably lacks the checkpoint
 // — while a SUCCESS is only ever an observation: the tip MOVED, and the
 // remote-tracking ref CARRIES it.

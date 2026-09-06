@@ -624,8 +624,11 @@ struct GuiHistoryWalkHeader {
 // cached global — the answer travels as a value, which is also what makes it safe
 // for the prefetch worker and the checkpoint worker to ask on their own threads.
 //
-// `ok` false with `read_failed` false is the ruled "not inside a git clone"; with
-// `read_failed` true it is a read that did not answer. `reason` is the one line
+// `ok` false with `read_failed` false is the ruled "not inside a git clone" — the
+// `rev-parse` RAN AND EXITED NONZERO, which is git's own no and the answer for a
+// project folder outside every clone; with `read_failed` true it is a read that
+// did not answer, git having never run or named something that is not a
+// directory. The definition site owns the mapping. `reason` is the one line
 // the caller prints. TWO CALLERS (re-derived by grep 2026-08-11):
 // resolve_history_walk_header below, which makes the refusal the header's own,
 // and read_history_branch_tip_sha, whose own two callers ask before any header
@@ -676,8 +679,12 @@ std::string read_history_branch_tip_sha(const std::string& source_audio_path);
 // against a baseline nobody ever read.
 //
 // WHICH IS WHY THE EMPTY VERDICT RESTS ON AN OUTPUT-SHAPED WITNESS and not on a
-// silent `log`: exit codes are unreadable here, so a `log` that ran and found
-// nothing and a `log` that failed both say nothing at all. `rev-list --count`
+// silent `log`: a `log` that ran and found nothing and a `log` that failed both
+// say nothing at all, and the emptiness ruling is that silence is never the
+// witness whatever else can be told about the invocation. (The capture layer
+// reads the child's status, so a failed `log` is its own state there and
+// git_output refuses it; the count stays the verdict by ruling, and the status
+// is a second reading that agrees rather than the only one.) `rev-list --count`
 // prints "0" — bytes git printed — and that is the ruled empty history.
 //
 // WHAT ENDS A RUN NOT OK — THE ONE ENUMERATION, every other site pointing here
@@ -1165,9 +1172,10 @@ std::string history_checkpoint_title(const std::string& project_directory);
 //   commit that landed and then hung in `post-commit` past the deadline lands
 //   here too, tip moved and all (git moves HEAD before running the hook). The
 //   commit that reported nothing and MOVED NO TIP made nothing, and that is what
-//   the tip compare is for: the child's exit status is unreadable here, so a
-//   moved tip is the only proof a commit happened, and a rejecting pre-commit
-//   hook or an identity/signing failure is caught by its absence. And a tip that
+//   the tip compare is for: the mutating runner reads no exit status, by ruling
+//   rather than by inability, so a moved tip is the only proof a commit happened
+//   here, and a rejecting pre-commit hook or an identity/signing failure is
+//   caught by its absence. And a tip that
 //   could not be read AFTER committing says nothing either way.
 // SO THE TERMINAL SHOWS WHICH, and that is the ruled model rather than a gap:
 // `git status` and `git log` answer in one look, a hand commit finishes an
