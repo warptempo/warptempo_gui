@@ -3034,19 +3034,24 @@ namespace {
 // stdout at all. So the header's presence is the proof and the lines after it are
 // the answer. (The exit status says the same thing and the capture layer does
 // read it; the header is asked for anyway, because its SECOND job is one no exit
-// status could do — the ahead reading below.)
+// status could do — the publication reading below.)
 //
 // THE HEADER ALSO CARRIES THE PUBLICATION STATE, which is the whole reason this
-// act needs no repository observation of its own: `[ahead N]` in the header's
-// decoration is git's own answer to "does the remote have what this branch has",
-// read out of the remote-tracking ref exactly as the deleted containment walk
-// read it, in a probe the act was already running. Clean paths and no `[ahead]`
-// is the honest all-done; clean paths WITH it is the standard tool's cue to push.
+// act needs no repository observation of its own: the decoration — `[ahead N]`,
+// or `[gone]` for an upstream that is configured and no longer there — is git's
+// own answer to "does the remote have what this branch has", read out of the
+// remote-tracking ref exactly as the deleted containment walk read it, in a probe
+// the act was already running. Clean paths and an undecorated upstream is the
+// honest all-done; clean paths WITH either decoration is the standard tool's cue
+// to push.
 //
-// (A BRANCH WITH NO UPSTREAM carries no decoration at all — `## main` — so it
-// reads as not-ahead and the act reports NothingToCommit over clean paths. That
-// is the sanctioned repository's answer for a configuration it does not have,
-// and a branch with nowhere to push is not a state this act can improve.)
+// (A BRANCH WITH NO UPSTREAM AT ALL carries no decoration — `## main` — so it
+// reads as owing nothing and the act reports NothingToCommit over clean paths.
+// That is the sanctioned repository's answer for a configuration it does not
+// have, and a branch with nowhere to push is not a state this act can improve.
+// `[gone]` IS A DIFFERENT STATE and is read as such: an upstream IS configured,
+// so there is a destination, and the branch it names is the one thing missing —
+// the remote lacks every commit this branch carries, and the push recreates it.)
 //
 // THE HEADER'S BRANCH NAME IS NOT READ. It was, from 2026-08-09 to 2026-09-06, as
 // a TRIPWIRE: `git status` takes no ref, so a checkout in another terminal
@@ -3061,30 +3066,42 @@ enum class GuiHistoryPathStatus {
     Dirty,        // it ran; at least one differs
 };
 
-// IS THE HEADER'S DECORATION AN `[ahead ...]`?
+// DOES THE HEADER'S DECORATION SAY THE BRANCH OWES ITS UPSTREAM A PUSH — either
+// commits the upstream lacks, or no upstream branch left to lack them?
+//
+// TWO DECORATIONS ANSWER YES, and they are two shapes of the one question.
+// `[ahead N]`: the branch carries commits the upstream ref has not got.
+// `[gone]`: the upstream is configured and the branch it names is not there at
+// all, so the remote lacks every commit this branch has. Both are publication
+// work and the act's one push does both — its explicit
+// `refs/heads/<branch>:refs/heads/<branch>` refspec RECREATES a gone branch
+// (verified live against a bare remote whose `main` was deleted and pruned).
 //
 // THE GRAMMAR, verified live against git 2.55 in every shape the act can meet:
 // `## main` (no upstream), `## main...origin/main` (with one),
-// `## main...origin/main [ahead 1]` / `[behind 1]` / `[ahead 1, behind 2]`,
-// `## HEAD (no branch)` (detached), `## No commits yet on main` (unborn).
+// `## main...origin/main [ahead 1]` / `[behind 1]` / `[ahead 1, behind 2]` /
+// `[gone]`, `## HEAD (no branch)` (detached), `## No commits yet on main`
+// (unborn).
 //
 // THE MATCH IS UNAMBIGUOUS BECAUSE OF WHAT A REFNAME MAY NOT CONTAIN: git refuses
 // a branch name holding a space (`git check-ref-format`'s own rules), so the
 // space that introduces the decoration can never be part of the local or the
-// upstream name, and `[ahead ` can appear nowhere else on the line. AHEAD AND
-// BEHIND TOGETHER STILL READ AS AHEAD, which is what the act wants: the branch
-// carries commits the remote has not got, whatever else the remote also carries,
-// and the push git then refuses is reported with git's own words.
-bool header_says_ahead(const std::string& header) {
-    return header.find(" [ahead ") != std::string::npos;
+// upstream name, and neither ` [ahead ` nor ` [gone]` can appear anywhere else on
+// the line. AHEAD AND BEHIND TOGETHER STILL READ AS OWING, which is what the act
+// wants: the branch carries commits the remote has not got, whatever else the
+// remote also carries, and the push git then refuses is reported with git's own
+// words.
+bool header_says_publication_owed(const std::string& header) {
+    return header.find(" [ahead ") != std::string::npos ||
+           header.find(" [gone]") != std::string::npos;
 }
 
-// `ahead_of_remote` comes back with the header's own reading (false whenever the
+// `publication_owed` comes back with the header's own reading (false whenever the
 // status could not be used at all).
 GuiHistoryPathStatus status_of_paths(const std::string& repo_root,
                                      const std::vector<std::string>& pathspecs,
-                                     bool& ahead_of_remote) {
-    ahead_of_remote = false;
+                                     bool& publication_owed) {
+    publication_owed = false;
     std::vector<std::string> args{"status", "--porcelain", "--branch", "--"};
     for (const std::string& p : pathspecs) args.push_back(p);
     std::string out;
@@ -3096,7 +3113,7 @@ GuiHistoryPathStatus status_of_paths(const std::string& repo_root,
         lines.front().compare(0, 2, "##") != 0) {
         return GuiHistoryPathStatus::Unavailable;
     }
-    ahead_of_remote = header_says_ahead(lines.front());
+    publication_owed = header_says_publication_owed(lines.front());
     for (std::size_t i = 1; i < lines.size(); ++i) {
         if (!lines[i].empty()) return GuiHistoryPathStatus::Dirty;
     }
@@ -3179,25 +3196,26 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //   (2) WRITE the three sidecars.
 //   (3) PRE-FLIGHT — one `git status --porcelain --branch` over those three
 //       paths, whose `##` header carries BOTH answers the act needs: are the
-//       paths dirty, and is the branch AHEAD of its remote.
+//       paths dirty, and does the branch OWE ITS UPSTREAM A PUSH (`[ahead N]`,
+//       or `[gone]` for an upstream branch that is no longer there).
 //   (4) DIRTY — `git add` then `git commit` under the caller's title; a nonzero
 //       exit on either is CommitFailed with git's own first line.
-//   (5) PUSH — iff a commit was just made OR the branch was already ahead. A
+//   (5) PUSH — iff a commit was just made OR the branch already owed one. A
 //       nonzero exit is CommittedNotPushed, zero is Committed. Clean paths and
 //       nothing to publish is NothingToCommit, and the act runs no mutation at
 //       all.
 //
-// THE CLEAN-BUT-AHEAD ARM PUSHES, which is the standard tool's answer to pending
+// THE CLEAN-BUT-OWING ARM PUSHES, which is the standard tool's answer to pending
 // commits and the reason the clean arm needs no observation of its own: the
-// header already said the remote has not got what the branch has, so the act
-// publishes it rather than reporting a state it declines to fix. (Under the old
-// model that arm was `Unconfirmed` with a stderr line telling the user to push
-// from the terminal.)
+// header already said the remote has not got what the branch has — some of it
+// under `[ahead N]`, all of it under `[gone]` — so the act publishes it rather
+// than reporting a state it declines to fix. (Under the old model that arm was
+// `Unconfirmed` with a stderr line telling the user to push from the terminal.)
 //
 // THE TWO ACCEPTED IMPRECISIONS, recorded rather than worked around, and they
 // are the same shape: a step the DEADLINE killed may well have done its work.
 // A PUSH so killed is reported CommittedNotPushed although it may have landed —
-// the next act's pre-flight is the correction, its header showing no `[ahead]`
+// the next act's pre-flight is the correction, its header showing no decoration
 // and reporting NothingToCommit — and a COMMIT that landed and then hung in a
 // `post-commit` hook past the deadline reads as CommitFailed although the commit
 // is there, git having moved HEAD before running the hook. In both the terminal
@@ -3324,12 +3342,12 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
     // (3) THE PRE-FLIGHT, AND IT IS THE ONLY READ THE ACT MAKES. One `git status`
     // answers both of the act's questions at once — whether the three paths
-    // differ from what is committed, and whether the branch is ahead of its
-    // remote — so nothing here has to ask the repository a second question to
+    // differ from what is committed, and whether the branch owes its upstream a
+    // push — so nothing here has to ask the repository a second question to
     // learn what a mutation did (status_of_paths owns the header's grammar).
-    bool                       ahead_of_remote = false;
+    bool                       publication_owed = false;
     const GuiHistoryPathStatus before_status =
-        status_of_paths(repo_root, pathspecs, ahead_of_remote);
+        status_of_paths(repo_root, pathspecs, publication_owed);
     if (before_status == GuiHistoryPathStatus::Unavailable) {
         return commit_failed("could not read 'git status' for the checkpoint "
                              "paths; the written files are still in the working "
@@ -3368,12 +3386,13 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     }
 
     // (5) THE PUSH — iff there is something for the remote to receive. A commit
-    // just made is the ordinary case; a branch the pre-flight found AHEAD is the
-    // other, and it is why the clean arm is not an early return: the bytes were
-    // already committed (by a previous act whose push failed, or in the
-    // terminal) and publishing them is exactly what a git front-end does with
+    // just made is the ordinary case; a branch the pre-flight found OWING
+    // PUBLICATION is the other, and it is why the clean arm is not an early
+    // return: the bytes were already committed (by a previous act whose push
+    // failed, or in the terminal) or the upstream branch has gone away under
+    // them, and publishing them is exactly what a git front-end does with
     // pending commits.
-    if (!committed && !ahead_of_remote) {
+    if (!committed && !publication_owed) {
         std::fprintf(stderr,
                      "warptempo_gui: Nothing to commit: the checkpoint is "
                      "committed and pushed\n");

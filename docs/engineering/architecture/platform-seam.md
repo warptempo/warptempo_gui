@@ -862,13 +862,14 @@ here touches them — the architect: "the taskbar looks great, it's already the
 correct color" — but THE BAND UNDER THEM IS OURS, and has been since that flag
 landed: it is `present`'s other band, `kRedesignContentGround` #202326, the
 ground the taskbar's icons already sit on (provenance: the palette block in
-`src/gui/render.h` — NOT a labwc colour, this one). `setNavigationBarColor
-(0xFF202326)` is still called in `onCreate` and carries the same number; by the
-`takeSurface` argument above it reaches no pixel either, and it is kept as the
-framework-side statement of what that band is (an open deletion candidate, the
-one the diagnostic did not measure). `APPEARANCE_LIGHT_NAVIGATION_BARS` is
-untouched, so the icons stay exactly as they were, and `setNavigationBarColor`
-is deprecated at 35 and honoured at the 34 the manifest targets. The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
+`src/gui/render.h` — NOT a labwc colour, this one). NEITHER BAR HAS A JAVA
+COLOUR: a `setNavigationBarColor(0xFF202326)` carrying the same number stood in
+`onCreate` until 2026-09-06, when it went the way of `setStatusBarColor` and for
+the same reason — by the `takeSurface` argument above it reached no pixel, so it
+only ever restated the band (and the inherited default, measured on the device at
+(33,35,38)) while duplicating a palette number in Java that a retune could put
+out of step. `APPEARANCE_LIGHT_NAVIGATION_BARS` is untouched, so the icons stay
+exactly as they were. The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
 and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a

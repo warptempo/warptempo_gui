@@ -250,9 +250,9 @@ public class MainActivity extends NativeActivity {
         // any more: it never reached a pixel and only ever agreed with the
         // band by carrying the same number (measured on the
         // tablet 2026-09-06 -- Java set 0xff202326 and read it back while the
-        // displayed bar stayed #292c30, the band's word). Deprecated at API 30
-        // and honoured at the 34 the manifest targets, the same note the
-        // navigation colour below carries.
+        // displayed bar stayed #292c30, the band's word). The navigation
+        // colour's setter went the same way and for the same reason, so NEITHER
+        // bar has a Java colour any more: both are bands of the native blit.
         getWindow().addFlags(
                 WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
@@ -267,22 +267,16 @@ public class MainActivity extends NativeActivity {
         // exactly as they are: nothing here touches
         // APPEARANCE_LIGHT_NAVIGATION_BARS.
         //
-        // THE SETTER BELOW CARRIES THE SAME NUMBER AND THE SAME FATE AS THE
-        // STATUS COLOUR ONE ABOVE: it names the colour the DECOR would fill
-        // that area with, and this activity's decor draws nothing (Window#take-
-        // Surface, the paragraph above), so the value that lands is the band's.
-        // It is kept only because it is the framework-side statement of what
-        // that band is; the inherited default was measured on the device at
-        // (33,35,38) -- the system's own #202326 -- so no reading here has ever
-        // distinguished the two. There is no second value for it to take
-        // either way: kRedesignContentGround is a CONTENT colour with no
-        // active/inactive pair, where the TOP band swaps on the window's
-        // activation edge. setNavigationBarColor is deprecated at API 35 -- the
-        // jar this compiles against -- and honoured at the 34 the manifest
-        // targets, so javac warns on it as it warns on setDecorFitsSystem-
-        // Windows and on the flag constant above -- expected, every one of
-        // them.
-        getWindow().setNavigationBarColor(0xFF202326);
+        // THERE IS NO JAVA COLOUR FOR THAT BAND AND THERE WAS NEVER A NEED FOR
+        // ONE. A setNavigationBarColor(0xFF202326) stood here until 2026-09-06,
+        // naming the colour the DECOR would fill the area with; this activity's
+        // decor draws nothing (Window#takeSurface, the paragraph above), so the
+        // value that landed was always the band's, and the inherited default it
+        // restated was measured on the device at (33,35,38) -- the system's own
+        // #202326 -- so no reading ever distinguished the two. It is deleted:
+        // a dead statement duplicating a palette number in Java can only come to
+        // disagree with the band at the next retune, and it kept a deprecation
+        // warning alive for nothing.
 
         // LIGHT ICONS ON THE STATUS BAR, by CLEARING the light-background
         // appearance (the NAVIGATION bar's own appearance bit is deliberately

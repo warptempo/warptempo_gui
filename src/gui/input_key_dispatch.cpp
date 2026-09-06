@@ -3134,8 +3134,8 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
 // what makes the coincident-write paragraph below safe rather than merely
 // unlucky: the worker writes the three sidecars into projects/<id>/ off the main
-// thread, and in that workflow a concurrent Ctrl+S would write the very same
-// paths through the same fixed temp name. The refusal lives at the one save
+// thread, and under the project-folder law a concurrent Ctrl+S would write the
+// very same paths through the same fixed temp name. The refusal lives at the one save
 // owner (GuiSaveOps::save) and its face is the Save button's "Committing...".
 // THE PRELUDE SAVE BELOW IS EXEMPT BY ORDERING ALONE — it runs before the bit
 // goes up, three statements down — so the act's own save needs no flag and no
@@ -3160,26 +3160,26 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // narrower than "nothing reaches the repository": the save's own three
 // writes are sequential, not cross-file transactional (save_ops.cpp), so a
 // save that fails partway through can leave earlier atomic renames on disk
-// exactly as any ordinary Ctrl+S failure can — and in the coincident
-// projects/<id>/ workflow those are repository working-tree paths. The
+// exactly as any ordinary Ctrl+S failure can — and under the project-folder law
+// those are repository working-tree paths. The
 // save's own failure line has already named the path; this one names the
 // act that declined because of it. The editor is already down (its Enter
 // closes it before calling here), which is every other
 // failure's shape in this act too.
 //
-// THE DOUBLE WRITE IS DELIBERATE AND HARMLESS in the coincident workflow. When
-// the source lives inside the matched projects/<id>/, the save and the act's
-// own write hit THE SAME THREE PATHS with BYTE-IDENTICAL CONTENT — the now side
-// is built from the save writers' own string halves (build_history_now_side
-// mirrors refresh_active_tab_view_from_app onto local copies, so a save running
-// first changes none of its bytes), and both writers are the atomic tmp + fsync
-// + rename, so the second rename simply replaces a file with its own contents.
-// It is not deduped: recognizing the coincidence would mean canonicalizing three
-// absolute paths against the repo root and then carrying a skip that only one
-// user's layout ever takes, to save three renames of bytes we already hold. When
-// the source lives ELSEWHERE (the older workflow), both writes are wanted and
-// distinct — the save publishes beside the source, the act publishes the repo's
-// copies — which is the same code doing the same thing for the same reason.
+// THE DOUBLE WRITE IS DELIBERATE AND HARMLESS, AND THE COINCIDENCE IS THE ONLY
+// CASE THERE IS. The project-folder law puts the source inside the matched
+// projects/<id>/ — the source's parent folder under the clone's projects/ IS the
+// project directory, which is the act's own bootstrap rule — so the save and the
+// act's own write always hit THE SAME THREE PATHS with BYTE-IDENTICAL CONTENT:
+// the now side is built from the save writers' own string halves
+// (build_history_now_side mirrors refresh_active_tab_view_from_app onto local
+// copies, so a save running first changes none of its bytes), and both writers
+// are the atomic tmp + fsync + rename, so the second rename simply replaces a
+// file with its own contents. It is not deduped, and no arm here forks on the
+// coincidence: recognizing it would mean canonicalizing three absolute paths
+// against the repo root and then carrying a skip, to save three renames of bytes
+// we already hold.
 //
 // AND THE SAVE BUTTON STAYS (architect's explicit reasoning): saving to disk is
 // its own act and the common one; this act is a save that also PUBLISHES. Two
