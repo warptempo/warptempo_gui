@@ -7056,7 +7056,7 @@ struct AppState {
     // steps are a network act, and freezing the window for them was the one
     // place this product made the user wait on a remote. The act captures what
     // it needs by value, closes the view and hands the job to
-    // GuiHistoryCommitWorker; its four failing verdicts come back as a
+    // GuiHistoryCommitWorker; its three failing verdicts come back as a
     // CRITICAL NOTIFICATION CARD (architect 2026-08-29 — a card that takes no
     // keyboard focus, is never TIMED out and is never BUMPED, and leaves only
     // by a deliberate dismissal: its X on the pointer, or bare Esc clearing
@@ -7064,10 +7064,11 @@ struct AppState {
     // card of any class from 2026-08-31 and the whole of it since 2026-09-01;
     // it was the tab
     // row's permanent critical chip from 2026-08-09, and before that an
-    // acknowledge modal), and its two ESTABLISHED ones say what they have to
-    // say on stderr and raise nothing. The fourth failure is Unconfirmed,
-    // split out of NothingToCommit on 2026-08-09: an act that confirmed
-    // neither the content nor the publication is not a clean ending.
+    // acknowledge modal), and its two ENDINGS say what they have to say on
+    // stderr and raise nothing. A FOURTH failure, Unconfirmed, stood from
+    // 2026-08-09 until 2026-09-06 for an act that could establish neither the
+    // content nor the publication; the act decides on git's exit status now,
+    // so there is no question left it cannot answer.
     //
     // THE ACT CLOSES THE VIEW WHEN ITS SAVE LANDS (architect 2026-08-07,
     // superseding the checkpoint-in-the-repository partition of 2026-08-05,
@@ -7988,7 +7989,7 @@ struct AppState {
     //                        its X, or at bare Esc's clearing of the whole
     //                        stack (2026-09-01, which reads no class; the arm
     //                        took the oldest card alone from 2026-08-31). The
-    //                        four checkpoint outcomes are its producers.
+    //                        three checkpoint failures are its producers.
     //             `paused` with `remaining_ms` is the HOVER BANK: while the
     //             pointer rests on a normal card its clock stops, the
     //             remaining time banked at hover-enter and re-armed at

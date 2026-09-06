@@ -53,7 +53,7 @@
 // running beside it. A read that races a mutation sees the repository partway
 // through — an older `log`, a commit not yet listed — and the answer to that is
 // the RE-WARM rather than a lock: the act's completion kicks a fresh run for
-// every outcome that MAY have committed — four of the six, everything but the
+// every outcome that MAY have committed — three of the five, everything but the
 // two that provably run no commit — so whatever raced is rebuilt from the
 // settled repository a moment later. That kick SUPERSEDES this run rather than
 // queueing behind it (the generation bump above is the whole mechanism), which
@@ -89,7 +89,7 @@ public:
     // THREE KICKERS, and the inventory is here because there is nowhere better
     // (membership re-derived 2026-08-09): the startup load's tail (main.cpp,
     // once the source has settled), the checkpoint act's completion for every
-    // outcome that MAY have committed (four of the six —
+    // outcome that MAY have committed (three of the five —
     // GuiInputHandler::on_history_checkpoint_complete owns that derivation), and
     // the `h` entry when the store is STALE. All three reach this through
     // GuiInputHandler::kick_history_prefetch, whose definition carries the

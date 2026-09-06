@@ -1152,59 +1152,43 @@ private:
 // spelling, and it has exactly one reader — the editor's opener.
 std::string history_checkpoint_title(const std::string& project_directory);
 
-// HOW FAR THE ACT GOT — six answers over ONE sanctioned path (the act's own head
+// HOW FAR THE ACT GOT — five answers over ONE sanctioned path (the act's own head
 // in the .cpp owns the model; this says what each value means to the caller).
+// Each is git's own account of the step that ended the act, the exit status
+// having been the verdict since 2026-09-06.
 //
 // WriteFailed — NOTHING REACHED THE REPOSITORY. The three sidecars could not be
 // written, or the act refused before writing them at all: a DETACHED HEAD is
 // unsanctioned use and throws here, since there is no branch to publish onto.
 //
-// CommitFailed — git made no checkpoint THE ACT CAN STAND BEHIND, which is not
-// quite the same as "no commit exists", and the difference splits its arms in
-// two.
-//   BEFORE THE COMMIT, nothing has been asked of git but reads, so the three
-//   files are written and sitting in the working tree where `git status` shows
-//   them and a hand `git commit` finishes them: an unusable `git status`, the
-//   mid-act branch-mismatch tripwire, and a branch tip that could not be read
-//   before committing.
-//   AT OR AFTER THE COMMIT, a commit MAY exist that this verdict cannot see. The
-//   commit that reported failure is usually one that made nothing — but a
-//   commit that landed and then hung in `post-commit` past the deadline lands
-//   here too, tip moved and all (git moves HEAD before running the hook). The
-//   commit that reported nothing and MOVED NO TIP made nothing, and that is what
-//   the tip compare is for: the mutating runner reads no exit status, by ruling
-//   rather than by inability, so a moved tip is the only proof a commit happened
-//   here, and a rejecting pre-commit hook or an identity/signing failure is
-//   caught by its absence. And a tip that
-//   could not be read AFTER committing says nothing either way.
-// SO THE TERMINAL SHOWS WHICH, and that is the ruled model rather than a gap:
-// `git status` and `git log` answer in one look, a hand commit finishes an
-// unfinished one, and the next act's clean arm re-observes whatever was left.
+// CommitFailed — GIT REFUSED A STEP BEFORE ANYTHING WAS PUBLISHED, and the three
+// files are sitting in the working tree where `git status` shows them and a hand
+// `git commit` finishes them: an unusable `git status`, or an `add` or `commit`
+// that exited nonzero (a rejecting `pre-commit` hook, an identity or signing
+// failure, a locked index) or was killed at the deadline. THE ONE CASE THIS
+// VERDICT CANNOT SEE is a commit that LANDED and then hung in `post-commit` past
+// the deadline — git moves HEAD before running the hook — which is the act's own
+// recorded imprecision: the terminal shows the truth in one look, and the next
+// act's pre-flight re-reads whatever was left.
 //
 // NothingToCommit — THE CLEAN, IN-SYNC ENDING: the bytes just written are what
-// the branch already carries AND the remote-tracking ref carries the branch.
-// Committed and published already, nothing to do. It is the one clean ending
-// beside Committed and the caller treats the two alike — including clearing a
-// standing failure report, which is how a push made IN THE TERMINAL is
-// recognized by the next act.
+// the branch already carries AND the pre-flight's `##` header reported nothing
+// ahead of the remote. Committed and published already, nothing to do. It is the
+// one clean ending beside Committed and the caller treats the two alike.
 //
-// Unconfirmed — THE ACT COULD NOT ESTABLISH ITS ANSWER, in three shapes: the
-// paths are clean but the branch is BEHIND its remote (unpushed commits — the
-// terminal's job under this model); the paths are clean and the remote could not
-// be read; or a checkpoint WAS committed and the remote-tracking ref could not
-// be read to say whether the push arrived. An unanswerable question is never a
-// yes, and never clears a standing report.
+// CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
+// LAND: the guard refused the destination, or git's push exited nonzero (a
+// rejected refspec, refused credentials, a remote hook saying no) or was killed
+// at the deadline. The fix is `git push` in the terminal; the next act finds the
+// branch still ahead and pushes it, which is also how a push made IN THE TERMINAL
+// is recognized.
 //
-// CommittedNotPushed — the checkpoint is in the local branch and the push did
-// not land: the guard refused the destination, the push reported failure, or —
-// the observed arm — the remote-tracking ref was SEEN not to carry the
-// checkpoint afterwards, which is what catches a push that exited nonzero while
-// still looking like success to the subprocess layer. The fix is `git push` in
-// the terminal; the next act's clean arm observes it and takes the report down.
+// Committed — THE CHECKPOINT IS IN THE BRANCH AND THE BRANCH IS PUBLISHED: git's
+// push exited zero. It covers both push arms — the commit this act just made,
+// and a branch the pre-flight found already ahead with these bytes clean.
 enum class GuiHistoryCommitOutcome {
     WriteFailed,
     NothingToCommit,
-    Unconfirmed,
     CommitFailed,
     CommittedNotPushed,
     Committed,
@@ -1236,24 +1220,19 @@ enum class GuiHistoryCommitOutcome {
 // is pinned into the push's own child rather than re-resolved from the mutable
 // remote name — so a config changed since the mode opened cannot publish to a
 // repository the user never confirmed, and neither can one changed between the
-// check and the push. The publication's other two terms are bound the same way:
-// the attributed commit is sent BY SHA, and the branch is read once at act start
-// — the act's ONLY reading of the symbolic HEAD for a value, with every
-// source-side observation after it BOUND to that branch: all but one by naming
-// its own `refs/heads/` ref, and the pre-flight `git status` — which takes no ref
-// and so cannot be spelled — by verifying its `##` header still names that
-// branch and ending the act when it does not. So a checkout mid-act cannot make
-// the observation and the publication mean different branches (the .cpp's push
-// leg owns all three, with the `-c` mechanics).
+// check and the push. The publication's other term is bound the same way:
+// the BRANCH is read once at act start — the act's ONLY reading of the symbolic
+// HEAD — and it names BOTH ENDS of the push refspec, so a checkout mid-act cannot
+// make the act publish onto a branch it never looked at (the .cpp's push leg owns
+// both, with the `-c` mechanics).
 //
-// SUCCESS IS AN OBSERVATION; EVERY OTHER ANSWER IS THE TRANSPORT'S (2026-08-09,
-// with the strict model). `Committed` is claimed only when the remote-tracking
-// ref is SEEN to carry the checkpoint — silence is never read as a yes, and an
-// unanswerable verify is `Unconfirmed`. The failures, by contrast, are the
-// child's own account: a commit or a push that git reported as failing IS the
-// failure, with the recorded cost that a commit landing under a hung
-// `post-commit` hook reads as `CommitFailed`. The act's head in the .cpp owns
-// the ruling, the seven steps and the accepted consequences.
+// THE EXIT STATUS IS THE VERDICT AT EVERY STEP (architect 2026-09-06, superseding
+// the strict model of 2026-08-09 whole): git's own account of its own run
+// decides, the way every git front-end decides, and the repository observations
+// that stood in for an exit status nothing could read — the tip compare, the
+// containment walk, the push verify — are deleted along with the `Unconfirmed`
+// verdict they produced between them. The act's head in the .cpp owns the ruling,
+// the five steps and the two accepted imprecisions.
 //
 // IT CREATES NO DIRECTORY AND NEEDS NONE: `project_directory` is the folder the
 // SOURCE is sitting in, so it exists by construction. The first checkpoint of a

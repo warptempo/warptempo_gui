@@ -80,18 +80,14 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 // three-arm folder resolution went and where the piece lives became a question
 // about the source path.)
 //
-// THE COMMIT ACT DOES NOT USE THIS SPELLING FOR ITS OBSERVATIONS. It reads HEAD
-// exactly once, to learn the branch NAME, and every source-side observation it
-// makes afterwards is BOUND TO THAT NAME — all but one by naming
-// `refs/heads/<that name>` outright, and the one that cannot (the pre-flight
-// `git status`, which takes no ref) by VERIFYING that the name is still what git
-// has checked out, through the `##` header status_of_paths already demanded as
-// its ran-witness. Either way no post-capture observation can answer for another
-// branch — because the act both observes and PUBLISHES, and a symbolic HEAD that
-// moves under it would let the two name different branches
-// (commit_history_checkpoint's `source_ref` owns the reasoning). The read-only
-// mode has no such exposure: it publishes nothing, and a checkout under it simply
-// shows the branch that is now checked out.
+// THE COMMIT ACT READS THIS SPELLING EXACTLY ONCE, to learn the branch NAME, and
+// then names `refs/heads/<that name>` at both ends of its push refspec. Reading
+// HEAD again at the push would let a checkout mid-act publish onto a branch the
+// act never looked at; reading it once cannot. (The act's own reads went with the
+// observation machinery on 2026-09-06 — it asks git one `status` and decides the
+// rest on exit codes — so the name serves the publication alone now.) The
+// read-only mode has no such exposure: it publishes nothing, and a checkout under
+// it simply shows the branch that is now checked out.
 //
 // The projects_repo guard is unaffected either way: it asks which REPOSITORY
 // this clone is, not how fresh it is.
@@ -191,69 +187,81 @@ long long monotonic_ms() {
            static_cast<long long>(ts.tv_nsec) / 1000000;
 }
 
-// WHAT A CAPTURE ANSWERED — a distinction the boolean this used to return could
-// not make. "The command failed" and "the command succeeded and said nothing"
-// are the same empty string, and two callers are wrong when they are confused:
-// a load-in-place would stage a sidecar a FAILED `show` invented as empty and
-// replace
-// the live store with a state the named commit never held, and the commit act's
-// pre-flight would read a FAILED `status` as "nothing to commit" and tell the
-// user the checkpoint already carries bytes that are in fact still uncommitted.
+// WHAT A GIT INVOCATION ANSWERED — the ONE run verdict BOTH subprocess entry
+// points return (2026-09-06, when the mutating runner below started reading the
+// exit status it had spent a month ignoring by ruling). "The command failed" and
+// "the command succeeded and said nothing" are the same empty string, and two
+// callers are wrong when they are confused: a load-in-place would stage a
+// sidecar a FAILED `show` invented as empty and replace the live store with a
+// state the named commit never held, and the commit act's pre-flight would read
+// a FAILED `status` as "nothing to commit" and tell the user the checkpoint
+// already carries bytes that are in fact still uncommitted.
 //
 // THREE ANSWERS, EACH A DIFFERENT FACT ABOUT THE INVOCATION, and the split
 // between the first two is the one only this enum can carry.
 //
-// `Failed` — GIT NEVER RAN. The spawn's own refusal, a pipe or file-actions
-// build that never got that far, a `waitpid` that did not answer with our own
-// normally-exited child, and BIONIC'S EXIT 127 (run_git_capture's head owns the
-// two spellings of could-not-exec). `out` is empty.
+// `Failed` — GIT NEVER RAN, OR RAN AND WAS KILLED. The spawn's own refusal, a
+// pipe or file-actions build that never got that far, a `waitpid` that did not
+// answer with our own normally-exited child, BIONIC'S EXIT 127
+// (run_git_capture's head owns the two spellings of could-not-exec), and — the
+// mutating runner's own arm — a child that outlived the deadline and was
+// SIGKILLed.
 //
 // `Exited` — GIT RAN AND REFUSED: it exec'd and exited NONZERO, which is git's
 // own verdict on the question it was asked — a `rev-parse` outside a clone
-// (128), a rejected pathspec, a locked index. `out` is CLEARED, because a
-// failed command's stdout is never handed on.
+// (128), a rejected pathspec, a locked index, a `commit` with nothing to commit
+// (1), a `push` the remote rejected (1), a `pre-commit` hook saying no (1).
 //
-// WHAT `Ran` PROMISES, stated because two callers must know it: GIT WAS EXECUTED
-// AND ITS EXIT STATUS WAS ZERO. The status is read at every call — SIGCHLD
-// carries its default disposition, so it is always there to read.
+// WHAT `Ran` PROMISES: GIT WAS EXECUTED AND ITS EXIT STATUS WAS ZERO. The status
+// is read at every call, by both entry points — SIGCHLD carries its default
+// disposition, so it is always there to read.
 //
-// ONE CALLER TELLS `Failed` FROM `Exited` (re-greped 2026-09-06): the ROOT
-// DERIVATION, where "could not ask git which clone holds this folder" and "this
-// folder is not inside a clone" are two different things to tell the user, and
-// only the first is a read that did not answer. resolve_ref_capture hands the
-// verdict on for the same distinction, though its one caller today drops it.
-// EVERY OTHER READER COMPARES AGAINST `Ran` ALONE, so `Exited` falls exactly
-// where `Failed` fell for all of them.
+// THE TWO FACES OF ONE ANSWER, which is what having a single enum for both entry
+// points means. A CAPTURE pairs the verdict with `out`, git's stdout: `Ran`
+// hands it over, and both other verdicts CLEAR it, since a failed command's
+// stdout is never handed on. A MUTATION pairs it with `first_line`, git's first
+// non-empty line over both streams, and that line is a DIAGNOSTIC ON EVERY
+// VERDICT and never a witness — it is what the failure card carries, while the
+// verdict alone says whether the mutation happened.
 //
-// WHAT `Ran` DOES NOT PROMISE is anything about the OUTPUT: a `log` with no
-// commits, a `rev-parse` that resolved nothing and an `ls-tree` of a tree with
-// no matching path all exit zero and print nothing, so `Ran` with an empty
-// string is an ordinary answer and not a success. A caller whose question is
+// ONE CAPTURE CALLER TELLS `Failed` FROM `Exited` (re-greped 2026-09-06): the
+// ROOT DERIVATION, where "could not ask git which clone holds this folder" and
+// "this folder is not inside a clone" are two different things to tell the user,
+// and only the first is a read that did not answer. EVERY OTHER READER COMPARES
+// AGAINST `Ran` ALONE — the checkpoint act's three mutations included, where a
+// git that could not start, one that was killed at the deadline and one that
+// refused all mean the same thing, that the step did not happen — so `Exited`
+// falls exactly where `Failed` falls for all of them.
+//
+// WHAT `Ran` DOES NOT PROMISE is anything about a capture's OUTPUT: a `log` with
+// no commits, a `rev-parse` that resolved nothing and an `ls-tree` of a tree
+// with no matching path all exit zero and print nothing, so `Ran` with an empty
+// string is an ordinary answer and not a success. A CAPTURE whose question is
 // "did this succeed" needs a witness IN THE OUTPUT, and both of them have one:
 // the commit act's status probe asks with `--branch`, whose header line is
 // emitted only on a successful run, and the load-in-place cross-checks each blob
-// against the byte count the tree listing stated. Neither rests on this enum
-// alone; what the enum adds is the case no output-shaped witness could ever
-// cover, that git never ran.
-enum class GitCapture {
-    Failed,  // git never ran; `out` is empty
-    Exited,  // git ran and exited nonzero; `out` is cleared
-    Ran,     // git ran and exited zero; `out` is its stdout, possibly empty
+// against the byte count the tree listing stated. A MUTATION needs no such
+// witness at all: its question is exactly the one the exit status answers.
+enum class GitRun {
+    Failed,  // git never ran, or ran and was killed
+    Exited,  // git ran and exited nonzero
+    Ran,     // git ran and exited zero
 };
 
 // Run `git -C <repo> <args...>` and capture its stdout.
 //
 // THE ONLY SUBCOMMANDS THIS ENTRY POINT EVER PASSES ARE `log`, `show`,
 // `ls-tree`, `rev-parse`, `status`, `rev-list` AND `remote get-url`
-// (re-derived from the invocations 2026-08-09): `log` and `ls-tree` are the
+// (re-derived from the invocations 2026-09-06): `log` and `ls-tree` are the
 // display walk's own reads, `show` reads a commit's blob, `remote get-url` is
 // the projects-home guard, `rev-parse` resolves a spelling — the
-// load-in-place-from-a-commit path's, the branch name, and the checkpoint act's
-// branch tip — `status` is that act's pre-flight probe, and `rev-list --count`
-// is the ONE containment read behind its clean arm and its push verify.
+// load-in-place-from-a-commit path's and the branch name — `status` is the
+// checkpoint act's pre-flight probe, and `rev-list --count` is the walk scan's
+// emptiness read.
 // `diff-tree` LEFT THE LIST on 2026-08-09 with the attribution walk that was its
-// only caller (the strict act keeps no content signature; the act's own head
-// owns that ruling). All of these are reads, and that
+// only caller (the act keeps no content signature; its own head owns that
+// ruling), and `rev-list <sha> ^<tip>` on 2026-09-06 with the checkpoint act's
+// containment observations. All of these are reads, and that
 // constraint is meant to stay checkable by reading the call sites below rather
 // than by trusting a runtime guard. THE MUTATING SUBCOMMANDS HAVE THEIR OWN
 // ENTRY POINT, run_git_mutate directly below, which is the whole point of there
@@ -268,7 +276,7 @@ enum class GitCapture {
 // carry is an ordinary answer here, not a fault worth printing.
 //
 // DID IT RUN, AND WHAT DID IT SAY — two questions, answered separately (see
-// GitCapture). Both are answered from the CHILD'S EXIT STATUS and its stdout;
+// GitRun). Both are answered from the CHILD'S EXIT STATUS and its stdout;
 // there is no probe of ours in the child, because there is no code of ours in
 // the child.
 //
@@ -297,9 +305,9 @@ enum class GitCapture {
 // 2026-08-11: it is derived from the loaded source and handed down through every
 // caller, which is what lets a second host run the same binary against its own
 // checkout.
-GitCapture run_git_capture(const std::string&              root,
-                           const std::vector<std::string>& args,
-                           std::string&                    out) {
+GitRun run_git_capture(const std::string&              root,
+                       const std::vector<std::string>& args,
+                       std::string&                    out) {
     out.clear();
 
     std::vector<std::string> full;
@@ -319,20 +327,20 @@ GitCapture run_git_capture(const std::string&              root,
     // while the descriptor the adddup2 puts on stdout is a fresh one that
     // carries no such flag and so survives into git.
     int fds[2];
-    if (pipe2(fds, O_CLOEXEC) != 0) return GitCapture::Failed;
+    if (pipe2(fds, O_CLOEXEC) != 0) return GitRun::Failed;
 
     posix_spawn_file_actions_t actions;
     if (posix_spawn_file_actions_init(&actions) != 0) {
         close(fds[0]);
         close(fds[1]);
-        return GitCapture::Failed;
+        return GitRun::Failed;
     }
     posix_spawnattr_t attr;
     if (posix_spawnattr_init(&attr) != 0) {
         posix_spawn_file_actions_destroy(&actions);
         close(fds[0]);
         close(fds[1]);
-        return GitCapture::Failed;
+        return GitRun::Failed;
     }
 
     // Stdout to the pipe, stderr to /dev/null (the head says why).
@@ -363,7 +371,7 @@ GitCapture run_git_capture(const std::string&              root,
     if (rc != 0) {
         close(fds[0]);
         close(fds[1]);
-        return GitCapture::Failed;
+        return GitRun::Failed;
     }
 
     close(fds[1]);
@@ -405,14 +413,14 @@ GitCapture run_git_capture(const std::string&              root,
     } while (w < 0 && errno == EINTR);
     if (w != pid || !WIFEXITED(status)) {
         out.clear();
-        return GitCapture::Failed;
+        return GitRun::Failed;
     }
     const int code = WEXITSTATUS(status);
-    if (code == 0) return GitCapture::Ran;
+    if (code == 0) return GitRun::Ran;
 
     // A failed command's stdout is never handed on, whichever verdict it takes.
     out.clear();
-    return (code == 127) ? GitCapture::Failed : GitCapture::Exited;
+    return (code == 127) ? GitRun::Failed : GitRun::Exited;
 }
 
 // THE ORDINARY READING — `Ran` AND said something — which is what every caller
@@ -429,85 +437,72 @@ GitCapture run_git_capture(const std::string&              root,
 // that, so by the time the log runs the count has said there ARE commits and
 // silence from it is a contradiction rather than an empty history.
 //
-// SEVEN CALLERS READ run_git_capture DIRECTLY INSTEAD (re-derived by grep
-// 2026-09-06 — the count stood at four and then five while the list was EDITED
+// FIVE CALLERS READ run_git_capture DIRECTLY INSTEAD (re-derived by grep
+// 2026-09-06 — the count stood at four, five and seven while the list was EDITED
 // rather than RE-DERIVED, which is the retell rule's own failure mode caught in
-// this very comment; eight call sites in the file, this helper being the
-// eighth), and they fall in three groups.
+// this very comment; six call sites in the file, this helper being the sixth),
+// and they fall in three groups.
 //
 // ONE ACCEPTS AN EMPTY ANSWER AS CONTENT: the load-in-place's BLOB reads
 // (read_snapshot_at), where an empty sidecar is a valid whole file in both marker
 // grammars — the tree listing's stated byte length is the second witness there.
 //
-// FOUR JUDGE THE SHAPE of what arrived, which git_output's length test cannot do:
-// the commit act's status pre-flight wants its `##` header (status_of_paths), the
-// scan's `rev-list --count` wants a number ("0" is bytes, not silence), the push
-// verify's containment walk wants a number for the same reason (ref_containment,
-// where an empty or non-numeric answer must never read as a yes), and the
-// touched-directory evidence read wants a NUL-framed set of this piece's own
-// sidecar paths, REFUSING an empty answer outright.
+// THREE JUDGE THE SHAPE of what arrived, which git_output's length test cannot
+// do: the commit act's status pre-flight wants its `##` header
+// (status_of_paths), the scan's `rev-list --count` wants a number ("0" is bytes,
+// not silence), and the touched-directory evidence read wants a NUL-framed set of
+// this piece's own sidecar paths, REFUSING an empty answer outright.
 //
-// TWO WANT THE RAN-VERSUS-COULD-NOT-RUN BIT ITSELF, which is not a question about
-// the output at all: the ROOT DERIVATION, whose two refusals ARE `Failed` and
-// `Exited` (a `rev-parse` that could not run against one that ran and told us
-// this folder is not in a clone), and resolve_ref_capture, which hands the
-// verdict on beside the object name because the distinction is real even where
-// its one caller today drops it.
+// ONE WANTS THE RAN-VERSUS-COULD-NOT-RUN BIT ITSELF, which is not a question
+// about the output at all: the ROOT DERIVATION, whose two refusals ARE `Failed`
+// and `Exited` (a `rev-parse` that could not run against one that ran and told us
+// this folder is not in a clone).
 bool git_output(const std::string& root, const std::vector<std::string>& args,
                 std::string& out) {
-    return run_git_capture(root, args, out) == GitCapture::Ran && !out.empty();
+    return run_git_capture(root, args, out) == GitRun::Ran && !out.empty();
 }
 
-// Run `git -C <repo> <args...>` for a MUTATING subcommand, and hand back the
-// first line git said about it.
+// Run `git -C <repo> <args...>` for a MUTATING subcommand, and answer with the
+// same GitRun verdict a capture gives, beside the first line git said about it.
 //
 // THE MUTATING INVENTORY IS `add`, `commit` AND `push` — the commit act's three
 // steps, in that order — AND THAT ACT IS THIS FUNCTION'S ONLY CALLER. Nothing
 // else in the product runs a git subcommand that changes a file, a ref or the
 // index.
 //
-// SUCCESS IS NOT DECIDED HERE, which is the one real difference from the capture
-// helper above. That helper's "ran and produced output" reading is WRONG for
-// these: a failed push produces plenty of output and a successful one may
-// produce none. AND THE EXIT STATUS IS NOT THE ACT'S OUTCOME EITHER, which is
-// why this one does not read the status the capture helper lives on: a commit
-// that landed and then tripped a `post-commit` hook exits nonzero with the tip
-// already moved, and a push that exits zero is still proven only by the
-// containment verify. That is the strict model's own reason for deciding every
-// SUCCESS on an OBSERVATION. So this reports only that the child was STARTED AND
-// RAN TO ITS OWN END — false means it could not be STARTED (posix_spawnp
-// refusing, below) or that it outlived the deadline below and was killed.
+// THE EXIT STATUS IS THE ANSWER, WHICH IS THE STANDARD MODEL EVERY GIT FRONT-END
+// USES (architect 2026-09-06, superseding the strict model of 2026-08-09 whole:
+// "we prefer parsimony in code ... remove git custom and use posix_spawn's
+// version"). The status was unreadable when that model was written — SIGCHLD was
+// ignored — so the act decided its successes by OBSERVING the repository
+// afterwards instead: a moved branch tip for the commit, a remote-tracking ref
+// carrying the checkpoint for the push. The spawn conversion made the status
+// readable at both entry points, this repository runs no hooks, and the
+// observation machinery was the last asymmetry between them; it is deleted, and
+// what a caller reads here is what git said about its own run.
 //
-// WHAT `false` ACTUALLY COVERS, stated exactly because a caller once believed
-// more of it: THE CHILD COULD NOT BE STARTED, the pipe could not be opened, or
-// THE DEADLINE FIRED and the child was killed. THAT IS ALL. It emphatically does
-// NOT mean "git reported failure": THE EXIT STATUS IS READABLE HERE AND IS
-// DELIBERATELY NOT READ, for the reason just given — so a child that execs,
-// writes its complaint, closes its pipe and exits nonzero inside the deadline
-// returns TRUE. A rejecting pre-commit hook, a refused push, an identity or
-// signing failure all look like success from here.
+// SO THE THREE VERDICTS MEAN EXACTLY WHAT THEY MEAN ABOVE (GitRun owns the
+// contract): `Ran` is git having exited zero and IS the step having happened,
+// `Exited` is git's own refusal — a `commit` with nothing to commit, a
+// `pre-commit` hook saying no, an identity or signing failure, a rejected push —
+// and `Failed` is git never having run, or having outlived the deadline below
+// and been killed. The act treats the two failing verdicts alike; what it wants
+// from each is `first_line`.
 //
-// ONE ASYMMETRY RIDES ON THAT AND IS RECORDED RATHER THAN PATCHED: on bionic a
-// could-not-exec spells itself as exit 127 (the capture helper's head owns that
-// split), which this deliberately does not read, so a missing git there returns
-// TRUE with an empty `first_line` instead of the started-nothing verdict glibc
-// gives. It costs the act nothing — its successes are observations, and a git
-// that never ran leaves the tip unmoved and the remote without the checkpoint —
-// and the tablet, the only bionic host, carries no git binary at all and greys
-// the checkpoint act.
-//
-// SO `true` MEANS ONLY "git ran to its own end", and no caller may read it as an
-// outcome. The checkpoint act reads it that way and only that way (2026-08-09):
-// its FAILURES may be decided on a false return — which is the strict model's
-// recorded trade, since a commit that landed and then hung in `post-commit` past
-// the deadline gets its child killed here and is reported failed — while every
-// SUCCESS is decided on an OBSERVATION afterwards: the branch tip having MOVED
-// for the commit, the remote-tracking ref carrying the checkpoint for the push.
-// `first_line` is git's own account of what went wrong and rides along on
-// whichever verdict the observation reaches.
+// `first_line` IS A DIAGNOSTIC ON EVERY VERDICT, never a witness: git's own first
+// non-empty line, which is what the failure card and the stderr line carry. On
+// the deadline arm it is the timeout sentence instead, this function's own words
+// being the only account of a run nobody let finish.
 //
 // STDOUT AND STDERR SHARE ONE PIPE, so `first_line` is git's own first non-empty
 // line whichever stream it chose (`commit` reports on stdout, `push` on stderr).
+//
+// COULD-NOT-EXEC HAS TWO SPELLINGS AND ONE VERDICT HERE TOO, the asymmetry the
+// old model recorded rather than patched having gone with it: glibc reports the
+// exec's own failure as posix_spawnp's nonzero RETURN, bionic as the child's
+// `_exit(127)`, and both land on `Failed` — git's own codes for these three
+// subcommands are 1 and 128, never 127. (The tablet, the one bionic host, carries
+// no git binary at all and greys the checkpoint act.)
 //
 // NOTHING HERE MAY BLOCK THE GUI WITHOUT END, and three things make that true
 // rather than one. STDIN IS /dev/null and the push's call site adds ssh's batch
@@ -518,16 +513,16 @@ bool git_output(const std::string& root, const std::vector<std::string>& args,
 // (kMutateDeadlineMs) covers everything neither of those can reach — a
 // black-holed route, a hanging proxy or credential helper, a hook that never
 // returns: the read loop polls, and expiry SIGKILLs the child (we hold the pid)
-// and returns failure with the timeout as `first_line`.
+// and returns `Failed` with the timeout as `first_line`.
 //
 // THE ENVIRONMENT IS BUILT BEFORE THE SPAWN, which is not a style choice: the
 // child runs no code of ours at all, so there is no side on which a setenv could
 // happen — posix_spawnp takes a finished envp and the exec itself installs it.
 // Any inherited GIT_TERMINAL_PROMPT is dropped rather than shadowed, so there is
 // exactly one such entry and no question of which one is read.
-bool run_git_mutate(const std::string&              root,
-                    const std::vector<std::string>& args,
-                    std::string&                    first_line) {
+GitRun run_git_mutate(const std::string&              root,
+                      const std::vector<std::string>& args,
+                      std::string&                    first_line) {
     first_line.clear();
 
     std::vector<std::string> full;
@@ -565,20 +560,20 @@ bool run_git_mutate(const std::string&              root,
     // so no descendant of the child — an ssh, a hook — can hold the write end
     // open past its own exit.
     int fds[2];
-    if (pipe2(fds, O_CLOEXEC) != 0) return false;
+    if (pipe2(fds, O_CLOEXEC) != 0) return GitRun::Failed;
 
     posix_spawn_file_actions_t actions;
     if (posix_spawn_file_actions_init(&actions) != 0) {
         close(fds[0]);
         close(fds[1]);
-        return false;
+        return GitRun::Failed;
     }
     posix_spawnattr_t attr;
     if (posix_spawnattr_init(&attr) != 0) {
         posix_spawn_file_actions_destroy(&actions);
         close(fds[0]);
         close(fds[1]);
-        return false;
+        return GitRun::Failed;
     }
 
     // BOTH output streams to the pipe, stdin to /dev/null.
@@ -619,12 +614,12 @@ bool run_git_mutate(const std::string&              root,
 
     // COULD IT BE STARTED AT ALL — glibc's own answer, and no child exists to
     // wait for on this road. (Bionic answers with the child's 127 instead, which
-    // this function deliberately does not read: see the head.)
+    // the status read below maps onto this same verdict.)
     if (rc != 0) {
         close(fds[0]);
         close(fds[1]);
         first_line = "Git could not be started";
-        return false;
+        return GitRun::Failed;
     }
 
     close(fds[1]);
@@ -685,18 +680,19 @@ bool run_git_mutate(const std::string&              root,
         first_line = "Timed out after " +
                      std::to_string(kMutateDeadlineMs / 1000) +
                      " seconds and was killed";
-        return false;
+        return GitRun::Failed;
     }
 
-    // Reap the child; the status is READABLE and deliberately unread (see the
-    // head — it is not the act's outcome).
+    // THE STATUS IS THE VERDICT, read exactly as the capture helper reads it: the
+    // child is ours and unreaped and SIGCHLD carries its default disposition, so
+    // the wait answers with our own pid. A status we could not read, a child that
+    // died on a SIGNAL and bionic's could-not-exec 127 all land on `Failed`,
+    // which is the honest verdict for a run that reached no verdict of its own.
     int   status = 0;
     pid_t w      = 0;
     do {
         w = waitpid(pid, &status, 0);
     } while (w < 0 && errno == EINTR);
-    (void)w;
-    (void)status;
 
     // The first non-empty line, trailing whitespace off. Spelled out here rather
     // than through the text helpers below so the two subprocess entry points
@@ -716,7 +712,11 @@ bool run_git_mutate(const std::string&              root,
         if (nl == std::string::npos) break;
         i = nl + 1;
     }
-    return true;
+
+    if (w != pid || !WIFEXITED(status)) return GitRun::Failed;
+    const int code = WEXITSTATUS(status);
+    if (code == 0) return GitRun::Ran;
+    return (code == 127) ? GitRun::Failed : GitRun::Exited;
 }
 
 // ---------------------------------------------------------------------------
@@ -1505,7 +1505,7 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const std::string& repo_root
     // helper's "said something" reading would fold a could-not-exec into an
     // empty answer — and here they are the same OUTCOME but the distinction is
     // still not the helper's to make silently.
-    if (run_git_capture(repo_root, args, raw) != GitCapture::Ran) return out;
+    if (run_git_capture(repo_root, args, raw) != GitRun::Ran) return out;
     if (raw.empty()) return out;
 
     // THE FRAMING IS THE TRUNCATION WITNESS, and it is the one this reader can
@@ -1655,7 +1655,7 @@ bool read_snapshot_at(const std::string& repo_root, const std::string& sha,
                       const std::string& path, std::string& out) {
     out.clear();
     return run_git_capture(repo_root, {"show", sha + ":" + path}, out) ==
-           GitCapture::Ran;
+           GitRun::Ran;
 }
 
 }  // namespace
@@ -2074,15 +2074,15 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
     // call in the file that runs somewhere it has not been told about, which is
     // the whole point of it.
     std::string out;
-    const GitCapture capture =
+    const GitRun capture =
         run_git_capture(dir, {"rev-parse", "--show-toplevel"}, out);
-    if (capture == GitCapture::Failed) {
+    if (capture == GitRun::Failed) {
         r.read_failed = true;
         r.reason = path_failure("could not ask git which clone holds ",
                                 dir_path, dir_name, "");
         return r;
     }
-    if (capture == GitCapture::Exited) {
+    if (capture == GitRun::Exited) {
         // Git answered, and the answer is no. NOT a `read_failed`: a project
         // folder outside every clone is a supported configuration (projects_path
         // need not be under the clone), and the mode's local fallback is what it
@@ -2347,7 +2347,7 @@ void scan_history_walk(
     }
     std::string count_out;
     long long   candidate_count = -1;
-    if (run_git_capture(repo_root, count_args, count_out) == GitCapture::Ran) {
+    if (run_git_capture(repo_root, count_args, count_out) == GitRun::Ran) {
         const std::string token = trim_trailing_ws(count_out);
         // ALL DIGITS IS NOT ENOUGH: strtoll saturates at LLONG_MAX on overflow
         // and would hand back a "valid" count for a token of a thousand nines.
@@ -3021,58 +3021,6 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 
 namespace {
 
-// A SPELLING'S OBJECT NAME, WITH THE CAPTURE'S OWN VERDICT BESIDE IT. `--verify`
-// is what makes a missing ref an error rather than an echo of the argument,
-// which is how the push check below asks "does this remote-tracking ref exist
-// yet".
-//
-// THE TWO RETURNS ARE TWO DIFFERENT FACTS. `object_name` answers WHAT THE REF
-// NAMES and is empty when the ref did not resolve; the returned GitCapture
-// answers HOW THE INVOCATION ENDED — all three states, so an absent ref
-// (`Exited`, git's own refusal of the spelling) and an unreachable repository
-// (`Failed`) are told apart — which an empty name cannot carry and which no
-// later probe can reconstruct: a second question answered now proves the
-// repository speaks now, never that an earlier invocation ever executed.
-//
-// NOBODY NEEDS BOTH TODAY (re-derived 2026-08-09): the one caller is
-// resolved_object_name directly below, which takes the name and drops the
-// verdict. The grading consumer that wanted the pair — the witnessed ref read —
-// went with the checkpoint act's graded machinery, and the pair is kept here
-// rather than folded away because the DISTINCTION is real and the fold would be
-// the lossy direction: a future caller that must tell an absent ref from an
-// unreadable repository has the answer waiting, and no other function in this
-// file can reconstruct it.
-GitCapture resolve_ref_capture(const std::string& repo_root,
-                               const std::string& spelling,
-                               std::string&       object_name) {
-    std::string      out;
-    const GitCapture capture =
-        run_git_capture(repo_root, {"rev-parse", "--verify", spelling}, out);
-    object_name =
-        (capture == GitCapture::Ran) ? trim_trailing_ws(out) : std::string();
-    return capture;
-}
-
-// The same read for the callers that need only the name, which collapses the two
-// answers on purpose: THE EMPTY ANSWER IS TWO ANSWERS — a ref that is absent and
-// a read that could not be made — and every caller treats both as the same
-// failure by design. Its three, re-derived 2026-08-09: the checkpoint act's
-// branch-tip read (no tip, no act), its clean arm's local-tip read, and
-// remote_carries, where an origin ref that is absent and one that cannot be read
-// both come back Unavailable — which under the strict model call for the same
-// thing, the act saying it could not confirm. A caller that must tell them apart
-// calls resolve_ref_capture above, which still hands back both.
-std::string resolved_object_name(const std::string& repo_root,
-                                 const std::string& spelling) {
-    std::string name;
-    resolve_ref_capture(repo_root, spelling, name);
-    return name;
-}
-
-}  // namespace
-
-namespace {
-
 // WHAT `git status` SAYS ABOUT THE THREE CHECKPOINT PATHS, in an answer that
 // proves it ran. The three outcomes are the ones the act needs to tell apart, and
 // telling them apart is exactly what the boolean capture could not do: "clean"
@@ -3083,117 +3031,64 @@ namespace {
 // THE WITNESS IS `--branch`. Porcelain v1 with that flag emits a `## <branch>`
 // header line FIRST and always, on every successful run — before any entry, and
 // on a clean answer as the whole output. A run that failed emits nothing on
-// stdout at all. So the header's presence is the proof, the lines after it are
-// the answer, and neither is inferred from the other. (The exit status says the
-// same thing and the capture layer does read it; the header is asked for anyway,
-// because its SECOND job below is one no exit status could do.)
+// stdout at all. So the header's presence is the proof and the lines after it are
+// the answer. (The exit status says the same thing and the capture layer does
+// read it; the header is asked for anyway, because its SECOND job is one no exit
+// status could do — the ahead reading below.)
 //
-// THE HEADER IS ALSO THE BINDING, which is the second thing `--branch` buys and
-// the one that keeps this probe honest about WHICH BRANCH it just answered for.
-// `git status` has no ref argument: it compares the working tree against the
-// CURRENT symbolic HEAD, and there is no spelling that pins it the way every
-// other source-side read of the act names `refs/heads/<captured>`. So the probe
-// cannot be pinned — it must be CHECKED, and the header is the check: it names
-// the branch git actually compared against, so comparing it to the branch
-// captured at act start turns an unpinnable observation into a verified one.
+// THE HEADER ALSO CARRIES THE PUBLICATION STATE, which is the whole reason this
+// act needs no repository observation of its own: `[ahead N]` in the header's
+// decoration is git's own answer to "does the remote have what this branch has",
+// read out of the remote-tracking ref exactly as the deleted containment walk
+// read it, in a probe the act was already running. Clean paths and no `[ahead]`
+// is the honest all-done; clean paths WITH it is the standard tool's cue to push.
 //
-// WITHOUT THAT COMPARE THE CLEAN ARM COULD END THE ACT ON ANOTHER BRANCH'S
-// ANSWER (reproduced live): captured `main` carries the old sidecar bytes, a
-// topic branch already carries the new ones, another terminal checks that topic
-// out before the probe, and the act's freshly written bytes match the topic tree
-// exactly — so `status` reports CLEAN, the clean arm resolves captured
-// `refs/heads/main` and finds `origin/main` caught up with it, and the act
-// returns NothingToCommit before the byte confirmation ever runs. Nothing is
-// committed, nothing is pushed, captured `main` still lacks the bytes, and the
-// user is told the checkpoint already carries them — the one line that tells
-// them to stop looking. OtherBranch is that sequence's close.
+// (A BRANCH WITH NO UPSTREAM carries no decoration at all — `## main` — so it
+// reads as not-ahead and the act reports NothingToCommit over clean paths. That
+// is the sanctioned repository's answer for a configuration it does not have,
+// and a branch with nowhere to push is not a state this act can improve.)
+//
+// THE HEADER'S BRANCH NAME IS NOT READ. It was, from 2026-08-09 to 2026-09-06, as
+// a TRIPWIRE: `git status` takes no ref, so a checkout in another terminal
+// mid-act could have it answer for a branch other than the one the act captured,
+// and the header's name was compared against that capture to catch it. The
+// compare is deleted with the observation machinery around it — an external
+// checkout in the middle of a checkpoint is unsanctioned use, which this act
+// meets bluntly rather than diagnosing (the act's head owns the ruling).
 enum class GuiHistoryPathStatus {
     Unavailable,  // git did not run, or ran and failed
-    OtherBranch,  // it ran, but against a branch that is not the captured one
-    Clean,        // it ran on the captured branch; the three paths match its tip
-    Dirty,        // it ran on the captured branch; at least one differs
+    Clean,        // it ran; the three paths match the checked-out tip
+    Dirty,        // it ran; at least one differs
 };
 
-// THE BRANCH THE `##` HEADER NAMES, in the same spelling `current_branch_name`
-// returns — "" for a detached HEAD, so the two answers compare directly.
+// IS THE HEADER'S DECORATION AN `[ahead ...]`?
 //
 // THE GRAMMAR, verified live against git 2.55 in every shape the act can meet:
 // `## main` (no upstream), `## main...origin/main` (with one),
 // `## main...origin/main [ahead 1]` / `[behind 1]` / `[ahead 1, behind 2]`,
 // `## HEAD (no branch)` (detached), `## No commits yet on main` (unborn).
 //
-// THE TWO CUTS ARE UNAMBIGUOUS BECAUSE OF WHAT A REFNAME MAY NOT CONTAIN: git
-// refuses a branch name holding two consecutive dots or a space
-// (`git check-ref-format`'s own rules), so the `...` that introduces the upstream
-// and the space that introduces a decoration can never be part of the name
-// itself. A name may freely carry single dots and slashes (`feat/a.b.c` parses
-// whole, verified), which is why the cut is on `...` and not on the first `.`.
-//
-// THE DETACHED FORM IS TESTED WHOLE rather than cut, because cutting it would
-// yield the literal "HEAD" and turn the ordinary detached act — which proceeds
-// and simply publishes nothing — into a spurious mismatch failure.
-//
-// THE UNBORN FORM IS CUT TO ITS REAL NAME, past the fixed `No commits yet on `
-// prefix `git status` always uses for it — verified live, including a slashed/
-// dotted name (`No commits yet on feat/a.b.c` parses whole). No further cut is
-// applied to the tail: an unborn branch carries no upstream, so `...` cannot
-// appear, and `check-ref-format` still refuses a space in the name, so the
-// whole remainder is unambiguously the name even if some future git prints a
-// trailing decoration this parse has not seen — the safe direction (a
-// misparsed decoration folds into the name, not out of it).
-//
-// EVERY OTHER SHAPE FAILS CLOSED BY CONSTRUCTION, and so does this one, only
-// not by returning a name that matches nothing — by returning the TRUE name of
-// a branch that cannot be the one this act captured. `current_branch_name`
-// (its declaration owns the read) resolves an unborn HEAD to "" exactly as it
-// does a detached one — `rev-parse --abbrev-ref HEAD` exits nonzero there, so
-// `git_output` reports no answer — so the mode can only ever CAPTURE a real,
-// committed branch name at act start (an unborn HEAD is never "the captured
-// branch" going in, and the mode cannot open on one either: no committed
-// history to diff against). The unborn OtherBranch case this parse now names
-// correctly is therefore reachable only by a MID-ACT EXTERNAL SWITCH onto an
-// orphan branch after the act's own capture — the same external-terminal
-// threat model the mismatch check above exists for — and ordinarily that
-// orphan's name cannot equal the captured branch's own, because getting there
-// means deleting the captured branch's commit history first, which git
-// refuses while it is the one checked out. The one way around that (checking
-// out elsewhere, deleting the captured branch, then recreating it as an
-// orphan under the identical name, then switching back) is possible but is an
-// act of destroying the captured branch's history outright, not a mere
-// checkout — at that point the mismatch this function reports is no longer
-// the risk worth naming.
-std::string branch_of_status_header(const std::string& header) {
-    // Past the `##` the caller has already proved is there, plus its separator.
-    std::size_t start = 2;
-    while (start < header.size() && header[start] == ' ') ++start;
-    const std::string rest = trim_trailing_ws(header.substr(start));
-    if (rest == "HEAD (no branch)") return {};  // detached: no name, as captured
-
-    static const std::string kUnbornPrefix = "No commits yet on ";
-    if (rest.compare(0, kUnbornPrefix.size(), kUnbornPrefix) == 0) {
-        return rest.substr(kUnbornPrefix.size());  // unborn: the whole tail
-    }
-
-    std::size_t end         = rest.find("...");
-    const std::size_t space = rest.find(' ');
-    if (space != std::string::npos && (end == std::string::npos || space < end)) {
-        end = space;
-    }
-    return rest.substr(0, end);  // npos takes the whole remainder
+// THE MATCH IS UNAMBIGUOUS BECAUSE OF WHAT A REFNAME MAY NOT CONTAIN: git refuses
+// a branch name holding a space (`git check-ref-format`'s own rules), so the
+// space that introduces the decoration can never be part of the local or the
+// upstream name, and `[ahead ` can appear nowhere else on the line. AHEAD AND
+// BEHIND TOGETHER STILL READ AS AHEAD, which is what the act wants: the branch
+// carries commits the remote has not got, whatever else the remote also carries,
+// and the push git then refuses is reported with git's own words.
+bool header_says_ahead(const std::string& header) {
+    return header.find(" [ahead ") != std::string::npos;
 }
 
-// `expect_branch` is the branch captured at act start ("" for a detached HEAD);
-// `checked_out_branch` comes back with what the header named, so the caller's
-// failure line can name both.
+// `ahead_of_remote` comes back with the header's own reading (false whenever the
+// status could not be used at all).
 GuiHistoryPathStatus status_of_paths(const std::string& repo_root,
                                      const std::vector<std::string>& pathspecs,
-                                     const std::string& expect_branch,
-                                     std::string&       checked_out_branch) {
-    checked_out_branch.clear();
+                                     bool& ahead_of_remote) {
+    ahead_of_remote = false;
     std::vector<std::string> args{"status", "--porcelain", "--branch", "--"};
     for (const std::string& p : pathspecs) args.push_back(p);
     std::string out;
-    if (run_git_capture(repo_root, args, out) != GitCapture::Ran) {
+    if (run_git_capture(repo_root, args, out) != GitRun::Ran) {
         return GuiHistoryPathStatus::Unavailable;
     }
     const std::vector<std::string> lines = split_lines(out);
@@ -3201,12 +3096,7 @@ GuiHistoryPathStatus status_of_paths(const std::string& repo_root,
         lines.front().compare(0, 2, "##") != 0) {
         return GuiHistoryPathStatus::Unavailable;
     }
-    checked_out_branch = branch_of_status_header(lines.front());
-    if (checked_out_branch != expect_branch) {
-        // The entries below this header are about the wrong branch too, so they
-        // are not read at all: there is no answer here for the act to use.
-        return GuiHistoryPathStatus::OtherBranch;
-    }
+    ahead_of_remote = header_says_ahead(lines.front());
     for (std::size_t i = 1; i < lines.size(); ++i) {
         if (!lines[i].empty()) return GuiHistoryPathStatus::Dirty;
     }
@@ -3223,77 +3113,6 @@ std::string current_branch_name(const std::string& repo_root) {
     std::string name = trim_trailing_ws(raw);
     if (name == "HEAD") return {};  // detached
     return name;
-}
-
-// IS `sha` REACHABLE FROM `tip` — the push's real question, since a commit
-// landing on top of the checkpoint makes the remote-tracking ref move to THAT
-// commit while the checkpoint rides along underneath as an ancestor.
-//
-// THREE ANSWERS, BECAUSE "COULD NOT ASK" IS NOT "NO" AND MUST NEVER BE "YES".
-// The answer is read out of the OUTPUT — and the output shape is the whole
-// design here. The older form asked
-// `rev-list --max-count=1 <sha> ^<tip>` and read SILENCE as containment: git
-// printing nothing meant reachable. But a run that ran and FAILED prints nothing
-// on stdout either, so every failure read as a confirmed containment — the one
-// direction this observation must never fail in, since it is what lets the act
-// say "pushed" about a checkpoint the remote does not carry, and what lets the
-// pre-flight call an unpushed checkpoint done and leave no route that retries.
-//
-// `--count` INVERTS THAT: a successful run ALWAYS prints a number ("0" when the
-// walk is empty, which is exactly containment), so the witness is the number
-// itself and an empty or non-numeric answer is a FAILURE, never a yes. Same
-// walk, same cost — only the answer is now success-shaped, the same reading
-// `status_of_paths` gets from its `##` header.
-//
-// The caller should still resolve both names first (an unresolvable rev is one
-// of the failures this now reports honestly rather than one it hides). What this
-// cannot separate is a walk that printed its number AND complained on stderr —
-// but the number a completed walk prints is that walk's own answer, and the
-// fail-open the callers are exposed to is closed.
-enum class GuiHistoryContainment {
-    Unavailable,  // the walk did not run, or ran and failed
-    Contains,     // it ran; `tip` reaches `sha`
-    Missing,      // it ran; it does not
-};
-
-GuiHistoryContainment ref_containment(const std::string& repo_root,
-                                      const std::string& tip,
-                                      const std::string& sha) {
-    std::string out;
-    if (run_git_capture(repo_root, {"rev-list", "--count", sha, "^" + tip},
-                        out) != GitCapture::Ran) {
-        return GuiHistoryContainment::Unavailable;
-    }
-    const std::string count = trim_trailing_ws(out);
-    if (count.empty()) return GuiHistoryContainment::Unavailable;
-    for (const char c : count) {
-        if (c < '0' || c > '9') return GuiHistoryContainment::Unavailable;
-    }
-    return count == "0" ? GuiHistoryContainment::Contains
-                        : GuiHistoryContainment::Missing;
-}
-
-
-// DOES `refs/remotes/origin/<branch>` CARRY `sha` — the act's ONE repository
-// observation, in PLAIN READS (2026-08-09). Resolve the ref, take the equality
-// shortcut, else one containment walk. Three answers, and the only one that
-// counts as a yes is Contains.
-//
-// THE WITNESS GRADING IS GONE with the rest of the graded machinery: an absent
-// remote-tracking ref and an unreadable one now share the Unavailable answer,
-// because under the strict model they call for the same thing — the act says it
-// could not confirm, and the terminal is where that gets looked at. What must
-// never happen is the opposite collapse, silence read as a yes, and that is
-// exactly what this shape refuses: only a walk that RAN and answered zero, or a
-// tip that IS the sha, returns Contains.
-GuiHistoryContainment remote_carries(const std::string& repo_root,
-                                     const std::string& branch,
-                                     const std::string& sha) {
-    const std::string tip =
-        resolved_object_name(repo_root, "refs/remotes/origin/" + branch);
-    if (tip.empty()) return GuiHistoryContainment::Unavailable;
-    if (tip == sha)  return GuiHistoryContainment::Contains;
-    return ref_containment(repo_root, tip, sha);
 }
 
 // THE THREE COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
@@ -3323,64 +3142,77 @@ std::string history_checkpoint_title(const std::string& project_directory) {
     return "Update " + id;
 }
 
-// THE ACT — ONE SANCTIONED PATH, EXIT CODES PLUS ONE OBSERVATION, ONE ERROR
-// CLASS (architect 2026-08-09, superseding the graded machinery of
-// 2026-08-04..09 WHOLE: the attribution walk, the retry family, the subject
-// selector, the byte gates and the witness grading are all deleted).
+// THE ACT — ONE SANCTIONED PATH, GIT'S OWN EXIT STATUS, ONE ERROR CLASS.
 //
 // THE RULING: SANCTIONED USE IS STRICT-EXACT INTENDED USE, AND ANYTHING ELSE
-// THROWS AN ERROR THAT IS FIXED IN THE TERMINAL, OUTSIDE THE GUI. The install
-// scripts guarantee ssh and git, the wrapper owns every code commit (and
-// excludes projects/), and the corpus is app-written — so the act stops
-// distinguishing deviation cases and stops trying to recover from them. It is
-// minimal but airtight: it does the one thing, and where the repository does not
-// answer the way sanctioned use implies, it says so and stops.
+// THROWS AN ERROR THAT IS FIXED IN THE TERMINAL, OUTSIDE THE GUI (architect
+// 2026-08-09, superseding the graded machinery of 2026-08-04..09 whole: the
+// attribution walk, the retry family, the subject selector, the byte gates and
+// the witness grading are all deleted). The install scripts guarantee ssh and
+// git, the wrapper owns every code commit (and excludes projects/), and the
+// corpus is app-written — so the act stops distinguishing deviation cases and
+// stops trying to recover from them. It is minimal but airtight: it does the one
+// thing, and where the repository does not answer the way sanctioned use
+// implies, it says so and stops.
 //
-// THE SEVEN STEPS, each numbered at its own site below:
+// THE ACT DECIDES ON GIT'S EXIT STATUS, WHICH IS THE STANDARD MODEL EVERY GIT
+// FRONT-END USES (architect 2026-09-06: "we prefer parsimony in code — makes it
+// more maintainable, and the policy to always ferret out inconsistencies and
+// asymmetries has paid dividends manyfold ... remove git custom and use
+// posix_spawn's version"). THE STRICT MODEL IT SUPERSEDES decided every SUCCESS
+// on an OBSERVATION of the repository — the branch tip having MOVED after the
+// commit, the remote-tracking ref CARRYING the checkpoint after the push — and
+// it was born of an inability rather than a design: SIGCHLD was ignored, the
+// mutating runner could not read a child's exit status, and an act that cannot
+// ask git how it went has to look at what git left behind. The spawn conversion
+// made the status readable at both entry points, the capture side already lived
+// on it, and this repository runs no hooks — so the observation machinery was
+// the last asymmetry between the two runners, and it is gone: the tip reads and
+// the tip compare, the containment walk and the push verify, the clean arm's
+// containment read and the pre-flight's branch tripwire, all deleted with the
+// `Unconfirmed` verdict they produced between them. Every question this act
+// asks git now gets an exit status back, so there is nothing left it cannot
+// answer.
+//
+// THE FIVE STEPS, each numbered at its own site below:
 //   (1) CAPTURE — the symbolic branch read ONCE. Detached refuses immediately.
-//   (2) WRITE the three sidecars, then PRE-FLIGHT `git status` over those three
-//       paths.
-//   (3) CLEAN paths — nothing to commit; ONE containment read says whether the
-//       branch is in sync with its remote, which is what decides the report.
-//   (4) DIRTY — read the branch tip, then `git add` and `git commit` under the
-//       caller's title.
-//   (5) The commit is OURS IF THE TIP MOVED: sanctioned use means nothing else
-//       commits here mid-act, so a moved tip IS the checkpoint and an unmoved
-//       one is a commit that never happened.
-//   (6) PUSH the sha onto the captured branch, at the guard-validated URL.
-//   (7) VERIFY — and the verify is the VERDICT: the remote-tracking ref carrying
-//       the checkpoint is Committed, an observed absence is CommittedNotPushed,
-//       and an unanswerable read is Unconfirmed.
+//   (2) WRITE the three sidecars.
+//   (3) PRE-FLIGHT — one `git status --porcelain --branch` over those three
+//       paths, whose `##` header carries BOTH answers the act needs: are the
+//       paths dirty, and is the branch AHEAD of its remote.
+//   (4) DIRTY — `git add` then `git commit` under the caller's title; a nonzero
+//       exit on either is CommitFailed with git's own first line.
+//   (5) PUSH — iff a commit was just made OR the branch was already ahead. A
+//       nonzero exit is CommittedNotPushed, zero is Committed. Clean paths and
+//       nothing to publish is NothingToCommit, and the act runs no mutation at
+//       all.
 //
-// THE TWO KEEPS, and why each survived a deletion pass that took everything
-// around it. THE PRE-FLIGHT'S BRANCH TRIPWIRE (step 2): `git status` takes no
-// ref, so it is the one observation that cannot be pinned by spelling; checking
-// its `##` header against the captured branch is five lines that convert a
-// SILENT WRONG ANSWER into the thrown error this model requires. THE VERIFY
-// (step 7): a transport's own account is not a fact about the repository, and
-// "the checkpoint is published" is the one claim this act must never make on
-// anything less — so success is an OBSERVATION, and an unanswerable observation
-// is simply not a yes.
+// THE CLEAN-BUT-AHEAD ARM PUSHES, which is the standard tool's answer to pending
+// commits and the reason the clean arm needs no observation of its own: the
+// header already said the remote has not got what the branch has, so the act
+// publishes it rather than reporting a state it declines to fix. (Under the old
+// model that arm was `Unconfirmed` with a stderr line telling the user to push
+// from the terminal.)
 //
-// AND SUCCESS IS AN OBSERVATION AT BOTH MUTATING STEPS, which is the strict
-// model's own ruling and not a limit of the subprocess layer: run_git_mutate
-// COULD read the child's exit status — the capture helper beside it does — and
-// DELIBERATELY DOES NOT, because git's status is not this act's outcome (its
-// header states exactly what its `false` covers and why), so a git that exits
-// nonzero within the deadline reads as `true` here. FAILURES may therefore be
-// decided on the advisory return OR on an observation — a commit
-// whose tip did not move, a push whose remote demonstrably lacks the checkpoint
-// — while a SUCCESS is only ever an observation: the tip MOVED, and the
-// remote-tracking ref CARRIES it.
+// THE TWO ACCEPTED IMPRECISIONS, recorded rather than worked around, and they
+// are the same shape: a step the DEADLINE killed may well have done its work.
+// A PUSH so killed is reported CommittedNotPushed although it may have landed —
+// the next act's pre-flight is the correction, its header showing no `[ahead]`
+// and reporting NothingToCommit — and a COMMIT that landed and then hung in a
+// `post-commit` hook past the deadline reads as CommitFailed although the commit
+// is there, git having moved HEAD before running the hook. In both the terminal
+// shows the truth in one look and the next act re-reads whatever was left; the
+// alternative is a repository observation, which is the machinery this model
+// exists to be rid of. A FAILED PUSH is
+// fixed with `git push` in the terminal, not by an in-app retry. And OUT-OF-APP
+// GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield a
+// blunt error rather than a graded diagnosis. (github-recheck.md carries the
+// history of what this replaced.)
 //
-// THE ACCEPTED CONSEQUENCES, recorded rather than worked around. A HUNG
-// post-commit HOOK reads as CommitFailed although the commit landed — git moves
-// HEAD before it runs the hook, the deadline kills the child, and the act
-// believes the transport; the terminal shows the truth, and the next act's clean
-// arm sorts it out. A FAILED PUSH is fixed with `git push` in the terminal, not
-// by an in-app retry. And OUT-OF-APP GIT UNDER projects/ is unsanctioned use: a
-// commit racing this act may yield a blunt error rather than a graded diagnosis.
-// (github-recheck.md carries the history of what this replaced.)
+// THE PROJECTS-HOME GUARD STAYS, and it is not an outcome observation — it is
+// the FENCE that keeps a checkpoint from publishing to the wrong place. It runs
+// at the mutating boundary, immediately before the push, and the push goes to
+// THE URL IT JUST VALIDATED (step 5 owns the pinning).
 //
 // WHAT THE COMMIT CANNOT CARRY, and why the pathspec is not a nicety: `git
 // commit -- <paths>` builds its tree from HEAD plus the named paths and ignores
@@ -3427,10 +3259,9 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const GuiHistoryNowSide& bytes, const std::string& title) {
 
     // (1) THE BRANCH, READ ONCE — the act's ONLY reading of the mutable symbolic
-    // HEAD for a value. Every later use is this one value: `source_ref` for the
-    // reads, the refspec for the push, the remote-tracking ref for the verify.
-    // Reading HEAD per site is what would let a checkout mid-act have the
-    // observation name one branch and the publication another.
+    // HEAD. It is what the push's refspec names at both ends, and reading HEAD
+    // again at the push would let a checkout mid-act publish onto a branch the
+    // act never looked at.
     //
     // A DETACHED HEAD IS UNSANCTIONED USE AND THROWS HERE, before anything is
     // written: the act publishes onto a branch, and there is no branch. Nothing
@@ -3442,7 +3273,6 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                      "check out a branch in the terminal\n");
         return GuiHistoryCommitOutcome::WriteFailed;
     }
-    const std::string source_ref = "refs/heads/" + branch;
 
     // kSidecarExtensions order, which is what pairs each text with its path.
     const std::string* texts[3] = {&bytes.warpmarkers_text,
@@ -3451,7 +3281,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     const std::vector<std::string> paths =
         checkpoint_paths(project_directory, base_name);
 
-    // (2a) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
+    // (2) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
     // rename — so a checkpoint is never half-written, into a directory that
     // exists because the source is in it. THESE THREE PATHS ARE THE ONES THE
     // PRELUDE SAVE JUST WROTE, always and no longer only in one workflow: the
@@ -3486,167 +3316,81 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         std::fprintf(stderr, "warptempo_gui: Commit failed: %s\n", why.c_str());
         return GuiHistoryCommitOutcome::CommitFailed;
     };
+    // git's own account of a failing step, appended where it said anything.
+    auto with_git = [](std::string why, const std::string& said) {
+        if (!said.empty()) why += " (git said: " + said + ")";
+        return why;
+    };
 
-    // (2b) THE PRE-FLIGHT, and THE ONE MID-ACT TRIPWIRE KEPT (see the head).
-    // `git status` takes no ref and compares against whatever HEAD points at, so
-    // it is the one source-side observation that cannot be pinned by spelling;
-    // it is pinned by CHECKING instead, against the `##` header's own branch
-    // name. A mismatch is neither Clean nor Dirty — it is no usable answer at
-    // all — so it ends the act here, having committed and pushed nothing. Five
-    // lines that convert a silent wrong answer into the thrown error the model
-    // requires.
-    std::string                checked_out_branch;
+    // (3) THE PRE-FLIGHT, AND IT IS THE ONLY READ THE ACT MAKES. One `git status`
+    // answers both of the act's questions at once — whether the three paths
+    // differ from what is committed, and whether the branch is ahead of its
+    // remote — so nothing here has to ask the repository a second question to
+    // learn what a mutation did (status_of_paths owns the header's grammar).
+    bool                       ahead_of_remote = false;
     const GuiHistoryPathStatus before_status =
-        status_of_paths(repo_root, pathspecs, branch, checked_out_branch);
+        status_of_paths(repo_root, pathspecs, ahead_of_remote);
     if (before_status == GuiHistoryPathStatus::Unavailable) {
         return commit_failed("could not read 'git status' for the checkpoint "
                              "paths; the written files are still in the working "
                              "tree");
     }
-    if (before_status == GuiHistoryPathStatus::OtherBranch) {
-        // The written sidecars stay in the working tree exactly as they do after
-        // any other failure here — visible to `git status` and committable by
-        // hand.
-        const std::string seen = checked_out_branch.empty()
-                                     ? std::string("a detached HEAD")
-                                     : ("'" + checked_out_branch + "'");
-        return commit_failed(
-            "git has " + seen + " checked out but this act captured '" +
-            branch + "', so nothing was committed or pushed; the written files "
-            "are still in the working tree");
-    }
-
-    // (3) CLEAN PATHS — the bytes just written are what the branch already
-    // carries, which is the state a user reaches by checkpointing twice and the
-    // mode's own empty diff already says so. There is nothing to commit and
-    // nothing for this act to publish.
-    //
-    // ONE CONTAINMENT READ DECIDES WHETHER THE CHIP CLEARS, and it is the only
-    // question this arm asks: is the captured branch IN SYNC with its remote?
-    // In sync is the honest all-done, and it is what recognizes a fix made in
-    // the terminal — the user pushed by hand, the next checkpoint sees it and
-    // the standing report goes. Behind is not: the branch carries commits the
-    // remote has not got, and under this model the push is the terminal's job,
-    // so the act says so and leaves the report standing.
-    if (before_status == GuiHistoryPathStatus::Clean) {
-        const std::string local = resolved_object_name(repo_root, source_ref);
-        if (local.empty()) {
-            std::fprintf(stderr,
-                         "warptempo_gui: Nothing to commit; could not read "
-                         "'%s' to check whether it is pushed, check from the "
-                         "terminal\n",
-                         source_ref.c_str());
-            return GuiHistoryCommitOutcome::Unconfirmed;
-        }
-        switch (remote_carries(repo_root, branch, local)) {
-        case GuiHistoryContainment::Contains:
-            std::fprintf(stderr,
-                         "warptempo_gui: Nothing to commit: the checkpoint is "
-                         "committed and pushed\n");
-            return GuiHistoryCommitOutcome::NothingToCommit;
-        case GuiHistoryContainment::Missing:
-            std::fprintf(stderr,
-                         "warptempo_gui: Nothing to commit; the branch has "
-                         "unpushed commits, push from the terminal\n");
-            return GuiHistoryCommitOutcome::Unconfirmed;
-        case GuiHistoryContainment::Unavailable:
-            break;
-        }
-        std::fprintf(stderr,
-                     "warptempo_gui: Nothing to commit; could not read whether "
-                     "'origin/%s' carries the branch, check from the "
-                     "terminal\n",
-                     branch.c_str());
-        return GuiHistoryCommitOutcome::Unconfirmed;
-    }
 
     // (4) DIRTY — stage and commit, both pathspec-scoped to the same three
-    // paths.
-    //
-    // THE TIP IS READ FIRST, because the commit's SUCCESS is an observation like
-    // every other success in this act. run_git_mutate DOES NOT READ A CHILD'S
-    // EXIT STATUS — deliberately, the status not being the act's outcome; its
-    // own header states exactly what its `false` covers — so a `git commit` that
-    // exits nonzero WITHOUT creating a commit — a rejecting pre-commit hook, an
-    // identity or signing failure — comes back TRUE. Believing it would read the
-    // UNMOVED tip as the checkpoint, push that old commit, observe the remote
-    // already carrying it and report an established Committed over three
-    // sidecars still sitting uncommitted. So: remember the tip, and require it to
-    // have MOVED.
-    //
-    // FAILURE STILL DECIDES ON THE ADVISORY RETURN, which is the strict model's
-    // recorded trade: a commit that landed and then hung in `post-commit` past
-    // the deadline reads as CommitFailed although the tip moved, and the terminal
-    // shows the truth. There is deliberately NO upgrade arm for it — blunt is
-    // ruled.
-    //
-    // The `add` stays advisory — `git commit -- <paths>` takes the working
-    // tree's own contents for those paths, so it matters only for a previously
-    // UNTRACKED sidecar, and the commit says so itself if that is what failed.
-    const std::string before = resolved_object_name(repo_root, source_ref);
-    if (before.empty()) {
-        return commit_failed("could not read '" + source_ref +
-                             "' before committing; the written files are still "
-                             "in the working tree");
+    // paths, and BOTH DECIDED ON GIT'S EXIT STATUS. `add` is no longer advisory:
+    // it fails only where the commit behind it could not succeed either (a
+    // pathspec matching nothing, an unwritable index), and reporting the step
+    // that actually refused is what puts git's own sentence on the card.
+    bool committed = false;
+    if (before_status == GuiHistoryPathStatus::Dirty) {
+        std::string              add_line;
+        std::vector<std::string> add_args{"add", "--"};
+        for (const std::string& p : pathspecs) add_args.push_back(p);
+        if (run_git_mutate(repo_root, add_args, add_line) != GitRun::Ran) {
+            return commit_failed(
+                with_git("git could not stage the checkpoint; the written files "
+                         "are still in the working tree",
+                         add_line));
+        }
+
+        std::string              commit_line;
+        std::vector<std::string> commit_args{"commit", "-m", title, "--"};
+        for (const std::string& p : pathspecs) commit_args.push_back(p);
+        if (run_git_mutate(repo_root, commit_args, commit_line) != GitRun::Ran) {
+            return commit_failed(
+                with_git("git could not commit the checkpoint; the written "
+                         "files are still in the working tree",
+                         commit_line));
+        }
+        committed = true;
+        std::fprintf(stderr, "warptempo_gui: Committed \"%s\"\n",
+                     title.c_str());
     }
 
-    std::string              add_line;
-    std::vector<std::string> add_args{"add", "--"};
-    for (const std::string& p : pathspecs) add_args.push_back(p);
-    run_git_mutate(repo_root, add_args,
-                   add_line);  // advisory; `add_line` is the diagnostic
-
-    std::string              commit_line;
-    std::vector<std::string> commit_args{"commit", "-m", title, "--"};
-    for (const std::string& p : pathspecs) commit_args.push_back(p);
-    if (!run_git_mutate(repo_root, commit_args, commit_line)) {
-        std::string why = "git could not commit the checkpoint; the written "
-                          "files are still in the working tree";
-        std::string transport = commit_line;
-        if (transport.empty()) transport = add_line;
-        if (!transport.empty()) why += " (git said: " + transport + ")";
-        return commit_failed(why);
+    // (5) THE PUSH — iff there is something for the remote to receive. A commit
+    // just made is the ordinary case; a branch the pre-flight found AHEAD is the
+    // other, and it is why the clean arm is not an early return: the bytes were
+    // already committed (by a previous act whose push failed, or in the
+    // terminal) and publishing them is exactly what a git front-end does with
+    // pending commits.
+    if (!committed && !ahead_of_remote) {
+        std::fprintf(stderr,
+                     "warptempo_gui: Nothing to commit: the checkpoint is "
+                     "committed and pushed\n");
+        return GuiHistoryCommitOutcome::NothingToCommit;
     }
 
-    // (5) THE COMMIT IS OURS, AND THE MOVE IS WHAT PROVES ONE HAPPENED.
-    // Sanctioned use means nothing else commits on this branch while the act
-    // runs, so a tip that has moved IS the checkpoint — no attribution walk, no
-    // content signature, no range. A tip that has NOT moved is the rejected-hook
-    // shape above: git said nothing useful and made nothing, so this is a
-    // failure however cheerfully the child exited. The ref is read rather than
-    // HEAD, keeping every source-side observation bound to the captured branch;
-    // a read that cannot answer is the error the model calls for.
-    const std::string landed = resolved_object_name(repo_root, source_ref);
-    if (landed.empty()) {
-        return commit_failed("committed, but could not read '" + source_ref +
-                             "' to learn what landed");
-    }
-    if (landed == before) {
-        std::string why = "git commit made no commit, check the terminal; the "
-                          "written files are still in the working tree";
-        std::string transport = commit_line;
-        if (transport.empty()) transport = add_line;
-        if (!transport.empty()) why += " (git said: " + transport + ")";
-        return commit_failed(why);
-    }
-    std::fprintf(stderr, "warptempo_gui: Committed %s \"%s\"\n",
-                 short_sha(landed).c_str(), title.c_str());
-
-    // (6) THE PUSH. THE DESTINATION IS THE GUARD'S OWN ANSWER, pinned into the
-    // push child's configuration: the projects-home guard runs here, at the
-    // MUTATING BOUNDARY, and this act pushes to THE URL IT JUST VALIDATED. A
-    // `git push origin` after the guard would ask a fresh process to resolve
-    // `origin` again, and `remote.origin.pushurl` is a config value another
-    // terminal — or a hook this very act just ran — can move in between. The pin
-    // is a PAIR of `-c` settings and needs both halves: that key is MULTI-VALUED,
-    // so a lone `-c` ADDS a destination rather than replacing the configured
-    // ones, and an EMPTY value CLEARS the accumulated list. So: clear, then name
-    // the one validated URL. The named remote stays in the argv so the
-    // remote-tracking ref still updates, which is what the verify reads.
-    //
-    // THE REFSPEC SENDS `landed` BY SHA, never `HEAD`, and nothing forces: what
-    // was committed is what gets published, and a commit sitting on top of it
-    // stays the user's own to push.
+    // THE DESTINATION IS THE GUARD'S OWN ANSWER, pinned into the push child's
+    // configuration: the projects-home guard runs here, at the MUTATING
+    // BOUNDARY, and this act pushes to THE URL IT JUST VALIDATED. A `git push
+    // origin` after the guard would ask a fresh process to resolve `origin`
+    // again, and `remote.origin.pushurl` is a config value another terminal — or
+    // a hook this very act just ran — can move in between. The pin is a PAIR of
+    // `-c` settings and needs both halves: that key is MULTI-VALUED, so a lone
+    // `-c` ADDS a destination rather than replacing the configured ones, and an
+    // EMPTY value CLEARS the accumulated list. So: clear, then name the one
+    // validated URL. The named remote stays in the argv so the remote-tracking
+    // ref still updates, which is what the NEXT act's pre-flight reads.
     GuiFailure  guard_reason;
     std::string destination;
     if (!clone_is_projects_home(repo_root, projects_repo, guard_reason,
@@ -3656,51 +3400,31 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         return GuiHistoryCommitOutcome::CommittedNotPushed;
     }
 
-    std::string push_line;
-    if (!run_git_mutate(repo_root,
-                        {"-c", "core.sshCommand=ssh -o BatchMode=yes",
-                         // Clear the configured push destinations, then name the
-                         // one the guard just validated — both halves required.
-                         "-c", "remote.origin.pushurl=",
-                         "-c", "remote.origin.pushurl=" + destination,
-                         "push", "origin",
-                         landed + ":refs/heads/" + branch},
-                        push_line)) {
+    // THE REFSPEC IS THE CAPTURED BRANCH AT BOTH ENDS, never `HEAD` and never a
+    // sha: the branch is what the act publishes, and both push arms — the commit
+    // it just made and the commits that were already pending — want the same
+    // thing sent. Nothing forces.
+    const std::string ref = "refs/heads/" + branch;
+    std::string       push_line;
+    if (run_git_mutate(repo_root,
+                       {"-c", "core.sshCommand=ssh -o BatchMode=yes",
+                        // Clear the configured push destinations, then name the
+                        // one the guard just validated — both halves required.
+                        "-c", "remote.origin.pushurl=",
+                        "-c", "remote.origin.pushurl=" + destination,
+                        "push", "origin", ref + ":" + ref},
+                       push_line) != GitRun::Ran) {
+        // GIT'S REFUSAL IS THE VERDICT — a rejected refspec, refused
+        // credentials, a remote hook saying no — and so is a push the deadline
+        // killed, which is one of the act's two accepted imprecisions (its head
+        // says why, and why the next act's pre-flight is the correction).
         std::fprintf(stderr, "warptempo_gui: Push failed: %s\n",
                      push_line.empty() ? "git reported nothing"
                                        : push_line.c_str());
         return GuiHistoryCommitOutcome::CommittedNotPushed;
     }
 
-    // (7) THE VERIFY — the one kept observation, and what makes success a fact
-    // about the repository rather than a transport's say-so. The remote-tracking
-    // ref CARRYING the checkpoint is the arrival: carrying, not equalling,
-    // because a commit landing on top of it moves the ref above. Anything else
-    // — a walk that could not run, a ref that does not resolve — is simply not a
-    // yes, and says so.
-    switch (remote_carries(repo_root, branch, landed)) {
-    case GuiHistoryContainment::Contains:
-        std::fprintf(stderr, "warptempo_gui: Pushed %s \"%s\"\n",
-                     short_sha(landed).c_str(), title.c_str());
-        return GuiHistoryCommitOutcome::Committed;
-    case GuiHistoryContainment::Missing:
-        // AN OBSERVED ABSENCE IS A FAILED PUSH, whatever the transport said —
-        // and it is the arm that catches a push exiting nonzero while still
-        // returning true above (rejected refspec, refused credentials, a remote
-        // hook saying no). The checkpoint is in the local branch and the remote
-        // demonstrably has not got it, which is CommittedNotPushed exactly.
-        std::fprintf(stderr,
-                     "warptempo_gui: Push failed: 'origin/%s' does not carry "
-                     "the checkpoint, push from the terminal\n",
-                     branch.c_str());
-        return GuiHistoryCommitOutcome::CommittedNotPushed;
-    case GuiHistoryContainment::Unavailable:
-        break;
-    }
-    std::fprintf(stderr,
-                 "warptempo_gui: Push unconfirmed: could not observe "
-                 "'origin/%s' carrying the checkpoint, check from the "
-                 "terminal\n",
+    std::fprintf(stderr, "warptempo_gui: Pushed '%s' to origin\n",
                  branch.c_str());
-    return GuiHistoryCommitOutcome::Unconfirmed;
+    return GuiHistoryCommitOutcome::Committed;
 }

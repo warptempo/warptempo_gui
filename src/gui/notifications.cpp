@@ -178,8 +178,8 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     //   - THE CARD JUST PUSHED, at index 0: it is the answer to the act the
     //     user has this moment performed, and bumping it would make that act
     //     silent — which is reachable, not theoretical (the capacity is 4 at
-    //     a 1080 px window and 350 %, and four critical checkpoint verdicts
-    //     can stand there). So the walk stops above index 0.
+    //     a 1080 px window and 350 %, and a run of critical checkpoint
+    //     failures fills it). So the walk stops above index 0.
     // THE MULTIPLES RULE MADE THIS LOAD-BEARING (2026-09-01): repeated presses
     // of one refusal now fill the room with copies of one sentence instead of
     // refreshing a single card, so the walk runs on ordinary use and not only

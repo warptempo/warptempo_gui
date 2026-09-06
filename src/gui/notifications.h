@@ -53,7 +53,7 @@
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock), at its X, or at a bare Esc that reaches the stack
 //              and takes the whole of it.
-//   CRITICAL — the four checkpoint outcomes and nothing else today. Stands
+//   CRITICAL — the three checkpoint failures and nothing else today. Stands
 //              until its X or that same Esc; no clock.
 //
 // WHAT IS NOT A CARD, by ruling. ALMOST EVERY SUCCESS: a render's completion

@@ -4545,8 +4545,8 @@ private:
     //     LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
     //     the main thread: it clears the in-flight bit and RAISES A CRITICAL
-    //     NOTIFICATION CARD for each of the four failing verdicts (the two
-    //     established ones raise nothing; GuiNotifications owns the card).
+    //     NOTIFICATION CARD for each of the three failing verdicts (the two
+    //     endings raise nothing; GuiNotifications owns the card).
     //     It raised an acknowledge modal until 2026-08-09 and wrote the tab
     //     row's permanent critical chip until 2026-08-29; a card takes
     //     nothing from the keyboard either, so the completion still needs

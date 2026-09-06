@@ -1111,7 +1111,7 @@ void GuiInputHandler::measure_history_head_delta() {
 // START A FRESH SCAN — the ONE funnel, and the one place the deferral lives.
 // Its three kickers, re-derived by grep on this name: main.cpp's startup load
 // tail (once the source has settled), on_history_checkpoint_complete for every
-// outcome that MAY have committed (four of the six — that site owns the
+// outcome that MAY have committed (three of the five — that site owns the
 // derivation), and kick_history_prefetch_if_stale below.
 //
 // IT SUPERSEDES WHATEVER IS RUNNING, and no caller has to ask: the store's kick
@@ -3110,7 +3110,7 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // checkpoint's own verdict arrives seconds later, on a worker, and a view held
 // open until then would be a modal wait dressed as a review. So a failed save
 // leaves the view exactly as it was (every refusal's shape) and a successful one
-// closes it, whatever the repository then says; the four failing verdicts
+// closes it, whatever the repository then says; the three failing verdicts
 // report through a CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
 // row's permanent critical chip from 2026-08-09, an acknowledge notice before
 // that) instead of through a view left standing.
@@ -3280,36 +3280,36 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
 // answered (the architect: persistent, the X alone). GuiNotifications owns
 // the card; this is the critical class's one producer.
 //
-// THE PARTITION, over the act's SIX verdicts (GuiHistoryCommitOutcome,
-// history_diff.h, whose contract comment owns what each one establishes):
-//   ESTABLISHED, AND THEY RAISE NOTHING — Committed (made and published, the
-//   ordinary ending) and NothingToCommit (the newest checkpoint already carried
-//   these bytes AND the remote already had it). Neither is a failure; each
-//   says what it has to say on stderr.
-//   THE FOUR FAILURES — WriteFailed (nothing reached the repository at all),
-//   CommitFailed (git made no checkpoint the act can stand behind), Committed-
-//   NotPushed (the checkpoint is in the local branch and the remote has not got
-//   it) and Unconfirmed (the act could not establish its answer). WHAT EACH ONE
-//   ESTABLISHES IS THE ENUM CONTRACT'S TO SAY, and it says it once
-//   (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs only
-//   which class each falls in, so the arms are not re-enumerated here.
+// THE PARTITION, over the act's FIVE verdicts (GuiHistoryCommitOutcome,
+// history_diff.h, whose contract comment owns what each one means):
+//   THE TWO ENDINGS, AND THEY RAISE NOTHING — Committed (the branch carries
+//   these bytes and the push exited zero) and NothingToCommit (the newest
+//   checkpoint already carried them and the branch was not ahead of its remote).
+//   Neither is a failure; each says what it has to say on stderr.
+//   THE THREE FAILURES — WriteFailed (nothing reached the repository at all),
+//   CommitFailed (git refused a step before anything was published) and
+//   CommittedNotPushed (the bytes are in the local branch and the push did not
+//   land). WHAT EACH ONE MEANS IS THE ENUM CONTRACT'S TO SAY, and it says it
+//   once (GuiHistoryCommitOutcome, history_diff.h) — this end of the wire needs
+//   only which class each falls in, so the arms are not re-enumerated here.
 //   The texts differ exactly where the
 //   user's next move does, which is why the act distinguishes them at all. They
 //   are SHORT because a card is one line and the detail is already on stderr,
 //   verbatim and unchanged by this arc.
 //
-// AN UNANSWERED QUESTION IS NOT A SUCCESS, which is the whole point of the sixth
-// verdict: Unconfirmed came back as NothingToCommit until 2026-08-09, so an act
-// that established neither content nor publication was reported as a clean
-// ending. It raises its own card like the other three failures; what it must
-// never do is claim to have established anything.
+// THERE WERE FOUR FAILURES UNTIL 2026-09-06: `Unconfirmed` said the act could
+// establish neither the content nor the publication, and it existed because the
+// mutating runner could not read a child's exit status and the act had to
+// observe the repository instead — an observation that could not be made had no
+// verdict left to take. The status is read now, so every question the act asks
+// gets an answer and that verdict is deleted.
 //
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, and since 2026-08-09 no
 // in-app retry either: a checkpoint that committed and failed to push is pushed
-// FROM THE TERMINAL, and the next checkpoint act notices — its clean arm reads
-// the branch against its remote, so a hand-push is what clears this report.
-// That is the strict model's whole shape: the act does the sanctioned thing or
-// it throws, and the fixing happens where git lives.
+// FROM THE TERMINAL, and the next checkpoint act notices — its pre-flight finds
+// the branch still ahead of its remote and pushes it, so a hand-push is what
+// leaves it nothing to do. That is the model's whole shape: the act does the
+// sanctioned thing or it throws, and the fixing happens where git lives.
 //
 // AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
 // is what retired a whole family of guards this function used to owe (the parked
@@ -3329,19 +3329,16 @@ void GuiInputHandler::on_history_checkpoint_complete(
     // membership re-derived 2026-08-09). The prefetch store describes the
     // repository as of one tip, so the next `h` must see a checkpoint this act
     // made — and "made" is not the same set as "succeeded".
-    //   FOUR MAY HAVE COMMITTED: Committed and CommittedNotPushed obviously did;
+    //   THREE MAY HAVE COMMITTED: Committed and CommittedNotPushed obviously
+    //   may have — each also reaches its push arm over CLEAN paths the branch
+    //   was merely ahead with, where this act committed nothing and HEAD is
+    //   where the scan already found it, so the kick is free there; and
     //   CommitFailed may have, because the act reports it on a hung
     //   `post-commit` hook whose commit had ALREADY landed (git moves HEAD
-    //   before running the hook — the recorded accepted consequence); and
-    //   Unconfirmed may have, because ONE of its arms is the push verify, which
-    //   is reached only past a commit that DID move the tip. Its other arms are
-    //   the CLEAN one's and commit nothing — an unreadable local tip, a branch
-    //   observably behind its remote, an unanswerable containment read — but a
-    //   kick cannot tell them apart from here and does not need to: the whole
-    //   set is admitted on the one arm that can have moved HEAD.
+    //   before running the hook — the recorded accepted imprecision).
     //   TWO PROVABLY DID NOT: WriteFailed never reaches git at all (a detached
-    //   refusal or a failed write), and NothingToCommit is the clean arm's
-    //   in-sync ending, which runs no add and no commit by construction.
+    //   refusal or a failed write), and NothingToCommit is the clean, not-ahead
+    //   ending, which runs no add and no commit by construction.
     // Kicking the two extra costs one scan on a rare failure and buys the walk
     // being TRUE after it; the old membership left the next visit reading a
     // pre-commit repository.
@@ -3367,11 +3364,11 @@ void GuiInputHandler::on_history_checkpoint_complete(
     switch (outcome) {
     case GuiHistoryCommitOutcome::Committed:
     case GuiHistoryCommitOutcome::NothingToCommit:
-        // THE TWO ESTABLISHED ANSWERS raise nothing: the checkpoint is
-        // committed AND the remote observably carries it, and a clean ending
-        // is not an event the user needs a card for (a render's completion
-        // is ruled the same way). A failure card standing from an earlier
-        // act stands on — it is the user's to close.
+        // THE TWO ENDINGS raise nothing: the checkpoint is committed and the
+        // push exited zero, or there was nothing to do, and a clean ending is
+        // not an event the user needs a card for (a render's completion is
+        // ruled the same way). A failure card standing from an earlier act
+        // stands on — it is the user's to close.
         break;
     case GuiHistoryCommitOutcome::WriteFailed:
         notifications.notify(AppState::NotificationClass::Critical,
@@ -3382,19 +3379,11 @@ void GuiInputHandler::on_history_checkpoint_complete(
             AppState::NotificationClass::Critical,
             "Checkpoint failed: files written but not committed");
         break;
-    case GuiHistoryCommitOutcome::Unconfirmed:
-        // NOTHING WAS ESTABLISHED HERE, and the card says exactly that. (The
-        // chip's fill-only-an-empty-slot condition is gone with the slot: a
-        // standing "committed but not pushed" card is not overwritten by this
-        // one, both stand, and the actionable text is not lost to the vaguer
-        // one.)
-        notifications.notify(AppState::NotificationClass::Critical, "Checkpoint could not be confirmed");
-        break;
     case GuiHistoryCommitOutcome::CommittedNotPushed:
-        // The commit landed and the push did not. The fix is `git push` in the
-        // terminal; the card stands until the user closes it. ONE CLAUSE like
-        // its three siblings (2026-09-01): it read "Checkpoint committed; push
-        // failed", the one semicolon among the four verdicts.
+        // The bytes are in the branch and the push did not land. The fix is
+        // `git push` in the terminal; the card stands until the user closes it.
+        // ONE CLAUSE like its two siblings (2026-09-01): it read "Checkpoint
+        // committed; push failed", the one semicolon among the verdicts.
         notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed but not pushed");
         break;
     }
