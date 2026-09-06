@@ -1277,9 +1277,11 @@ void render_flag_boxes_impl(
         // further right by its measure box's width, so its admission widens by
         // that much or the bound would UNDER-state — the one thing a cull bound
         // may never do. It is per marker rather than a flat charge of the
-        // grammar's 12-byte ceiling because most markers carry no measure at
-        // all, and a flat charge would drag every lane's left cull out by 12
-        // ems for boxes that do not exist.
+        // grammar's own byte ceiling (kMaxMarkerMeasureBytes, marker_measure.h
+        // — named rather than spelled, the number being the header's to move)
+        // because most markers carry no measure at all, and a flat charge
+        // would drag every lane's left cull out by that whole ceiling in ems
+        // for boxes that do not exist.
         //
         // THE MARKER'S OWN MEASURE IS THE WHOLE TERM, because it is the whole
         // of what paints: nothing inherits (architect 2026-08-20), so there is

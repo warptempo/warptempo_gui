@@ -13,44 +13,35 @@
 
 #include <cctype>
 #include <cstdio>
-#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace {
 
-// Strict signed two-decimal parse straight to integer cents (sign, >=1
-// integer digit, '.', exactly two fraction digits; direct digit-to-cents
-// conversion — no strtod, no doubles) — the iteration bound editor's
-// grammar, the one form a bound cell shows (format_iter_bound_cell) read
-// back. Leading/trailing ASCII whitespace is trimmed first. A digit run
-// whose cents would overflow int64 is refused (unreachable under the
-// caller's walls; adversarial typing earns the plain refusal).
-bool parse_signed_2dp_cents(const std::string& raw, int64_t& out) {
-    size_t a = 0, b = raw.size();
-    while (a < b && std::isspace(static_cast<unsigned char>(raw[a]))) ++a;
-    while (b > a && std::isspace(static_cast<unsigned char>(raw[b - 1]))) --b;
-    const std::string v = raw.substr(a, b - a);
-    if (v.size() < 4) return false;
+// THE ITERATION BOUND'S GRAMMAR, READ BACK. It is FIXED-WIDTH — a sign, one
+// integer digit, the point, two decimals (format_signed_delta_cents,
+// warpmarkers.h, the one form a bound cell shows) — so this reader takes
+// exactly those five bytes and nothing else: no surrounding whitespace, no
+// leading zero, no second integer digit, ONE CANONICAL SPELLING PER VALUE.
+// THE READER IS THE GRAMMAR'S OWNER, which is why it is exact rather than
+// merely wide enough to catch ordinary typing: the field's five-byte cap
+// (kMaxPendingCharsIterBound, text_editor.h) bounds what can be TYPED and
+// this bounds what can be COMMITTED, so a pending that reached the commit by
+// any other road meets the same judge. The conversion is digit-to-cents
+// direct — no strtod, no doubles — and needs no overflow arm at all, one
+// integer digit and two decimals never leaving [-9.99, +9.99]; the tempo
+// window's own wall, refused below, is what holds a bound inside +/-3.75.
+bool parse_signed_2dp_cents(const std::string& v, int64_t& out) {
+    if (v.size() != 5) return false;
     if (v[0] != '+' && v[0] != '-') return false;
-    const auto dot = v.find('.', 1);
-    if (dot == std::string::npos) return false;
-    if (dot == 1) return false;
-    if (v.size() - dot - 1 != 2) return false;
-    for (size_t i = 1; i < v.size(); ++i) {
-        if (i == dot) continue;
-        if (!std::isdigit(static_cast<unsigned char>(v[i]))) return false;
+    if (v[2] != '.') return false;
+    const char digits[3] = {v[1], v[3], v[4]};
+    for (const char c : digits) {
+        if (!std::isdigit(static_cast<unsigned char>(c))) return false;
     }
-    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
-    int64_t whole = 0;
-    for (size_t i = 1; i < dot; ++i) {
-        if (whole > (kMax - 9) / 10) return false;       // overflow refused
-        whole = whole * 10 + (v[i] - '0');
-    }
-    if (whole > (kMax - 99) / 100) return false;         // overflow refused
-    const int64_t mag =
-        whole * 100 + (v[dot + 1] - '0') * 10 + (v[dot + 2] - '0');
+    const int64_t mag = (digits[0] - '0') * 100 + (digits[1] - '0') * 10 +
+                        (digits[2] - '0');
     out = (v[0] == '-') ? -mag : mag;
     return true;
 }
@@ -298,7 +289,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     } else {
         int64_t value = 0;
         if (!parse_signed_2dp_cents(next, value)) {
-            refuse("a bound is a sign and two decimals, as +0.00");
+            refuse("a bound is a sign, one digit and two decimals, as +0.00");
             return;
         }
         // THE WALLS, the landing owner's two, refused rather than clamped:

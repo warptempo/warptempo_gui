@@ -101,8 +101,14 @@ namespace text_editor {
 //
 // An operation that would grow the pending past this cap refuses atomically
 // and sets the red state (the whole edit lands or the buffer is untouched);
-// shrinking and non-growing edits are always accepted, so an over-cap pending
-// seeded from a hand-edited file can be trimmed back to canonical form.
+// shrinking and non-growing edits are always accepted. THAT SHRINK LATITUDE
+// IS NEVER EXERCISED HERE, and the roster's honest home for it is the
+// settings value (kMaxPendingCharsSettings below), whose free text does load
+// wider from disk than the editor will grow: this field's seed is composed
+// from the store (flag_text, flag_editor.cpp) and the store's every road —
+// the load, the history walk, the load in place — comes through the strict
+// canonical-line parser that this cap is derived from, so no over-cap
+// payload can reach the editor at all.
 static_assert(kTempoMaxCents < 1000,
               "a tempo's integer part no longer fits one digit");
 constexpr int kMaxPendingChars = 28;
@@ -115,6 +121,11 @@ constexpr int kMaxPendingChars = 28;
 // kTempoMaxCents - kTempoMinCents, i.e. 3.75. So `-3.75` is the widest token
 // the field can commit and FIVE BYTES is the cap, a tight bound rather than a
 // policy one; the assert keeps the derivation honest across a bracket retune.
+// THE CAP AND THE JUDGE AGREE EXACTLY: the commit's reader
+// (parse_signed_2dp_cents, flag_editor.cpp) owns that grammar and takes those
+// five bytes and nothing else — no surrounding whitespace, no leading zero,
+// no second integer digit — so the cap advertises exactly the spellings the
+// commit accepts, and a pending arriving by any other road is judged the same.
 // (It was 8 until 2026-09-05, left wide so an over-wide spelling would be
 // refused by the commit's own name for it. The sixth character is refused by
 // the field-full card instead, which is the truthful refusal for a field that
