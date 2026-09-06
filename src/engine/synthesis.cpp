@@ -689,18 +689,24 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
     std::cout << "\r"
               << "[pass 2/3] synthesis........................ 100%\n";
 
-    // Interleave the per-channel mono streams and append them to the caller's
-    // buffer in one emission. All channels emit out_frames samples; the append
-    // is a single contiguous insert.
+    // Interleave the per-channel mono streams straight into the caller's
+    // buffer. All channels emit out_frames samples; the buffer is grown ONCE
+    // by the whole emission and the samples are written into that new tail in
+    // place, so there is no intermediate interleave buffer and no second
+    // full-size copy (frozen-directory change, architect approval 2026-09-06).
+    // The write is an APPEND: the tail begins at the caller buffer's incoming
+    // size, so a non-empty buffer keeps everything it already held, and the
+    // spectral limiter (Pass 3) then runs in the engine after synthesis, in
+    // place on this buffer, over its size().
     if (out_frames > 0) {
-        std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
         for (int ch = 0; ch < channels; ++ch) {
-            const std::vector<float>& m = mono[ch];
             // Always-on (not an assert — Release is the shipped build);
             // breach-only — the emission accounting upstream sizes the buffer,
             // so a breach here would be a silent buffer overrun, the class the
-            // engine owns loudly.
-            if (static_cast<int64_t>(m.size()) < out_frames) {
+            // engine owns loudly. Every channel is checked BEFORE any sample
+            // is written, so a breach aborts with the caller's buffer
+            // untouched.
+            if (static_cast<int64_t>(mono[ch].size()) < out_frames) {
                 // Terminal message strings in this file carry
                 // sentence-initial capitals (architect approval
                 // 2026-08-02, the terminal capitalization pass —
@@ -717,13 +723,14 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
                              "than the frame emission; internal breach\n");
                 std::abort();
             }
-            for (int64_t f = 0; f < out_frames; ++f)
-                inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
-        // Append the full interleaved emit to the caller-owned buffer. The
-        // spectral limiter (Pass 3) then runs in the engine after synthesis,
-        // in place on this buffer.
-        output_buffer->insert(output_buffer->end(), inter.data(),
-                              inter.data() + inter.size());
+        const size_t old_size = output_buffer->size();
+        output_buffer->resize(old_size + static_cast<size_t>(out_frames) * channels);
+        for (int ch = 0; ch < channels; ++ch) {
+            const std::vector<float>& m = mono[ch];
+            for (int64_t f = 0; f < out_frames; ++f)
+                (*output_buffer)[old_size + static_cast<size_t>(f) * channels + ch] =
+                    m[static_cast<size_t>(f)];
+        }
     }
 }

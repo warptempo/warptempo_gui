@@ -21,10 +21,11 @@ struct EngineParams {
 
     // The engine's sole output sink, required non-null (the engine is
     // buffer-out only; encode lives orchestrator-side in the prepost chain).
-    // Synthesis output is appended to this caller-owned vector via
-    // std::vector::insert. The spectral limiter is always applied in place on
-    // this buffer after synthesis. The buffer must remain valid through
-    // run_warptempo_engine; the caller is responsible for clearing or
+    // Synthesis appends to this caller-owned vector by resizing it ONCE by the
+    // whole emission and interleaving the channels into that new tail in place
+    // (architect approval 2026-09-06). The spectral limiter is always applied
+    // in place on this buffer after synthesis. The buffer must remain valid
+    // through run_warptempo_engine; the caller is responsible for clearing or
     // reserving.
     std::vector<float>* output_buffer = nullptr;
 
