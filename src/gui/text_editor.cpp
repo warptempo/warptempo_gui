@@ -652,54 +652,31 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::Consumed;
     }
 
-    // Printable insertion (length-capped in BYTES). Each Kind's cap admits its
-    // longest full-precision value form (see the kMaxPendingChars*
-    // comments in text_editor.h).
-    // Accept any character-bearing key the keyboard produced. The platform
-    // resolved the effective codepoint (shift / layout / compose applied) via
+    // Printable insertion, THROUGH THE ONE INCOMING FILTER. Accept any
+    // character-bearing key the keyboard produced. The platform resolved the
+    // effective codepoint (shift / layout / compose applied) via
     // xkb_state_key_get_utf32 — a FULL Unicode codepoint, not a byte — so a
     // compose or dead-key sequence arrives here whole and is UTF-8 encoded
     // below, landing as one insertion of one to four bytes. Characters that are
     // invalid for this field are NOT filtered here — the commit-time validator
     // rejects the value (red flash) when Enter is pressed. This replaces the
-    // per-Kind keysym_to_char vocabulary entirely; the only thing Kind still
-    // selects is the length cap below.
+    // per-Kind keysym_to_char vocabulary entirely.
+    //
+    // THE CAP AND ITS GROWTH RULE HAVE ONE OWNER AND THE TYPED PATH WRAPS IT:
+    // the encoded keystroke goes into `replace_selection`, so the per-Kind byte
+    // ladder and the "past the cap AND growing" refusal are stated once and
+    // typing a character can never drift from pasting that same character.
+    // The filter half is a no-op on this road by construction — encode_utf8 of
+    // an insertable codepoint is well-formed shortest-form UTF-8, which is
+    // exactly what the filter passes — so the only verdict it adds here is the
+    // cap's, and it owns the red state and the blink on both outcomes.
     if (!ctrl && !mods.alt && is_insertable_codepoint(mods.codepoint)) {
-        const std::string ch = encode_utf8(mods.codepoint);
-        int cap = kMaxPendingChars;
-        if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
-        if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
-        if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
-        if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
-        if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-        if (s.kind == Kind::IterBound)         cap = kMaxPendingCharsIterBound;
-        // Atomic cap: compute the result size BEFORE erasing the selection,
-        // so a refusal leaves the buffer (selection included) untouched.
-        // Refuse exactly when the insert would push past the cap AND grow the
-        // pending; replacing a full selection with one char shrinks-then-grows
-        // within the cap and is accepted. The insert's length is the ENCODED
-        // byte count, so a multi-byte character is weighed as what it costs.
-        const int old_size = static_cast<int>(s.pending.size());
-        const int sel      = has_selection(s)
-                                 ? selection_end(s) - selection_start(s)
-                                 : 0;
-        const int ins      = static_cast<int>(ch.size());
-        const int new_size = old_size - sel + ins;
-        if (new_size > cap && new_size > old_size) {
-            s.red = true;
-            touch_blink(s);
+        if (!replace_selection(s, encode_utf8(mods.codepoint))) {
             // CONSUMED, AND SAID SO (architect 2026-08-30): the key is eaten
             // exactly as an accepted one is, and OverCapacity is what lets the
             // dispatch layer raise the card this module cannot.
             return KeyAction::OverCapacity;
         }
-        if (has_selection(s)) {
-            erase_selection(s);
-        }
-        s.pending.insert(static_cast<size_t>(s.cursor_pos), ch);
-        s.cursor_pos += ins;
-        s.red = false;
-        touch_blink(s);
         return KeyAction::Consumed;
     }
 

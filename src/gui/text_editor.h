@@ -482,8 +482,13 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // highlighted substring (empty if no selection — and always a whole number of
 // codepoints, since both endpoints are boundaries).
 //
-// replace_selection is the paste/cut primitive and THE ONE INCOMING-TEXT
-// FILTER. Its acceptance rule:
+// replace_selection is the paste/cut primitive, THE ONE INCOMING-TEXT FILTER,
+// and THE ONE OWNER OF THE PER-KIND BYTE CAP — every route that grows a
+// pending buffer comes through it: the paste and the cut (input_handler), the
+// settings editor's completion append and its recall prefix
+// (settings_editor.cpp), and THE TYPED KEYSTROKE, which handle_key encodes and
+// hands over rather than repeating the ladder (its own contribution is the
+// KeyAction::OverCapacity it returns when this refuses). Its acceptance rule:
 //   - PRINTABLE ASCII (0x20..0x7e) passes.
 //   - WELL-FORMED MULTI-BYTE UTF-8 passes verbatim — the sequence's length
 //     matches its lead byte, every continuation byte is one, and the decoded
@@ -502,8 +507,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // strictness ruling; true on every applied path, the empty-insert shrink
 // included) so the caller can say WHY the field went red — the paste's card is
 // raised by the input handler, which knows a press happened, this module having
-// no notifications of its own. The keyboard's own over-capacity refusal
-// reports through KeyAction::OverCapacity instead.
+// no notifications of its own. The keyboard's over-capacity refusal is the
+// SAME verdict wearing another return: handle_key turns this false into
+// KeyAction::OverCapacity, which is what its own dispatch layer cards.
 std::string selected_text(const State& s);
 bool        replace_selection(State& s, const std::string& raw);
 

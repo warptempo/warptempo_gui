@@ -477,11 +477,16 @@ struct FlagCache {
 // fixed the lane's HEIGHT on every host (render.h's kOverviewHeightPx): the
 // height still varies with gui_scale, so it stays a key field rather than
 // becoming a constant this cache could drop — and the WIDTH was always the one
-// that moves on a resize. The AUDIO IS DELIBERATELY NOT A KEY FIELD: the source is loaded
-// ONCE at launch and is process-immortal (file_loader — there is no
-// in-session source load; `'` load-in-place replaces the marker stores and
-// the engine block, never the sample buffer), so the bars' input cannot change under a
-// live process and a per-frame tick repaint never re-reads the pyramid.
+// that moves on a resize. The AUDIO IS DELIBERATELY NOT A KEY FIELD: the
+// source is loaded ONCE PER PROJECT and outlives nothing else — it is fixed
+// for the whole lifetime of this cache, which is a member of the
+// GuiPaintHandler that `run_project` builds beside the GuiAudio it paints
+// (main.cpp) and tears down with it, so an Open Project reopen arrives at a
+// NEW cache over a NEW source rather than swapping the buffer under this one.
+// Inside a project there is no source load at all (`'` load-in-place replaces
+// the marker stores and the engine block, never the sample buffer), so the
+// bars' input cannot change under a live cache and a per-frame tick repaint
+// never re-reads the pyramid.
 // Rebuilds are synchronous at the paint site (O(lane width) with the
 // pyramid's unconditional <=5-pairs-per-column bound — the whole-song span is
 // exactly what the coarse rungs exist for).

@@ -11543,6 +11543,30 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
     return mode.walk_index() > 0;
 }
 
+// WHERE A WALK PRESS LANDS — the destination itself, named ONCE for the act
+// and for the hint. `,` steps OLDER to index + 1 and its shifted twin jumps
+// to the OLDEST member (count − 1); `.` steps NEWER to index − 1 and its twin
+// jumps to the NEWEST (0).
+//
+// PRECONDITION: the direction's own wall predicate above answered true. That
+// is what makes count non-zero and both ± 1 steps in range, and it is why
+// this carries no clamp of its own — the wall is the wall's owner's, asked
+// before the landing is.
+//
+// TWO READERS: the `,` / `.` arm (handle_history_mode_key,
+// input_key_dispatch.cpp), which WRITES this answer through set_walk_index,
+// and the two arrows' shift line (redesign_button_tooltip's stateful
+// overload), which compares the plain and the shifted landing and drops the
+// line where they coincide — the two skips' shape, and the reason the hint
+// cannot drift from the act.
+inline std::size_t history_walk_step_landing(
+        const AppState::HistoryMode& mode, bool older, bool shift) {
+    const std::size_t count = mode.walk_count();
+    const std::size_t here  = mode.walk_index();
+    if (older) return shift ? count - 1 : here + 1;
+    return shift ? 0 : here - 1;
+}
+
 // WOULD THE GRID-ITERATION SWEEP RENDER ANYTHING? — the sweep's two
 // USER-CONSTRUCTIBLE pre-dispatch refusals asked ahead of the press (architect
 // 2026-09-02, the four-tier review's R-10). With iteration mode on, Ctrl+Alt+R
@@ -14244,7 +14268,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // they rest disabled, which since 2026-08-18 is every frame outside the
         // `h` view and since 2026-08-30 the walk's two walls inside it — the
         // shift line stays on a greyed arrow, the jump it names moving nothing
-        // there either. They were painted inside the view alone from 2026-08-12
+        // there either. ON A LIVE ARROW ONE STEP FROM ITS WALL THE LINE DROPS
+        // (the stateful overload's own fork, which compares the two landings
+        // through the act's owner history_walk_step_landing): there the step
+        // and the jump reach the SAME member, and a modifier line exists
+        // exactly where the modified press does something different.
+        // They were painted inside the view alone from 2026-08-12
         // (first as the icon row's collapsed four, then as the bottom row's
         // swapped cluster) until the relayout brought them back to a row that
         // hides nothing.
@@ -14953,6 +14982,33 @@ inline RedesignTooltipText redesign_button_tooltip(
                 !active_column_authoring_allowed(a))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
+        // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on
+        // the member the bare press ALREADY reaches — one step from a wall,
+        // where `,` and Shift+`,` both choose count − 1 and `.` and Shift+`.`
+        // both choose 0. THE COMPARE IS THE ACT'S OWN LANDING OWNER
+        // (history_walk_step_landing, asked in both forms) rather than the
+        // arithmetic restated here, the two skips' shape exactly.
+        //
+        // A DEAD ARROW KEEPS ITS LINE, the recorded behaviour at the constant
+        // table (2026-08-30, the walls' grey: standing AT a wall, the step and
+        // the jump onto that wall move nothing alike, and the tooltips-on-
+        // disabled ruling still owes the button its words). The wall predicate
+        // is also the landing owner's precondition, so asking it first is one
+        // test doing both jobs — the compare runs only where the arrow is
+        // live, which is the only state this fork is about.
+        case RedesignButton::HistoryOlder:
+        case RedesignButton::HistoryNewer: {
+            const bool older = b == RedesignButton::HistoryOlder;
+            if (!(older ? history_walk_older_actionable(a.history_mode)
+                        : history_walk_newer_actionable(a.history_mode)))
+                break;
+            if (history_walk_step_landing(a.history_mode, older,
+                                          /*shift=*/false) ==
+                history_walk_step_landing(a.history_mode, older,
+                                          /*shift=*/true))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
+        }
         default:
             break;
     }
@@ -14984,9 +15040,11 @@ inline RedesignTooltipText redesign_button_tooltip(
 // crossing in the P column, the jump with no eligible focus or no source,
 // the audition's shift over a standing sequence, the skips' ctrl form where
 // the two landings
-// coincide, and since 2026-09-02 (R-17e) THE FOUR ARROWS' STEP LADDER where
+// coincide, since 2026-09-02 (R-17e) THE FOUR ARROWS' STEP LADDER where
 // every rung refuses alike (Up / Down on the target view's kind refusal,
-// Left / Right in the marker lane in T+W) — the overload returns the one-line
+// Left / Right in the marker lane in T+W), and THE WALK'S TWO ARROWS one step
+// from a wall, where the jump names the member the step already reaches —
+// the overload returns the one-line
 // form, and it can return a
 // second line only on a button this walk has already bound to an admission,
 // since every overload arm either forwards the table's line or drops it.

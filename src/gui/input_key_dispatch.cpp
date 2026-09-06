@@ -1810,13 +1810,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
                     : history_walk_newer_actionable(app.history_mode))) {
             return true;
         }
-        const std::size_t count  = app.history_mode.walk_count();
-        const std::size_t here   = app.history_mode.walk_index();
-        const std::size_t oldest = count - 1;   // count > 0 past the wall
-        const std::size_t there =
-            older ? (mods.shift ? oldest : here + 1)
-                  : (mods.shift ? 0 : here - 1);
-        app.history_mode.set_walk_index(there);
+        // THE DESTINATION HAS ONE OWNER (history_walk_step_landing,
+        // app_state.h): the step's index + 1 / − 1 and the twins' walls are
+        // spelled there, past the wall check above, which is that owner's
+        // precondition. The arrows' shift line reads the same body to decide
+        // whether the twin lands anywhere else, so the hint cannot drift from
+        // what this press does.
+        app.history_mode.set_walk_index(
+            history_walk_step_landing(app.history_mode, older, mods.shift));
         // THE MODE FOCUS AND ITS SELECTION CLEAR ON EVERY STEP, through the one
         // clearer that always takes them together: both index into the list the
         // step is about to replace, so carrying either would light an unrelated
