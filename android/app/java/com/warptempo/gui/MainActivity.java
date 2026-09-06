@@ -22,11 +22,11 @@ import java.nio.charset.StandardCharsets;
 /**
  * The product's ONE Java class: a NativeActivity subclass. Its body is
  * setDecorFitsSystemWindows(true), which ASKS for the window's content to be
- * laid out inside the system bars' insets rather than under them, the window
- * calls that give the STATUS BAR the product's own title-bar colour and the
- * band under the TASKBAR the product's content ground, and -- since the car's
- * arc -- the MediaSession that hands the head unit's buttons down to the
- * render player and its state back up (the block at the end of this comment).
+ * laid out inside the system bars' insets rather than under them, the flag
+ * that leaves BOTH system bars' backgrounds transparent so the native side's
+ * own bands are the colour seen under them, and -- since the car's arc -- the
+ * MediaSession that hands the head unit's buttons down to the render player
+ * and its state back up (the block at the end of this comment).
  *
  * <p>IT DOES NOT SHRINK THE NATIVE SURFACE, and nothing here can. An app
  * window's frame is the whole display by construction on modern Android
@@ -75,41 +75,49 @@ import java.nio.charset.StandardCharsets;
  * sampled from the same Breeze source -- with `window.active.label.text.color:
  * #fcfcfc` = kRedesignLabel, which is why the bar's own icons stay light. The
  * system's default painted it ~#212326 (measured on a screencap), near the
- * CONTENT ground and so a shade off the menu row below it. The native side
- * leaves air under the bar in the same ground (kStatusBarAirPx,
- * src/gui/platform_android.cpp), so bar, air and menu row read as one strip.
- * AND A TITLE BAR DARKENS WHEN ITS WINDOW IS DEACTIVATED (architect
- * 2026-09-06, on a shade pull with the cover open -- the bar "does not change
- * to the disabled/inactive color that labwc uses"): the ruling's second half,
- * and the same edge rows 1 and 2 already take. `window.inactive.title.bg.color:
- * #202326` is kRedesignRowGroundUnfocused, the native side hands the edge up
- * through windowActive(boolean) below, and STATUS_BAR_ACTIVE /
- * STATUS_BAR_INACTIVE are where the two numbers live. The bar's ICONS do not
- * change with it: labwc's `window.inactive.label.text.color` is the same
- * #fcfcfc.
+ * CONTENT ground and so a shade off the menu row below it. AND A TITLE BAR
+ * DARKENS WHEN ITS WINDOW IS DEACTIVATED (architect 2026-09-06, on a shade
+ * pull with the cover open -- the bar "does not change to the
+ * disabled/inactive color that labwc uses"): the ruling's second half, and the
+ * same edge rows 1 and 2 already take, `window.inactive.title.bg.color:
+ * #202326` being kRedesignRowGroundUnfocused.
+ * WHAT PAINTS BOTH VALUES IS THE NATIVE SIDE, NOT THIS FILE (2026-09-06): the
+ * bar's own background is transparent under the flag onCreate sets, this
+ * activity's decor draws nothing at all (Window#takeSurface, the paragraph
+ * above), and the pixels the bar shows are the top BAND of the native blit --
+ * kRedesignRowGround / kRedesignRowGroundUnfocused chosen on the same
+ * window_activated_ bit rows 1 and 2 read (top_band_word, present, src/gui/-
+ * platform_android.cpp). The setStatusBarColor call this file used to carry
+ * never reached a pixel -- no decor, no fill -- and agreed with the band only
+ * by carrying the same number; it is deleted, and the bar has ONE owner with
+ * the rows. The native side also leaves air under the bar in the same ground
+ * (kStatusBarAirPx), so bar, air and menu row read as one strip and darken
+ * together. The bar's ICONS do not change with it: labwc's
+ * `window.inactive.label.text.color` is the same #fcfcfc, so
+ * APPEARANCE_LIGHT_STATUS_BARS -- which IS the system's and is not inert --
+ * is cleared once in onCreate and never touched again.
  * THE TASKBAR'S ICONS ARE THE LAUNCHER'S AND NOTHING HERE TOUCHES THEM: the
  * architect -- "the taskbar looks great, it's already the correct color". THE
  * BAND UNDER THEM IS OURS, and has been since the bar-backgrounds flag landed:
- * the window draws BOTH bars' backgrounds, so that strip took the inherited
- * navigationBarColor (measured on the device at (33,35,38) -- the system
- * default, and the same #202326 we would have picked). It is now set on
- * purpose to kRedesignContentGround, the ground the taskbar's icons already
- * sit on.
+ * neither bar's background is the system's any more, so that strip is the
+ * native blit's other band, kRedesignContentGround #202326 -- the ground the
+ * taskbar's icons already sit on, and the same value the inherited
+ * navigationBarColor carried (measured on the device at (33,35,38)).
  *
  * <p>EVERY LATER JAVA NEED JOINS THIS CLASS, as a method -- never as a second
  * top-level class (the MediaSession.Callback below is an INNER class of this
  * one and is not a second class in that sense: it is the session's own
- * listener shape and can be nothing else). THREE HAVE LANDED: the car's
- * MediaSession (the block at the end of this comment); on 2026-09-03, THE
+ * listener shape and can be nothing else). TWO HAVE LANDED: the car's
+ * MediaSession (the block at the end of this comment) and, on 2026-09-03, THE
  * SYSTEM CLIPBOARD -- clipboardSet / clipboardGet, ClipboardManager being a
  * Java object with no NDK surface, so copy and paste reach every other app on
- * the tablet over the same JNI road the session opened; and on 2026-09-06 THE
- * STATUS BAR'S ACTIVATION EDGE -- windowActive, the only one of the three
- * that has to be POSTED to the UI thread, because a Window setter is not the
- * binder call the other two are. One is still known
- * and unbuilt: the SAF picker's onActivityResult, which is exactly why a
- * subclass is required at all, NativeActivity never forwarding it. The
- * key-repeat cadence stays hard-coded from labwc's numbers in
+ * the tablet over the same JNI road the session opened. A THIRD LANDED AND WAS
+ * RETIRED THE SAME DAY: windowActive(boolean), the status bar's activation
+ * edge (2026-09-06), deleted once the bar was found to be the native band's
+ * pixels rather than the framework's -- a Window setter no decor draws. One
+ * need is still known and unbuilt: the SAF picker's onActivityResult, which is
+ * exactly why a subclass is required at all, NativeActivity never forwarding
+ * it. The key-repeat cadence stays hard-coded from labwc's numbers in
  * platform_android.cpp because nothing native reports it.
  *
  * <p>THE CAR (architect design 2026-08-28, section 3): the head unit's buttons
@@ -144,25 +152,6 @@ import java.nio.charset.StandardCharsets;
 public class MainActivity extends NativeActivity {
 
     private static final String TAG = "warptempo";
-
-    // THE STATUS BAR'S TWO COLOURS, AND THEY ARE THE labwc TITLE BAR'S TWO.
-    // PROVENANCE BY CHAIN rather than derivation
-    // (~/.config/labwc/themerc-override): window.active.title.bg.color
-    // #292c30 IS kRedesignRowGround, and window.inactive.title.bg.color
-    // #202326 IS kRedesignRowGroundUnfocused -- the pair rows 1 and 2 of the
-    // GUI swap between on the window's own activation edge (src/gui/render.h
-    // owns both values; the class comment above carries the chain). THE TWO
-    // NUMBERS ARE COPIES AND ARE EDITED IN ONE ACT with their native owners,
-    // the media command table's rule (gui_media.h) for the same reason it
-    // applies there: the APK build compiles this file against no C++ header,
-    // so no build checks them.
-    //
-    // THE BAR'S ICONS STAY LIGHT IN BOTH STATES: labwc's
-    // window.inactive.label.text.color is the same #fcfcfc its active twin
-    // is, so APPEARANCE_LIGHT_STATUS_BARS is cleared once in onCreate and
-    // never touched again.
-    private static final int STATUS_BAR_ACTIVE   = 0xFF292C30;
-    private static final int STATUS_BAR_INACTIVE = 0xFF202326;
 
     // THE LIBRARY MUST BE REGISTERED FOR NAME-BASED JNI RESOLUTION: the
     // NativeActivity dlopens libwarptempo_gui.so for android_main, but that
@@ -239,56 +228,60 @@ public class MainActivity extends NativeActivity {
         // installed rather than the level the manifest declares.
         getWindow().setDecorFitsSystemWindows(true);
 
-        // THE WINDOW HAS TO DRAW THE BAR BACKGROUNDS FOR A COLOUR TO LAND ON
-        // THEM AT ALL. setStatusBarColor's own documented precondition is
-        // FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS set and FLAG_TRANSLUCENT_STATUS
-        // clear: the Material and DeviceDefault themes set the first through
-        // windowDrawsSystemBarBackgrounds, but this activity's theme is the
-        // legacy @android:style/Theme.NoTitleBar (the manifest says why), which
-        // does not — so the flag is set here by hand. The second is set by
-        // nothing in this app, so there is nothing to clear. Deprecated at
-        // API 30 and honoured at the 34 the manifest targets, exactly like the
-        // setter below.
+        // THE FLAG IS WHAT LETS OUR PIXELS BE THE BARS' BACKGROUNDS, and on
+        // this activity that is the whole of its job. Documented behaviour:
+        // with FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS set (and FLAG_TRANSLUCENT_-
+        // STATUS clear, which nothing here sets) the system bars are drawn
+        // with a TRANSPARENT background and the window is responsible for the
+        // colour underneath them. The Material and DeviceDefault themes set it
+        // through windowDrawsSystemBarBackgrounds; this activity's theme is
+        // the legacy @android:style/Theme.NoTitleBar (the manifest says why),
+        // which does not -- so it is set here by hand. WITHOUT IT the system
+        // draws its own opaque bar background over that strip and our band is
+        // never seen.
+        //
+        // THE SECOND HALF OF THE DOCUMENTED SENTENCE -- the window filling
+        // those areas from getStatusBarColor() / getNavigationBarColor() -- is
+        // the DECOR VIEW's work, and a NativeActivity has no decor drawing at
+        // all: it takes the window's own surface (Window#takeSurface), so the
+        // statusBarBackground colour view never paints. THE COLOUR THAT LANDS
+        // THERE IS THE NATIVE SIDE'S TOP BAND (top_band_word, src/gui/platform_-
+        // android.cpp), which is why there is no setStatusBarColor call here
+        // any more: it never reached a pixel and only ever agreed with the
+        // band by carrying the same number (measured on the
+        // tablet 2026-09-06 -- Java set 0xff202326 and read it back while the
+        // displayed bar stayed #292c30, the band's word). Deprecated at API 30
+        // and honoured at the 34 the manifest targets, the same note the
+        // navigation colour below carries.
         getWindow().addFlags(
                 WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
-        // THE TITLE-BAR COLOUR, straight from the labwc themerc-override (the
-        // constants above carry the provenance chain): STATUS_BAR_ACTIVE is
-        // kRedesignRowGround, the ground the menu row under it already
-        // paints. THE BAR IS CREATED ACTIVE and windowActive below repaints
-        // it on every activation edge from here on -- the first
-        // APP_CMD_GAINED_FOCUS arrives after this and sets the colour that is
-        // already on it, which is why neither side special-cases the opening
-        // push. setStatusBarColor is deprecated at API 35 -- the jar this
-        // compiles against -- and works at 34, which is what the manifest
-        // targets and what the platform honours; the replacement is the
-        // edge-to-edge arrangement this app deliberately does not use (the
-        // targetSdk note above). A second javac deprecation warning is
-        // expected here, and windowActive's own call to the same setter adds
-        // one more of the same kind.
-        getWindow().setStatusBarColor(STATUS_BAR_ACTIVE);
-
         // THE TASKBAR'S BAND IS OURS TOO, and stating it is the point. The
-        // FLAG above makes this window draw BOTH bars' backgrounds, so the
-        // strip under the taskbar has been painted by us since that flag
-        // landed -- with the INHERITED navigationBarColor, measured on the
-        // device at (33,35,38), which is the system default and is also
-        // #202326, so nothing visibly changed by luck rather than by
-        // intention. This is the intention: #202326 is
-        // kRedesignContentGround (the palette block in src/gui/render.h), the
-        // product's content ground and the ground the taskbar's icons already
-        // sit on. It is NOT a labwc colour -- the taskbar itself is the
-        // launcher's and we paint none of it; we own only the band beneath.
-        // Its ICONS are left exactly as they are: nothing here touches
-        // APPEARANCE_LIGHT_NAVIGATION_BARS. setNavigationBarColor is
-        // deprecated at API 35 -- the jar this compiles against -- and
-        // honoured at the 34 the manifest targets, the same note the status
-        // colour above carries, and a third javac deprecation warning is
-        // expected. THIS ONE IS SET ONCE AND NEVER AGAIN, where the status
-        // bar's is set on every activation edge: kRedesignContentGround is a
-        // CONTENT colour with no active/inactive pair -- labwc's inactive
-        // theme darkens a title bar and nothing a taskbar band corresponds
-        // to -- so there is no second value for this band to take.
+        // FLAG above makes the system draw no background over EITHER bar, so
+        // the strip under the taskbar has been painted by us since that flag
+        // landed -- by the native side's own band (kBandWord = kRedesign-
+        // ContentGround #202326, src/gui/platform_android.cpp), the product's
+        // content ground and the ground the taskbar's icons already sit on. It
+        // is NOT a labwc colour -- the taskbar itself is the launcher's and we
+        // paint none of it; we own only the band beneath. Its ICONS are left
+        // exactly as they are: nothing here touches
+        // APPEARANCE_LIGHT_NAVIGATION_BARS.
+        //
+        // THE SETTER BELOW CARRIES THE SAME NUMBER AND THE SAME FATE AS THE
+        // STATUS COLOUR ONE ABOVE: it names the colour the DECOR would fill
+        // that area with, and this activity's decor draws nothing (Window#take-
+        // Surface, the paragraph above), so the value that lands is the band's.
+        // It is kept only because it is the framework-side statement of what
+        // that band is; the inherited default was measured on the device at
+        // (33,35,38) -- the system's own #202326 -- so no reading here has ever
+        // distinguished the two. There is no second value for it to take
+        // either way: kRedesignContentGround is a CONTENT colour with no
+        // active/inactive pair, where the TOP band swaps on the window's
+        // activation edge. setNavigationBarColor is deprecated at API 35 -- the
+        // jar this compiles against -- and honoured at the 34 the manifest
+        // targets, so javac warns on it as it warns on setDecorFitsSystem-
+        // Windows and on the flag constant above -- expected, every one of
+        // them.
         getWindow().setNavigationBarColor(0xFF202326);
 
         // LIGHT ICONS ON THE STATUS BAR, by CLEARING the light-background
@@ -531,42 +524,6 @@ public class MainActivity extends NativeActivity {
             Log.w(TAG, "clipboard read refused", t);
             return NO_BYTES;
         }
-    }
-
-    // THE THIRD JNI ROAD UP (GuiPlatform::publish_window_active,
-    // src/gui/platform_android.cpp), and the only one that is not about
-    // sound or text: the STATUS BAR IS THIS WINDOW'S TITLE BAR, and a labwc
-    // title bar DARKENS when its window is deactivated (architect
-    // 2026-09-06). The native side already takes that edge --
-    // APP_CMD_LOST_FOCUS on a shade pull, APP_CMD_GAINED_FOCUS on the way
-    // back, rows 1 and 2 swapping their ground between the same two values --
-    // and hands the new state here, because the bar is the FRAMEWORK'S
-    // surface and only this side can recolour it.
-    //
-    // POSTED TO THE UI THREAD, unlike mediaState and the clipboard pair:
-    // this is called on the native loop's thread as they are, but
-    // MediaSession's and ClipboardManager's setters are binder calls legal
-    // from any attached thread, while Window#setStatusBarColor writes the
-    // window's own attributes and belongs to the thread that owns them.
-    // runOnUiThread is that post, and it is also the whole return: the native
-    // side is told nothing and waits for nothing.
-    //
-    // THE GUARD IS INSIDE THE RUNNABLE, and it is the window's rather than
-    // the session's. mediaState's `released` says the SESSION has been let
-    // go; what this needs to know is whether the WINDOW is still there, and a
-    // runnable posted before onDestroy can still be sitting in the UI
-    // thread's queue when it runs -- so isDestroyed() / isFinishing() are
-    // asked at the moment the setter would land. (Before the native loop
-    // exists there is no producer at all: nothing calls this until init()
-    // has looked the id up.) setStatusBarColor carries onCreate's own
-    // deprecation note -- deprecated at API 35, honoured at the 34 the
-    // manifest targets -- and one more javac warning with it.
-    public void windowActive(boolean active) {
-        runOnUiThread(() -> {
-            if (isDestroyed() || isFinishing()) return;
-            getWindow().setStatusBarColor(
-                    active ? STATUS_BAR_ACTIVE : STATUS_BAR_INACTIVE);
-        });
     }
 
     // THE HEAD UNIT'S BUTTONS, one integer each. The transport methods below

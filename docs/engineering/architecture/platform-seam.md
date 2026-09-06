@@ -758,9 +758,11 @@ so the vertical stack (`main.cpp`, which takes any height) lays out inside the
 bars and the waveform pays the difference. THE ORIGIN IS THE BACKEND'S OWN
 CONTAINMENT and crosses the seam nowhere: it is ADDED at the one blit
 (`present`, which also fills the two bands outside the rect — the TOP one with
-`kRedesignRowGround`, everything else with `kRedesignContentGround`; one owed
-full-surface post per adoption, and `ANativeWindow_lock`'s own dirty-rect
-widening after that) and SUBTRACTED at
+`kRedesignRowGround` or `kRedesignRowGroundUnfocused` on the window's own
+activation edge, everything else with `kRedesignContentGround`, which has no
+inactive face; one owed full-surface post per adoption AND per activation edge,
+the window keeping the pixels outside the dirty rect between them) and
+SUBTRACTED at
 the one input decode (`on_motion_event`'s two coordinate lambdas — the key path
 carries no coordinates and the capture doors take GUI coordinates that never
 reach the window). `GuiInputCore`, `main.cpp` and every painter are identical
@@ -779,8 +781,9 @@ its retune on 2026-08-27, the mirror of One UI's own top gap), added to the rect
 and only when the framework reports a top inset at all, so that a fullscreen
 future gets no blank band: the clock sat closer to our first row than to the top
 of the panel (architect 2026-08-27), and the rows given up join the top band,
-which paints `kRedesignRowGround` — the status bar's own colour and the menu
-row's — so bar, air and menu row read as one title strip. Origin, size, damage
+which paints the title strip's ground — the status bar's own pixels and the menu
+row's colour — so bar, air and menu row read as one title strip and darken
+together. Origin, size, damage
 and every touch coordinate follow from that one function. THE FRAMEWORK'S RECT ALREADY EXCLUDES BOTH BARS, measured on an AWAKE Tab S10
 FE under the architect's own Screen zoom (override density 320):
 `window 2304x1270 at (0,74) of surface 2304x1440` — a 60 px status bar plus the
@@ -801,58 +804,71 @@ platform — and the window is now the content rect rather than the surface.
 
 `android/app/java/com/warptempo/gui/MainActivity.java` is the product's ONE
 Java class: a `NativeActivity` subclass whose `onCreate` body is
-`setDecorFitsSystemWindows(true)` plus both bars' colours. The first ASKS
-for the inset layout; what actually delivers the inset area is the content rect
-above, and the pair (target 34 + this call) is what makes the framework report
-one. THE SYSTEM BARS
+`setDecorFitsSystemWindows(true)` plus `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS`. The
+first ASKS for the inset layout; what actually delivers the inset area is the
+content rect above, and the pair (target 34 + this call) is what makes the
+framework report one. THE SYSTEM BARS
 SHOW PERMANENTLY (architect 2026-08-27): immersive mode — both bars hidden
 sticky-immersive at create and every focus gain — is RETIRED as a reversible
 experiment, because a swipe brought the taskbar's icons up OVER the app with no
 background of their own (Android's transient bars, its behaviour rather than
 ours) and read as a bug, and the waveform is tall enough to lose the bars'
 height. THE STATUS BAR IS THIS WINDOW'S TITLE BAR and takes the colour the
-architect's own labwc theme gives one (architect 2026-08-27): `setStatusBarColor
-(0xFF292C30)` — the provenance is a chain, not a derivation, from
-`~/.config/labwc/themerc-override`'s `window.active.title.bg.color: #292c30`,
-which IS `kRedesignRowGround`, with its `window.active.label.text.color: #fcfcfc`
-= `kRedesignLabel` the reason the bar's icons stay light (the
-`APPEARANCE_LIGHT_STATUS_BARS` bit is CLEARED — it means dark icons for a light
-bar). AND IT TAKES BOTH OF THAT TITLE BAR'S COLOURS, ON THE ACTIVATION EDGE THE
-ROWS ALREADY TAKE (architect 2026-09-06, on a shade pull with the cover open —
-the bar *"does not change to the disabled/inactive color that labwc uses"*): the
-ruling's second half. `window.inactive.title.bg.color: #202326` IS
-`kRedesignRowGroundUnfocused`, the value rows 1–2 swap to on deactivation
-(kdenlive-redesign.md's UNFOCUSED-WINDOW GROUND), and the bar is the only one of
-those surfaces the backend cannot paint — it is the FRAMEWORK'S — so the edge
-goes UP: the `APP_CMD_GAINED_FOCUS` / `APP_CMD_LOST_FOCUS` arm calls
-`publish_window_active(active)` beside `activation_changed_hook_`, and
-`MainActivity.windowActive(boolean)` POSTS `setStatusBarColor` to the UI thread
-(`runOnUiThread`, a `Window` setter not being the binder call the other roads
-up are), guarded inside the runnable on `isDestroyed()`/`isFinishing()` for a
-post that outlives `onDestroy`. The two literals live at `STATUS_BAR_ACTIVE` /
-`STATUS_BAR_INACTIVE` in the sliver and are copies of their native owners,
-edited in one act like the media command table. NO SPECIAL CASE FOR THE FIRST
-EDGE: `onCreate` paints the bar active and the first `GAINED_FOCUS` arrives
-after it. The bar's ICONS do not change with the ground —
-`window.inactive.label.text.color` is the same `#fcfcfc` — so
-`APPEARANCE_LIGHT_STATUS_BARS` is untouched, and the TASKBAR'S BAND below takes
+architect's own labwc theme gives one (architect 2026-08-27) — the provenance is
+a chain, not a derivation, from `~/.config/labwc/themerc-override`'s
+`window.active.title.bg.color: #292c30`, which IS `kRedesignRowGround`, with its
+`window.active.label.text.color: #fcfcfc` = `kRedesignLabel` the reason the
+bar's icons stay light (the `APPEARANCE_LIGHT_STATUS_BARS` bit is CLEARED — it
+means dark icons for a light bar). AND IT TAKES BOTH OF THAT TITLE BAR'S
+COLOURS, ON THE ACTIVATION EDGE THE ROWS ALREADY TAKE (architect 2026-09-06, on
+a shade pull with the cover open — the bar *"does not change to the
+disabled/inactive color that labwc uses"*): the ruling's second half.
+`window.inactive.title.bg.color: #202326` IS `kRedesignRowGroundUnfocused`, the
+value rows 1–2 swap to on deactivation (kdenlive-redesign.md's UNFOCUSED-WINDOW
+GROUND).
+
+**THE BAR'S COLOUR IS THE NATIVE TOP BAND'S, AND THE CHAIN ENDS AT THE BAND
+WORDS** (2026-09-06, replacing the JNI up-call landed hours earlier the same
+day). `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` leaves the system bars' own
+backgrounds TRANSPARENT over this window's surface, and the other half of that
+arrangement — the DECOR filling those areas from `getStatusBarColor()` — never
+happens here, because a `NativeActivity` takes the WINDOW's own surface
+(`Window#takeSurface`, above) and its decor view hierarchy draws nothing at all.
+So the 60 px under the bar and the 14 px of air below it are OUR pixels, filled
+by `present`'s top band, and `top_band_word(window_activated_)` is the ONE
+chooser: `kRedesignRowGround` active, `kRedesignRowGroundUnfocused` inactive,
+off the same bit rows 1 and 2 read — one owner for all three surfaces, and they
+cannot disagree. The band is written only by a post that reaches its rows and
+GUI damage is in content coordinates, so the `APP_CMD_GAINED_FOCUS` /
+`APP_CMD_LOST_FOCUS` arm sets `surface_bands_owed_` beside
+`activation_changed_hook_` — the hook's top-strip damage buys the frame, the
+flag makes that frame's post the whole surface. MEASURED, and this is why the
+Java road is gone: a diagnostic build proved the whole up-call chain ran and
+Java read `0xff202326` back off the window while the DISPLAYED bar stayed
+`#292c30` under a calibrated scrim — `setStatusBarColor` had been inert since
+`takeSurface` landed and "worked" at create only because both sides spelled the
+same number. `MainActivity.windowActive(boolean)`, `publish_window_active`, the
+fourth method id and the two Java literals are DELETED WHOLE. The bar's ICONS
+do not change with the ground — `window.inactive.label.text.color` is the same
+`#fcfcfc` — so `APPEARANCE_LIGHT_STATUS_BARS` is untouched, and that one is NOT
+inert: it governs the SYSTEM's own icons over our band. THE TASKBAR'S BAND takes
 no second colour either: `kRedesignContentGround` is a content colour with no
 active/inactive pair, and labwc's inactive theme darkens nothing it corresponds
-to. `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand beside it because
-`setStatusBarColor` needs it and the legacy theme below does not set it; both
-are deprecated at API 35 and honoured at the 34 the manifest targets. THE
-TASKBAR'S ICONS ARE THE LAUNCHER'S and nothing here touches them — the
-architect: "the taskbar looks great, it's already the correct color" — but THE
-BAND UNDER THEM IS OURS, and has been since `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS`
-made the window draw BOTH bars' backgrounds: it took the inherited
-`navigationBarColor`, measured on the device at (33,35,38), which is the system
-default and is also #202326, so nothing visibly changed by luck. It is now
-stated: `setNavigationBarColor(0xFF202326)` = `kRedesignContentGround`, the
+to. `FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS` is set by hand because the legacy theme
+below does not set it the way the Material / DeviceDefault themes do, and it is
+what makes both bands visible at all; it is deprecated at API 30 and honoured at
+the 34 the manifest targets. THE TASKBAR'S ICONS ARE THE LAUNCHER'S and nothing
+here touches them — the architect: "the taskbar looks great, it's already the
+correct color" — but THE BAND UNDER THEM IS OURS, and has been since that flag
+landed: it is `present`'s other band, `kRedesignContentGround` #202326, the
 ground the taskbar's icons already sit on (provenance: the palette block in
-`src/gui/render.h` — NOT a labwc colour, this one). `APPEARANCE_LIGHT_NAVIGATION_BARS`
-is untouched, so the icons stay exactly as they were, and
-`setNavigationBarColor` carries the status colour's own deprecation note
-(deprecated at 35, honoured at the 34 the manifest targets). The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
+`src/gui/render.h` — NOT a labwc colour, this one). `setNavigationBarColor
+(0xFF202326)` is still called in `onCreate` and carries the same number; by the
+`takeSurface` argument above it reaches no pixel either, and it is kept as the
+framework-side statement of what that band is (an open deletion candidate, the
+one the diagnostic did not measure). `APPEARANCE_LIGHT_NAVIGATION_BARS` is
+untouched, so the icons stay exactly as they were, and `setNavigationBarColor`
+is deprecated at 35 and honoured at the 34 the manifest targets. The activity's theme is `Theme.NoTitleBar` (not `.Fullscreen`)
 and **targetSdk is 34**, stepped back from 35 the same day: Android 15 lays a
 target-35 window out edge-to-edge whatever it asks for, and the 35-era opt-out
 is the `windowOptOutEdgeToEdgeEnforcement` THEME attribute, needing a
@@ -868,10 +884,10 @@ dlopen does not register the library for name-based JNI resolution), its
 one `native` method `nativeMediaCommand(int, long)` — STILL the only one,
 the clipboard's pair going UP rather than down — the first of the instance
 methods the native side calls up (`mediaState(...)`, joined 2026-09-03 by
-`clipboardSet` / `clipboardGet` and 2026-09-06 by `windowActive(boolean)`, the
-status bar's activation edge and the one up-call that POSTS to the UI thread
-rather than running on the caller's — FOUR IDS IN THE ONE LOOKUP BLOCK, each
-independent and each with its own failure line), an inner
+`clipboardSet` / `clipboardGet` — THREE IDS IN THE ONE LOOKUP BLOCK, each
+independent and each with its own failure line; a fourth, `windowActive(boolean)`,
+landed and was deleted the same day, 2026-09-06, the status bar being the native
+band's pixels rather than the framework's), an inner
 `MediaSession.Callback` (an inner class, not a second top-level one) and
 the first lifecycle override beside `onCreate` — `onDestroy`, which
 releases the session after `super.onDestroy()` has joined the native

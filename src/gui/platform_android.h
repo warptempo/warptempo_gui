@@ -488,12 +488,15 @@ private:
     int  origin_y_  = 0;
     int  surface_w_ = 0;
     int  surface_h_ = 0;
-    // ONE FULL-SURFACE POST IS OWED AFTER EVERY ADOPTION, so the two bands
-    // outside the content rect get their ground (present picks it per row —
-    // the top band's is the title strip's) at least once per window rather
-    // than showing whatever the buffer held. Later frames
-    // keep them right through lock()'s own widening, which is the same
-    // mechanism partial damage already relies on (present).
+    // ONE FULL-SURFACE POST IS OWED AFTER EVERY ADOPTION AND AT EVERY
+    // ACTIVATION EDGE — the two writers — so the bands outside the content
+    // rect get the ground they are owed (present picks it per row: the top
+    // band's is the title strip's, which darkens with the window and IS the
+    // status bar's colour on this platform) rather than showing whatever the
+    // buffer held or the word the other activation state left. Between those
+    // posts the window keeps the area outside the dirty rect it hands back,
+    // which is the same mechanism partial damage already relies on and is
+    // exactly why a CHANGED band word needs a post of its own (present).
     bool surface_bands_owed_ = false;
     int  width_  = 0;
     int  height_ = 0;
@@ -544,17 +547,15 @@ private:
     // method ids, looked up once. Null when the attach or the lookup failed,
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
-    // FOUR IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
-    // independent of the others: the car's mediaState (2026-08-28), the
+    // THREE IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
+    // independent of the others: the car's mediaState (2026-08-28) and the
     // clipboard's pair (2026-09-03) — clipboard_road_open() is the one
-    // predicate both clipboard roads ask — and windowActive (2026-09-06),
-    // the status bar's activation edge (contract at publish_window_active).
+    // predicate both clipboard roads ask.
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
     struct _jmethodID* clipboard_set_method_ = nullptr;
     struct _jmethodID* clipboard_get_method_ = nullptr;
-    struct _jmethodID* window_active_method_ = nullptr;
 
     // -- Idle-tick timing --
     // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
@@ -671,13 +672,6 @@ private:
     // One pass of the loop body: the blocking drain, then the fixed dispatch
     // order, the settled hook and the paint.
     void pump();
-    // Hand the window's activation state up to MainActivity.windowActive so
-    // the STATUS BAR — this window's title bar, and the framework's surface
-    // rather than ours — takes the same darkening rows 1-2 take on the same
-    // edge. Called from the APP_CMD_GAINED_FOCUS / APP_CMD_LOST_FOCUS arm
-    // beside activation_changed_hook_; a silent no-op when the JNI road is
-    // not open. The whole rule is at the definition.
-    void publish_window_active(bool active);
 
     // -- Lifecycle and input handlers (called from the file-static glue hooks) --
     void on_app_cmd(int32_t cmd);

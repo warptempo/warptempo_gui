@@ -257,11 +257,25 @@ constexpr uint32_t window_word(GuiColor c) {
     return 0xFF000000u | (ch(c.b) << 16) | (ch(c.g) << 8) | ch(c.r);
 }
 
-// TWO WORDS, and which one a band row takes is decided at the row (present()).
-// The TOP band is the title strip's ground; every other band pixel — a bottom
-// band, or a side band beside content rows — is the content's own.
-constexpr uint32_t kBandWord    = window_word(kRedesignContentGround);
-constexpr uint32_t kTopBandWord = window_word(kRedesignRowGround);
+// THREE WORDS, and which one a band row takes is decided at the row
+// (present()). The TOP band is the title strip's ground and it SWAPS ON THE
+// WINDOW'S ACTIVATION exactly as rows 1 and 2 do — top_band_word is the one
+// chooser — because THESE PIXELS ARE THE STATUS BAR'S COLOUR on this platform:
+// the framework draws no background of its own over that strip (the flag that
+// arranges it is set in MainActivity.onCreate, and the reasoning is at
+// kStatusBarAirPx below), so what shows through the bar is this band. Every
+// other band pixel — a bottom band, or a side band beside content rows — is
+// the content's own, and THAT ground has no inactive face: kRedesignContent-
+// Ground is one value focused and unfocused alike (render.h owns the palette,
+// and it is the palette that says so).
+constexpr uint32_t kBandWord            = window_word(kRedesignContentGround);
+constexpr uint32_t kTopBandWordActive   = window_word(kRedesignRowGround);
+constexpr uint32_t kTopBandWordInactive =
+    window_word(kRedesignRowGroundUnfocused);
+
+constexpr uint32_t top_band_word(bool window_activated) {
+    return window_activated ? kTopBandWordActive : kTopBandWordInactive;
+}
 
 void fill_band(uint32_t* dst, int n, uint32_t word) {
     for (int x = 0; x < n; ++x) dst[x] = word;
@@ -280,13 +294,18 @@ void fill_band(uint32_t* dst, int n, uint32_t word) {
 // nothing else. DEVICE pixels, deliberately: the air pairs with the status
 // bar's own density-scaled geometry, not with anything gui_scale sizes.
 //
-// IT PAINTS kTopBandWord, not the content ground. The status bar above it is
-// kRedesignRowGround (the Java sliver sets it, from the labwc title bar the
-// architect names as the color he expects) and the MENU ROW directly beneath it
-// is the same ground, so a content-ground band between two identical grounds
-// would read as a darker stripe — a defect, not air. Filled with the row
-// ground, the status bar, the air and the menu row read as ONE title strip: the
-// clock at its top, the menus beneath it, which is kdenlive's own arrangement.
+// IT PAINTS THE TOP BAND'S WORD, not the content ground — and so does the
+// status bar's own strip above it, because THOSE PIXELS ARE OURS TOO: the
+// framework paints no bar background over them (FLAG_DRAWS_SYSTEM_BAR_BACK-
+// GROUNDS, set in MainActivity.onCreate, is what leaves the bar's background
+// transparent over this window's surface, and the bar's clock and icons are
+// all the system draws there). The MENU ROW directly beneath the air is the
+// same ground, so a content-ground band between two identical grounds would
+// read as a darker stripe — a defect, not air. Filled with the row ground, the
+// status bar, the air and the menu row read as ONE title strip: the clock at
+// its top, the menus beneath it, which is kdenlive's own arrangement — and all
+// three darken together on the window's activation edge, the strip being one
+// surface with one owner (top_band_word).
 constexpr int kStatusBarAirPx = 14;
 
 // ---------------------------------------------------------------------------
@@ -625,11 +644,10 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // failed attach or lookup logs and leaves the id null, and every call
     // then drops or falls back with this line already written.
     //
-    // THE FOUR IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
-    // mediaState (2026-08-28), the clipboard's pair (2026-09-03) and the
-    // status bar's windowActive (2026-09-06). Each is independent — a missing
-    // clipboardSet leaves the head unit's display working and vice versa — so
-    // each has its own arm and its own line.
+    // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
+    // mediaState (2026-08-28) and the clipboard's pair (2026-09-03). Each is
+    // independent — a missing clipboardSet leaves the head unit's display
+    // working and vice versa — so each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
         JNIEnv* env = nullptr;
         if (app_->activity->vm->AttachCurrentThread(&env, nullptr) == JNI_OK &&
@@ -673,25 +691,12 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
                              "found; pastes read this process's own copies "
                              "only\n");
             }
-            window_active_method_ =
-                env->GetMethodID(cls, "windowActive", "(Z)V");
-            if (!window_active_method_) {
-                if (env->ExceptionCheck()) {
-                    env->ExceptionDescribe();
-                    env->ExceptionClear();
-                }
-                std::fprintf(stderr,
-                             "warptempo_gui: MainActivity.windowActive not "
-                             "found; the status bar will keep its active "
-                             "colour through a focus loss\n");
-            }
             env->DeleteLocalRef(cls);
         } else {
             std::fprintf(stderr,
                          "warptempo_gui: AttachCurrentThread failed; the "
-                         "head unit's display will show nothing, the "
-                         "clipboard stays inside this process and the status "
-                         "bar keeps one colour\n");
+                         "head unit's display will show nothing and the "
+                         "clipboard stays inside this process\n");
         }
     }
 
@@ -960,7 +965,6 @@ void GuiPlatform::shutdown() {
     media_state_method_   = nullptr;
     clipboard_set_method_ = nullptr;
     clipboard_get_method_ = nullptr;
-    window_active_method_ = nullptr;
     if (timerfd_ >= 0) {
         unwatch_fd(timerfd_);
         close(timerfd_);
@@ -1101,13 +1105,18 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     // above this line — the damage list, the backbuffer, every rect the GUI
     // ever named — is in CONTENT coordinates; the window wants SURFACE ones.
     //
-    // AND THE OWED POST IS THE WHOLE SURFACE, once per adoption, so the two
-    // bands outside the content rect are written at least once with the
-    // product's ground instead of holding whatever the buffer arrived with.
-    // After that they stay right for free: lock() widens the dirty rect it is
-    // given whenever the buffer it hands back is older than the last post, and
-    // the row loop below fills whatever band rows that widening names — the
-    // same mechanism the content's own partial damage already depends on.
+    // AND THE OWED POST IS THE WHOLE SURFACE, at every adoption AND at every
+    // activation edge — the two writers of surface_bands_owed_ — so the bands
+    // outside the content rect are written with the word they are owed instead
+    // of holding whatever the buffer arrived with, or, at the edge, the word
+    // the other activation state left there. Between those posts they stay
+    // right for free: the window keeps the area OUTSIDE the dirty rect it hands
+    // back (it copies it forward from the last post, or widens the rect and
+    // leaves the row loop below to fill it), the same mechanism the content's
+    // own partial damage already depends on. That is also exactly why a CHANGE
+    // of band word has to buy a post of its own: damage the GUI declares is in
+    // CONTENT coordinates and can never name a band row, so kept pixels would
+    // keep the old word forever.
     int sx0 = x + origin_x_;
     int sy0 = y + origin_y_;
     int sx1 = sx0 + w;
@@ -1175,15 +1184,21 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     const auto* src = reinterpret_cast<const uint32_t*>(
         cairo_image_surface_get_data(back_));
     auto* dst = static_cast<uint32_t*>(buf.bits);
+    // THE TOP BAND'S WORD IS THIS FRAME'S ACTIVATION STATE (the words at
+    // kBandWord), read once for the whole blit: window_activated_ is the same
+    // bit rows 1 and 2 paint their ground from, so the bar, the air and the
+    // menu row can never disagree about which of them is focused.
+    const uint32_t top_word = top_band_word(window_activated_);
     if (src && dst && cx1 > cx0) {
         for (int row = cy0; row < cy1; ++row) {
             uint32_t* drow = dst + static_cast<size_t>(row) * buf.stride;
             const int brow = row - origin_y_;
-            // WHICH GROUND THIS ROW'S BAND TAKES (the two words at kBandWord):
-            // above the content rect is the title strip — the status bar and
-            // the air under it, one ground with the menu row below — and
-            // everything else is the content's own.
-            const uint32_t band_word = (brow < 0) ? kTopBandWord : kBandWord;
+            // WHICH GROUND THIS ROW'S BAND TAKES: above the content rect is the
+            // title strip — the status bar's own background and the air under
+            // it, one ground with the menu row below, darkening with the window
+            // — and everything else is the content's own, which has one colour
+            // in both states.
+            const uint32_t band_word = (brow < 0) ? top_word : kBandWord;
             if (brow < 0 || brow >= back_h_ || ix1 <= ix0) {
                 // A band row (above or below the content rect), or a rect that
                 // misses the content horizontally: all ground.
@@ -1521,11 +1536,15 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // this hook is the EDGE, the same shape the Wayland backend's
             // configure-driven one takes for the same reason.
             if (activation_changed_hook_) activation_changed_hook_();
-            // THE STATUS BAR TAKES THIS EDGE TOO, and it is the one surface
-            // that darkens on it which this backend cannot paint: the bar is
-            // the framework's, so the same bool goes UP to Java (the whole
-            // rule is at publish_window_active).
-            publish_window_active(active);
+            // THE STATUS BAR TAKES THIS EDGE TOO, and on this platform the bar
+            // IS the top band (top_band_word): the framework paints no
+            // background over that strip, so darkening it is this backend's own
+            // blit and not a call up to Java. The band is written only by a
+            // post that reaches its rows, and the hook's damage above is the
+            // top STRIP's — content rows, every one of them below the band — so
+            // the new word buys the full-surface post the flag owes it, exactly
+            // as an adoption does.
+            surface_bands_owed_ = true;
             if (!active) {
                 // FOCUS LEAVING IS A HARD END FOR TOUCH: the window system has
                 // taken the contacts (a notification shade pull, a task
@@ -1961,46 +1980,6 @@ std::string GuiPlatform::clipboard_get_text() {
     }
     env->PopLocalFrame(nullptr);
     return text;
-}
-
-// ---------------------------------------------------------------------------
-// The status bar's activation edge (the third JNI road up, the fourth id)
-// ---------------------------------------------------------------------------
-
-// THE STATUS BAR IS THIS WINDOW'S TITLE BAR (architect 2026-08-27), so it
-// takes BOTH of the labwc title bar's colours and not only the active one
-// (architect 2026-09-06, on a shade pull with the cover open: the bar "does
-// not change to the disabled/inactive color that labwc uses"). Rows 1 and 2
-// already swap their ground on this very edge, kRedesignRowGround to
-// kRedesignRowGroundUnfocused (render.h owns the pair); the bar above them is
-// the FRAMEWORK'S surface, which nothing on this side of the seam can paint,
-// so the edge goes up to MainActivity.windowActive and Java recolours it with
-// the same two values. That method posts the setter to the UI thread —
-// Window's own setters are not the binder calls the session's and the
-// clipboard's are — and the two numbers live in the Java file because no
-// build can check them against their owners here (the media command table's
-// rule, gui_media.h, for the same reason).
-//
-// THE SHAPE IS publish_media_state's, whole: the glue thread's env attached
-// once in init(), an id looked up once in the same block, the guard on all
-// four terms, and a Java exception described, cleared and swallowed rather
-// than propagated. No local frame, because this call creates no references.
-//
-// NO SPECIAL CASE FOR THE FIRST EDGE: onCreate paints the bar active and the
-// first APP_CMD_GAINED_FOCUS arrives after it, so the opening push sets the
-// colour that is already there.
-void GuiPlatform::publish_window_active(bool active) {
-    if (!app_ || !app_->activity || !jni_env_ || !window_active_method_) return;
-    JNIEnv* env = jni_env_;
-    env->CallVoidMethod(app_->activity->clazz, window_active_method_,
-                        static_cast<jboolean>(active));
-    if (env->ExceptionCheck()) {
-        env->ExceptionDescribe();
-        env->ExceptionClear();
-        std::fprintf(stderr,
-                     "warptempo_gui: MainActivity.windowActive threw; the "
-                     "status bar kept the colour it had\n");
-    }
 }
 
 // ---------------------------------------------------------------------------
