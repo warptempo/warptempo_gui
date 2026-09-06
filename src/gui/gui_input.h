@@ -976,6 +976,14 @@ struct GuiTouchNavFrame {
     // distance under 1 px on either side delivers 1.0; single-finger frames
     // are degenerate by construction, so they always carry 1.0).
     double dist_ratio = 1.0;
+    // BOTH DELTAS AT THEIR NO-OP VALUES (dx 0.0, ratio 1.0) IS A DELIVERED
+    // FRAME IN EXACTLY ONE CASE — the platform otherwise suppresses it: the
+    // DOWNGRADE'S TRANSITION FRAME, one single-finger frame delivered at the
+    // two-to-one lift so the GUI hears the pinch end even when the survivor
+    // is standing still (the exemption at set_touch_nav_hooks' update
+    // contract, input_core.h). It carries the survivor's own centroid, and
+    // the model applies nothing for it: its errand is the seated pivot's
+    // clear, which apply_touch_nav_update runs above its no-op return.
     // TWO fingers vs the phone model's one — the GUI's fork between the
     // zoom-only gesture and the pan-only one.
     bool   two_finger = false;

@@ -576,7 +576,12 @@ struct GuiRenderPlayer {
     // gate refuses, because a head unit's toggle sends the direction its own
     // display believes and a display that has drifted would otherwise send
     // the already-true verb forever, silently dropped. The state does not
-    // move, so the push is the last edge's own said again. THE FOCUS LOSSES
+    // move, so the push is the last edge's own said again. AND A PASSED GATE
+    // IS NOT ENOUGH: Play's act has refusals of its own beneath the gate —
+    // the player resting with NOTHING BOUND, where Up and a fresh open() leave
+    // it — so that arm asks the RESULT (a started transport is LIVE and has
+    // published from the play road already) and pushes the unchanged truth
+    // otherwise, rather than restating the act's conditions. THE FOCUS LOSSES
     // STAY SILENT — an imposed interrupt carries no display belief to
     // correct — and Pause has an arm of its own for exactly that split;
     // STOP -> PAUSE AND THEN HOME, direct (architect 2026-09-01,
@@ -627,10 +632,11 @@ struct GuiRenderPlayer {
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
     // app.render_player and the one position reader (render_player_position)
     // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep at each retell (ELEVEN call sites across EIGHT
-    // functions — eight across seven before on_media_command's three
-    // re-publishes landed on 2026-09-04, seven across six before up() took its
-    // own push earlier that day): open() —
+    // re-derived by grep at each retell (TWELVE call sites across EIGHT
+    // functions — eleven across eight before the Play arm's act-side refusal
+    // took its own push, eight across seven before on_media_command's first
+    // three re-publishes landed on 2026-09-04, seven across six before up()
+    // took its own push earlier that day): open() —
     // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
@@ -643,11 +649,13 @@ struct GuiRenderPlayer {
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
     // seek);
-    // on_media_command's THREE REFUSAL ARMS (2026-09-04) — a Play said to a
-    // live transport, a Pause said to a resting one and a Next at the item
-    // folder's last wav: the state has not moved, so each pushes the standing
-    // one AS AN ANSWER TO THE PRESS, which is what keeps a head unit whose
-    // display has drifted from sending the same dead verb forever (the
+    // on_media_command's FOUR REFUSAL ARMS — a Play said to a live transport,
+    // a Pause said to a resting one and a Next at the item folder's last wav
+    // (2026-09-04), plus a Play whose GATE PASSED and whose ACT could not
+    // start anything, the player resting with nothing bound where Up and a
+    // fresh open() leave it: the state has not moved, so each pushes the
+    // standing one AS AN ANSWER TO THE PRESS, which is what keeps a head unit
+    // whose display has drifted from sending the same dead verb forever (the
     // reasoning is at those arms; the focus losses are not among them); and
     // close() — inactive. NO PER-TICK PUSH: a
     // playing position advances on the head unit's own clock from the last

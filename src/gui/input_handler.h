@@ -570,7 +570,13 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
 // an upgrade takes.
 // Its two non-writer callers are unchanged: the touch nav body's top (any frame
-// that is not two-finger) and end_touch_nav (every end of the gesture).
+// that is not two-finger) and end_touch_nav (every end of the gesture). THE
+// FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
+// than by luck: the core delivers ONE single-finger frame at the two-to-one
+// transition even when both of its deltas are no-ops (the no-op exemption at
+// set_touch_nav_hooks' update contract, input_core.h), so a survivor that never
+// moves still kills the pivot and erases the stem on the frame the pinch ended,
+// and no later upgrade can inherit it.
 void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO

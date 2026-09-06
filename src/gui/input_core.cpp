@@ -1749,7 +1749,8 @@ void GuiInputCore::touch_up(int32_t id) {
                 // exactly as it was.
                 if (touch_nav_frame_dirty_) {
                     touch_nav_frame_dirty_ = false;
-                    deliver_touch_nav_frame();
+                    deliver_touch_nav_frame(
+                        /*deliver_even_if_no_op=*/false);
                 }
                 if (id == touch_owner_id_) {
                     touch_owner_id_ = touch_nav_id2_;
@@ -1762,6 +1763,36 @@ void GuiInputCore::touch_up(int32_t id) {
                 touch_nav_start_cx_   = touch_nav_last_cx_   = touch_nav_x1_;
                 touch_nav_start_cy_   = touch_nav_y1_;
                 touch_nav_start_dist_ = touch_nav_last_dist_ = 0.0;
+                // AND THE TRANSITION ANNOUNCES ITSELF, even where nothing
+                // moved. The GUI learns the pinch is over from a delivered
+                // frame ARRIVING not-two-finger — that is the seat's whole
+                // clear road (apply_touch_nav_update's leading line, and
+                // TouchNavZoomState's lifecycle) — but a survivor that does
+                // not move produces no such frame: its next frames carry
+                // dx 0.0 and ratio 1.0 and die at the exact-no-op return
+                // below, so the dead pinch's pivot stayed seated and its
+                // stem stayed painted under one finger, and a second finger
+                // landing elsewhere pinched about the OLD song point. So the
+                // downgrade itself delivers ONE single-finger frame, exempt
+                // from that return and from nothing else: it is measured
+                // AFTER the rebase, so it carries the survivor's own
+                // centroid with dx 0.0 and ratio 1.0 by construction (the
+                // rebase wrote last_cx_/last_dist_ to exactly those bases) —
+                // an honest statement of the new geometry that applies
+                // nothing, seats nothing and consumes no double-click
+                // candidate, because the GUI's own no-op return sits above
+                // that clear. It stays inside the update hook's vocabulary:
+                // the end hook is still NOT owed here (a downgrade is a
+                // transform, not an end) and no hook member was added.
+                // GATED ON A PRIOR DELIVERY, which is exactly the condition
+                // under which the GUI can be holding a seat at all (a seat
+                // exists only where a frame was delivered): a sub-latch pair
+                // announces nothing and still costs the GUI nothing, and
+                // this call cannot latch a gesture that never latched — the
+                // latch arm measures the survivor against the bases the
+                // rebase just seated on it, which are zero on both axes.
+                if (touch_nav_delivered_)
+                    deliver_touch_nav_frame(/*deliver_even_if_no_op=*/true);
                 break;
             }
             // The LAST nav finger lifting ENDS the gesture (any end commits).
@@ -1901,7 +1932,7 @@ void GuiInputCore::touch_frame() {
         flush_touch_frame_motion();
     } else if (touch_phase_ == TouchPhase::Nav && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
-        deliver_touch_nav_frame();
+        deliver_touch_nav_frame(/*deliver_even_if_no_op=*/false);
     } else if (touch_phase_ == TouchPhase::Region &&
                touch_region_frame_dirty_) {
         touch_region_frame_dirty_ = false;
@@ -1919,7 +1950,7 @@ void GuiInputCore::touch_frame() {
     }
 }
 
-void GuiInputCore::deliver_touch_nav_frame() {
+void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
     // SINGLE-FINGER NAV (the phone model) forks only these three reads: the
     // finger is the centroid and the distance stays 0.0 — the pinch latch arm
     // below is then structurally false and the ratio guard delivers 1.0, so
@@ -1961,7 +1992,13 @@ void GuiInputCore::deliver_touch_nav_frame() {
     const double dx = cx - touch_nav_last_cx_;
     touch_nav_last_cx_   = cx;
     touch_nav_last_dist_ = dist;
-    if (dx == 0.0 && ratio == 1.0) return;  // a no-op frame delivers nothing
+    // A no-op frame delivers nothing — with ONE exemption, passed in by the
+    // DOWNGRADE alone (the site's own record): the two-to-one transition must
+    // reach the GUI even when the survivor is standing still, because a
+    // delivered not-two-finger frame is the only thing that tells it the
+    // pinch is over. Nothing else may set the flag: a stream of zero-delta
+    // frames is noise the GUI would have to filter again.
+    if (dx == 0.0 && ratio == 1.0 && !deliver_even_if_no_op) return;
     touch_nav_delivered_ = true;
     if (touch_nav_update_hook_) {
         GuiTouchNavFrame frame;
@@ -2016,7 +2053,7 @@ void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     //     condition this end hook is owed on, and the hook clears it.
     if (deliver_final_frame && touch_nav_frame_dirty_) {
         touch_nav_frame_dirty_ = false;
-        deliver_touch_nav_frame();
+        deliver_touch_nav_frame(/*deliver_even_if_no_op=*/false);
     }
     touch_nav_frame_dirty_ = false;
     // The end hook is owed a commit only if an update was ever delivered — a

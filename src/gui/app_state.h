@@ -1653,7 +1653,13 @@ struct OverviewDragState {
 //     seat follows the refusal, the two halves deliberately on opposite sides
 //     of it (the reasoning is at the site) — and at end_touch_nav, every end
 //     included, so a later upgrade re-seats rather than inheriting a stale
-//     anchor.
+//     anchor. SUCH A FRAME IS GUARANTEED AT THE DOWNGRADE ITSELF: the platform
+//     delivers one single-finger frame at the two-to-one transition even
+//     though both its deltas are no-ops (the exemption at
+//     set_touch_nav_hooks' update contract, input_core.h), because a
+//     STATIONARY survivor produces no frame of its own and would otherwise
+//     leave this seat alive and its stem painted under a single finger, ready
+//     for the next pair to pinch about a song point the fingers had left.
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
 //     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
 //     with every command that reaches one (the `t`/`p`/Ctrl+Tab keys, the 1/2/3

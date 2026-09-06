@@ -553,9 +553,18 @@ public:
     //     its latch: it exists only by crossing the disambiguation slop, the
     //     same distance in the same Chebyshev metric, measured from the same
     //     down point).
+    //     A NO-OP FRAME IS NOT DELIVERED — zero centroid delta and ratio 1.0
+    //     say nothing — WITH ONE EXEMPTION, and it is what makes the
+    //     DOWNGRADE observable: the two-to-one transition delivers one
+    //     single-finger frame at the transition itself, carrying the
+    //     survivor's centroid with both deltas at their no-op values. The
+    //     GUI's model reads a not-two-finger ARRIVAL as the end of the pinch
+    //     (it is where the seated pivot is cleared and its stem erased), and
+    //     a survivor that stands still would otherwise never produce one.
     //   * end(): the gesture ended — its LAST nav finger lifted (any end
     //     commits; one finger of TWO lifting is the DOWNGRADE, a transform
-    //     the hook stream never sees — the edge inventory below),
+    //     the END hook never sees — the update hook announces it with the
+    //     transition frame above; the edge inventory below),
     //     touch_cancel, or touch-capability loss. Fired ONLY if at least
     //     one update was delivered, so a sub-latch two-finger touch costs the
     //     GUI nothing.
@@ -1276,9 +1285,12 @@ private:
     //     position (the upgrade's rebase in reverse — folding the centroid's
     //     jump off the pair midpoint would pan by half the finger gap) and
     //     the latch state carried, so 1↔2 transitions repeat freely within
-    //     one contact stream with no jump at any edge. The gesture ends when
-    //     its LAST nav finger lifts. A third finger is ignored, across
-    //     upgrades and downgrades alike.
+    //     one contact stream with no jump at any edge — and ANNOUNCED to the
+    //     GUI by a single-finger frame delivered at the transition, so a
+    //     survivor that never moves still ends the pinch (the no-op
+    //     exemption at set_touch_nav_hooks' update contract). The gesture
+    //     ends when its LAST nav finger lifts. A third finger is ignored,
+    //     across upgrades and downgrades alike.
     //   * Region  — THE REGION HOLD (the eighth glass ruling, 2026-08-12):
     //     the zone window EXPIRED with the down point on the pan zone, and
     //     the owning finger now drives the REGION former through the region
@@ -1446,6 +1458,12 @@ private:
     //     cannot be applied twice — the distance basis drops to the
     //     single-finger degenerate 0.0, and the latch state CARRIES (an
     //     unlatched pair re-seats its latch reference at the survivor).
+    //     AND THE TRANSITION IS THEN ANNOUNCED: one single-finger frame
+    //     delivers off the rebased bases (dx 0.0, ratio 1.0 — the no-op
+    //     exemption at update() above), iff a frame was ever delivered for
+    //     this gesture, so the GUI hears the pinch end on the frame it ends
+    //     rather than on the survivor's first real motion, which a
+    //     stationary survivor never produces.
     //     An ignored third finger stays ignored.
     //   * touch UP, the LAST nav finger (single-finger nav: the owner) — the
     //     staged dirty frame DELIVERS
@@ -1900,7 +1918,14 @@ private:
     // input reads: the finger is the centroid and the distance stays 0.0, so
     // the pinch latch arm is structurally false and the ratio guard delivers
     // 1.0 — everything downstream is shared verbatim.
-    void deliver_touch_nav_frame();
+    // deliver_even_if_no_op exempts THIS call from the body's exact-no-op
+    // return (dx 0.0 and ratio 1.0 deliver nothing), and the DOWNGRADE is its
+    // one caller: the two-to-one transition owes the GUI a not-two-finger
+    // frame even when the survivor is standing still, that arrival being the
+    // only thing that tells the GUI the pinch is over and clears its seated
+    // pivot. It does not exempt the LATCH, so a sub-latch pair still
+    // navigates nothing. Every other call passes false.
+    void deliver_touch_nav_frame(bool deliver_even_if_no_op);
     // End a live Nav gesture. deliver_final_frame selects the END SPLIT
     // (recorded at the definition): the finger's own lift delivers the staged
     // dirty frame first (true — the user's final motion, the any-end-commits

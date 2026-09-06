@@ -2954,6 +2954,12 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // early return rather than an assignment here: this line runs on EVERY
     // one-finger frame, while the stem must be rubbed out once, on the frame
     // the seat actually dies (contract at clear_touch_zoom_seat).
+    // AND THE DOWNGRADE REACHES THIS LINE BY CONSTRUCTION: the platform
+    // delivers one single-finger frame at the two-to-one transition even when
+    // both of its deltas are no-ops (the exemption at set_touch_nav_hooks'
+    // update contract), so a survivor left standing still cannot keep the dead
+    // pinch's pivot seated and its stem painted under one finger — which is
+    // what let a later upgrade zoom about the OLD song point.
     if (!f.two_finger) clear_touch_zoom_seat(app, viewport);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
@@ -3110,11 +3116,15 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     }
 
     // A frame whose surviving delta is an exact no-op applies nothing: the
-    // platform suppresses only frames where BOTH raw deltas are no-ops, so a
+    // platform suppresses frames where BOTH raw deltas are no-ops, so a
     // two-finger frame carrying pure centroid travel arrives here and dies
     // here — having seated the pivot on its way past, which is the whole of
-    // the ordering above. Below the seat, above the double-click clear (the C8
-    // rule covers APPLIED frames).
+    // the ordering above. THE DOWNGRADE'S TRANSITION FRAME IS THE PLATFORM'S
+    // ONE EXEMPTION FROM THAT SUPPRESSION and dies here too, which is exactly
+    // what it is for: its whole errand is the CLEAR at the top of this body,
+    // and it must apply nothing, seat nothing and consume no double-click
+    // candidate on its way to that return. Below the seat, above the
+    // double-click clear (the C8 rule covers APPLIED frames).
     if (eff_dx == 0.0 && eff_ratio == 1.0) return;
 
     // An applied navigation frame moves content between two taps, so a

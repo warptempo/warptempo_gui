@@ -1350,6 +1350,23 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // band happens to rest on.
             if (rp.transport != Transport::Live) {
                 transport_toggle_act();
+                // AND A PLAY THE ACT COULD NOT START ANSWERS AS THE GATE'S
+                // OWN REFUSAL DOES (the record is at the re-publish below).
+                // The gate passes with the transport down, but the act
+                // beneath it has refusals of its own — a player resting with
+                // NOTHING BOUND is the live one, which is where `Up` and a
+                // fresh `open()` leave it — and those went out silently, so
+                // a head unit whose display had drifted to "paused" pressed
+                // Play here forever and was never told the truth. THE TEST
+                // IS THE RESULT, NOT A COPY OF THE ACT'S CONDITIONS (`rp` is
+                // a reference, so it reads what the act just wrote): a
+                // started transport is LIVE and has already published from
+                // the play road itself, and anything else means nothing
+                // moved and the unchanged truth is owed. The GUI side is
+                // untouched — the refusal stays silent there, a player
+                // resting with nothing bound showing that state on its own
+                // row (the one-dimensional rule at transport_toggle_act).
+                if (rp.transport != Transport::Live) publish_media_state();
                 return;
             }
             // A REFUSED DIRECTION RE-PUBLISHES (architect 2026-09-04, after
