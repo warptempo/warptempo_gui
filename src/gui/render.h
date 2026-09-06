@@ -3140,10 +3140,15 @@ void render_flags(cairo_t* cr,
 //                   every kind alike, with the marker's boxes to its right
 //                   riding that edge. An emptied field is two pads, the
 //                   smallest box there is, whichever kind it belongs to.
-//                   CLAMPED fully on-window in every case. Every box spans its
-//                   1px LEFT BORDER too (the flag's own for the payload
-//                   editor, the seam divider for the other two), so its x is
-//                   one column left of the fill and its w one wider.
+//                   NEVER CLAMPED ON-WINDOW, ON ANY KIND, AT EITHER EDGE
+//                   (architect 2026-09-06): the field opens at its own box's
+//                   seam wherever that seam is and the WINDOW cuts it off,
+//                   like every other box in this lane — so `box` may reach
+//                   past a window edge, which costs its consumers nothing (a
+//                   press is inside the window by construction). Every box
+//                   spans its 1px LEFT BORDER too (the flag's own for the
+//                   payload editor, the seam divider for the other two), so
+//                   its x is one column left of the fill and its w one wider.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -3247,12 +3252,21 @@ struct FlagEditorBox {
 // monospace face dies at this surface with the lane placement owner
 // (lane_text_left_x) that used to put it here.
 //
-// AT A WINDOW EDGE THE BOX CLAMPS AND THE VIEW TRUNCATES. The box slides left
-// to stay fully on-window; when the payload is wider than the lane itself the
-// box spans the lane and the text scrolls inside it, the caret staying visible
-// through State::view_offset_px (the minimal-travel rule lives at that field).
-// Left/Right/Home/End then navigate it exactly like any one-line field —
-// nothing in the key path knows the box scrolls.
+// AT A WINDOW EDGE THE BOX IS CUT OFF AND NOTHING MOVES (architect 2026-09-06,
+// on the clamp this paragraph used to describe: "leave its position truthful,
+// don't clamp it, don't do anything"). The box used to slide left to stay
+// fully on-window, its width capped at the lane so that it always could; both
+// are deleted, because under the one graphic model that slide walked the field
+// left over the boxes the pass is still painting at rest and took it out of
+// its own box's slot. The field therefore holds its WHOLE run at every width —
+// the text does not scroll inside it any more — and a field reaching past an
+// edge is READ BY PANNING THE VIEWPORT, this editor being pointer- and
+// wheel-transparent so the wheel and the grab-pan work while it stands.
+// State::view_offset_px survives on this surface for the sub-pixel case alone
+// (a run's width rounded down to a whole column, which would otherwise clip
+// the caret's reserved column at end-of-text); the glyph-by-glyph travel its
+// minimal-travel rule describes belongs to the DIALOG field, whose box is
+// fixed. Left/Right/Home/End navigate exactly like any one-line field.
 //
 // Takes AppState by NON-CONST reference, alone among the renderers here, and
 // for two honest reasons: it advances the editor's view offset (session state
@@ -3486,9 +3500,11 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
 // over a marker's painted column and clamped it onscreen — first for the
 // marker-text lane's runs and the hover popup, then, after row 5's checkpoint B
 // deleted those, for the flag editor alone. The editor's unroll took the last
-// of it: the box is LEFT-anchored on the marker's own column like the flag it
-// replaces, sized by shaped text, and clamped by render_flag_editor_box, which
-// is now the single owner of that whole question. The column math they wrapped
+// of it: the box is LEFT-anchored on its own box's seam like the box it
+// replaces and sized by shaped text, render_flag_editor_box being the single
+// owner of that whole question — and since 2026-09-06 there is no onscreen
+// clamp left in it at all, the window cutting a field off exactly as it cuts
+// off a flag. The column math they wrapped
 // — painted_column_of_source_frame_on_basis over the displayed map and the item
 // viewport basis — is unchanged and called directly there.)
 

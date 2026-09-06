@@ -430,13 +430,18 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
 
 // BPM mode: strict parser for "<beats>@[<lo>,<hi>]". beats must be a
 // positive integer (metronomes count integer beats) capped at
-// kBpmBeatsMax; lo/hi are doubles (parse_value_double strictness) within
-// the bpm bracket [kBpmMin, kBpmMax] (value_format.h) with lo <= hi
-// (degenerate lo=hi is valid), each pinned to ONE canonical spelling — the
-// bpm writer's form (format_value_double, min 0 decimals), so "210" and
-// "210.5" commit while "210.0" and "210.50" refuse; no whitespace, no
-// missing fields, no alternate forms. On failure returns false and leaves
-// out-params unchanged.
+// kBpmBeatsMax and written WITHOUT PADDING; lo/hi are doubles
+// (parse_value_double strictness) within the bpm bracket [kBpmMin, kBpmMax]
+// (value_format.h) with lo <= hi (degenerate lo=hi is valid), each pinned to
+// ONE canonical spelling — the bpm writer's form (format_value_double, min 0
+// decimals), so "210" and "210.5" commit while "210.0" and "210.50" refuse;
+// no whitespace, no missing fields, no alternate forms. EVERY FIELD OF THE
+// GRAMMAR THEREFORE HAS ONE SPELLING PER VALUE, which is what lets the
+// editor's byte cap be derived rather than chosen (kMaxPendingCharsBpm,
+// text_editor.h). On failure returns false and leaves out-params unchanged;
+// the one caller (commit_bpm_edit, flag_editor.cpp) turns every refusal here
+// into the same red flash and the same `BPM edit rejected: invalid syntax`
+// card, whichever field was the offender.
 inline bool parse_bpm_bracket(const std::string& s,
                               int& beats, double& lo, double& hi) {
     if (s.empty()) return false;
@@ -462,7 +467,18 @@ inline bool parse_bpm_bracket(const std::string& s,
         return !v.empty();
     };
     if (!digits_only(left)) return false;
+    // ONE SPELLING PER BEATS COUNT (architect 2026-09-06, on the leading
+    // zeros this arm used to swallow: "make it more strict"). A beats count
+    // is a positive decimal integer written without padding, so a leading
+    // zero refuses outright: `0` and `000` were always refused by the
+    // positivity test below — a zero beats count is no metronome reading —
+    // and `0210` / `000210`, which used to commit the very same 210 the
+    // canonical spelling commits, refuse with them now. The lo/hi arms below
+    // have pinned one spelling each since the bracket was written; this is
+    // that same discipline on the one field of the grammar that lacked it.
+    // `digits_only` has already run, so the string is non-empty digits.
     auto parse_pos_int = [](const std::string& v, int& out) -> bool {
+        if (v.front() == '0') return false;
         long long acc = 0;
         for (char c : v) {
             acc = acc * 10 + (c - '0');

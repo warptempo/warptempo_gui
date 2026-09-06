@@ -2296,8 +2296,8 @@ static int committed_cell_seam_off(const AppState& app,
     return flag_w;
 }
 
-// The contract (the face, the clamp, the view truncation, the non-const
-// AppState) is at the declaration in render.h. What follows is the mechanics.
+// The contract (the face, the unclamped position, the non-const AppState) is
+// at the declaration in render.h. What follows is the mechanics.
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // The publication is unconditional: every run that finds no open editor
     // writes the invalid state, so a closed session can never leave the pointer
@@ -2397,15 +2397,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const int caret_px = scaled_px(1.0, 1);
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
-    int box_w = pad_l + run_w + pad_r;
-
-    // THE CLAMP, in two stages. First the box is capped at the LANE's own width
-    // — a payload wider than the window cannot be shown whole, and this is
-    // where the view starts truncating instead. Then the box's left edge, which
-    // wants to be the marker's painted column (the flag's own left edge, so the
-    // box unrolls FROM the flag rather than jumping), slides left far enough to
-    // keep the right edge on-window.
-    if (box_w > lane.w) box_w = lane.w;
+    // THE BOX IS ITS TWO PADS AND ITS RUN, AND NOTHING BOUNDS IT — not the
+    // lane, not the window. The LANE-WIDTH CAP that stood here went with the
+    // position clamp below (architect 2026-09-06): it was a WIDTH rule kept
+    // for a POSITION rule's sake — a box no wider than the lane can always be
+    // slid fully on-window — and with the field standing wherever its own box
+    // stands, a field wider than the window simply runs off the edge, which is
+    // the same truthful answer the cap existed to avoid giving. Nothing else
+    // read it: the text viewport, the view offset and the riding run all
+    // derive from `box_w` rather than from the lane.
+    const int box_w = pad_l + run_w + pad_r;
 
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
@@ -2445,13 +2446,28 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                                iteration_on) + border_w
                      : 0;
 
-    const double min_left = static_cast<double>(lane.x);
-    const double max_left = static_cast<double>(lane.x + lane.w - box_w);
-    double box_left = static_cast<double>(area.x + col + anchor_off);
-    if (max_left <= min_left) box_left = min_left;
-    else if (box_left < min_left) box_left = min_left;
-    else if (box_left > max_left) box_left = max_left;
-    const int bx = static_cast<int>(std::nearbyint(box_left));
+    // NO FIELD IS CLAMPED, ON ANY KIND, AT EITHER EDGE (architect 2026-09-06,
+    // on the clamp this line used to carry: "let's get rid of that, that's a
+    // good catch … leave its position truthful, don't clamp it, don't do
+    // anything"). The box opened at the seam above and then slid left or right
+    // to keep itself whole on-window — a rule written for the payload editor
+    // when the flag was the only box on the row, and one the ONE GRAPHIC MODEL
+    // cannot survive: at a lane edge the slide walked the field left OVER the
+    // lower cell or the flag box that the cached pass is still painting at
+    // rest, so the boxes to its left no longer stood where they rest and the
+    // field no longer stood in its own box's slot — the two things the model
+    // promises. So the field opens where its box IS and stays there.
+    //
+    // THE WINDOW IS THE CLIP AND IT NEEDS NO CALL: this lane spans the window
+    // (strip_row_rect anchors every lane at x 0 with the window's own width),
+    // and this painter draws straight onto the window surface, so a box past
+    // either edge falls off it exactly as a cached flag box does off the
+    // strip-width surface the flag pass paints into. A field cut off at an
+    // edge is READ BY PANNING THE VIEWPORT: the marker-lane editors are
+    // pointer- and wheel-transparent, so the wheel and the grab-pan work while
+    // one stands and the field travels with its marker, which is the same
+    // answer the row gives for a flag box that is half off the edge at rest.
+    const int bx = area.x + col + anchor_off;
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the
     // width the view offset is measured against. The caret column belongs to it
@@ -2470,12 +2486,29 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MINIMAL-TRAVEL VIEW OFFSET (the field's contract is at
     // State::view_offset_px). Scroll only as far as the caret demands, in
-    // whichever direction it left the window, then clamp to the run's own
+    // whichever direction it left the VIEWPORT, then clamp to the run's own
     // travel — so a caret walking right pushes the view right one glyph at a
     // time and walking back left pulls it back the same way, never jumping.
     // The caret's own column is reserved at the right edge, so the comparison
     // is against (view_w - caret) rather than view_w: a caret at end-of-text
     // stops with its column inside the clip instead of half past it.
+    //
+    // WHAT IT STILL HAS TO DO HERE IS SUB-PIXEL, AND IT IS NOT NOTHING. The
+    // box holds this field's WHOLE run by construction (two pads and the run,
+    // no cap), so no long buffer travels on this surface any more — but
+    // `box_w` takes the run's width to the nearest whole column and can round
+    // DOWN by as much as half of one, which leaves the caret's reserved column
+    // sitting exactly on the clip's right edge with no ink of its own. The
+    // travel below pulls the origin back by that remainder and the caret is
+    // seen. (The DIALOG field, whose box is a fixed width a long buffer really
+    // does not fit, is where the glyph-by-glyph travel lives — the same rule
+    // applied at paint_modal_dialog to a surface that needs all of it.)
+    //
+    // IT KEEPS THE CARET INSIDE THE FIELD, NEVER INSIDE THE WINDOW. With the
+    // field standing at its own box wherever that box is, a field at a lane
+    // edge is cut off and its caret can be cut off with it; the answer to that
+    // is the VIEWPORT PAN (the ruling at `bx` above), not a scroll of the text
+    // inside a box that is already showing all of it.
     const int cursor_pos =
         std::clamp(ed.cursor_pos, 0, static_cast<int>(ed.pending.size()));
     const double caret_off = byte_x[static_cast<size_t>(cursor_pos)];
@@ -2577,9 +2610,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // pair — paint_modal_dialog; the flag editor's box is the anatomy's one
     // editor tenant now.)
     //
-    // The border sits OUTSIDE the fill like the flag's, so nothing the clamp,
-    // the text viewport or the view offset computed above moves: box_w, view_x0
-    // and view_x1 are all fill-relative, and at the left clamp this column
+    // The border sits OUTSIDE the fill like the flag's, so nothing the text
+    // viewport or the view offset computed above moves: box_w, view_x0 and
+    // view_x1 are all fill-relative, and at the window's left edge this column
     // simply falls off the surface exactly as a flag's does. Its COLOUR comes
     // off the resolved face, so a DISABLED marker's open editor carries the
     // damped border its idle flag carries — the editor opens on any store index

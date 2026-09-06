@@ -55,14 +55,14 @@ namespace text_editor {
 //
 // EVERY CAP IS ITS GRAMMAR'S WIDEST SPELLING (architect 2026-09-05): a field
 // whose cap is wider than what it can legally commit advertises longer typing
-// than it allows, which is the truthfulness defect the roster answers. FOUR
+// than it allows, which is the truthfulness defect the roster answers. FIVE
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
-// iteration bound, the measure (which takes the load bound from its owner)
-// and the measure paste's offset. THE OTHER THREE ARE POLICY CEILINGS and
-// each says so where it stands: the settings value and the commit title are
-// FREE TEXT with no widest spelling to be tight against, and the BPM bracket
-// has a grammar whose beats field admits leading zeros, so it has no widest
-// spelling either.
+// iteration bound, the measure (which takes the load bound from its owner),
+// the measure paste's offset, and, since 2026-09-06, the BPM bracket, whose
+// beats field stopped admitting leading zeros and so gained a widest spelling
+// like every other field of that grammar. THE OTHER TWO ARE POLICY CEILINGS
+// and each says so where it stands: the settings value and the commit title
+// are FREE TEXT, with no widest spelling to be tight against.
 //
 // Maximum bytes allowed in `pending`, and it belongs to the FLAG PAYLOAD
 // editor alone: every other Kind names its own cap below, so this default is
@@ -133,21 +133,37 @@ constexpr int kMaxPendingChars = 28;
 static_assert(kTempoMaxCents - kTempoMinCents < 1000,
               "an iteration bound's integer part no longer fits one digit");
 constexpr int kMaxPendingCharsIterBound = 5;
-// BPM popup. `<beats>@[<lo>,<hi>]`: beats a positive int (up to 10
-// digits), lo/hi full doubles in shortest round-trip form (up to 23 chars
-// each): 10 + 2 + 23 + 1 + 23 + 1 = 60.
+// BPM popup, `<beats>@[<lo>,<hi>]` (parse_bpm_bracket, warpmarkers.h — the
+// grammar's one owner):
+//   BEATS  4 bytes, a positive integer with no leading zeros, capped at
+//          kBpmBeatsMax — so `9999` is the widest there is.
+//   LO/HI  18 bytes each. Each is pinned by an equality test to the bpm
+//          writer's own spelling (format_value_double at 0 decimals, i.e.
+//          to_chars' shortest round-trip form) inside [kBpmMin, kBpmMax] =
+//          [10, 400]. A shortest round-trip double never needs more than
+//          SEVENTEEN significant digits, and in that bracket every digit of
+//          the fixed spelling is significant (the leading integer digit is
+//          non-zero, and there are two or three of them), so the spelling is
+//          at most seventeen digits plus the point; to_chars picks the
+//          scientific form only where it is SHORTER, so 18 bounds both. The
+//          bound is attained, at `10.000000000000002` — the double one ulp
+//          above 10, whose rounding interval (half an ulp, 2^-50 wide) holds
+//          no sixteen-digit decimal.
+// 4 + 2 + 18 + 1 + 18 + 1 = 44, and the whole 44 is attained together:
+// `9999@[10.000000000000002,10.000000000000004]` is in bracket, in order and
+// spelled canonically throughout.
 //
-// A POLICY CEILING, and it is the one grammar-carrying field that cannot be
-// made tight (recorded 2026-09-05, when the other grammar caps came down to
-// their widest spellings). The bounds ARE pinned to one spelling each —
-// parse_bpm_bracket refuses anything but the bpm writer's form
-// (format_value_double at 0 decimals) inside [kBpmMin, kBpmMax] — but BEATS
-// is read digit by digit with no leading-zero refusal, so `0210` and
-// `000210` commit the same 9999-capped value as `210` and the widest legal
-// spelling is however many bytes the field will hold. The value is
-// session-only and never serialized, which is why the one-spelling
-// discipline was never pressed here.
-constexpr int kMaxPendingCharsBpm = 60;
+// A TIGHT BOUND SINCE 2026-09-06, when the beats arm stopped admitting
+// leading zeros (architect: "make it more strict") and the grammar gained one
+// spelling per value in every field. It was a POLICY 60 until then — sized
+// for a ten-digit beats count and two 23-byte doubles — because a field
+// whose widest legal spelling was `however many bytes the field will hold`
+// had no tight bound to be derived.
+static_assert(kBpmBeatsMax < 10000,
+              "a beats count no longer fits four digits");
+static_assert(kBpmMin >= 1.0 && kBpmMax < 1000.0,
+              "a bpm bound no longer fits three significant integer digits");
+constexpr int kMaxPendingCharsBpm = 44;
 // Settings prompt. A POLICY CEILING — free text has no widest spelling to be
 // tight against. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
@@ -316,10 +332,17 @@ struct State {
     // view_offset_px), so a positive value hides text off the box's left edge.
     //
     // THE PAINTERS WRITE IT AND THE PAINTERS READ IT — two of them since
-    // 2026-08-13, one rule. THE FLAG EDITOR's unrolled box is clamped fully
-    // on-window and THE DIALOG EDITORS' inset field is a fixed 520px, so on
-    // both surfaces a long buffer does not fit and the view must travel to
-    // keep the caret visible.
+    // 2026-08-13, one rule. THE DIALOG EDITORS' inset field is a fixed 520px,
+    // so a long buffer does not fit it and the view must travel glyph by
+    // glyph to keep the caret visible. THE MARKER-LANE FIELD IS THE OTHER
+    // CASE ENTIRELY SINCE 2026-09-06: its box is its own two pads and its own
+    // run — no lane cap, no on-window clamp — so the whole run is always
+    // inside it and the travel it asks for is SUB-PIXEL, the box having
+    // rounded the shaped width down to a whole column and left the caret's
+    // reserved column on the clip's right edge. A field cut off at a window
+    // edge is not this field's business: the box stands where its box stands
+    // and the VIEWPORT PAN is what brings it into view (render.h's
+    // render_flag_editor_box carries the ruling).
     //
     // THE MINIMAL-TRAVEL RULE, which both painters apply and neither may
     // reinvent: each frame, scroll only as far as the caret demands and in
