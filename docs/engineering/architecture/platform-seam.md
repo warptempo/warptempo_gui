@@ -377,7 +377,16 @@ drag coordinates floor instead of truncating.
   project model): which project opens is the portable owner's question —
   `startup_source` (`project_model.h`) opens the device config's
   `last_project` or the first valid project in name order under its
-  `projects_path`, and File → Open is the picker on both platforms. The
+  `projects_path`, and File → Open is the picker on both platforms. WHEN
+  `gui_main` RETURNS, `android_main` asks the activity to finish and then
+  STAYS: it services the glue until `destroyRequested` is set and only then
+  returns into `android_app_destroy`. **THE LOOP OUTLIVES THE ACTIVITY, NEVER
+  THE REVERSE** (2026-09-06): every glue callback the framework runs on the UI
+  thread blocks on the glue's condition until the loop thread acknowledges it,
+  so a thread that left at the finish stranded the UI thread in `onPause`, and
+  the system ANRed and killed the process ten seconds later (six
+  `data_app_anr` records on the tablet). The two waits — for the first window
+  and for the destroy — are one helper, `pump_glue_until`. The
   `current` file and `resolve_source_path` are RETIRED (a stale `current` on
   the device is simply never read). What the backend still owns of the sync
   convention is WHERE the projects are: its template stamps
@@ -435,16 +444,18 @@ drag coordinates floor instead of truncating.
   consumer's one close road runs: `GuiPrompt::request_close` prompts on a dirty
   tab and completes at once on a clean one, and the exit that follows is
   `request_exit`'s own (`should_exit_` plus `ANativeActivity_finish`, the one
-  asker `android_main`'s tail shares), so `run()` returns, `gui_main` returns
-  and the activity goes exactly as Quit's does. The DOWN is consumed too, not
-  merely ignored: the framework's own back handling runs off the UP after
-  tracking the DOWN, so an unconsumed DOWN would leave the system holding a
-  tracked press it could still act on beside a prompt we had just raised; DOWN
-  repeats ride the consume and fire nothing. Firing from the input drain is
-  safe under `drain_looper`'s "nothing may block" rule — the callback raises a
-  bottom-row prompt or requests an exit and returns. Every other key still
-  returns 0 (hardware keyboards are out of scope, `touch.md`), and the road
-  into the core's key path stays `synthesize_key`. **BACK ASKS; A DESTROY
+  asker `android_main`'s tail shares), so `run()` returns, `gui_main` returns,
+  `android_main` services the glue until the destroy the finish asked for has
+  landed and only then returns, and the activity goes exactly as Quit's does.
+  The DOWN is consumed too, not merely ignored: the framework's own back
+  handling runs off the UP after tracking the DOWN, so an unconsumed DOWN
+  would leave the system holding a tracked press it could still act on beside
+  a prompt we had just raised; DOWN repeats ride the consume and fire nothing.
+  Firing from the input drain is safe under `drain_looper`'s "nothing may
+  block" rule — the callback raises a bottom-row prompt or requests an exit
+  and returns. Every other key still returns 0 (hardware keyboards are out of
+  scope, `touch.md`), and the road into the core's key path stays
+  `synthesize_key`. **BACK ASKS; A DESTROY
   CANNOT** is the residual loss, recorded at `drain_looper`'s
   `destroyRequested` arm: `APP_CMD_DESTROY` is the system stating the activity
   is already going, with nobody left to answer a prompt, so a session killed

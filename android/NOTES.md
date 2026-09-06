@@ -671,7 +671,10 @@ consumer, and the seam has no addition at all — §13.3.)*
   hook the Wayland backend fires for the compositor's X — so BACK NOW ASKS THE
   UNSAVED-WORK QUESTION (architect 2026-08-29). A dirty tab gets the prompt, a
   clean one exits at once, and the exit road is `request_exit`'s own
-  (`should_exit_` + `ANativeActivity_finish`), so the activity still goes.
+  (`should_exit_` + `ANativeActivity_finish`), so the activity still goes —
+  `run()` returns, `gui_main` returns, and `android_main` then services the
+  glue until the framework's destroy has landed before it returns (2026-09-06;
+  leaving earlier stranded the UI thread in `onPause` and ANRed the app).
   Until that ruling this arm returned 0 for every key: the framework's default
   handling finished the activity and no GUI close road ran, so a dirty session
   was torn down silently where the laptop's would have asked. The DOWN is

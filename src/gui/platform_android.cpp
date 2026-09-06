@@ -158,8 +158,8 @@ void route_stdio_to_logcat() {
 android_app* g_android_app = nullptr;
 
 // FINISHING THE ACTIVITY IS ONE ACT, ASKED AT MOST ONCE PER ACTIVITY. Two
-// roads end this process and both must tear the activity down, or the glue is
-// left pumping a live activity with no loop behind it: the GUI's own quit
+// roads end this process and both must tear the activity down, or the process
+// is left with a live activity nobody has asked to go: the GUI's own quit
 // (GuiPlatform::request_exit) and a FATAL STARTUP REFUSAL that returns out of
 // gui_main before any GuiPlatform exists — a malformed device config, or no
 // project under the projects path (device_config.h, project_model.h). The
@@ -170,6 +170,10 @@ android_app* g_android_app = nullptr;
 // asker wins and every later one is a no-op. Reset by android_main at entry —
 // the glue runs it again when an activity is destroyed and remade, and the new
 // activity has not been asked anything.
+// THE ASK IS ONLY HALF THE ORDERING: the finish is asynchronous, so the
+// framework's teardown lands on this thread afterwards and this thread must
+// still be there to acknowledge it. Both halves are stated together at
+// android_main's tail, where the wait for that teardown lives.
 bool g_activity_finish_asked = false;
 
 void finish_activity_once(android_app* app) {
@@ -982,10 +986,13 @@ void GuiPlatform::redeliver_geometry() {
 void GuiPlatform::request_exit() {
     should_exit_ = true;
     // ALSO ASK THE ACTIVITY TO GO. run() returning is only half of a quit
-    // here: android_main returns into the glue, which would sit with a live
-    // activity and no loop. finish() makes the system tear the activity down,
-    // which is what the user asked for when they pressed Quit. Through the one
-    // asker (finish_activity_once above), which android_main's tail shares.
+    // here: without the ask the process would sit with a live activity nobody
+    // tears down. finish() makes the system tear the activity down, which is
+    // what the user asked for when they pressed Quit, and the teardown it
+    // makes the framework deliver — onPause through onDestroy — is what
+    // android_main's tail then services before it returns (the ordering rule
+    // is stated there). Through the one asker (finish_activity_once above),
+    // which that tail shares.
     finish_activity_once(app_);
 }
 
@@ -2134,6 +2141,32 @@ void install_fonts_or_die(android_app* app) {
     }
 }
 
+// SERVICING THE GLUE, ONE SHAPE FOR BOTH WAITS. android_main brackets the GUI
+// with two stretches in which this thread has nothing of its own to run and
+// must still answer the glue: the HEAD waits for the first window, the TAIL
+// waits for the framework's destroy (both below, the tail's comment carrying
+// the ordering rule). The body is the same either way — block on the looper
+// with no timeout, because the only wakes owed are the glue's, and run
+// whatever window-system source the poll names — so it is written here once
+// and each caller states only its own predicate. THE PREDICATE IS ASKED
+// BEFORE THE FIRST POLL: either condition can already hold on entry (a destroy
+// delivered while the GUI still ran has set destroyRequested, at
+// drain_looper's own arm), and an untimed poll would then wait for a wake
+// nobody owes. The glue pointer is the whole argument — at the tail the
+// GuiPlatform is already torn down and there is no platform state to consult.
+template <typename Predicate>
+void pump_glue_until(android_app* app, Predicate reached) {
+    while (!reached()) {
+        int   events = 0;
+        void* data   = nullptr;
+        const int ident = ALooper_pollOnce(-1, nullptr, &events, &data);
+        if (ident == LOOPER_ID_MAIN || ident == LOOPER_ID_INPUT) {
+            auto* source = static_cast<android_poll_source*>(data);
+            if (source) source->process(app, source);
+        }
+    }
+}
+
 } // namespace
 
 void android_main(android_app* app) {
@@ -2190,19 +2223,16 @@ void android_main(android_app* app) {
 
     // WAIT FOR THE WINDOW before handing over. gui_main constructs its
     // GuiPlatform and expects init() to have geometry — the whole GUI layout
-    // is computed from it — so the glue is pumped here until APP_CMD_INIT_WINDOW
-    // has landed. The bootstrap command handler is the glue's default (none):
-    // app->window is set by the glue itself before it posts the command, so
-    // simply draining until it is non-null is the whole wait.
-    while (app->window == nullptr && app->destroyRequested == 0) {
-        int   events = 0;
-        void* data   = nullptr;
-        const int ident = ALooper_pollOnce(-1, nullptr, &events, &data);
-        if (ident == LOOPER_ID_MAIN || ident == LOOPER_ID_INPUT) {
-            auto* source = static_cast<android_poll_source*>(data);
-            if (source) source->process(app, source);
-        }
-    }
+    // is computed from it — so the glue is pumped here (pump_glue_until above)
+    // until APP_CMD_INIT_WINDOW has landed. The bootstrap command handler is
+    // the glue's default (none): app->window is set by the glue itself before
+    // it posts the command, so simply draining until it is non-null is the
+    // whole wait. A destroy arriving first ends it and takes the early return
+    // — the activity is going before there is anything to show in it, and the
+    // teardown that follows is the glue's own.
+    pump_glue_until(app, [app] {
+        return app->window != nullptr || app->destroyRequested != 0;
+    });
     if (app->destroyRequested != 0) {
         g_android_app = nullptr;
         return;
@@ -2222,13 +2252,37 @@ void android_main(android_app* app) {
     // WHATEVER ENDED THE GUI, THE ACTIVITY GOES WITH IT. A quit has already
     // asked through GuiPlatform::request_exit and this call is the no-op the
     // one asker makes it; a fatal startup refusal returned before there was a
-    // platform to ask, and this is its ask. Either way the glue is never left
-    // with a live activity and no loop behind it.
+    // platform to ask, and this is its ask. Either way the ask is made before
+    // the wait below, which is the wait for what the ask sets in motion.
     finish_activity_once(app);
 
-    // The GUI is gone; unhook whatever it left and let the glue finish.
+    // The GUI is gone; unhook whatever it left. The handlers going null does
+    // NOT stop the glue answering the framework: android_app_pre_exec_cmd and
+    // android_app_post_exec_cmd still perform every acknowledgement, and
+    // process_input still finishes every event unhandled — which is exactly
+    // what a departing app owes.
     app->onAppCmd     = nullptr;
     app->onInputEvent = nullptr;
     app->userData     = nullptr;
     g_android_app     = nullptr;
+
+    // THE LOOP OUTLIVES THE ACTIVITY, NEVER THE REVERSE. Every lifecycle
+    // callback the framework runs on the UI thread — onPause, onStop,
+    // onInputQueueDestroyed, onNativeWindowDestroyed — writes a command to
+    // this thread and then BLOCKS on the glue's condition until this thread
+    // has acknowledged it. ANativeActivity_finish is asynchronous, so those
+    // callbacks arrive AFTER the GUI has ended, and a loop thread that left
+    // first strands the UI thread in that wait for good: the finishing
+    // window's focus-loss event is never consumed and the system kills the
+    // process ten seconds later (six data_app_anr records on the tablet, all
+    // "Waited 10000ms for FocusEvent(hasFocus=false)", the UI thread in
+    // pthread_cond_wait under NativeActivity.onPause with no loop thread in
+    // the process; reproduced over adb through the fatal-startup road, both
+    // 2026-09-06). So this thread stays and services the glue until the
+    // destroy the finish asked for has landed — which is also the whole
+    // reason the ask above is unconditional. Returning then lets the glue's
+    // own android_app_destroy run, satisfying onDestroy's wait as before; a
+    // destroy already delivered (the system's own road, drain_looper's arm)
+    // leaves the predicate true and this returns at once.
+    pump_glue_until(app, [app] { return app->destroyRequested != 0; });
 }
