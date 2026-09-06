@@ -2,6 +2,7 @@
 
 #include "gui_input.h"
 #include "marker_measure.h"
+#include "value_format.h"
 
 #include <algorithm>
 #include <chrono>
@@ -52,32 +53,92 @@ namespace text_editor {
 // so a field's cap is a storage bound rather than a character count. The names
 // are historical; nothing measures characters anywhere in this module.
 //
-// Maximum characters allowed in `pending`. The cap 52 covers a hypothetical
-// full-double BASE and SCALE in the payload `BASE*SCALE:a.aa` — worst
-// case 23 chars per value (17 significant digits plus point and exponent):
-// 23 + 1 + 23 + 1 + 4 = 52. BASE is pinned to the N.NN grammar (4
-// chars at the bracket ceiling), so committable payloads are far shorter;
-// the generous cap is kept deliberately — it costs nothing and SCALE
-// remains a full double in shortest round-trip form. An operation that
-// would grow the pending past this cap refuses atomically and sets the red
-// state (the whole edit lands or the buffer is untouched); shrinking and
-// non-growing edits are always accepted, so an over-cap pending loaded from
-// a hand-edited file can be trimmed back to canonical form.
-constexpr int kMaxPendingChars = 52;
+// EVERY CAP IS ITS GRAMMAR'S WIDEST SPELLING (architect 2026-09-05): a field
+// whose cap is wider than what it can legally commit advertises longer typing
+// than it allows, which is the truthfulness defect the roster answers. FOUR
+// CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
+// iteration bound, the measure (which takes the load bound from its owner)
+// and the measure paste's offset. THE OTHER THREE ARE POLICY CEILINGS and
+// each says so where it stands: the settings value and the commit title are
+// FREE TEXT with no widest spelling to be tight against, and the BPM bracket
+// has a grammar whose beats field admits leading zeros, so it has no widest
+// spelling either.
+//
+// Maximum bytes allowed in `pending`, and it belongs to the FLAG PAYLOAD
+// editor alone: every other Kind names its own cap below, so this default is
+// what FlagPayload reads and nothing else does.
+//
+// THE DERIVATION. The commit runs `parse_single_canonical_line` — the very
+// parse the load runs (warpmarkers_parse.cpp owns the grammar) — so the
+// widest committable payload is the widest LOADABLE one. The forms are
+// `pass`, `x.yz`, `pass:x.yz`, `N.NN`, `N.NN*SCALE`, `N.NN:x.yz` and
+// `N.NN*SCALE:x.yz`, so the widest is TEMPO + `*` + SCALE + `:` + LABEL:
+//   TEMPO   4 bytes — `4.00`. parse_tempo_cents pins exactly the N.NN
+//           spelling and the bracket pins the integer part to one digit at
+//           kTempoMaxCents; the assert below keeps that honest across a
+//           bracket retune.
+//   SCALE  18 bytes, and this is the term that had to be ANSWERED rather
+//           than assumed, the scale being a full double. THE READER IS NOT
+//           FREE: parse_positive_value's last arm refuses any spelling that
+//           is not the WRITER'S (`format_value_double(v, 4) != s`), and
+//           parse_value_double refuses every alphabetic byte before it. So
+//           no exponent form, no `01.5000`, and no long digit string that
+//           canonicalizes shorter — `1.000000000000000000001` parses and is
+//           then refused for not being its own canonical spelling. What is
+//           left is exactly the shortest round-trip spelling of a double
+//           inside [kScaleMin, kScaleMax] padded to four decimals: one
+//           integer digit, the point, and at most SIXTEEN fraction digits —
+//           sixteen because the bracket's own ulp is at least 2^-53, wider
+//           than 1e-16, so a sixteen-decimal value always sits inside a
+//           double's rounding interval there. The bound is attained, at
+//           `0.5000000000000001`.
+//   LABEL   4 bytes exactly (is_valid_label_format: a lowercase letter, the
+//           dot, two lowercase alphanumerics).
+// 4 + 1 + 18 + 1 + 4 = 28, spelled whole: `4.00*0.5000000000000001:a.aa`.
+// A TIGHT BOUND, not a policy cap. (It was 52 until 2026-09-05, sized for a
+// full-double BASE from before tempo became integer cents pinned to N.NN; the
+// remainder was advertising typing the commit refuses.)
+//
+// An operation that would grow the pending past this cap refuses atomically
+// and sets the red state (the whole edit lands or the buffer is untouched);
+// shrinking and non-growing edits are always accepted, so an over-cap pending
+// seeded from a hand-edited file can be trimmed back to canonical form.
+static_assert(kTempoMaxCents < 1000,
+              "a tempo's integer part no longer fits one digit");
+constexpr int kMaxPendingChars = 28;
 // The ITERATION BOUND editor (a double-click or Enter on one of the two bound
-// cells a flag grows in iteration mode). Holds one signed two-decimal bound;
-// the widest value the walls admit is five bytes (`-3.75`, the clamp window
-// at a base on a tempo wall), and 8 leaves room for the over-wide spellings
-// the commit refuses by name rather than the cap swallowing them as
-// `This field is full`. The FIELD is exactly its cell and never grows
-// (render_flag_editor_box's pin), so a token past the cell's width scrolls
-// under the caret rather than painting over the box beside it.
-constexpr int kMaxPendingCharsIterBound = 8;
+// cells a flag grows in iteration mode). ITS GRAMMAR IS FIXED-WIDTH: a sign,
+// one integer digit, the point, two decimals (format_signed_delta_cents,
+// warpmarkers.h — the sign is the cells' whole syntax). The integer digit is
+// single because the walls the commit and the arrows' step share — the clamp
+// window clamp_iter_bracket_to_tempo_bracket states — hold every bound inside
+// kTempoMaxCents - kTempoMinCents, i.e. 3.75. So `-3.75` is the widest token
+// the field can commit and FIVE BYTES is the cap, a tight bound rather than a
+// policy one; the assert keeps the derivation honest across a bracket retune.
+// (It was 8 until 2026-09-05, left wide so an over-wide spelling would be
+// refused by the commit's own name for it. The sixth character is refused by
+// the field-full card instead, which is the truthful refusal for a field that
+// could never commit one.)
+static_assert(kTempoMaxCents - kTempoMinCents < 1000,
+              "an iteration bound's integer part no longer fits one digit");
+constexpr int kMaxPendingCharsIterBound = 5;
 // BPM popup. `<beats>@[<lo>,<hi>]`: beats a positive int (up to 10
 // digits), lo/hi full doubles in shortest round-trip form (up to 23 chars
 // each): 10 + 2 + 23 + 1 + 23 + 1 = 60.
+//
+// A POLICY CEILING, and it is the one grammar-carrying field that cannot be
+// made tight (recorded 2026-09-05, when the other grammar caps came down to
+// their widest spellings). The bounds ARE pinned to one spelling each —
+// parse_bpm_bracket refuses anything but the bpm writer's form
+// (format_value_double at 0 decimals) inside [kBpmMin, kBpmMax] — but BEATS
+// is read digit by digit with no leading-zero refusal, so `0210` and
+// `000210` commit the same 9999-capped value as `210` and the widest legal
+// spelling is however many bytes the field will hold. The value is
+// session-only and never serialized, which is why the one-spelling
+// discipline was never pressed here.
 constexpr int kMaxPendingCharsBpm = 60;
-// Settings prompt. Sized for the free-text provenance fields (url, notes),
+// Settings prompt. A POLICY CEILING — free text has no widest spelling to be
+// tight against. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
 // bounded by their commit-time validators, not by this cap. 1024 bytes is
 // the editor's growth ceiling: a wider on-disk value still loads, displays,
@@ -97,8 +158,9 @@ constexpr int kMaxPendingCharsBpm = 60;
 constexpr int kMaxPendingCharsSettings = 1024;
 // The history mode's commit-title editor (Ctrl+S while the view stands).
 // Holds the checkpoint's commit message — one line, prefilled with `Update
-// <id>` and free UTF-8 text the user may rewrite. 256 is a generous ceiling,
-// well past the ~50-character summary line a commit title is written to be.
+// <id>` and free UTF-8 text the user may rewrite. A POLICY CEILING — free
+// text has no widest spelling — and 256 is generous, well past the
+// ~50-character summary line a commit title is written to be.
 // (The `h` view's load prompt took the same ceiling until 2026-08-28, when
 // the field-less picker replaced it; that picker retired the next day and the
 // view's `'` raises a plain confirmation now, with nothing to type at all.)
@@ -113,12 +175,15 @@ constexpr int kMaxPendingCharsMeasure =
     static_cast<int>(kMaxMarkerMeasureBytes);
 // The MEASURE PROPAGATE's paste-offset editor (Ctrl+Alt+/). Holds one SIGNED
 // decimal integer — the number of measures to add to every DIRECT measure the
-// paste writes. 6 is exactly the longest legal spelling, `-99999`: the offset
-// is applied to a measure number bracketed at 99999 (marker_measure.h), so an
-// offset outside +/-99999 could not produce an in-bracket result from any
-// in-bracket source and there is nothing longer to type. A tight bound rather
-// than a policy cap, the measure field's own arrangement.
-constexpr int kMaxPendingCharsMeasureOffset = 6;
+// paste writes. 4 is exactly the longest spelling that could produce a result:
+// the offset is applied to a measure number bracketed at kMeasureMaxWhole
+// (marker_measure.h), so an offset outside +/-kMeasureMaxWhole could not
+// carry any in-bracket source to an in-bracket result, and `-999` is four
+// bytes. A tight bound rather than a policy cap, the measure field's own
+// arrangement. (It was 6, `-99999`, and came down with the measure ceiling on
+// 2026-09-05 — architect approval that date for the frozen header the ceiling
+// lives in.)
+constexpr int kMaxPendingCharsMeasureOffset = 4;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap

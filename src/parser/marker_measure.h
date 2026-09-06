@@ -10,7 +10,10 @@
 // succeeds the deleted marker_comment.h, written under the 2026-08-19 grant.
 // THIRD FROZEN REOPEN, architect approval 2026-08-21: the SECTION QUALIFIER
 // retired with the score-video sunset — the retirement record is at the
-// grammar block below.)
+// grammar block below. FOURTH FROZEN REOPEN, architect approval 2026-09-05:
+// THE TWO VOCABULARY CEILINGS CAME DOWN to 999 measures and sixteenths, and
+// the byte bound re-derived with them — the record is at the constants
+// block below.)
 //
 // Every warp and phase-reset marker line may carry a MEASURE REFERENCE,
 // appended to the otherwise whitespace-free canonical line as:
@@ -125,10 +128,31 @@
 // successor down the store, never definition to ref (warpmarkers.h states
 // that separation at the no-cascade-resolver ruling).
 
-// The vocabulary clamps (the absurd-value rule): a measure number and an
-// offset's whole part both bracket at 99999, a fraction's denominator at 99.
-inline constexpr int64_t kMeasureMaxWhole       = 99999;
-inline constexpr int64_t kMeasureMaxDenominator = 99;
+// The vocabulary clamps: a measure number and an offset's whole part both
+// bracket at kMeasureMaxWhole, a fraction's denominator at
+// kMeasureMaxDenominator.
+//
+// THEY ARE THE SCORE'S BOUNDS, NOT ABSURD-VALUE CLAMPS (FOURTH FROZEN
+// REOPEN, architect approval 2026-09-05). They stood at 99999 and 99 from
+// the field's 2026-08-20 rebrand, chosen under the absurd-value rule alone —
+// wide enough that no real number could reach them, which is all a clamp
+// against a stray digit run has to be. The architect ruled them down to what
+// music actually spells: "999 measures is more than any sheet music; the
+// finest fraction I could place a marker on is a sixteenth". The point is
+// truthfulness downstream — the byte bound below, and every editor cap
+// derived from it, now advertise exactly what the grammar can commit rather
+// than room no one can use.
+//
+// THE TIGHTENING IS THE COST, and it is paid the way every grammar
+// tightening in this header is paid: a sidecar carrying `1000`, `+1000` or a
+// denominator past 16 (`1 1/17`) becomes ADVERSARIAL and load-fatal in both
+// binaries from this date, and the measure editor refuses the same values at
+// its commit, through this one judge. No project history carries such a
+// token — the ceilings were never reachable in practice — so the tightening
+// strands nothing and needs no migration, the 2026-08-20 rebrand's own
+// reasoning.
+inline constexpr int64_t kMeasureMaxWhole       = 999;
+inline constexpr int64_t kMeasureMaxDenominator = 16;
 
 // (kMeasureMinSection / kMeasureMaxSection stood here from 2026-08-20 to the
 // 2026-08-21 sunset, with the retired section qualifier — architect approval
@@ -136,13 +160,18 @@ inline constexpr int64_t kMeasureMaxDenominator = 99;
 
 // Maximum measure length in BYTES, shared by both binaries. The grammar is
 // ASCII, so bytes and characters agree. The longest canonical token is the
-// full OFFSET form `+99999 98/99` at 12 bytes — 1 for the sign over the
-// 11-byte `99999 98/99`, which is itself the longest DIRECT form. (The
-// retired section qualifier briefly made a 14-byte `99:99999 98/99` the
-// widest; the cap re-derived down with the 2026-08-21 sunset, architect
-// approval the same day.) Nothing longer can be spelled, so this is a tight
-// bound rather than a policy cap.
-inline constexpr size_t kMaxMarkerMeasureBytes = 12;
+// full OFFSET form `+999 15/16` at 10 bytes — 1 for the sign over the 9-byte
+// `999 15/16`, which is itself the longest DIRECT form: three digits at
+// kMeasureMaxWhole, the single fraction space, and the widest FRACTION,
+// which is five bytes — two digits, the bar, two digits, the denominator
+// bounded at kMeasureMaxDenominator and the numerator under it, reduced
+// (`15/16`, `12/13` and their kin all reach it). Nothing longer can be
+// spelled, so this is a tight bound rather than a policy cap — which is the
+// whole reason the ceilings above are the score's and not a clamp's.
+// (It read 12 for the 99999/99 ceilings, and 14 for the one day the retired
+// section qualifier made `99:99999 98/99` the widest; each re-derivation
+// carries its own grant — architect approval 2026-08-21 and 2026-09-05.)
+inline constexpr size_t kMaxMarkerMeasureBytes = 10;
 
 // The result of splitting one raw marker line. `prefix` is the canonical
 // line the position/payload parsers see; `measure` is the raw measure bytes
@@ -292,7 +321,7 @@ inline bool parse_marker_measure(std::string_view text,
             v.whole = 0;
         } else {
             if (!marker_measure_detail::parse_canonical_uint(
-                    body, kMeasureMaxWhole, 5, v.whole)) {
+                    body, kMeasureMaxWhole, 3, v.whole)) {
                 error_out = v.is_offset
                                 ? "measure offset must be 1.." +
                                       std::to_string(kMeasureMaxWhole)
@@ -306,7 +335,7 @@ inline bool parse_marker_measure(std::string_view text,
     } else {
         // Whole part, exactly one space, fraction.
         if (!marker_measure_detail::parse_canonical_uint(
-                body.substr(0, space), kMeasureMaxWhole, 5, v.whole)) {
+                body.substr(0, space), kMeasureMaxWhole, 3, v.whole)) {
             error_out = v.is_offset ? "measure offset must be 1.." +
                                           std::to_string(kMeasureMaxWhole)
                                     : "measure number must be 1.." +

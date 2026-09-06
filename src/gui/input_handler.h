@@ -3154,7 +3154,7 @@ private:
     // measure_offset_editor_commit: Enter — parse the buffer as one canonical
     // signed integer, run the paste, close on success; red-flash and STAY OPEN
     // on either refusal (a malformed offset, or an offset that would carry a
-    // pasted measure out of the [1, 99999] bracket).
+    // pasted measure out of the [1, kMeasureMaxWhole] bracket).
     // measure_offset_editor_exit_no_commit: the abandon body — Esc's cancel, and
     // Ctrl+Q's through the close road's own step (close_modal_editors_no_commit);
     // the anchor

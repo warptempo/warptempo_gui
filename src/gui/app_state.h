@@ -7843,7 +7843,8 @@ struct AppState {
     // marker index, seated at the open and read once at the commit.
     // Esc abandons with nothing written, and a buffer that is not one canonical
     // signed integer red-flashes rather than pasting — as does an offset that
-    // would carry any pasted measure out of the [1, 99999] bracket, which
+    // would carry any pasted measure out of the [1, kMeasureMaxWhole] bracket,
+    // which
     // refuses the paste WHOLE rather than clamping or partially applying.
     // A dialog modal like the three above, with its own State so the paint
     // regions stay independent.

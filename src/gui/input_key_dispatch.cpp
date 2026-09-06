@@ -2835,7 +2835,7 @@ void GuiInputHandler::measure_offset_editor_exit_no_commit() {
 // written nothing. The second is the more interesting one and it is
 // deliberately not a clamp: an offset that would carry a measure past the
 // bracket is a mis-typed offset, and silently pinning a run of bar numbers to
-// 99999 would be a confident wrong answer.
+// kMeasureMaxWhole would be a confident wrong answer.
 void GuiInputHandler::measure_offset_editor_commit() {
     if (!text_editor::is_active(app.measure_offset_editor)) return;
     const std::string& text = app.measure_offset_editor.pending;
@@ -2847,9 +2847,12 @@ void GuiInputHandler::measure_offset_editor_commit() {
         negative = true;
         digits   = text.substr(1);
     }
-    // At most six digits, so the accumulation below cannot overflow and the
-    // bracket check in the paste is the only bound that matters.
-    if (digits.empty() || digits.size() > 6) ok = false;
+    // The field's own cap (kMaxPendingCharsMeasureOffset, four bytes — the
+    // widest spelling that could carry an in-bracket measure to an in-bracket
+    // result) is what can arrive here, so this is the belt under it: at most
+    // four digits, the accumulation below cannot overflow, and the bracket
+    // check in the paste is the only bound that decides anything.
+    if (digits.empty() || digits.size() > 4) ok = false;
     if (ok && digits.size() > 1 && digits.front() == '0') ok = false;
     int64_t magnitude = 0;
     if (ok) {
