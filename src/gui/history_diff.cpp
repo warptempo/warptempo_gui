@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
+#include <spawn.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -32,7 +33,7 @@
 #include <system_error>
 #include <utility>
 
-// The child's environment is built from ours BEFORE the fork (see
+// The child's environment is built from ours BEFORE THE SPAWN (see
 // run_git_mutate), which needs the process environment by name.
 extern "C" char** environ;
 
@@ -182,69 +183,6 @@ std::string escape_glob(const std::string& s) {
     return out;
 }
 
-// THE EXEC SELF-PIPE — the one witness of "git never ran at all" that survives
-// main()'s SIG_IGN SIGCHLD regime, and SHARED BY BOTH subprocess entry points
-// below (the capture since 2026-08-04, the mutation since the round-2
-// conversions: its own comment used to claim a verdict its implementation could
-// not make, and sharing this was cheaper and honester than narrowing the claim).
-//
-// A pipe is opened with O_CLOEXEC on both ends. The child keeps its write end
-// open across everything it does before exec and writes ONE byte on it only if
-// execvp/execvpe RETURNS — that is, only if git could not be run at all. A
-// successful exec closes the descriptor for it, so the parent's read gets EOF; a
-// failed one gets the byte. The read needs NO waitpid and cannot hang: the only
-// holder of the write end is the child, and it releases it either by exec'ing or
-// by exiting immediately after the write, so the read terminates on every path.
-// The child's own pre-exec failures (a dup2 that will not) write the byte too —
-// "we did not get to run git" is exactly what they mean.
-//
-// THE PARENT READS IT AFTER THE OUTPUT PIPE REACHES EOF, which is the point at
-// which the child has finished with stdout, so the byte — written before the
-// child's own _exit — is already in the pipe by then.
-struct ExecProbe {
-    int fds[2] = {-1, -1};
-
-    bool open_pipe() { return pipe2(fds, O_CLOEXEC) == 0; }
-
-    // Child side. The read end goes at once; the write end carries the one byte
-    // on every path out of the child that is NOT a successful exec.
-    void child_close_read() { close(fds[0]); }
-    void child_give_up() {
-        const char    byte    = 1;
-        const ssize_t ignored = write(fds[1], &byte, 1);
-        (void)ignored;
-        _exit(127);
-    }
-
-    void parent_close_write() { close(fds[1]); }
-
-    // Parent side: true when the child said it could not exec. An unreadable
-    // answer counts as failure — the safe side of this particular question,
-    // since every caller's fallback is to trust a repository observation
-    // instead. Closes the read end.
-    bool parent_exec_failed() {
-        bool failed = false;
-        for (;;) {
-            char          byte = 0;
-            const ssize_t n    = read(fds[0], &byte, 1);
-            if (n > 0) {
-                failed = true;
-                break;
-            }
-            if (n == 0) break;
-            if (errno == EINTR) continue;
-            failed = true;
-            break;
-        }
-        close(fds[0]);
-        return failed;
-    }
-
-    // The one path that does not ask: the mutation's deadline expired, the
-    // child was killed, and the answer is already known to be failure.
-    void parent_drop() { close(fds[0]); }
-};
-
 // Milliseconds on a clock that cannot jump — the deadline's own time base.
 long long monotonic_ms() {
     struct timespec ts{};
@@ -262,22 +200,26 @@ long long monotonic_ms() {
 // pre-flight would read a FAILED `status` as "nothing to commit" and tell the
 // user the checkpoint already carries bytes that are in fact still uncommitted.
 //
-// Failed covers both shapes of not-having-answered: the fork/exec never ran the
-// program at all (detected explicitly — see the self-pipe below), or it ran and
-// reported a non-zero status where that status is obtainable.
+// Failed covers both shapes of not-having-answered: git never ran at all (the
+// spawn's own refusal, or the child's 127 — see run_git_capture below), or it
+// ran and exited nonzero.
 //
-// WHAT `Ran` DOES NOT PROMISE, stated because two callers must know it: under
-// main()'s SIG_IGN SIGCHLD the exit status is usually NOT obtainable (waitpid
-// returns ECHILD), so `Ran` means "git itself was executed" rather than "git
-// succeeded". A git that started and then failed with nothing on stdout — a
-// rejected pathspec, a locked index — lands in Ran with an empty string. So a
-// caller whose question is "did this succeed" needs a witness IN THE OUTPUT, and
-// both of them have one: the commit act's status probe asks with `--branch`,
-// whose header line is emitted only on a successful run, and the
-// load-in-place
-// cross-checks each blob against the byte count the tree listing stated. Neither
-// rests on this enum alone; what the enum adds is the case no output-shaped
-// witness could ever cover, that git never ran.
+// WHAT `Ran` PROMISES, stated because two callers must know it: GIT WAS EXECUTED
+// AND ITS EXIT STATUS WAS ZERO. The status is read at every call — SIGCHLD
+// carries its default disposition, so it is always there to read — and a git
+// that started and then failed with nothing on stdout, a rejected pathspec or a
+// locked index, is Failed here.
+//
+// WHAT `Ran` DOES NOT PROMISE is anything about the OUTPUT: a `log` with no
+// commits, a `rev-parse` that resolved nothing and an `ls-tree` of a tree with
+// no matching path all exit zero and print nothing, so `Ran` with an empty
+// string is an ordinary answer and not a success. A caller whose question is
+// "did this succeed" needs a witness IN THE OUTPUT, and both of them have one:
+// the commit act's status probe asks with `--branch`, whose header line is
+// emitted only on a successful run, and the load-in-place cross-checks each blob
+// against the byte count the tree listing stated. Neither rests on this enum
+// alone; what the enum adds is the case no output-shaped witness could ever
+// cover, that git never ran.
 enum class GitCapture {
     Failed,
     Ran,  // git was executed; `out` is its whole stdout, possibly empty
@@ -310,16 +252,29 @@ enum class GitCapture {
 // carry is an ordinary answer here, not a fault worth printing.
 //
 // DID IT RUN, AND WHAT DID IT SAY — two questions, answered separately (see
-// GitCapture). main() sets SIGCHLD to SIG_IGN so the kernel auto-reaps the
-// fire-and-forget audio players, which also means waitpid() here normally fails
-// with ECHILD and the exit status is simply not obtainable; it is still honoured
-// when it does arrive (a future session leaving the default disposition), and
-// the EXEC SELF-PIPE below covers the case that regime would otherwise hide
-// completely.
+// GitCapture). Both are answered from the CHILD'S EXIT STATUS and its stdout;
+// there is no probe of ours in the child, because there is no code of ours in
+// the child.
 //
-// THE SELF-PIPE covers the case no output-shaped witness could: that git never
-// ran. Its mechanism lives at ExecProbe above, which the mutating entry point
-// shares.
+// THE CHILD IS SPAWNED, NEVER FORKED (2026-09-06, and the mutating entry point
+// below does the same): this process carries several hundred megabytes of
+// virtual address space, and fork() copies its page tables and marks every page
+// copy-on-write, so the GUI thread faulted on its own writes once per git call —
+// a stutter measurable across the startup walk's prefetch, which runs a git per
+// commit. posix_spawnp runs the child under vfork semantics (no page-table copy,
+// no COW) and the parent resumes only once the child has exec'd or failed. The
+// redirections are a FILE-ACTIONS object the spawn applies for us, which is why
+// nothing here has to be async-signal-safe and why the child cannot report
+// anything of its own.
+//
+// COULD-NOT-EXEC HAS TWO SPELLINGS AND ONE VERDICT, and the verdict is what the
+// callers read. glibc reports the exec's own failure as posix_spawnp's nonzero
+// RETURN, reaping the failed child itself — no pid is handed out and nothing
+// here may wait on one. bionic (the tablet) does not: its child `_exit(127)`s,
+// so there the verdict is the EXIT STATUS, readable because SIGCHLD carries its
+// default disposition and unambiguous because git's own failure codes are 1 and
+// 128/129 for the reads below, never 127. Both spellings land on Failed, which
+// is the case no output-shaped witness could ever cover: that git never ran.
 //
 // `root` IS THE CLONE, and it is a parameter rather than a constant since
 // 2026-08-11: it is derived from the loaded source and handed down through every
@@ -342,43 +297,59 @@ GitCapture run_git_capture(const std::string&              root,
     for (std::string& s : full) argv.push_back(const_cast<char*>(s.c_str()));
     argv.push_back(nullptr);
 
+    // BOTH ORIGINAL ENDS ARE CLOEXEC, which is what lets the child side be a
+    // file-actions object with nothing to close by hand: the exec drops them,
+    // while the descriptor the adddup2 puts on stdout is a fresh one that
+    // carries no such flag and so survives into git.
     int fds[2];
-    if (pipe(fds) != 0) return GitCapture::Failed;
-    ExecProbe probe;
-    if (!probe.open_pipe()) {
+    if (pipe2(fds, O_CLOEXEC) != 0) return GitCapture::Failed;
+
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions) != 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return GitCapture::Failed;
+    }
+    posix_spawnattr_t attr;
+    if (posix_spawnattr_init(&attr) != 0) {
+        posix_spawn_file_actions_destroy(&actions);
         close(fds[0]);
         close(fds[1]);
         return GitCapture::Failed;
     }
 
-    const pid_t pid = fork();
-    if (pid < 0) {
-        close(fds[0]);
-        close(fds[1]);
-        probe.parent_close_write();
-        probe.parent_drop();
-        return GitCapture::Failed;
+    // Stdout to the pipe, stderr to /dev/null (the head says why).
+    int rc = posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    if (rc == 0) {
+        rc = posix_spawn_file_actions_addopen(&actions, STDERR_FILENO,
+                                              "/dev/null", O_WRONLY, 0);
     }
-    if (pid == 0) {
-        // Child: stdout to the pipe, stderr discarded, then exec immediately.
-        // Every path out of here that is NOT a successful exec says so on the
-        // self-pipe first.
+    // POSIX_SPAWN_USEVFORK is BIONIC'S SWITCH: without it bionic forks, which is
+    // the whole cost this conversion exists to remove. glibc has used CLONE_VFORK
+    // unconditionally since 2.24 and ignores the flag.
+    if (rc == 0) {
+        rc = posix_spawnattr_setflags(
+            &attr, static_cast<short>(POSIX_SPAWN_USEVFORK));
+    }
+
+    // The environment is inherited whole; this entry point pins nothing (the
+    // mutating one below does, and says why).
+    pid_t pid = -1;
+    if (rc == 0) {
+        rc = posix_spawnp(&pid, "git", &actions, &attr, argv.data(), environ);
+    }
+    posix_spawnattr_destroy(&attr);
+    posix_spawn_file_actions_destroy(&actions);
+
+    // A failed spawn is glibc's could-not-exec spelling and there is no child to
+    // wait for; a failed actions/attr build never got that far. Same verdict.
+    if (rc != 0) {
         close(fds[0]);
-        probe.child_close_read();
-        if (dup2(fds[1], STDOUT_FILENO) < 0) probe.child_give_up();
         close(fds[1]);
-        const int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
-        execvp("git", argv.data());
-        probe.child_give_up();
-        _exit(127);  // child_give_up() does not return; the compiler's proof
+        return GitCapture::Failed;
     }
 
     close(fds[1]);
-    probe.parent_close_write();
     char buf[4096];
     for (;;) {
         const ssize_t n = read(fds[0], buf, sizeof(buf));
@@ -392,16 +363,17 @@ GitCapture run_git_capture(const std::string&              root,
     }
     close(fds[0]);
 
-    // The exec verdict (ExecProbe owns the mechanism).
-    const bool exec_failed = probe.parent_exec_failed();
-
+    // THE STATUS IS THE VERDICT. The child is ours and unreaped and SIGCHLD
+    // carries its default disposition, so the wait answers with our own pid; a
+    // status we could not read is Failed on the same footing as a nonzero one,
+    // since `Ran` promises a zero status and nothing here may promise it blind.
+    // Bionic's could-not-exec arrives here as 127 (see the head).
     int   status = 0;
     pid_t w      = 0;
     do {
         w = waitpid(pid, &status, 0);
     } while (w < 0 && errno == EINTR);
-    if (exec_failed ||
-        (w == pid && (!WIFEXITED(status) || WEXITSTATUS(status) != 0))) {
+    if (w != pid || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         out.clear();
         return GitCapture::Failed;
     }
@@ -458,22 +430,32 @@ bool git_output(const std::string& root, const std::vector<std::string>& args,
 // SUCCESS IS NOT DECIDED HERE, which is the one real difference from the capture
 // helper above. That helper's "ran and produced output" reading is WRONG for
 // these: a failed push produces plenty of output and a successful one may
-// produce none, and the exit status is not obtainable either — main() sets
-// SIGCHLD to SIG_IGN, so waitpid normally fails with ECHILD (the same regime the
-// capture helper documents). So this reports only that the child was STARTED AND
-// RAN TO ITS OWN END — false means it could not be STARTED (the shared ExecProbe
-// says so; before the round-2 conversion this comment claimed that case while the
-// code returned true for it) or that it outlived the deadline below and was
-// killed.
+// produce none. AND THE EXIT STATUS IS NOT THE ACT'S OUTCOME EITHER, which is
+// why this one does not read the status the capture helper lives on: a commit
+// that landed and then tripped a `post-commit` hook exits nonzero with the tip
+// already moved, and a push that exits zero is still proven only by the
+// containment verify. That is the strict model's own reason for deciding every
+// SUCCESS on an OBSERVATION. So this reports only that the child was STARTED AND
+// RAN TO ITS OWN END — false means it could not be STARTED (posix_spawnp
+// refusing, below) or that it outlived the deadline below and was killed.
 //
 // WHAT `false` ACTUALLY COVERS, stated exactly because a caller once believed
-// more of it: THE CHILD COULD NOT BE EXECED, the pipe could not be read, or THE
-// DEADLINE FIRED and the child was killed. THAT IS ALL. It emphatically does NOT
-// mean "git reported failure": THE EXIT STATUS IS UNREADABLE HERE — main()
-// installs SIG_IGN for SIGCHLD, so waitpid answers ECHILD and there is no status
-// to read — so a child that execs, writes its complaint, closes its pipe and
-// exits nonzero inside the deadline returns TRUE. A rejecting pre-commit hook, a
-// refused push, an identity or signing failure all look like success from here.
+// more of it: THE CHILD COULD NOT BE STARTED, the pipe could not be opened, or
+// THE DEADLINE FIRED and the child was killed. THAT IS ALL. It emphatically does
+// NOT mean "git reported failure": THE EXIT STATUS IS READABLE HERE AND IS
+// DELIBERATELY NOT READ, for the reason just given — so a child that execs,
+// writes its complaint, closes its pipe and exits nonzero inside the deadline
+// returns TRUE. A rejecting pre-commit hook, a refused push, an identity or
+// signing failure all look like success from here.
+//
+// ONE ASYMMETRY RIDES ON THAT AND IS RECORDED RATHER THAN PATCHED: on bionic a
+// could-not-exec spells itself as exit 127 (the capture helper's head owns that
+// split), which this deliberately does not read, so a missing git there returns
+// TRUE with an empty `first_line` instead of the started-nothing verdict glibc
+// gives. It costs the act nothing — its successes are observations, and a git
+// that never ran leaves the tip unmoved and the remote without the checkpoint —
+// and the tablet, the only bionic host, carries no git binary at all and greys
+// the checkpoint act.
 //
 // SO `true` MEANS ONLY "git ran to its own end", and no caller may read it as an
 // outcome. The checkpoint act reads it that way and only that way (2026-08-09):
@@ -499,11 +481,11 @@ bool git_output(const std::string& root, const std::vector<std::string>& args,
 // returns: the read loop polls, and expiry SIGKILLs the child (we hold the pid)
 // and returns failure with the timeout as `first_line`.
 //
-// THE ENVIRONMENT IS BUILT BEFORE THE FORK, which is not a style choice. Between
-// fork and exec only async-signal-safe calls are legal, and setenv allocates —
-// so the child gets a finished envp to hand straight to execvpe and does no work
-// of its own. Any inherited GIT_TERMINAL_PROMPT is dropped rather than shadowed,
-// so there is exactly one such entry and no question of which one is read.
+// THE ENVIRONMENT IS BUILT BEFORE THE SPAWN, which is not a style choice: the
+// child runs no code of ours at all, so there is no side on which a setenv could
+// happen — posix_spawnp takes a finished envp and the exec itself installs it.
+// Any inherited GIT_TERMINAL_PROMPT is dropped rather than shadowed, so there is
+// exactly one such entry and no question of which one is read.
 bool run_git_mutate(const std::string&              root,
                     const std::vector<std::string>& args,
                     std::string&                    first_line) {
@@ -539,52 +521,74 @@ bool run_git_mutate(const std::string&              root,
     for (std::string& s : env_storage) envp.push_back(s.data());
     envp.push_back(nullptr);
 
+    // CLOEXEC on both original ends, as in the capture helper: the exec drops
+    // them and the two adddup2'd descriptors are the only ones that reach git,
+    // so no descendant of the child — an ssh, a hook — can hold the write end
+    // open past its own exit.
     int fds[2];
-    if (pipe(fds) != 0) return false;
-    ExecProbe probe;
-    if (!probe.open_pipe()) {
+    if (pipe2(fds, O_CLOEXEC) != 0) return false;
+
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions) != 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return false;
+    }
+    posix_spawnattr_t attr;
+    if (posix_spawnattr_init(&attr) != 0) {
+        posix_spawn_file_actions_destroy(&actions);
         close(fds[0]);
         close(fds[1]);
         return false;
     }
 
-    const pid_t pid = fork();
-    if (pid < 0) {
-        close(fds[0]);
-        close(fds[1]);
-        probe.parent_close_write();
-        probe.parent_drop();
-        return false;
+    // BOTH output streams to the pipe, stdin to /dev/null.
+    int rc = posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    if (rc == 0) {
+        rc = posix_spawn_file_actions_adddup2(&actions, fds[1], STDERR_FILENO);
     }
-    if (pid == 0) {
-        // Child: BOTH output streams to the pipe, stdin to /dev/null, then exec.
-        //
-        // ITS OWN PROCESS GROUP FIRST, so the deadline below has something to
-        // kill that covers the whole act. Git is not a leaf: a push spawns ssh,
-        // and any of the three can run a hook, so killing the git process alone
-        // would leave exactly the thing that was hanging — the ssh, the
-        // credential helper, the hook — orphaned and still holding whatever it
-        // was holding. The child leads the group, so its pid IS the group id and
-        // the parent needs no second handle. (setpgid is a bare syscall, which is
-        // what makes it legal on this side of the fork.)
-        setpgid(0, 0);
+    if (rc == 0) {
+        rc = posix_spawn_file_actions_addopen(&actions, STDIN_FILENO,
+                                              "/dev/null", O_RDONLY, 0);
+    }
+
+    // ITS OWN PROCESS GROUP, so the deadline below has something to kill that
+    // covers the whole act. Git is not a leaf: a push spawns ssh, and any of the
+    // three can run a hook, so killing the git process alone would leave exactly
+    // the thing that was hanging — the ssh, the credential helper, the hook —
+    // orphaned and still holding whatever it was holding. POSIX_SPAWN_SETPGROUP
+    // with a group of 0 makes the child lead its own group, so its pid IS the
+    // group id and the parent needs no second handle; and under vfork semantics
+    // the parent does not resume until the child has exec'd, so the group is
+    // established before any kill of ours can run.
+    //
+    // POSIX_SPAWN_USEVFORK is bionic's switch — see the capture helper.
+    if (rc == 0) {
+        rc = posix_spawnattr_setflags(
+            &attr, static_cast<short>(POSIX_SPAWN_SETPGROUP |
+                                      POSIX_SPAWN_USEVFORK));
+    }
+    if (rc == 0) rc = posix_spawnattr_setpgroup(&attr, 0);
+
+    pid_t pid = -1;
+    if (rc == 0) {
+        rc = posix_spawnp(&pid, "git", &actions, &attr, argv.data(),
+                          envp.data());
+    }
+    posix_spawnattr_destroy(&attr);
+    posix_spawn_file_actions_destroy(&actions);
+
+    // COULD IT BE STARTED AT ALL — glibc's own answer, and no child exists to
+    // wait for on this road. (Bionic answers with the child's 127 instead, which
+    // this function deliberately does not read: see the head.)
+    if (rc != 0) {
         close(fds[0]);
-        probe.child_close_read();
-        if (dup2(fds[1], STDOUT_FILENO) < 0) probe.child_give_up();
-        if (dup2(fds[1], STDERR_FILENO) < 0) probe.child_give_up();
         close(fds[1]);
-        const int devnull = open("/dev/null", O_RDONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDIN_FILENO);
-            close(devnull);
-        }
-        execvpe("git", argv.data(), envp.data());
-        probe.child_give_up();
-        _exit(127);  // child_give_up() does not return; the compiler's proof
+        first_line = "Git could not be started";
+        return false;
     }
 
     close(fds[1]);
-    probe.parent_close_write();
     std::string     out;
     char            buf[4096];
     const long long started = monotonic_ms();
@@ -624,24 +628,29 @@ bool run_git_mutate(const std::string&              root,
         // that a half-finished git would not clean up better on its next run,
         // and TERM is what a hung credential helper is most likely already
         // ignoring. THE WHOLE GROUP goes (the negated pid), not the git process
-        // alone: see the setpgid above. Under SIG_IGN the kernel reaps it.
+        // alone: see the process group above.
+        //
+        // AND THE PARENT REAPS ITS OWN CHILD. SIGCHLD carries its default
+        // disposition, so nothing discards the status for us and an unwaited
+        // child would sit as a zombie until the process exits. The kill is
+        // immediate, so the wait does not block meaningfully; the status is
+        // read only to consume it.
         kill(-pid, SIGKILL);
-        probe.parent_drop();  // the answer is already known: this is a failure
+        int   killed_status = 0;
+        pid_t killed_w      = 0;
+        do {
+            killed_w = waitpid(pid, &killed_status, 0);
+        } while (killed_w < 0 && errno == EINTR);
+        (void)killed_w;
+        (void)killed_status;
         first_line = "Timed out after " +
                      std::to_string(kMutateDeadlineMs / 1000) +
                      " seconds and was killed";
         return false;
     }
 
-    // COULD IT BE STARTED AT ALL — the question the exit status cannot answer
-    // here, and the one this function's `false` has always claimed to cover.
-    if (probe.parent_exec_failed()) {
-        first_line = "Git could not be started";
-        return false;
-    }
-
-    // Reap where the disposition allows it; the status is deliberately unread
-    // (see above), and under SIG_IGN this simply fails with ECHILD.
+    // Reap the child; the status is READABLE and deliberately unread (see the
+    // head — it is not the act's outcome).
     int   status = 0;
     pid_t w      = 0;
     do {
@@ -2259,11 +2268,10 @@ void scan_history_walk(
     }
     // HOW MANY COMMITS TOUCHED THIS PIECE — AND THE WITNESS THAT THE READ RAN.
     // `rev-list --count` prints a number ON SUCCESS, and that is the whole point
-    // of asking it (2026-08-09): exit codes are unreadable in this program
-    // (SIGCHLD is SIG_IGN, so waitpid answers ECHILD), so the capture layer's
-    // standing rule is that a success needs an OUTPUT-SHAPED WITNESS — and a
-    // bare `log` has none, an executed-but-FAILED `log` and a piece with no
-    // checkpoint both saying nothing at all. Reading that silence as the ruled
+    // of asking it (2026-08-09): the capture layer's standing rule is that a
+    // success needs an OUTPUT-SHAPED WITNESS — and a bare `log` has none, since
+    // git_output collapses "could not run" and "ran and said nothing" into the
+    // same false and a piece with no checkpoint says nothing at all. Reading that silence as the ruled
     // empty history would open the view at `0/0` and light Save and commit over
     // a history nothing established was empty. A COUNT cannot be silent: "0" is
     // bytes git printed, and it means the walk ran and found nothing.
@@ -3010,9 +3018,9 @@ namespace {
 // header line FIRST and always, on every successful run — before any entry, and
 // on a clean answer as the whole output. A run that failed emits nothing on
 // stdout at all. So the header's presence is the proof, the lines after it are
-// the answer, and neither is inferred from the other. (The exit status would say
-// the same thing and is not available: main()'s SIG_IGN regime, documented at the
-// capture helper.)
+// the answer, and neither is inferred from the other. (The exit status says the
+// same thing and the capture layer does read it; the header is asked for anyway,
+// because its SECOND job below is one no exit status could do.)
 //
 // THE HEADER IS ALSO THE BINDING, which is the second thing `--branch` buys and
 // the one that keeps this probe honest about WHICH BRANCH it just answered for.
@@ -3156,9 +3164,8 @@ std::string current_branch_name(const std::string& repo_root) {
 // commit while the checkpoint rides along underneath as an ancestor.
 //
 // THREE ANSWERS, BECAUSE "COULD NOT ASK" IS NOT "NO" AND MUST NEVER BE "YES".
-// The exit status is unobtainable (main()'s SIG_IGN regime, documented at the
-// capture helper), so the answer has to be legible in the OUTPUT — and the
-// output shape is the whole design here. The older form asked
+// The answer is read out of the OUTPUT — and the output shape is the whole
+// design here. The older form asked
 // `rev-list --max-count=1 <sha> ^<tip>` and read SILENCE as containment: git
 // printing nothing meant reachable. But a run that ran and FAILED prints nothing
 // on stdout either, so every failure read as a confirmed containment — the one
@@ -3489,9 +3496,9 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // paths.
     //
     // THE TIP IS READ FIRST, because the commit's SUCCESS is an observation like
-    // every other success in this act. run_git_mutate CANNOT SEE A CHILD'S EXIT
-    // STATUS AT ALL (the SIGCHLD disposition makes waitpid answer ECHILD — its
-    // own header states exactly what its `false` covers), so a `git commit` that
+    // every other success in this act. run_git_mutate DOES NOT READ A CHILD'S
+    // EXIT STATUS — deliberately, the status not being the act's outcome; its
+    // own header states exactly what its `false` covers — so a `git commit` that
     // exits nonzero WITHOUT creating a commit — a rejecting pre-commit hook, an
     // identity or signing failure — comes back TRUE. Believing it would read the
     // UNMOVED tip as the checkpoint, push that old commit, observe the remote

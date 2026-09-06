@@ -33,6 +33,7 @@
                                    // has other callers here)
 
 #include <fcntl.h>
+#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -48,6 +49,10 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+// The trashed deletion's child inherits our environment whole (gio needs the
+// session bus address to reach gvfs), and posix_spawnp takes it by name.
+extern "C" char** environ;
 
 namespace {
 
@@ -109,16 +114,17 @@ constexpr const char* kSyncRunning =
 // WHOLE, so a restore brings back one entry rather than a scatter of files.
 //
 // THE VERDICT IS AN OBSERVATION OF THE FILESYSTEM rather than the child's exit
-// status, for the reason main()'s SIG_IGN SIGCHLD makes unavoidable: under that
-// disposition waitpid returns ECHILD and the status is simply not obtainable
-// (the git runners in history_diff.cpp are written to the same regime, and
-// their comments own the reasoning). The wait still runs — it is what orders
-// the observation after the child — and the status is HONOURED when it does
-// arrive, a future session leaving the default disposition; what decides the
-// ordinary case is that the directory is no longer there. That one witness
-// covers every shape the caller's fallback exists for: gio absent (execvp
-// returns and the child _exit's), gio refusing (an unsupported filesystem, no
-// gvfs available), a fork that never happened.
+// status, and that is a choice rather than a limitation: the act's question is
+// whether the folder is GONE, which is not the question gio's exit code answers
+// (the git runners in history_diff.cpp split the same way for the same reason,
+// and their comments own it). The wait still runs — it is what orders the
+// observation after the child, and it is also what keeps the child from sitting
+// as a zombie, SIGCHLD carrying its default disposition — and the status IS
+// honoured as a fast negative; what decides the ordinary case is that the
+// directory is no longer there. That one witness covers every shape the
+// caller's fallback exists for: gio absent (posix_spawnp refuses outright on
+// glibc; on bionic the child exits 127), gio refusing (an unsupported
+// filesystem, no gvfs available), a spawn that never happened at all.
 //
 // THE WITNESS ANSWERS ONLY A CONFIRMED ABSENCE, which is why the error_code is
 // read rather than discarded: std::filesystem::exists returns false both when
@@ -140,19 +146,37 @@ bool trash_directory(const std::filesystem::path& dir) {
                     const_cast<char*>("--"),  const_cast<char*>(path.c_str()),
                     nullptr};
 
-    const pid_t pid = fork();
-    if (pid < 0) return false;
-    if (pid == 0) {
-        // Child: nothing between here and exec that is not async-signal-safe.
-        const int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDOUT_FILENO);
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
-        execvp("gio", argv);
-        _exit(127);
+    // posix_spawnp, never fork(): the GUI carries several hundred megabytes of
+    // virtual address space and a fork would copy its page tables and mark every
+    // page copy-on-write, a cost the product stopped paying on 2026-09-06 (the
+    // capture helper in history_diff.cpp owns the reasoning and the measurement).
+    // The child runs no code of ours — the two /dev/null redirections are a
+    // file-actions object the spawn applies — so nothing here has to be
+    // async-signal-safe. POSIX_SPAWN_USEVFORK is bionic's switch; glibc has used
+    // CLONE_VFORK unconditionally since 2.24 and ignores the flag.
+    posix_spawn_file_actions_t actions;
+    if (posix_spawn_file_actions_init(&actions) != 0) return false;
+    posix_spawnattr_t attr;
+    if (posix_spawnattr_init(&attr) != 0) {
+        posix_spawn_file_actions_destroy(&actions);
+        return false;
     }
+    int rc = posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO,
+                                              "/dev/null", O_WRONLY, 0);
+    if (rc == 0) {
+        rc = posix_spawn_file_actions_addopen(&actions, STDERR_FILENO,
+                                              "/dev/null", O_WRONLY, 0);
+    }
+    if (rc == 0) {
+        rc = posix_spawnattr_setflags(
+            &attr, static_cast<short>(POSIX_SPAWN_USEVFORK));
+    }
+
+    pid_t pid = -1;
+    if (rc == 0) rc = posix_spawnp(&pid, "gio", &actions, &attr, argv, environ);
+    posix_spawnattr_destroy(&attr);
+    posix_spawn_file_actions_destroy(&actions);
+    if (rc != 0) return false;
 
     int   status = 0;
     pid_t w      = 0;

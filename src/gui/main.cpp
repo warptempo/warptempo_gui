@@ -3127,27 +3127,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 int gui_main(const char* argument) {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
-    // Auto-reap the fire-and-forget children the GUI launches. Ignoring SIGCHLD
-    // makes the kernel discard child exit status so a detached child never
-    // lingers as a zombie; set once here, never per-launch.
-    //
-    // THE WHOLE ROSTER OF FORKING SUBSYSTEMS, and every one of them is written
-    // TO this disposition rather than against it (the external audio player
-    // `l` used to spawn left the roster 2026-08-28 — `l` now plays a render
-    // in-process through the render player, render_player.h):
-    //   * THE HISTORY MODE (history_diff.cpp), which runs git SYNCHRONOUSLY
-    //     through two fenced entry points — reads for the diff and the walk,
-    //     and the commit act's `add`/`commit`/`push` — and, because this
-    //     disposition makes waitpid return ECHILD, decides nothing from child
-    //     status: a read reports whether it RAN (an exec self-pipe) and what it
-    //     said, and the commit act's verdicts are observations of the
-    //     repository afterwards.
-    //   * THE TRASHED DELETION's `gio trash` (trash_directory,
-    //     input_key_dispatch.cpp), whose verdict is likewise an observation of
-    //     the filesystem rather than an exit code.
-    // Each helper's own comment owns its reasoning; what matters here is that
-    // none of them depends on the default disposition being restored.
-    std::signal(SIGCHLD, SIG_IGN);
+    // (NO SIGCHLD DISPOSITION HERE. SIG_IGN stood at this point until
+    // 2026-09-06 to auto-reap fire-and-forget children; the last such child —
+    // the external audio player `l` used to spawn — left the roster 2026-08-28,
+    // and the three spawners that remain (git's two fenced entry points in
+    // history_diff.cpp, `gio trash` in input_key_dispatch.cpp) each wait on
+    // their own child. The DEFAULT disposition is what makes an exit status
+    // readable, which is how the capture helper tells a git that could not be
+    // exec'd from one that ran — see its head.)
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
     // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is the
@@ -3159,12 +3146,11 @@ int gui_main(const char* argument) {
     // (abandon the transfer, close the fd, no state to unwind). libjack's
     // server socket is the same shape and inherits the same protection — it has
     // no SIGPIPE-dependent behaviour of its own. THE CHILDREN INHERIT IT: an
-    // ignored disposition survives exec, and the roster's two spawners (git
-    // through history_diff.cpp, gio through trash_directory) run the child
-    // with the parent reading its output to the end or discarding it, so the
-    // child never meets a closed pipe. (The one spawner that reset SIGPIPE
-    // and SIGCHLD to default for its child — the external audio player's —
-    // retired 2026-08-28 with the `l` spawn.)
+    // ignored disposition survives exec and posix_spawn resets nothing of its
+    // own here (no POSIX_SPAWN_SETSIGDEF in either spawner's attributes), and
+    // the roster's two spawners (git through history_diff.cpp, gio through
+    // trash_directory) run the child with the parent reading its output to the
+    // end or discarding it, so the child never meets a closed pipe.
     std::signal(SIGPIPE, SIG_IGN);
 
     // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
