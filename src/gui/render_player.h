@@ -268,7 +268,8 @@ struct GuiInputHandler;
 // road — so the ordinary on_key dispatch runs and there is no second dispatch
 // road for keys. THREE COMMAND FAMILIES ACT DIRECT instead of pressing
 // anything, and the table at the declaration owns why: SeekTo (no keysym
-// carries an absolute position), the DIRECTION-NAMED play/pause family, which
+// carries an absolute position), the PAUSE-SIDE family — Pause and the two
+// focus losses, Play having left it 2026-09-07 — which
 // since R6 must reach the transport past Space's highlight fork
 // (transport_toggle_act), and — since the player's Stop key retired
 // 2026-09-01 — STOP, which composes that same toggle with a seek to the top;
@@ -409,17 +410,21 @@ struct GuiRenderPlayer {
     // is the three-arm table above (LIVE pause / PAUSED resume / IDLE the item
     // from its start, and nothing with no item) and reads no highlight at all.
     //
-    // TWO CALLERS, and the split between them is by NAME: play_button_act
-    // calls it as its tail, so Space, the Play button and the car's undivided
-    // PlayPause keep the whole highlight-driven act; and on_media_command's
-    // DIRECTION-NAMED arms — Play, Pause, FocusLost, FocusLostTransient —
-    // call it DIRECTLY instead of synthesizing Space, because a direction is a
-    // claim about the transport alone. Without that split R6's highlight arm
-    // would have let a focus loss START a walked-to row instead of pausing
-    // what sounds (R40's bug from the car's side). It is a direct act like
-    // SeekTo, and like SeekTo it clears no modal ring — the ring clear belongs
-    // to the key-synthesis lambda, whose membership is every kind that presses
-    // a key and no other.
+    // TWO CALLERS (re-grepped 2026-09-07), and the split between them is by
+    // NAME: play_button_act calls it as its tail, so Space, the Play button,
+    // the car's undivided PlayPause AND THE HEAD UNIT'S OWN PLAY keep the
+    // whole highlight-driven act; and on_media_command's PAUSE-SIDE arms —
+    // Pause, FocusLost/FocusLostTransient, and Stop's leading pause — call it
+    // DIRECTLY instead of synthesizing Space, three call sites in that one
+    // function, because a claim that something must STOP sounding is a claim
+    // about the transport alone. Without that split R6's highlight arm would
+    // have let a focus loss START a walked-to row instead of pausing what
+    // sounds (R40's bug from the car's side). PLAY LEFT THIS LIST 2026-09-07
+    // (the architect, from the car): R40's bug was never on the play side,
+    // and a Play that read no band could start nothing at all with nothing
+    // bound. It is a direct act like SeekTo, and like SeekTo it clears no
+    // modal ring — the ring clear belongs to the key-synthesis lambda, whose
+    // membership is every kind that presses a key and no other.
     void transport_toggle_act();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item.
@@ -541,9 +546,10 @@ struct GuiRenderPlayer {
     // off (update_modal_dialog_hover). So the ring is CLEARED before any key
     // is synthesized, in the synthesis road itself, which is what makes the
     // membership exactly "every command kind that synthesizes a key" — the
-    // DIRECT acts do not take it (SeekTo, the directional family's
+    // DIRECT acts do not take it (SeekTo, the PAUSE-side family's
     // transport toggle since the round-B conversion, and Stop since the
-    // player's stop key retired 2026-09-01), pressing no button
+    // player's stop key retired 2026-09-01 — Play left that family
+    // 2026-09-07 and presses Space, so it TAKES the clear), pressing no button
     // because they press no key, and a kind that presses nothing (FocusGained,
     // a state-gated no-op) damages nothing. The clear
     // is dispatch_modal_dialog_editor_act's own three writes: the one owner
@@ -552,22 +558,30 @@ struct GuiRenderPlayer {
     // AppState::modal_dialog_key_pressed), then modal_dialog_focus = -1 and
     // modal_dialog_focus_active = false, damaging the modal box.
     //
-    // AN UNDIVIDED COMMAND TAKES THE WHOLE ACT, A DIRECTION-NAMED ONE TAKES
-    // THE TRANSPORT ALONE (2026-08-31, the round-B conversion). Until R6 the
-    // two were the same thing, Space having been a transport-only toggle; R6
-    // put the highlight in front of it, so a Pause or a focus loss sent as a
+    // AN UNDIVIDED COMMAND TAKES THE WHOLE ACT, AND SO DOES PLAY; A PAUSE-SIDE
+    // DIRECTION TAKES THE TRANSPORT ALONE (2026-08-31, the round-B conversion;
+    // narrowed 2026-09-07). Until R6 the undivided and the directional were
+    // the same thing, Space having been a transport-only toggle; R6 put the
+    // highlight in front of it, so a Pause or a focus loss sent as a
     // synthesized Space would open a folder or start a walked-to row instead
-    // of pausing what sounds. PlayPause, which says "the other one", still
-    // takes the key and inherits every act Space has; Play, Pause and the two
-    // focus losses call transport_toggle_act DIRECT — the transport's own
-    // three-arm tail, past the highlight — joining SeekTo as a direct act with
-    // no keysym behind it and, like SeekTo, taking no ring clear.
+    // of pausing what sounds. PlayPause, which says "the other one", takes the
+    // key and inherits every act Space has, AND SO DOES PLAY since 2026-09-07
+    // (the architect, from the car: the head unit's Play IS the tablet's Play
+    // button — R40's bug was a pause-side bug, and a Play past the band could
+    // start nothing at all with nothing bound, which is where Up and a fresh
+    // open() leave the player). Pause, the two focus losses and Stop's leading
+    // pause call transport_toggle_act DIRECT — the transport's own three-arm
+    // tail, past the highlight — joining SeekTo as a direct act with no keysym
+    // behind it and, like SeekTo, taking no ring clear.
     //
     // THE TABLE (design §3, R6): PlayPause -> Space UNCONDITIONALLY (the
     // undivided toggle key, which the sliver maps itself rather than letting
     // the framework split it — gui_media.h; Space is play_button_act whole, so
     // the key and the act say the same thing and no gate belongs between
-    // them); Play -> THE TRANSPORT TOGGLE ONLY WITH THE TRANSPORT DOWN; Pause,
+    // them); Play -> SPACE ONLY WITH THE TRANSPORT DOWN, so a head unit's Play
+    // is the tablet's Play button whole (a highlighted folder OPENS, a
+    // highlighted other wav PLAYS, the item's own row takes the transport
+    // tail); Pause,
     // FocusLost and FocusLostTransient -> THE TRANSPORT TOGGLE ONLY WITH THE
     // TRANSPORT LIVE (a focus loss pauses, ALWAYS, Android's one imposed
     // interrupt);
@@ -577,11 +591,12 @@ struct GuiRenderPlayer {
     // display believes and a display that has drifted would otherwise send
     // the already-true verb forever, silently dropped. The state does not
     // move, so the push is the last edge's own said again. AND A PASSED GATE
-    // IS NOT ENOUGH: Play's act has refusals of its own beneath the gate —
-    // the player resting with NOTHING BOUND, where Up and a fresh open() leave
-    // it — so that arm asks the RESULT (a started transport is LIVE and has
-    // published from the play road already) and pushes the unchanged truth
-    // otherwise, rather than restating the act's conditions. THE FOCUS LOSSES
+    // IS NOT ENOUGH: the act Play now presses may start nothing — it may OPEN
+    // the highlighted folder, or refuse outright with NOTHING BOUND, where Up
+    // and a fresh open() leave the player — so that arm asks the RESULT (a
+    // started transport is LIVE and has published from the play road already)
+    // and pushes the unchanged truth otherwise, rather than restating the
+    // act's conditions. THE FOCUS LOSSES
     // STAY SILENT — an imposed interrupt carries no display belief to
     // correct — and Pause has an arm of its own for exactly that split;
     // STOP -> PAUSE AND THEN HOME, direct (architect 2026-09-01,
@@ -603,17 +618,18 @@ struct GuiRenderPlayer {
     // is a track change on every road and in every transport state, and this
     // arm asks the act's own wall before it presses: at the folder's last wav
     // the press changes nothing, so it publishes instead — a re-publish on a
-    // refusal, the directional arms' own rule);
+    // refusal, the pressed directions' own rule);
     // FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
-    // posture; the user presses play). The state gate on the DIRECTIONAL
-    // play/pause family is a SEMANTIC PRE-FILTER, not a second dispatch: the
+    // posture; the user presses play). The state gate on Play and on the
+    // PAUSE-SIDE family is a SEMANTIC PRE-FILTER, not a second dispatch: the
     // transport toggle is a toggle, and a head unit saying "play" to a live
     // transport must not pause it, so the gate decides whether the act runs.
     //
-    // THE ROAD'S DIRECT ACTS: the directional family's transport toggle
-    // above, Stop's composition of that toggle with seek_to(0), and SeekTo,
+    // THE ROAD'S DIRECT ACTS: the PAUSE-side family's transport toggle
+    // above (Pause and the two focus losses, Play having left it 2026-09-07),
+    // Stop's composition of that toggle with seek_to(0), and SeekTo,
     // which calls seek_to(frame) DIRECT because no keysym
     // carries an absolute position — the seeks the keys
     // bind are relative (Left / Right / Home). Its milliseconds are clamped
@@ -649,11 +665,13 @@ struct GuiRenderPlayer {
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
     // seek);
-    // on_media_command's FOUR REFUSAL ARMS — a Play said to a live transport,
+    // on_media_command's FOUR REFUSAL ARMS, re-grepped 2026-09-07 and still
+    // four — a Play said to a live transport,
     // a Pause said to a resting one and a Next at the item folder's last wav
-    // (2026-09-04), plus a Play whose GATE PASSED and whose ACT could not
-    // start anything, the player resting with nothing bound where Up and a
-    // fresh open() leave it: the state has not moved, so each pushes the
+    // (2026-09-04), plus a Play whose GATE PASSED and whose ACT started no
+    // transport, having OPENED the highlighted folder or refused outright with
+    // nothing bound, where Up and a
+    // fresh open() leave the player: the state has not moved, so each pushes the
     // standing one AS AN ANSWER TO THE PRESS, which is what keeps a head unit
     // whose display has drifted from sending the same dead verb forever (the
     // reasoning is at those arms; the focus losses are not among them); and

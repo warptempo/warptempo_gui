@@ -14,15 +14,19 @@
 //
 // A COMMAND IS TRANSLATED INTO THE PLAYER'S OWN KEYS, never dispatched on a
 // second key road (GuiRenderPlayer::on_media_command, render_player.h): the
-// undivided toggle and the skip/relative-seek buttons are chords the player
-// already binds, so the ordinary on_key dispatch runs and the mode's refusals,
-// its gesture-modal swallow and its ring hold exactly as for a key. THREE
-// FAMILIES ACT DIRECT instead of pressing anything — SeekTo, whose absolute
-// position no keysym carries; the DIRECTION-NAMED Play, Pause, FocusLost and
-// FocusLostTransient, which must reach the transport past Space's highlight
-// fork; and Stop, which composes that same toggle with a seek to the top — and
-// a direct act inherits none of the synthesized key's road, the ring clear
-// included. The table at on_media_command owns each arm's reason.
+// undivided toggle, PLAY, and the skip/relative-seek buttons are chords the
+// player already binds, so the ordinary on_key dispatch runs and the mode's
+// refusals, its gesture-modal swallow and its ring hold exactly as for a key —
+// PLAY PRESSES SPACE since 2026-09-07 (the architect, from the car: the head
+// unit's Play IS the tablet's Play button, band and all, the Accord carrying
+// no key that could walk that band). THREE FAMILIES ACT DIRECT instead of
+// pressing anything — SeekTo, whose absolute position no keysym carries; the
+// PAUSE-SIDE Pause, FocusLost and FocusLostTransient, which must reach the
+// transport past Space's highlight fork so that a claim to STOP sounding
+// cannot start a walked-to row; and Stop, which composes that same toggle with
+// a seek to the top — and a direct act inherits none of the synthesized key's
+// road, the ring clear included. The table at on_media_command owns each arm's
+// reason.
 
 struct GuiMediaCommand {
     // THE KIND TABLE IS SHARED WITH THE JAVA SLIVER BY NUMBER: each enumerator's

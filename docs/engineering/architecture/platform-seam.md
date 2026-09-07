@@ -947,7 +947,10 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   release, under `kCarStableCodeBase` = 1000 (recorded beside the keyboard's
   `kStableCodeBase`), so the ordinary `on_key` dispatch runs — no second road;
   the DIRECT ACTS take no key at all, `SeekTo` among them because no keysym
-  carries an absolute position. (The head unit's STOP became a real stop on
+  carries an absolute position; they are the PAUSE SIDE — Pause, the two focus
+  losses, `Stop`'s leading pause — plus `SeekTo`, the head unit's PLAY having
+  joined the key road on 2026-09-07 so that it is the tablet's Play button
+  whole. (The head unit's STOP became a real stop on
   2026-08-28, R36 — the player's own Stop key rather than the pause it had
   been mapped to — and became PAUSE AND THEN HOME on 2026-09-01, a direct act,
   when that key and its button retired; the mapping table is
@@ -979,8 +982,9 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   and playback proceeding (the stream is already running). A LOSS is forwarded
   down as `FocusLost` / `FocusLostTransient` and pauses the player — through
   its TRANSPORT DIRECTLY since 2026-08-31 rather than through the key road, a
-  direction-named command acting on the transport alone now that Space reads
-  the band first (render-player.md's car section owns the split); it is
+  PAUSE-SIDE command acting on the transport alone now that Space reads
+  the band first (the head unit's Play left that family on 2026-09-07 and
+  presses Space; render-player.md's car section owns the split); it is
   "Android's one imposed interrupt", and it always pauses. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
   default, so a navigation prompt ducks rather than pauses — and THE LISTENER
