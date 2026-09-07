@@ -15,18 +15,23 @@
 // A COMMAND IS TRANSLATED INTO THE PLAYER'S OWN KEYS, never dispatched on a
 // second key road (GuiRenderPlayer::on_media_command, render_player.h): the
 // undivided toggle, PLAY, and the skip/relative-seek buttons are chords the
-// player already binds, so the ordinary on_key dispatch runs and the mode's
-// refusals, its gesture-modal swallow and its ring hold exactly as for a key —
-// PLAY PRESSES SPACE since 2026-09-07 (the architect, from the car: the head
-// unit's Play IS the tablet's Play button, band and all, the Accord carrying
-// no key that could walk that band). THREE FAMILIES ACT DIRECT instead of
-// pressing anything — SeekTo, whose absolute position no keysym carries; the
-// PAUSE-SIDE Pause, FocusLost and FocusLostTransient, which must reach the
-// transport past Space's highlight fork so that a claim to STOP sounding
-// cannot start a walked-to row; and Stop, which composes that same toggle with
-// a seek to the top — and a direct act inherits none of the synthesized key's
-// road, the ring clear included. The table at on_media_command owns each arm's
-// reason.
+// player already binds, so THE MEDIA ROAD'S OWN PRESS LAMBDA CLEARS THE MODAL
+// RING FIRST (modal_dialog_focus, its active bit and the input core's pending
+// modal press — a car button is not a keyboard walking the modal row's ring,
+// and a bare Space or Enter on a ring-focused button is that button's press,
+// so a synthesized Space must not become one) and ONLY THEN runs the ordinary
+// on_key dispatch, so the synthesized key inherits the mode's refusals and its
+// gesture-modal swallow exactly as a key would — PLAY PRESSES SPACE since
+// 2026-09-07 (the architect, from the car: the head unit's Play IS the
+// tablet's Play button, band and all, the Accord carrying no key that could
+// walk that band). THREE FAMILIES ACT DIRECT instead of pressing anything —
+// SeekTo, whose absolute position no keysym carries; the PAUSE-SIDE Pause,
+// FocusLost and FocusLostTransient, which must reach the transport past
+// Space's highlight fork so that a claim to STOP sounding cannot start a
+// walked-to row; and Stop, which composes that same toggle with a seek to the
+// top — and a direct act touches no ring at all: it clears none and inherits
+// none of the synthesized key's road. The table at on_media_command owns each
+// arm's reason.
 
 struct GuiMediaCommand {
     // THE KIND TABLE IS SHARED WITH THE JAVA SLIVER BY NUMBER: each enumerator's
