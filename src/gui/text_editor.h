@@ -261,13 +261,17 @@ enum class Kind {
 // opener can forget to take an id, and each new dialog editor has inherited
 // the identity for free — the commit-title editor in 2026-08-07 and the
 // measure paste-offset editor in 2026-08-20, neither touching this counter.
-// THE THREE SURFACES THAT ARE NOT EDITORS take their ids from this same
-// counter at their own one raise route each — the PROMPT (PromptState::present,
-// app_state.h), the RENDER PLAYER (GuiRenderPlayer::open) and the PICKER
-// (GuiInputHandler::open_project_picker, through
-// AppState::Picker) — so the ids never collide across the classes and one
-// integer compare answers "is this published geometry the surface that owns
-// input right now" (the doctrine and the comparison's one owner are at
+// THE SURFACES THAT ARE NOT EDITORS take their ids from this same counter at
+// their own one raise route each — every non-editor member of
+// AppState::ModalDialogOwner (app_state.h), which is the modal surfaces' ONE
+// authoritative enumeration and where a new one is added: the PROMPT
+// (PromptState::present, app_state.h), the RENDER PLAYER
+// (GuiRenderPlayer::open), the PICKER (GuiInputHandler::open_project_picker)
+// and, since 2026-09-03, the AV SYNC STATS PANEL
+// (GuiInputHandler::open_av_sync_stats, the open half of the Shift+L toggle).
+// So the ids never collide across the classes and one integer compare answers
+// "is this published geometry the surface that owns input right now" (the
+// doctrine and the comparison's one owner are at
 // AppState::ModalDialogGeometry and
 // GuiInputHandler::modal_dialog_stash_current).
 //

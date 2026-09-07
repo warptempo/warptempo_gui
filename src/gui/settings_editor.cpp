@@ -650,17 +650,18 @@ void GuiSettingsEditor::commit() {
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        // The path names its BASENAME on the card, the stack's own rule
-        // (messaging.md), and the stderr line has always named the same.
+        // The path names its BASENAME on the card, SINGLE-QUOTED as every
+        // name is (messaging.md), and the stderr line has always named the
+        // same.
         // ONE CLAUSE AND NO INSTRUCTION AFTER IT (2026-09-01, the
         // capitalization sweep's sentence shape): the reason IS the message,
         // the grid-iterations cap card's own rule. It closed with "; choose a
         // different title" until that day.
         const std::string refusal =
             "Settings edit rejected: this would make the render output "
-            "overwrite the source file (" +
+            "overwrite the source file '" +
             std::filesystem::path(app.source_audio_path).filename().string() +
-            ")";
+            "'";
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;

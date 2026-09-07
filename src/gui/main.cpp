@@ -485,11 +485,10 @@ int top_strip_h(const AppState& a) {
 // The BOTTOM strip's public height INCLUDES GAP 2 (2026-08-12: the row
 // unification made this the blank foot below the row, commit B moved the blank
 // above it): it is the distance from the waveform bottom to the window bottom,
-// which is what every consumer actually asks of it —
-// bottom_strip_area then spans the blank band (its damage covering it is
-// correct: the band is repainted window ground), and waveform_area's
-// h - top - bottom arithmetic yields the CLAMPED, CENTERED waveform height with
-// no second expression.
+// which is what every consumer actually asks of it — the blank band is
+// repainted in the window ground, and waveform_area's h - top - bottom
+// arithmetic yields the CLAMPED, CENTERED waveform height with no second
+// expression.
 int bottom_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -500,13 +499,6 @@ GuiRect top_strip_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     return GuiRect{0, 0, w, top_strip_h(a)};
-}
-
-GuiRect bottom_strip_area(const AppState& a) {
-    int w = a.width, h = a.height;
-    clamp_dims(w, h);
-    const int sh = bottom_strip_h(a);
-    return GuiRect{0, h - sh, w, sh};
 }
 
 GuiRect waveform_area(const AppState& a) {

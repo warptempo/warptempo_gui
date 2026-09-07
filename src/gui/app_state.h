@@ -9162,7 +9162,6 @@ int     top_strip_h(const AppState& a);
 int     bottom_strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
-GuiRect bottom_strip_area(const AppState& a);
 // One shared lane-rect helper for every strip lane (see the layout contract at
 // its definition in main.cpp). lane_from_window_edge indexes from the strip's
 // window edge, 0 = edge-most. The named lane accessors below delegate to it.

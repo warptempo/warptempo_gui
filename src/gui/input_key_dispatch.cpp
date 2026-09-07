@@ -748,20 +748,18 @@ void GuiInputHandler::close_history_mode() {
     //
     // THE LOAD-IN-PLACE CLOSERS PAY A REDUNDANT REBUILD HERE and are
     // deliberately not special-cased: each calls this closer on the first line
-    // past its last refusal and then rebuilds again at its own tail, over the top
-    // of this — the same "not wasted either" reasoning the restore above carries
-    // (which is where the per-act membership and the band difference between them
-    // live), at the price of one plate render on a keypress that is already
-    // loading a state.
+    // past its last refusal and then rebuilds again at its own tail, over the
+    // top of this, at the price of one plate render on a keypress that is
+    // already loading a state — not wasted either, since the press is loading a
+    // whole state and the second rebuild is what publishes it.
     republish_history_lane_now();
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
     // with it, and row 8's state cell rewrites its `n/N shortsha` walk line.
     // Narrow damage would have to know all three, and none of them is worth a
-    // rect. It
-    // covers the restore's and the republication's own damage too, which is why
-    // both above emit theirs and nothing here has to widen for them.
+    // rect. It covers the republication's own damage too, which is why the
+    // rebuild above emits its own and nothing here has to widen for it.
     viewport.invalidate_all();
 
     // (THE DEFERRED PREFETCH KICK'S FLUSH stood here from 2026-08-07 and is
