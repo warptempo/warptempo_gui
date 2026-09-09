@@ -202,12 +202,20 @@ inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 // the flag alone at accent_for_focus, paint_handler.cpp, and the activation
 // hook damages whichever modal row stands). It is the FOURTH reader class of
 // AppState::window_activated after rows 1 and 2 (the ground) and the scrub
-// (its played groove). WHAT IT DOES NOT TOUCH: the hover faces on either
-// surface. A hover is a promise that the pointer can act, and a pointer over
-// an unfocused window still can — so kFolderRowHover, kFolderRowHoverOutline,
-// kFolderRowHoverSelected and the modal row's hovered / armed / pressed
-// accents all keep the live blue. The icon row's lamps, the tab row, the view
-// bar and the flag editor's selection band are outside the ruling entirely.
+// (its played groove) — AND THE SELECTED TAB'S CAP IS THE FIFTH since
+// 2026-09-09 (architect, from the third PCManFM-Qt/Breeze crop of the top
+// strip relayout: the unfocused window's selected tab wears EXACTLY this
+// value across its 3px cap, #1b4155, the same Breeze role), read through the
+// same accent_for_focus fork by paint_tab_row and damaged by the same
+// top-strip invalidation the header's ground swap already spends. WHAT IT
+// DOES NOT TOUCH: the hover faces on any surface. A hover is a promise that
+// the pointer can act, and a pointer over an unfocused window still can — so
+// kFolderRowHover, kFolderRowHoverOutline, kFolderRowHoverSelected and the
+// modal row's hovered / armed / pressed accents all keep the live blue, and
+// THE UNSELECTED TABS' TWO COLOURS DO NOT SWAP either (the third crop's
+// hovered B is the same #263f4d as the focused one's). The icon row's lamps,
+// the view bar and the flag editor's selection band are outside the ruling
+// entirely.
 inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 
 // THE UNFOCUSED GROUND for rows 1 and 2 (architect 2026-07-31, from live use).
@@ -223,21 +231,25 @@ inline constexpr GuiColor kRedesignAccentInactive = hex(0x1B4155);
 // (architect 2026-09-03 evening, with the File anchor left live on this row —
 // "the title bar is still the regular one — the window has focus"; the modal
 // term it carried from 2026-09-02 lives at view_bar_focused now, the bar
-// being the surface that needed it). GAP 1's band above the row wears the
-// same shade from the same painter.
+// being the surface that needed it). (GAP 1's band wore this shade from the
+// same painter while it opened above the menu row, 2026-09-03..09; the band
+// is the TAB ROW's tall ground since the top strip relayout and takes
+// kRedesignContentGround, which does not swap.)
 // NO OTHER ROW'S GROUND SWAPS: row 3's ground and every row below it sit on
 // kRedesignContentGround, itself the unfocused shade, so the swap has nothing
 // to do down there. (Row 3's ground was the resting tab's #1b1d20 for a few
 // hours on 2026-08-13, under a ruling the architect withdrew the same day —
 // the record is at the row-3 block below.)
 //
-// WHAT ELSE READS THE FLAG, re-grepped rather than inherited: the PLAY-SCRUB's
-// played groove (2026-08-28, the block at kScrubPlayed below) and, since
-// 2026-09-02, the FOLDER OVERLAY's panel and every modal row's active-focus
-// ring, whose accent takes kRedesignAccentInactive above. So "no row below row 2 swaps",
+// WHAT ELSE READS THE FLAG, re-grepped rather than inherited (2026-09-09): the
+// PLAY-SCRUB's played groove (2026-08-28, the block at kScrubPlayed below);
+// since 2026-09-02 the FOLDER OVERLAY's panel and every modal row's
+// active-focus ring, whose accent takes kRedesignAccentInactive above; and
+// since 2026-09-09 THE SELECTED TAB'S CAP, the same constant through the same
+// fork. So "no row below row 2 swaps",
 // true of the GROUND when it was written, is no longer true of the window:
 // what row 1 and row 2 own is the unfocused ground, and the accent's own
-// unfocused face is the panel's. (Row 2's own LANE died at the 2026-08-12
+// unfocused face is the panel's, the ring's and the tab cap's. (Row 2's own LANE died at the 2026-08-12
 // relayout — its crop-named faces are the icon row's now, over a ground that
 // is already the unfocused shade — so this ground has ONE lane left to paint,
 // and the pairing survives as the crops' naming.)
@@ -404,7 +416,9 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // y=0 across the full 281 px, then two adjacent unselected tabs at #1b1d20
 // over x 0..178 with #202326 over x 179..280 — the TROUGH, the empty bar right
 // of the last tab — and row_3_tab_trough is that trough sampled alone, one
-// #535659 row over 29 rows of #202326.
+// #535659 row over 29 rows of #202326. (Those crops' y=0 line was the row's
+// top border from 2026-08-13 to 2026-09-09; the border paragraph below
+// records why it went.)
 //
 // A RULING PASSED THROUGH THIS BLOCK AND WAS WITHDRAWN, recorded so nobody
 // re-proposes the swap from the same misreading. On 2026-08-13 the architect
@@ -420,9 +434,12 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // ruling and KEPT after it) is THE SURFACE THE SELECTED TAB OPENS INTO, one
 // fact seen on the tab row and every lane below it: the TAB ROW'S OWN GROUND
 // (the trough is a reader again), the SELECTED TAB'S INTERIOR (the tab is a
-// mouth into the content, which is what its broken bottom border makes
-// literal — and with the ground restored the two are the same pixels, so the
-// bar's own fill IS that interior and the tab lays no second one), the ICON
+// mouth into the content — literal while its bottom border broke under it,
+// 2026-08-13..2026-09-09, and since the relayout the lane's own foot, the
+// overview strip's top edge being the line below; with the ground restored
+// the two are the same pixels, and since 2026-09-09 the tab lays that same
+// constant inside its own rounded path once more, over the neighbour's spill
+// under its corner — paint_tab_row), the ICON
 // ROW's ground, row 5's trim/ruler/marker lane grounds, the unified BOTTOM
 // ROW's ground, and the ground term every face mix over those rows resolves
 // against (the icon row's and the transport row's five faces, the modal dialog
@@ -435,30 +452,45 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // hard-coded rule, never a reference to the palette, and a retune of one must
 // not follow the other.
 //
-// THE ROW'S TWO BORDER ROWS ARE ONE GREY, kRedesignTabLine #4c4e51, AND THAT
-// DELIBERATELY OVERRIDES A CROP (architect 2026-08-14: "make tab row top border
-// #4c4e51 to match other lines"). THE MEASUREMENT STANDS AND IS KEPT HERE so
-// nobody "restores" it: the SOURCE's top line IS #535659 — y=0 of both
-// row_3_tab_example.png and row_3_tab_trough.png, full width over tabs and
-// trough alike, the KWave/pcmanfm-qt pair agreeing — and the bottom border and
-// the tab frame measure #4c4e51 (row_3_bottom_border.png). Breeze does draw two
-// roles on this lane. The architect chose PRODUCT-INTERNAL CONSISTENCY over the
-// sample: #4c4e51 is the line grey the rest of the product's chrome takes, and
-// one line value across the window reads better here than the source's two.
+// THE ROW HAS NO BORDER ROWS SINCE 2026-09-09 (architect, the top strip
+// relayout: the tab row sits under the ICON ROW's own border-bottom, gap 1
+// between, and directly ON the overview strip, whose black top edge is the
+// demarcation below — kdenlive-redesign.md's closing section), so
+// kRedesignTabLine paints ONE thing on this lane: the SELECTED TAB'S TWO SIDE
+// BORDERS, from its cap's arcs to the lane's last row. THE TWO BORDER ROWS
+// THE LANE CARRIED 2026-08-13..2026-09-09 WERE ONE GREY, this constant, AND
+// THAT DELIBERATELY OVERRODE A CROP (architect 2026-08-14: "make tab row top
+// border #4c4e51 to match other lines"). THE MEASUREMENT STANDS AND IS KEPT
+// HERE so nobody "restores" it into a line that no longer exists: the SOURCE's
+// top line IS #535659 — y=0 of both row_3_tab_example.png and
+// row_3_tab_trough.png, full width over tabs and trough alike, the
+// KWave/pcmanfm-qt pair agreeing — and the bottom border and the tab frame
+// measure #4c4e51 (row_3_bottom_border.png). Breeze does draw two roles on
+// this lane. The architect chose PRODUCT-INTERNAL CONSISTENCY over the sample:
+// #4c4e51 is the line grey the rest of the product's chrome takes.
 // kRedesignTabTopLine, the top row's own constant for the one day it existed
-// (2026-08-13..14), is RETIRED with it — the top border now reads the same
-// constant the bottom one does, and there is no second line constant on this
-// row to keep in step.
+// (2026-08-13..14), was RETIRED with that ruling.
+//
+// THE UNSELECTED TAB IS ONE GEOMETRY IN TWO COLOURS (architect 2026-09-09,
+// his option 1 off the three PCManFM-Qt/Breeze crops in tmp/): a flat fill of
+// the full content height, kRedesignTabRest at rest and kRedesignTabHover
+// under the pointer, its outer top corner rounded and its inner edge extended
+// UNDER the selected neighbour by the corner radius (paint_tab_row carries
+// Breeze's geometry verbatim). THE HOVER EDGE IS RETIRED WITH IT:
+// kRedesignTabHoverEdge #496170, the 1px line across a hovered tab's bottom
+// row that was the hover face's one difference from rest (2026-07-31 to
+// 2026-09-09; the second crop of the relayout still shows it at row 29, and
+// the architect ruled it off), has no fill left to paint, and its value is
+// git history and this sentence.
 //
 // kRedesignTabLine is a SECOND structural line grey, distinct from
 // kRedesignLine #535659 (row 2's separator and border-bottom, sampled from a
-// kdenlive crop): the tab frame, this row's two borders and row 4's separators
-// measure #4c4e51 in every crop. Both sampled, neither derived from the other,
-// and a retune of one must not follow the other.
+// kdenlive crop): the tab frame, row 4's border and separators and the bottom
+// row's border-top measure #4c4e51 in every crop. Both sampled, neither
+// derived from the other, and a retune of one must not follow the other.
 inline constexpr GuiColor kRedesignContentGround = hex(0x202326);
 inline constexpr GuiColor kRedesignTabRest       = hex(0x1B1D20);
 inline constexpr GuiColor kRedesignTabHover      = hex(0x263F4D);
-inline constexpr GuiColor kRedesignTabHoverEdge  = hex(0x496170);
 inline constexpr GuiColor kRedesignTabLine       = hex(0x4C4E51);
 
 // -- Row 4, the ICON ROW's one new color -----------------------------------
@@ -1386,42 +1418,46 @@ inline constexpr int kPlayheadUnitPx = 8;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
 // window edge (the kdenlive menu bar, row 1 of the redesign). 30 CONTENT at
-// 100% gui_scale plus a 1px MARGIN-BOTTOM, so the LANE is 31.
+// 100% gui_scale AND NOTHING ELSE: the LANE IS ITS CONTENT since 2026-09-09
+// (architect, the top strip relayout — kdenlive-redesign.md's closing
+// section), the row standing at its natural height with the ICON ROW
+// directly under it and no margin, border or line between the two. kdenlive,
+// QEMU and virt-manager draw no border between the menubar and the toolbar,
+// and neither does this row: the view bar's blue touches the icon row's
+// ground directly.
 //
-// THE SAME CSS BOX MODEL rows 3 and 4 take (a stated dimension is CONTENT
-// and what sits outside it is its own term, with the LANE the sum — the lane
-// must physically own every pixel it paints), with ONE TERM DIFFERENT IN KIND:
-// what sits outside row 1's content is a MARGIN, not a border. It paints the
-// ROW GROUND rather than a line, and it exists to hold the RIGHT-FLOATING VIEW
-// BAR's own blue background off the next lane's ground (the tab row, since
-// the 2026-08-12 relayout deleted the toolbar lane). Under the left-floating
-// buttons it is indistinguishable from the ground above it, which is correct —
-// a margin shows what is behind the box, and behind row 1 is row 1's ground.
+// THE 1px MARGIN-BOTTOM IS RETIRED WITH THE RELAYOUT (kMenuRowMarginPx /
+// menu_row_margin_h_px, the lane's one term outside its content from
+// 2026-08-02). It existed to hold the RIGHT-FLOATING VIEW BAR's own blue
+// background off the next lane's ground, which was the tab row from the
+// 2026-08-12 relayout until this one; with the icon row under the menu row
+// the architect ruled the bar's blue against that row's ground with nothing
+// between. The view bar's button box lost its two 1px VERTICAL margins the
+// same day and is the content height whole, so the anchors' hover pill and
+// the bar's box are ONE height and the row is exactly that height (the walk
+// is at paint_menu_row's right float, paint_handler.cpp).
 //
 // 30 -> 34 -> 30. The 2026-08-02 view bar raised the content to 34 = 1 + 32 +
 // 1 so the bar's buttons could keep the icon row's 32px box; the architect
 // took it back to the crop's own 30 on 2026-08-21 — the lane now matches
 // kdenlive's menu bar exactly, that allowance retires, and the view bar's
 // button box DERIVES from the row instead (content minus its two 1px margins,
-// 28 at 100% — the derivation is live at the right-float walk,
-// paint_handler.cpp). Everything below moves up 4px, automatically, through
-// main.cpp's lane table.
+// 28 at 100%, until 2026-09-09; the content whole since). Everything below
+// moves automatically, through main.cpp's lane table.
 //
-// All three size on gui_scale_factor() like every other lane in the tree (the
+// Both size on gui_scale_factor() like every other lane in the tree (the
 // font axis the pre-redesign lanes used to ride is deleted — see the gui_scale
 // block above). Rounded with std::nearbyint and floored like every other lane
-// metric; the 1px MARGIN's floor is live at gui_scale 50 (it rounds to 0
-// there), the height floors are still far below the scaled heights.
+// metric; the height floor is far below the scaled height. TWO ACCESSORS FOR
+// ONE NUMBER, deliberately: the lane table reads the LANE and the painter the
+// CONTENT, the vocabulary every other row keeps, and this row's lane simply
+// has no other term in it.
 inline constexpr int kMenuRowHeightPx = 30;
-inline constexpr int kMenuRowMarginPx = 1;
-inline int menu_row_margin_h_px() {
-    return scaled_px(kMenuRowMarginPx, 1);
-}
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
 inline int menu_row_h_px() {
-    return menu_row_content_h_px() + menu_row_margin_h_px();
+    return menu_row_content_h_px();
 }
 
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
@@ -1434,43 +1470,45 @@ inline int menu_row_h_px() {
 // which used to read row 2's. The crops and the row-2 record stay in
 // kdenlive-redesign.md.)
 
-// Authored pixel geometry of the TAB ROW — the top strip's lane 1, under the
-// menu row (row 3 of the redesign: the "Tab A" / "Tab B" Breeze tabs). Measured
-// at 100% gui_scale off row_3_tab_{rest,hover,selected}.png (30 tall),
-// row_3_bottom_border.png and — for the top line — row_3_tab_example.png and
-// row_3_tab_trough.png.
+// Authored pixel geometry of the TAB ROW — the top strip's lane 2 since
+// 2026-09-09, under the icon row and directly ON the overview strip (row 3 of
+// the redesign: the "A" / "B" Breeze tabs; it was lane 1, under the menu row,
+// from the 2026-08-12 relayout until the 2026-09-09 one — kdenlive-redesign.md's
+// closing section). Measured at 100% gui_scale off
+// row_3_tab_{rest,hover,selected}.png (30 tall) and, for its geometry since
+// 2026-09-09, the three PCManFM-Qt/Breeze crops that section names.
 //
 // THE CSS BOX MODEL IS THE RULED VOCABULARY (architect 2026-07-31): the
-// architect's stated 30 is CONTENT and the borders sit OUTSIDE it, so the LANE
-// the strip stack allocates is their sum. tab_row_content_h_px() is the ground
-// and tab band — the height every tab box fills, flush, top to bottom;
-// tab_row_h_px() is the lane. Rides gui_scale_factor() like row 1, not
-// the monospace font's axis.
+// architect's stated 30 is CONTENT and anything outside it is its own term,
+// with the LANE their sum. tab_row_content_h_px() is the ground and tab band —
+// the height every tab box fills, flush, top to bottom; tab_row_h_px() is the
+// lane. Rides gui_scale_factor() like row 1, not the monospace font's axis.
 //
-// THE LANE CARRIES TWO BORDER ROWS, ONE AT EACH EDGE, so it is 32 at 100%
-// (30 + 1 + 1). THE TOP LINE JOINED 2026-08-13, from the two crops named above:
-// both show a single row at y=0 running the FULL WIDTH, over the unselected
-// tabs and over the trough alike. It is what was actually missing from the row
-// — without it the row bled into the menu row above — and the lane GREW by that
-// row rather than eating one of its own 30, the overview lane's own answer the
-// same day and for the same reason (a border is chrome, not content). Both rows
-// take ONE grey since 2026-08-14, kRedesignTabLine, the architect overriding
-// the crop's #535659 top line for product-internal consistency: the palette
-// block's row-3 section carries the measurement and the ruling.
+// THE LANE HAS NO BORDER AT EITHER EDGE since 2026-09-09, so it is 30 at 100%
+// — THE LANE IS ITS CONTENT. It carried a border row at each edge from
+// 2026-08-13 until then (32 at 100%; kTabRowBorderPx / tab_row_border_h_px
+// and both border fills, the bottom one's break under the selected tab
+// included, are retired with the relayout): the top line had landed to stop
+// the row bleeding into the menu row above it, and the menu row is no longer
+// above it — the row sits under the icon row's own border-bottom and ON the
+// overview strip, whose black top edge is the demarcation below, so the two
+// lines the lane owned had nothing left to separate. The measurements behind
+// them and the one-grey ruling stay at the palette block's row-3 section.
+// (The flexible GAP 1 opens ABOVE this lane since the same day and is this
+// lane's tall ground, painted by paint_tab_row — main.cpp's vertical rule.)
 inline constexpr int kTabRowHeightPx = 30;
-inline constexpr int kTabRowBorderPx = 1;   // per edge: top and bottom
-inline int tab_row_border_h_px() {
-    return scaled_px(kTabRowBorderPx, 1);
-}
 inline int tab_row_content_h_px() {
     return scaled_px(kTabRowHeightPx, 5);
 }
 inline int tab_row_h_px() {
-    return tab_row_content_h_px() + 2 * tab_row_border_h_px();
+    return tab_row_content_h_px();
 }
 
-// Authored pixel geometry of the ICON ROW — the top strip's lane 2, under the
-// tabs (row 4 of the redesign: TWENTY-EIGHT view/mode/action buttons since
+// Authored pixel geometry of the ICON ROW — the top strip's lane 1 since
+// 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
+// under the tabs, from the 2026-08-12 relayout until then; the tab row sits
+// under THIS row's border-bottom now, with the flexible gap 1 between —
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-EIGHT view/mode/action buttons since
 // 2026-09-04, when the radio collapse took three off the row and the Center on
 // next marker lamp, the Restrict undo to viewport lamp and the ITERATION PAIR
 // back from the deleted menu row put four back — the
@@ -1484,7 +1522,13 @@ inline int tab_row_h_px() {
 // .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
 //
 // Same CSS box model as row 3: 46 is CONTENT, the 1px border-bottom sits
-// OUTSIDE it, and the LANE is their sum (47 at 100%).
+// OUTSIDE it, and the LANE is their sum (47 at 100%). THE BORDER IS INSET BY
+// ITS OWN THICKNESS AT EACH END since 2026-09-09 (architect, kdenlive's own
+// detail, read off his mockup: the line runs from the second column to the
+// second-last, the first and last columns in the row's ground): the painter
+// starts the line icon_row_border_h_px() in from each edge, so the inset
+// scales with the line — one column at 100%, two at the tablet's 225%. The
+// bottom row's border-top takes the same inset (its block below).
 //
 // 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31, settling the
 // discrepancy this constant first recorded): the row was briefed as 48 tall
@@ -1840,8 +1884,13 @@ inline GuiRect overview_content_rect(GuiRect lane) {
 // waveform, so the border facing it is the one drawn), and commit B's stack
 // names that same line "the thin border" above the row. IT IS THE ICON ROW'S
 // BORDER TOO, read from the same accessor and merely drawn on the opposite
-// edge: one chrome line, three lanes now, the folder overlay band's own top
-// border reading the same accessor since 2026-08-29. THE ROW IS THE WINDOW'S
+// edge: one chrome line, two lanes, AND ONE INSET — since 2026-09-09 both
+// lines start their own thickness in from each window edge, the first and
+// last columns staying the row's ground (the icon row's block above; the
+// architect's mockup shows it on both). (The folder overlay's band read this
+// accessor for its own top line from 2026-08-29 and the tab row's from
+// 2026-09-03; that line is retired with the 2026-09-09 relayout, the band
+// starting under the icon row's own border.) THE ROW IS THE WINDOW'S
 // LAST LANE AGAIN (architect 2026-08-29, the evening of the messaging
 // redesign's bar half): a STATUS BAR stood below it for that one day and
 // folded back into it, its state text becoming this row's own cell right of

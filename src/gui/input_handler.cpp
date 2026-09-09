@@ -1159,17 +1159,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
     //       under the prompt gate; architect 2026-07-31, joining as the sixth of
     //       the six the count then stood at). EVERY menu — re-greped
-    //       2026-09-04, the four of kDropdownMenus: File, Edit,
-    //       Settings and Help — is this ONE
+    //       2026-09-09, the three of kDropdownMenus: File, Edit and
+    //       Settings — is this ONE
     //       binding: they
     //       share one popup state and one gate, so the second dropdown
     //       (Navigation, 2026-08-02), the third (File, 2026-08-13), the
     //       fourth-then-third (Edit, 2026-08-20), the Series menu
     //       (2026-08-27) and the Help menu (2026-09-03) added no
-    //       place of their own and the Navigation one's deletion (2026-08-15)
-    //       and the Iterations one's (2026-09-04) took
-    //       none away — the count is a property of the GATE, not of the menu
-    //       list. It cannot collide with (a)/(b):
+    //       place of their own and the Navigation one's deletion (2026-08-15),
+    //       the Iterations one's (2026-09-04) and the Help one's (2026-09-09)
+    //       took none away — the count is a property of the GATE, not of the
+    //       menu list. It cannot collide with (a)/(b):
     //       a popup and an editor can never be open together, by TWO mechanisms
     //       — the dialog editors' veil swallows the press that would open
     //       a menu, and the pointer-transparent flag editor, which does not, is
@@ -3107,12 +3107,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // B, whose two flexible gaps center the waveform): GAP 2, between the
     // waveform and the bottom row, needs no band of its own — it lies below
     // every area this probe tests, so a wheel there falls to the no-context 0
-    // exactly as the old blank foot's did — while GAP 1, ABOVE the menu row
-    // since 2026-09-03 (it opened between the menu row and the centered block
-    // from commit B until then; main.cpp's vertical rule is the owner), lies
-    // INSIDE top_strip_area and therefore JOINS THE INERT BAND LIST below,
-    // that band being no more a panning surface at the top of the window than
-    // the blank ground at its foot.
+    // exactly as the old blank foot's did — while GAP 1, BETWEEN THE ICON ROW
+    // AND THE TAB ROW since 2026-09-09 (above the menu row 2026-09-03..09,
+    // between the menu row and the centered block from commit B until then;
+    // main.cpp's vertical rule is the owner), lies INSIDE top_strip_area and
+    // therefore JOINS THE INERT BAND LIST below, that band being no more a
+    // panning surface under the toolbar than the blank ground at the
+    // window's foot.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag
@@ -3174,16 +3175,17 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // (The toolbar row's band left with its lane, 2026-08-12 — the
             // relayout dissolved row 2 into the icon row, whose band below
             // covers its four buttons now.)
-            top_menu_row_area(app),
-            // GAP 1's band, the ONE non-lane member (commit B; ABOVE the menu
-            // row since 2026-09-03, wearing that row's ground): it sits
-            // inside the top-strip area below, which pans, so without this
-            // entry a wheel over that ground would scroll the song — exactly
-            // the fault row 1's ruling named. Not a redesigned row, but the
-            // same answer for the same reason, and the reason it needs a
-            // rect at all is at top_flex_gap_area (app_state.h).
+            top_menu_row_area(app),  top_icon_row_area(app),
+            // GAP 1's band, the ONE non-lane member (commit B; between the
+            // icon row and the tab row since 2026-09-09, wearing the tab
+            // row's ground): it sits inside the top-strip area below, which
+            // pans, so without this entry a wheel over that ground would
+            // scroll the song — exactly the fault row 1's ruling named. Not
+            // a redesigned row, but the same answer for the same reason, and
+            // the reason it needs a rect at all is at top_flex_gap_area
+            // (app_state.h).
             top_flex_gap_area(app),
-            top_tab_row_area(app),   top_icon_row_area(app),
+            top_tab_row_area(app),
             // The bottom row joined the family's inert band list 2026-08-11
             // (as the transport row), exactly as the rule above promises a
             // future row would, and the 2026-08-12 unification widened its

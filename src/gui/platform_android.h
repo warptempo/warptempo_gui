@@ -137,7 +137,7 @@ public:
     // paint nothing. They stay on the API because the GUI calls them from its
     // load and dirty-state paths unconditionally (contract and composition
     // rule at platform_wayland.h, which owns them).
-    // THE TABLET'S DIRTY INDICATOR IS ROW 8'S ` (*)` (architect 2026-09-09),
+    // THE TABLET'S DIRTY INDICATOR IS ROW 8'S ` *` (architect 2026-09-09),
     // the clock's own suffix in the portable painter — which is why the mark
     // moved there: with the title its only home, unsaved work showed nowhere
     // at all on this backend.

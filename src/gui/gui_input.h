@@ -904,14 +904,16 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // no-op until this date, so the binding costs no other chord anything. The act
 // is GuiInputHandler::toggle_av_sync_stats, whose open half carries every gate
 // in its own body — the modal refusals, the `h` view, the loading state — which
-// is what let the Help menu's row reach it with no chord at all until now.
+// is what let the Help menu's row (2026-09-03..09) reach it with no chord at
+// all for its first hours. Since that menu's deletion this chord and the Play
+// renders button's shifted press are the panel's two roads.
 // Three readers, the shape shared so none can drift: on_key's dispatch arm
 // (handle_mode_keys, beside bare `l`), the read-only allowlist
 // (read_only_key_blocked, which admits it — the panel measures the hardware and
 // authors nothing) and the panel's own router, where this same chord is the
 // closer. The `h` view refuses it at that mode's allowlist like every chord it
-// does not name, which is the same answer the dead Help anchor gives the
-// pointer in there.
+// does not name (the same answer the dead Help anchor gave the pointer in
+// there while it stood).
 inline bool is_av_sync_stats_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::L && !mods.ctrl && mods.shift && !mods.alt;
 }

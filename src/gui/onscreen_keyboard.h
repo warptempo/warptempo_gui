@@ -486,9 +486,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // rule that THE WAVEFORM IS NOT PAINTED WHERE
 // THE SLOT PAINTS. IT SUBTRACTS THE STANDING TENANT'S OWN RECT, which since
 // 2026-08-28 is a real fork rather than a formality: the overlay's band is the
-// CEILING every time it stands (the tab row's first pixel down since
-// 2026-09-03, whatever its listing's length) and the keyboard's is its four
-// key rows, so a
+// CEILING every time it stands (the icon row's foot down since 2026-09-09,
+// the tab row's first pixel 2026-09-03..09, whatever its listing's length)
+// and the keyboard's is its four key rows, so a
 // rect
 // borrowed from the other tenant would either hide waveform nothing paints
 // over or leave the panel painting where the waveform still runs.
@@ -515,8 +515,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // can still answer true for an empty rect an exposure straddles — it compares
 // edges, not areas). THAT LAST CASE IS THE OVERLAY'S ORDINARY ONE SINCE
 // 2026-09-02, when the panel's ceiling first moved above the waveform (row 1's
-// foot that day, the window's top for hours of 2026-09-03 and the tab row's
-// first pixel since that evening): its band starts ABOVE the waveform, so
+// foot that day, the window's top for hours of 2026-09-03, the tab row's
+// first pixel from that evening and the icon row's foot since 2026-09-09):
+// its band starts ABOVE the waveform, so
 // every waveform pass is clipped out whole while it stands, and the LANES it
 // also covers (rows 2..7; the menu row stands above the band, File lit and the
 // other three anchors and the view bar greyed) are not

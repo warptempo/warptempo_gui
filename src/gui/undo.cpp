@@ -129,7 +129,7 @@ void Undo::recompute_dirty() {
     //     the flag and is a cheap no-op when it has not moved. It is the
     //     laptop's surface alone — Android has no titlebar, so the backend
     //     there stores nothing.
-    //   * ROW 8'S ` (*)` (architect 2026-09-09) is READ: the painter takes
+    //   * ROW 8'S ` *` (architect 2026-09-09) is READ: the painter takes
     //     app.dirty straight out of the state as the clock's own suffix, so
     //     what this tail owes it is DAMAGE, and only ON A TRANSITION. This
     //     body runs after every command, and an unconditional invalidate would

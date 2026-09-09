@@ -4,7 +4,7 @@
 #include <vector>
 
 // THE AV SYNC PANEL'S TWO READINGS AND THE LINES THEY COMPOSE INTO (architect
-// 2026-09-03, Help → AV Sync Stats). The panel answers ONE question — by how
+// 2026-09-03, the AV Sync Stats panel on Shift+L). The panel answers ONE question — by how
 // much does the painted playhead lead or trail the sound it names — and it
 // answers it out of two figures that live on opposite sides of the product:
 // the audio device's OUTPUT LATENCY (GuiPlayback::audio_stats, one arm per

@@ -1559,8 +1559,8 @@ struct GuiInputHandler {
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
-    // action of EVERY non-chord button — the four of kDropdownMenus, File,
-    // Edit, Settings and Help (re-greped 2026-09-04): it closes the
+    // action of EVERY non-chord button — the three of kDropdownMenus, File,
+    // Edit and Settings (re-greped 2026-09-09): it closes the
     // named menu if it is the open one and otherwise opens it, so pressing the
     // other button SWITCHES menus and "never two at once" is structural rather
     // than a rule. Its ONE refusal is the `h` history view's, and it is
@@ -1720,9 +1720,9 @@ struct GuiInputHandler {
     // hit, apply the button's shift / enabled / radio refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
-    // being a consumed nothing). The five buttons
-    // outside it are row 1's anchors — File, Edit, Settings and
-    // Help (re-greped 2026-09-04 against kDropdownMenus) — whose action is a
+    // being a consumed nothing). The three buttons
+    // outside it are row 1's anchors — File, Edit and
+    // Settings (re-greped 2026-09-09 against kDropdownMenus) — whose action is a
     // dropdown
     // toggle — the recorded press-time exception, stated at their claim (row 1
     // had a chord button, Quit, inside it until 2026-08-13, when its act became
@@ -2959,13 +2959,15 @@ private:
     // it shows and why the two figures mean what they do is at
     // av_sync_stats.h; what is here is the mode.
     //
-    // ONE OPENER, REACHED THREE WAYS since 2026-09-03: the Help menu's row,
-    // which is its chord like every other command row and dispatches Shift+L
-    // through on_key; that chord pressed on the keyboard (is_av_sync_stats_key,
-    // gui_input.h — bare `l`'s shifted twin, both toggles of one overlay); and
-    // the Play renders button's shift-click or long press, which synthesizes
-    // the same chord. The row carried no chord at all from the panel's landing
-    // that morning until that evening, the opener's own body holding the gates
+    // ONE OPENER, REACHED TWO WAYS since 2026-09-09: Shift+L on the keyboard
+    // (is_av_sync_stats_key, gui_input.h — bare `l`'s shifted twin, both
+    // toggles of one overlay), and the Play renders button's shift-click or
+    // long press, which synthesizes the same chord. A THIRD road, the Help
+    // menu's one row, stood 2026-09-03..09 — its chord like every other
+    // command row once bound, dispatching Shift+L through on_key — and went
+    // with that menu at the top strip relayout. The row carried no chord at
+    // all from the panel's landing that morning until that evening, the
+    // opener's own body holding the gates
     // a chord would have met; the gates stayed where they are and the road
     // count changed. The opener refuses — silently, touching no playback —
     // under a prompt, under any keyboard-modal editor, under the render

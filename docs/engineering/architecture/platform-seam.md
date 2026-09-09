@@ -261,7 +261,8 @@ drag coordinates floor instead of truncating.
   line, and the Wayland presentation-feedback lead with its own — because the
   product does not measure what it was not asked to measure. **THE OTHER HALF
   OF THAT RULING LANDED THE SAME DAY**: the measurements are re-homed under
-  `Help → AV Sync Stats` and run ONLY WHILE THAT PANEL STANDS (the Display
+  the AV Sync Stats panel (`Shift+L`; the `Help` menu that also opened it
+  stood 2026-09-03..09) and run ONLY WHILE THAT PANEL STANDS (the Display
   measurement seam below, and render-player.md for the panel itself). NEITHER
   MEASUREMENT IS COMPENSATION and neither reaches the line: the predictor is
   the raw one above whether the panel is up or down, and what the panel does
@@ -420,7 +421,7 @@ drag coordinates floor instead of truncating.
   notional-x FIELD survives and tracks the finger), cursor kinds stored and
   never applied, titles — **and the title stub stopped costing the user
   anything on 2026-09-09**, when the DIRTY MARK moved onto row 8 as the
-  clock's ` (*)` suffix (messaging.md's state-cell section): the title was the
+  clock's ` *` suffix (messaging.md's state-cell section): the title was the
   mark's ONE home from 2026-08-01, and a fullscreen `NativeActivity` has no
   titlebar, so unsaved work showed nowhere at all on the tablet until then.
   The mark is painted by the PORTABLE painter out of `app.dirty`, so it needs
@@ -504,7 +505,8 @@ THE BAND HAS A SECOND TENANT SINCE 2026-08-28 and the keyboard yields it: the
 FOLDER OVERLAY paints in this same bottom-anchored SLOT — the band's x, its
 width and its bottom edge, one owner (`keyboard_slot_band`) — but NOT in the
 same rect: the height is each tenant's own, this keyboard's four key rows
-against the overlay's ceiling at the tab row's first pixel, and the slot's
+against the overlay's ceiling under the icon row's border (the tab row's
+first pixel 2026-09-03..09), and the slot's
 show/hide damage is therefore the taller of the two (`slot_damage_rect`). `onscreen_keyboard::
 stands` gained a third term for it that same day and LOST IT AGAIN when the
 pickers lost their fields — the exclusion is structural, no editor and the

@@ -64,7 +64,7 @@
 // writes — there is something that paints, the dirty dot goes away"). THAT
 // RULING NAMED THE WINDOW TITLE, which the tablet has none of, so the save was
 // silent AND invisible there for the nine days until the mark moved onto ROW 8
-// as the clock's ` (*)` suffix (architect 2026-09-09); the reasoning is the
+// as the clock's ` *` suffix (architect 2026-09-09); the reasoning is the
 // same on both machines now, and stronger. THE
 // SAVE'S FAILURE IS A CARD, that ruling having been about the SUCCESS
 // (architect 2026-09-02): a write that did not happen leaves the dirty mark

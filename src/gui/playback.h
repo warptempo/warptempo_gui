@@ -306,7 +306,7 @@ public:
     bool    device_absent() const;
 
     // WHAT THE DEVICE SAYS ABOUT ITSELF, READ ON DEMAND (architect 2026-09-03,
-    // Help → AV Sync Stats). The backend's own name, its rate, its period and
+    // the AV Sync Stats panel on Shift+L). The backend's own name, its rate, its period and
     // — where the platform reports a trustworthy one — its OUTPUT LATENCY, the
     // figure the panel's net line needs (the type and the derivation are at
     // av_sync_stats.h). ONE CALLER: the panel's per-frame row refresh, which

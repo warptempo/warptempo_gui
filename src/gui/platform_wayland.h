@@ -88,7 +88,7 @@ public:
     // set_title_dirty is called at every dirty-state transition; it is a cheap
     // no-op when the flag has not moved, so the per-command recompute_dirty can
     // call it unconditionally. IT IS NOT THE MARK'S ONLY SURFACE any more
-    // (architect 2026-09-09): row 8's clock wears a ` (*)` suffix read straight
+    // (architect 2026-09-09): row 8's clock wears a ` *` suffix read straight
     // out of app.dirty, which is the mark on BOTH backends — this titlebar half
     // exists only where a compositor paints a titlebar.
     //

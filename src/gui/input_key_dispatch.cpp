@@ -2353,9 +2353,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // this predicate blocks wears its row's DISABLED face while the mode stands and
 // ignores the pointer, so the roster says what it will do rather than swallowing
 // clicks silently. The partition is DERIVED from this function (and hand-answered
-// for the four anchors alone, which have no chord to ask about: Settings,
-// Edit since 2026-08-20 and Help since 2026-09-03 all
-// dead on the toggle_dropdown lockout, File live
+// for the three anchors alone, which have no chord to ask about: Settings
+// and Edit since 2026-08-20 both dead on the toggle_dropdown lockout (Help
+// was too, 2026-09-03..09), File live
 // since 2026-08-13 — Navigation was live from 2026-08-08 until its
 // 2026-08-15 deletion, and Iterations dead from 2026-08-27 until its own on
 // 2026-09-04, which put its two commands back on chord-bearing buttons the
@@ -2523,9 +2523,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // everything, and the admitted Ctrl+Q already ends the view the same way.
     // The picker it raises stands OVER the mode — its router runs ahead of
     // this gate in on_key, its veil consumes the view's presses, and its band
-    // starts at the TAB ROW's first pixel and runs to the bottom row, covering
-    // lanes 1..6 (the diff lane with them), the waveform and gap 2, with only
-    // the dead menu row standing above it — so a Cancel or an
+    // starts under the ICON ROW's border and runs to the bottom row, covering
+    // gap 1 and lanes 2..6 (the diff lane with them), the waveform and gap 2,
+    // with only the two toolbar rows standing above it, dead but for File
+    // (the tab row's first pixel 2026-09-03..09) — so a Cancel or an
     // Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
     // consumed no-op, which made two of the File menu's three rows dead in
@@ -6086,9 +6087,10 @@ void GuiInputHandler::open_project_picker() {
     // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
     // everything — Ctrl+Q, which is admitted, ends the view the same way. The
     // picker stands OVER the view (its router runs ahead of the mode's gate in
-    // on_key, its veil consumes the view's presses, and its band starts at the
-    // tab row and covers lanes 1..6 — the diff lane with them — the waveform
-    // and gap 2, the menu row alone above it with File live on it), a Cancel or Esc leaves
+    // on_key, its veil consumes the view's presses, and its band starts under
+    // the icon row's border and covers gap 1 and lanes 2..6 — the diff lane
+    // with them — the waveform and gap 2, the two toolbar rows alone above it
+    // with File live on the menu row), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything
@@ -6499,25 +6501,27 @@ void GuiInputHandler::open_av_sync_stats() {
     // through a MENU ROW and a menu row's refusals belong to the act.
     //
     // All of them are silent, and none of them owes a sentence in any state a
-    // press can reach. The Help anchor is unreachable under a prompt and dead
-    // under either of the other two folder-overlay contents, under a standing
-    // panel and in the `h` view (menu_anchor_dead_in_mode — File is the one
-    // anchor those modes leave live, and it does not carry this row), so no
-    // row press arrives here refused. Shift+L, the act's chord since
-    // 2026-09-03 evening, meets its own refusals ABOVE this body: the three
-    // routers own the keyboard while their contents stand and consume it, the
-    // `h` view's allowlist cards it in the mode's own sentence, and the modal
-    // and loading gates at on_key's head swallow it before the dispatch. So
+    // press can reach. Shift+L, the act's chord since 2026-09-03 evening and
+    // its only keyboard road since the Help menu's 2026-09-09 deletion, meets
+    // its own refusals ABOVE this body: the three routers own the keyboard
+    // while their contents stand and consume it, the `h` view's allowlist
+    // cards it in the mode's own sentence, and the modal and loading gates at
+    // on_key's head swallow it before the dispatch; the Play renders button's
+    // shifted press synthesizes that same chord and meets the same gates. So
     // the arms below are a belt on states no road delivers, standing because
     // the gate belongs with the act it refuses — the picker's own shape.
+    // (While the Help anchor stood it was unreachable under a prompt and dead
+    // under the other two folder-overlay contents, under a standing panel and
+    // in the `h` view, so no row press ever arrived here refused either.)
     if (app.prompt.active) return;
     if (keyboard_modal_editor_active()) return;
     if (render_player_active()) return;
     if (picker_active()) return;
     if (stats_panel_active()) return;
-    // THE `h` HISTORY VIEW IS REFUSED, and this refusal is what makes the Help
-    // anchor DEAD in that view: menu_anchor_dead_in_mode's criterion is "every
-    // row would open onto nothing", and this is the row saying no. The view is
+    // THE `h` HISTORY VIEW IS REFUSED (and this refusal is what made the Help
+    // anchor DEAD in that view while it stood: menu_anchor_dead_in_mode's
+    // criterion is "every row would open onto nothing", and this was the row
+    // saying no). The view is
     // a read-only walk over past checkpoints and the panel measures the live
     // hardware; nothing about the two is related, and the panel's band would
     // cover the diff lane the view exists to show.
@@ -7551,7 +7555,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // this handler are exactly the gates the player's own opener wants, and
     // the panel's opener carries the rest in its own body — the modal
     // refusals, the `h` view, the loading state — as it did while the Help
-    // menu's row was its only road. Inside the panel the chord is the mode's
+    // menu's row (2026-09-03..09) was its only road. Inside the panel the chord is the mode's
     // own closer (route_stats_panel_key) and never reaches here, which is bare
     // `l`'s shape exactly. The Play renders button's shift-click and its long
     // press synthesize this chord (redesign_button_shift_admits).

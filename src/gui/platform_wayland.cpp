@@ -936,7 +936,7 @@ void GuiPlatform::set_title(const std::string& title) {
 // shipped with a few hours earlier is retired (the asterisk is the convention
 // every editor uses, and it is plain ASCII). The bottom strip's old dirty CELL
 // is gone and stays gone — but the mark itself is on ROW 8 as well since
-// 2026-09-09, as the clock's ` (*)` suffix inside the clock's own run
+// 2026-09-09, as the clock's ` *` suffix inside the clock's own run
 // (paint_bottom_row_buttons_and_clock). The two surfaces say the same thing
 // deliberately: this one is the compositor's and exists only where a titlebar
 // does, and the tablet, which has none, had no dirty indicator at all until
