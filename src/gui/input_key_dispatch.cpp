@@ -3146,8 +3146,9 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 // repo copies while the session still claimed unsaved changes — incoherent in
 // the architect's own workflow, where the loaded source LIVES in the matched
 // projects/<id>/ and the act's repo write therefore IS the working sidecar set:
-// the bytes on disk were exactly a save's and the title bar still carried the
-// dirty dot. So the prelude below is the REAL Ctrl+S, through its one owner
+// the bytes on disk were exactly a save's and the session still showed the
+// dirty mark (which rode the window title in that era and is row 8's clock
+// suffix now). So the prelude below is the REAL Ctrl+S, through its one owner
 // (GuiSaveOps::save — the same three atomic writes beside the source, the same
 // per-write stderr, the same note_saved tail — the reference move, the
 // coalescing stamp's clear and the dirty refold), never a second
@@ -7828,8 +7829,8 @@ void GuiInputHandler::copy_focused_marker_value() {
     // a clipboard, and since the resolved readout retired with the status bar
     // nothing displays a resolved value either — so this card is the whole of
     // what the press shows. The save, a render and a Synchronize stay silent
-    // by ruling: each has its own visible answer (the title's dirty mark, the
-    // file on disk). THE BUTTON INHERITS IT: the bottom row's Copy resolved
+    // by ruling: each has its own visible answer (row 8's clock suffix — the
+    // ` *` a save clears — and the file on disk). THE BUTTON INHERITS IT: the bottom row's Copy resolved
     // value dispatches this same bare `j` through on_key at its lift, so the
     // sentence lives once and both roads say it.
     notifications.notify(AppState::NotificationClass::Normal,

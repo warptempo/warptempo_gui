@@ -172,11 +172,13 @@ bool GuiSaveOps::save() {
     // of merging into the entry the reference now rests on and reading clean
     // over a store that differs from the file.
     //
-    // NO DAMAGE ON THE CLEAN EDGE (2026-08-01): the dirty state's only display
-    // was the bottom row's dot, and the dot moved to the WINDOW TITLE, which the
-    // compositor repaints on its own. recompute_dirty (note_saved's tail) pushes
-    // the new flag to the title itself, so the repaint this used to request has
-    // nothing left to redraw.
+    // NO DAMAGE REQUEST HERE (2026-08-01, restated 2026-09-09): the dirty
+    // state's one display is row 8's clock suffix, which the painter reads out
+    // of `app.dirty`, and the DAMAGE for it belongs to the flag's derive owner
+    // — recompute_dirty, note_saved's own tail, which invalidates the bottom
+    // row's cell exactly when the flag transitions. A save that cleans a dirty
+    // store is repainted by that; a save over an already-clean one moves
+    // nothing and rightly repaints nothing.
     undo.note_saved();
     return true;
 }

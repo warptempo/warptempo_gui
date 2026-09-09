@@ -833,10 +833,15 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // dialog editor alike. The claim sits at on_button_press's head, ahead of
 // every gate (the rule at notifications.h).
 
-// Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
-// painter's stash and nothing here re-shapes or re-measures, so the clickable
-// region is exactly the drawn one. A zero rect (before that row's first paint)
-// contains no point, which is the correct cold answer.
+// Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
+// rect is the painter's stash and nothing here re-shapes or re-measures, so the
+// pointer reads exactly what the painter published — which for every button but
+// the view bar's three is also the box it drew. THE VIEW BAR IS THE ONE
+// INTENTIONAL PAINT-ONLY INSET (architect 2026-09-09: the hit box is the blue
+// div's own height): the walk publishes the lane-tall rect and paints the
+// vertically inset face through `view_bar_face_rect`, so the top and bottom
+// margin rows answer the press and stay div ground. A zero rect (before that
+// row's first paint) contains no point, which is the correct cold answer.
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
     return rect_contains(
         app.redesign_buttons[redesign_button_index(id)].rect, x, y);

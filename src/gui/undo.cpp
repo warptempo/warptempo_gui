@@ -523,8 +523,9 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
         // rather than being left to the callers' own recompute_dirty below this
         // call: the pop is what puts a saved baseline back at distance 0, and a
         // net-zero wobble over a saved file must read CLEAN again. The callers'
-        // own call right after is then a same-state re-ask (recompute_dirty's
-        // title setter does not move a flag that has not moved).
+        // own call right after is then a same-state re-ask, and costs nothing:
+        // recompute_dirty damages row 8 only on a TRANSITION, and this one has
+        // already happened here.
         recompute_dirty();
         return;
     }
@@ -572,9 +573,10 @@ void Undo::note_saved() {
     // op, and the ONE undo entry a merged run had stays one.
     app.history.mark_saved();
     last_gesture_kind_ = GestureKind::None;
-    // THE DOT IS RE-DERIVED HERE, by the owner that moved the reference — the
-    // same shape as the byte-equal pop above. recompute_dirty pushes the flag
-    // to the window title itself, so the save requests no damage.
+    // THE MARK IS RE-DERIVED HERE, by the owner that moved the reference — the
+    // same shape as the byte-equal pop above. recompute_dirty also owns the
+    // damage for it (row 8's cell, on the transition alone), so the save itself
+    // asks for none.
     recompute_dirty();
 }
 

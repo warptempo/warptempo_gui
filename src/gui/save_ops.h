@@ -14,9 +14,13 @@
 // target; the .phaseresetmarkers write is a sibling; the .settings
 // write is required too, so any of the three failures keeps the save dirty.
 //
-// NO Viewport REFERENCE any more (2026-08-01): a save paints nothing. Its one
-// damage request was the bottom row's dirty-dot cell, and the dot moved to the
-// window title, which the compositor repaints.
+// NO Viewport REFERENCE any more (2026-08-01): a save paints nothing of its
+// own. Its one damage request was the bottom row's dirty-mark cell, and that
+// damage now belongs to the derive owner instead: Undo::recompute_dirty (the
+// note_saved tail below) invalidates the row ON THE TRANSITION alone, so a
+// save that actually cleans the flag is repainted by it and one that changes
+// nothing costs no repaint. Row 8's ` *` is the mark's one surface (2026-09-09,
+// the window title's second asterisk deleted with it).
 //
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
 // while a Save-and-Commit checkpoint is publishing, because that background act

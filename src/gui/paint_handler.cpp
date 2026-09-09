@@ -1468,13 +1468,26 @@ void redesign_rounded_top_rect_path(cairo_t* cr, double x, double y,
 // the box and put the baseline at its foot, then round to the pixel grid so the
 // glyphs stay crisp at every scale. Row 1 centers in the ROW (a flush button),
 // the modal dialog's buttons in their 32-tall box (row 2's, until that row's
-// 2026-08-12 deletion); one formula, every box kind — THE ONE BASELINE SOLVER,
-// read by every proportional label and by the monospace clocks.
+// 2026-08-12 deletion); one formula, every box kind — THE ONE BASELINE SOLVER
+// FOR EVERY EXTENTS-CENTRED CHROME LABEL (fifteen callers) AND BOTH MONOSPACE
+// CLOCKS.
+//
+// THE MARKER LANE IS THE NAMED EXCEPTION and stays out of the solver: the live
+// flag pass, the history-diff flag pass and the marker-lane editor each seat
+// their label at `lane.y + marker_flag_baseline_px()` (render.cpp; the owner
+// and its reasoning at render.h's kMarkerFlagBaselinePx), a length AUTHORED
+// off the same kdenlive crop the lane's own height comes off, which is why it
+// must agree with the crop and not with a face's leading. The two rules meet
+// at 100% — row 16 in the 20-tall lane either way — and part at 225%, where
+// the authored baseline scales to row 36 while extents centring in the
+// 45-tall lane would seat row 35. That divergence is the crop's answer
+// winning, not drift.
 //
 // A TIE ROUNDS TOWARD THE DESCENT (architect 2026-09-09, measured: "kdenlive
 // has nine pixels of margin above and below the word File, whereas we have
-// eight above and ten below"). The face's hinted extents are integers
-// (ascent 15, descent 4 at 16px; 33 and 8 at the tablet's 36px), so
+// eight above and ten below"). The SANS face's hinted extents are integers
+// whose DIFFERENCE IS ODD (ascent 15, descent 4 at 16px; 33 and 8 at the
+// tablet's 36px), so
 // `box_h + ascent - descent` is ODD for every EVEN box at both scales and the
 // centre lands on a half-pixel systematically, not by accident. Banker's
 // rounding resolved that tie by the parity of `box_y + box_h / 2`, so the
@@ -1486,10 +1499,11 @@ void redesign_rounded_top_rect_path(cairo_t* cr, double x, double y,
 // dropdown item at 20, the 31 field at 21: tmp/kden-hover.png,
 // tmp/kden-view.png, the PCManFM-Qt tab crops and
 // tmp/keep/screenshots/kdenlive/redesign/) and makes the answer independent
-// of the box's y. Odd boxes carry no tie and are untouched; the monospace
-// clocks' face (ascent 13 / descent 5, an even difference) ties on odd boxes
-// only, and the bottom row's 46 is even, so no clock moved. This is a text
-// baseline and not an authored position: the project's banker's rule
+// of the box's y. Odd boxes carry no tie and are untouched; the MONOSPACE
+// face's difference is EVEN at both scales (ascent 13 / descent 5 at the
+// clock's 14.67px, 28 / 10 at the tablet's 33px — 8 and 18), so the clocks tie
+// on odd boxes only, and the bottom row's 46 is even: no clock moved. This is
+// a text baseline and not an authored position: the project's banker's rule
 // (snap_authored_frame, the lattice) is for values that land on a grid by
 // chance, and this one lands on the half by construction.
 double redesign_baseline(cairo_scaled_font_t* font, double box_y,
@@ -2388,7 +2402,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // tab, from the row's landing until 2026-09-09. The border row is gone
     // and stays gone; what came back that same day is the BASE LINE, which is
     // the lane's last CONTENT row and is painted above, between the two tab
-    // passes, because an unselected tab's fill now stops short of it.)
+    // passes, because a HOVERED unselected tab's fill stops one line short of
+    // it — a RESTING one runs the whole content band and is its own base row,
+    // which is why the line stands only where no tab does.)
 
     cairo_restore(cr);
 }
