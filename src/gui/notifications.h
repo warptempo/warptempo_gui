@@ -60,8 +60,12 @@
 // ("that would get annoying"), a Synchronize that mirrored the project, a
 // propagate walk that pasted what it had, and THE SAVE — an act that did what
 // was asked says nothing, its result being on screen, the save's being the
-// dirty mark leaving the window title (architect 2026-08-30: "the disc
-// writes — there is something that paints, the dirty dot goes away"). THE
+// dirty mark going out (architect 2026-08-30: "the disc
+// writes — there is something that paints, the dirty dot goes away"). THAT
+// RULING NAMED THE WINDOW TITLE, which the tablet has none of, so the save was
+// silent AND invisible there for the nine days until the mark moved onto ROW 8
+// as the clock's ` (*)` suffix (architect 2026-09-09); the reasoning is the
+// same on both machines now, and stronger. THE
 // SAVE'S FAILURE IS A CARD, that ruling having been about the SUCCESS
 // (architect 2026-09-02): a write that did not happen leaves the dirty mark
 // exactly where the press found it, so the three write arms and the

@@ -11,7 +11,8 @@
                                   // from this TU)
 #include "platform.h"           // viewport.gui.set_title_dirty — the window
                                   // title's dirty half, pushed from
-                                  // recompute_dirty's tail
+                                  // recompute_dirty's tail (whose other half is
+                                  // the row-8 mark's transition damage)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
                                   // singleton recenter and the group framing,
@@ -118,15 +119,28 @@ void Undo::recompute_dirty() {
             else               app.warp_dirty        = true;
         }
     }
+    const bool was_dirty = app.dirty;
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
-    // THE DIRTY DOT LIVES IN THE WINDOW TITLE (architect 2026-08-01): this is
-    // the derive-owner of app.dirty, so every mutation, save and undo/redo
-    // transition passes through here, and pushing the flag from this one tail
-    // is what keeps the titlebar honest without a scattered set of inline
-    // title strings. The setter is a no-op when the flag has not moved.
+    // THE DIRTY MARK HAS TWO SURFACES AND ONE DERIVE-OWNER. This is where
+    // app.dirty is derived, so every mutation, save and undo/redo transition
+    // passes through here, and answering from this one tail is what keeps both
+    // surfaces honest without a scattered set of inline writes.
+    //   * THE WINDOW TITLE (architect 2026-08-01) is PUSHED: the setter takes
+    //     the flag and is a cheap no-op when it has not moved. It is the
+    //     laptop's surface alone — Android has no titlebar, so the backend
+    //     there stores nothing.
+    //   * ROW 8'S ` (*)` (architect 2026-09-09) is READ: the painter takes
+    //     app.dirty straight out of the state as the clock's own suffix, so
+    //     what this tail owes it is DAMAGE, and only ON A TRANSITION. This
+    //     body runs after every command, and an unconditional invalidate would
+    //     repaint the bottom row on every keypress for a mark that did not
+    //     move.
     // (The load's own four-flag reset is the only other transition — it pushes
-    // the same way from file_loader.cpp.)
+    // the title the same way from file_loader.cpp, and owes no damage of its
+    // own: load_file invalidates the whole window on both sides of that
+    // assignment.)
     viewport.gui.set_title_dirty(app.dirty);
+    if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
 }
 
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,

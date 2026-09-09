@@ -10859,7 +10859,11 @@ std::pair<long long, long long> compute_trim_samples(
 // strings are BACK ON THIS ROW as the STATE CELL, right of the clock, under
 // Viewport::invalidate_status_cell_area — which takes the LANE WHOLE, the cell
 // reserving no width of its own to erase inside — after one day on a status
-// bar of their own; and the two families that
+// bar of their own. THE DIRTY MARK IS ON THIS ROW TOO since 2026-09-09, but
+// not as a tenant: it is ` (*)` inside the CLOCK's run (the clock's suffix, not
+// the state's prefix, so it stands with no state string beside it), damaged
+// through that same lane owner on the flag's transitions alone. And the two
+// families that
 // shared the old owner — the string writers and the dialog editors' repaint
 // sites — are two populations with two owners, each inventoried at its own
 // declaration in viewport.h. A route touching the clock AND the state cell

@@ -331,7 +331,9 @@ struct Viewport {
     // is TRUE RIGHT NOW: the `h` walk line, else the process line — the
     // render / batch / loading progress string, or, when that is empty and a
     // mirror is running, the derived `Synchronizing...`. So this is the owner
-    // for every route that changes what those answer and nothing else. (The bar was the window's last lane
+    // for every route that changes what those answer — and, since 2026-09-09,
+    // for the one route that flips the CLOCK'S DIRTY SUFFIX, the lane's other
+    // piece of state (the inventory below). (The bar was the window's last lane
     // for one day and carried a THIRD string, the resolved readout, in a right
     // cell; that readout RETIRED WHOLE with the bar — bare `j` copies the
     // value and Shift+`j` goes to the marker it came from — and every caller
@@ -350,9 +352,10 @@ struct Viewport {
     // is this row's too, with its own cell owner below — and this rect covers
     // that one as a superset).
     //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-04 —
-    // membership is "this route changes what the cell shows", which is the
-    // progress line's writers plus the mirror's two edges, eleven sites:
+    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-09-09 —
+    // membership is "this route changes what the LANE shows", which is the
+    // progress line's writers, the mirror's two edges and the dirty mark's one
+    // transition owner, twelve sites:
     //   * input_render_dispatch's THREE (the promote, the park's retraction,
     //     finalize_render_run);
     //   * target_render's SIX (the "Updating..." stamp, the run hold's late
@@ -364,7 +367,15 @@ struct Viewport {
     //     `Synchronizing...` is DERIVED at the reader out of the worker's
     //     busy bit, below whatever the progress line holds
     //     (process_line_text, paint_handler.cpp), so the pair damages the
-    //     lane on the two edges where that bit changes and nothing else.
+    //     lane on the two edges where that bit changes and nothing else;
+    //   * undo's ONE, Undo::recompute_dirty's tail — THE DIRTY MARK (architect
+    //     2026-09-09), row 8's ` (*)` on the clock's own run. It is the one
+    //     member that is not a cell string at all: the painter reads app.dirty
+    //     directly, so the derive-owner owes the damage, and it owes it ONLY
+    //     WHERE THE FLAG MOVED — that body runs after every command, and an
+    //     unconditional call would repaint the row on every keypress. The
+    //     load's own dirty reset is the flag's other transition and is not
+    //     here, being a whole-window route by the rule below.
     // The `h` WALK LINE has no site of its own here and never did: it rides
     // the mode's edges, which invalidate the whole window. The file loader's
     // "Loading..." likewise damages the window whole.

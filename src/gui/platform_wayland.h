@@ -87,7 +87,10 @@ public:
     // the audio filename and from the output `title=` settings key).
     // set_title_dirty is called at every dirty-state transition; it is a cheap
     // no-op when the flag has not moved, so the per-command recompute_dirty can
-    // call it unconditionally.
+    // call it unconditionally. IT IS NOT THE MARK'S ONLY SURFACE any more
+    // (architect 2026-09-09): row 8's clock wears a ` (*)` suffix read straight
+    // out of app.dirty, which is the mark on BOTH backends — this titlebar half
+    // exists only where a compositor paints a titlebar.
     //
     // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar,
     // so the product's one-face HarfBuzz rule (which governs pixels WE paint)

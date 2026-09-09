@@ -1082,6 +1082,15 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // Viewport::invalidate_status_cell_area and whose rect is the lane WHOLE —
 // see the record just above.)
 //
+// THE DIRTY MARK PAINTS PAST THIS CELL AND THAT IS CORRECT (architect
+// 2026-09-09): row 8's ` (*)` is appended to the timestamp inside the clock's
+// own run, so while the tab is dirty the painted run is wider than the reserved
+// cell this rect covers. The tick does not care — the suffix is not a digit and
+// changes only when app.dirty moves, and THAT transition damages the lane whole
+// through Viewport::invalidate_status_cell_area (Undo::recompute_dirty's tail).
+// A per-second tick therefore erases and repaints the digits alone, leaving the
+// suffix's pixels exactly as the last full-lane paint left them.
+//
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
 // damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):

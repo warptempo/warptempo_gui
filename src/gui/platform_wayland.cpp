@@ -934,8 +934,13 @@ void GuiPlatform::set_title(const std::string& title) {
 // with unsaved work. The dirty mark is an ASTERISK PLUS ONE SPACE inserted before
 // the separator, and it is present only while dirty; the U+25CF dot the title
 // shipped with a few hours earlier is retired (the asterisk is the convention
-// every editor uses, and it is plain ASCII). The mark lives here and nowhere
-// else; the bottom strip's old dirty cell is gone.
+// every editor uses, and it is plain ASCII). The bottom strip's old dirty CELL
+// is gone and stays gone — but the mark itself is on ROW 8 as well since
+// 2026-09-09, as the clock's ` (*)` suffix inside the clock's own run
+// (paint_bottom_row_buttons_and_clock). The two surfaces say the same thing
+// deliberately: this one is the compositor's and exists only where a titlebar
+// does, and the tablet, which has none, had no dirty indicator at all until
+// the row-8 mark landed. Nothing about this composition moved with it.
 //
 // The project name inside the string is a FILESYSTEM folder name taken
 // verbatim, so it carries whatever bytes that folder is spelled with; only the

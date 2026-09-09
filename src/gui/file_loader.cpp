@@ -433,6 +433,12 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // the title's dirty half itself. The other transition site is
     // recompute_dirty's tail — those two are the whole inventory, since the four
     // flags above have no other writer in the tree.
+    // ROW 8'S ` (*)` NEEDS NO DAMAGE CALL HERE, unlike at that tail: the mark is
+    // painted from app.dirty directly, and this body invalidates the WHOLE
+    // WINDOW on both sides of this assignment — at the `Loading...` frame above
+    // and again at the return below — so the lane is covered as a superset
+    // (the whole-window routes are deliberately unlisted in
+    // invalidate_status_cell_area's caller inventory, viewport.h).
     gui.set_title_dirty(false);
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,

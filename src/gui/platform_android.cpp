@@ -920,6 +920,10 @@ int GuiPlatform::height() const { return height_; }
 // the GUI calls them unconditionally from the load path and from every
 // dirty-state transition, and the seam's promise is that a consumer compiles
 // against either backend unchanged.
+// UNSAVED WORK IS STILL SHOWN HERE: since 2026-09-09 the dirty mark is ROW 8'S
+// ` (*)`, painted by the portable painter out of app.dirty, so this backend's
+// silence costs the user nothing — which it did while the title was the mark's
+// only home.
 void GuiPlatform::set_project_title(std::string /*project_name*/) {}
 void GuiPlatform::set_title_dirty(bool /*dirty*/) {}
 

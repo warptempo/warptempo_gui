@@ -64,9 +64,11 @@
 // product has one text size, so none of the three moves those strings have
 // made — the bottom row to the tab row on 2026-08-13, the tab row to the
 // one-day status bar on 2026-08-29 and the bar back into row 8's own cell that
-// evening — changed a glyph. (The dirty mark used
-// to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which labwc
-// paints — see GuiPlatform::apply_window_title.)
+// evening — changed a glyph. (The dirty mark was on this list until
+// 2026-08-01, when it moved to the WINDOW TITLE, which labwc paints — see
+// GuiPlatform::apply_window_title. It is back on the row since 2026-09-09 and
+// still not on this list: it is ` (*)` inside the CLOCK's monospace run, not a
+// string of the state cell's, and the title keeps its own asterisk.)
 //
 // The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
 // belongs to the clock and lives at its own metrics, re-derived on the
@@ -142,8 +144,14 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // and its `h`-view overlap with the tabs all went with the bar's landing: the
 // tab row paints tabs over its whole width again.
 //
-// THE DIRTY DOT is not a tenant: it rides the WINDOW TITLE beside the project
-// name, where labwc paints it (GuiPlatform::apply_window_title).
+// THE DIRTY MARK IS NOT A TENANT EITHER — it is THE CLOCK'S SUFFIX (architect
+// 2026-09-09): ` (*)` after the timestamp's digits while the tab is dirty,
+// inside the clock's own unclipped run, so it stands with or without a state
+// string beside it and reserves no width of its own. It rode the WINDOW TITLE
+// alone from 2026-08-01 until then; the title keeps its asterisk on the laptop,
+// where labwc paints one (GuiPlatform::apply_window_title), and the tablet —
+// which has no titlebar and so had no dirty indicator at all — is why the mark
+// moved onto the row the two backends share.
 
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
@@ -3474,6 +3482,30 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // from the CLOCK's origin, so a narrow-but-honest window cut digits
         // off the clock, and its `x1 > x0` guard turned a bound left of the
         // cell into NO clip at all — the collision it exists to prevent.)
+        //
+        // AND THE DIRTY MARK IS THE CLOCK'S SUFFIX (architect 2026-09-09):
+        // ` (*)` after the digits while the tab carries unsaved work, so the
+        // row reads `00:00.100 (*) | Rendering...`. It is STATE by this
+        // product's own split — true right now, replaced as it changes, never
+        // timed out and never cleared by a press — which is what puts it on
+        // row 8; and it rides THE CLOCK'S RUN rather than the state's because
+        // it must stand whether or not a state string does. So it joins the
+        // UNCLIPPED text, and the state simply begins that much further right:
+        // clock_w below is the pair's advance, not the timestamp's.
+        // THE TABLET IS WHY IT MOVED HERE. The mark's only home was the window
+        // title, which labwc paints and a fullscreen NativeActivity has none
+        // of, so the tablet showed unsaved work nowhere at all. The laptop's
+        // titlebar asterisk is untouched and now says the same thing twice,
+        // deliberately (GuiPlatform::apply_window_title).
+        // ITS DAMAGE IS THE TRANSITION'S, NOT THE FRAME'S: Undo::recompute_dirty
+        // invalidates this lane when and only when app.dirty moves, because
+        // that body runs after every command and an unconditional invalidate
+        // would repaint the row on every keypress for a mark that did not move.
+        // The reserved clock CELL does not grow for the suffix — it is the
+        // widest-digit specimen's advance and stays the per-second tick's
+        // damage box, which repaints digits the suffix never changes; the
+        // suffix's own pixels move only on a transition, and that damages the
+        // lane whole (clock_invalidate_rect's record, main.cpp).
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so this text is hidden while a prompt, a dialog editor, the render
         // player, the picker or the AV Sync Stats panel stands
@@ -3495,10 +3527,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = process_line_text(app, external_sync_worker);
         }
         const double x0 = static_cast<double>(cell_x);
-        // THE CLOCK, UNCLIPPED, and its advance is where the state begins.
-        const double clock_w = show_row_text(cr, font, x0, baseline,
-                                             format_timestamp(seconds),
-                                             kRedesignLabel);
+        // THE CLOCK, UNCLIPPED, AND THE DIRTY MARK INSIDE ITS RUN; the pair's
+        // advance is where the state begins.
+        std::string clock = format_timestamp(seconds);
+        if (app.dirty) clock += " (*)";
+        const double clock_w =
+            show_row_text(cr, font, x0, baseline, clock, kRedesignLabel);
         if (!state.empty()) {
             // THE SEPARATION IS A CHARACTER — the literal " | " leading the
             // state's own run, which is why the two runs read as the one
@@ -6336,9 +6370,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // display all three view states as lit buttons and tabs, and the icon
     // row's read-only toggle shows the lock (the tabs' own padlocks did until
     // 2026-08-14), so the letters were restating what the redesigned
-    // rows say in their own vocabulary. The dirty mark's section moved to the
-    // WINDOW TITLE beside the project name (GuiPlatform::apply_window_title)
-    // — the title is the mark's only home now.
+    // rows say in their own vocabulary. The dirty mark's SECTION stays gone —
+    // it has no cell of its own and reserves no width — but the mark itself is
+    // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the
+    // clock's run (` (*)`, the block in paint_bottom_row_buttons_and_clock),
+    // the window title keeping its own asterisk where a compositor paints one
+    // (GuiPlatform::apply_window_title).
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
     // redesigned rows above it: the clock reads 00:00.000 with no source, and
