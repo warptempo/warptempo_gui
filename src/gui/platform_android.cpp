@@ -915,17 +915,16 @@ int GuiPlatform::height() const { return height_; }
 
 // A NativeActivity under Theme.NoTitleBar has no titlebar and no
 // task-switcher string a native app can rewrite, so the classic application
-// form the Wayland backend composes ("K551 * - warptempo_gui") has nowhere to
-// go. Both setters are therefore silent no-ops. They are not deleted because
-// the GUI calls them unconditionally from the load path and from every
-// dirty-state transition, and the seam's promise is that a consumer compiles
-// against either backend unchanged.
-// UNSAVED WORK IS STILL SHOWN HERE: since 2026-09-09 the dirty mark is ROW 8'S
-// ` *`, painted by the portable painter out of app.dirty, so this backend's
-// silence costs the user nothing — which it did while the title was the mark's
-// only home.
+// form the Wayland backend composes ("K551 - warptempo_gui") has nowhere to
+// go. The setter is therefore a silent no-op. It is not deleted because the
+// GUI calls it unconditionally from the load path, and the seam's promise is
+// that a consumer compiles against either backend unchanged.
+// UNSAVED WORK IS SHOWN HERE like anywhere else: since 2026-09-09 the dirty
+// mark is ROW 8'S ` *`, painted by the portable painter out of app.dirty, and
+// it is the ONE dirty indicator on both backends — the title's own asterisk is
+// deleted, and the seam's set_title_dirty with it, so this backend has no
+// second setter to no-op.
 void GuiPlatform::set_project_title(std::string /*project_name*/) {}
-void GuiPlatform::set_title_dirty(bool /*dirty*/) {}
 
 // ---------------------------------------------------------------------------
 // Lifetime

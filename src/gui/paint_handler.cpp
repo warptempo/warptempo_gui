@@ -69,9 +69,9 @@
 // having one text size. Every NOTIFICATION CARD's line is still the sans,
 // shaped and painted through the ONE chokepoint like every other redesigned
 // row (paint_notifications, 2026-08-29). (The dirty mark left this row for
-// the WINDOW TITLE on 2026-08-01 — labwc paints it, see
-// GuiPlatform::apply_window_title — and is back on the row since 2026-09-09
-// as ` *` inside the CLOCK's own run, the title keeping its own asterisk.)
+// the WINDOW TITLE on 2026-08-01 — labwc painted it — and is back on the row
+// since 2026-09-09 as ` *` inside the CLOCK's own run, the title's asterisk
+// deleted the same day as a duplicate signal.)
 //
 // The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
 // belongs to the clock and lives at its own metrics, re-derived on the
@@ -151,10 +151,11 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // 2026-09-09): ` *` after the timestamp's digits while the tab is dirty,
 // inside the clock's own unclipped run, so it stands with or without a state
 // string beside it and reserves no width of its own. It rode the WINDOW TITLE
-// alone from 2026-08-01 until then; the title keeps its asterisk on the laptop,
-// where labwc paints one (GuiPlatform::apply_window_title), and the tablet —
-// which has no titlebar and so had no dirty indicator at all — is why the mark
-// moved onto the row the two backends share.
+// alone from 2026-08-01 until then — the tablet, which has no titlebar and so
+// had no dirty indicator at all, is why it moved onto the row the two backends
+// share — and the title's own asterisk was DELETED the same day (architect:
+// "otherwise it becomes a duplicate signal, and we avoid those in this
+// project"), so this is the mark's one surface on both machines.
 
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
@@ -602,7 +603,7 @@ constexpr double kTabMinWidthPx      = 58.0;  // see the reconstruction above
 // unselected, so switching tabs would visibly shove the other one sideways.
 // Selection is a FACE, not a size.
 constexpr double kTabTrimHeightPx    = 3.0;   // the selected tab's blue top
-constexpr double kTabBorderPx        = 1.0;   // side borders / hover edge
+constexpr double kTabBorderPx        = 1.0;   // side borders / the base line
 // The selected tab's top corners round at r = 5, and that is MEASURED, not
 // assumed: integrating the row_3_tab_selected.png corner's uncovered area
 // against a quarter-disc gives 1.453 px^2 in row 1 for r = 5 against the crop's
@@ -1816,14 +1817,38 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // edge, over the CONTENT GROUND #202326 (Breeze's standard bar, matching
     // the pane it opens into; the crops, the ruling that briefly darkened it
     // and that ruling's withdrawal are all at render.h's row-3 block), WITH
-    // NO BORDER ROW AT EITHER EDGE since 2026-09-09: the lane sits under the
+    // NO BORDER LANE AT EITHER EDGE since 2026-09-09: the lane sits under the
     // icon row's own border-bottom with GAP 1 between — which THIS painter
     // fills in the row's ground, so the tabs sit at the foot of one tall lane
     // (main.cpp's vertical rule) — and directly ON the overview strip, whose
-    // black top edge is the line below. (A 1px line at the lane's top and a
-    // 1px line at its bottom that BROKE under the selected tab stood
-    // 2026-08-13..2026-09-09; kdenlive-redesign.md's closing section carries
-    // the relayout.)
+    // black top edge is the line below. (A 1px line at the lane's TOP stood
+    // 2026-08-13..2026-09-09 and is gone for good; kdenlive-redesign.md's
+    // closing section carries the relayout.)
+    //
+    // THE LANE'S LAST ROW IS THE BASE LINE (architect 2026-09-09, his second
+    // look at that relayout: "the #4c4e51 line should be the LAST ROW of the
+    // tab row — but INSIDE the tab row, not outside"). It costs the lane no
+    // height — the strip stack still allocates 30 authored px of CONTENT and
+    // no border row — and it has THREE FACES over the one `line_w` band at
+    // `content_y + content_h - line_w`:
+    //   - kRedesignTabLine #4c4e51 ACROSS THE WHOLE LANE, over the trough and
+    //     under every unselected tab at rest;
+    //   - kRedesignTabHoverEdge #496170 across a HOVERED unselected tab's own
+    //     BOX — the hit rect, never the extended fill, which is what the crop
+    //     fixes (row 29 of tmp/Screenshot_2026-09-09_02-42-29-c.png: cols
+    //     80..159 are the hover blue and col 79 is the selected neighbour's
+    //     side border, so the spill under that neighbour keeps the grey);
+    //   - BROKEN under the SELECTED tab, whose box shows the content ground —
+    //     the break the relayout deleted, back at its new home INSIDE the
+    //     lane. That tab's side borders run down THROUGH this row to the
+    //     lane's last pixel exactly as they already did.
+    // An unselected tab's fill is therefore `content_h - line_w` tall and the
+    // line completes it, which is the picture Breeze builds from the other
+    // side with rect.adjust(0,0,0,+1) under a bar-wide base line.
+    // (The RESTING tab's base row is the ONE place this overrides the crop —
+    // it measures #1b1d20 there, the resting fill run to the lane's foot —
+    // and the architect ruled the grey continuous instead; render.h's row-3
+    // block carries that record with the rest of the provenance.)
     //
     // THE GEOMETRY IS BREEZE'S OWN — drawTabBarTabShapeControl for
     // RoundedNorth (breezestyle.cpp, verified against Breeze master
@@ -1864,9 +1889,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // inventoried at that constant (render.h), damaged by the activation
     // hook's top-strip invalidation like the header's ground. An UNSELECTED
     // tab is ONE GEOMETRY IN TWO COLOURS (architect 2026-09-09, his option 1):
-    // rest #1b1d20 or hover #263f4d and nothing else — no bottom edge line
-    // (kRedesignTabHoverEdge is retired, render.h), no border, no click face
-    // — RECESSED against the bar, Breeze's model. Its two colours do NOT
+    // rest #1b1d20 or hover #263f4d, no border and no click face — RECESSED
+    // against the bar, Breeze's model. THE HOVER'S THIRD COLOUR IS THE BASE
+    // LINE'S, not the fill's (the block above): the fill stops one line short
+    // of the lane's foot in both states and the base row under it carries
+    // kRedesignTabHoverEdge while hovered. Its two colours do NOT
     // follow the focus swap (the third crop's hovered B is the focused one's
     // own #263f4d). There is no selected-hover face anywhere in this row (a
     // tab press is a chord, never a refusal), and this row has NO disabled
@@ -2044,12 +2071,17 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                               static_cast<double>(content_h)));
     };
 
-    // PASS ONE — THE UNSELECTED TABS: a flat fill of the full content height,
-    // the outer top corner rounded (the first tab's left, the last tab's
-    // right — Breeze rounds only isFirst / isLast, and with two tabs an
-    // unselected one is always one of those), the edge facing the selected
-    // neighbour SQUARE and run `spill` under it. Rest or hover is the one
-    // colour fork; the fill is the whole face.
+    // THE BASE LINE'S BAND — the lane's last `line_w` rows, inside the
+    // content and costing it no height (the block at the head of this
+    // painter). Pass one stops its fills here; the base pass fills it.
+    const int base_y = content_y + content_h - line_w;
+
+    // PASS ONE — THE UNSELECTED TABS: a flat fill down to the base band, the
+    // outer top corner rounded (the first tab's left, the last tab's right —
+    // Breeze rounds only isFirst / isLast, and with two tabs an unselected one
+    // is always one of those), the edge facing the selected neighbour SQUARE
+    // and run `spill` under it. Rest or hover is the fill's one colour fork;
+    // the base row under it is the base line's, in its own pass below.
     for (int i = 0; i < kTabCount; ++i) {
         const TabBox& b = boxes[i];
         if (b.selected) continue;
@@ -2067,11 +2099,48 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
         redesign_rounded_top_rect_path(cr, fx, content_y,
                                        static_cast<double>(fw),
-                                       static_cast<double>(content_h),
+                                       static_cast<double>(content_h - line_w),
                                        round_left  ? radius : 0.0,
                                        round_right ? radius : 0.0);
         cairo_fill(cr);
+        // THE LABEL IS CENTERED IN THE WHOLE CONTENT BAND, not in the
+        // shortened fill: it is the same baseline the selected tab's label
+        // takes, and the two must sit on one line.
         paint_label(b);
+    }
+
+    // THE BASE LINE, in one pass over the band both tab passes leave to it —
+    // the three faces in painted order, each a plain rectangle:
+    //   1. the grey across the whole lane (trough included);
+    //   2. the hover blue across a hovered unselected tab's OWN box, so the
+    //      spill it paints under the selected neighbour keeps the grey;
+    //   3. the break under the selected tab, the content ground across its
+    //      box.
+    // The break is painted HERE rather than left to pass two's own interior
+    // fill, which covers the same pixels a moment later: this pass owns all
+    // three faces of its band, so a later change to that fill's clip cannot
+    // quietly put a line back under the selected tab. Pass two then paints
+    // over it as it always did, side borders and all.
+    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                         kRedesignTabLine.b);
+    cairo_rectangle(cr, lane.x, base_y, lane.w, line_w);
+    cairo_fill(cr);
+    for (int i = 0; i < kTabCount; ++i) {
+        const TabBox& b = boxes[i];
+        if (b.selected || !b.hovered) continue;
+        cairo_set_source_rgb(cr, kRedesignTabHoverEdge.r,
+                             kRedesignTabHoverEdge.g,
+                             kRedesignTabHoverEdge.b);
+        cairo_rectangle(cr, b.x, base_y, b.w, line_w);
+        cairo_fill(cr);
+    }
+    if (selected_i >= 0) {
+        cairo_set_source_rgb(cr, kRedesignContentGround.r,
+                             kRedesignContentGround.g,
+                             kRedesignContentGround.b);
+        cairo_rectangle(cr, boxes[selected_i].x, base_y, boxes[selected_i].w,
+                        line_w);
+        cairo_fill(cr);
     }
 
     // PASS TWO — THE SELECTED TAB, painted LAST over its neighbours' spill.
@@ -2160,11 +2229,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // state with the row's own lit fill instead. The slot's record is at
     // the retired constants above.)
     //
-    // (THE BORDER-BOTTOM WAS DRAWN HERE, full window width at the lane's
-    // last row and BROKEN under the selected tab, from the row's landing
-    // until 2026-09-09; the tab opens into the overview strip now, whose own
-    // top edge is the line, and the break's span bookkeeping went with the
-    // line.)
+    // (THE BORDER-BOTTOM WAS DRAWN HERE, full window width at the lane's own
+    // BORDER row — one row BELOW the content — and broken under the selected
+    // tab, from the row's landing until 2026-09-09. The border row is gone
+    // and stays gone; what came back that same day is the BASE LINE, which is
+    // the lane's last CONTENT row and is painted above, between the two tab
+    // passes, because an unselected tab's fill now stops short of it.)
 
     cairo_restore(cr);
 }
@@ -3574,9 +3644,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // clock_w below is the pair's advance, not the timestamp's.
         // THE TABLET IS WHY IT MOVED HERE. The mark's only home was the window
         // title, which labwc paints and a fullscreen NativeActivity has none
-        // of, so the tablet showed unsaved work nowhere at all. The laptop's
-        // titlebar asterisk is untouched and now says the same thing twice,
-        // deliberately (GuiPlatform::apply_window_title).
+        // of, so the tablet showed unsaved work nowhere at all. THE TITLE'S
+        // ASTERISK WENT the same day (architect 2026-09-09: "it should only
+        // show up in the bottom. Otherwise it becomes a duplicate signal, and
+        // we avoid those in this project"), taking the seam's set_title_dirty
+        // with it, so this suffix is the product's ONE dirty indicator.
         // ITS DAMAGE IS THE TRANSITION'S, NOT THE FRAME'S: Undo::recompute_dirty
         // invalidates this lane when and only when app.dirty moves, because
         // that body runs after every command and an unconditional invalidate
@@ -6460,9 +6532,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // rows say in their own vocabulary. The dirty mark's SECTION stays gone —
     // it has no cell of its own and reserves no width — but the mark itself is
     // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the
-    // clock's run (` *`, the block in paint_bottom_row_buttons_and_clock),
-    // the window title keeping its own asterisk where a compositor paints one
-    // (GuiPlatform::apply_window_title).
+    // clock's run (` *`, the block in paint_bottom_row_buttons_and_clock), and
+    // it is the only dirty indicator the product has: the window title's own
+    // asterisk was deleted the same day as a duplicate signal.
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
     // redesigned rows above it: the clock reads 00:00.000 with no source, and

@@ -419,15 +419,18 @@ drag coordinates floor instead of truncating.
 - **Android stubs** (each named at its site with its Wayland twin), THREE
   since 2026-09-03 and re-greped at that count: pointer capture as no-ops (the
   notional-x FIELD survives and tracks the finger), cursor kinds stored and
-  never applied, titles — **and the title stub stopped costing the user
+  never applied, the title — **and the title stub stopped costing the user
   anything on 2026-09-09**, when the DIRTY MARK moved onto row 8 as the
   clock's ` *` suffix (messaging.md's state-cell section): the title was the
   mark's ONE home from 2026-08-01, and a fullscreen `NativeActivity` has no
   titlebar, so unsaved work showed nowhere at all on the tablet until then.
   The mark is painted by the PORTABLE painter out of `app.dirty`, so it needs
-  no seam member of its own; `set_title_dirty` stays on the API and stays a
-  no-op here, the laptop's titlebar asterisk being the compositor's own second
-  surface for the same fact. **THE CLIPBOARD LEFT THIS LIST** the evening it was
+  no seam member of its own — and `set_title_dirty` is **DELETED FROM THE SEAM
+  ON BOTH BACKENDS** the same day (architect: *"it should only show up in the
+  bottom. Otherwise it becomes a duplicate signal, and we avoid those in this
+  project"*), taking the laptop's titlebar asterisk with it. The title stub
+  that remains is `set_project_title` alone, and the title it no-ops is the
+  project name plus `" - warptempo_gui"` and nothing else. **THE CLIPBOARD LEFT THIS LIST** the evening it was
   written into it (architect, *"if it's cheap, let's go ahead and build it"*):
   it was one stored string with `clipboard_set_text` answering FALSE, and it
   is now the SYSTEM clipboard over the MediaSession's own JNI road — two more

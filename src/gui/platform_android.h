@@ -133,16 +133,16 @@ public:
     // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
-    // and landscape-only with no titlebar, so both setters store nothing and
-    // paint nothing. They stay on the API because the GUI calls them from its
-    // load and dirty-state paths unconditionally (contract and composition
-    // rule at platform_wayland.h, which owns them).
-    // THE TABLET'S DIRTY INDICATOR IS ROW 8'S ` *` (architect 2026-09-09),
-    // the clock's own suffix in the portable painter — which is why the mark
-    // moved there: with the title its only home, unsaved work showed nowhere
-    // at all on this backend.
+    // and landscape-only with no titlebar, so this setter stores nothing and
+    // paints nothing. It stays on the API because the GUI calls it from its
+    // load path unconditionally (contract and composition rule at
+    // platform_wayland.h, which owns it).
+    // THE DIRTY INDICATOR IS ROW 8'S ` *` (architect 2026-09-09), the clock's
+    // own suffix in the portable painter, and it is the ONE dirty indicator on
+    // both backends: the title's asterisk is deleted, and `set_title_dirty`
+    // with it, so there is no second surface to keep this backend's no-op in
+    // step with.
     void set_project_title(std::string project_name);
-    void set_title_dirty(bool dirty);
 
     void shutdown();
     void run();

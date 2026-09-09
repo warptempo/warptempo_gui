@@ -930,22 +930,23 @@ void GuiPlatform::set_title(const std::string& title) {
 }
 
 // THE TITLE'S ONE COMPOSITION SITE (architect 2026-08-01, second pass): the
-// CLASSIC APPLICATION FORM — "K551 - warptempo_gui" clean, "K551 * - warptempo_gui"
-// with unsaved work. The dirty mark is an ASTERISK PLUS ONE SPACE inserted before
-// the separator, and it is present only while dirty; the U+25CF dot the title
-// shipped with a few hours earlier is retired (the asterisk is the convention
-// every editor uses, and it is plain ASCII). The bottom strip's old dirty CELL
-// is gone and stays gone — but the mark itself is on ROW 8 as well since
-// 2026-09-09, as the clock's ` *` suffix inside the clock's own run
-// (paint_bottom_row_buttons_and_clock). The two surfaces say the same thing
-// deliberately: this one is the compositor's and exists only where a titlebar
-// does, and the tablet, which has none, had no dirty indicator at all until
-// the row-8 mark landed. Nothing about this composition moved with it.
+// CLASSIC APPLICATION FORM — "K551 - warptempo_gui", the project name, a
+// separator and the binary name.
+//
+// THE DIRTY MARK IS NOT PART OF IT (architect 2026-09-09: "the dirty dot still
+// shows up in the window title as well as the bottom row. It should only show
+// up in the bottom. Otherwise it becomes a duplicate signal, and we avoid those
+// in this project"). The title carried it from 2026-08-01 — an asterisk plus
+// one space before the separator, a U+25CF dot for the first few hours — and
+// the mark's one home now is ROW 8's clock suffix, ` *` inside the clock's own
+// run (paint_bottom_row_buttons_and_clock), which BOTH backends paint. The
+// seam member that pushed the flag here, set_title_dirty, is deleted with it,
+// so this composition has no state left to read but the project name.
 //
 // The project name inside the string is a FILESYSTEM folder name taken
 // verbatim, so it carries whatever bytes that folder is spelled with; only the
-// fixed parts this site composes — the separator, the binary name, the asterisk
-// — are the product's own, and those are ASCII. Composition keeps those bytes
+// fixed parts this site composes — the separator and the binary name — are the
+// product's own, and those are ASCII. Composition keeps those bytes
 // whole; set_title above is where they meet the protocol's UTF-8 requirement
 // and drops anything malformed (the rules are at title_bytes_to_utf8). A
 // well-formed name therefore reaches the compositor verbatim, which is the
@@ -955,28 +956,17 @@ void GuiPlatform::set_title(const std::string& title) {
 //
 // project_title_ is empty until the load derives it, so the pre-load frames
 // (and the loading line) keep the bare binary name init() seeded: with no
-// project there is no name to separate from, and no unsaved work to mark.
+// project there is no name to separate from.
 void GuiPlatform::apply_window_title() {
     if (project_title_.empty()) {
         set_title("warptempo_gui");
         return;
     }
-    std::string t = project_title_;
-    t += title_dirty_ ? " * - warptempo_gui" : " - warptempo_gui";
-    set_title(t);
+    set_title(project_title_ + " - warptempo_gui");
 }
 
 void GuiPlatform::set_project_title(std::string project_name) {
     project_title_ = std::move(project_name);
-    apply_window_title();
-}
-
-void GuiPlatform::set_title_dirty(bool dirty) {
-    // Cheap-no-op on an unchanged flag: recompute_dirty runs after every
-    // command, and re-sending an identical title on each one would be pure
-    // protocol traffic.
-    if (dirty == title_dirty_) return;
-    title_dirty_ = dirty;
     apply_window_title();
 }
 

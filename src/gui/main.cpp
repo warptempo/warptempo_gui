@@ -782,12 +782,13 @@ GuiRect top_marker_row_area(const AppState& a) {
 // — the state text is this row's cell now and the resolved readout retired;
 // the OVERVIEW STRIP was bottom lane 0 under this
 // row for the afternoon of 2026-08-12 and is TOP lane 3 now.) THE DIRTY MARK
-// IS A TENANT HERE, AND IT IS THE PORTABLE ONE: the clock wears the ` *`
-// suffix while app.dirty stands (paint_bottom_row_buttons_and_clock appends
-// it; the transition is the lane's own damage, Undo::recompute_dirty's tail,
-// and messaging.md carries the ruling). The Wayland title's own asterisk is a
-// SECOND indicator painted by the compositor's titlebar, off this surface and
-// absent on the tablet, where set_title_dirty is a no-op. THE LANE IS THE ICON ROW'S
+// IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the ` *` suffix
+// while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
+// transition is the lane's own damage, Undo::recompute_dirty's tail, and
+// messaging.md carries the ruling). The Wayland title carried a SECOND
+// asterisk until 2026-09-09, when the architect ruled the duplicate signal off
+// — the title is the project name alone now on both backends, and the seam
+// member that pushed the flag is deleted. THE LANE IS THE ICON ROW'S
 // HEIGHT since 2026-08-14, its content and border both delegating to that
 // row's accessors.
 // bottom_row_area is the lane INCLUDING its 1px border-top (the waveform

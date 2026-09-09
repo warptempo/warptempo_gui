@@ -77,27 +77,29 @@ public:
     // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
-    // "K551 - warptempo_gui" clean, "K551 * - warptempo_gui" with unsaved work.
-    // These two setters are its ONLY writers — set_title itself is private below
-    // so the composition cannot be bypassed by an inline string somewhere in the
-    // GUI.
+    // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
+    // is private below so the composition cannot be bypassed by an inline string
+    // somewhere in the GUI.
     //
     // set_project_title takes the source's PARENT FOLDER BASENAME (derived once
     // at load, file_loader.cpp — the folder is the project's name, distinct from
     // the audio filename and from the output `title=` settings key).
-    // set_title_dirty is called at every dirty-state transition; it is a cheap
-    // no-op when the flag has not moved, so the per-command recompute_dirty can
-    // call it unconditionally. IT IS NOT THE MARK'S ONLY SURFACE any more
-    // (architect 2026-09-09): row 8's clock wears a ` *` suffix read straight
-    // out of app.dirty, which is the mark on BOTH backends — this titlebar half
-    // exists only where a compositor paints a titlebar.
+    //
+    // THE TITLE CARRIES NO DIRTY MARK (architect 2026-09-09: "it should only
+    // show up in the bottom. Otherwise it becomes a duplicate signal, and we
+    // avoid those in this project"): row 8's clock wears the ` *` suffix read
+    // straight out of app.dirty, on both backends, and it is the product's ONE
+    // dirty indicator. `set_title_dirty` — the seam member the flag was pushed
+    // through from 2026-08-01 — is deleted on both backends with the mark it
+    // carried, and the title is the project name and the binary name, nothing
+    // else.
     //
     // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar,
     // so the product's one-face HarfBuzz rule (which governs pixels WE paint)
-    // does not reach here. The string is all-ASCII since the dirty mark became
-    // an asterisk, so nothing depends on that latitude any more.
+    // does not reach here. The product's own half of the string is ASCII; the
+    // project name is a filesystem name taken verbatim, which is what
+    // set_title's UTF-8 boundary is for.
     void set_project_title(std::string project_name);
-    void set_title_dirty(bool dirty);
 
     void shutdown();
     // Pump until an exit or a run stop is requested (the loop contract at
@@ -599,13 +601,12 @@ private:
     friend struct WaylandListeners;
 
     // -- The window title, composed in one place --
-    // set_title is the raw xdg_toplevel call and is PRIVATE so that the two
-    // public setters above are the whole vocabulary: init() seeds the pre-load
+    // set_title is the raw xdg_toplevel call and is PRIVATE so that the one
+    // public setter above is the whole vocabulary: init() seeds the pre-load
     // fallback with it, apply_window_title() is the only other caller.
     void set_title(const std::string& title);
     void apply_window_title();
     std::string project_title_;          // the parent-folder basename; empty pre-load
-    bool        title_dirty_ = false;
 
     // -- Wayland globals (bound during init()) --
     // THE PROTOCOL CLASSES, stated here once (init() enforces them): the five

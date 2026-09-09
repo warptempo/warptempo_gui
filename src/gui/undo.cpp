@@ -9,10 +9,6 @@
                                   // since 2026-08-16; frame_span_into_view is
                                   // its cannot-fit arm and is no longer called
                                   // from this TU)
-#include "platform.h"           // viewport.gui.set_title_dirty — the window
-                                  // title's dirty half, pushed from
-                                  // recompute_dirty's tail (whose other half is
-                                  // the row-8 mark's transition damage)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
                                   // singleton recenter and the group framing,
@@ -121,25 +117,21 @@ void Undo::recompute_dirty() {
     }
     const bool was_dirty = app.dirty;
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
-    // THE DIRTY MARK HAS TWO SURFACES AND ONE DERIVE-OWNER. This is where
+    // THE DIRTY MARK HAS ONE SURFACE AND ONE DERIVE-OWNER. This is where
     // app.dirty is derived, so every mutation, save and undo/redo transition
-    // passes through here, and answering from this one tail is what keeps both
-    // surfaces honest without a scattered set of inline writes.
-    //   * THE WINDOW TITLE (architect 2026-08-01) is PUSHED: the setter takes
-    //     the flag and is a cheap no-op when it has not moved. It is the
-    //     laptop's surface alone — Android has no titlebar, so the backend
-    //     there stores nothing.
-    //   * ROW 8'S ` *` (architect 2026-09-09) is READ: the painter takes
-    //     app.dirty straight out of the state as the clock's own suffix, so
-    //     what this tail owes it is DAMAGE, and only ON A TRANSITION. This
-    //     body runs after every command, and an unconditional invalidate would
-    //     repaint the bottom row on every keypress for a mark that did not
-    //     move.
-    // (The load's own four-flag reset is the only other transition — it pushes
-    // the title the same way from file_loader.cpp, and owes no damage of its
-    // own: load_file invalidates the whole window on both sides of that
-    // assignment.)
-    viewport.gui.set_title_dirty(app.dirty);
+    // passes through here.
+    // ROW 8'S ` *` (architect 2026-09-09) is that surface on both backends,
+    // and it is READ, never pushed: the painter takes app.dirty straight out of
+    // the state as the clock's own suffix, so what this tail owes it is DAMAGE,
+    // and only ON A TRANSITION. This body runs after every command, and an
+    // unconditional invalidate would repaint the bottom row on every keypress
+    // for a mark that did not move. (The window title carried a second
+    // asterisk until 2026-09-09, pushed from here through a seam setter; the
+    // architect ruled the duplicate signal off and both are deleted, so damage
+    // is the whole of what this tail does for the mark.)
+    // (The load's own four-flag reset is the only other transition, and it
+    // owes no damage of its own: load_file invalidates the whole window on
+    // both sides of that assignment.)
     if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
 }
 

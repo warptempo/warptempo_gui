@@ -353,8 +353,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // The folder is what the architect calls the project, and it reads and
     // versions better than either the audio filename or the output `title=`
     // settings key (a different thing entirely: that one names the render). The
-    // " - warptempo_gui" tail and the dirty asterisk are composed by the
-    // title's owner, GuiPlatform::apply_window_title.
+    // " - warptempo_gui" tail is composed by the title's owner,
+    // GuiPlatform::apply_window_title, and the title carries nothing else —
+    // the dirty asterisk it wore until 2026-09-09 is row 8's alone now.
     //
     // TAKEN FROM THE RESOLVED PROJECT, never derived from the source's parent:
     // the model already answered which folder this is, and a derivation off the
@@ -429,17 +430,18 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     app.phase_reset_dirty    = false;
     app.settings_dirty     = false;
     // The load is the ONE dirty transition that does not go through
-    // Undo::recompute_dirty (it assigns the four flags outright), so it carries
-    // the title's dirty half itself. The other transition site is
-    // recompute_dirty's tail — those two are the whole inventory, since the four
-    // flags above have no other writer in the tree.
-    // ROW 8'S ` *` NEEDS NO DAMAGE CALL HERE, unlike at that tail: the mark is
-    // painted from app.dirty directly, and this body invalidates the WHOLE
-    // WINDOW on both sides of this assignment — at the `Loading...` frame above
-    // and again at the return below — so the lane is covered as a superset
-    // (the whole-window routes are deliberately unlisted in
-    // invalidate_status_cell_area's caller inventory, viewport.h).
-    gui.set_title_dirty(false);
+    // Undo::recompute_dirty (it assigns the four flags outright); that tail is
+    // the other transition site, and those two are the whole inventory, since
+    // the four flags above have no other writer in the tree.
+    // ROW 8'S ` *` — the mark's ONE surface since 2026-09-09, the window
+    // title's own asterisk having been deleted as a duplicate signal — NEEDS
+    // NO DAMAGE CALL HERE, unlike at that tail: the mark is painted from
+    // app.dirty directly, and this body invalidates the WHOLE WINDOW on both
+    // sides of this assignment — at the `Loading...` frame above and again at
+    // the return below — so the lane is covered as a superset (the
+    // whole-window routes are deliberately unlisted in
+    // invalidate_status_cell_area's caller inventory, viewport.h). So this
+    // site pushes nothing at all any more.
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: Source load aborted: invalid warp markers in "
