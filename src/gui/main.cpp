@@ -141,12 +141,13 @@ namespace {
 // the icon row's first group now) — from the window edge inward, IN THE ORDER
 // THE 2026-09-09 TOP STRIP RELAYOUT GAVE THEM (the vertical rule below carries
 // the ruling): MENU ROW (its own authored menu_row_h_px(), row 1 of the
-// kdenlive redesign, PINNED AT THE WINDOW TOP at its natural 34 with no margin
-// — kdenlive's own menubar lane, whose derivation is the view bar's 32px box
-// inside its two 1px margins; it stood at 30 for the hours between the
-// relayout and his remeasure the same day, sat on the tab row with gap 1
-// above it from 2026-09-03 until the relayout, and stood at the window top
-// with gap 1 below it from commit B until then), then ICON ROW
+// kdenlive redesign, PINNED AT THE WINDOW TOP at its natural 30 with no margin
+// — the anchors' pill IS the lane, and the view bar's box derives DOWN from
+// it as 28 inside its two 1px margins; it stood at 34 for the hours between
+// his remeasure of kdenlive's lane on 2026-09-09 and his ruling the next
+// morning, sat on the tab row with gap 1 above it from 2026-09-03 until the
+// relayout, and stood at the window top with gap 1 below it from commit B
+// until then), then ICON ROW
 // (icon_row_h_px(), row 4 of the redesign, directly
 // under the menu row with nothing between, its border-bottom inset one
 // thickness at each end), then FLEXIBLE GAP 1, then THE CENTERED BLOCK's
@@ -248,7 +249,11 @@ namespace {
 // waveform 730 -> 736) and these ten went back on as TWENTY-TWO (8 for the
 // menu row's four, 14 for the tab row's six), 428 -> 450 above, every lane
 // below the toolbar standing twenty-two pixels lower and the waveform paying
-// for all of it, 736 -> 714.
+// for all of it, 736 -> 714. THE NEXT MORNING THE MENU ROW'S FOUR CAME OFF
+// AGAIN (the pill IS the lane, 30 — the view bar's box shrinking from its
+// content instead): top lanes 200 -> 196, GAP 1 taking them back on the
+// laptop (90 -> 94), and on the tablet 450 -> 442 above with the waveform
+// taking the eight back (714 -> 722).
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, with no
@@ -273,49 +278,53 @@ namespace {
 // (the top block being taller than the bottom strip) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
-// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 200 =
-// menu 34 + icon 47 + tab 36 (30 content + a 6px margin-bottom) + overview 26
+// THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 196 =
+// menu 30 + icon 47 + tab 36 (30 content + a 6px margin-bottom) + overview 26
 // + trim 9 + ruler 28 + marker 20, of which 119 is the block above the
-// waveform (tab row through marker lane) and 81 the two toolbar rows above
+// waveform (tab row through marker lane) and 77 the two toolbar rows above
 // the gap; the 2026-09-09 relayout took the top lanes 193 -> 190 — the menu
-// row's 1px margin and the tab row's two border rows — and the same day's two
+// row's 1px margin and the tab row's two border rows — the same day's two
 // remeasures put them 190 -> 200, +4 on the menu row and +6 on the tab row's
-// new margin; every one of those pixels came out of GAP 1 or went back into
-// it; the BOTTOM STRIP is 47, the bottom ROW alone (since 2026-08-14, when it
+// new margin, and the next morning's ruling took the menu row's four off
+// again, 200 -> 196; every one of those pixels came out of GAP 1 or went
+// back into it; the BOTTOM STRIP is 47, the bottom ROW alone (since 2026-08-14, when it
 // took the icon row's 46px content in place of its own 50; the STATUS BAR's 33
 // joined it for the one day of 2026-08-29 and folded back into the row that
 // evening) — every number below is re-derived from that table rather than
 // adjusted):
-//   1920x1080: leftover 833 -> waveform CLAMPED at 500, gap 1 = 90, gap 2 = 243
-//     — 34 menu / 47 icon / 90 blank / 119 block / 500 waveform / 243 blank
-//     / 47 row (30 / 47 / 100 / 113 / 500 / 243 / 47 for the hours between
-//     the relayout and the two remeasures; 97 blank / 31 menu / 162 block /
-//     500 / 243 / 47 from 2026-09-03 until the relayout, and 31 / 97 / 162 /
-//     500 / 243 / 47 from commit B until that day — THE WAVEFORM IS IN THE
-//     SAME PLACE UNDER ALL FOUR), the waveform spanning y 290..790 about the
+//   1920x1080: leftover 837 -> waveform CLAMPED at 500, gap 1 = 94, gap 2 = 243
+//     — 30 menu / 47 icon / 94 blank / 119 block / 500 waveform / 243 blank
+//     / 47 row (34 / 47 / 90 / 119 / 500 / 243 / 47 for the hours of
+//     2026-09-09 the lane stood at 34; 30 / 47 / 100 / 113 / 500 / 243 / 47
+//     for the hours between the relayout and the two remeasures; 97 blank /
+//     31 menu / 162 block / 500 / 243 / 47 from 2026-09-03 until the
+//     relayout, and 31 / 97 / 162 / 500 / 243 / 47 from commit B until that
+//     day — THE WAVEFORM IS IN THE SAME PLACE UNDER ALL FIVE), the waveform
+//     spanning y 290..790 about the
 //     window's midline 540 (the clamp fixes its height and the midpoint rule
 //     its centre, so gap 1 absorbs every authored pixel the lanes above it
 //     gain or lose, exactly as GAP 2 absorbed the status bar's 33 on its one
 //     day and gave it back).
 //   2304x1270 AT gui_scale 225, THE GLASS HOST (the tablet's CONTENT RECT —
 //   the framework's, both system bars excluded, on a 2304x1440 surface):
-//     leftover 714 -> waveform UNCLAMPED at 714 (the scaled clamp is 1125),
+//     leftover 722 -> waveform UNCLAMPED at 722 (the scaled clamp is 1125),
 //     both gaps 0
-//     — 76 menu / 106 icon / 0 blank / 268 block / 714 waveform / 0 blank /
-//     106 row, the lanes rounding to 76 menu (34 x 2.25 = 76.5, banker's down
-//     to the even 76) + 106 icon (104 + a 2px border) + 82 tab (68 content +
+//     — 68 menu / 106 icon / 0 blank / 268 block / 722 waveform / 0 blank /
+//     106 row, the lanes rounding to 68 menu (30 x 2.25 = 67.5, banker's up
+//     to the even 68) + 106 icon (104 + a 2px border) + 82 tab (68 content +
 //     a 14px margin, 13.5 rounding up to the even 14) + 58 overview (54 + two
-//     borders) + 20 trim + 63 ruler + 45 marker = 450 above and 106 below,
-//     which puts the overview strip's first pixel at y 264. Centering is
+//     borders) + 20 trim + 63 ruler + 45 marker = 442 above and 106 below,
+//     which puts the overview strip's first pixel at y 256. Centering is
 //     infeasible there like the short window below (the midpoint rule would
-//     want gap 1 = -172), so the waveform keeps everything — and pays for
+//     want gap 1 = -168), so the waveform keeps everything — and pays for
 //     every authored pixel the lanes gain, which is why 22 device pixels came
-//     off it when the menu row's 4 and the tab row's 6 landed (736 -> 714).
+//     off it when the menu row's 4 and the tab row's 6 landed (736 -> 714)
+//     and 8 went back on when the menu row's 4 came off again (714 -> 722).
 //   1024x600, A SHORT WINDOW (the Pi's old panel, kept as the worked case the
 //   floors exist for; that rig is returned and no host runs this geometry):
-//     leftover 353 -> waveform UNCLAMPED at 353, both gaps 0
-//     — 34 / 47 / 0 / 119 / 353 / 0 / 47. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = -81), so the waveform keeps everything,
+//     leftover 357 -> waveform UNCLAMPED at 357, both gaps 0
+//     — 30 / 47 / 0 / 119 / 357 / 0 / 47. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = -75), so the waveform keeps everything,
 //     which is the rule's own floor rather than a special case.
 //
 // THE TWO BANDS HIT NOTHING, AND ONLY ONE IS BLANK: gap 2 is window ground
@@ -598,15 +607,16 @@ GuiRect waveform_area(const AppState& a) {
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
     // it fits: gui_scale's 350 (architect 2026-08-29, down from the 400 that
-    // stood from 2026-08-26) takes the eight lanes' 247 authored px — the top
-    // strip's 200 plus the bottom row's 47, the 2026-09-09 relayout's three
-    // retired pixels off and that same day's two remeasures (the menu row's
-    // 34 and the tab row's 6px margin-bottom) on — to 867 device px on a
-    // supported 1080-tall
+    // stood from 2026-08-26) takes the eight lanes' 243 authored px — the top
+    // strip's 196 plus the bottom row's 47, the 2026-09-09 relayout's three
+    // retired pixels off, that same day's two remeasures (the menu row's 34
+    // and the tab row's 6px margin-bottom) on, and the menu row's four off
+    // again the next morning (the pill is the lane, 30) — to 853 device px on
+    // a supported 1080-tall
     // window (lane by lane through scaled_px, which is not one multiply of the
-    // sum: 119 menu + 165 icon + 126 tab (105 content + a 21px margin) +
+    // sum: 105 menu + 165 icon + 126 tab (105 content + a 21px margin) +
     // 92 overview + 32 trim + 98 ruler +
-    // 70 marker + 165 row), leaving 213 for the waveform and its gaps. IT
+    // 70 marker + 165 row), leaving 227 for the waveform and its gaps. IT
     // ACTUALLY OVERRAN
     // ONE FOR THE DAY THE TWO MET: at 400 % the NINE lanes of 2026-08-29's
     // status bar came to 1092, and the schema-legal combination computed a
@@ -614,7 +624,7 @@ GuiRect waveform_area(const AppState& a) {
     // exactly what this guard is here for and what the paragraph below already
     // promised. (No host runs anything near it: the laptop is 100 % on 1080
     // and the tablet 225 % on its 1270-tall content rect, where the eight
-    // lanes take 556.) The guard
+    // lanes take 548.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved three times — and the lane set is one
     // the redesign keeps adding to and taking from. If

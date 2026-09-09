@@ -279,13 +279,16 @@ GuiColor accent_for_focus(const AppState& app) {
 // architect states one. The hover pill therefore spans the row's full CONTENT
 // height — the 1px vertical inset that stood here was a misread of the crop
 // (those rows were the title-bar seam, not design). That content height is
-// kMenuRowHeightPx = 30, the crop's own height again since 2026-08-21 (it
-// stood at 34 from 2026-08-02, an allowance for the right float's 32px
-// buttons that now derive their box from the row instead — render.h carries
-// the succession), and since 2026-09-09 the lane is exactly that: the 1px
-// MARGIN-BOTTOM the lane carried from 2026-08-02 (kMenuRowMarginPx) retired
-// with the top strip relayout, so the pill fills the row whole and the icon
-// row's ground begins on the next pixel row.
+// kMenuRowHeightPx = 30, the crop's own height — the PILL'S — since
+// 2026-08-21 (it stood at 34 from 2026-08-02, an allowance for the right
+// float's 32px buttons, and again for the hours of 2026-09-09 between his
+// remeasure of kdenlive's 34 lane and his ruling the next morning that the
+// pill IS the lane; on both returns the view bar's box derives DOWN from the
+// row instead — render.h carries the succession), and since 2026-09-09 the
+// lane is exactly that: the 1px MARGIN-BOTTOM the lane carried from
+// 2026-08-02 (kMenuRowMarginPx) retired with the top strip relayout, so the
+// pill fills the row whole and the icon row's ground begins on the next
+// pixel row.
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
@@ -474,35 +477,61 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // margin in this redesign): each button carries 1px on its LEFT AND RIGHT,
 // so two adjacent buttons sit 2px apart and the div is
 // 1 + w + 2 + w + 2 + w + 1 wide, and each carries 1px ABOVE AND BELOW, so
-// the box is the row's content less 2 — and THAT IS WHAT SETS THE LANE
-// (architect 2026-09-09, his remeasure of kdenlive: the crop's menubar lane
-// is 34, its div fills that lane and its selected box measures 32 inside a
-// 1px margin at each edge, so kMenuRowHeightPx is 1 + 32 + 1; render.h's
-// menu row block carries the derivation and the crops). The walk below
-// spells exactly that: btn_y is the row's y plus the margin and btn_h its
-// content less two. THE VERTICAL PAIR WAS RETIRED FOR THE HOURS of
-// 2026-09-09 the lane stood at 30 and this box was the content whole; it
-// derived as content minus the two margins from 2026-08-21 (28 under the
-// crop-read 30) and set the row's height at 34 before that — the same
-// arithmetic this row is back on, now with the crop behind it.
+// the box is the row's content less 2 — 28 at 100% — and THE LANE SETS THE
+// BOX, not the box the lane (architect 2026-09-09, the morning after his
+// remeasure of kdenlive had put the lane on the box's 32 + 2: "make the
+// height of the top row based on the thirty pixels of File/Edit, keep all
+// the margins, borders and padding for the view buttons, and make the view
+// buttons also thirty so they all fit in a thirty-pixel row ... take from
+// the INSIDE height, the actual content, about four pixels"; render.h's menu
+// row block carries the crops and the whole succession). The walk below
+// spells exactly that: each button PUBLISHES the lane-tall rect and PAINTS
+// the box view_bar_face_rect derives from it — the row's y plus the margin,
+// its content less two. THE BOX WAS 28 from 2026-08-21 until the 2026-09-09
+// relayout too, the content whole (30) for the hours the vertical pair was
+// retired, and 32 inside a 34 lane for the hours after his remeasure — the
+// same arithmetic every time the pair stood, and the lane's derivation the
+// only thing that changed.
 //
-// AND THE LEFT FLOAT'S PILL IS NO LONGER THIS BOX'S HEIGHT: the same
-// remeasure put the anchors' hover pill on its own authored 30
-// (kMenuPillHeightPx) riding the LANE'S TOP EDGE with 4 rows of ground under
-// it, which is what the crop shows, so the row's two faces are two heights
-// and neither derives from the other.
+// AND THE LEFT FLOAT'S PILL IS THE LANE, so the row's two floats are ONE
+// height again — the pill fills the 30 and the div fills the 30, the box
+// standing 1px inside the div at each edge, which is what the crop shows of
+// kdenlive's own bar at its 34.
+//
+// THE HIT RECT IS THE LANE'S FULL HEIGHT, the button's columns by the lane's
+// rows (architect 2026-09-09: "I'm assuming the hit box for all of them is
+// the same as the entire background, the blue background ... they should
+// have the same sort of sizes and hit boxes because they sit on the row"),
+// so a view button and an anchor publish the same kind of rect and the
+// pointer reads the div's rows on both floats; the 28 box is a FACE inside
+// it, derived by the one helper below.
 //
 // A BUTTON'S OWN BOX is kdenlive's, read straight off the 82px "Logging" crop's
 // scanline: [frame 1][fill 12][text][fill 12][frame 1], so the width is the
 // shaped label plus 2*(border + padding) = label + 26, and the frame is drawn
 // INSIDE the box (the row-3 side-border precedent — a face, never a size
-// change). The 5px corner and the 1px frame fit the 32 box exactly as they
-// fit the 30 and the 28: the face box insets by half its stroke and rounds
+// change). The 5px corner and the 1px frame fit the 28 box exactly as they
+// fit the 30 and the 32: the face box insets by half its stroke and rounds
 // inside it.
-constexpr double kViewBarBtnMarginPx = 1.0;    // left and right, no collapse
+constexpr double kViewBarBtnMarginPx = 1.0;    // all four sides, no collapse
 constexpr double kViewBarBtnBorderPx = 1.0;    // drawn inside the box
 constexpr double kViewBarBtnPadPx    = 12.0;   // per side, inside the border
 constexpr double kViewBarRadiusPx    = 5.0;    // the redesign's one radius
+
+// THE VIEW BAR'S FACE BOX FROM ITS PUBLISHED RECT — THE ONE SUBTRACTION
+// (architect 2026-09-09: the hit box is the lane-tall div's rows, the painted
+// box the lane less its two vertical margins). The walk publishes the
+// lane-tall rect through publish_button_face, so the press router, the hover
+// walk, the tooltip and the drift comparator all read the lane's rows, and
+// then paints the face inside it through THIS helper alone — the
+// displayed-basis doctrine holds because the painted box derives from the
+// published rect here and nowhere else, so the two cannot drift. The
+// horizontal pair is not in it: a button's columns are its own box on both
+// surfaces, the margins between neighbours being the walk's step.
+GuiRect view_bar_face_rect(const GuiRect& published, int margin) {
+    return GuiRect{published.x, published.y + margin, published.w,
+                   published.h - 2 * margin};
+}
 
 struct ViewBarButtonDef {
     RedesignButton id;
@@ -1439,12 +1468,35 @@ void redesign_rounded_top_rect_path(cairo_t* cr, double x, double y,
 // the box and put the baseline at its foot, then round to the pixel grid so the
 // glyphs stay crisp at every scale. Row 1 centers in the ROW (a flush button),
 // the modal dialog's buttons in their 32-tall box (row 2's, until that row's
-// 2026-08-12 deletion); one formula, two box kinds.
+// 2026-08-12 deletion); one formula, every box kind — THE ONE BASELINE SOLVER,
+// read by every proportional label and by the monospace clocks.
+//
+// A TIE ROUNDS TOWARD THE DESCENT (architect 2026-09-09, measured: "kdenlive
+// has nine pixels of margin above and below the word File, whereas we have
+// eight above and ten below"). The face's hinted extents are integers
+// (ascent 15, descent 4 at 16px; 33 and 8 at the tablet's 36px), so
+// `box_h + ascent - descent` is ODD for every EVEN box at both scales and the
+// centre lands on a half-pixel systematically, not by accident. Banker's
+// rounding resolved that tie by the parity of `box_y + box_h / 2`, so the
+// same 30 box put File 8 rows under its top at an even y and 9 at an odd
+// one, and a 32 box beside a 30 box landed its label a row apart. Rounding
+// the tie UP — floor(x + 0.5), the baseline a row lower, the cap band a row
+// nearer the box's middle — puts every label where kdenlive's crops put
+// theirs (the 30 pill and the 30 tabs at row 21, the 32 box at 22, the 29
+// dropdown item at 20, the 31 field at 21: tmp/kden-hover.png,
+// tmp/kden-view.png, the PCManFM-Qt tab crops and
+// tmp/keep/screenshots/kdenlive/redesign/) and makes the answer independent
+// of the box's y. Odd boxes carry no tie and are untouched; the monospace
+// clocks' face (ascent 13 / descent 5, an even difference) ties on odd boxes
+// only, and the bottom row's 46 is even, so no clock moved. This is a text
+// baseline and not an authored position: the project's banker's rule
+// (snap_authored_frame, the lattice) is for values that land on a grid by
+// chance, and this one lands on the half by construction.
 double redesign_baseline(cairo_scaled_font_t* font, double box_y,
                          double box_h) {
     cairo_font_extents_t fe;
     cairo_scaled_font_extents(font, &fe);
-    return std::nearbyint(box_y + (box_h + fe.ascent - fe.descent) * 0.5);
+    return std::floor(box_y + (box_h + fe.ascent - fe.descent) * 0.5 + 0.5);
 }
 
 } // namespace
@@ -1498,19 +1550,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // bar's blue off the lane below, retired with the relayout; render.h's
     // block carries the succession.)
     //
-    // THE TWO FLOATS ARE NO LONGER ONE HEIGHT since 2026-09-09's remeasure of
-    // kdenlive itself (render.h's menu row block carries the crops and the
-    // derivation): the RIGHT float's div fills the lane and its button box is
-    // the content less its two 1px vertical margins — 32 at 100%, which is
-    // what SETS the lane's 34 — while the LEFT float's anchors wear a 30px
-    // PILL RIDING THE LANE'S TOP EDGE with 4 rows of ground under it. The
-    // pill is the anchor's published rect as well as its face, so those 4
-    // rows are as inert as the lane's tail past the last anchor. THE PILL
-    // CANNOT OUTGROW THE LANE and so takes no clamp here: render.h
-    // static_asserts kMenuPillHeightPx <= kMenuRowHeightPx and both floor at
-    // the same 5, and scaled_px is monotone.
+    // THE LANE IS THE PILL'S 30 (architect 2026-09-09, the morning after his
+    // remeasure of kdenlive had put the row on 34 — render.h's menu row block
+    // carries the crops and both rulings): the LEFT float's anchors wear a
+    // pill that fills the lane top to bottom and is their published rect,
+    // and the RIGHT float's div fills the same lane, its button box the
+    // content less its two 1px vertical margins — 28 at 100% — painted
+    // INSIDE a lane-tall published rect (view_bar_face_rect, the one
+    // subtraction, at kViewBarBtnMarginPx). So the row's two floats are one
+    // height, and the pill's foot, the lane's foot and the icon row's first
+    // pixel are the same row — where the dropdown hangs. (For the hours the
+    // lane stood at 34 the pill was its own 30 riding the lane's top edge
+    // with 4 rows of ground under it; that constant is gone with the ruling.)
     const int content_h = row.h;
-    const int pill_h    = menu_pill_h_px();
 
     cairo_save(cr);
 
@@ -1561,7 +1613,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render, def.id,
-            GuiRect{x, row.y, btn_w, pill_h});
+            GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
@@ -1619,7 +1671,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                                  kRedesignAccent.b);
             redesign_rounded_rect_path(cr, x, row.y,
                                        static_cast<double>(btn_w),
-                                       static_cast<double>(pill_h), rad);
+                                       static_cast<double>(content_h), rad);
             cairo_fill(cr);
         }
 
@@ -1629,14 +1681,15 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // there, since a dead button never wears the pill.
         const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
-        // THE LABEL CENTERS IN THE PILL, not in the lane: the pill is the
+        // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
         // button, and Qt's own menu bar centers an item's text in the item
-        // rect (the crop's File label sits in its 30 rows, 2px above the 34
-        // lane's own middle).
+        // rect — the crop's File sits 9 rows under the pill's top and 9 above
+        // its foot, which is where the solver's tie rule puts ours
+        // (redesign_baseline).
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(pill_h)));
+                              static_cast<double>(content_h)));
 
         x += btn_w;
     }
@@ -1651,19 +1704,23 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         const int mar  = std::max(1, scaled_px(kViewBarBtnMarginPx));
         const int bord = std::max(1, scaled_px(kViewBarBtnBorderPx));
         const int bpad = scaled_px(kViewBarBtnPadPx);
-        // THE BOX IS THE CONTENT LESS ITS TWO 1px VERTICAL MARGINS, and it
-        // is what SETS the lane (architect 2026-09-09, his remeasure of
-        // kdenlive: the crop's div fills the 34 lane and its selected box
-        // measures 32 inside a 1px margin at each edge, so 1 + 32 + 1 = 34).
-        // The margins do not collapse on this axis any more than on the
-        // horizontal one — one term, applied at each edge. The div itself
-        // still fills the lane whole, so the bar's blue meets the row's top
-        // edge and the icon row's ground below with nothing between. (The
-        // vertical pair was retired for the hours of 2026-09-09 the lane
-        // stood at 30 and this box was the content whole; the block at
-        // kViewBarBtnMarginPx carries the succession.)
-        const int btn_y = row.y + mar;
-        const int btn_h = content_h - 2 * mar;
+        // THE BOX IS THE LANE LESS ITS TWO 1px VERTICAL MARGINS, and the
+        // LANE is the pill's 30 (architect 2026-09-09: "keep all the
+        // margins, borders and padding for the view buttons ... take from
+        // the INSIDE height, the actual content, about four pixels"), so the
+        // box is 28 at 100% — where it stood from 2026-08-21 until the
+        // relayout — and 64 at the tablet's 225%. The margins do not
+        // collapse on this axis any more than on the horizontal one — one
+        // term, applied at each edge. The div itself fills the lane whole,
+        // so the bar's blue meets the row's top edge and the icon row's
+        // ground below with nothing between. THE SUBTRACTION LIVES IN ONE
+        // HELPER, view_bar_face_rect (at kViewBarBtnMarginPx): each button
+        // below PUBLISHES the lane-tall rect and PAINTS the box the helper
+        // derives from it, so the pointer's rows and the eye's cannot drift.
+        // (The box was the content whole for the hours of 2026-09-09 the
+        // lane stood at 30 without the pair, and 32 inside a 34 lane for the
+        // hours after his remeasure; the block at kViewBarBtnMarginPx
+        // carries the succession.)
 
         text_shape::ShapedRun runs[kViewBarButtonCount];
         int widths[kViewBarButtonCount];
@@ -1675,8 +1732,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // Each button's own left and right margin — they do not collapse, so
             // the pair between two neighbours sums to 2px and the div's outer
             // pair is its 1px inset on each side. One term, applied per button,
-            // spells the whole width. (The vertical pair is gone since
-            // 2026-09-09; the box's height is the row's.)
+            // spells the whole width. (The vertical pair is the FACE BOX's
+            // term, not the width's — view_bar_face_rect.)
             div_w += widths[i] + 2 * mar;
         }
 
@@ -1779,7 +1836,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // click, which is the same early-out the row's own content_h guard above
         // makes. Unreachable at any schema-legal gui_scale (content_h floors at
         // 5 and the margins at 1 each).
-        if (div_w <= 0 || btn_h <= 0) { cairo_restore(cr); return; }
+        if (div_w <= 0 || content_h <= 2 * mar) { cairo_restore(cr); return; }
 
         const int div_x = row.x + row.w - div_w;
         // IT IS THE BAR'S OWN VERDICT (view_bar_focused, app_state.h): the
@@ -1807,9 +1864,15 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             vx += mar;
             const int btn_w = widths[i];
 
+            // THE PUBLISHED RECT IS LANE-TALL — the button's columns by the
+            // lane's rows — and THE FACE BOX DERIVES FROM IT through the one
+            // helper (view_bar_face_rect): the hit rect is what the pointer
+            // reads, the box is what the eye sees, and the second is the
+            // first less its two vertical margins, nowhere restated.
             AppState::RedesignButtonFace& face = publish_button_face(
                 cr, app, audio, playback, target_render,
-                kViewBarButtons[i].id, GuiRect{vx, btn_y, btn_w, btn_h});
+                kViewBarButtons[i].id, GuiRect{vx, row.y, btn_w, content_h});
+            const GuiRect box = view_bar_face_rect(face.rect, mar);
 
             const bool pressed =
                 redesign_button_pressed_face(app, kViewBarButtons[i].id);
@@ -1822,7 +1885,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                 // inset rule lives there). The REST face paints no fill at all:
                 // its color IS the div's background, already under it, which is
                 // why the crop's resting button is invisible.
-                redesign_face_box(cr, vx, btn_y, btn_w, btn_h, bord, bar_rad,
+                redesign_face_box(cr, box.x, box.y, box.w, box.h, bord,
+                                  bar_rad,
                                   f.filled ? &f.fill  : nullptr,
                                   f.framed ? &f.frame : nullptr);
             }
@@ -1833,9 +1897,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                                  kRedesignLabel.b);
             text_shape::show_shaped_run(
-                cr, runs[i], static_cast<double>(vx + bord + bpad),
-                redesign_baseline(font, static_cast<double>(btn_y),
-                                  static_cast<double>(btn_h)));
+                cr, runs[i], static_cast<double>(box.x + bord + bpad),
+                redesign_baseline(font, static_cast<double>(box.y),
+                                  static_cast<double>(box.h)));
 
             vx += btn_w + mar;
         }
@@ -2124,9 +2188,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // since the lock slot left), vertically by the shared extents-solved
     // baseline. Rounded to the pixel grid like every other integer-domain
     // conversion, so the glyphs stay crisp; the halving makes a 1px bias
-    // unavoidable at odd leftovers and nearbyint's banker's rounding is the
-    // project's one answer for that. Painted by BOTH passes, each over its
-    // own fill.
+    // unavoidable at odd leftovers, and the solver's tie rule (the cap band
+    // a row nearer the middle, the crops' own 9/9 in this 30 box) is the one
+    // answer for that on every text surface. Painted by BOTH passes, each
+    // over its own fill.
     const auto paint_label = [&](const TabBox& b) {
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
@@ -4433,16 +4498,18 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // anchors are flush with the lane's left edge anyway). THE Y IS THE MENU
     // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
     // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
-    // between. It is read from top_menu_row_area rather than from btn.y +
-    // btn.h because THE ANCHOR'S RECT IS ITS 30px PILL since the same day's
-    // remeasure and the lane is 34: the pill's foot is 4 authored rows above
-    // the lane's, and a dropdown that hung there would float over the row's
-    // own ground. The two agreed exactly for the hours the lane was the
-    // pill's height, and from 2026-08-02 to 2026-09-09 they differed by the
-    // lane's 1px margin-bottom, where the architect ruled the BUTTON: the box
-    // covered that margin strip while the menu was up, the ruled look and not
-    // a leak. What he stated then is what this reads now — "the menu row's
-    // bottom edge", the whole lane's — with the anchor keeping the x.
+    // between — and since the same day's last ruling the lane IS the
+    // anchor's pill, so the pill's foot is that row too and the dropdown
+    // touches the first row as it does in kdenlive. It is read from
+    // top_menu_row_area rather than from btn.y + btn.h because the LANE is
+    // the owner of that row: for the hours the lane stood at 34 the pill
+    // was 4 authored rows short of it, and a dropdown hung from the pill
+    // floated over the row's own ground — the very thing the architect saw
+    // and ruled against. From 2026-08-02 to 2026-09-09 the two differed by
+    // the lane's 1px margin-bottom, where he ruled the BUTTON: the box
+    // covered that margin strip while the menu was up, the ruled look and
+    // not a leak. What he stated then is what this reads now — "the menu
+    // row's bottom edge", the whole lane's — with the anchor keeping the x.
     const GuiRect menu_lane = top_menu_row_area(app);
     int x = btn.x;
     int y = menu_lane.y + menu_lane.h;   // flush: zero margin under the LANE

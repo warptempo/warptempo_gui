@@ -1466,82 +1466,77 @@ constexpr int kMinWindowHeightPx = 480;
 inline constexpr int kPlayheadUnitPx = 8;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
-// window edge (the kdenlive menu bar, row 1 of the redesign). 34 AT 100%
+// window edge (the kdenlive menu bar, row 1 of the redesign). 30 AT 100%
 // gui_scale, AND THE LANE IS ITS CONTENT: the row stands at that height with
 // the ICON ROW directly under it and no margin, border or line between the
 // two. kdenlive, QEMU and virt-manager draw no border between the menubar and
 // the toolbar, and neither does this row: the view bar's blue touches the
 // icon row's ground directly.
 //
-// THE 34 IS DERIVED, AND ITS DERIVATION IS THE VIEW BAR'S BOX (architect
-// 2026-09-09, off tmp/kden-hover.png and tmp/kden-view.png, both carrying the
-// labwc title on rows 0-25 so the window begins at row 26): kdenlive's
-// menubar lane measures rows 26-59, the view bar's blue div fills that lane
-// whole, and ITS SELECTED BUTTON BOX measures rows 27-58 — 32 rows inside a
-// 1px margin at each edge. So
+// THE 30 IS THE PILL'S, AND THE PILL IS THE LANE (architect 2026-09-09, on
+// seeing the row at 34 with the dropdown hanging four pixels under the
+// pill: "make the height of the top row based on the thirty pixels of
+// File/Edit, keep all the margins, borders and padding for the view
+// buttons, and make the view buttons also thirty so they all fit in a
+// thirty-pixel row ... take from the INSIDE height, the actual content,
+// about four pixels ... this way the dropdown will touch the first row, as
+// it does in kdenlive"). File's hover pill measures rows 26-55 in
+// tmp/kden-hover.png — 30 rows — and that number is the lane whole: the
+// anchors' pill fills it top to bottom and IS the anchor's published hit
+// rect, and its foot is the lane's foot, which is where the dropdown and
+// its damage band hang (top_menu_row_area — paint_dropdown and
+// toggle_dropdown read the same accessor), so the popup touches the icon
+// row's first pixel, kdenlive's own picture.
 //
-//     34 = kViewBarBtnMarginPx + 32 + kViewBarBtnMarginPx
+// THE VIEW BAR DERIVES DOWN FROM THE LANE: its button box is the content
+// less its two 1px vertical margins — 28 at 100% — with every margin, border
+// and pad kept (kViewBarBtnMarginPx and its siblings, paint_handler.cpp),
+// the lane taking the four pixels out of the box's INSIDE height rather than
+// the box setting the lane. kdenlive's own bar box is 32 inside its 34 lane
+// (tmp/kden-view.png, rows 27-58 in 26-59); ours is 28 inside the pill's 30,
+// and the 5px corner and the 1px frame fit the 28 as they fit the 32
+// (redesign_face_box insets by half its stroke and rounds inside the box).
+// THE VIEW BUTTONS' HIT RECT IS THE LANE'S FULL HEIGHT — the button's
+// columns by the lane's rows, the blue div's own ("I'm assuming the hit box
+// for all of them is the same as the entire background, the blue background
+// ... they should have the same sort of sizes and hit boxes because they sit
+// on the row") — so the anchors and the view buttons publish the same kind
+// of rect; the 28 box is painted INSIDE the published rect, the two margins
+// subtracted by the ONE helper view_bar_face_rect (paint_handler.cpp) and
+// nowhere else, so what the pointer hits and what the eye sees cannot drift.
 //
-// and the bar's box DERIVES from the lane again (content minus its two
-// vertical margins), which is what the right float's walk spells:
-// `btn_y = row.y + mar`, `btn_h = content_h - 2 * mar` (paint_menu_row).
-// "The view on the right follows whatever we decide for File/Edit — the
-// interplay is that kdenlive's view-bar box sets the 34 and the pills stay 30
-// at the top."
+// 30 -> 34 -> 30 -> 34 -> 30. The 2026-08-02 view bar raised the content to
+// 34 = 1 + 32 + 1 so the bar's buttons could keep the icon row's 32px box;
+// the architect took it back to the crop's own 30 on 2026-08-21, the box
+// deriving down as 28; the 2026-09-09 relayout kept that 30 while retiring
+// the box's two vertical margins (the box became the content whole, 30);
+// later that day his remeasure of kdenlive put the row on 34 = 1 + 32 + 1
+// with the margins restored and the pill on its own authored 30 riding the
+// lane's top edge with 4 rows of ground under it (kMenuPillHeightPx /
+// menu_pill_h_px, which lived for those hours and are gone); and the next
+// morning he saw the dropdown hanging under the pill and ruled the pill the
+// lane again — the box shrinking from its content, the margins kept. (THE
+// 1px MARGIN-BOTTOM the lane carried 2026-08-02..2026-09-09 —
+// kMenuRowMarginPx / menu_row_margin_h_px, which held the right float's
+// blue off the next lane's ground — stays retired: the bar's blue meets the
+// icon row's ground directly.) Everything below moves automatically,
+// through main.cpp's lane table.
 //
-// THE ANCHORS' PILL IS 30 AND RIDES THE LANE'S TOP EDGE, which is the other
-// half of the same crop: File's hover pill measures rows 26-55 in
-// kden-hover.png, FLUSH with the lane's top, with 4 rows of ground under it.
-// kMenuPillHeightPx below is that 30, authored on its own rather than derived
-// from the lane, because the crop states the two numbers independently — the
-// box sets the lane and the pill does not follow it. THE PILL IS THE
-// ANCHOR'S HIT RECT too, not just its face: paint_menu_row publishes
-// `{x, row.y, btn_w, menu_pill_h_px()}` and the press router, the hover walk
-// and the tooltip all read that stash, so the 4 rows of ground under a pill
-// are as inert as the lane's tail past the last anchor. THE DROPDOWN STILL
-// HANGS FROM THE LANE'S FOOT, which is the icon row's first pixel:
-// paint_dropdown takes its y from top_menu_row_area rather than from the
-// anchor's rect, the one place the two disagree by those 4 rows.
-//
-// 30 -> 34 -> 30 -> 34. The 2026-08-02 view bar raised the content to 34 =
-// 1 + 32 + 1 so the bar's buttons could keep the icon row's 32px box; the
-// architect took it back to the crop's own 30 on 2026-08-21, and the
-// 2026-09-09 relayout kept that 30 while retiring the box's two vertical
-// margins (the box became the content whole, 30). LATER THE SAME DAY he
-// remeasured kdenlive itself and put the row back on 34 with the margins
-// restored — the same arithmetic as 2026-08-02, now with the crop behind it
-// and with the pill's own 30 stated beside it. (THE 1px MARGIN-BOTTOM the
-// lane carried 2026-08-02..2026-09-09 — kMenuRowMarginPx / menu_row_margin_h_px,
-// which held the right float's blue off the next lane's ground — stays
-// retired: the bar's blue meets the icon row's ground directly.) Everything
-// below moves automatically, through main.cpp's lane table.
-//
-// Both size on gui_scale_factor() like every other lane in the tree (the
+// The row sizes on gui_scale_factor() like every other lane in the tree (the
 // font axis the pre-redesign lanes used to ride is deleted — see the gui_scale
 // block above). Rounded with std::nearbyint and floored like every other lane
 // metric; the height floor is far below the scaled height. At the tablet's
-// 225% the lane is 76 (34 x 2.25 = 76.5, banker's down to the even 76) and
-// the pill 68 (67.5 up to the even 68), so 8 device rows of ground stand
-// under a pill there. TWO ACCESSORS FOR ONE NUMBER, deliberately: the lane
-// table reads the LANE and the painter the CONTENT, the vocabulary every
-// other row keeps, and this row's lane simply has no other term in it.
-inline constexpr int kMenuRowHeightPx  = 34;
-inline constexpr int kMenuPillHeightPx = 30;
+// 225% the lane is 68 (30 x 2.25 = 67.5, banker's up to the even 68) and the
+// view bar's box 64 inside its two 2px margins. TWO ACCESSORS FOR ONE NUMBER,
+// deliberately: the lane table reads the LANE and the painter the CONTENT,
+// the vocabulary every other row keeps, and this row's lane simply has no
+// other term in it.
+inline constexpr int kMenuRowHeightPx = 30;
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
 inline int menu_row_h_px() {
     return menu_row_content_h_px();
-}
-// The LEFT float's hover pill — the anchors' one face AND their hit rect,
-// top-aligned in the lane (the block above). Floors at 5 like the lane it
-// rides in, so it CANNOT OUTGROW THE LANE at any scale: scaled_px is
-// monotone in its authored argument and the two share that floor, so the
-// static_assert below is the whole guarantee and the painter needs no clamp.
-static_assert(kMenuPillHeightPx <= kMenuRowHeightPx,
-              "the anchors' pill rides inside the menu lane");
-inline int menu_pill_h_px() {
-    return scaled_px(kMenuPillHeightPx, 5);
 }
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign

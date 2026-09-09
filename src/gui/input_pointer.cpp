@@ -9159,14 +9159,15 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // places the box at — read from the SAME lane accessor there, so the
     // damaged band and the painted box start on the same row of pixels; a
     // band anchored anywhere else would leave a strip of the popup unpainted
-    // at one end. It is the LANE and not the anchor's rect since 2026-09-09's
-    // remeasure of the menu row, which made the anchor's published rect its
-    // 30px PILL inside a 34 lane: the two agreed exactly while the lane was
-    // the pill's height, and differed by row 1's 1px margin-bottom
+    // at one end. It is the LANE and not the anchor's rect because the lane
+    // is the one owner of that row: the anchor's published rect is its pill,
+    // which IS the lane since 2026-09-09's last ruling (the two agree
+    // exactly), stood 4 rows short of it for the hours that day the lane was
+    // 34, and differed from it by row 1's 1px margin-bottom
     // 2026-08-02..09-09, where the architect ruled the box onto the button
     // and it covered that margin strip. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
-    // only this band's y left the button, and it damages FULL WIDTH anyway.
+    // only this band's y reads the lane, and it damages FULL WIDTH anyway.
     {
         const GuiRect menu_lane = top_menu_row_area(app);
         viewport.invalidate_rect(
