@@ -1463,54 +1463,106 @@ void redesign_rounded_top_rect_path(cairo_t* cr, double x, double y,
     cairo_line_to(cr, x + w, y + h);
 }
 
-// The baseline for a label vertically centered in `box`: SOLVED from the face's
-// own extents, never a measured literal — center the (ascent + descent) band in
-// the box and put the baseline at its foot, then round to the pixel grid so the
-// glyphs stay crisp at every scale. Row 1 centers in the ROW (a flush button),
-// the modal dialog's buttons in their 32-tall box (row 2's, until that row's
-// 2026-08-12 deletion); one formula, every box kind — THE ONE BASELINE SOLVER
-// FOR EVERY EXTENTS-CENTRED CHROME LABEL (fifteen callers) AND BOTH MONOSPACE
-// CLOCKS.
+// THE FACE'S CAP HEIGHT AT ITS CURRENT SIZE — the ink height of a capital,
+// asked of the "H", which has no overshoot on either of the product's two
+// faces (measured: the glyph's ink runs exactly to the baseline and its
+// `height` equals `-y_bearing`). It is an INK EXTENT OF ONE GLYPH and not a
+// width, so it is none of the shaping chokepoint's business — text_shape owns
+// the WIDTH of a run, which is what may never be measured twice, and this
+// measures the face. No memo: cairo caches a scaled font's glyph extents, and
+// a frame asks this about thirty times.
+double cap_height_px(cairo_scaled_font_t* font) {
+    cairo_text_extents_t te;
+    cairo_scaled_font_text_extents(font, "H", &te);
+    return te.height;
+}
+
+// THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
+// the face's own CAP BAND in the box, a half-row tie going toward the TOP
+// (architect 2026-09-09, after his pixel pass on two screenshots at 100% and
+// 225%). What the eye centres in a chrome box is the capital band — the word
+// "File" is cap-height ink and nothing else — so the solver centres exactly
+// that and lets the descender band fall where the face puts it:
+//
+//     baseline = box_y + floor((box_h + cap_height) / 2)
+//
+// The floor IS the cell rule (containing_pixel, input_core.h) and not an
+// exception to it: a half-row tie belongs to the row that contains it, which
+// is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
+// LABEL and both monospace clocks.
+//
+// THE MEASURED FACES (pycairo on the same fontconfig faces the product
+// resolves, hint metrics on, so every extent is a whole pixel):
+//
+//     face / size          ascent  descent  asc-desc  cap "H"  asc+desc
+//     sans 16px  (100%)      15       4        11       12        19
+//     sans 36px  (225%)      33       8        25       26        41
+//     mono 14.67px (100%)    13       5         8       10        18
+//     mono 33px  (225%)      28      10        18       22        38
+//
+// ON THE SANS FACE AT THE REDESIGN'S SIZE cap = (ascent - descent) + 1 at BOTH
+// scales, so `floor((h + cap) / 2)` is arithmetically the same row as the
+// ascent-minus-descent proxy resolved with a half-up tie, for every box height
+// and at every scale. NOT ONE SANS SURFACE MOVES under this rule: every
+// kdenlive crop stays landed (the 30 pill and the 30 tabs at row 21, the 32
+// box at 22, the 29 dropdown item at 20, the 31 field at 21 —
+// tmp/kden-hover.png, tmp/kden-view.png, the PCManFM-Qt tab crops and
+// tmp/keep/screenshots/kdenlive/redesign/), and the answer is independent of
+// the box's y by construction rather than by a tie rule. The identity is the
+// SIZE'S and not the FACE'S — the tooltip's 10pt hint line reports cap 9
+// against a 10-row ascent-descent difference, the other way round — which
+// costs nothing, because that size paints on a LINE BAND and never in a box.
+//
+// TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
+// centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
+// band and has none, so a line's baseline is line_baseline() below and the cap
+// rule is not asked. THIRTEEN BOX SEATS: the menu row's anchors, the view
+// bar's buttons, the tab labels, the row-8 clock, the notification card's
+// first line, the dropdown items, the prompt's message, the render player's
+// clock, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
+// the reasoning is at that site), the modal buttons' own labels, the on-screen
+// keyboard's caps, and the folder overlay's BUTTON rows. FOUR LINE SEATS: the
+// tooltip's two lines, the ruler's labels, and the folder overlay's TEXT rows.
+// The overlay's row painter is the ONE site that forks between them, on
+// folder_overlay::text_listing — exactly the predicate that already forks the
+// face and the row pitch there.
 //
 // THE MARKER LANE IS THE NAMED EXCEPTION and stays out of the solver: the live
 // flag pass, the history-diff flag pass and the marker-lane editor each seat
 // their label at `lane.y + marker_flag_baseline_px()` (render.cpp; the owner
 // and its reasoning at render.h's kMarkerFlagBaselinePx), a length AUTHORED
 // off the same kdenlive crop the lane's own height comes off, which is why it
-// must agree with the crop and not with a face's leading. The two rules meet
-// at 100% — row 16 in the 20-tall lane either way — and part at 225%, where
-// the authored baseline scales to row 36 while extents centring in the
-// 45-tall lane would seat row 35. That divergence is the crop's answer
-// winning, not drift.
+// must agree with the crop and not with a face's metric. The two rules meet at
+// 100% — the crop's 12-row cap centred in the 20-tall lane seats row 16 either
+// way — and part at 225%, where the authored baseline scales to row 36 while
+// cap-centring the 26-row cap in the 45-tall lane would seat row 35. That
+// divergence is the crop's answer winning, not drift.
 //
-// A TIE ROUNDS TOWARD THE DESCENT (architect 2026-09-09, measured: "kdenlive
-// has nine pixels of margin above and below the word File, whereas we have
-// eight above and ten below"). The SANS face's hinted extents are integers
-// whose DIFFERENCE IS ODD (ascent 15, descent 4 at 16px; 33 and 8 at the
-// tablet's 36px), so
-// `box_h + ascent - descent` is ODD for every EVEN box at both scales and the
-// centre lands on a half-pixel systematically, not by accident. Banker's
-// rounding resolved that tie by the parity of `box_y + box_h / 2`, so the
-// same 30 box put File 8 rows under its top at an even y and 9 at an odd
-// one, and a 32 box beside a 30 box landed its label a row apart. Rounding
-// the tie UP — floor(x + 0.5), the baseline a row lower, the cap band a row
-// nearer the box's middle — puts every label where kdenlive's crops put
-// theirs (the 30 pill and the 30 tabs at row 21, the 32 box at 22, the 29
-// dropdown item at 20, the 31 field at 21: tmp/kden-hover.png,
-// tmp/kden-view.png, the PCManFM-Qt tab crops and
-// tmp/keep/screenshots/kdenlive/redesign/) and makes the answer independent
-// of the box's y. Odd boxes carry no tie and are untouched; the MONOSPACE
-// face's difference is EVEN at both scales (ascent 13 / descent 5 at the
-// clock's 14.67px, 28 / 10 at the tablet's 33px — 8 and 18), so the clocks tie
-// on odd boxes only, and the bottom row's 46 is even: no clock moved. This is
-// a text baseline and not an authored position: the project's banker's rule
-// (snap_authored_frame, the lattice) is for values that land on a grid by
-// chance, and this one lands on the half by construction.
+// TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
+// corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
+// row's content band is 46 at 100% and 104 at 225%, and cap-centring the
+// monospace digits gives row 28 and row 63 — exactly where the old proxy plus
+// the architect's authored drop put them, at both scales. His measured pixel
+// WAS cap-centring (46 - 10 = 36 rows of margin, eighteen above the digits'
+// cap band and eighteen below), so the offset is gone and neither clock moved.
+// AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
+// rather than the field band's plus a drop, which is what levels it with OK
+// and Cancel at every scale (the reasoning is at the modal's own site).
 double redesign_baseline(cairo_scaled_font_t* font, double box_y,
                          double box_h) {
+    return box_y + std::floor((box_h + cap_height_px(font)) * 0.5);
+}
+
+// THE BASELINE FOR A LINE — a band that IS the face's ascent plus its descent,
+// with no margins to centre anything in, so the seat is the ascent and the
+// rule above is not asked. The ceil matches the one the pitch takes
+// (folder_overlay::text_row_pitch_px over mono_line_height_px), so a stack of
+// lines and their seats round the same way; on both backends the hinted
+// ascent is a whole pixel already and it changes nothing.
+double line_baseline(cairo_scaled_font_t* font, double line_y) {
     cairo_font_extents_t fe;
     cairo_scaled_font_extents(font, &fe);
-    return std::floor(box_y + (box_h + fe.ascent - fe.descent) * 0.5 + 0.5);
+    return line_y + std::ceil(fe.ascent);
 }
 
 } // namespace
@@ -1698,7 +1750,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // THE LABEL CENTERS IN THE PILL, which IS the lane: the pill is the
         // button, and Qt's own menu bar centers an item's text in the item
         // rect — the crop's File sits 9 rows under the pill's top and 9 above
-        // its foot, which is where the solver's tie rule puts ours
+        // its foot, which is where cap-centring puts ours
         // (redesign_baseline).
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
@@ -2199,13 +2251,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // horizontally in the tab's FIELD (the padding is the width FLOOR's term,
     // not an anchor — at the minimum width a left-padded label would hug the
     // border instead of sitting in the middle; the field is the whole tab
-    // since the lock slot left), vertically by the shared extents-solved
-    // baseline. Rounded to the pixel grid like every other integer-domain
-    // conversion, so the glyphs stay crisp; the halving makes a 1px bias
-    // unavoidable at odd leftovers, and the solver's tie rule (the cap band
-    // a row nearer the middle, the crops' own 9/9 in this 30 box) is the one
-    // answer for that on every text surface. Painted by BOTH passes, each
-    // over its own fill.
+    // since the lock slot left), vertically by the shared solver, which
+    // centres the face's CAP BAND in the box. Rounded to the pixel grid like
+    // every other integer-domain conversion, so the glyphs stay crisp; the
+    // halving makes a 1px bias unavoidable at odd leftovers, and the solver's
+    // floor is the one answer for that on every text surface (the crops' own
+    // 9/9 in this 30 box). Painted by BOTH passes, each over its own fill.
     const auto paint_label = [&](const TabBox& b) {
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
@@ -3349,18 +3400,23 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // no wider.
 constexpr const char* kClockShape = "DD:DD.DDD";
 
-// THE CELL'S TWO AUTHORED OFFSETS OFF THAT SEAT (architect 2026-08-18, his own
-// measured numbers from looking at the row): the cell sits FOUR PIXELS RIGHT of
-// the separator's pen and ONE PIXEL DOWN of the band's centred baseline.
-//   * the 4px is a MARGIN MIRROR — the row's last button keeps one lane pad
-//     from the lane's RIGHT edge, and this gives the clock the same air on its
-//     left, so the row's two text-free margins read alike;
-//   * the 1px puts the digits perfectly vertically centred in the lane.
-// THEY ARE AUTHORED, NOT DERIVED — sampled off the painted row exactly as this
-// row's separator trio is, so neither is folded into an expression over the pad
-// or the baseline. They ride gui_scale like every other authored length here.
+// THE CELL'S ONE AUTHORED OFFSET OFF THAT SEAT (architect 2026-08-18, his own
+// measured number from looking at the row): the cell sits FOUR PIXELS RIGHT of
+// the separator's pen. It is a MARGIN MIRROR — the row's last button keeps one
+// lane pad from the lane's RIGHT edge, and this gives the clock the same air
+// on its left, so the row's two text-free margins read alike. AUTHORED, NOT
+// DERIVED — sampled off the painted row exactly as this row's separator trio
+// is, so it is not folded into an expression over the pad. It rides gui_scale
+// like every other authored length here.
+//
+// (A VERTICAL OFFSET STOOD BESIDE IT from the same evening until 2026-09-09:
+// one pixel DOWN of the band's centred baseline, his own measure of where the
+// digits read centred in the lane. THE BASELINE SOLVER ANSWERS IT NOW — it
+// centres the face's CAP BAND rather than its ascent-minus-descent, which
+// seats the digits on his row at both scales, at the row-8 clock and at the
+// render player's alike, so the drop had nothing left to correct. The
+// derivation is at redesign_baseline.)
 constexpr double kClockCellOffsetXPx = 4.0;
-constexpr double kClockCellOffsetYPx = 1.0;
 
 // THE SEPARATOR → TIMESTAMP DISTANCE, this row's own and the ONE OWNER of
 // that distance (architect 2026-08-29): the whole air between the divider's
@@ -3696,19 +3752,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double cell_w = clock_metrics.cell_w;
         // THE CELL STARTS AT THE LEFT BLOCK'S SEPARATOR PEN (architect
         // 2026-08-18, "move bottom row timestamp to left alignment"), PLUS THE
-        // AUTHORED MARGIN-MIRROR OFFSET (the same day, at his live look; both
-        // offsets and their reasons are at kClockCellOffset*Px). The cell
+        // AUTHORED MARGIN-MIRROR OFFSET (the same day, at his live look; the
+        // offset and its reason are at kClockCellOffsetXPx). The cell
         // is still a reserved WIDTH — measured from the widest digit's
         // specimen, so the glyphs never walk inside it — and only its ORIGIN
         // moved: it was `lane.x + nearbyint((lane.w - cell_w) * 0.5)`, the lane
         // midline, from 2026-08-11 until then.
         const int cell_x = clock_cell_x + scaled_px(kClockCellOffsetXPx);
-        // AND THE BASELINE TAKES THE VERTICAL OFFSET, off the band's centred
-        // one, which is what leaves the digits reading centred in the lane.
+        // THE BASELINE IS THE BAND'S SOLVED ONE AND NOTHING ELSE: the solver
+        // centres the face's cap band, which is where the architect measured
+        // these digits, so the vertical drop that used to ride here is gone.
         const double baseline =
             redesign_baseline(font, static_cast<double>(content_y),
-                              static_cast<double>(content_h)) +
-            scaled_px(kClockCellOffsetYPx);
+                              static_cast<double>(content_h));
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
@@ -3717,10 +3773,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // which contains the baseline's ascent and descent by construction.
         // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the horizontal
         // offset above is in `cell_x` and so is in this box, which is what stops
-        // the moved cell leaving a trail. The VERTICAL offset needs no term: the
-        // box is the row's whole content band, which the nudged baseline's ink
-        // stays inside, and the band's bottom IS the window's, so widening it
-        // downward would damage past the surface.
+        // the moved cell leaving a trail. The vertical axis needs no term at
+        // all: the box is the row's whole content band, which the baseline's
+        // ink stays inside, and the band's bottom IS the window's, so widening
+        // it downward would damage past the surface.
         // CEIL, NOT nearbyint: cell_w is a fractional advance sum and this is
         // a DAMAGE box, which may be a hair too wide but never a hair too
         // narrow — rounding down could leave the cell's last column unerased.
@@ -4055,16 +4111,19 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // is the whole point: the two forms differ by an added line, not by anything
     // about the first one.
     //
-    // Each line sits on ITS OWN band, so each baseline is that band's foot — the
-    // shared centrer applied to a slot that is exactly the band, which makes the
-    // symmetry above true of the ink and not merely of the arithmetic.
+    // EACH LINE SITS ON ITS OWN BAND, and a band IS the face's ascent plus its
+    // descent — a LINE and not a box, so each baseline is line_baseline's, its
+    // own band's ascent. The box solver is not asked here: there are no
+    // margins around a band to centre a cap in, and the two lines' bands are
+    // laid end to end with the authored gap between them, which is what makes
+    // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_font_size(cr, size1);
     cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                          kRedesignLabel.b);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
-        redesign_baseline(cairo_get_scaled_font(cr),
-                          static_cast<double>(y + pad_y), band1));
+        line_baseline(cairo_get_scaled_font(cr),
+                      static_cast<double>(y + pad_y)));
     if (two_line) {
         cairo_set_font_size(cr, size2);
         // The hint line is DIMMED by the one measured factor, uniformly.
@@ -4073,9 +4132,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         cairo_set_source_rgb(cr, dim.r, dim.g, dim.b);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
-            redesign_baseline(cairo_get_scaled_font(cr),
-                              static_cast<double>(y + pad_y) + band1 + gap,
-                              band2));
+            line_baseline(cairo_get_scaled_font(cr),
+                          static_cast<double>(y + pad_y) + band1 + gap));
     }
 
     cairo_restore(cr);
@@ -4796,14 +4854,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     gui_select_font_face(cr, GuiFontFamily::Sans);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
+    // THE LABEL IS A LINE, not a box: the lane gives it one authored pad and
+    // then the face's own band, so the seat is line_baseline's ascent off that
+    // pad. (The band itself is no longer computed here — nothing else in this
+    // painter reads the face's extents.)
     const double baseline =
-        redesign_baseline(font,
-                          static_cast<double>(lane.y) +
-                              std::nearbyint(kRulerLabelPadTopPx *
-                                             gui_scale_factor()),
-                          fe.ascent + fe.descent);
+        line_baseline(font, static_cast<double>(lane.y) +
+                                std::nearbyint(kRulerLabelPadTopPx *
+                                               gui_scale_factor()));
 
     // SUB-SECOND EMPHASIS: while the step is finer than a second, the WHOLE
     // SECONDS are the landmarks, so they take the brighter label white while
@@ -6961,14 +7019,6 @@ constexpr double kModalButtonGapPx    = 8.0;
 constexpr double kModalFieldHeightPx  = 31.0;   // includes its two 1px borders
 constexpr double kModalFieldBorderPx  = 1.0;
 constexpr double kModalFieldPadXPx    = 7.0;
-// THE LABEL'S AUTHORED 1px DROP (architect-measured 2026-08-21, looking at the
-// painted row: the dialog label — "Setting:" and its siblings — sat one pixel
-// high). The kClockCellOffsetYPx arrangement exactly: an authored offset, not
-// a derivation, added to the LABEL's baseline alone. The FIELD's ink keeps the
-// shared field-band baseline untouched — the field metrics are ruled correct —
-// so the label and buffer part by this one authored pixel. Rides gui_scale
-// like every authored length here.
-constexpr double kModalLabelOffsetYPx = 1.0;
 constexpr double kModalFieldWidthPx   = 520.0;  // authored; see the block above
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
 // since the 2026-08-12 relayout dissolved that row (these buttons read row
@@ -7787,10 +7837,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    itself is unchanged). Its cell is PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and it CLIPS at
         //    the lane's right pad on a narrow window. --
+        // The band's solved baseline, row 8's clock said twice — the same
+        // face, the same size and the same seat, this row standing in that
+        // lane.
         const double cbase =
             redesign_baseline(cfont, static_cast<double>(content.y),
-                              static_cast<double>(content.h)) +
-            scaled_px(kClockCellOffsetYPx);
+                              static_cast<double>(content.h));
         const int sr = audio.sample_rate();
         auto seconds_of = [sr](int64_t frames) {
             return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
@@ -7893,17 +7945,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const GuiRect field_outer{fx, field_y, field_w, field_h};
         const GuiRect field_inner{fx + fbord, field_y + fbord,
                                   field_w - 2 * fbord, field_h - 2 * fbord};
-        // ONE BASELINE FOR LABEL AND FIELD INK, solved on the FIELD's band so
-        // the buffer sits centred in its own box and the label reads level
-        // with it — the LABEL then takes its own authored 1px drop
-        // (kModalLabelOffsetYPx, above) off that shared seat; the field's ink
-        // does not.
+        // TWO SEATS, EACH SOLVED ON THE BOX IT BELONGS TO. The FIELD'S INK
+        // takes the FIELD's band, so the buffer sits centred in its own box
+        // (the field metrics are ruled correct and this is what keeps them
+        // so). THE LABEL TAKES THE BUTTONS' OWN SEAT — the same `btn_y` and
+        // `btn_h` the button loop and the scrub read — because what the label
+        // must read level with is the row's words, "Setting:" beside OK and
+        // Cancel, and the two boxes are different heights centred in one band:
+        // the field's 31 and the buttons' 32 land a row apart at 100% by their
+        // own parity and two rows apart at 225%, where the label sat visibly
+        // under the buttons until this. Reading the buttons' box makes the two
+        // level at every scale by construction rather than by an authored
+        // correction, which is why the label's own 1px drop is gone.
         const double baseline =
             redesign_baseline(font, static_cast<double>(field_y),
                               static_cast<double>(field_h));
 
         show_row_text(cr, font, static_cast<double>(cx0),
-                      baseline + scaled_px(kModalLabelOffsetYPx),
+                      redesign_baseline(font, static_cast<double>(btn_y),
+                                        static_cast<double>(btn_h)),
                       prefix.c_str(), kRedesignLabel);
 
         // THE FIELD CHROME — THE BUTTONS' OWN BOX (architect 2026-08-13, at
@@ -8793,14 +8853,18 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // thing to read).
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
-            // The baseline is solved from the row's rect and the face's
-            // extents (redesign_baseline) for both row kinds. In a button box
-            // that centres the line in the box; in a TEXT row the box IS the
-            // line — ceil(ascent + descent) — so the formula collapses to
-            // y + ascent (rounded) at every gui_scale, and the descenders end
-            // at the row's foot, which is where the next line starts.
-            const double baseline = redesign_baseline(
-                font, static_cast<double>(r.y), static_cast<double>(r.h));
+            // THE SEAT FORKS WITH THE PITCH AND THE FACE, on the same one
+            // predicate: a BUTTON row is a box, so its label takes the box
+            // solver's cap centring; a TEXT row IS a line — the monospace
+            // ascent plus descent with no gap to the next row — so it takes
+            // the line seat, its own ascent, which puts the descenders exactly
+            // on the row's foot where the next line starts. The box rule is a
+            // rule about MARGINS and a line has none, which is why this is the
+            // one site that asks which it is.
+            const double baseline =
+                text_row ? line_baseline(font, static_cast<double>(r.y))
+                         : redesign_baseline(font, static_cast<double>(r.y),
+                                             static_cast<double>(r.h));
             // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (R31: no wrap,
             // no ellipsis — "project and file names will be short"), and the
             // clip to the ROW's own right edge is what "off the edge" means
