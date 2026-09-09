@@ -370,6 +370,19 @@ drag coordinates floor instead of truncating.
   Android through the two bundled Liberation files
   (`gui_font_bundled.cpp`, FT faces over owned copies; a failed install
   aborts before the first paint — a missing asset is a build defect).
+  THE RESOLUTION INCLUDES THE HINT STYLE (architect 2026-09-09, on codex's
+  finding): the face alone is not the answer, because a hinter grid-fits the
+  outline before anything measures it and the cap-centred chrome baseline reads
+  an ink extent — the same Liberation Sans at 36 px reports a 26-row cap under
+  fontconfig's `hintstyle slight` (FreeType's light autohinter) and 25 under the
+  font's native TrueType bytecode, which is what cairo defaults to for a face
+  built by hand. So the bundled road installs ONE `cairo_font_options_t`
+  carrying SLIGHT and `gui_select_font_face` puts it on the context beside the
+  face, and every solver answer is identical on both backends (the six-size
+  table is at that file's head). NOT reproduced: fontconfig's `rgba` — the
+  laptop paints subpixel RGB, a tablet rotates, so a subpixel order is not a
+  face fact there and the tablet keeps GRAY antialiasing; that is per-pixel
+  coverage and not a metric, hint metrics staying on for both.
 - **Entry**: `gui_main(argument)` (`gui_main.h`) is the one GUI body;
   Linux `main()` is a thin wrapper passing its optional `<wav>` or nullptr,
   Android's `android_main` pins `LC_ALL=C` (bionic starts in C.UTF-8), sets

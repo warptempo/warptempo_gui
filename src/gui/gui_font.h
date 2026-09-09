@@ -3,7 +3,11 @@
 // THE ONE FACE OWNER: every text surface selects its face here and nowhere
 // else; what "sans" and "monospace" RESOLVE TO is the backend's business —
 // fontconfig's answer on Linux, the bundled Liberation files on Android — so
-// the painters never name a font.
+// the painters never name a font. THE RESOLUTION INCLUDES THE HINT STYLE, not
+// the face alone: a hinter grid-fits the outline, so two backends holding the
+// same font bytes report different whole-pixel ink under different hinters,
+// and the bundled road carries fontconfig's own (SLIGHT) so both backends
+// measure one set of text rows (gui_font_bundled.cpp's head, with its table).
 //
 // The two families are the product's whole face inventory: the proportional
 // sans every row shapes and paints on (12pt x gui_scale, the text_shape

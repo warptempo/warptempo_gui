@@ -1500,6 +1500,12 @@ double cap_height_px(cairo_scaled_font_t* font) {
 //     mono 14.67px (100%)    13       5         8       10        18
 //     mono 33px  (225%)      28      10        18       22        38
 //
+// THE TABLE HOLDS ON BOTH BACKENDS. The bundled road ships those same
+// Liberation bytes AND carries fontconfig's own hint style beside them
+// (gui_font_bundled.cpp, whose head owns that ruling and carries the
+// measurement), so the two backends grid-fit identically and every seat below
+// is one answer rather than two.
+//
 // ON THE SANS FACE AT THE REDESIGN'S SIZE cap = (ascent - descent) + 1 at BOTH
 // scales, so `floor((h + cap) / 2)` is arithmetically the same row as the
 // ascent-minus-descent proxy resolved with a half-up tie, for every box height
