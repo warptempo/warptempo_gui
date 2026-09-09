@@ -470,23 +470,35 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // Only the div's ORIGIN is new, and it needs all three widths before it can be
 // placed, which is why the labels are shaped up front rather than in the walk.
 //
-// MARGINS DO NOT COLLAPSE HERE (a stated fact, like every margin in this
-// redesign): each button carries 1px on its LEFT AND RIGHT, so two adjacent
-// buttons sit 2px apart and the div is 1 + w + 2 + w + 2 + w + 1 wide. THE
-// VERTICAL PAIR IS RETIRED (architect 2026-09-09, the top strip relayout):
-// the button box IS the row's content height — 30 at 100%, the anchors'
-// hover pill's own height, so the two faces on this row are one height and
-// the row is exactly that height — where from 2026-08-21 it derived as
-// content minus the two margins, 28 under the crop's own 30 (and set the
-// row's height at 34 before that; render.h carries the succession). The
-// walk below spells exactly that: btn_y is the row's y and btn_h its content.
+// MARGINS DO NOT COLLAPSE HERE, ON EITHER AXIS (a stated fact, like every
+// margin in this redesign): each button carries 1px on its LEFT AND RIGHT,
+// so two adjacent buttons sit 2px apart and the div is
+// 1 + w + 2 + w + 2 + w + 1 wide, and each carries 1px ABOVE AND BELOW, so
+// the box is the row's content less 2 — and THAT IS WHAT SETS THE LANE
+// (architect 2026-09-09, his remeasure of kdenlive: the crop's menubar lane
+// is 34, its div fills that lane and its selected box measures 32 inside a
+// 1px margin at each edge, so kMenuRowHeightPx is 1 + 32 + 1; render.h's
+// menu row block carries the derivation and the crops). The walk below
+// spells exactly that: btn_y is the row's y plus the margin and btn_h its
+// content less two. THE VERTICAL PAIR WAS RETIRED FOR THE HOURS of
+// 2026-09-09 the lane stood at 30 and this box was the content whole; it
+// derived as content minus the two margins from 2026-08-21 (28 under the
+// crop-read 30) and set the row's height at 34 before that — the same
+// arithmetic this row is back on, now with the crop behind it.
+//
+// AND THE LEFT FLOAT'S PILL IS NO LONGER THIS BOX'S HEIGHT: the same
+// remeasure put the anchors' hover pill on its own authored 30
+// (kMenuPillHeightPx) riding the LANE'S TOP EDGE with 4 rows of ground under
+// it, which is what the crop shows, so the row's two faces are two heights
+// and neither derives from the other.
 //
 // A BUTTON'S OWN BOX is kdenlive's, read straight off the 82px "Logging" crop's
 // scanline: [frame 1][fill 12][text][fill 12][frame 1], so the width is the
 // shaped label plus 2*(border + padding) = label + 26, and the frame is drawn
 // INSIDE the box (the row-3 side-border precedent — a face, never a size
-// change). The 5px corner and the 1px frame fit the 30 box exactly as they
-// fit the 28: the face box insets by half its stroke and rounds inside it.
+// change). The 5px corner and the 1px frame fit the 32 box exactly as they
+// fit the 30 and the 28: the face box insets by half its stroke and rounds
+// inside it.
 constexpr double kViewBarBtnMarginPx = 1.0;    // left and right, no collapse
 constexpr double kViewBarBtnBorderPx = 1.0;    // drawn inside the box
 constexpr double kViewBarBtnPadPx    = 12.0;   // per side, inside the border
@@ -1480,13 +1492,25 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     if (row.w <= 0 || row.h <= 0) return;
 
     // THE LANE IS ITS CONTENT (render.h's menu_row_* pair) since 2026-09-09:
-    // both floats fill the whole lane, the anchors' pill and the view bar's
-    // box at one height, and the icon row's ground begins on the next pixel
-    // row with no margin, border or line between — kdenlive's own
-    // menubar-over-toolbar seam. (The 1px margin-bottom the lane carried
-    // from 2026-08-02, holding the bar's blue off the lane below, retired
-    // with the relayout; render.h's block carries the succession.)
+    // the icon row's ground begins on the next pixel row with no margin,
+    // border or line between — kdenlive's own menubar-over-toolbar seam.
+    // (The 1px margin-bottom the lane carried from 2026-08-02, holding the
+    // bar's blue off the lane below, retired with the relayout; render.h's
+    // block carries the succession.)
+    //
+    // THE TWO FLOATS ARE NO LONGER ONE HEIGHT since 2026-09-09's remeasure of
+    // kdenlive itself (render.h's menu row block carries the crops and the
+    // derivation): the RIGHT float's div fills the lane and its button box is
+    // the content less its two 1px vertical margins — 32 at 100%, which is
+    // what SETS the lane's 34 — while the LEFT float's anchors wear a 30px
+    // PILL RIDING THE LANE'S TOP EDGE with 4 rows of ground under it. The
+    // pill is the anchor's published rect as well as its face, so those 4
+    // rows are as inert as the lane's tail past the last anchor. THE PILL
+    // CANNOT OUTGROW THE LANE and so takes no clamp here: render.h
+    // static_asserts kMenuPillHeightPx <= kMenuRowHeightPx and both floor at
+    // the same 5, and scaled_px is monotone.
     const int content_h = row.h;
+    const int pill_h    = menu_pill_h_px();
 
     cairo_save(cr);
 
@@ -1537,7 +1561,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
             cr, app, audio, playback, target_render, def.id,
-            GuiRect{x, row.y, btn_w, content_h});
+            GuiRect{x, row.y, btn_w, pill_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
@@ -1595,7 +1619,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                                  kRedesignAccent.b);
             redesign_rounded_rect_path(cr, x, row.y,
                                        static_cast<double>(btn_w),
-                                       static_cast<double>(content_h), rad);
+                                       static_cast<double>(pill_h), rad);
             cairo_fill(cr);
         }
 
@@ -1605,10 +1629,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // there, since a dead button never wears the pill.
         const GuiColor label_c = mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
+        // THE LABEL CENTERS IN THE PILL, not in the lane: the pill is the
+        // button, and Qt's own menu bar centers an item's text in the item
+        // rect (the crop's File label sits in its 30 rows, 2px above the 34
+        // lane's own middle).
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad),
             redesign_baseline(font, static_cast<double>(row.y),
-                              static_cast<double>(content_h)));
+                              static_cast<double>(pill_h)));
 
         x += btn_w;
     }
@@ -1623,12 +1651,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         const int mar  = std::max(1, scaled_px(kViewBarBtnMarginPx));
         const int bord = std::max(1, scaled_px(kViewBarBtnBorderPx));
         const int bpad = scaled_px(kViewBarBtnPadPx);
-        // THE BOX IS THE CONTENT HEIGHT WHOLE (architect 2026-09-09): no
-        // vertical margin, so the bar's blue meets the row's top edge and the
-        // icon row's ground below with nothing between, and the box is the
-        // anchors' pill's own height (the block at kViewBarBtnMarginPx).
-        const int btn_y = row.y;
-        const int btn_h = content_h;
+        // THE BOX IS THE CONTENT LESS ITS TWO 1px VERTICAL MARGINS, and it
+        // is what SETS the lane (architect 2026-09-09, his remeasure of
+        // kdenlive: the crop's div fills the 34 lane and its selected box
+        // measures 32 inside a 1px margin at each edge, so 1 + 32 + 1 = 34).
+        // The margins do not collapse on this axis any more than on the
+        // horizontal one — one term, applied at each edge. The div itself
+        // still fills the lane whole, so the bar's blue meets the row's top
+        // edge and the icon row's ground below with nothing between. (The
+        // vertical pair was retired for the hours of 2026-09-09 the lane
+        // stood at 30 and this box was the content whole; the block at
+        // kViewBarBtnMarginPx carries the succession.)
+        const int btn_y = row.y + mar;
+        const int btn_h = content_h - 2 * mar;
 
         text_shape::ShapedRun runs[kViewBarButtonCount];
         int widths[kViewBarButtonCount];
@@ -1825,30 +1860,51 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // 2026-08-13..2026-09-09 and is gone for good; kdenlive-redesign.md's
     // closing section carries the relayout.)
     //
-    // THE LANE'S LAST ROW IS THE BASE LINE (architect 2026-09-09, his second
-    // look at that relayout: "the #4c4e51 line should be the LAST ROW of the
-    // tab row — but INSIDE the tab row, not outside"). It costs the lane no
-    // height — the strip stack still allocates 30 authored px of CONTENT and
-    // no border row — and it has THREE FACES over the one `line_w` band at
-    // `content_y + content_h - line_w`:
-    //   - kRedesignTabLine #4c4e51 ACROSS THE WHOLE LANE, over the trough and
-    //     under every unselected tab at rest;
+    // THE LANE CARRIES A 6px MARGIN-BOTTOM (architect 2026-09-09: "PCManFM-Qt
+    // has six pixels of margin below the tab row; with the icons moved up,
+    // the tab row abuts the overview strip and the selected tab has a black
+    // bar running under it that looks odd"). It is the row's one term
+    // OUTSIDE its content and INSIDE its lane — tab_row_h_px() is
+    // content + margin, render.h's block carries the arithmetic — so
+    // `content_h` below is tab_row_content_h_px() and every tab, hit rect and
+    // label anchors in the CONTENT band, while THE GROUND FILL TAKES THE
+    // LANE WHOLE and so extends six rows below the base line. Nothing is
+    // published in those rows, so they are pointer-inert exactly as gap 1 is
+    // and by the same route: the tab row's press claim answers a press there
+    // the way it answers the stretch past the last tab.
+    //
+    // THE CONTENT'S LAST ROW IS THE BASE LINE (architect 2026-09-09, his
+    // second look at that relayout: "the #4c4e51 line should be the LAST ROW
+    // of the tab row — but INSIDE the tab row, not outside"). It costs the
+    // row no height — the line lives in the 30 rather than beside it — and
+    // the band is `content_y + content_h - line_w`.
+    //
+    // THE LINE STANDS ONLY WHERE NO TAB DOES (architect 2026-09-09, his third
+    // look: "I didn't mean to imply the unselected tab should have a visible
+    // line at the bottom when it is not hovered"), which is the crops read
+    // literally. THREE FACES and a fourth state that is the absence of one:
+    //   - kRedesignTabLine #4c4e51 ACROSS THE TROUGH — the stretch right of
+    //     the last tab, and the row's only ground at that row;
     //   - kRedesignTabHoverEdge #496170 across a HOVERED unselected tab's own
     //     BOX — the hit rect, never the extended fill, which is what the crop
     //     fixes (row 29 of tmp/Screenshot_2026-09-09_02-42-29-c.png: cols
     //     80..159 are the hover blue and col 79 is the selected neighbour's
-    //     side border, so the spill under that neighbour keeps the grey);
-    //   - BROKEN under the SELECTED tab, whose box shows the content ground —
-    //     the break the relayout deleted, back at its new home INSIDE the
-    //     lane. That tab's side borders run down THROUGH this row to the
-    //     lane's last pixel exactly as they already did.
-    // An unselected tab's fill is therefore `content_h - line_w` tall and the
-    // line completes it, which is the picture Breeze builds from the other
-    // side with rect.adjust(0,0,0,+1) under a bar-wide base line.
-    // (The RESTING tab's base row is the ONE place this overrides the crop —
-    // it measures #1b1d20 there, the resting fill run to the lane's foot —
-    // and the architect ruled the grey continuous instead; render.h's row-3
-    // block carries that record with the rest of the provenance.)
+    //     side border, so the spill under that neighbour is not the blue's);
+    //   - NOTHING under a RESTING unselected tab, whose flat fill runs the
+    //     full content height and IS that row (row 29 of
+    //     tmp/Screenshot_2026-09-09_02-41-44-c.png: #1b1d20 across cols
+    //     80..159). A HOVERED tab's fill stops one line short instead, which
+    //     is pass one's one fork;
+    //   - and BROKEN under the SELECTED tab, whose box shows the content
+    //     ground — the break the relayout deleted, back at its new home
+    //     INSIDE the content. That tab's side borders run down THROUGH this
+    //     row to the content's last pixel exactly as they already did.
+    // (The grey ran under a resting tab too for the hours between the second
+    // look and the third — product-internal consistency over the sample, the
+    // 2026-08-14 top border's own choice — and the architect withdrew it;
+    // render.h's row-3 block carries that record with the rest of the
+    // provenance. What the crops never show is the trough, so the grey there
+    // is the rule's own and not a measurement.)
     //
     // THE GEOMETRY IS BREEZE'S OWN — drawTabBarTabShapeControl for
     // RoundedNorth (breezestyle.cpp, verified against Breeze master
@@ -1891,9 +1947,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     // tab is ONE GEOMETRY IN TWO COLOURS (architect 2026-09-09, his option 1):
     // rest #1b1d20 or hover #263f4d, no border and no click face — RECESSED
     // against the bar, Breeze's model. THE HOVER'S THIRD COLOUR IS THE BASE
-    // LINE'S, not the fill's (the block above): the fill stops one line short
-    // of the lane's foot in both states and the base row under it carries
-    // kRedesignTabHoverEdge while hovered. Its two colours do NOT
+    // LINE'S, not the fill's (the block above): a HOVERED tab's fill stops
+    // one line short of the content's foot and the base row under it carries
+    // kRedesignTabHoverEdge, while a RESTING tab's fill runs the whole
+    // content height and no line is drawn under it at all. Its two colours do
+    // NOT
     // follow the focus swap (the third crop's hovered B is the focused one's
     // own #263f4d). There is no selected-hover face anywhere in this row (a
     // tab press is a chord, never a refusal), and this row has NO disabled
@@ -1923,23 +1981,33 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     const GuiRect lane = top_tab_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // THE LANE IS ITS CONTENT — no border row at either edge since 2026-09-09
-    // — and `content_y` is the origin EVERYTHING on this row anchors to: the
-    // tabs, their published hit rects and the labels' baseline.
-    const int content_h = lane.h;
+    // THE LANE IS ITS CONTENT PLUS ITS MARGIN-BOTTOM — no border row at
+    // either edge since 2026-09-09, and the margin since later that day (the
+    // head of this painter; the arithmetic is render.h's). `content_y` is the
+    // origin EVERYTHING on this row anchors to — the tabs, their published
+    // hit rects, the labels' baseline and the base line — and the margin is
+    // the six rows the lane keeps below `content_y + content_h`.
+    // THE PAINTER READS THE CONTENT AND THE LANE TABLE READS THE LANE, the
+    // vocabulary every row in the tree keeps (render.h's accessor pair) — so
+    // this is tab_row_content_h_px() and not `lane.h - the margin`, which is
+    // the same arithmetic spelled a second time.
+    const int content_h = tab_row_content_h_px();
     const int content_y = lane.y;
 
     cairo_save(cr);
 
-    // THE BAR, over GAP 1 AND THE LANE IN ONE RECTANGLE: the CONTENT GROUND,
-    // the surface the selected tab opens into, from the top of the flexible
-    // band (top_flex_gap_area — zero-height wherever the centering leaves no
-    // gap, the tablet) to the lane's foot, so the two cannot show a seam and
-    // the tabs read as sitting at the foot of one tall lane (the vertical
-    // rule, main.cpp; the exposure gate at the paint order's step 3 tests the
-    // band too). It is the trough right of the last tab and, laid again
-    // inside the selected tab's own path below, that tab's interior — the
-    // crops read bar and pane as one value (render.h's row-3 block).
+    // THE BAR, over GAP 1, THE CONTENT AND THE MARGIN IN ONE RECTANGLE: the
+    // CONTENT GROUND, the surface the selected tab opens into, from the top
+    // of the flexible band (top_flex_gap_area — zero-height wherever the
+    // centering leaves no gap, the tablet) to the LANE's foot, so no seam can
+    // show anywhere in the run and the tabs read as sitting inside one tall
+    // lane (the vertical rule, main.cpp; the exposure gate at the paint
+    // order's step 3 tests the band too). The six rows below the base line
+    // are this same fill and nothing else — that IS the margin (architect
+    // 2026-09-09), which is why it needs no painter of its own. The fill is
+    // also the trough right of the last tab and, laid again inside the
+    // selected tab's own path below, that tab's interior — the crops read bar
+    // and pane as one value (render.h's row-3 block).
     const GuiRect gap = top_flex_gap_area(app);
     const int ground_y = gap.h > 0 ? gap.y : lane.y;
     cairo_set_source_rgb(cr, kRedesignContentGround.r,
@@ -2071,17 +2139,31 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
                               static_cast<double>(content_h)));
     };
 
-    // THE BASE LINE'S BAND — the lane's last `line_w` rows, inside the
-    // content and costing it no height (the block at the head of this
-    // painter). Pass one stops its fills here; the base pass fills it.
+    // THE BASE LINE'S BAND — the CONTENT's last `line_w` rows, inside it and
+    // costing the row no height (the block at the head of this painter). A
+    // HOVERED tab's fill stops here; a RESTING one's runs through it.
     const int base_y = content_y + content_h - line_w;
 
-    // PASS ONE — THE UNSELECTED TABS: a flat fill down to the base band, the
-    // outer top corner rounded (the first tab's left, the last tab's right —
-    // Breeze rounds only isFirst / isLast, and with two tabs an unselected one
-    // is always one of those), the edge facing the selected neighbour SQUARE
-    // and run `spill` under it. Rest or hover is the fill's one colour fork;
-    // the base row under it is the base line's, in its own pass below.
+    // THE TABS' OWN SPAN, which is what makes the trough a rect: the walk
+    // above lays them flush from the lane's left edge and adjacent, so their
+    // union is [lane.x, tabs_right) and everything right of it is trough.
+    // Taken as the MAXIMUM of the published boxes' right edges rather than as
+    // a sum, so the answer stays right if the walk ever spaces or reorders
+    // them; the spill an unselected tab paints under its selected neighbour
+    // is inside that union either way.
+    int tabs_right = lane.x;
+    for (const TabBox& b : boxes)
+        tabs_right = std::max(tabs_right, b.x + b.w);
+
+    // PASS ONE — THE UNSELECTED TABS: a flat fill, the outer top corner
+    // rounded (the first tab's left, the last tab's right — Breeze rounds
+    // only isFirst / isLast, and with two tabs an unselected one is always
+    // one of those), the edge facing the selected neighbour SQUARE and run
+    // `spill` under it. Rest or hover forks the fill's COLOUR and its HEIGHT
+    // together: at rest the fill runs the whole content band and is its own
+    // base row, hovered it stops one line short and the base pass paints
+    // kRedesignTabHoverEdge in the row it left (the head of this painter —
+    // the crops, read literally).
     for (int i = 0; i < kTabCount; ++i) {
         const TabBox& b = boxes[i];
         if (b.selected) continue;
@@ -2096,10 +2178,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
         const GuiColor tab_face = b.hovered ? kRedesignTabHover
                                             : kRedesignTabRest;
+        const int fill_h = b.hovered ? content_h - line_w : content_h;
         cairo_set_source_rgb(cr, tab_face.r, tab_face.g, tab_face.b);
         redesign_rounded_top_rect_path(cr, fx, content_y,
                                        static_cast<double>(fw),
-                                       static_cast<double>(content_h - line_w),
+                                       static_cast<double>(fill_h),
                                        round_left  ? radius : 0.0,
                                        round_right ? radius : 0.0);
         cairo_fill(cr);
@@ -2109,22 +2192,28 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         paint_label(b);
     }
 
-    // THE BASE LINE, in one pass over the band both tab passes leave to it —
+    // THE BASE LINE, in ONE pass over the band the tab passes leave to it —
     // the three faces in painted order, each a plain rectangle:
-    //   1. the grey across the whole lane (trough included);
+    //   1. the grey across THE TROUGH ALONE, right of the last tab: the line
+    //      stands only where no tab does (architect 2026-09-09, his third
+    //      look), so a resting tab's own fill is what fills its base row and
+    //      this rect never reaches it;
     //   2. the hover blue across a hovered unselected tab's OWN box, so the
-    //      spill it paints under the selected neighbour keeps the grey;
+    //      spill it paints under the selected neighbour is not the blue's;
     //   3. the break under the selected tab, the content ground across its
     //      box.
     // The break is painted HERE rather than left to pass two's own interior
-    // fill, which covers the same pixels a moment later: this pass owns all
-    // three faces of its band, so a later change to that fill's clip cannot
-    // quietly put a line back under the selected tab. Pass two then paints
-    // over it as it always did, side borders and all.
-    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
-                         kRedesignTabLine.b);
-    cairo_rectangle(cr, lane.x, base_y, lane.w, line_w);
-    cairo_fill(cr);
+    // fill, which covers the same pixels a moment later: this pass owns every
+    // face of its band, so a later change to that fill's clip cannot quietly
+    // leave a neighbour's spill showing under the selected tab. Pass two then
+    // paints over it as it always did, side borders and all.
+    if (tabs_right < lane.x + lane.w) {
+        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                             kRedesignTabLine.b);
+        cairo_rectangle(cr, tabs_right, base_y,
+                        (lane.x + lane.w) - tabs_right, line_w);
+        cairo_fill(cr);
+    }
     for (int i = 0; i < kTabCount; ++i) {
         const TabBox& b = boxes[i];
         if (b.selected || !b.hovered) continue;
@@ -4339,20 +4428,24 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // expression.
     const int h = dropdown_h_px(menu);
 
-    // FLUSH WITH THE BUTTON IT EMITS FROM, on BOTH axes (architect 2026-08-02).
-    // THE TWO EDGES ARE ONE ROW OF PIXELS AGAIN since 2026-09-09: the anchor
-    // fills the menu lane (menu_row_h_px == menu_row_content_h_px), so
-    // btn.y + btn.h IS the lane's bottom and the icon row's first pixel, and
-    // the box hangs straight onto the toolbar with nothing between.
-    // (When row 1 gained its 1px margin-bottom on 2026-08-02 those two edges
-    // stopped being the same row, and the anchor briefly moved to the LANE on
-    // the reading that "the menu row's bottom edge" meant the whole lane. He
-    // ruled the button: the dropdown hangs off the thing that opened it — so
-    // while that margin stood the box's top edge landed on the MARGIN STRIP
-    // and covered it for as long as the menu was up, the ruled look and not a
-    // leak. The margin retired with the relayout.)
+    // FLUSH WITH THE BUTTON IT EMITS FROM ON X, AND WITH THE LANE ON Y.
+    // The x is the anchor's own left edge (architect 2026-08-02, and the
+    // anchors are flush with the lane's left edge anyway). THE Y IS THE MENU
+    // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
+    // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
+    // between. It is read from top_menu_row_area rather than from btn.y +
+    // btn.h because THE ANCHOR'S RECT IS ITS 30px PILL since the same day's
+    // remeasure and the lane is 34: the pill's foot is 4 authored rows above
+    // the lane's, and a dropdown that hung there would float over the row's
+    // own ground. The two agreed exactly for the hours the lane was the
+    // pill's height, and from 2026-08-02 to 2026-09-09 they differed by the
+    // lane's 1px margin-bottom, where the architect ruled the BUTTON: the box
+    // covered that margin strip while the menu was up, the ruled look and not
+    // a leak. What he stated then is what this reads now — "the menu row's
+    // bottom edge", the whole lane's — with the anchor keeping the x.
+    const GuiRect menu_lane = top_menu_row_area(app);
     int x = btn.x;
-    int y = btn.y + btn.h;               // flush: zero margin under the button
+    int y = menu_lane.y + menu_lane.h;   // flush: zero margin under the LANE
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
     app.dropdown.rect = GuiRect{x, y, w, h};

@@ -9155,21 +9155,23 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE BUTTON'S BOTTOM, the same expression paint_dropdown
-    // places the box at — the dropdown hangs off the thing that opened it
-    // (architect 2026-08-02), which since the 2026-09-09 relayout retired row
-    // 1's margin-bottom IS the lane's own bottom and the icon row's first
-    // pixel (it stood one pixel above the lane's bottom while that margin
-    // stood, 2026-08-02..09-09). Both sites read the SAME stashed
-    // rect through the SAME anchor owner, so the damaged band and the painted
-    // box start on the same row of pixels; a band anchored a pixel lower would
-    // leave the popup's own top border unpainted.
+    // THE TOP EDGE IS THE MENU LANE'S FOOT, the same expression paint_dropdown
+    // places the box at — read from the SAME lane accessor there, so the
+    // damaged band and the painted box start on the same row of pixels; a
+    // band anchored anywhere else would leave a strip of the popup unpainted
+    // at one end. It is the LANE and not the anchor's rect since 2026-09-09's
+    // remeasure of the menu row, which made the anchor's published rect its
+    // 30px PILL inside a 34 lane: the two agreed exactly while the lane was
+    // the pill's height, and differed by row 1's 1px margin-bottom
+    // 2026-08-02..09-09, where the architect ruled the box onto the button
+    // and it covered that margin strip. The x is still the anchor's (the
+    // dropdown hangs off the thing that opened it, architect 2026-08-02);
+    // only this band's y left the button, and it damages FULL WIDTH anyway.
     {
-        const GuiRect& btn =
-            app.redesign_buttons[redesign_button_index(
-                dropdown_anchor_button(menu))].rect;
+        const GuiRect menu_lane = top_menu_row_area(app);
         viewport.invalidate_rect(
-            GuiRect{0, btn.y + btn.h, app.width, dropdown_h_px(menu)});
+            GuiRect{0, menu_lane.y + menu_lane.h, app.width,
+                    dropdown_h_px(menu)});
     }
     // THE TOOLTIP GOES DOWN ON THE OPEN EDGE — the two floating surfaces cannot
     // coexist (paint_handler.h states the pair), and this is the one line that
