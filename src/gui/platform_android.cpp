@@ -772,10 +772,11 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     resolve_content_rect(surf_w, surf_h, ox, oy, cw, ch);
 
     // THE GEOMETRY EDGE, which is not the same thing as an adoption: the glue
-    // posts INIT_WINDOW, WINDOW_RESIZED and CONFIG_CHANGED for a
-    // landscape-locked activity whose surface never changes size, so most
-    // adoptions move nothing. A moved ORIGIN counts as a move even at an
-    // unchanged size: every pixel the GUI paints lands somewhere else.
+    // posts INIT_WINDOW, WINDOW_RESIZED and CONFIG_CHANGED for a landscape-ONLY
+    // activity — either landscape is admitted, never portrait — whose surface
+    // never changes size, the 180° flip included, so most adoptions move
+    // nothing. A moved ORIGIN counts as a move even at an unchanged size:
+    // every pixel the GUI paints lands somewhere else.
     // Only a real move owes the resize callback (which force-ends every
     // pointer gesture, closes the dropdown and rebuilds the layout) and the
     // one startup line.
@@ -1514,9 +1515,11 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
         case APP_CMD_CONTENT_RECT_CHANGED:
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_CONFIG_CHANGED:
-            // The activity is landscape-locked and resizeableActivity="false",
-            // so the SURFACE cannot move here — but the window the GUI sees is
-            // the content rect inside the system bars, and a bar coming or
+            // The activity is landscape-ONLY — either landscape, never
+            // portrait — and resizeableActivity="false", so the SURFACE cannot
+            // move here: a 180° flip keeps its size and moves nothing but its
+            // transform, which the compositor owns. But the window the GUI sees
+            // is the content rect inside the system bars, and a bar coming or
             // going moves that without touching the surface. CONTENT_RECT_-
             // CHANGED is the command that carries it (the glue has already
             // stored the new rect by the time this runs); the other two adopt

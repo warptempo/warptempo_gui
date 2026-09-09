@@ -55,16 +55,23 @@
          the system's.
 
          No windowLayoutInDisplayCutoutMode: the default never lays a landscape
-         window into a cutout, and this panel has none anyway. resizeableActivity="false" with the
-         landscape lock keeps the one geometry; screenSize|screenLayout are in
-         configChanges so a bar coming or going resizes the window instead of
-         recreating the activity. -->
+         window into a cutout, and this panel has none anyway.
+
+         screenOrientation="sensorLandscape": THE SENSOR DECIDES, BUT ALWAYS
+         LANDSCAPE, NEVER PORTRAIT. The lock is landscape-ONLY, not one
+         landscape — the tablet is held with its USB-C port on either side and
+         the product is upright for both — and a 180° flip keeps the window's
+         size, moving nothing but the surface's transform, which the compositor
+         owns. So resizeableActivity="false" still buys the one geometry;
+         orientation|screenSize are in configChanges so the flip never recreates
+         the activity, and screenSize|screenLayout are there so a bar coming or
+         going resizes the window instead of recreating it either. -->
     <activity
         android:name=".MainActivity"
         android:exported="true"
         android:label="Warptempo"
         android:theme="@android:style/Theme.NoTitleBar"
-        android:screenOrientation="landscape"
+        android:screenOrientation="sensorLandscape"
         android:resizeableActivity="false"
         android:launchMode="singleTask"
         android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"

@@ -49,7 +49,8 @@ export WT_BUILD_TOOLS_SHA1="b0b6376977657e8ad9b969bacf4093601da2c6fb"
 # res/values style and an aapt2 compile step this APK does not have (it ships no
 # res/ at all); stepping the target back to 34 is the same result with no build
 # machinery at all. NOT 36 either, which was 35's own reason: Android 16 revokes
-# screenOrientation on screens >=600dp and this activity is landscape-locked.
+# screenOrientation on screens >=600dp and this activity asks for landscape
+# only (sensorLandscape: either landscape, never portrait).
 # The spike's build script reads this same variable.
 export WT_TARGET_SDK="34"
 

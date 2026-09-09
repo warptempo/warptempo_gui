@@ -133,7 +133,7 @@ public:
     // platform-seam.md's Synchronize section.)
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
-    // and landscape-locked with no titlebar, so both setters store nothing and
+    // and landscape-only with no titlebar, so both setters store nothing and
     // paint nothing. They stay on the API because the GUI calls them from its
     // load and dirty-state paths unconditionally (contract and composition
     // rule at platform_wayland.h, which owns them).
