@@ -514,13 +514,13 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // RESTING one's does not — the one fork in pass one's fill height, and the
 // third look's whole change (paint_tab_row).
 //
-// #496170 IS MEASURED: row 29 of tmp/Screenshot_2026-09-09_02-42-29-c.png,
+// #496170 IS MEASURED: row 29 of tmp/previous/review_2026-09-09/his_screenshots/Screenshot_2026-09-09_02-42-29-c.png,
 // cols 80..159 — B's own box, exactly, col 79 being A's selected side border
 // — which is what fixes the hover segment's SPAN as the hit box and not the
 // spill. HARD-CODED AND NOT A BLEND: nothing clean generates it from
 // kRedesignTabHover and kRedesignTabLine, and the palette rule forbids
 // deriving it anyway. THE CROPS ARE NOW FOLLOWED WITH NO OVERRIDE LEFT ON
-// THIS ROW: row 29 of tmp/Screenshot_2026-09-09_02-41-44-c.png measures
+// THIS ROW: row 29 of tmp/previous/review_2026-09-09/his_screenshots/Screenshot_2026-09-09_02-41-44-c.png measures
 // #1b1d20 across the RESTING B's cols 80..159 — its own fill run to the
 // foot — and the grey ran under a resting tab too for the hours between the
 // second look and the third, product-internal consistency chosen over the
@@ -1481,7 +1481,7 @@ inline constexpr int kPlayheadUnitPx = 8;
 // thirty-pixel row ... take from the INSIDE height, the actual content,
 // about four pixels ... this way the dropdown will touch the first row, as
 // it does in kdenlive"). File's hover pill measures rows 26-55 in
-// tmp/kden-hover.png — 30 rows — and that number is the lane whole: the
+// tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png — 30 rows — and that number is the lane whole: the
 // anchors' pill fills it top to bottom and IS the anchor's published hit
 // rect, and its foot is the lane's foot, which is where the dropdown and
 // its damage band hang (top_menu_row_area — paint_dropdown and
@@ -1493,7 +1493,7 @@ inline constexpr int kPlayheadUnitPx = 8;
 // and pad kept (kViewBarBtnMarginPx and its siblings, paint_handler.cpp),
 // the lane taking the four pixels out of the box's INSIDE height rather than
 // the box setting the lane. kdenlive's own bar box is 32 inside its 34 lane
-// (tmp/kden-view.png, rows 27-58 in 26-59); ours is 28 inside the pill's 30,
+// (tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, rows 27-58 in 26-59); ours is 28 inside the pill's 30,
 // and the 5px corner and the 1px frame fit the 28 as they fit the 32
 // (redesign_face_box insets by half its stroke and rounds inside the box).
 // THE VIEW BUTTONS' HIT RECT IS THE LANE'S FULL HEIGHT — the button's

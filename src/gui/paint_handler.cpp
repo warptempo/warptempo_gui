@@ -1512,7 +1512,7 @@ double cap_height_px(cairo_scaled_font_t* font) {
 // and at every scale. NOT ONE SANS SURFACE MOVES under this rule: every
 // kdenlive crop stays landed (the 30 pill and the 30 tabs at row 21, the 32
 // box at 22, the 29 dropdown item at 20, the 31 field at 21 —
-// tmp/kden-hover.png, tmp/kden-view.png, the PCManFM-Qt tab crops and
+// tmp/previous/review_2026-09-09/his_screenshots/kden-hover.png, tmp/previous/review_2026-09-09/his_screenshots/kden-view.png, the PCManFM-Qt tab crops and
 // tmp/keep/screenshots/kdenlive/redesign/), and the answer is independent of
 // the box's y by construction rather than by a tie rule. The identity is the
 // SIZE'S and not the FACE'S — the tooltip's 10pt hint line reports cap 9
@@ -2023,12 +2023,12 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     //     the last tab, and the row's only ground at that row;
     //   - kRedesignTabHoverEdge #496170 across a HOVERED unselected tab's own
     //     BOX — the hit rect, never the extended fill, which is what the crop
-    //     fixes (row 29 of tmp/Screenshot_2026-09-09_02-42-29-c.png: cols
+    //     fixes (row 29 of tmp/previous/review_2026-09-09/his_screenshots/Screenshot_2026-09-09_02-42-29-c.png: cols
     //     80..159 are the hover blue and col 79 is the selected neighbour's
     //     side border, so the spill under that neighbour is not the blue's);
     //   - NOTHING under a RESTING unselected tab, whose flat fill runs the
     //     full content height and IS that row (row 29 of
-    //     tmp/Screenshot_2026-09-09_02-41-44-c.png: #1b1d20 across cols
+    //     tmp/previous/review_2026-09-09/his_screenshots/Screenshot_2026-09-09_02-41-44-c.png: #1b1d20 across cols
     //     80..159). A HOVERED tab's fill stops one line short instead, which
     //     is pass one's one fork;
     //   - and BROKEN under the SELECTED tab, whose box shows the content
@@ -4244,7 +4244,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // DOWN over whatever lies there (the tab row's right stretch, the icon row's
 // empty right, the thin lanes, the waveform), the cards kIconBtnGapPx apart.
 //
-// THE LOOK (his picked mockup, tmp/previous/messaging_mockups/cards_AB.png's
+// THE LOOK (his picked mockup, cards_AB.png — the mockup file is deleted; its
 // look 1; the chrome record at render.h's palette block): the player's dark
 // ground under the popup's 1 px border through the one popup box painter;
 // a row of the icon row's own height, holding — left to right, EVERY
