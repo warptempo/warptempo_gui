@@ -1438,15 +1438,17 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying TWO FLOATS — the LEFT one, "File" and
+    // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
     // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
-    // Navigation anchor deleted from between them 2026-08-15). No ring;
+    // Navigation anchor deleted from between them 2026-08-15, Edit arriving
+    // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and
+    // 2026-09-09). No ring;
     // the kdenlive bar is flat.
     //
-    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for BOTH
-    // buttons — plus ONE mode-scoped third, the history view's disabled
-    // face, which since 2026-08-08 lands on the SETTINGS anchor alone (File
+    // THE LEFT FLOAT'S HOVER MODEL IS KDENLIVE'S, and it is TWO faces for
+    // EVERY anchor — plus ONE mode-scoped third, the history view's disabled
+    // face, which since 2026-08-08 lands on every anchor but FILE (which
     // stays lit in there, its menu working; the partition is
     // history_mode_disables_button's and nothing here restates it) (below, at the
     // pill):
@@ -1457,11 +1459,12 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // only pointer-out rests it. The click and disabled faces belong to rows 2
     // and 4, so these two have no press-state machinery at all.
     //
-    // BOTH ACTIONS ARE THE SAME KIND since 2026-08-13: each button TOGGLES
-    // A DROPDOWN — the roster's two non-chord actions, since no keyboard chord
+    // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
+    // TOGGLES A DROPDOWN — the roster's three non-chord actions, since no
+    // keyboard chord
     // opens or closes a popup. The menus lead only where the keyboard already
     // goes: the bare `;` key still opens the settings editor directly, and
-    // File's one item is Ctrl+Q. (The left float
+    // File's three items are Ctrl+O, bare `\` and Ctrl+Q. (The left float
     // held a CHORD button until that day — Quit, dispatched through the shared
     // chord table like every other redesigned button; the act is the File menu's
     // item now, and the chord is untouched. It held a THIRD ANCHOR, Navigation,
@@ -1538,7 +1541,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
         // is the one that is open", so it paints on the popup's own anchor as
-        // well as on hover — whichever of the four anchors emitted the open
+        // well as on hover — whichever of the three anchors emitted the open
         // popup, through the one anchor owner. It is also what keeps the button
         // from going dark the instant the menu appears — the open edge
         // deliberately UNHOVERS the whole roster (the pointer belongs to the
@@ -1548,7 +1551,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // A PAINT CONDITION, NOT A `selected` BIT. Two reasons, both structural:
         // redesign_button_selected is defined as the live fact a button's CHORD
         // flips, and no menu button has a chord at all (they are the
-        // roster's two non-chord actions) — a dropdown is not a resting mode. And
+        // roster's three non-chord actions) — a dropdown is not a resting mode. And
         // the tick comparator that watches the selected bits would be pure
         // duplication here: the popup's two writers, toggle_dropdown and the one
         // close owner close_dropdown, ALREADY invalidate the top strip on both
@@ -3440,7 +3443,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // and the size and none of this cell's geometry, being a list rather than
     // a cell. NONE OF THE THREE EVER PAINTS IN THE SAME FRAME AS ANOTHER: the
     // player and the panel each own the row whole while they stand, and the
-    // panel's band covers everything between the menu row and this one. The
+    // panel's band covers everything between the ICON ROW and this one (the
+    // menu row and the icon row stand above the band since 2026-09-09). The
     // set's own record is at this file's bottom-row text block.
     {
         gui_select_font_face(cr, GuiFontFamily::Mono);
@@ -4135,8 +4139,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
     // the button that emits it at ZERO margin: its top edge is the BUTTON's
-    // bottom edge (not the lane's: row 1's 1px margin-bottom puts those one pixel
-    // apart, and the architect ruled the button; the full argument is at the
+    // bottom edge, which since the 2026-09-09 relayout IS the menu lane's
+    // bottom and the ICON ROW's first pixel — the anchors fill the lane now,
+    // so there is no margin strip between them (the ruling, and the margin
+    // that held those two edges one pixel apart 2026-08-02..09-09, are at the
     // anchor arithmetic below), under that button's left edge. Publishes its own
     // rect and every item rect, so the press claim hit-tests exactly what was
     // painted and never re-shapes a label.
@@ -4262,12 +4268,17 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int h = dropdown_h_px(menu);
 
     // FLUSH WITH THE BUTTON IT EMITS FROM, on BOTH axes (architect 2026-08-02).
-    // When row 1 gained its 1px margin-bottom the button's bottom edge and the
-    // lane's stopped being the same row of pixels, and the anchor briefly moved
-    // to the LANE on the reading that "the menu row's bottom edge" meant the
-    // whole lane. He ruled the button: the dropdown hangs off the thing that
-    // opened it. So the box's top edge lands on row 1's MARGIN STRIP and covers
-    // it for as long as the menu is up — that is the ruled look, not a leak.
+    // THE TWO EDGES ARE ONE ROW OF PIXELS AGAIN since 2026-09-09: the anchor
+    // fills the menu lane (menu_row_h_px == menu_row_content_h_px), so
+    // btn.y + btn.h IS the lane's bottom and the icon row's first pixel, and
+    // the box hangs straight onto the toolbar with nothing between.
+    // (When row 1 gained its 1px margin-bottom on 2026-08-02 those two edges
+    // stopped being the same row, and the anchor briefly moved to the LANE on
+    // the reading that "the menu row's bottom edge" meant the whole lane. He
+    // ruled the button: the dropdown hangs off the thing that opened it — so
+    // while that margin stood the box's top edge landed on the MARGIN STRIP
+    // and covered it for as long as the menu was up, the ruled look and not a
+    // leak. The margin retired with the relayout.)
     int x = btn.x;
     int y = btn.y + btn.h;               // flush: zero margin under the button
     if (x + w > app.width) x = app.width - w;

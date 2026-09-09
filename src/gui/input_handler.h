@@ -1520,7 +1520,7 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's four menu anchors and
+    // writer serving the WHOLE roster — row 1's three menu anchors and
     // the view bar's three, row 3's two tabs, row 4's twenty-eight (the
     // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
     // back from the menu row since 2026-09-04, the history group's

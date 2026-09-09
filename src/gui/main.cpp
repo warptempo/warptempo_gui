@@ -227,9 +227,15 @@ namespace {
 // ROW's ground so the tabs sit at the foot of one tall lane. The waveform
 // stays where 2026-09-03 left it ("it's perfect right there") and the gap
 // BELOW it at the bottom row "looks correct" (a DAW would put more channels
-// there). ON THE TABLET NOTHING MOVES BUT THE ORDER: at 2304x1440 and
-// gui_scale 225 gap 1 is 0 (the stack below), so the icon row simply
-// exchanged places with the tab row there.
+// there). ON THE TABLET THE ORDER CHANGED AND SIX PIXELS MOVED WITH IT: the
+// GUI's window there is the framework's CONTENT RECT, 2304x1270 with both
+// system bars excluded (the physical surface is 2304x1440; the measurement is
+// at platform_android.h's resolve_content_rect block), and at gui_scale 225
+// gap 1 is 0 (the stack below), so the icon row exchanged places with the tab
+// row AND the three authored pixels this relayout retired — the menu row's
+// margin and the tab row's two borders — came off the top lanes as SIX device
+// pixels there: 434 -> 428 above, every lane below the toolbar standing six
+// pixels higher and the waveform taking all six, 730 -> 736.
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, with no
@@ -273,9 +279,18 @@ namespace {
 //     three), the waveform spanning y 290..790 about the window's midline
 //     540 (the clamp fixes its height and the midpoint rule its centre, so the
 //     bar's 33 came out of GAP 2 alone on its one day and went back into it).
+//   2304x1270 AT gui_scale 225, THE GLASS HOST (the tablet's CONTENT RECT —
+//   the framework's, both system bars excluded, on a 2304x1440 surface):
+//     leftover 736 -> waveform UNCLAMPED at 736 (the scaled clamp is 1125),
+//     both gaps 0
+//     — 68 menu / 106 icon / 0 blank / 254 block / 736 waveform / 0 blank /
+//     106 row, the lanes rounding to 68 menu + 106 icon (104 + a 2px border)
+//     + 68 tab + 58 overview (54 + two borders) + 20 trim + 63 ruler + 45
+//     marker = 428 above and 106 below. Centering is infeasible there like
+//     the short window below (the midpoint rule would want gap 1 = -161),
+//     so the waveform keeps everything.
 //   1024x600, A SHORT WINDOW (the Pi's old panel, kept as the worked case the
-//   floors exist for; that rig is returned and no host runs this geometry —
-//   the glass host is 2304x1440 at gui_scale 225):
+//   floors exist for; that rig is returned and no host runs this geometry):
 //     leftover 363 -> waveform UNCLAMPED at 363, both gaps 0
 //     — 30 / 47 / 0 / 113 / 363 / 0 / 47. Centering is infeasible there (the
 //     midpoint rule would want gap 1 = -71), so the waveform keeps everything,
@@ -559,15 +574,20 @@ GuiRect waveform_area(const AppState& a) {
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and at today's ceiling
     // it fits: gui_scale's 350 (architect 2026-08-29, down from the 400 that
-    // stood from 2026-08-26) takes the eight lanes' 240 authored px — the top
-    // strip's 193 plus the bottom row's 47 — to 840 on a supported 1080-tall
-    // window, leaving 240 for the waveform and its gaps. IT ACTUALLY OVERRAN
+    // stood from 2026-08-26) takes the eight lanes' 237 authored px — the top
+    // strip's 190 plus the bottom row's 47, the 2026-09-09 relayout's three
+    // retired pixels already off — to 832 device px on a supported 1080-tall
+    // window (lane by lane through scaled_px, which is not one multiply of the
+    // sum: 105 menu + 165 icon + 105 tab + 92 overview + 32 trim + 98 ruler +
+    // 70 marker + 165 row), leaving 248 for the waveform and its gaps. IT
+    // ACTUALLY OVERRAN
     // ONE FOR THE DAY THE TWO MET: at 400 % the NINE lanes of 2026-08-29's
     // status bar came to 1092, and the schema-legal combination computed a
     // ZERO waveform between two zero gaps rather than a negative one, which is
     // exactly what this guard is here for and what the paragraph below already
     // promised. (No host runs anything near it: the laptop is 100 % on 1080
-    // and the tablet 225 % on 1440, where the eight lanes take 540.) The guard
+    // and the tablet 225 % on its 1270-tall content rect, where the eight
+    // lanes take 534.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved three times — and the lane set is one
     // the redesign keeps adding to and taking from. If
@@ -761,8 +781,13 @@ GuiRect top_marker_row_area(const AppState& a) {
 // stood one lane below this row for that day and folded into it that evening
 // — the state text is this row's cell now and the resolved readout retired;
 // the OVERVIEW STRIP was bottom lane 0 under this
-// row for the afternoon of 2026-08-12 and is TOP lane 3 now.) The dirty flag is
-// the window title's dot, not a tenant here. THE LANE IS THE ICON ROW'S
+// row for the afternoon of 2026-08-12 and is TOP lane 3 now.) THE DIRTY MARK
+// IS A TENANT HERE, AND IT IS THE PORTABLE ONE: the clock wears the ` *`
+// suffix while app.dirty stands (paint_bottom_row_buttons_and_clock appends
+// it; the transition is the lane's own damage, Undo::recompute_dirty's tail,
+// and messaging.md carries the ruling). The Wayland title's own asterisk is a
+// SECOND indicator painted by the compositor's titlebar, off this surface and
+// absent on the tablet, where set_title_dirty is a no-op. THE LANE IS THE ICON ROW'S
 // HEIGHT since 2026-08-14, its content and border both delegating to that
 // row's accessors.
 // bottom_row_area is the lane INCLUDING its 1px border-top (the waveform

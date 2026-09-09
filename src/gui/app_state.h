@@ -9270,8 +9270,12 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET, where gap 1 is 0, the band is the same pixels it
-// was under the 2026-09-03 ruling less the deleted line.
+// "no room". ON THE TABLET, where gap 1 is 0, THE BAND LOST ITS TOP 104
+// DEVICE PIXELS to the move: on the 2304x1270 content rect at gui_scale 225
+// the 2026-09-03 ceiling was the tab row's first pixel, y = 70 under a 70px
+// menu lane, and the icon row's foot is y = 174, so the band runs [174, 1164)
+// where it ran [70, 1164) — and its CONTENT lost 102, the band having spent
+// two of those pixels on the border row that retired with the move.
 //
 // THE FIXED-HEIGHT HALF OF R35 STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28, R33/R35: "from the bottom strip up to the middle of
@@ -12195,7 +12199,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     only give one. A derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-//   * Row 1's four anchors and row 3's tabs answer true HERE: row 1 keeps its
+//   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
 //     two faces by ruling, and a tab has no disabled face of its own. Their
 //     entries exist
 //     so the vector is total over the roster and the comparator needs no
@@ -12218,7 +12222,7 @@ inline bool playback_launch_playable(const AppState& a,
 // AV Sync Stats panel — EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
 // the arm at the head of the body defers to menu_anchor_dead_in_mode, so the
-// other three anchors and the view bar are dead with the rest).
+// other two anchors and the view bar are dead with the rest).
 // All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
@@ -12410,9 +12414,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // have lit.
     //
     // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
-    // PARTITION (architect 2026-09-03 evening: the band starts at the tab
-    // row's first pixel, so row 1 — the four anchors and the view bar — is
-    // the ONE roster lane on screen while a content stands, and "everything
+    // PARTITION (architect 2026-09-03 evening; the band started at the tab
+    // row's first pixel then and starts at the ICON ROW'S FOOT since
+    // 2026-09-09, so the menu row — its three anchors and the view bar — and
+    // the icon row are the roster lanes on screen while a content stands,
+    // and "everything
     // else like what we do with history: all the commands in File are
     // available in history mode. Leave that for the player, the picker and
     // the AV stats"). So the answer here is the ANCHOR OWNER'S,

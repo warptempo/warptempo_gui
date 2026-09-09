@@ -55,14 +55,15 @@ namespace {
 // RedesignButton, app_state.h): the KEYBOARD CHORD each button on rows 1
 // through 4 and row 8 fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. FOUR roster entries are absent — row 1's FILE, EDIT, SETTINGS
-// and HELP anchors (re-greped 2026-09-04 against kDropdownMenus), each of
+// the same ids. THREE roster entries are absent — row 1's FILE, EDIT and
+// SETTINGS anchors (re-greped 2026-09-09 against kDropdownMenus, the Help
+// anchor having left with the top strip relayout), each of
 // whose action is a POPUP TOGGLE,
 // not a chord at all, since no keyboard chord opens or closes a dropdown. All
-// four are spelled at their own claim, which walks kDropdownMenus rather than
+// three are spelled at their own claim, which walks kDropdownMenus rather than
 // naming them.
 // THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
-// table, which is what makes "the table's length plus those four IS the
+// table, which is what makes "the table's length plus those three IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
 // The `shift` column is each button's OWN chord — THREE rows set it: Redo's
@@ -708,8 +709,11 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the FOUR menu anchors carries a chord here — 51
-// rows against the roster's 55 since 2026-09-04'S ITERATIONS DELETION, which
+// every RedesignButton but the THREE menu anchors carries a chord here — 51
+// rows against the roster's 54 since 2026-09-09'S HELP DELETION, which moved
+// the ROSTER ALONE: the anchor carried no chord, so this table did not feel
+// it (the addend's own succession is at the static_assert below).
+// It was 51 against 55 from 2026-09-04'S ITERATIONS DELETION, which
 // moved BOTH numbers in one act and is the SERIES RELOCATION'S OWN SHAPE RUN
 // BACKWARDS: the architect deleted the menu-row dropdown once the icon row had
 // room again, so `IconBpm` and `IconIter` joined this table on bare `m` and
@@ -785,7 +789,7 @@ constexpr ToolbarChord kToolbarChords[] = {
 // that day it was 45 against 48: the marker walk's three in, the collapsed
 // play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
 // so its removal moved the roster and not this table — so the
-// table's length plus THE FOUR ANCHORS IS the roster. The check is not
+// table's length plus THE THREE ANCHORS IS the roster. The check is not
 // bookkeeping —
 // history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
@@ -1143,7 +1147,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // and to rows 1 and 3 having no disabled face, on the view bar's own precedent
 // (a whole surface wearing a state that is not the enabled bit).
 //
-// IT IS DERIVED, NOT LISTED. Each roster button but two IS a chord
+// IT IS DERIVED, NOT LISTED. Each roster button but three IS a chord
 // (finish_chrome_press_release synthesizes it and calls on_key at the lift),
 // so "the view
 // consumes this button's act" is exactly "the view's keyboard gate consumes this
@@ -1377,16 +1381,17 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // arrows paint unconditionally and every roster button publishes a real rect in
 // every state.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
-    // THE FOUR ANCHORS ARE ONE ARM AND ONE OWNER (menu_anchor_dead_in_mode,
+    // THE THREE ANCHORS ARE ONE ARM AND ONE OWNER (menu_anchor_dead_in_mode,
     // app_state.h — the predicate the OPEN reads too, at toggle_dropdown).
     // SETTINGS is dead because
     // its items reach the settings editor by a DIRECT call that meets no gate
     // at all; EDIT (2026-08-20) because every one
     // of its rows is a CHORD the mode's allowlist drops, so the menu would
     // open onto nothing — the face promising more than the keys deliver, which
-    // is what this partition exists to prevent; HELP (2026-09-03) for the same
-    // reason since its one row gained Shift+L that evening, a chord the
-    // allowlist does not name either; FILE is LIVE (2026-08-13, its
+    // is what this partition exists to prevent (HELP answered the same way
+    // 2026-09-03..09, its one row's Shift+L being a chord the allowlist does
+    // not name either, until the anchor was deleted with the top strip
+    // relayout); FILE is LIVE (2026-08-13, its
     // three rows Ctrl+Q, Ctrl+O and, since 2026-08-31, bare `\`, all on the
     // allowlist), so the menu opens onto three working rows.
     //
@@ -1397,7 +1402,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // shared owner on 2026-09-02, when the folder overlay's band first stood
     // under row 1 and needed the identical partition, and since 2026-09-03
     // evening THE OVERLAY TAKES THIS PARTITION WHOLE — File live, the other
-    // four dead under the player, the picker and the AV sync panel exactly as
+    // two dead under the player, the picker and the AV sync panel exactly as
     // in this view (the architect's ruling is at the owner). This arm never
     // reaches that term from here — it is inside `a.history_mode.active`, and
     // redesign_button_enabled asks the owner directly for the band — but it
@@ -1414,7 +1419,7 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
         return history_mode_key_blocked(tc.key, chord, app);
     }
     // Not in the table and not an anchor: nothing to consume. Unreachable today
-    // (the table plus the four anchors is the whole roster) and stated rather
+    // (the table plus the three anchors is the whole roster) and stated rather
     // than asserted, so a future button defaults to LIVE — the face it already
     // had — instead of greying on a chord nobody has written yet.
     return false;
@@ -5222,7 +5227,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE ONE THING THE THREE VEILS BELOW LET THROUGH (architect 2026-09-03
     // evening): the LIVE MENU ANCHOR — File. The menu row stands above the
-    // band with File lit and the other three anchors dead, so its press must
+    // band with File lit and the other two anchors dead, so its press must
     // reach the menu-row claim at the foot of this function, which sits BELOW
     // these veils, and this one local is what carries it past them. ONE OWNER
     // (press_on_live_menu_anchor, near the head of this file — the same
@@ -5855,7 +5860,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // coverage true. ONE PRESS ROUTE IN THESE ROWS DISPATCHES NO CHORD
     // (re-derived 2026-08-06, again 2026-08-15 when the Navigation anchor left,
     // again 2026-08-18 when the walk selector did, and again 2026-08-20 when
-    // the EDIT anchor arrived, and again 2026-08-27 with SERIES): the four menu
+    // the EDIT anchor arrived, and again 2026-08-27 with SERIES, and again
+    // 2026-09-09 when the HELP anchor left): the three menu
     // anchors,
     // which have none and are
     // shut at toggle_dropdown instead. (The A/B TAB PAIR was a second WHILE
@@ -7505,7 +7511,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's four menu anchors and the view bar's three, row 3's two
+// (row 1's three menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-eight — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
 // eighteen since 2026-08-29: 55, the enum's
@@ -9151,8 +9157,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     //
     // THE TOP EDGE IS THE BUTTON'S BOTTOM, the same expression paint_dropdown
     // places the box at — the dropdown hangs off the thing that opened it
-    // (architect 2026-08-02), which since row 1 gained its 1px margin-bottom is
-    // one pixel above the lane's own bottom. Both sites read the SAME stashed
+    // (architect 2026-08-02), which since the 2026-09-09 relayout retired row
+    // 1's margin-bottom IS the lane's own bottom and the icon row's first
+    // pixel (it stood one pixel above the lane's bottom while that margin
+    // stood, 2026-08-02..09-09). Both sites read the SAME stashed
     // rect through the SAME anchor owner, so the damaged band and the painted
     // box start on the same row of pixels; a band anchored a pixel lower would
     // leave the popup's own top border unpainted.
